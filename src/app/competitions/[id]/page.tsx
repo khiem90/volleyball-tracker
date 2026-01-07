@@ -63,7 +63,7 @@ export default function CompetitionDetailPage() {
     getMatchesByCompetition,
     addMatches,
     startCompetition,
-    updateCompetition,
+    startCompetitionWithMatches,
     completeCompetition,
   } = useApp();
 
@@ -105,14 +105,12 @@ export default function CompetitionDetailPage() {
         const numCourts = competition.numberOfCourts || 1;
         const win2outState = initializeWin2OutState(competition.id, competition.teamIds, numCourts);
         const initialMatches = generateWin2OutInitialMatches(competition.id, competition.teamIds, numCourts);
-        newMatches = initialMatches;
         
-        updateCompetition({
-          ...competition,
-          win2outState,
-          status: "in_progress",
-        });
-        addMatches(newMatches);
+        // Use atomic function to avoid race condition in shared mode
+        startCompetitionWithMatches(
+          { ...competition, win2outState },
+          initialMatches
+        );
         setShowStartConfirm(false);
         return;
       }
@@ -120,14 +118,12 @@ export default function CompetitionDetailPage() {
         const numCourts = competition.numberOfCourts || 1;
         const twoMatchRotationState = initializeTwoMatchRotationState(competition.id, competition.teamIds, numCourts);
         const initialMatches = generateTwoMatchRotationInitialMatches(competition.id, competition.teamIds, numCourts);
-        newMatches = initialMatches;
         
-        updateCompetition({
-          ...competition,
-          twoMatchRotationState,
-          status: "in_progress",
-        });
-        addMatches(newMatches);
+        // Use atomic function to avoid race condition in shared mode
+        startCompetitionWithMatches(
+          { ...competition, twoMatchRotationState },
+          initialMatches
+        );
         setShowStartConfirm(false);
         return;
       }
@@ -136,7 +132,7 @@ export default function CompetitionDetailPage() {
     addMatches(newMatches);
     startCompetition(competition.id);
     setShowStartConfirm(false);
-  }, [competition, addMatches, startCompetition, updateCompetition]);
+  }, [competition, addMatches, startCompetition, startCompetitionWithMatches]);
 
   // Handle match click for scoring
   const handleMatchClick = useCallback((match: Match) => {

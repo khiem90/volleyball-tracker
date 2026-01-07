@@ -307,6 +307,7 @@ interface AppContextValue {
   updateCompetition: (competition: Competition) => void;
   deleteCompetition: (id: string) => void;
   startCompetition: (id: string) => void;
+  startCompetitionWithMatches: (competition: Competition, matches: Omit<Match, "id" | "createdAt">[]) => void;
   completeCompetition: (id: string, winnerId?: string) => void;
   getCompetitionById: (id: string) => Competition | undefined;
   // Match actions
@@ -495,6 +496,38 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     }
   }, [isSharedMode, canEdit, session, syncAllData]);
 
+  // Atomically start competition with matches (fixes race condition in shared mode)
+  const startCompetitionWithMatches = useCallback(
+    (competition: Competition, matches: Omit<Match, "id" | "createdAt">[]) => {
+      if (isSharedMode && !canEdit) return;
+
+      // Generate IDs for new matches
+      const newMatches: Match[] = matches.map((match) => ({
+        ...match,
+        id: generateId(),
+        createdAt: Date.now(),
+      }));
+
+      // Update competition with match IDs
+      const updatedCompetition: Competition = {
+        ...competition,
+        status: "in_progress",
+        matchIds: [...(competition.matchIds || []), ...newMatches.map((m) => m.id)],
+      };
+
+      if (isSharedMode && session) {
+        // Single atomic update for shared mode
+        const allMatches = [...(session.matches || []), ...newMatches];
+        syncAllData({ competition: updatedCompetition, matches: allMatches });
+      } else {
+        // For local mode, dispatch both actions
+        dispatch({ type: "UPDATE_COMPETITION", competition: updatedCompetition });
+        dispatch({ type: "ADD_MATCHES", matches });
+      }
+    },
+    [isSharedMode, canEdit, session, syncAllData]
+  );
+
   const completeCompetition = useCallback((id: string, winnerId?: string) => {
     if (isSharedMode && !canEdit) return;
     
@@ -673,6 +706,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     updateCompetition,
     deleteCompetition,
     startCompetition,
+    startCompetitionWithMatches,
     completeCompetition,
     getCompetitionById,
     addMatch,
