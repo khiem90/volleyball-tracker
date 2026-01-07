@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Users, Trophy, Zap, Menu, Globe, Link2, LogIn, LogOut, User, History } from "lucide-react";
+import { Home, Users, Trophy, Zap, Menu, LogIn, LogOut, History } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -23,11 +23,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useAuth } from "@/context/AuthContext";
-import { useSession } from "@/context/SessionContext";
-import { CreateSessionDialog } from "./CreateSessionDialog";
-import { JoinSessionDialog } from "./JoinSessionDialog";
 import { SessionAuth } from "./SessionAuth";
-import { ShareButton } from "./ShareSession";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: Home, description: "Overview & stats" },
@@ -40,10 +36,7 @@ const navItems = [
 export const Navigation = () => {
   const pathname = usePathname();
   const { user, signOut, isConfigured } = useAuth();
-  const { isSharedMode, session, role } = useSession();
 
-  const [showCreateSession, setShowCreateSession] = useState(false);
-  const [showJoinSession, setShowJoinSession] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
 
   // Don't show nav on session/summary pages (they have their own header)
@@ -119,40 +112,6 @@ export const Navigation = () => {
 
           {/* Right side actions */}
           <div className="hidden md:flex items-center gap-2">
-            {isConfigured && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setShowJoinSession(true)}
-                      className="cursor-pointer"
-                    >
-                      <Link2 className="w-4 h-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Join Session</TooltipContent>
-                </Tooltip>
-
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setShowCreateSession(true)}
-                      className="cursor-pointer"
-                    >
-                      <Globe className="w-4 h-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Create Shareable Session</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            )}
-
-            {isSharedMode && <ShareButton />}
-
             {isConfigured && (
               user ? (
                 <TooltipProvider>
@@ -288,40 +247,6 @@ export const Navigation = () => {
                 {isConfigured && (
                   <>
                     <Separator className="my-4" />
-                    
-                    <SheetClose asChild>
-                      <button
-                        type="button"
-                        onClick={() => setShowJoinSession(true)}
-                        className="w-full flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-accent/50 transition-all duration-200 cursor-pointer"
-                      >
-                        <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-accent">
-                          <Link2 className="w-5 h-5" />
-                        </div>
-                        <div className="flex flex-col text-left">
-                          <span className="font-medium">Join Session</span>
-                          <span className="text-xs text-muted-foreground">Enter a share code</span>
-                        </div>
-                      </button>
-                    </SheetClose>
-
-                    <SheetClose asChild>
-                      <button
-                        type="button"
-                        onClick={() => setShowCreateSession(true)}
-                        className="w-full flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-accent/50 transition-all duration-200 cursor-pointer"
-                      >
-                        <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-accent">
-                          <Globe className="w-5 h-5" />
-                        </div>
-                        <div className="flex flex-col text-left">
-                          <span className="font-medium">Create Session</span>
-                          <span className="text-xs text-muted-foreground">Share live scores</span>
-                        </div>
-                      </button>
-                    </SheetClose>
-
-                    <Separator className="my-4" />
 
                     {user ? (
                       <SheetClose asChild>
@@ -365,8 +290,6 @@ export const Navigation = () => {
       </nav>
 
       {/* Dialogs */}
-      <CreateSessionDialog open={showCreateSession} onOpenChange={setShowCreateSession} />
-      <JoinSessionDialog open={showJoinSession} onOpenChange={setShowJoinSession} />
       <SessionAuth open={showAuth} onOpenChange={setShowAuth} showViewerOption={false} />
     </>
   );

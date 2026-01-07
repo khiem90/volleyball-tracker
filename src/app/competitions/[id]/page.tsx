@@ -10,6 +10,9 @@ import { DoubleBracket } from "@/components/DoubleBracket";
 import { Win2OutView } from "@/components/Win2OutView";
 import { TwoMatchRotationView } from "@/components/TwoMatchRotationView";
 import { useApp } from "@/context/AppContext";
+import { useSession } from "@/context/SessionContext";
+import { CreateSessionDialog } from "@/components/CreateSessionDialog";
+import { ShareButton } from "@/components/ShareSession";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -33,6 +36,8 @@ import {
   Clock,
   Crown,
   Swords,
+  Share2,
+  Globe,
 } from "lucide-react";
 import { generateRoundRobinSchedule, calculateStandings } from "@/lib/roundRobin";
 import { generateSingleEliminationBracket } from "@/lib/singleElimination";
@@ -69,6 +74,9 @@ export default function CompetitionDetailPage() {
 
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
   const [showStartConfirm, setShowStartConfirm] = useState(false);
+  const [showCreateSession, setShowCreateSession] = useState(false);
+  
+  const { isSharedMode } = useSession();
 
   const competition = useMemo(
     () => getCompetitionById(competitionId),
@@ -256,12 +264,30 @@ export default function CompetitionDetailPage() {
             </div>
           </div>
 
-          {competition.status === "draft" && (
-            <Button onClick={() => setShowStartConfirm(true)} className="gap-2 shadow-lg shadow-primary/20" size="lg">
-              <Play className="w-5 h-5" />
-              Start Competition
-            </Button>
-          )}
+          <div className="flex items-center gap-3">
+            {competition.status === "draft" && (
+              <Button onClick={() => setShowStartConfirm(true)} className="gap-2 shadow-lg shadow-primary/20" size="lg">
+                <Play className="w-5 h-5" />
+                Start Competition
+              </Button>
+            )}
+            
+            {/* Session sharing controls - only show for in_progress competitions */}
+            {competition.status === "in_progress" && (
+              isSharedMode ? (
+                <ShareButton />
+              ) : (
+                <Button 
+                  onClick={() => setShowCreateSession(true)} 
+                  variant="outline" 
+                  className="gap-2 cursor-pointer"
+                >
+                  <Globe className="w-4 h-4" />
+                  Share Live
+                </Button>
+              )
+            )}
+          </div>
         </div>
 
         {/* Winner Banner */}
@@ -575,6 +601,9 @@ export default function CompetitionDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Create Session Dialog */}
+      <CreateSessionDialog open={showCreateSession} onOpenChange={setShowCreateSession} />
     </div>
   );
 }
