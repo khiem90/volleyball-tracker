@@ -85,9 +85,7 @@ export default function MatchPage() {
       const newAway = team === "away" ? currentAway + 1 : currentAway;
       setHistory((prev) => {
         const seeded =
-          prev.length === 0
-            ? [{ home: currentHome, away: currentAway }]
-            : prev;
+          prev.length === 0 ? [{ home: currentHome, away: currentAway }] : prev;
         const last = seeded[seeded.length - 1];
         if (!last || last.home !== newHome || last.away !== newAway) {
           return [...seeded, { home: newHome, away: newAway }];
@@ -110,9 +108,7 @@ export default function MatchPage() {
         team === "away" ? Math.max(0, currentAway - 1) : currentAway;
       setHistory((prev) => {
         const seeded =
-          prev.length === 0
-            ? [{ home: currentHome, away: currentAway }]
-            : prev;
+          prev.length === 0 ? [{ home: currentHome, away: currentAway }] : prev;
         const last = seeded[seeded.length - 1];
         if (!last || last.home !== newHome || last.away !== newAway) {
           return [...seeded, { home: newHome, away: newAway }];
@@ -158,10 +154,17 @@ export default function MatchPage() {
       const updatedCompetition = {
         ...competition,
         win2outState: updatedState,
-        status: updatedState.isComplete ? ("completed" as const) : ("in_progress" as const),
+        status: updatedState.isComplete
+          ? ("completed" as const)
+          : ("in_progress" as const),
       };
 
-      completeMatchWithNextMatch(matchId, winnerId, updatedCompetition, nextMatch);
+      completeMatchWithNextMatch(
+        matchId,
+        winnerId,
+        updatedCompetition,
+        nextMatch
+      );
       setShowCompleteDialog(false);
       router.push(`/competitions/${competition.id}`);
       return;
@@ -188,10 +191,17 @@ export default function MatchPage() {
       const updatedCompetition = {
         ...competition,
         twoMatchRotationState: updatedState,
-        status: updatedState.isComplete ? ("completed" as const) : ("in_progress" as const),
+        status: updatedState.isComplete
+          ? ("completed" as const)
+          : ("in_progress" as const),
       };
 
-      completeMatchWithNextMatch(matchId, winnerId, updatedCompetition, nextMatch);
+      completeMatchWithNextMatch(
+        matchId,
+        winnerId,
+        updatedCompetition,
+        nextMatch
+      );
       setShowCompleteDialog(false);
       router.push(`/competitions/${competition.id}`);
       return;

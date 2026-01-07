@@ -26,7 +26,10 @@ import {
   Crown,
   Shield,
   Eye,
+  Trash2,
+  Loader2,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 interface ShareSessionProps {
   open: boolean;
@@ -34,12 +37,15 @@ interface ShareSessionProps {
 }
 
 export const ShareSession = ({ open, onOpenChange }: ShareSessionProps) => {
-  const { session, role, getShareUrl, getAdminShareUrl, isSharedMode } = useSession();
+  const { session, role, getShareUrl, getAdminShareUrl, isSharedMode, endSession, isCreator } = useSession();
   const { user } = useAuth();
+  const router = useRouter();
 
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedAdminLink, setCopiedAdminLink] = useState(false);
   const [showQR, setShowQR] = useState(false);
+  const [showEndConfirm, setShowEndConfirm] = useState(false);
+  const [isEnding, setIsEnding] = useState(false);
 
   const shareUrl = getShareUrl();
   const adminShareUrl = getAdminShareUrl();
@@ -84,6 +90,16 @@ export const ShareSession = ({ open, onOpenChange }: ShareSessionProps) => {
       handleCopyLink();
     }
   }, [shareUrl, session, handleCopyLink]);
+
+  const handleEndSession = useCallback(async () => {
+    setIsEnding(true);
+    const success = await endSession();
+    setIsEnding(false);
+    if (success) {
+      onOpenChange(false);
+      router.push("/");
+    }
+  }, [endSession, onOpenChange, router]);
 
   if (!session || !isSharedMode) {
     return null;
@@ -200,6 +216,68 @@ export const ShareSession = ({ open, onOpenChange }: ShareSessionProps) => {
                 <p className="text-xs text-amber-500/80">
                   ⚠️ Only share this link with people you trust. Anyone with this link can edit scores.
                 </p>
+              </div>
+            </>
+          )}
+
+          {/* End Session - Only show for creator */}
+          {isCreator && (
+            <>
+              <Separator />
+              <div className="space-y-2">
+                <label className="text-sm font-medium flex items-center gap-2 text-destructive">
+                  <Trash2 className="w-4 h-4" />
+                  End Session
+                </label>
+                {!showEndConfirm ? (
+                  <>
+                    <p className="text-xs text-muted-foreground">
+                      Permanently delete this session. All viewers will lose access.
+                    </p>
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowEndConfirm(true)}
+                      className="w-full cursor-pointer text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      End Session
+                    </Button>
+                  </>
+                ) : (
+                  <div className="space-y-2 p-3 rounded-lg bg-destructive/10 border border-destructive/30">
+                    <p className="text-sm font-medium text-destructive">
+                      Are you sure? This cannot be undone.
+                    </p>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => setShowEndConfirm(false)}
+                        disabled={isEnding}
+                        className="flex-1 cursor-pointer"
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        onClick={handleEndSession}
+                        disabled={isEnding}
+                        className="flex-1 gap-2 cursor-pointer"
+                      >
+                        {isEnding ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Ending...
+                          </>
+                        ) : (
+                          <>
+                            <Trash2 className="w-4 h-4" />
+                            Confirm
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             </>
           )}
