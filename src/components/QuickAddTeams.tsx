@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -10,7 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Users, Minus, Plus, Sparkles } from "lucide-react";
+import { Users, Minus, Plus, Sparkles, Check } from "lucide-react";
 
 // Color style presets
 const colorStyles = [
@@ -117,8 +118,7 @@ export const QuickAddTeams = ({
     (index: number) => {
       const num = startNumber + index;
       if (currentNamingStyle.id === "group" || currentNamingStyle.id === "side") {
-        // Use letters for group/side
-        const letter = String.fromCharCode(64 + num); // A, B, C...
+        const letter = String.fromCharCode(64 + num);
         return `${currentNamingStyle.prefix} ${letter}`;
       }
       return `${currentNamingStyle.prefix} ${num}`;
@@ -143,7 +143,6 @@ export const QuickAddTeams = ({
   const handleCreate = useCallback(() => {
     onAddTeams(previewTeams);
     onOpenChange(false);
-    // Reset for next time
     setTeamCount(4);
   }, [previewTeams, onAddTeams, onOpenChange]);
 
@@ -162,29 +161,32 @@ export const QuickAddTeams = ({
 
         <div className="space-y-6 py-4">
           {/* Team Count */}
-          <div className="space-y-2">
+          <div className="space-y-3">
             <label className="text-sm font-medium">Number of Teams</label>
-            <div className="flex items-center justify-center gap-4">
+            <div className="flex items-center justify-center gap-6">
               <Button
                 variant="outline"
                 size="icon"
                 onClick={handleDecrease}
                 disabled={teamCount <= 2}
-                className="h-10 w-10 rounded-full"
+                className="h-12 w-12 rounded-full"
               >
-                <Minus className="w-4 h-4" />
+                <Minus className="w-5 h-5" />
               </Button>
-              <span className="text-4xl font-bold w-16 text-center tabular-nums">
-                {teamCount}
-              </span>
+              <div className="text-center">
+                <span className="text-5xl font-bold tabular-nums text-primary">
+                  {teamCount}
+                </span>
+                <p className="text-xs text-muted-foreground mt-1">teams</p>
+              </div>
               <Button
                 variant="outline"
                 size="icon"
                 onClick={handleIncrease}
                 disabled={teamCount >= 16}
-                className="h-10 w-10 rounded-full"
+                className="h-12 w-12 rounded-full"
               >
-                <Plus className="w-4 h-4" />
+                <Plus className="w-5 h-5" />
               </Button>
             </div>
           </div>
@@ -199,10 +201,10 @@ export const QuickAddTeams = ({
                   type="button"
                   onClick={() => setSelectedNaming(style.id)}
                   className={`
-                    px-3 py-2 rounded-lg text-sm font-medium transition-all
+                    px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer
                     ${selectedNaming === style.id
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-card border border-border/50 hover:border-primary/50"
+                      ? "bg-primary text-primary-foreground shadow-md"
+                      : "bg-card border border-border/40 hover:border-primary/40"
                     }
                   `}
                 >
@@ -222,14 +224,14 @@ export const QuickAddTeams = ({
                   type="button"
                   onClick={() => setSelectedStyle(style.id)}
                   className={`
-                    p-3 rounded-lg text-left transition-all
+                    p-3 rounded-xl text-left transition-all duration-200 cursor-pointer
                     ${selectedStyle === style.id
                       ? "ring-2 ring-primary bg-primary/5"
-                      : "bg-card border border-border/50 hover:border-primary/50"
+                      : "bg-card border border-border/40 hover:border-primary/40"
                     }
                   `}
                 >
-                  <div className="flex items-center gap-2 mb-1">
+                  <div className="flex items-center gap-2 mb-1.5">
                     <div className="flex -space-x-1">
                       {style.colors.slice(0, 4).map((color, i) => (
                         <div
@@ -240,6 +242,9 @@ export const QuickAddTeams = ({
                       ))}
                     </div>
                     <span className="text-sm font-medium">{style.name}</span>
+                    {selectedStyle === style.id && (
+                      <Check className="w-4 h-4 text-primary ml-auto" />
+                    )}
                   </div>
                   <p className="text-xs text-muted-foreground">{style.description}</p>
                 </button>
@@ -249,24 +254,29 @@ export const QuickAddTeams = ({
 
           {/* Preview */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Preview</label>
-            <div className="p-4 rounded-lg bg-card/50 border border-border/50 max-h-40 overflow-y-auto">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium">Preview</label>
+              <Badge variant="secondary">{teamCount} teams</Badge>
+            </div>
+            <div className="p-4 rounded-xl bg-card/50 border border-border/40 max-h-40 overflow-y-auto scrollbar-thin">
               <div className="grid grid-cols-2 gap-2">
                 {previewTeams.map((team, i) => (
                   <div
                     key={i}
                     className="flex items-center gap-2 p-2 rounded-lg"
                     style={{
-                      background: `linear-gradient(135deg, ${team.color}20, ${team.color}10)`,
+                      background: `linear-gradient(135deg, ${team.color}15, ${team.color}08)`,
                     }}
                   >
                     <div
-                      className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                      className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 shadow-sm"
                       style={{
                         background: `linear-gradient(135deg, ${team.color}, ${team.color}cc)`,
                       }}
                     >
-                      <Users className="w-4 h-4 text-white" />
+                      <span className="text-xs font-bold text-white">
+                        {team.name.charAt(team.name.length - 1)}
+                      </span>
                     </div>
                     <span className="text-sm font-medium truncate">{team.name}</span>
                   </div>
@@ -280,7 +290,7 @@ export const QuickAddTeams = ({
           <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
             Cancel
           </Button>
-          <Button onClick={handleCreate} className="flex-1 gap-2">
+          <Button onClick={handleCreate} className="flex-1 gap-2 shadow-lg shadow-primary/20">
             <Sparkles className="w-4 h-4" />
             Create {teamCount} Teams
           </Button>
@@ -289,4 +299,3 @@ export const QuickAddTeams = ({
     </Dialog>
   );
 };
-

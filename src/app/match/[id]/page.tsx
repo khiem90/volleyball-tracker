@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useApp } from "@/context/AppContext";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -13,7 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ArrowLeft, Minus, Plus, Trophy, Undo2, Check } from "lucide-react";
+import { ArrowLeft, Minus, Plus, Trophy, Undo2, Check, Crown } from "lucide-react";
 import { advanceWinner } from "@/lib/singleElimination";
 import { processMatchResult } from "@/lib/win2out";
 import { processMatchResult as processTwoMatchRotationResult } from "@/lib/twoMatchRotation";
@@ -114,8 +115,6 @@ export default function MatchPage() {
       );
       const updatedMatches = advanceWinner(competitionMatches, match, winnerId);
 
-      // Update the competition with advanced bracket
-      // This is a simplified version - in production you'd want more sophisticated bracket management
       updatedMatches.forEach((updatedMatch) => {
         if (updatedMatch.id !== match.id) {
           const original = competitionMatches.find((m) => m.id === updatedMatch.id);
@@ -128,7 +127,6 @@ export default function MatchPage() {
 
     // Handle Win 2 & Out format
     if (competition && competition.type === "win2out" && competition.win2outState) {
-      // Create a completed match object for processing
       const completedMatch = {
         ...match,
         winnerId,
@@ -141,14 +139,12 @@ export default function MatchPage() {
         completedMatch
       );
 
-      // Update competition with new state
       updateCompetition({
         ...competition,
         win2outState: updatedState,
         status: updatedState.isComplete ? "completed" : "in_progress",
       });
 
-      // Create next match if there is one
       if (nextMatch) {
         addMatch(nextMatch);
       }
@@ -156,7 +152,6 @@ export default function MatchPage() {
 
     // Handle Two Match Rotation format
     if (competition && competition.type === "two_match_rotation" && competition.twoMatchRotationState) {
-      // Create a completed match object for processing
       const completedMatch = {
         ...match,
         winnerId,
@@ -169,14 +164,12 @@ export default function MatchPage() {
         completedMatch
       );
 
-      // Update competition with new state
       updateCompetition({
         ...competition,
         twoMatchRotationState: updatedState,
         status: updatedState.isComplete ? "completed" : "in_progress",
       });
 
-      // Create next match if there is one
       if (nextMatch) {
         addMatch(nextMatch);
       }
@@ -195,7 +188,6 @@ export default function MatchPage() {
   const handleOpenCompleteDialog = useCallback(() => {
     if (!match) return;
     if (match.homeScore === match.awayScore) {
-      // Don't allow ties - need a winner
       return;
     }
     setShowCompleteDialog(true);
@@ -205,9 +197,11 @@ export default function MatchPage() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <Trophy className="w-16 h-16 mx-auto mb-4 text-muted-foreground/30" />
+          <div className="w-20 h-20 mx-auto mb-4 rounded-3xl bg-muted/50 flex items-center justify-center">
+            <Trophy className="w-10 h-10 text-muted-foreground/30" />
+          </div>
           <h2 className="text-xl font-semibold mb-2">Match not found</h2>
-          <p className="text-muted-foreground mb-4">This match may have been deleted.</p>
+          <p className="text-muted-foreground mb-6">This match may have been deleted.</p>
           <Link href="/">
             <Button variant="outline" className="gap-2">
               <ArrowLeft className="w-4 h-4" />
@@ -222,11 +216,13 @@ export default function MatchPage() {
   const canComplete = match.homeScore !== match.awayScore;
   const homeColor = homeTeam.color || "#3b82f6";
   const awayColor = awayTeam.color || "#f97316";
+  const homeLeading = match.homeScore > match.awayScore;
+  const awayLeading = match.awayScore > match.homeScore;
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <header className="glass border-b border-border/50 px-4 py-3 z-50">
+      <header className="glass border-b border-border/40 px-4 py-3 z-50">
         <div className="flex items-center justify-between max-w-4xl mx-auto">
           <Button
             variant="ghost"
@@ -248,6 +244,9 @@ export default function MatchPage() {
             <h1 className="text-sm font-medium text-muted-foreground">
               {competition?.name || "Quick Match"}
             </h1>
+            <Badge variant="secondary" className="mt-1 text-xs">
+              {match.status === "in_progress" ? "Live" : "In Progress"}
+            </Badge>
           </div>
 
           <div className="flex items-center gap-2">
@@ -265,7 +264,7 @@ export default function MatchPage() {
               size="sm"
               onClick={handleOpenCompleteDialog}
               disabled={!canComplete}
-              className="gap-2"
+              className="gap-2 shadow-lg shadow-primary/20"
             >
               <Check className="w-4 h-4" />
               <span className="hidden sm:inline">End Match</span>
@@ -277,128 +276,187 @@ export default function MatchPage() {
       {/* Score Panels */}
       <div className="flex-1 flex flex-col md:flex-row">
         {/* Home Team */}
-        <div
-          className="flex-1 flex flex-col items-center justify-center p-4 relative overflow-hidden"
+        <button
+          type="button"
+          onClick={() => handleAddPoint("home")}
+          className="flex-1 flex flex-col items-center justify-center p-6 relative overflow-hidden cursor-pointer select-none focus:outline-none active:scale-[0.99] transition-transform"
           style={{
             background: `linear-gradient(135deg, ${homeColor}, ${homeColor}cc)`,
           }}
+          aria-label={`Add point to ${homeTeam.name}. Current score: ${match.homeScore}`}
         >
           {/* Decorative elements */}
-          <div className="absolute -top-20 -left-20 w-60 h-60 rounded-full bg-white/5 blur-3xl" />
-          <div className="absolute -bottom-20 -right-20 w-80 h-80 rounded-full bg-white/5 blur-3xl" />
+          <div className="absolute -top-32 -left-32 w-80 h-80 rounded-full bg-white/5 blur-3xl" />
+          <div className="absolute -bottom-32 -right-32 w-96 h-96 rounded-full bg-white/5 blur-3xl" />
+          <div className="absolute top-0 right-0 w-full h-full bg-linear-to-br from-white/5 to-transparent" />
+
+          {/* Leading indicator */}
+          {homeLeading && (
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-1.5 bg-white/20 backdrop-blur-sm rounded-full px-3 py-1.5">
+              <Crown className="w-4 h-4 text-amber-300" />
+              <span className="text-xs font-semibold text-white">Leading</span>
+            </div>
+          )}
 
           {/* Team Name */}
           <h2 className="text-white/90 text-lg md:text-xl font-semibold mb-4 relative z-10">
             {homeTeam.name}
           </h2>
 
-          {/* Score Controls */}
-          <div className="flex items-center gap-4 md:gap-8 relative z-10">
+          {/* Score */}
+          <span
+            className="text-white font-black text-[6rem] md:text-[12rem] leading-none tracking-tighter min-w-[1.5ch] text-center drop-shadow-2xl relative z-10"
+            style={{
+              textShadow: "0 4px 40px rgba(0,0,0,0.3), 0 0 80px rgba(255,255,255,0.15)",
+            }}
+          >
+            {match.homeScore}
+          </span>
+
+          {/* Controls */}
+          <div className="flex items-center gap-4 mt-6 relative z-10">
             <Button
               variant="outline"
               size="icon"
-              onClick={() => handleDeductPoint("home")}
-              aria-label={`Deduct point from ${homeTeam.name}`}
-              className="h-12 w-12 md:h-14 md:w-14 rounded-full bg-white/10 hover:bg-white/20 border-white/20 text-white transition-all duration-200 hover:scale-110 active:scale-95"
-            >
-              <Minus className="w-5 h-5 md:w-6 md:h-6" />
-            </Button>
-
-            <span
-              className="text-white font-black text-[5rem] md:text-[10rem] leading-none tracking-tighter min-w-[1.2ch] text-center drop-shadow-2xl"
-              style={{
-                textShadow: "0 4px 30px rgba(0,0,0,0.3), 0 0 60px rgba(255,255,255,0.1)",
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDeductPoint("home");
               }}
+              aria-label={`Deduct point from ${homeTeam.name}`}
+              className="h-12 w-12 rounded-full bg-white/10 hover:bg-white/20 border-white/20 text-white transition-all duration-200 hover:scale-110 active:scale-95"
             >
-              {match.homeScore}
-            </span>
-
+              <Minus className="w-5 h-5" />
+            </Button>
+            <span className="text-white/60 text-sm font-medium px-2">Tap to score</span>
             <Button
               variant="outline"
               size="icon"
-              onClick={() => handleAddPoint("home")}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleAddPoint("home");
+              }}
               aria-label={`Add point to ${homeTeam.name}`}
-              className="h-12 w-12 md:h-14 md:w-14 rounded-full bg-white/10 hover:bg-white/20 border-white/20 text-white transition-all duration-200 hover:scale-110 active:scale-95"
+              className="h-12 w-12 rounded-full bg-white/10 hover:bg-white/20 border-white/20 text-white transition-all duration-200 hover:scale-110 active:scale-95"
             >
-              <Plus className="w-5 h-5 md:w-6 md:h-6" />
+              <Plus className="w-5 h-5" />
             </Button>
           </div>
-        </div>
+        </button>
 
         {/* Divider */}
-        <div className="hidden md:block w-0.5 bg-background" />
-        <div className="block md:hidden h-0.5 bg-background" />
+        <div className="hidden md:block w-1 bg-background" />
+        <div className="block md:hidden h-1 bg-background" />
 
         {/* Away Team */}
-        <div
-          className="flex-1 flex flex-col items-center justify-center p-4 relative overflow-hidden"
+        <button
+          type="button"
+          onClick={() => handleAddPoint("away")}
+          className="flex-1 flex flex-col items-center justify-center p-6 relative overflow-hidden cursor-pointer select-none focus:outline-none active:scale-[0.99] transition-transform"
           style={{
             background: `linear-gradient(135deg, ${awayColor}, ${awayColor}cc)`,
           }}
+          aria-label={`Add point to ${awayTeam.name}. Current score: ${match.awayScore}`}
         >
           {/* Decorative elements */}
-          <div className="absolute -top-20 -left-20 w-60 h-60 rounded-full bg-white/5 blur-3xl" />
-          <div className="absolute -bottom-20 -right-20 w-80 h-80 rounded-full bg-white/5 blur-3xl" />
+          <div className="absolute -top-32 -left-32 w-80 h-80 rounded-full bg-white/5 blur-3xl" />
+          <div className="absolute -bottom-32 -right-32 w-96 h-96 rounded-full bg-white/5 blur-3xl" />
+          <div className="absolute top-0 right-0 w-full h-full bg-linear-to-br from-white/5 to-transparent" />
+
+          {/* Leading indicator */}
+          {awayLeading && (
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-1.5 bg-white/20 backdrop-blur-sm rounded-full px-3 py-1.5">
+              <Crown className="w-4 h-4 text-amber-300" />
+              <span className="text-xs font-semibold text-white">Leading</span>
+            </div>
+          )}
 
           {/* Team Name */}
           <h2 className="text-white/90 text-lg md:text-xl font-semibold mb-4 relative z-10">
             {awayTeam.name}
           </h2>
 
-          {/* Score Controls */}
-          <div className="flex items-center gap-4 md:gap-8 relative z-10">
+          {/* Score */}
+          <span
+            className="text-white font-black text-[6rem] md:text-[12rem] leading-none tracking-tighter min-w-[1.5ch] text-center drop-shadow-2xl relative z-10"
+            style={{
+              textShadow: "0 4px 40px rgba(0,0,0,0.3), 0 0 80px rgba(255,255,255,0.15)",
+            }}
+          >
+            {match.awayScore}
+          </span>
+
+          {/* Controls */}
+          <div className="flex items-center gap-4 mt-6 relative z-10">
             <Button
               variant="outline"
               size="icon"
-              onClick={() => handleDeductPoint("away")}
-              aria-label={`Deduct point from ${awayTeam.name}`}
-              className="h-12 w-12 md:h-14 md:w-14 rounded-full bg-white/10 hover:bg-white/20 border-white/20 text-white transition-all duration-200 hover:scale-110 active:scale-95"
-            >
-              <Minus className="w-5 h-5 md:w-6 md:h-6" />
-            </Button>
-
-            <span
-              className="text-white font-black text-[5rem] md:text-[10rem] leading-none tracking-tighter min-w-[1.2ch] text-center drop-shadow-2xl"
-              style={{
-                textShadow: "0 4px 30px rgba(0,0,0,0.3), 0 0 60px rgba(255,255,255,0.1)",
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDeductPoint("away");
               }}
+              aria-label={`Deduct point from ${awayTeam.name}`}
+              className="h-12 w-12 rounded-full bg-white/10 hover:bg-white/20 border-white/20 text-white transition-all duration-200 hover:scale-110 active:scale-95"
             >
-              {match.awayScore}
-            </span>
-
+              <Minus className="w-5 h-5" />
+            </Button>
+            <span className="text-white/60 text-sm font-medium px-2">Tap to score</span>
             <Button
               variant="outline"
               size="icon"
-              onClick={() => handleAddPoint("away")}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleAddPoint("away");
+              }}
               aria-label={`Add point to ${awayTeam.name}`}
-              className="h-12 w-12 md:h-14 md:w-14 rounded-full bg-white/10 hover:bg-white/20 border-white/20 text-white transition-all duration-200 hover:scale-110 active:scale-95"
+              className="h-12 w-12 rounded-full bg-white/10 hover:bg-white/20 border-white/20 text-white transition-all duration-200 hover:scale-110 active:scale-95"
             >
-              <Plus className="w-5 h-5 md:w-6 md:h-6" />
+              <Plus className="w-5 h-5" />
             </Button>
           </div>
-        </div>
+        </button>
       </div>
 
       {/* Complete Match Dialog */}
       <Dialog open={showCompleteDialog} onOpenChange={setShowCompleteDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>End Match?</DialogTitle>
-            <DialogDescription>
-              Final score: {homeTeam.name} {match.homeScore} - {match.awayScore} {awayTeam.name}
-              <br />
-              <br />
-              Winner:{" "}
-              <strong className="text-emerald-500">
-                {match.homeScore > match.awayScore ? homeTeam.name : awayTeam.name}
-              </strong>
+            <DialogTitle className="flex items-center gap-2">
+              <Trophy className="w-5 h-5 text-primary" />
+              End Match?
+            </DialogTitle>
+            <DialogDescription className="space-y-3 pt-2">
+              <div className="flex items-center justify-center gap-4 p-4 rounded-xl bg-muted/50">
+                <div className="text-center">
+                  <div 
+                    className="w-10 h-10 rounded-lg mx-auto mb-1"
+                    style={{ backgroundColor: homeColor }}
+                  />
+                  <p className="text-xs text-muted-foreground">{homeTeam.name}</p>
+                  <p className="text-2xl font-bold">{match.homeScore}</p>
+                </div>
+                <span className="text-muted-foreground">-</span>
+                <div className="text-center">
+                  <div 
+                    className="w-10 h-10 rounded-lg mx-auto mb-1"
+                    style={{ backgroundColor: awayColor }}
+                  />
+                  <p className="text-xs text-muted-foreground">{awayTeam.name}</p>
+                  <p className="text-2xl font-bold">{match.awayScore}</p>
+                </div>
+              </div>
+              <div className="text-center pt-2">
+                <p className="text-sm text-muted-foreground">Winner</p>
+                <p className="font-semibold text-lg text-emerald-500">
+                  {match.homeScore > match.awayScore ? homeTeam.name : awayTeam.name}
+                </p>
+              </div>
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex-row gap-2 sm:gap-2">
             <Button variant="outline" onClick={() => setShowCompleteDialog(false)} className="flex-1">
               Continue Playing
             </Button>
-            <Button onClick={handleCompleteMatch} className="flex-1 gap-2">
+            <Button onClick={handleCompleteMatch} className="flex-1 gap-2 shadow-lg shadow-primary/20">
               <Trophy className="w-4 h-4" />
               Confirm Winner
             </Button>
@@ -408,4 +466,3 @@ export default function MatchPage() {
     </div>
   );
 }
-

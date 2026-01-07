@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, type KeyboardEvent, type ChangeEvent } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -10,19 +11,20 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Users, Check } from "lucide-react";
 import type { PersistentTeam } from "@/types/game";
 
 const TEAM_COLORS = [
-  "#3b82f6", // Blue
-  "#f97316", // Orange
-  "#22c55e", // Green
   "#ef4444", // Red
+  "#f97316", // Orange
+  "#eab308", // Yellow
+  "#22c55e", // Green
+  "#14b8a6", // Teal
+  "#06b6d4", // Cyan
+  "#3b82f6", // Blue
+  "#6366f1", // Indigo
   "#8b5cf6", // Purple
   "#ec4899", // Pink
-  "#14b8a6", // Teal
-  "#f59e0b", // Amber
-  "#6366f1", // Indigo
-  "#06b6d4", // Cyan
 ];
 
 interface TeamFormProps {
@@ -93,7 +95,10 @@ export const TeamForm = ({ open, onOpenChange, team, onSubmit }: TeamFormProps) 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{isEditing ? "Edit Team" : "Create Team"}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <Users className="w-5 h-5 text-primary" />
+            {isEditing ? "Edit Team" : "Create Team"}
+          </DialogTitle>
           <DialogDescription>
             {isEditing
               ? "Update your team's name and color."
@@ -107,7 +112,7 @@ export const TeamForm = ({ open, onOpenChange, team, onSubmit }: TeamFormProps) 
             <label htmlFor="team-name" className="text-sm font-medium">
               Team Name
             </label>
-            <input
+            <Input
               id="team-name"
               type="text"
               value={name}
@@ -115,15 +120,7 @@ export const TeamForm = ({ open, onOpenChange, team, onSubmit }: TeamFormProps) 
               onKeyDown={handleKeyDown}
               placeholder="Enter team name"
               autoFocus
-              className={`
-                w-full px-4 py-3 rounded-lg
-                bg-card border transition-all duration-200
-                outline-none focus:ring-2
-                ${error
-                  ? "border-destructive focus:ring-destructive/30"
-                  : "border-border/50 focus:border-primary focus:ring-primary/30"
-                }
-              `}
+              className={error ? "border-destructive focus-visible:ring-destructive" : ""}
               aria-describedby={error ? "team-name-error" : undefined}
               aria-invalid={!!error}
             />
@@ -135,7 +132,7 @@ export const TeamForm = ({ open, onOpenChange, team, onSubmit }: TeamFormProps) 
           </div>
 
           {/* Color Picker */}
-          <div className="space-y-2">
+          <div className="space-y-3">
             <label className="text-sm font-medium">Team Color</label>
             <div className="flex flex-wrap gap-2">
               {TEAM_COLORS.map((c) => (
@@ -144,14 +141,18 @@ export const TeamForm = ({ open, onOpenChange, team, onSubmit }: TeamFormProps) 
                   type="button"
                   onClick={() => handleColorSelect(c)}
                   className={`
-                    w-10 h-10 rounded-lg transition-all duration-200
-                    hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2
-                    ${color === c ? "ring-2 ring-offset-2 ring-white scale-110" : ""}
+                    w-10 h-10 rounded-xl transition-all duration-200 relative cursor-pointer
+                    hover:scale-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background
+                    ${color === c ? "ring-2 ring-offset-2 ring-offset-background ring-white scale-110" : ""}
                   `}
                   style={{ backgroundColor: c }}
                   aria-label={`Select color ${c}`}
                   aria-pressed={color === c}
-                />
+                >
+                  {color === c && (
+                    <Check className="w-5 h-5 text-white absolute inset-0 m-auto drop-shadow-md" />
+                  )}
+                </button>
               ))}
             </div>
           </div>
@@ -160,17 +161,18 @@ export const TeamForm = ({ open, onOpenChange, team, onSubmit }: TeamFormProps) 
           <div className="space-y-2">
             <label className="text-sm font-medium">Preview</label>
             <div
-              className="p-4 rounded-xl flex items-center gap-3 text-white"
+              className="p-4 rounded-xl flex items-center gap-4 text-white relative overflow-hidden"
               style={{
-                background: `linear-gradient(135deg, ${color}, ${color}99)`,
+                background: `linear-gradient(135deg, ${color}, ${color}cc)`,
               }}
             >
-              <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center">
-                <span className="text-xl font-bold">
+              <div className="absolute inset-0 bg-white/5" />
+              <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center relative z-10">
+                <span className="text-2xl font-bold">
                   {name.trim().charAt(0).toUpperCase() || "T"}
                 </span>
               </div>
-              <span className="font-semibold text-lg">
+              <span className="font-semibold text-lg relative z-10">
                 {name.trim() || "Team Name"}
               </span>
             </div>
@@ -181,7 +183,8 @@ export const TeamForm = ({ open, onOpenChange, team, onSubmit }: TeamFormProps) 
           <Button variant="outline" onClick={handleCancel} className="flex-1">
             Cancel
           </Button>
-          <Button onClick={handleSubmit} className="flex-1">
+          <Button onClick={handleSubmit} className="flex-1 gap-2 shadow-lg shadow-primary/20">
+            <Check className="w-4 h-4" />
             {isEditing ? "Save Changes" : "Create Team"}
           </Button>
         </DialogFooter>
@@ -189,4 +192,3 @@ export const TeamForm = ({ open, onOpenChange, team, onSubmit }: TeamFormProps) 
     </Dialog>
   );
 };
-

@@ -6,7 +6,9 @@ import { Navigation } from "@/components/Navigation";
 import { useApp } from "@/context/AppContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Zap, ChevronRight, Plus, Shuffle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Users, Zap, Check, Plus, Shuffle, Swords } from "lucide-react";
 
 export default function QuickMatchPage() {
   const router = useRouter();
@@ -105,30 +107,32 @@ export default function QuickMatchPage() {
       <main className="max-w-4xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
-            <Zap className="w-8 h-8 text-white" />
+          <div className="w-20 h-20 mx-auto mb-4 rounded-3xl bg-linear-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-2xl shadow-amber-500/30">
+            <Zap className="w-10 h-10 text-white" />
           </div>
           <h1 className="text-3xl font-bold tracking-tight mb-2">Quick Match</h1>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground max-w-md mx-auto">
             Start a quick match between two teams without creating a competition
           </p>
         </div>
 
         {/* No Teams State */}
         {availableTeams.length < 2 ? (
-          <Card className="border-border/50 bg-card/30 text-center">
+          <Card className="border-border/40 bg-card/30 text-center">
             <CardContent className="py-12">
-              <Users className="w-16 h-16 mx-auto mb-4 text-muted-foreground/30" />
-              <h3 className="text-lg font-semibold mb-2">
+              <div className="w-20 h-20 mx-auto mb-4 rounded-3xl bg-muted/50 flex items-center justify-center">
+                <Users className="w-10 h-10 text-muted-foreground/40" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">
                 {availableTeams.length === 0
                   ? "No teams available"
                   : "Need at least 2 teams"}
               </h3>
-              <p className="text-muted-foreground mb-6">
+              <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
                 Create some teams first to start a quick match.
               </p>
-              <Button onClick={handleQuickCreateTeam} variant="outline" className="gap-2">
-                <Plus className="w-4 h-4" />
+              <Button onClick={handleQuickCreateTeam} variant="outline" className="gap-2" size="lg">
+                <Plus className="w-5 h-5" />
                 Create Team
               </Button>
             </CardContent>
@@ -138,13 +142,19 @@ export default function QuickMatchPage() {
             {/* Team Selection */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
               {/* Home Team Selection */}
-              <Card className="border-border/50 bg-card/30">
-                <CardHeader>
-                  <CardTitle className="text-lg">Home Team</CardTitle>
+              <Card className="border-border/40 bg-card/30">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-sky-500/20 flex items-center justify-center">
+                      <Users className="w-4 h-4 text-sky-500" />
+                    </div>
+                    Home Team
+                  </CardTitle>
                   <CardDescription>Select the first team</CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                <Separator />
+                <CardContent className="pt-4">
+                  <div className="space-y-2 max-h-64 overflow-y-auto scrollbar-thin pr-1">
                     {availableTeams.map((team) => {
                       const isSelected = team.id === homeTeamId;
                       const isDisabled = team.id === awayTeamId;
@@ -157,26 +167,28 @@ export default function QuickMatchPage() {
                           onClick={() => handleHomeTeamSelect(team.id)}
                           disabled={isDisabled}
                           className={`
-                            w-full flex items-center gap-3 p-3 rounded-lg text-left transition-all
+                            w-full flex items-center gap-3 p-3 rounded-xl text-left transition-all duration-200 
                             ${isSelected
-                              ? "bg-primary/10 border-2 border-primary"
-                              : "bg-card border border-border/50 hover:border-primary/30"
+                              ? "bg-primary/10 ring-2 ring-primary shadow-md"
+                              : "bg-card hover:bg-accent/50 border border-border/40 hover:border-primary/30"
                             }
                             ${isDisabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}
                           `}
                           aria-pressed={isSelected}
                         >
                           <div
-                            className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                            className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 shadow-md"
                             style={{
                               background: `linear-gradient(135deg, ${teamColor}, ${teamColor}99)`,
                             }}
                           >
-                            <Users className="w-5 h-5 text-white" />
+                            <span className="text-sm font-bold text-white">
+                              {team.name.charAt(0).toUpperCase()}
+                            </span>
                           </div>
-                          <span className="font-medium truncate">{team.name}</span>
+                          <span className="font-medium truncate flex-1">{team.name}</span>
                           {isSelected && (
-                            <ChevronRight className="w-5 h-5 text-primary ml-auto" />
+                            <Check className="w-5 h-5 text-primary shrink-0" />
                           )}
                         </button>
                       );
@@ -186,13 +198,19 @@ export default function QuickMatchPage() {
               </Card>
 
               {/* Away Team Selection */}
-              <Card className="border-border/50 bg-card/30">
-                <CardHeader>
-                  <CardTitle className="text-lg">Away Team</CardTitle>
+              <Card className="border-border/40 bg-card/30">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-orange-500/20 flex items-center justify-center">
+                      <Users className="w-4 h-4 text-orange-500" />
+                    </div>
+                    Away Team
+                  </CardTitle>
                   <CardDescription>Select the opponent</CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                <Separator />
+                <CardContent className="pt-4">
+                  <div className="space-y-2 max-h-64 overflow-y-auto scrollbar-thin pr-1">
                     {availableTeams.map((team) => {
                       const isSelected = team.id === awayTeamId;
                       const isDisabled = team.id === homeTeamId;
@@ -205,26 +223,28 @@ export default function QuickMatchPage() {
                           onClick={() => handleAwayTeamSelect(team.id)}
                           disabled={isDisabled}
                           className={`
-                            w-full flex items-center gap-3 p-3 rounded-lg text-left transition-all
+                            w-full flex items-center gap-3 p-3 rounded-xl text-left transition-all duration-200 
                             ${isSelected
-                              ? "bg-primary/10 border-2 border-primary"
-                              : "bg-card border border-border/50 hover:border-primary/30"
+                              ? "bg-primary/10 ring-2 ring-primary shadow-md"
+                              : "bg-card hover:bg-accent/50 border border-border/40 hover:border-primary/30"
                             }
                             ${isDisabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}
                           `}
                           aria-pressed={isSelected}
                         >
                           <div
-                            className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                            className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 shadow-md"
                             style={{
                               background: `linear-gradient(135deg, ${teamColor}, ${teamColor}99)`,
                             }}
                           >
-                            <Users className="w-5 h-5 text-white" />
+                            <span className="text-sm font-bold text-white">
+                              {team.name.charAt(0).toUpperCase()}
+                            </span>
                           </div>
-                          <span className="font-medium truncate">{team.name}</span>
+                          <span className="font-medium truncate flex-1">{team.name}</span>
                           {isSelected && (
-                            <ChevronRight className="w-5 h-5 text-primary ml-auto" />
+                            <Check className="w-5 h-5 text-primary shrink-0" />
                           )}
                         </button>
                       );
@@ -236,26 +256,31 @@ export default function QuickMatchPage() {
 
             {/* Match Preview */}
             {(homeTeam || awayTeam) && (
-              <Card className="border-border/50 bg-card/30 mb-6">
-                <CardContent className="py-6">
+              <Card className="border-border/40 bg-card/30 mb-6 overflow-hidden">
+                <div className="h-1 w-full bg-linear-to-r from-sky-500 via-primary to-orange-500" />
+                <CardContent className="py-8">
                   <div className="flex items-center justify-center gap-4 md:gap-8">
                     {/* Home Team Preview */}
                     <div className="text-center flex-1">
                       {homeTeam ? (
                         <>
                           <div
-                            className="w-16 h-16 mx-auto mb-2 rounded-xl flex items-center justify-center"
+                            className="w-20 h-20 mx-auto mb-3 rounded-2xl flex items-center justify-center shadow-xl relative overflow-hidden"
                             style={{
                               background: `linear-gradient(135deg, ${homeTeam.color || "#3b82f6"}, ${homeTeam.color || "#3b82f6"}99)`,
                             }}
                           >
-                            <Users className="w-8 h-8 text-white" />
+                            <div className="absolute inset-0 bg-white/10" />
+                            <span className="text-2xl font-bold text-white relative z-10">
+                              {homeTeam.name.charAt(0).toUpperCase()}
+                            </span>
                           </div>
-                          <p className="font-semibold">{homeTeam.name}</p>
+                          <p className="font-semibold text-lg">{homeTeam.name}</p>
+                          <Badge variant="secondary" className="mt-1">Home</Badge>
                         </>
                       ) : (
                         <>
-                          <div className="w-16 h-16 mx-auto mb-2 rounded-xl bg-card border-2 border-dashed border-border flex items-center justify-center">
+                          <div className="w-20 h-20 mx-auto mb-3 rounded-2xl bg-muted border-2 border-dashed border-border flex items-center justify-center">
                             <Users className="w-8 h-8 text-muted-foreground/30" />
                           </div>
                           <p className="text-muted-foreground">Select team</p>
@@ -264,25 +289,34 @@ export default function QuickMatchPage() {
                     </div>
 
                     {/* VS */}
-                    <div className="text-2xl font-bold text-muted-foreground">VS</div>
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
+                        <Swords className="w-7 h-7 text-primary" />
+                      </div>
+                      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">vs</span>
+                    </div>
 
                     {/* Away Team Preview */}
                     <div className="text-center flex-1">
                       {awayTeam ? (
                         <>
                           <div
-                            className="w-16 h-16 mx-auto mb-2 rounded-xl flex items-center justify-center"
+                            className="w-20 h-20 mx-auto mb-3 rounded-2xl flex items-center justify-center shadow-xl relative overflow-hidden"
                             style={{
                               background: `linear-gradient(135deg, ${awayTeam.color || "#f97316"}, ${awayTeam.color || "#f97316"}99)`,
                             }}
                           >
-                            <Users className="w-8 h-8 text-white" />
+                            <div className="absolute inset-0 bg-white/10" />
+                            <span className="text-2xl font-bold text-white relative z-10">
+                              {awayTeam.name.charAt(0).toUpperCase()}
+                            </span>
                           </div>
-                          <p className="font-semibold">{awayTeam.name}</p>
+                          <p className="font-semibold text-lg">{awayTeam.name}</p>
+                          <Badge variant="secondary" className="mt-1">Away</Badge>
                         </>
                       ) : (
                         <>
-                          <div className="w-16 h-16 mx-auto mb-2 rounded-xl bg-card border-2 border-dashed border-border flex items-center justify-center">
+                          <div className="w-20 h-20 mx-auto mb-3 rounded-2xl bg-muted border-2 border-dashed border-border flex items-center justify-center">
                             <Users className="w-8 h-8 text-muted-foreground/30" />
                           </div>
                           <p className="text-muted-foreground">Select team</p>
@@ -296,7 +330,7 @@ export default function QuickMatchPage() {
 
             {/* Error Message */}
             {error && (
-              <p className="text-destructive text-center mb-4">{error}</p>
+              <p className="text-destructive text-center mb-4 font-medium">{error}</p>
             )}
 
             {/* Actions */}
@@ -305,14 +339,15 @@ export default function QuickMatchPage() {
                 variant="outline"
                 onClick={handleRandomSelect}
                 className="gap-2"
+                size="lg"
               >
-                <Shuffle className="w-4 h-4" />
+                <Shuffle className="w-5 h-5" />
                 Random Teams
               </Button>
               <Button
                 onClick={handleStartMatch}
                 disabled={!canStart}
-                className="gap-2"
+                className="gap-2 shadow-xl shadow-primary/25"
                 size="lg"
               >
                 <Zap className="w-5 h-5" />
@@ -325,4 +360,3 @@ export default function QuickMatchPage() {
     </div>
   );
 }
-

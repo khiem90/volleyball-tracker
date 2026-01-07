@@ -90,7 +90,8 @@ body {
 }
 
 .scrollbar-thin::-webkit-scrollbar {
-  width: 4px;
+  width: 6px;
+  height: 6px;
 }
 
 .scrollbar-thin::-webkit-scrollbar-track {
@@ -98,12 +99,12 @@ body {
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb {
-  background-color: hsl(var(--muted-foreground) / 0.3);
-  border-radius: 2px;
+  background-color: hsl(var(--muted-foreground) / 0.2);
+  border-radius: 999px;
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background-color: hsl(var(--muted-foreground) / 0.5);
+  background-color: hsl(var(--muted-foreground) / 0.4);
 }
 
 /* Prevent text selection on score panels */
@@ -120,32 +121,50 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Dark theme as default */
+/* Coral Sunset Theme - Warm, energetic, and distinctive */
 :root {
-  --radius: 0.75rem;
-  --background: oklch(0.12 0.01 260);
-  --foreground: oklch(0.95 0 0);
-  --card: oklch(0.16 0.01 260);
-  --card-foreground: oklch(0.95 0 0);
-  --popover: oklch(0.16 0.01 260);
-  --popover-foreground: oklch(0.95 0 0);
-  --primary: oklch(0.75 0.15 55);
-  --primary-foreground: oklch(0.15 0 0);
-  --secondary: oklch(0.22 0.01 260);
-  --secondary-foreground: oklch(0.9 0 0);
-  --muted: oklch(0.2 0.01 260);
-  --muted-foreground: oklch(0.6 0 0);
-  --accent: oklch(0.25 0.02 260);
-  --accent-foreground: oklch(0.95 0 0);
-  --destructive: oklch(0.6 0.2 25);
-  --border: oklch(0.25 0.01 260);
-  --input: oklch(0.22 0.01 260);
-  --ring: oklch(0.75 0.15 55);
-  --chart-1: oklch(0.65 0.2 250);
-  --chart-2: oklch(0.65 0.2 45);
-  --chart-3: oklch(0.65 0.15 145);
-  --chart-4: oklch(0.65 0.2 320);
-  --chart-5: oklch(0.75 0.15 55);
+  --radius: 0.625rem;
+  
+  /* Deep charcoal background with warm undertone */
+  --background: oklch(0.13 0.015 30);
+  --foreground: oklch(0.96 0.01 60);
+  
+  /* Cards with subtle warmth */
+  --card: oklch(0.17 0.015 30);
+  --card-foreground: oklch(0.96 0.01 60);
+  
+  --popover: oklch(0.17 0.015 30);
+  --popover-foreground: oklch(0.96 0.01 60);
+  
+  /* Coral primary - vibrant and warm */
+  --primary: oklch(0.72 0.18 25);
+  --primary-foreground: oklch(0.13 0.015 30);
+  
+  /* Muted slate with warmth */
+  --secondary: oklch(0.22 0.012 30);
+  --secondary-foreground: oklch(0.92 0.01 60);
+  
+  --muted: oklch(0.20 0.012 30);
+  --muted-foreground: oklch(0.58 0.02 60);
+  
+  /* Warm accent */
+  --accent: oklch(0.25 0.02 30);
+  --accent-foreground: oklch(0.96 0.01 60);
+  
+  /* Warm red for destructive */
+  --destructive: oklch(0.58 0.22 25);
+  
+  /* Borders and inputs */
+  --border: oklch(0.28 0.015 30);
+  --input: oklch(0.22 0.012 30);
+  --ring: oklch(0.72 0.18 25);
+  
+  /* Chart colors - warm gradient palette */
+  --chart-1: oklch(0.72 0.18 25);
+  --chart-2: oklch(0.70 0.16 55);
+  --chart-3: oklch(0.68 0.15 145);
+  --chart-4: oklch(0.65 0.18 200);
+  --chart-5: oklch(0.62 0.16 280);
 }
 
 @layer base {
@@ -157,11 +176,22 @@ body {
   }
 }
 
-/* Glass effect utility */
+/* Glass morphism effect */
 .glass {
-  background: oklch(0.15 0.01 260 / 0.8);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: oklch(0.15 0.015 30 / 0.85);
+  backdrop-filter: blur(16px) saturate(1.8);
+  -webkit-backdrop-filter: blur(16px) saturate(1.8);
+}
+
+/* Subtle noise texture overlay */
+.noise-overlay::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  opacity: 0.03;
+  pointer-events: none;
+  mix-blend-mode: overlay;
 }
 
 /* Score panel gradients */
@@ -179,4 +209,130 @@ body {
     oklch(0.55 0.18 45) 50%, 
     oklch(0.45 0.15 50) 100%
   );
+}
+
+/* Glow effects */
+.glow-primary {
+  box-shadow: 0 0 30px -5px oklch(0.72 0.18 25 / 0.4);
+}
+
+.glow-success {
+  box-shadow: 0 0 20px -5px oklch(0.68 0.15 145 / 0.4);
+}
+
+/* Animated gradient background */
+.animated-gradient {
+  background: linear-gradient(
+    -45deg,
+    oklch(0.72 0.18 25 / 0.1),
+    oklch(0.70 0.16 55 / 0.1),
+    oklch(0.68 0.15 145 / 0.05),
+    oklch(0.13 0.015 30)
+  );
+  background-size: 400% 400%;
+  animation: gradientShift 15s ease infinite;
+}
+
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Subtle shine effect on hover */
+.shine-hover {
+  position: relative;
+  overflow: hidden;
+}
+
+.shine-hover::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    115deg,
+    transparent 0%,
+    transparent 40%,
+    oklch(1 0 0 / 0.08) 50%,
+    transparent 60%,
+    transparent 100%
+  );
+  transform: translateX(-100%);
+  transition: transform 0.6s ease;
+}
+
+.shine-hover:hover::after {
+  transform: translateX(100%);
+}
+
+/* Card hover lift effect */
+.card-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px -10px oklch(0 0 0 / 0.3);
+}
+
+/* Smooth color transitions */
+.color-transition {
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+}
+
+/* Icon container styles */
+.icon-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-lg);
+}
+
+/* Status badge variants */
+.status-draft {
+  background: oklch(0.45 0.05 250 / 0.2);
+  color: oklch(0.7 0.08 250);
+}
+
+.status-active {
+  background: oklch(0.70 0.16 55 / 0.2);
+  color: oklch(0.80 0.16 55);
+}
+
+.status-complete {
+  background: oklch(0.68 0.15 145 / 0.2);
+  color: oklch(0.78 0.15 145);
+}
+
+/* Focus visible styles */
+:focus-visible {
+  outline: 2px solid oklch(0.72 0.18 25);
+  outline-offset: 2px;
+}
+
+/* Better button active states */
+button:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+/* Smooth page transitions */
+main {
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

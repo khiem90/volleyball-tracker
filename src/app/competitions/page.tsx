@@ -6,17 +6,12 @@ import { Navigation } from "@/components/Navigation";
 import { CompetitionCard } from "@/components/CompetitionCard";
 import { useApp } from "@/context/AppContext";
 import { Button } from "@/components/ui/button";
-import { Plus, Trophy, Filter } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Plus, Trophy } from "lucide-react";
 import type { CompetitionStatus } from "@/types/game";
 
 type FilterOption = "all" | CompetitionStatus;
-
-const filterOptions: { value: FilterOption; label: string }[] = [
-  { value: "all", label: "All" },
-  { value: "in_progress", label: "In Progress" },
-  { value: "draft", label: "Draft" },
-  { value: "completed", label: "Completed" },
-];
 
 export default function CompetitionsPage() {
   const { state, deleteCompetition } = useApp();
@@ -29,8 +24,8 @@ export default function CompetitionsPage() {
     [deleteCompetition]
   );
 
-  const handleFilterChange = useCallback((newFilter: FilterOption) => {
-    setFilter(newFilter);
+  const handleFilterChange = useCallback((value: string) => {
+    setFilter(value as FilterOption);
   }, []);
 
   const filteredCompetitions = useMemo(() => {
@@ -51,21 +46,33 @@ export default function CompetitionsPage() {
     [state.matches]
   );
 
+  const getCounts = useMemo(() => ({
+    all: state.competitions.length,
+    draft: state.competitions.filter(c => c.status === "draft").length,
+    in_progress: state.competitions.filter(c => c.status === "in_progress").length,
+    completed: state.competitions.filter(c => c.status === "completed").length,
+  }), [state.competitions]);
+
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
 
       <main className="max-w-6xl mx-auto px-4 py-8">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Competitions</h1>
-            <p className="text-muted-foreground mt-1">
+            <div className="flex items-center gap-3 mb-1">
+              <h1 className="text-3xl font-bold tracking-tight">Competitions</h1>
+              <Badge variant="secondary" className="text-sm">
+                {state.competitions.length}
+              </Badge>
+            </div>
+            <p className="text-muted-foreground">
               Manage your tournaments and leagues
             </p>
           </div>
           <Link href="/competitions/new">
-            <Button className="gap-2">
+            <Button className="gap-2 shadow-lg shadow-primary/20">
               <Plus className="w-4 h-4" />
               <span className="hidden sm:inline">New Competition</span>
             </Button>
@@ -74,56 +81,49 @@ export default function CompetitionsPage() {
 
         {/* Filter Tabs */}
         {state.competitions.length > 0 && (
-          <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2">
-            <Filter className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-            {filterOptions.map((option) => {
-              const count =
-                option.value === "all"
-                  ? state.competitions.length
-                  : state.competitions.filter((c) => c.status === option.value).length;
-
-              return (
-                <Button
-                  key={option.value}
-                  variant={filter === option.value ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => handleFilterChange(option.value)}
-                  className={`
-                    gap-1.5 flex-shrink-0
-                    ${filter !== option.value ? "border-border/50 bg-card/50" : ""}
-                  `}
-                >
-                  {option.label}
-                  <span
-                    className={`
-                      px-1.5 py-0.5 text-xs rounded-full
-                      ${filter === option.value
-                        ? "bg-primary-foreground/20"
-                        : "bg-muted"
-                      }
-                    `}
-                  >
-                    {count}
-                  </span>
-                </Button>
-              );
-            })}
-          </div>
+          <Tabs value={filter} onValueChange={handleFilterChange} className="mb-6">
+            <TabsList className="bg-card/50 border border-border/40 p-1">
+              <TabsTrigger value="all" className="gap-2 data-[state=active]:shadow-md">
+                All
+                <Badge variant="secondary" className="h-5 px-1.5 text-xs">
+                  {getCounts.all}
+                </Badge>
+              </TabsTrigger>
+              <TabsTrigger value="in_progress" className="gap-2 data-[state=active]:shadow-md">
+                Active
+                <Badge variant="secondary" className="h-5 px-1.5 text-xs">
+                  {getCounts.in_progress}
+                </Badge>
+              </TabsTrigger>
+              <TabsTrigger value="draft" className="gap-2 data-[state=active]:shadow-md">
+                Draft
+                <Badge variant="secondary" className="h-5 px-1.5 text-xs">
+                  {getCounts.draft}
+                </Badge>
+              </TabsTrigger>
+              <TabsTrigger value="completed" className="gap-2 data-[state=active]:shadow-md">
+                Done
+                <Badge variant="secondary" className="h-5 px-1.5 text-xs">
+                  {getCounts.completed}
+                </Badge>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
         )}
 
         {/* Competitions List */}
         {state.competitions.length === 0 ? (
           <div className="text-center py-16">
-            <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-card/50 flex items-center justify-center">
-              <Trophy className="w-10 h-10 text-muted-foreground/50" />
+            <div className="w-24 h-24 mx-auto mb-6 rounded-3xl bg-linear-to-br from-violet-500/20 to-purple-600/20 flex items-center justify-center">
+              <Trophy className="w-12 h-12 text-violet-500/60" />
             </div>
-            <h2 className="text-xl font-semibold mb-2">No competitions yet</h2>
-            <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
+            <h2 className="text-2xl font-semibold mb-3">No competitions yet</h2>
+            <p className="text-muted-foreground mb-8 max-w-md mx-auto">
               Create your first competition to organize teams into tournaments, round robins, or leagues.
             </p>
             <Link href="/competitions/new">
-              <Button className="gap-2">
-                <Plus className="w-4 h-4" />
+              <Button className="gap-2 shadow-lg shadow-primary/20" size="lg">
+                <Plus className="w-5 h-5" />
                 Create Your First Competition
               </Button>
             </Link>
@@ -155,4 +155,3 @@ export default function CompetitionsPage() {
     </div>
   );
 }
-
