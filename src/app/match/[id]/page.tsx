@@ -4,6 +4,7 @@ import { useState, useCallback, useMemo, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useApp } from "@/context/AppContext";
+import { useSession } from "@/context/SessionContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -14,7 +15,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ArrowLeft, Minus, Plus, Trophy, Undo2, Check, Crown } from "lucide-react";
+import { ShareButton } from "@/components/ShareSession";
+import {
+  ArrowLeft,
+  Minus,
+  Plus,
+  Trophy,
+  Undo2,
+  Check,
+  Crown,
+  Eye,
+  Shield,
+} from "lucide-react";
 import { advanceWinner } from "@/lib/singleElimination";
 import { processMatchResult } from "@/lib/win2out";
 import { processMatchResult as processTwoMatchRotationResult } from "@/lib/twoMatchRotation";
@@ -33,15 +45,20 @@ export default function MatchPage() {
     completeMatch,
     updateCompetition,
     addMatch,
+    canEdit,
+    isSharedMode,
   } = useApp();
+
+  const { role } = useSession();
 
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
   const [history, setHistory] = useState<{ home: number; away: number }[]>([]);
 
   const match = useMemo(() => getMatchById(matchId), [getMatchById, matchId]);
   const competition = useMemo(
-    () => (match?.competitionId ? getCompetitionById(match.competitionId) : null),
-    [match?.competitionId, getCompetitionById]
+    () =>
+      match?.competitionId ? getCompetitionById(match.competitionId) : null,
+    [match, getCompetitionById]
   );
 
   const homeTeam = useMemo(
@@ -60,37 +77,52 @@ export default function MatchPage() {
     }
   }, [match, matchId, startMatch]);
 
-  // Track score history for undo
-  useEffect(() => {
-    if (match) {
-      setHistory((prev) => {
-        const last = prev[prev.length - 1];
-        if (!last || last.home !== match.homeScore || last.away !== match.awayScore) {
-          return [...prev, { home: match.homeScore, away: match.awayScore }];
-        }
-        return prev;
-      });
-    }
-  }, [match?.homeScore, match?.awayScore]);
-
   const handleAddPoint = useCallback(
     (team: "home" | "away") => {
-      if (!match) return;
-      const newHome = team === "home" ? match.homeScore + 1 : match.homeScore;
-      const newAway = team === "away" ? match.awayScore + 1 : match.awayScore;
+      if (!match || !canEdit) return;
+      const currentHome = match.homeScore;
+      const currentAway = match.awayScore;
+      const newHome = team === "home" ? currentHome + 1 : currentHome;
+      const newAway = team === "away" ? currentAway + 1 : currentAway;
+      setHistory((prev) => {
+        const seeded =
+          prev.length === 0
+            ? [{ home: currentHome, away: currentAway }]
+            : prev;
+        const last = seeded[seeded.length - 1];
+        if (!last || last.home !== newHome || last.away !== newAway) {
+          return [...seeded, { home: newHome, away: newAway }];
+        }
+        return seeded;
+      });
       updateMatchScore(matchId, newHome, newAway);
     },
-    [match, matchId, updateMatchScore]
+    [match, matchId, updateMatchScore, canEdit]
   );
 
   const handleDeductPoint = useCallback(
     (team: "home" | "away") => {
-      if (!match) return;
-      const newHome = team === "home" ? Math.max(0, match.homeScore - 1) : match.homeScore;
-      const newAway = team === "away" ? Math.max(0, match.awayScore - 1) : match.awayScore;
+      if (!match || !canEdit) return;
+      const currentHome = match.homeScore;
+      const currentAway = match.awayScore;
+      const newHome =
+        team === "home" ? Math.max(0, currentHome - 1) : currentHome;
+      const newAway =
+        team === "away" ? Math.max(0, currentAway - 1) : currentAway;
+      setHistory((prev) => {
+        const seeded =
+          prev.length === 0
+            ? [{ home: currentHome, away: currentAway }]
+            : prev;
+        const last = seeded[seeded.length - 1];
+        if (!last || last.home !== newHome || last.away !== newAway) {
+          return [...seeded, { home: newHome, away: newAway }];
+        }
+        return seeded;
+      });
       updateMatchScore(matchId, newHome, newAway);
     },
-    [match, matchId, updateMatchScore]
+    [match, matchId, updateMatchScore, canEdit]
   );
 
   const handleUndo = useCallback(() => {
@@ -109,7 +141,11 @@ export default function MatchPage() {
     completeMatch(matchId, winnerId);
 
     // Handle bracket advancement for elimination tournaments
-    if (competition && (competition.type === "single_elimination" || competition.type === "double_elimination")) {
+    if (
+      competition &&
+      (competition.type === "single_elimination" ||
+        competition.type === "double_elimination")
+    ) {
       const competitionMatches = state.matches.filter(
         (m) => m.competitionId === competition.id
       );
@@ -117,16 +153,30 @@ export default function MatchPage() {
 
       updatedMatches.forEach((updatedMatch) => {
         if (updatedMatch.id !== match.id) {
-          const original = competitionMatches.find((m) => m.id === updatedMatch.id);
-          if (original && (original.homeTeamId !== updatedMatch.homeTeamId || original.awayTeamId !== updatedMatch.awayTeamId)) {
-            updateMatchScore(updatedMatch.id, updatedMatch.homeScore, updatedMatch.awayScore);
+          const original = competitionMatches.find(
+            (m) => m.id === updatedMatch.id
+          );
+          if (
+            original &&
+            (original.homeTeamId !== updatedMatch.homeTeamId ||
+              original.awayTeamId !== updatedMatch.awayTeamId)
+          ) {
+            updateMatchScore(
+              updatedMatch.id,
+              updatedMatch.homeScore,
+              updatedMatch.awayScore
+            );
           }
         }
       });
     }
 
     // Handle Win 2 & Out format
-    if (competition && competition.type === "win2out" && competition.win2outState) {
+    if (
+      competition &&
+      competition.type === "win2out" &&
+      competition.win2outState
+    ) {
       const completedMatch = {
         ...match,
         winnerId,
@@ -151,7 +201,11 @@ export default function MatchPage() {
     }
 
     // Handle Two Match Rotation format
-    if (competition && competition.type === "two_match_rotation" && competition.twoMatchRotationState) {
+    if (
+      competition &&
+      competition.type === "two_match_rotation" &&
+      competition.twoMatchRotationState
+    ) {
       const completedMatch = {
         ...match,
         winnerId,
@@ -183,7 +237,17 @@ export default function MatchPage() {
     } else {
       router.push("/");
     }
-  }, [match, matchId, competition, state.matches, completeMatch, updateMatchScore, updateCompetition, addMatch, router]);
+  }, [
+    match,
+    matchId,
+    competition,
+    state.matches,
+    completeMatch,
+    updateMatchScore,
+    updateCompetition,
+    addMatch,
+    router,
+  ]);
 
   const handleOpenCompleteDialog = useCallback(() => {
     if (!match) return;
@@ -201,7 +265,9 @@ export default function MatchPage() {
             <Trophy className="w-10 h-10 text-muted-foreground/30" />
           </div>
           <h2 className="text-xl font-semibold mb-2">Match not found</h2>
-          <p className="text-muted-foreground mb-6">This match may have been deleted.</p>
+          <p className="text-muted-foreground mb-6">
+            This match may have been deleted.
+          </p>
           <Link href="/">
             <Button variant="outline" className="gap-2">
               <ArrowLeft className="w-4 h-4" />
@@ -250,25 +316,47 @@ export default function MatchPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleUndo}
-              disabled={history.length < 2}
-              className="gap-2"
-            >
-              <Undo2 className="w-4 h-4" />
-              <span className="hidden sm:inline">Undo</span>
-            </Button>
-            <Button
-              size="sm"
-              onClick={handleOpenCompleteDialog}
-              disabled={!canComplete}
-              className="gap-2 shadow-lg shadow-primary/20"
-            >
-              <Check className="w-4 h-4" />
-              <span className="hidden sm:inline">End Match</span>
-            </Button>
+            {isSharedMode && (
+              <Badge
+                variant="outline"
+                className={`gap-1 text-xs ${
+                  role === "viewer"
+                    ? "bg-muted text-muted-foreground"
+                    : "bg-blue-500/20 text-blue-500 border-blue-500/30"
+                }`}
+              >
+                {role === "viewer" ? (
+                  <Eye className="w-3 h-3" />
+                ) : (
+                  <Shield className="w-3 h-3" />
+                )}
+                {role}
+              </Badge>
+            )}
+            {isSharedMode && <ShareButton />}
+            {canEdit && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleUndo}
+                  disabled={history.length < 2}
+                  className="gap-2"
+                >
+                  <Undo2 className="w-4 h-4" />
+                  <span className="hidden sm:inline">Undo</span>
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleOpenCompleteDialog}
+                  disabled={!canComplete}
+                  className="gap-2 shadow-lg shadow-primary/20"
+                >
+                  <Check className="w-4 h-4" />
+                  <span className="hidden sm:inline">End Match</span>
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -276,19 +364,44 @@ export default function MatchPage() {
       {/* Score Panels */}
       <div className="flex-1 flex flex-col md:flex-row">
         {/* Home Team */}
-        <button
-          type="button"
-          onClick={() => handleAddPoint("home")}
-          className="flex-1 flex flex-col items-center justify-center p-6 relative overflow-hidden cursor-pointer select-none focus:outline-none active:scale-[0.99] transition-transform"
+        <div
+          role={canEdit ? "button" : undefined}
+          tabIndex={canEdit ? 0 : undefined}
+          onClick={canEdit ? () => handleAddPoint("home") : undefined}
+          onKeyDown={
+            canEdit
+              ? (e) => {
+                  if (e.key === "Enter" || e.key === " ")
+                    handleAddPoint("home");
+                }
+              : undefined
+          }
+          className={`flex-1 flex flex-col items-center justify-center p-6 relative overflow-hidden select-none focus:outline-none transition-transform ${
+            canEdit ? "cursor-pointer active:scale-[0.99]" : ""
+          }`}
           style={{
             background: `linear-gradient(135deg, ${homeColor}, ${homeColor}cc)`,
           }}
-          aria-label={`Add point to ${homeTeam.name}. Current score: ${match.homeScore}`}
+          aria-label={
+            canEdit
+              ? `Add point to ${homeTeam.name}. Current score: ${match.homeScore}`
+              : `${homeTeam.name}: ${match.homeScore}`
+          }
         >
           {/* Decorative elements */}
           <div className="absolute -top-32 -left-32 w-80 h-80 rounded-full bg-white/5 blur-3xl" />
           <div className="absolute -bottom-32 -right-32 w-96 h-96 rounded-full bg-white/5 blur-3xl" />
           <div className="absolute top-0 right-0 w-full h-full bg-linear-to-br from-white/5 to-transparent" />
+
+          {/* View-only indicator */}
+          {!canEdit && isSharedMode && (
+            <div className="absolute top-4 right-4 flex items-center gap-1.5 bg-white/20 backdrop-blur-sm rounded-full px-3 py-1.5">
+              <Eye className="w-4 h-4 text-white/80" />
+              <span className="text-xs font-medium text-white/80">
+                View Only
+              </span>
+            </div>
+          )}
 
           {/* Leading indicator */}
           {homeLeading && (
@@ -307,55 +420,81 @@ export default function MatchPage() {
           <span
             className="text-white font-black text-[6rem] md:text-[12rem] leading-none tracking-tighter min-w-[1.5ch] text-center drop-shadow-2xl relative z-10"
             style={{
-              textShadow: "0 4px 40px rgba(0,0,0,0.3), 0 0 80px rgba(255,255,255,0.15)",
+              textShadow:
+                "0 4px 40px rgba(0,0,0,0.3), 0 0 80px rgba(255,255,255,0.15)",
             }}
           >
             {match.homeScore}
           </span>
 
-          {/* Controls */}
-          <div className="flex items-center gap-4 mt-6 relative z-10">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleDeductPoint("home");
-              }}
-              aria-label={`Deduct point from ${homeTeam.name}`}
-              className="h-12 w-12 rounded-full bg-white/10 hover:bg-white/20 border-white/20 text-white transition-all duration-200 hover:scale-110 active:scale-95"
-            >
-              <Minus className="w-5 h-5" />
-            </Button>
-            <span className="text-white/60 text-sm font-medium px-2">Tap to score</span>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleAddPoint("home");
-              }}
-              aria-label={`Add point to ${homeTeam.name}`}
-              className="h-12 w-12 rounded-full bg-white/10 hover:bg-white/20 border-white/20 text-white transition-all duration-200 hover:scale-110 active:scale-95"
-            >
-              <Plus className="w-5 h-5" />
-            </Button>
-          </div>
-        </button>
+          {/* Controls - only show if can edit */}
+          {canEdit ? (
+            <div className="flex items-center gap-4 mt-6 relative z-10">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDeductPoint("home");
+                }}
+                aria-label={`Deduct point from ${homeTeam.name}`}
+                className="h-12 w-12 rounded-full bg-white/10 hover:bg-white/20 border-white/20 text-white transition-all duration-200 hover:scale-110 active:scale-95"
+              >
+                <Minus className="w-5 h-5" />
+              </Button>
+              <span className="text-white/60 text-sm font-medium px-2">
+                Tap to score
+              </span>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleAddPoint("home");
+                }}
+                aria-label={`Add point to ${homeTeam.name}`}
+                className="h-12 w-12 rounded-full bg-white/10 hover:bg-white/20 border-white/20 text-white transition-all duration-200 hover:scale-110 active:scale-95"
+              >
+                <Plus className="w-5 h-5" />
+              </Button>
+            </div>
+          ) : (
+            <div className="mt-6 relative z-10">
+              <span className="text-white/40 text-sm font-medium">
+                Live Score
+              </span>
+            </div>
+          )}
+        </div>
 
         {/* Divider */}
         <div className="hidden md:block w-1 bg-background" />
         <div className="block md:hidden h-1 bg-background" />
 
         {/* Away Team */}
-        <button
-          type="button"
-          onClick={() => handleAddPoint("away")}
-          className="flex-1 flex flex-col items-center justify-center p-6 relative overflow-hidden cursor-pointer select-none focus:outline-none active:scale-[0.99] transition-transform"
+        <div
+          role={canEdit ? "button" : undefined}
+          tabIndex={canEdit ? 0 : undefined}
+          onClick={canEdit ? () => handleAddPoint("away") : undefined}
+          onKeyDown={
+            canEdit
+              ? (e) => {
+                  if (e.key === "Enter" || e.key === " ")
+                    handleAddPoint("away");
+                }
+              : undefined
+          }
+          className={`flex-1 flex flex-col items-center justify-center p-6 relative overflow-hidden select-none focus:outline-none transition-transform ${
+            canEdit ? "cursor-pointer active:scale-[0.99]" : ""
+          }`}
           style={{
             background: `linear-gradient(135deg, ${awayColor}, ${awayColor}cc)`,
           }}
-          aria-label={`Add point to ${awayTeam.name}. Current score: ${match.awayScore}`}
+          aria-label={
+            canEdit
+              ? `Add point to ${awayTeam.name}. Current score: ${match.awayScore}`
+              : `${awayTeam.name}: ${match.awayScore}`
+          }
         >
           {/* Decorative elements */}
           <div className="absolute -top-32 -left-32 w-80 h-80 rounded-full bg-white/5 blur-3xl" />
@@ -379,41 +518,52 @@ export default function MatchPage() {
           <span
             className="text-white font-black text-[6rem] md:text-[12rem] leading-none tracking-tighter min-w-[1.5ch] text-center drop-shadow-2xl relative z-10"
             style={{
-              textShadow: "0 4px 40px rgba(0,0,0,0.3), 0 0 80px rgba(255,255,255,0.15)",
+              textShadow:
+                "0 4px 40px rgba(0,0,0,0.3), 0 0 80px rgba(255,255,255,0.15)",
             }}
           >
             {match.awayScore}
           </span>
 
-          {/* Controls */}
-          <div className="flex items-center gap-4 mt-6 relative z-10">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleDeductPoint("away");
-              }}
-              aria-label={`Deduct point from ${awayTeam.name}`}
-              className="h-12 w-12 rounded-full bg-white/10 hover:bg-white/20 border-white/20 text-white transition-all duration-200 hover:scale-110 active:scale-95"
-            >
-              <Minus className="w-5 h-5" />
-            </Button>
-            <span className="text-white/60 text-sm font-medium px-2">Tap to score</span>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleAddPoint("away");
-              }}
-              aria-label={`Add point to ${awayTeam.name}`}
-              className="h-12 w-12 rounded-full bg-white/10 hover:bg-white/20 border-white/20 text-white transition-all duration-200 hover:scale-110 active:scale-95"
-            >
-              <Plus className="w-5 h-5" />
-            </Button>
-          </div>
-        </button>
+          {/* Controls - only show if can edit */}
+          {canEdit ? (
+            <div className="flex items-center gap-4 mt-6 relative z-10">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDeductPoint("away");
+                }}
+                aria-label={`Deduct point from ${awayTeam.name}`}
+                className="h-12 w-12 rounded-full bg-white/10 hover:bg-white/20 border-white/20 text-white transition-all duration-200 hover:scale-110 active:scale-95"
+              >
+                <Minus className="w-5 h-5" />
+              </Button>
+              <span className="text-white/60 text-sm font-medium px-2">
+                Tap to score
+              </span>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleAddPoint("away");
+                }}
+                aria-label={`Add point to ${awayTeam.name}`}
+                className="h-12 w-12 rounded-full bg-white/10 hover:bg-white/20 border-white/20 text-white transition-all duration-200 hover:scale-110 active:scale-95"
+              >
+                <Plus className="w-5 h-5" />
+              </Button>
+            </div>
+          ) : (
+            <div className="mt-6 relative z-10">
+              <span className="text-white/40 text-sm font-medium">
+                Live Score
+              </span>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Complete Match Dialog */}
@@ -427,36 +577,49 @@ export default function MatchPage() {
             <DialogDescription className="space-y-3 pt-2">
               <div className="flex items-center justify-center gap-4 p-4 rounded-xl bg-muted/50">
                 <div className="text-center">
-                  <div 
+                  <div
                     className="w-10 h-10 rounded-lg mx-auto mb-1"
                     style={{ backgroundColor: homeColor }}
                   />
-                  <p className="text-xs text-muted-foreground">{homeTeam.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {homeTeam.name}
+                  </p>
                   <p className="text-2xl font-bold">{match.homeScore}</p>
                 </div>
                 <span className="text-muted-foreground">-</span>
                 <div className="text-center">
-                  <div 
+                  <div
                     className="w-10 h-10 rounded-lg mx-auto mb-1"
                     style={{ backgroundColor: awayColor }}
                   />
-                  <p className="text-xs text-muted-foreground">{awayTeam.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {awayTeam.name}
+                  </p>
                   <p className="text-2xl font-bold">{match.awayScore}</p>
                 </div>
               </div>
               <div className="text-center pt-2">
                 <p className="text-sm text-muted-foreground">Winner</p>
                 <p className="font-semibold text-lg text-emerald-500">
-                  {match.homeScore > match.awayScore ? homeTeam.name : awayTeam.name}
+                  {match.homeScore > match.awayScore
+                    ? homeTeam.name
+                    : awayTeam.name}
                 </p>
               </div>
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex-row gap-2 sm:gap-2">
-            <Button variant="outline" onClick={() => setShowCompleteDialog(false)} className="flex-1">
+            <Button
+              variant="outline"
+              onClick={() => setShowCompleteDialog(false)}
+              className="flex-1"
+            >
               Continue Playing
             </Button>
-            <Button onClick={handleCompleteMatch} className="flex-1 gap-2 shadow-lg shadow-primary/20">
+            <Button
+              onClick={handleCompleteMatch}
+              className="flex-1 gap-2 shadow-lg shadow-primary/20"
+            >
               <Trophy className="w-4 h-4" />
               Confirm Winner
             </Button>

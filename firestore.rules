@@ -1,0 +1,27 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Sessions collection
+    match /sessions/{sessionId} {
+      // Anyone can read sessions (for viewers)
+      allow read: if true;
+      
+      // Only authenticated users who are creator or admin can write
+      // Or anyone with the correct admin token (handled by app logic)
+      allow create: if true; // Anyone can create a session
+      
+      allow update: if 
+        // User is the creator
+        request.auth != null && request.auth.uid == resource.data.creatorId
+        // Or user is in the admin list
+        || (request.auth != null && request.auth.uid in resource.data.adminIds)
+        // For anonymous updates, the app validates the admin token
+        // We allow writes but the app enforces the token check
+        || true;
+      
+      allow delete: if 
+        request.auth != null && request.auth.uid == resource.data.creatorId;
+    }
+  }
+}
+

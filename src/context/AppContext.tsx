@@ -6,6 +6,7 @@ import {
   useReducer,
   useEffect,
   useCallback,
+  useMemo,
   type ReactNode,
 } from "react";
 import type {
@@ -16,6 +17,7 @@ import type {
   CompetitionType,
   MatchStatus,
 } from "@/types/game";
+import { useSession } from "./SessionContext";
 
 // ============================================
 // Constants
@@ -292,6 +294,9 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
 // ============================================
 interface AppContextValue {
   state: AppState;
+  // Session info
+  isSharedMode: boolean;
+  canEdit: boolean;
   // Team actions
   addTeam: (name: string, color?: string) => void;
   updateTeam: (id: string, name: string, color?: string) => void;
@@ -327,42 +332,104 @@ interface AppProviderProps {
 }
 
 export const AppProvider = ({ children }: AppProviderProps) => {
-  const [state, dispatch] = useReducer(appReducer, initialState);
+  const [localState, dispatch] = useReducer(appReducer, initialState);
+  const { session, isSharedMode, canEdit, syncAllData } = useSession();
 
-  // Load state from localStorage on mount
+  // Determine which state to use: session data or local data
+  const state = useMemo((): AppState => {
+    if (isSharedMode && session) {
+      return {
+        teams: session.teams || [],
+        competitions: session.competition ? [session.competition] : [],
+        matches: session.matches || [],
+      };
+    }
+    return localState;
+  }, [isSharedMode, session, localState]);
+
+  // Load state from localStorage on mount (only for local mode)
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored) as AppState;
-        dispatch({ type: "LOAD_STATE", state: parsed });
+    if (!isSharedMode) {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+          const parsed = JSON.parse(stored) as AppState;
+          dispatch({ type: "LOAD_STATE", state: parsed });
+        }
+      } catch (error) {
+        console.error("Failed to load state from localStorage:", error);
       }
-    } catch (error) {
-      console.error("Failed to load state from localStorage:", error);
     }
-  }, []);
+  }, [isSharedMode]);
 
-  // Save state to localStorage whenever it changes
+  // Save state to localStorage whenever it changes (only for local mode)
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    } catch (error) {
-      console.error("Failed to save state to localStorage:", error);
+    if (!isSharedMode) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(localState));
+      } catch (error) {
+        console.error("Failed to save state to localStorage:", error);
+      }
     }
-  }, [state]);
+  }, [localState, isSharedMode]);
+
+  // Sync to Firestore helper
+  const syncToFirestore = useCallback(async (newState: AppState) => {
+    if (isSharedMode && canEdit && session) {
+      try {
+        await syncAllData({
+          competition: newState.competitions[0] || null,
+          teams: newState.teams,
+          matches: newState.matches,
+        });
+      } catch (error) {
+        console.error("Failed to sync to Firestore:", error);
+      }
+    }
+  }, [isSharedMode, canEdit, session, syncAllData]);
 
   // Team actions
   const addTeam = useCallback((name: string, color?: string) => {
-    dispatch({ type: "ADD_TEAM", name, color });
-  }, []);
+    if (isSharedMode && !canEdit) return;
+    
+    const newTeam: PersistentTeam = {
+      id: generateId(),
+      name,
+      color,
+      createdAt: Date.now(),
+    };
+    
+    if (isSharedMode && session) {
+      const newTeams = [...(session.teams || []), newTeam];
+      syncAllData({ teams: newTeams });
+    } else {
+      dispatch({ type: "ADD_TEAM", name, color });
+    }
+  }, [isSharedMode, canEdit, session, syncAllData]);
 
   const updateTeam = useCallback((id: string, name: string, color?: string) => {
-    dispatch({ type: "UPDATE_TEAM", id, name, color });
-  }, []);
+    if (isSharedMode && !canEdit) return;
+    
+    if (isSharedMode && session) {
+      const newTeams = (session.teams || []).map(team =>
+        team.id === id ? { ...team, name, color } : team
+      );
+      syncAllData({ teams: newTeams });
+    } else {
+      dispatch({ type: "UPDATE_TEAM", id, name, color });
+    }
+  }, [isSharedMode, canEdit, session, syncAllData]);
 
   const deleteTeam = useCallback((id: string) => {
-    dispatch({ type: "DELETE_TEAM", id });
-  }, []);
+    if (isSharedMode && !canEdit) return;
+    
+    if (isSharedMode && session) {
+      const newTeams = (session.teams || []).filter(team => team.id !== id);
+      syncAllData({ teams: newTeams });
+    } else {
+      dispatch({ type: "DELETE_TEAM", id });
+    }
+  }, [isSharedMode, canEdit, session, syncAllData]);
 
   const getTeamById = useCallback(
     (id: string) => state.teams.find((team) => team.id === id),
@@ -372,28 +439,78 @@ export const AppProvider = ({ children }: AppProviderProps) => {
   // Competition actions
   const createCompetition = useCallback(
     (name: string, type: CompetitionType, teamIds: string[], numberOfCourts?: number) => {
+      if (isSharedMode && !canEdit) return "";
+      
       const id = generateId();
-      dispatch({ type: "CREATE_COMPETITION", name, competitionType: type, teamIds, numberOfCourts });
+      const newCompetition: Competition = {
+        id,
+        name,
+        type,
+        teamIds,
+        matchIds: [],
+        status: "draft",
+        createdAt: Date.now(),
+        numberOfCourts,
+      };
+      
+      if (isSharedMode && session) {
+        syncAllData({ competition: newCompetition });
+      } else {
+        dispatch({ type: "CREATE_COMPETITION", name, competitionType: type, teamIds, numberOfCourts });
+      }
+      
       return id;
     },
-    []
+    [isSharedMode, canEdit, session, syncAllData]
   );
 
   const updateCompetition = useCallback((competition: Competition) => {
-    dispatch({ type: "UPDATE_COMPETITION", competition });
-  }, []);
+    if (isSharedMode && !canEdit) return;
+    
+    if (isSharedMode && session) {
+      syncAllData({ competition });
+    } else {
+      dispatch({ type: "UPDATE_COMPETITION", competition });
+    }
+  }, [isSharedMode, canEdit, session, syncAllData]);
 
   const deleteCompetition = useCallback((id: string) => {
-    dispatch({ type: "DELETE_COMPETITION", id });
-  }, []);
+    if (isSharedMode && !canEdit) return;
+    
+    if (isSharedMode && session) {
+      const newMatches = (session.matches || []).filter(m => m.competitionId !== id);
+      syncAllData({ competition: null, matches: newMatches });
+    } else {
+      dispatch({ type: "DELETE_COMPETITION", id });
+    }
+  }, [isSharedMode, canEdit, session, syncAllData]);
 
   const startCompetition = useCallback((id: string) => {
-    dispatch({ type: "START_COMPETITION", id });
-  }, []);
+    if (isSharedMode && !canEdit) return;
+    
+    if (isSharedMode && session && session.competition) {
+      syncAllData({ competition: { ...session.competition, status: "in_progress" } });
+    } else {
+      dispatch({ type: "START_COMPETITION", id });
+    }
+  }, [isSharedMode, canEdit, session, syncAllData]);
 
   const completeCompetition = useCallback((id: string, winnerId?: string) => {
-    dispatch({ type: "COMPLETE_COMPETITION", id, winnerId });
-  }, []);
+    if (isSharedMode && !canEdit) return;
+    
+    if (isSharedMode && session && session.competition) {
+      syncAllData({
+        competition: {
+          ...session.competition,
+          status: "completed",
+          completedAt: Date.now(),
+          winnerId,
+        },
+      });
+    } else {
+      dispatch({ type: "COMPLETE_COMPETITION", id, winnerId });
+    }
+  }, [isSharedMode, canEdit, session, syncAllData]);
 
   const getCompetitionById = useCallback(
     (id: string) => state.competitions.find((comp) => comp.id === id),
@@ -402,31 +519,129 @@ export const AppProvider = ({ children }: AppProviderProps) => {
 
   // Match actions
   const addMatch = useCallback((match: Omit<Match, "id" | "createdAt">) => {
-    dispatch({ type: "ADD_MATCH", match });
-  }, []);
+    if (isSharedMode && !canEdit) return;
+    
+    const newMatch: Match = {
+      ...match,
+      id: generateId(),
+      createdAt: Date.now(),
+    };
+    
+    if (isSharedMode && session) {
+      const newMatches = [...(session.matches || []), newMatch];
+      
+      // Update competition matchIds if applicable
+      let updatedCompetition = session.competition;
+      if (match.competitionId && session.competition) {
+        updatedCompetition = {
+          ...session.competition,
+          matchIds: [...session.competition.matchIds, newMatch.id],
+        };
+      }
+      
+      syncAllData({ matches: newMatches, competition: updatedCompetition });
+    } else {
+      dispatch({ type: "ADD_MATCH", match });
+    }
+  }, [isSharedMode, canEdit, session, syncAllData]);
 
   const addMatches = useCallback((matches: Omit<Match, "id" | "createdAt">[]) => {
-    dispatch({ type: "ADD_MATCHES", matches });
-  }, []);
+    if (isSharedMode && !canEdit) return;
+    
+    const newMatches: Match[] = matches.map(match => ({
+      ...match,
+      id: generateId(),
+      createdAt: Date.now(),
+    }));
+    
+    if (isSharedMode && session) {
+      const allMatches = [...(session.matches || []), ...newMatches];
+      
+      // Update competition matchIds if applicable
+      let updatedCompetition = session.competition;
+      if (session.competition) {
+        const newMatchIds = newMatches
+          .filter(m => m.competitionId === session.competition?.id)
+          .map(m => m.id);
+        if (newMatchIds.length > 0) {
+          updatedCompetition = {
+            ...session.competition,
+            matchIds: [...session.competition.matchIds, ...newMatchIds],
+          };
+        }
+      }
+      
+      syncAllData({ matches: allMatches, competition: updatedCompetition });
+    } else {
+      dispatch({ type: "ADD_MATCHES", matches });
+    }
+  }, [isSharedMode, canEdit, session, syncAllData]);
 
   const updateMatchScore = useCallback(
     (matchId: string, homeScore: number, awayScore: number) => {
-      dispatch({ type: "UPDATE_MATCH_SCORE", matchId, homeScore, awayScore });
+      if (isSharedMode && !canEdit) return;
+      
+      if (isSharedMode && session) {
+        const newMatches = (session.matches || []).map(match =>
+          match.id === matchId ? { ...match, homeScore, awayScore } : match
+        );
+        syncAllData({ matches: newMatches });
+      } else {
+        dispatch({ type: "UPDATE_MATCH_SCORE", matchId, homeScore, awayScore });
+      }
     },
-    []
+    [isSharedMode, canEdit, session, syncAllData]
   );
 
   const startMatch = useCallback((matchId: string) => {
-    dispatch({ type: "START_MATCH", matchId });
-  }, []);
+    if (isSharedMode && !canEdit) return;
+    
+    if (isSharedMode && session) {
+      const newMatches = (session.matches || []).map(match =>
+        match.id === matchId ? { ...match, status: "in_progress" as MatchStatus } : match
+      );
+      syncAllData({ matches: newMatches });
+    } else {
+      dispatch({ type: "START_MATCH", matchId });
+    }
+  }, [isSharedMode, canEdit, session, syncAllData]);
 
   const completeMatch = useCallback((matchId: string, winnerId: string) => {
-    dispatch({ type: "COMPLETE_MATCH", matchId, winnerId });
-  }, []);
+    if (isSharedMode && !canEdit) return;
+    
+    if (isSharedMode && session) {
+      const newMatches = (session.matches || []).map(match =>
+        match.id === matchId
+          ? { ...match, status: "completed" as MatchStatus, completedAt: Date.now(), winnerId }
+          : match
+      );
+      syncAllData({ matches: newMatches });
+    } else {
+      dispatch({ type: "COMPLETE_MATCH", matchId, winnerId });
+    }
+  }, [isSharedMode, canEdit, session, syncAllData]);
 
   const deleteMatch = useCallback((matchId: string) => {
-    dispatch({ type: "DELETE_MATCH", matchId });
-  }, []);
+    if (isSharedMode && !canEdit) return;
+    
+    if (isSharedMode && session) {
+      const match = (session.matches || []).find(m => m.id === matchId);
+      const newMatches = (session.matches || []).filter(m => m.id !== matchId);
+      
+      // Remove match ID from competition if applicable
+      let updatedCompetition = session.competition;
+      if (match?.competitionId && session.competition) {
+        updatedCompetition = {
+          ...session.competition,
+          matchIds: session.competition.matchIds.filter(id => id !== matchId),
+        };
+      }
+      
+      syncAllData({ matches: newMatches, competition: updatedCompetition });
+    } else {
+      dispatch({ type: "DELETE_MATCH", matchId });
+    }
+  }, [isSharedMode, canEdit, session, syncAllData]);
 
   const getMatchById = useCallback(
     (id: string) => state.matches.find((match) => match.id === id),
@@ -441,11 +656,15 @@ export const AppProvider = ({ children }: AppProviderProps) => {
 
   // Utility
   const resetState = useCallback(() => {
-    dispatch({ type: "RESET_STATE" });
-  }, []);
+    if (!isSharedMode) {
+      dispatch({ type: "RESET_STATE" });
+    }
+  }, [isSharedMode]);
 
   const value: AppContextValue = {
     state,
+    isSharedMode,
+    canEdit: isSharedMode ? canEdit : true,
     addTeam,
     updateTeam,
     deleteTeam,
@@ -480,4 +699,3 @@ export const useApp = (): AppContextValue => {
   }
   return context;
 };
-

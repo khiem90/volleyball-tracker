@@ -1,0 +1,326 @@
+"use client";
+
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+  useRef,
+  type ReactNode,
+} from "react";
+import { useAuth } from "./AuthContext";
+import {
+  createSession,
+  getSessionByShareCode,
+  updateSessionData,
+  subscribeToSession,
+  getSessionRole,
+  hasAdminAccess,
+  validateAdminToken,
+  getSessionUrl,
+  getAdminUrl,
+} from "@/lib/sessions";
+import type { Session, SessionRole } from "@/types/session";
+import type { Competition, PersistentTeam, Match } from "@/types/game";
+
+// ============================================
+// Context Types
+// ============================================
+interface SessionContextValue {
+  // Session state
+  session: Session | null;
+  role: SessionRole;
+  isLoading: boolean;
+  error: string | null;
+  isSharedMode: boolean;
+  
+  // Session management
+  createNewSession: (name: string) => Promise<{ shareCode: string; adminToken: string }>;
+  joinSession: (shareCode: string) => Promise<boolean>;
+  leaveSession: () => void;
+  
+  // Admin token management
+  applyAdminToken: (token: string) => boolean;
+  
+  // Data updates (only work if user has admin access)
+  updateCompetition: (competition: Competition) => Promise<void>;
+  updateTeams: (teams: PersistentTeam[]) => Promise<void>;
+  updateMatches: (matches: Match[]) => Promise<void>;
+  syncAllData: (data: { competition?: Competition | null; teams?: PersistentTeam[]; matches?: Match[] }) => Promise<void>;
+  
+  // URL helpers
+  getShareUrl: () => string;
+  getAdminShareUrl: () => string | null;
+  
+  // Permission check
+  canEdit: boolean;
+}
+
+const SessionContext = createContext<SessionContextValue | null>(null);
+
+// ============================================
+// Provider
+// ============================================
+interface SessionProviderProps {
+  children: ReactNode;
+}
+
+export const SessionProvider = ({ children }: SessionProviderProps) => {
+  const { user, getAdminToken, setAdminToken } = useAuth();
+  
+  const [session, setSession] = useState<Session | null>(null);
+  const [role, setRole] = useState<SessionRole>("viewer");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isSharedMode, setIsSharedMode] = useState(false);
+  const [currentAdminToken, setCurrentAdminToken] = useState<string | null>(null);
+  
+  const unsubscribeRef = useRef<(() => void) | null>(null);
+
+  // Cleanup subscription on unmount
+  useEffect(() => {
+    return () => {
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current();
+      }
+    };
+  }, []);
+
+  // Update role when session or user changes
+  useEffect(() => {
+    if (session) {
+      const token = currentAdminToken || getAdminToken(session.id);
+      const newRole = getSessionRole(session, user?.uid || null, token);
+      setRole(newRole);
+    } else {
+      setRole("viewer");
+    }
+  }, [session, user, currentAdminToken, getAdminToken]);
+
+  // Create a new session
+  const createNewSession = useCallback(
+    async (name: string): Promise<{ shareCode: string; adminToken: string }> => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const { session: newSession, adminToken } = await createSession(
+          name,
+          user?.uid || null
+        );
+
+        // Store admin token for anonymous access
+        setAdminToken(newSession.id, adminToken);
+        setCurrentAdminToken(adminToken);
+
+        // Subscribe to session updates
+        if (unsubscribeRef.current) {
+          unsubscribeRef.current();
+        }
+
+        unsubscribeRef.current = subscribeToSession(
+          newSession.id,
+          (updatedSession) => {
+            setSession(updatedSession);
+          },
+          (err) => {
+            setError(err.message);
+          }
+        );
+
+        setSession(newSession);
+        setIsSharedMode(true);
+        setRole("creator");
+
+        return { shareCode: newSession.shareCode, adminToken };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Failed to create session";
+        setError(message);
+        throw err;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [user, setAdminToken]
+  );
+
+  // Join an existing session by share code
+  const joinSession = useCallback(
+    async (shareCode: string): Promise<boolean> => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const foundSession = await getSessionByShareCode(shareCode);
+
+        if (!foundSession) {
+          setError("Session not found");
+          return false;
+        }
+
+        // Clean up previous subscription
+        if (unsubscribeRef.current) {
+          unsubscribeRef.current();
+        }
+
+        // Check for stored admin token
+        const storedToken = getAdminToken(foundSession.id);
+        if (storedToken) {
+          setCurrentAdminToken(storedToken);
+        }
+
+        // Subscribe to session updates
+        unsubscribeRef.current = subscribeToSession(
+          foundSession.id,
+          (updatedSession) => {
+            setSession(updatedSession);
+          },
+          (err) => {
+            setError(err.message);
+          }
+        );
+
+        setSession(foundSession);
+        setIsSharedMode(true);
+
+        return true;
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Failed to join session";
+        setError(message);
+        return false;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [getAdminToken]
+  );
+
+  // Leave the current session
+  const leaveSession = useCallback(() => {
+    if (unsubscribeRef.current) {
+      unsubscribeRef.current();
+      unsubscribeRef.current = null;
+    }
+
+    setSession(null);
+    setRole("viewer");
+    setIsSharedMode(false);
+    setCurrentAdminToken(null);
+    setError(null);
+  }, []);
+
+  // Apply an admin token to gain admin access
+  const applyAdminToken = useCallback(
+    (token: string): boolean => {
+      if (!session) return false;
+
+      if (validateAdminToken(session, token)) {
+        setAdminToken(session.id, token);
+        setCurrentAdminToken(token);
+        return true;
+      }
+
+      return false;
+    },
+    [session, setAdminToken]
+  );
+
+  // Check if user can edit
+  const canEdit = role === "creator" || role === "admin";
+
+  // Update competition data
+  const updateCompetition = useCallback(
+    async (competition: Competition): Promise<void> => {
+      if (!session || !canEdit) {
+        throw new Error("Not authorized to edit this session");
+      }
+
+      await updateSessionData(session.id, { competition });
+    },
+    [session, canEdit]
+  );
+
+  // Update teams data
+  const updateTeams = useCallback(
+    async (teams: PersistentTeam[]): Promise<void> => {
+      if (!session || !canEdit) {
+        throw new Error("Not authorized to edit this session");
+      }
+
+      await updateSessionData(session.id, { teams });
+    },
+    [session, canEdit]
+  );
+
+  // Update matches data
+  const updateMatches = useCallback(
+    async (matches: Match[]): Promise<void> => {
+      if (!session || !canEdit) {
+        throw new Error("Not authorized to edit this session");
+      }
+
+      await updateSessionData(session.id, { matches });
+    },
+    [session, canEdit]
+  );
+
+  // Sync all data at once
+  const syncAllData = useCallback(
+    async (data: { competition?: Competition | null; teams?: PersistentTeam[]; matches?: Match[] }): Promise<void> => {
+      if (!session || !canEdit) {
+        throw new Error("Not authorized to edit this session");
+      }
+
+      await updateSessionData(session.id, data);
+    },
+    [session, canEdit]
+  );
+
+  // Get share URL
+  const getShareUrl = useCallback((): string => {
+    if (!session) return "";
+    return getSessionUrl(session.shareCode);
+  }, [session]);
+
+  // Get admin share URL (only for creator/admin with token)
+  const getAdminShareUrl = useCallback((): string | null => {
+    if (!session || !currentAdminToken) return null;
+    return getAdminUrl(session.shareCode, currentAdminToken);
+  }, [session, currentAdminToken]);
+
+  const value: SessionContextValue = {
+    session,
+    role,
+    isLoading,
+    error,
+    isSharedMode,
+    createNewSession,
+    joinSession,
+    leaveSession,
+    applyAdminToken,
+    updateCompetition,
+    updateTeams,
+    updateMatches,
+    syncAllData,
+    getShareUrl,
+    getAdminShareUrl,
+    canEdit,
+  };
+
+  return (
+    <SessionContext.Provider value={value}>{children}</SessionContext.Provider>
+  );
+};
+
+// ============================================
+// Hook
+// ============================================
+export const useSession = (): SessionContextValue => {
+  const context = useContext(SessionContext);
+  if (!context) {
+    throw new Error("useSession must be used within a SessionProvider");
+  }
+  return context;
+};
+
