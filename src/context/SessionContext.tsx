@@ -20,7 +20,11 @@ import {
   validateAdminToken,
   getSessionUrl,
   getAdminUrl,
+  deleteSession,
 } from "@/lib/sessions";
+
+// LocalStorage key for persisting session
+const SESSION_STORAGE_KEY = "volleyball_tracker_session";
 import type { Session, SessionRole } from "@/types/session";
 import type { Competition, PersistentTeam, Match } from "@/types/game";
 
@@ -39,6 +43,7 @@ interface SessionContextValue {
   createNewSession: (name: string) => Promise<{ shareCode: string; adminToken: string }>;
   joinSession: (shareCode: string) => Promise<boolean>;
   leaveSession: () => void;
+  endSession: () => Promise<boolean>; // Only creator can end session
   
   // Admin token management
   applyAdminToken: (token: string) => boolean;
@@ -55,6 +60,7 @@ interface SessionContextValue {
   
   // Permission check
   canEdit: boolean;
+  isCreator: boolean;
 }
 
 const SessionContext = createContext<SessionContextValue | null>(null);
@@ -86,6 +92,34 @@ export const SessionProvider = ({ children }: SessionProviderProps) => {
       }
     };
   }, []);
+
+  // Restore session from localStorage on mount
+  useEffect(() => {
+    const storedSession = localStorage.getItem(SESSION_STORAGE_KEY);
+    if (storedSession) {
+      try {
+        const { shareCode } = JSON.parse(storedSession);
+        if (shareCode && !session && !isLoading) {
+          // Auto-rejoin the stored session
+          joinSession(shareCode);
+        }
+      } catch (err) {
+        // Invalid stored data, clear it
+        localStorage.removeItem(SESSION_STORAGE_KEY);
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run on mount
+
+  // Persist session to localStorage when it changes
+  useEffect(() => {
+    if (session && isSharedMode) {
+      localStorage.setItem(
+        SESSION_STORAGE_KEY,
+        JSON.stringify({ shareCode: session.shareCode, sessionId: session.id })
+      );
+    }
+  }, [session, isSharedMode]);
 
   // Update role when session or user changes
   useEffect(() => {
@@ -196,12 +230,15 @@ export const SessionProvider = ({ children }: SessionProviderProps) => {
     [getAdminToken]
   );
 
-  // Leave the current session
+  // Leave the current session (but don't delete it)
   const leaveSession = useCallback(() => {
     if (unsubscribeRef.current) {
       unsubscribeRef.current();
       unsubscribeRef.current = null;
     }
+
+    // Clear persisted session
+    localStorage.removeItem(SESSION_STORAGE_KEY);
 
     setSession(null);
     setRole("viewer");
@@ -209,6 +246,45 @@ export const SessionProvider = ({ children }: SessionProviderProps) => {
     setCurrentAdminToken(null);
     setError(null);
   }, []);
+
+  // End the session (delete from Firestore) - only creator can do this
+  const endSession = useCallback(async (): Promise<boolean> => {
+    if (!session) return false;
+
+    // Only creator can end the session
+    const isCreator = user?.uid === session.creatorId || 
+      (currentAdminToken && session.adminToken === currentAdminToken && !session.creatorId);
+    
+    if (!isCreator) {
+      setError("Only the session creator can end the session");
+      return false;
+    }
+
+    try {
+      // Unsubscribe first
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current();
+        unsubscribeRef.current = null;
+      }
+
+      // Delete from Firestore
+      await deleteSession(session.id);
+
+      // Clear local state
+      localStorage.removeItem(SESSION_STORAGE_KEY);
+      setSession(null);
+      setRole("viewer");
+      setIsSharedMode(false);
+      setCurrentAdminToken(null);
+      setError(null);
+
+      return true;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to end session";
+      setError(message);
+      return false;
+    }
+  }, [session, user, currentAdminToken]);
 
   // Apply an admin token to gain admin access
   const applyAdminToken = useCallback(
@@ -228,6 +304,9 @@ export const SessionProvider = ({ children }: SessionProviderProps) => {
 
   // Check if user can edit
   const canEdit = role === "creator" || role === "admin";
+
+  // Check if user is the creator
+  const isCreator = role === "creator";
 
   // Update competition data
   const updateCompetition = useCallback(
@@ -298,6 +377,7 @@ export const SessionProvider = ({ children }: SessionProviderProps) => {
     createNewSession,
     joinSession,
     leaveSession,
+    endSession,
     applyAdminToken,
     updateCompetition,
     updateTeams,
@@ -306,6 +386,7 @@ export const SessionProvider = ({ children }: SessionProviderProps) => {
     getShareUrl,
     getAdminShareUrl,
     canEdit,
+    isCreator,
   };
 
   return (

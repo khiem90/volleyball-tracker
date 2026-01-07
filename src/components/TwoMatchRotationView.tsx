@@ -39,14 +39,21 @@ export const TwoMatchRotationView = ({
     [state]
   );
 
-  // Get active matches (pending or in_progress) - one per court potentially
-  const activeMatches = useMemo(
-    () =>
-      matches.filter(
-        (m) => m.status === "pending" || m.status === "in_progress"
-      ),
-    [matches]
-  );
+  // Get active matches - only matches where BOTH teams are currently on a court
+  const activeMatches = useMemo(() => {
+    // Get all team IDs currently assigned to courts
+    const teamsOnCourts = new Set<string>();
+    state.courts.forEach((court) => {
+      court.teamIds.forEach((teamId) => teamsOnCourts.add(teamId));
+    });
+
+    // Filter matches: pending/in_progress AND both teams are currently on courts
+    return matches.filter((m) => {
+      const isActiveStatus = m.status === "pending" || m.status === "in_progress";
+      const bothTeamsOnCourt = teamsOnCourts.has(m.homeTeamId) && teamsOnCourts.has(m.awayTeamId);
+      return isActiveStatus && bothTeamsOnCourt;
+    });
+  }, [matches, state.courts]);
 
   const completedMatches = useMemo(
     () =>
