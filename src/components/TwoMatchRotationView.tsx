@@ -39,20 +39,36 @@ export const TwoMatchRotationView = ({
     [state]
   );
 
-  // Get active matches - only matches where BOTH teams are currently on a court
+  // Get active matches - ONE match per court where both teams match the court's teams
   const activeMatches = useMemo(() => {
-    // Get all team IDs currently assigned to courts
-    const teamsOnCourts = new Set<string>();
+    const result: Match[] = [];
+    const seenCourts = new Set<number>();
+
+    // For each court, find the most recent pending/in_progress match for those teams
     state.courts.forEach((court) => {
-      court.teamIds.forEach((teamId) => teamsOnCourts.add(teamId));
+      const [team1, team2] = court.teamIds;
+      
+      // Find matches where both teams are exactly the ones on this court
+      const courtMatches = matches.filter((m) => {
+        const isActiveStatus = m.status === "pending" || m.status === "in_progress";
+        const teamsMatch = 
+          (m.homeTeamId === team1 && m.awayTeamId === team2) ||
+          (m.homeTeamId === team2 && m.awayTeamId === team1);
+        return isActiveStatus && teamsMatch;
+      });
+
+      // Only take the most recent one (by createdAt or id)
+      if (courtMatches.length > 0 && !seenCourts.has(court.courtNumber)) {
+        // Sort by createdAt descending, take the most recent
+        const sortedMatches = courtMatches.sort((a, b) => 
+          (b.createdAt || 0) - (a.createdAt || 0)
+        );
+        result.push(sortedMatches[0]);
+        seenCourts.add(court.courtNumber);
+      }
     });
 
-    // Filter matches: pending/in_progress AND both teams are currently on courts
-    return matches.filter((m) => {
-      const isActiveStatus = m.status === "pending" || m.status === "in_progress";
-      const bothTeamsOnCourt = teamsOnCourts.has(m.homeTeamId) && teamsOnCourts.has(m.awayTeamId);
-      return isActiveStatus && bothTeamsOnCourt;
-    });
+    return result;
   }, [matches, state.courts]);
 
   const completedMatches = useMemo(
