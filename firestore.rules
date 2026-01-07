@@ -22,6 +22,19 @@ service cloud.firestore {
       allow delete: if 
         request.auth != null && request.auth.uid == resource.data.creatorId;
     }
+    
+    // Session summaries collection
+    match /summaries/{summaryId} {
+      // Anyone can read summaries (for sharing)
+      allow read: if true;
+      
+      // Only authenticated users can create summaries
+      allow create: if request.auth != null;
+      
+      // Only the creator can update or delete summaries
+      allow update, delete: if 
+        request.auth != null && request.auth.uid == resource.data.creatorId;
+    }
   }
 }
 

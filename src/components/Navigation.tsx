@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Users, Trophy, Zap, Menu, Globe, Link2, LogIn, LogOut, User } from "lucide-react";
+import { Home, Users, Trophy, Zap, Menu, Globe, Link2, LogIn, LogOut, User, History } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -34,6 +34,7 @@ const navItems = [
   { href: "/teams", label: "Teams", icon: Users, description: "Manage your teams" },
   { href: "/competitions", label: "Competitions", icon: Trophy, description: "Tournaments & leagues" },
   { href: "/quick-match", label: "Quick Match", icon: Zap, description: "Start a fast game" },
+  { href: "/summaries", label: "History", icon: History, description: "Session history" },
 ];
 
 export const Navigation = () => {
@@ -45,8 +46,8 @@ export const Navigation = () => {
   const [showJoinSession, setShowJoinSession] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
 
-  // Don't show nav on session pages (they have their own header)
-  if (pathname.startsWith("/session/")) {
+  // Don't show nav on session/summary pages (they have their own header)
+  if (pathname.startsWith("/session/") || pathname.startsWith("/summary/")) {
     return null;
   }
 

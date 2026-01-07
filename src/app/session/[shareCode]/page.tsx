@@ -94,12 +94,13 @@ export default function SessionPage() {
   // Handle ending the session
   const handleEndSession = async () => {
     setIsEndingSession(true);
-    const success = await endSession();
+    const summary = await endSession();
     setIsEndingSession(false);
-    if (success) {
-      router.push("/");
-    }
     setShowEndSessionDialog(false);
+    if (summary) {
+      // Redirect creator to their session summary
+      router.push(`/summary/${summary.shareCode}`);
+    }
   };
 
   // Handle leaving the session (go back to local mode)

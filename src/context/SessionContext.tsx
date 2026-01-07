@@ -21,11 +21,12 @@ import {
   getSessionUrl,
   getAdminUrl,
   deleteSession,
+  createSessionSummary,
 } from "@/lib/sessions";
 
 // LocalStorage key for persisting session
 const SESSION_STORAGE_KEY = "volleyball_tracker_session";
-import type { Session, SessionRole } from "@/types/session";
+import type { Session, SessionRole, SessionSummary } from "@/types/session";
 import type { Competition, PersistentTeam, Match } from "@/types/game";
 
 // ============================================
@@ -43,7 +44,7 @@ interface SessionContextValue {
   createNewSession: (name: string) => Promise<{ shareCode: string; adminToken: string }>;
   joinSession: (shareCode: string) => Promise<boolean>;
   leaveSession: () => void;
-  endSession: () => Promise<boolean>; // Only creator can end session
+  endSession: () => Promise<SessionSummary | null>; // Only creator can end session, returns summary
   
   // Admin token management
   applyAdminToken: (token: string) => boolean;
@@ -263,9 +264,9 @@ export const SessionProvider = ({ children }: SessionProviderProps) => {
     setError(null);
   }, []);
 
-  // End the session (delete from Firestore) - only creator can do this
-  const endSession = useCallback(async (): Promise<boolean> => {
-    if (!session) return false;
+  // End the session (save summary and delete from Firestore) - only creator can do this
+  const endSession = useCallback(async (): Promise<SessionSummary | null> => {
+    if (!session) return null;
 
     // Only creator can end the session
     const isCreator = user?.uid === session.creatorId || 
@@ -273,7 +274,7 @@ export const SessionProvider = ({ children }: SessionProviderProps) => {
     
     if (!isCreator) {
       setError("Only the session creator can end the session");
-      return false;
+      return null;
     }
 
     try {
@@ -282,6 +283,9 @@ export const SessionProvider = ({ children }: SessionProviderProps) => {
         unsubscribeRef.current();
         unsubscribeRef.current = null;
       }
+
+      // Save summary before deleting
+      const summary = await createSessionSummary(session);
 
       // Delete from Firestore
       await deleteSession(session.id);
@@ -294,11 +298,11 @@ export const SessionProvider = ({ children }: SessionProviderProps) => {
       setCurrentAdminToken(null);
       setError(null);
 
-      return true;
+      return summary;
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to end session";
       setError(message);
-      return false;
+      return null;
     }
   }, [session, user, currentAdminToken]);
 

@@ -93,11 +93,12 @@ export const ShareSession = ({ open, onOpenChange }: ShareSessionProps) => {
 
   const handleEndSession = useCallback(async () => {
     setIsEnding(true);
-    const success = await endSession();
+    const summary = await endSession();
     setIsEnding(false);
-    if (success) {
-      onOpenChange(false);
-      router.push("/");
+    onOpenChange(false);
+    if (summary) {
+      // Redirect creator to their session summary
+      router.push(`/summary/${summary.shareCode}`);
     }
   }, [endSession, onOpenChange, router]);
 

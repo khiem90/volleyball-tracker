@@ -41,3 +41,30 @@ export interface StoredAdminToken {
   token: string;
 }
 
+// Session summary saved after session ends (only creator can access)
+export interface SessionSummary {
+  id: string;
+  name: string;
+  creatorId: string | null;
+  shareCode: string;              // For sharing the summary
+  competition: Competition | null;
+  teams: PersistentTeam[];
+  matches: Match[];               // All matches (completed history)
+  createdAt: number;              // When original session was created
+  endedAt: number;                // When session was ended
+  stats: SessionStats;            // Computed summary stats
+}
+
+// Summary statistics
+export interface SessionStats {
+  totalMatches: number;
+  completedMatches: number;
+  totalTeams: number;
+  duration: number;               // Session duration in ms
+  winner?: {
+    teamId: string;
+    teamName: string;
+    wins: number;
+  };
+}
+

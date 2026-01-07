@@ -12,13 +12,14 @@ import {
   type Unsubscribe,
 } from "firebase/firestore";
 import { db, isFirebaseConfigured } from "./firebase";
-import type { Session, SessionRole } from "@/types/session";
+import type { Session, SessionRole, SessionSummary, SessionStats } from "@/types/session";
 import type { Competition, PersistentTeam, Match } from "@/types/game";
 
 // ============================================
 // Constants
 // ============================================
 const SESSIONS_COLLECTION = "sessions";
+const SUMMARIES_COLLECTION = "summaries";
 
 // Generate a random share code (6 alphanumeric characters)
 const generateShareCode = (): string => {
@@ -427,5 +428,160 @@ export const getAdminUrl = (shareCode: string, adminToken: string): string => {
     return `${window.location.origin}/session/${shareCode}?admin=${adminToken}`;
   }
   return `/session/${shareCode}?admin=${adminToken}`;
+};
+
+// ============================================
+// Session Summary Functions
+// ============================================
+
+/**
+ * Compute stats from session data
+ */
+const computeSessionStats = (
+  session: Session
+): SessionStats => {
+  const matches = session.matches || [];
+  const teams = session.teams || [];
+  const completedMatches = matches.filter((m) => m.status === "completed");
+
+  // Count wins per team
+  const winsPerTeam: Record<string, number> = {};
+  completedMatches.forEach((match) => {
+    if (match.winnerId) {
+      winsPerTeam[match.winnerId] = (winsPerTeam[match.winnerId] || 0) + 1;
+    }
+  });
+
+  // Find the team with most wins
+  let winner: SessionStats["winner"] | undefined;
+  let maxWins = 0;
+  Object.entries(winsPerTeam).forEach(([teamId, wins]) => {
+    if (wins > maxWins) {
+      maxWins = wins;
+      const team = teams.find((t) => t.id === teamId);
+      winner = {
+        teamId,
+        teamName: team?.name || "Unknown Team",
+        wins,
+      };
+    }
+  });
+
+  return {
+    totalMatches: matches.length,
+    completedMatches: completedMatches.length,
+    totalTeams: teams.length,
+    duration: Date.now() - session.createdAt,
+    winner,
+  };
+};
+
+/**
+ * Create a session summary (called when ending a session)
+ */
+export const createSessionSummary = async (
+  session: Session
+): Promise<SessionSummary> => {
+  if (!db) {
+    throw new Error("Firebase is not configured");
+  }
+
+  const summaryId = `summary-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+  const shareCode = generateShareCode();
+  const stats = computeSessionStats(session);
+
+  const summary: SessionSummary = {
+    id: summaryId,
+    name: session.name,
+    creatorId: session.creatorId,
+    shareCode,
+    competition: session.competition,
+    teams: session.teams,
+    matches: session.matches,
+    createdAt: session.createdAt,
+    endedAt: Date.now(),
+    stats,
+  };
+
+  const sanitizedSummary = sanitizeForFirestore(summary);
+  await setDoc(doc(db, SUMMARIES_COLLECTION, summaryId), sanitizedSummary);
+
+  return summary;
+};
+
+/**
+ * Get a summary by ID
+ */
+export const getSummaryById = async (
+  summaryId: string
+): Promise<SessionSummary | null> => {
+  if (!db) return null;
+
+  const docRef = doc(db, SUMMARIES_COLLECTION, summaryId);
+  const docSnap = await getDoc(docRef);
+
+  if (docSnap.exists()) {
+    return docSnap.data() as SessionSummary;
+  }
+  return null;
+};
+
+/**
+ * Get a summary by share code
+ */
+export const getSummaryByShareCode = async (
+  shareCode: string
+): Promise<SessionSummary | null> => {
+  if (!db) return null;
+
+  const q = query(
+    collection(db, SUMMARIES_COLLECTION),
+    where("shareCode", "==", shareCode.toUpperCase())
+  );
+  const querySnapshot = await getDocs(q);
+
+  if (!querySnapshot.empty) {
+    return querySnapshot.docs[0].data() as SessionSummary;
+  }
+  return null;
+};
+
+/**
+ * Get all summaries for a creator
+ */
+export const getCreatorSummaries = async (
+  creatorId: string
+): Promise<SessionSummary[]> => {
+  if (!db) return [];
+
+  const q = query(
+    collection(db, SUMMARIES_COLLECTION),
+    where("creatorId", "==", creatorId)
+  );
+  const querySnapshot = await getDocs(q);
+
+  return querySnapshot.docs.map((doc) => doc.data() as SessionSummary);
+};
+
+/**
+ * Delete a summary (only creator can delete)
+ */
+export const deleteSummary = async (summaryId: string): Promise<void> => {
+  if (!db) {
+    throw new Error("Firebase is not configured");
+  }
+
+  const docRef = doc(db, SUMMARIES_COLLECTION, summaryId);
+  await deleteDoc(docRef);
+};
+
+/**
+ * Get the shareable URL for a summary
+ */
+export const getSummaryUrl = (shareCode: string): string => {
+  if (typeof window !== "undefined") {
+    return `${window.location.origin}/summary/${shareCode}`;
+  }
+  return `/summary/${shareCode}`;
 };
 
