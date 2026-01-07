@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { ArrowLeft, Minus, Plus, Trophy, Undo2, Check } from "lucide-react";
 import { advanceWinner } from "@/lib/singleElimination";
+import { processMatchResult } from "@/lib/win2out";
 
 export default function MatchPage() {
   const params = useParams();
@@ -29,6 +30,7 @@ export default function MatchPage() {
     startMatch,
     completeMatch,
     updateCompetition,
+    addMatch,
   } = useApp();
 
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
@@ -123,6 +125,34 @@ export default function MatchPage() {
       });
     }
 
+    // Handle Win 2 & Out format
+    if (competition && competition.type === "win2out" && competition.win2outState) {
+      // Create a completed match object for processing
+      const completedMatch = {
+        ...match,
+        winnerId,
+        status: "completed" as const,
+        completedAt: Date.now(),
+      };
+
+      const { updatedState, nextMatch } = processMatchResult(
+        competition.win2outState,
+        completedMatch
+      );
+
+      // Update competition with new state
+      updateCompetition({
+        ...competition,
+        win2outState: updatedState,
+        status: updatedState.isComplete ? "completed" : "in_progress",
+      });
+
+      // Create next match if there is one
+      if (nextMatch) {
+        addMatch(nextMatch);
+      }
+    }
+
     setShowCompleteDialog(false);
 
     // Navigate back to competition or dashboard
@@ -131,7 +161,7 @@ export default function MatchPage() {
     } else {
       router.push("/");
     }
-  }, [match, matchId, competition, state.matches, completeMatch, updateMatchScore, router]);
+  }, [match, matchId, competition, state.matches, completeMatch, updateMatchScore, updateCompetition, addMatch, router]);
 
   const handleOpenCompleteDialog = useCallback(() => {
     if (!match) return;

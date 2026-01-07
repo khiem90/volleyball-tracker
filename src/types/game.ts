@@ -47,7 +47,7 @@ export interface PersistentTeam {
 }
 
 // Competition types
-export type CompetitionType = "round_robin" | "single_elimination" | "double_elimination";
+export type CompetitionType = "round_robin" | "single_elimination" | "double_elimination" | "win2out";
 
 export type CompetitionStatus = "draft" | "in_progress" | "completed";
 
@@ -81,6 +81,8 @@ export interface Competition {
   createdAt: number;
   completedAt?: number;
   winnerId?: string;
+  // Win 2 & Out specific state
+  win2outState?: Win2OutState;
 }
 
 // Round Robin specific
@@ -126,4 +128,24 @@ export interface QuickMatch {
   status: MatchStatus;
   createdAt: number;
   completedAt?: number;
+}
+
+// Win 2 & Out format types
+export type Win2OutEliminationReason = "lost" | "champion";
+
+export interface Win2OutTeamStatus {
+  teamId: string;
+  winStreak: number;
+  isEliminated: boolean;
+  eliminationReason?: Win2OutEliminationReason;
+  eliminatedAt?: number;
+  matchesPlayed: number;
+}
+
+export interface Win2OutState {
+  competitionId: string;
+  teamStatuses: Win2OutTeamStatus[];
+  queue: string[]; // Team IDs waiting to play
+  currentChampionId?: string; // Team currently on court with wins
+  isComplete: boolean;
 }

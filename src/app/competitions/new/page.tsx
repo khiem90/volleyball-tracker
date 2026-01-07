@@ -15,6 +15,7 @@ import {
   RefreshCw,
   Brackets,
   Layers,
+  Crown,
 } from "lucide-react";
 import type { CompetitionType, PersistentTeam } from "@/types/game";
 
@@ -52,6 +53,13 @@ const formatOptions: FormatOption[] = [
     icon: <Layers className="w-8 h-8" />,
     minTeams: 4,
     requiresPowerOf2: true,
+  },
+  {
+    type: "win2out",
+    label: "Win 2 & Out",
+    description: "Winner stays on, but win twice in a row and you're crowned champion and out!",
+    icon: <Crown className="w-8 h-8" />,
+    minTeams: 3,
   },
 ];
 

@@ -7,6 +7,7 @@ import { Navigation } from "@/components/Navigation";
 import { Standings } from "@/components/Standings";
 import { Bracket } from "@/components/Bracket";
 import { DoubleBracket } from "@/components/DoubleBracket";
+import { Win2OutView } from "@/components/Win2OutView";
 import { useApp } from "@/context/AppContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,12 +31,14 @@ import {
 import { generateRoundRobinSchedule, calculateStandings } from "@/lib/roundRobin";
 import { generateSingleEliminationBracket, advanceWinner } from "@/lib/singleElimination";
 import { generateDoubleEliminationBracket } from "@/lib/doubleElimination";
-import type { Match } from "@/types/game";
+import { initializeWin2OutState, generateFirstMatch } from "@/lib/win2out";
+import type { Match, Win2OutState } from "@/types/game";
 
 const typeLabels: Record<string, string> = {
   round_robin: "Round Robin",
   single_elimination: "Single Elimination",
   double_elimination: "Double Elimination",
+  win2out: "Win 2 & Out",
 };
 
 export default function CompetitionDetailPage() {
@@ -90,12 +93,28 @@ export default function CompetitionDetailPage() {
       case "double_elimination":
         newMatches = generateDoubleEliminationBracket(competition.teamIds, competition.id);
         break;
+      case "win2out": {
+        // Initialize win2out state and create first match
+        const win2outState = initializeWin2OutState(competition.id, competition.teamIds);
+        const firstMatch = generateFirstMatch(competition.id, competition.teamIds);
+        newMatches = [firstMatch];
+        
+        // Update competition with win2out state
+        updateCompetition({
+          ...competition,
+          win2outState,
+          status: "in_progress",
+        });
+        addMatches(newMatches);
+        setShowStartConfirm(false);
+        return; // Early return since we already updated status
+      }
     }
 
     addMatches(newMatches);
     startCompetition(competition.id);
     setShowStartConfirm(false);
-  }, [competition, addMatches, startCompetition]);
+  }, [competition, addMatches, startCompetition, updateCompetition]);
 
   // Handle match click for scoring
   const handleMatchClick = useCallback((match: Match) => {
@@ -436,6 +455,16 @@ export default function CompetitionDetailPage() {
               />
             </CardContent>
           </Card>
+        )}
+
+        {/* Win 2 & Out View */}
+        {competition.status !== "draft" && competition.type === "win2out" && competition.win2outState && (
+          <Win2OutView
+            state={competition.win2outState}
+            matches={matches}
+            teams={competitionTeams}
+            onMatchClick={handleMatchClick}
+          />
         )}
       </main>
 
