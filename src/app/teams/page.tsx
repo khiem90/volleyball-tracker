@@ -4,19 +4,25 @@ import { useState, useCallback } from "react";
 import { Navigation } from "@/components/Navigation";
 import { TeamCard } from "@/components/TeamCard";
 import { TeamForm } from "@/components/TeamForm";
+import { QuickAddTeams } from "@/components/QuickAddTeams";
 import { useApp } from "@/context/AppContext";
 import { Button } from "@/components/ui/button";
-import { Plus, Users } from "lucide-react";
+import { Plus, Users, Sparkles } from "lucide-react";
 import type { PersistentTeam } from "@/types/game";
 
 export default function TeamsPage() {
   const { state, addTeam, updateTeam, deleteTeam } = useApp();
   const [formOpen, setFormOpen] = useState(false);
+  const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [editingTeam, setEditingTeam] = useState<PersistentTeam | null>(null);
 
   const handleCreateClick = useCallback(() => {
     setEditingTeam(null);
     setFormOpen(true);
+  }, []);
+
+  const handleQuickAddClick = useCallback(() => {
+    setQuickAddOpen(true);
   }, []);
 
   const handleEditTeam = useCallback((team: PersistentTeam) => {
@@ -42,6 +48,15 @@ export default function TeamsPage() {
     [editingTeam, addTeam, updateTeam]
   );
 
+  const handleQuickAddTeams = useCallback(
+    (teams: { name: string; color: string }[]) => {
+      teams.forEach((team) => {
+        addTeam(team.name, team.color);
+      });
+    },
+    [addTeam]
+  );
+
   const sortedTeams = [...state.teams].sort((a, b) => b.createdAt - a.createdAt);
 
   return (
@@ -57,10 +72,16 @@ export default function TeamsPage() {
               Manage your teams for competitions and matches
             </p>
           </div>
-          <Button onClick={handleCreateClick} className="gap-2">
-            <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">Add Team</span>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={handleQuickAddClick} className="gap-2">
+              <Sparkles className="w-4 h-4" />
+              <span className="hidden sm:inline">Quick Add</span>
+            </Button>
+            <Button onClick={handleCreateClick} className="gap-2">
+              <Plus className="w-4 h-4" />
+              <span className="hidden sm:inline">Add Team</span>
+            </Button>
+          </div>
         </div>
 
         {/* Teams Grid */}
@@ -73,10 +94,16 @@ export default function TeamsPage() {
             <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
               Create your first team to start organizing competitions and tracking matches.
             </p>
-            <Button onClick={handleCreateClick} className="gap-2">
-              <Plus className="w-4 h-4" />
-              Create Your First Team
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Button variant="outline" onClick={handleQuickAddClick} className="gap-2">
+                <Sparkles className="w-4 h-4" />
+                Quick Add Multiple Teams
+              </Button>
+              <Button onClick={handleCreateClick} className="gap-2">
+                <Plus className="w-4 h-4" />
+                Create Single Team
+              </Button>
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -98,6 +125,14 @@ export default function TeamsPage() {
         onOpenChange={setFormOpen}
         team={editingTeam}
         onSubmit={handleFormSubmit}
+      />
+
+      {/* Quick Add Teams Modal */}
+      <QuickAddTeams
+        open={quickAddOpen}
+        onOpenChange={setQuickAddOpen}
+        onAddTeams={handleQuickAddTeams}
+        existingTeamCount={state.teams.length}
       />
     </div>
   );
