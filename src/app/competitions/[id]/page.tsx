@@ -1,0 +1,490 @@
+"use client";
+
+import { useEffect, useMemo, useCallback, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
+import { Navigation } from "@/components/Navigation";
+import { Standings } from "@/components/Standings";
+import { Bracket } from "@/components/Bracket";
+import { DoubleBracket } from "@/components/DoubleBracket";
+import { useApp } from "@/context/AppContext";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  ArrowLeft,
+  Play,
+  Trophy,
+  Users,
+  Calendar,
+  CheckCircle2,
+  Clock,
+} from "lucide-react";
+import { generateRoundRobinSchedule, calculateStandings } from "@/lib/roundRobin";
+import { generateSingleEliminationBracket, advanceWinner } from "@/lib/singleElimination";
+import { generateDoubleEliminationBracket } from "@/lib/doubleElimination";
+import type { Match } from "@/types/game";
+
+const typeLabels: Record<string, string> = {
+  round_robin: "Round Robin",
+  single_elimination: "Single Elimination",
+  double_elimination: "Double Elimination",
+};
+
+export default function CompetitionDetailPage() {
+  const params = useParams();
+  const router = useRouter();
+  const competitionId = params.id as string;
+
+  const {
+    state,
+    getCompetitionById,
+    getMatchesByCompetition,
+    addMatches,
+    startCompetition,
+    updateCompetition,
+    updateMatchScore,
+    startMatch,
+    completeMatch,
+    completeCompetition,
+  } = useApp();
+
+  const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
+  const [showStartConfirm, setShowStartConfirm] = useState(false);
+
+  const competition = useMemo(
+    () => getCompetitionById(competitionId),
+    [getCompetitionById, competitionId]
+  );
+
+  const matches = useMemo(
+    () => getMatchesByCompetition(competitionId),
+    [getMatchesByCompetition, competitionId]
+  );
+
+  const competitionTeams = useMemo(() => {
+    if (!competition) return [];
+    return state.teams.filter((t) => competition.teamIds.includes(t.id));
+  }, [competition, state.teams]);
+
+  // Generate matches when competition starts
+  const handleStartCompetition = useCallback(() => {
+    if (!competition) return;
+
+    let newMatches: Omit<Match, "id" | "createdAt">[] = [];
+
+    switch (competition.type) {
+      case "round_robin":
+        newMatches = generateRoundRobinSchedule(competition.teamIds, competition.id);
+        break;
+      case "single_elimination":
+        newMatches = generateSingleEliminationBracket(competition.teamIds, competition.id);
+        break;
+      case "double_elimination":
+        newMatches = generateDoubleEliminationBracket(competition.teamIds, competition.id);
+        break;
+    }
+
+    addMatches(newMatches);
+    startCompetition(competition.id);
+    setShowStartConfirm(false);
+  }, [competition, addMatches, startCompetition]);
+
+  // Handle match click for scoring
+  const handleMatchClick = useCallback((match: Match) => {
+    setSelectedMatch(match);
+  }, []);
+
+  // Navigate to match page
+  const handlePlayMatch = useCallback(() => {
+    if (!selectedMatch) return;
+    router.push(`/match/${selectedMatch.id}`);
+  }, [selectedMatch, router]);
+
+  // Check if competition is complete
+  useEffect(() => {
+    if (!competition || competition.status !== "in_progress") return;
+
+    const allMatchesComplete = matches.length > 0 && matches.every((m) => m.status === "completed");
+
+    if (allMatchesComplete) {
+      // Find winner based on competition type
+      let winnerId: string | undefined;
+
+      if (competition.type === "round_robin") {
+        const standings = calculateStandings(competition.teamIds, matches);
+        winnerId = standings[0]?.teamId;
+      } else {
+        // For elimination tournaments, winner is from the final match
+        const finalMatch = matches.find((m) => {
+          if (competition.type === "single_elimination") {
+            const totalRounds = Math.log2(competition.teamIds.length);
+            return m.round === totalRounds && !m.bracket;
+          }
+          return m.bracket === "grand_finals";
+        });
+        winnerId = finalMatch?.winnerId;
+      }
+
+      if (winnerId) {
+        completeCompetition(competition.id, winnerId);
+      }
+    }
+  }, [competition, matches, completeCompetition]);
+
+  if (!competition) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <main className="max-w-6xl mx-auto px-4 py-8">
+          <div className="text-center py-16">
+            <Trophy className="w-16 h-16 mx-auto mb-4 text-muted-foreground/30" />
+            <h2 className="text-xl font-semibold mb-2">Competition not found</h2>
+            <p className="text-muted-foreground mb-4">
+              This competition may have been deleted.
+            </p>
+            <Link href="/competitions">
+              <Button variant="outline" className="gap-2">
+                <ArrowLeft className="w-4 h-4" />
+                Back to Competitions
+              </Button>
+            </Link>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  const completedMatches = matches.filter((m) => m.status === "completed").length;
+  const inProgressMatches = matches.filter((m) => m.status === "in_progress").length;
+  const pendingMatches = matches.filter((m) => m.status === "pending").length;
+
+  const standings = competition.type === "round_robin"
+    ? calculateStandings(competition.teamIds, matches)
+    : null;
+
+  const winner = competition.winnerId
+    ? state.teams.find((t) => t.id === competition.winnerId)
+    : null;
+
+  return (
+    <div className="min-h-screen bg-background">
+      <Navigation />
+
+      <main className="max-w-6xl mx-auto px-4 py-8">
+        {/* Back Link */}
+        <Link href="/competitions">
+          <Button variant="ghost" className="mb-6 gap-2 text-muted-foreground hover:text-foreground">
+            <ArrowLeft className="w-4 h-4" />
+            Back to Competitions
+          </Button>
+        </Link>
+
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-8">
+          <div>
+            <div className="flex items-center gap-3 mb-2">
+              <h1 className="text-3xl font-bold tracking-tight">{competition.name}</h1>
+              <span
+                className={`
+                  px-3 py-1 text-sm font-medium rounded-full
+                  ${competition.status === "draft" ? "bg-slate-500/20 text-slate-400" : ""}
+                  ${competition.status === "in_progress" ? "bg-amber-500/20 text-amber-500" : ""}
+                  ${competition.status === "completed" ? "bg-emerald-500/20 text-emerald-500" : ""}
+                `}
+              >
+                {competition.status === "draft" && "Draft"}
+                {competition.status === "in_progress" && "In Progress"}
+                {competition.status === "completed" && "Completed"}
+              </span>
+            </div>
+            <div className="flex flex-wrap items-center gap-4 text-muted-foreground">
+              <span className="flex items-center gap-1.5">
+                <Trophy className="w-4 h-4" />
+                {typeLabels[competition.type]}
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Users className="w-4 h-4" />
+                {competition.teamIds.length} teams
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Calendar className="w-4 h-4" />
+                {new Date(competition.createdAt).toLocaleDateString()}
+              </span>
+            </div>
+          </div>
+
+          {competition.status === "draft" && (
+            <Button onClick={() => setShowStartConfirm(true)} className="gap-2">
+              <Play className="w-4 h-4" />
+              Start Competition
+            </Button>
+          )}
+        </div>
+
+        {/* Winner Banner */}
+        {winner && (
+          <Card className="mb-8 border-amber-500/50 bg-gradient-to-r from-amber-500/10 to-amber-600/10">
+            <CardContent className="py-6">
+              <div className="flex items-center justify-center gap-4">
+                <div
+                  className="w-16 h-16 rounded-xl flex items-center justify-center"
+                  style={{
+                    background: `linear-gradient(135deg, ${winner.color || "#f59e0b"}, ${winner.color || "#f59e0b"}99)`,
+                  }}
+                >
+                  <span className="text-3xl">🏆</span>
+                </div>
+                <div className="text-center">
+                  <p className="text-sm text-amber-500 font-medium mb-1">Champion</p>
+                  <p className="text-2xl font-bold">{winner.name}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Stats */}
+        {competition.status !== "draft" && (
+          <div className="grid grid-cols-3 gap-4 mb-8">
+            <Card className="border-border/50 bg-card/30">
+              <CardContent className="py-4 text-center">
+                <CheckCircle2 className="w-6 h-6 mx-auto mb-2 text-emerald-500" />
+                <div className="text-2xl font-bold">{completedMatches}</div>
+                <p className="text-sm text-muted-foreground">Completed</p>
+              </CardContent>
+            </Card>
+            <Card className="border-border/50 bg-card/30">
+              <CardContent className="py-4 text-center">
+                <Clock className="w-6 h-6 mx-auto mb-2 text-amber-500" />
+                <div className="text-2xl font-bold">{inProgressMatches}</div>
+                <p className="text-sm text-muted-foreground">In Progress</p>
+              </CardContent>
+            </Card>
+            <Card className="border-border/50 bg-card/30">
+              <CardContent className="py-4 text-center">
+                <Play className="w-6 h-6 mx-auto mb-2 text-blue-500" />
+                <div className="text-2xl font-bold">{pendingMatches}</div>
+                <p className="text-sm text-muted-foreground">Pending</p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Draft State - Show teams */}
+        {competition.status === "draft" && (
+          <Card className="border-border/50 bg-card/30">
+            <CardHeader>
+              <CardTitle>Participating Teams</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {competitionTeams.map((team) => (
+                  <div
+                    key={team.id}
+                    className="flex items-center gap-2 p-3 rounded-lg bg-card border border-border/50"
+                  >
+                    <div
+                      className="w-8 h-8 rounded-lg flex items-center justify-center"
+                      style={{
+                        background: `linear-gradient(135deg, ${team.color || "#3b82f6"}, ${team.color || "#3b82f6"}99)`,
+                      }}
+                    >
+                      <Users className="w-4 h-4 text-white" />
+                    </div>
+                    <span className="font-medium truncate">{team.name}</span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Round Robin - Show standings and matches */}
+        {competition.status !== "draft" && competition.type === "round_robin" && standings && (
+          <div className="space-y-6">
+            <Standings standings={standings} teams={competitionTeams} />
+
+            {/* Match Schedule */}
+            <Card className="border-border/50 bg-card/30">
+              <CardHeader>
+                <CardTitle>Match Schedule</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {matches
+                    .sort((a, b) => {
+                      // Sort by status (in_progress first, then pending, then completed)
+                      const statusOrder = { in_progress: 0, pending: 1, completed: 2 };
+                      const statusDiff = statusOrder[a.status] - statusOrder[b.status];
+                      if (statusDiff !== 0) return statusDiff;
+                      // Then by round and position
+                      if (a.round !== b.round) return a.round - b.round;
+                      return a.position - b.position;
+                    })
+                    .map((match) => {
+                      const homeTeam = competitionTeams.find((t) => t.id === match.homeTeamId);
+                      const awayTeam = competitionTeams.find((t) => t.id === match.awayTeamId);
+                      const homeWon = match.winnerId === match.homeTeamId;
+                      const awayWon = match.winnerId === match.awayTeamId;
+
+                      return (
+                        <div
+                          key={match.id}
+                          className={`
+                            p-4 rounded-lg border transition-all
+                            ${match.status === "in_progress"
+                              ? "border-amber-500/50 bg-amber-500/5"
+                              : "border-border/50 bg-card"
+                            }
+                            ${match.status === "pending" ? "cursor-pointer hover:border-primary/50" : ""}
+                          `}
+                          onClick={() => {
+                            if (match.status === "pending" || match.status === "in_progress") {
+                              handleMatchClick(match);
+                            }
+                          }}
+                          role={match.status !== "completed" ? "button" : undefined}
+                          tabIndex={match.status !== "completed" ? 0 : undefined}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3 flex-1">
+                              <div
+                                className="w-3 h-3 rounded-full"
+                                style={{ backgroundColor: homeTeam?.color || "#3b82f6" }}
+                              />
+                              <span className={homeWon ? "font-semibold text-emerald-500" : ""}>
+                                {homeTeam?.name || "TBD"}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-4">
+                              {match.status === "completed" ? (
+                                <span className="text-lg font-bold tabular-nums">
+                                  {match.homeScore} - {match.awayScore}
+                                </span>
+                              ) : (
+                                <span
+                                  className={`
+                                    px-2 py-1 text-xs font-medium rounded-full
+                                    ${match.status === "in_progress"
+                                      ? "bg-amber-500/20 text-amber-500"
+                                      : "bg-slate-500/20 text-slate-400"
+                                    }
+                                  `}
+                                >
+                                  {match.status === "in_progress" ? "Live" : "Pending"}
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="flex items-center gap-3 flex-1 justify-end">
+                              <span className={awayWon ? "font-semibold text-emerald-500" : ""}>
+                                {awayTeam?.name || "TBD"}
+                              </span>
+                              <div
+                                className="w-3 h-3 rounded-full"
+                                style={{ backgroundColor: awayTeam?.color || "#f97316" }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Single Elimination Bracket */}
+        {competition.status !== "draft" && competition.type === "single_elimination" && (
+          <Card className="border-border/50 bg-card/30">
+            <CardHeader>
+              <CardTitle>Tournament Bracket</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Bracket
+                matches={matches}
+                teams={competitionTeams}
+                totalTeams={competition.teamIds.length}
+                onMatchClick={handleMatchClick}
+              />
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Double Elimination Bracket */}
+        {competition.status !== "draft" && competition.type === "double_elimination" && (
+          <Card className="border-border/50 bg-card/30">
+            <CardHeader>
+              <CardTitle>Tournament Bracket</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <DoubleBracket
+                matches={matches}
+                teams={competitionTeams}
+                totalTeams={competition.teamIds.length}
+                onMatchClick={handleMatchClick}
+              />
+            </CardContent>
+          </Card>
+        )}
+      </main>
+
+      {/* Start Competition Confirmation */}
+      <Dialog open={showStartConfirm} onOpenChange={setShowStartConfirm}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Start Competition?</DialogTitle>
+            <DialogDescription>
+              This will generate the {typeLabels[competition.type].toLowerCase()} schedule for{" "}
+              {competition.teamIds.length} teams. You won't be able to add or remove teams after starting.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-row gap-2 sm:gap-2">
+            <Button variant="outline" onClick={() => setShowStartConfirm(false)} className="flex-1">
+              Cancel
+            </Button>
+            <Button onClick={handleStartCompetition} className="flex-1 gap-2">
+              <Play className="w-4 h-4" />
+              Start
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Match Action Dialog */}
+      <Dialog open={!!selectedMatch} onOpenChange={() => setSelectedMatch(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedMatch?.status === "in_progress" ? "Continue Match" : "Start Match"}
+            </DialogTitle>
+            <DialogDescription>
+              {competitionTeams.find((t) => t.id === selectedMatch?.homeTeamId)?.name} vs{" "}
+              {competitionTeams.find((t) => t.id === selectedMatch?.awayTeamId)?.name}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-row gap-2 sm:gap-2">
+            <Button variant="outline" onClick={() => setSelectedMatch(null)} className="flex-1">
+              Cancel
+            </Button>
+            <Button onClick={handlePlayMatch} className="flex-1 gap-2">
+              <Play className="w-4 h-4" />
+              {selectedMatch?.status === "in_progress" ? "Continue" : "Play Match"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
