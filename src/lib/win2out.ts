@@ -3,6 +3,7 @@ import type { Match, Win2OutState, Win2OutTeamStatus } from "@/types/game";
 /**
  * Initialize Win 2 & Out state for a competition.
  * First two teams play, rest wait in queue.
+ * This is an ENDLESS mode - losers go back to the queue.
  */
 export const initializeWin2OutState = (
   competitionId: string,
@@ -52,6 +53,7 @@ export const generateFirstMatch = (
 
 /**
  * Process a completed match and update Win 2 & Out state.
+ * ENDLESS MODE: Losers go back to the end of the queue.
  * Returns updated state and optionally the next match to create.
  */
 export const processMatchResult = (
@@ -95,13 +97,12 @@ export const processMatchResult = (
     }
 
     if (status.teamId === loserId) {
+      // Loser resets streak but is NOT eliminated - goes back to queue
       return {
         ...status,
         winStreak: 0,
         matchesPlayed: status.matchesPlayed + 1,
-        isEliminated: true,
-        eliminationReason: "lost" as const,
-        eliminatedAt: Date.now(),
+        // Keep isEliminated as false - they go back to queue
       };
     }
 
@@ -112,8 +113,13 @@ export const processMatchResult = (
   const winnerStatus = updatedStatuses.find((s) => s.teamId === winnerId)!;
   const winnerIsChampion = winnerStatus.isEliminated;
 
-  // Get next team from queue
+  // Build new queue - loser goes to the back!
   const queue = [...state.queue];
+  
+  // Add loser to back of queue (endless mode)
+  queue.push(loserId);
+  
+  // Get next challenger from front of queue
   const nextChallengerId = queue.shift();
 
   // Determine the current champion (team on court)
@@ -138,6 +144,23 @@ export const processMatchResult = (
           round: completedMatch.round + 1,
           position: 1,
         };
+      } else if (queue.length === 0) {
+        // Only one team left in queue, they become champion by default
+        const lastTeamStatus = updatedStatuses.find(
+          (s) => s.teamId === nextChallengerId
+        );
+        if (lastTeamStatus) {
+          const idx = updatedStatuses.findIndex(
+            (s) => s.teamId === nextChallengerId
+          );
+          updatedStatuses[idx] = {
+            ...lastTeamStatus,
+            isEliminated: true,
+            eliminationReason: "champion",
+            eliminatedAt: Date.now(),
+          };
+          champions.push(nextChallengerId);
+        }
       }
     }
   } else {
@@ -158,24 +181,9 @@ export const processMatchResult = (
     }
   }
 
-  // Check if competition is complete
+  // Check if competition is complete (all teams are champions)
   const remainingTeams = updatedStatuses.filter((s) => !s.isEliminated);
-  const isComplete = remainingTeams.length <= 1 && queue.length === 0;
-
-  // If only one team left and no one in queue, they're the final champion
-  if (isComplete && remainingTeams.length === 1) {
-    const finalChampion = remainingTeams[0];
-    const finalIndex = updatedStatuses.findIndex(
-      (s) => s.teamId === finalChampion.teamId
-    );
-    updatedStatuses[finalIndex] = {
-      ...finalChampion,
-      isEliminated: true,
-      eliminationReason: "champion",
-      eliminatedAt: Date.now(),
-    };
-    champions.push(finalChampion.teamId);
-  }
+  const isComplete = remainingTeams.length === 0;
 
   return {
     updatedState: {
@@ -197,9 +205,6 @@ export const getTeamsByStatus = (state: Win2OutState) => {
   const champions = state.teamStatuses.filter(
     (s) => s.isEliminated && s.eliminationReason === "champion"
   );
-  const eliminated = state.teamStatuses.filter(
-    (s) => s.isEliminated && s.eliminationReason === "lost"
-  );
   const inQueue = state.teamStatuses.filter(
     (s) => !s.isEliminated && state.queue.includes(s.teamId)
   );
@@ -207,7 +212,7 @@ export const getTeamsByStatus = (state: Win2OutState) => {
     (s) => !s.isEliminated && !state.queue.includes(s.teamId)
   );
 
-  return { champions, eliminated, inQueue, onCourt };
+  return { champions, inQueue, onCourt };
 };
 
 /**
@@ -221,4 +226,3 @@ export const getCurrentChampionStreak = (state: Win2OutState): number => {
   );
   return champion?.winStreak || 0;
 };
-
