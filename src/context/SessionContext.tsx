@@ -156,7 +156,15 @@ export const SessionProvider = ({ children }: SessionProviderProps) => {
         unsubscribeRef.current = subscribeToSession(
           newSession.id,
           (updatedSession) => {
-            setSession(updatedSession);
+            if (updatedSession === null) {
+              // Session was deleted
+              setError("This session has been ended.");
+              setSession(null);
+              setIsSharedMode(false);
+              localStorage.removeItem(SESSION_STORAGE_KEY);
+            } else {
+              setSession(updatedSession);
+            }
           },
           (err) => {
             setError(err.message);
@@ -208,7 +216,15 @@ export const SessionProvider = ({ children }: SessionProviderProps) => {
         unsubscribeRef.current = subscribeToSession(
           foundSession.id,
           (updatedSession) => {
-            setSession(updatedSession);
+            if (updatedSession === null) {
+              // Session was deleted - notify the user
+              setError("This session has been ended by the creator.");
+              setSession(null);
+              setIsSharedMode(false);
+              localStorage.removeItem(SESSION_STORAGE_KEY);
+            } else {
+              setSession(updatedSession);
+            }
           },
           (err) => {
             setError(err.message);

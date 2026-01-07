@@ -231,14 +231,17 @@ export default function SessionPage() {
   }
 
   if (error || !session) {
+    const isEnded = error?.includes("ended");
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="max-w-md w-full">
           <CardHeader className="text-center">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-destructive/10 flex items-center justify-center">
-              <AlertCircle className="w-8 h-8 text-destructive" />
+            <div className={`w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center ${
+              isEnded ? "bg-amber-500/10" : "bg-destructive/10"
+            }`}>
+              <AlertCircle className={`w-8 h-8 ${isEnded ? "text-amber-500" : "text-destructive"}`} />
             </div>
-            <CardTitle>Session Not Found</CardTitle>
+            <CardTitle>{isEnded ? "Session Ended" : "Session Not Found"}</CardTitle>
             <CardDescription>
               {error || `We couldn't find a session with code "${shareCode}". It may have been deleted or the code is incorrect.`}
             </CardDescription>
