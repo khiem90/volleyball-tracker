@@ -57,7 +57,7 @@ const formatOptions: FormatOption[] = [
   {
     type: "win2out",
     label: "Win 2 & Out",
-    description: "Endless mode! Winner stays, loser goes to back of queue. Win 2 in a row = champion!",
+    description: "True endless! Winner stays, win 2 = champion & back to queue. Track who gets crowned most!",
     icon: <Crown className="w-8 h-8" />,
     minTeams: 3,
   },

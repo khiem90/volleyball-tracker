@@ -3,8 +3,8 @@
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, Trophy, Clock, Flame, Play, RefreshCw } from "lucide-react";
-import { getTeamsByStatus, getCurrentChampionStreak } from "@/lib/win2out";
+import { Users, Trophy, Clock, Flame, Play, RefreshCw, Crown } from "lucide-react";
+import { getTeamsByStatus, getCurrentChampionStreak, getChampionCount } from "@/lib/win2out";
 import type { Match, PersistentTeam, Win2OutState } from "@/types/game";
 
 interface Win2OutViewProps {
@@ -34,7 +34,7 @@ export const Win2OutView = ({
     return teamsMap.get(teamId)?.color || "#3b82f6";
   };
 
-  const { champions, inQueue } = useMemo(
+  const { championsData } = useMemo(
     () => getTeamsByStatus(state),
     [state]
   );
@@ -63,27 +63,34 @@ export const Win2OutView = ({
     }
   };
 
-  // Calculate total active teams (not champions yet)
-  const activeTeamsCount = state.teamStatuses.filter((s) => !s.isEliminated).length;
+  // Build leaderboard sorted by champion count, then matches played
+  const leaderboard = useMemo(() => {
+    return [...state.teamStatuses]
+      .map((status) => ({
+        ...status,
+        championCount: getChampionCount(state, status.teamId),
+      }))
+      .sort((a, b) => {
+        if (b.championCount !== a.championCount) {
+          return b.championCount - a.championCount;
+        }
+        return b.matchesPlayed - a.matchesPlayed;
+      });
+  }, [state]);
 
   return (
     <div className="space-y-6">
       {/* Endless Mode Banner */}
       <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground bg-card/30 rounded-lg py-2 px-4">
-        <RefreshCw className="w-4 h-4" />
-        <span>Endless Mode - Losers go back to the queue</span>
+        <RefreshCw className="w-4 h-4 animate-spin-slow" />
+        <span>True Endless Mode - Win 2 in a row → Champion → Back to queue!</span>
       </div>
 
       {/* Current Match */}
       <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-primary/10">
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-lg">
-            {state.isComplete ? (
-              <>
-                <Trophy className="w-5 h-5 text-amber-500" />
-                All Teams Crowned!
-              </>
-            ) : currentMatch ? (
+            {currentMatch ? (
               <>
                 <Play className="w-5 h-5 text-primary" />
                 Current Match
@@ -127,7 +134,12 @@ export const Win2OutView = ({
                 <p className="font-semibold">{getTeamName(currentMatch.homeTeamId)}</p>
                 {state.currentChampionId === currentMatch.homeTeamId && championStreak > 0 && (
                   <p className="text-xs text-amber-500 font-medium">
-                    🔥 {championStreak} win{championStreak > 1 ? "s" : ""} - 1 more to crown!
+                    🔥 {championStreak} win{championStreak > 1 ? "s" : ""} - 1 more = champion!
+                  </p>
+                )}
+                {getChampionCount(state, currentMatch.homeTeamId) > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    👑 ×{getChampionCount(state, currentMatch.homeTeamId)}
                   </p>
                 )}
               </div>
@@ -159,16 +171,15 @@ export const Win2OutView = ({
                 <p className="font-semibold">{getTeamName(currentMatch.awayTeamId)}</p>
                 {state.currentChampionId === currentMatch.awayTeamId && championStreak > 0 && (
                   <p className="text-xs text-amber-500 font-medium">
-                    🔥 {championStreak} win{championStreak > 1 ? "s" : ""} - 1 more to crown!
+                    🔥 {championStreak} win{championStreak > 1 ? "s" : ""} - 1 more = champion!
+                  </p>
+                )}
+                {getChampionCount(state, currentMatch.awayTeamId) > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    👑 ×{getChampionCount(state, currentMatch.awayTeamId)}
                   </p>
                 )}
               </div>
-            </div>
-          ) : state.isComplete ? (
-            <div className="text-center py-6">
-              <Trophy className="w-16 h-16 mx-auto mb-4 text-amber-500" />
-              <p className="text-lg font-semibold text-amber-500">Everyone's a Champion!</p>
-              <p className="text-muted-foreground">All {champions.length} teams have won 2 in a row</p>
             </div>
           ) : (
             <div className="text-center py-6 text-muted-foreground">
@@ -178,29 +189,24 @@ export const Win2OutView = ({
         </CardContent>
       </Card>
 
-      {/* Queue - Now more prominent since losers go back here */}
+      {/* Queue */}
       <Card className="border-blue-500/30 bg-blue-500/5">
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-lg">
             <Clock className="w-5 h-5 text-blue-500" />
             Queue ({state.queue.length} waiting)
-            {activeTeamsCount > 0 && (
-              <span className="text-sm font-normal text-muted-foreground ml-2">
-                • {activeTeamsCount} teams still playing
-              </span>
-            )}
           </CardTitle>
         </CardHeader>
         <CardContent>
           {state.queue.length === 0 ? (
             <p className="text-sm text-muted-foreground py-4 text-center">
-              {activeTeamsCount <= 2 ? "All teams are on court or crowned!" : "Queue is empty"}
+              All teams are on court!
             </p>
           ) : (
             <div className="flex flex-wrap gap-2">
               {state.queue.map((teamId, index) => {
                 const teamStatus = state.teamStatuses.find((s) => s.teamId === teamId);
-                const matchesPlayed = teamStatus?.matchesPlayed || 0;
+                const champCount = getChampionCount(state, teamId);
 
                 return (
                   <div
@@ -219,9 +225,9 @@ export const Win2OutView = ({
                       <Users className="w-3 h-3 text-white" />
                     </div>
                     <span className="font-medium text-sm">{getTeamName(teamId)}</span>
-                    {matchesPlayed > 0 && (
-                      <span className="text-xs text-muted-foreground">
-                        ({matchesPlayed} played)
+                    {champCount > 0 && (
+                      <span className="text-xs text-amber-500 font-medium">
+                        👑×{champCount}
                       </span>
                     )}
                   </div>
@@ -232,49 +238,78 @@ export const Win2OutView = ({
         </CardContent>
       </Card>
 
-      {/* Champions */}
+      {/* Leaderboard */}
       <Card className="border-amber-500/30 bg-amber-500/5">
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-lg">
-            <Trophy className="w-5 h-5 text-amber-500" />
-            Champions ({champions.length})
+            <Crown className="w-5 h-5 text-amber-500" />
+            Leaderboard
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {champions.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-4 text-center">
-              Win 2 in a row to become a champion! 🏆
-            </p>
-          ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-              {champions.map((status, index) => (
+          <div className="space-y-2">
+            {leaderboard.map((status, index) => {
+              const champCount = status.championCount;
+              const isOnCourt = !state.queue.includes(status.teamId);
+              
+              return (
                 <div
                   key={status.teamId}
-                  className="flex items-center gap-3 p-3 rounded-lg bg-amber-500/10"
+                  className={`
+                    flex items-center gap-3 p-3 rounded-lg
+                    ${index === 0 && champCount > 0 ? "bg-amber-500/20 border border-amber-500/30" : "bg-card border border-border/50"}
+                    ${isOnCourt ? "ring-2 ring-primary/30" : ""}
+                  `}
                 >
-                  <div className="flex items-center justify-center w-6 text-amber-500 font-bold">
-                    #{index + 1}
+                  {/* Rank */}
+                  <div className={`
+                    w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm
+                    ${index === 0 && champCount > 0 ? "bg-amber-500 text-white" : ""}
+                    ${index === 1 && champCount > 0 ? "bg-slate-400 text-white" : ""}
+                    ${index === 2 && champCount > 0 ? "bg-amber-700 text-white" : ""}
+                    ${(index > 2 || champCount === 0) ? "bg-card text-muted-foreground" : ""}
+                  `}>
+                    {index + 1}
                   </div>
+
+                  {/* Team */}
                   <div
                     className="w-8 h-8 rounded-lg flex items-center justify-center"
                     style={{
                       background: `linear-gradient(135deg, ${getTeamColor(status.teamId)}, ${getTeamColor(status.teamId)}cc)`,
                     }}
                   >
-                    <Trophy className="w-4 h-4 text-white" />
+                    <Users className="w-4 h-4 text-white" />
                   </div>
+
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-amber-500 truncate">
-                      {getTeamName(status.teamId)}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className={`font-medium truncate ${index === 0 && champCount > 0 ? "text-amber-500" : ""}`}>
+                        {getTeamName(status.teamId)}
+                      </p>
+                      {isOnCourt && (
+                        <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full">
+                          On Court
+                        </span>
+                      )}
+                    </div>
                     <p className="text-xs text-muted-foreground">
-                      {status.matchesPlayed} matches
+                      {status.matchesPlayed} matches played
                     </p>
+                  </div>
+
+                  {/* Champion count */}
+                  <div className="text-right">
+                    <div className="flex items-center gap-1 text-amber-500 font-bold">
+                      <Crown className="w-4 h-4" />
+                      <span>{champCount}</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">crowns</p>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
+              );
+            })}
+          </div>
         </CardContent>
       </Card>
 
@@ -285,8 +320,8 @@ export const Win2OutView = ({
             <CardTitle className="text-lg">Match History ({completedMatches.length} matches)</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2 max-h-80 overflow-y-auto">
-              {completedMatches.map((match, index) => {
+            <div className="space-y-2 max-h-60 overflow-y-auto">
+              {completedMatches.slice(0, 20).map((match, index) => {
                 const homeWon = match.winnerId === match.homeTeamId;
 
                 return (
