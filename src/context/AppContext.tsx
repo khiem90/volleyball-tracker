@@ -44,7 +44,7 @@ type AppAction =
   | { type: "UPDATE_TEAM"; id: string; name: string; color?: string }
   | { type: "DELETE_TEAM"; id: string }
   // Competition actions
-  | { type: "CREATE_COMPETITION"; name: string; competitionType: CompetitionType; teamIds: string[] }
+  | { type: "CREATE_COMPETITION"; name: string; competitionType: CompetitionType; teamIds: string[]; numberOfCourts?: number }
   | { type: "UPDATE_COMPETITION"; competition: Competition }
   | { type: "DELETE_COMPETITION"; id: string }
   | { type: "START_COMPETITION"; id: string }
@@ -104,6 +104,7 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
         matchIds: [],
         status: "draft",
         createdAt: Date.now(),
+        numberOfCourts: action.numberOfCourts,
       };
       return {
         ...state,
@@ -297,7 +298,7 @@ interface AppContextValue {
   deleteTeam: (id: string) => void;
   getTeamById: (id: string) => PersistentTeam | undefined;
   // Competition actions
-  createCompetition: (name: string, type: CompetitionType, teamIds: string[]) => string;
+  createCompetition: (name: string, type: CompetitionType, teamIds: string[], numberOfCourts?: number) => string;
   updateCompetition: (competition: Competition) => void;
   deleteCompetition: (id: string) => void;
   startCompetition: (id: string) => void;
@@ -370,9 +371,9 @@ export const AppProvider = ({ children }: AppProviderProps) => {
 
   // Competition actions
   const createCompetition = useCallback(
-    (name: string, type: CompetitionType, teamIds: string[]) => {
+    (name: string, type: CompetitionType, teamIds: string[], numberOfCourts?: number) => {
       const id = generateId();
-      dispatch({ type: "CREATE_COMPETITION", name, competitionType: type, teamIds });
+      dispatch({ type: "CREATE_COMPETITION", name, competitionType: type, teamIds, numberOfCourts });
       return id;
     },
     []

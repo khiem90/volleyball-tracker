@@ -16,6 +16,7 @@ import {
   Brackets,
   Layers,
   Crown,
+  RotateCw,
 } from "lucide-react";
 import type { CompetitionType, PersistentTeam } from "@/types/game";
 
@@ -61,6 +62,13 @@ const formatOptions: FormatOption[] = [
     icon: <Crown className="w-8 h-8" />,
     minTeams: 3,
   },
+  {
+    type: "two_match_rotation",
+    label: "2 Match Rotation",
+    description: "Play 2 matches then rotate. First match winner stays, then everyone gets 2 games before rotating.",
+    icon: <RotateCw className="w-8 h-8" />,
+    minTeams: 3,
+  },
 ];
 
 export default function NewCompetitionPage() {
@@ -71,6 +79,7 @@ export default function NewCompetitionPage() {
   const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>([]);
   const [competitionName, setCompetitionName] = useState("");
   const [nameError, setNameError] = useState("");
+  const [numberOfCourts, setNumberOfCourts] = useState(1);
 
   const { createCompetition, addMatches, startCompetition } = useApp();
 
@@ -137,6 +146,10 @@ export default function NewCompetitionPage() {
     }
   }, [step]);
 
+  const maxCourts = useMemo(() => {
+    return Math.floor(selectedTeamIds.length / 2);
+  }, [selectedTeamIds.length]);
+
   const handleCreateCompetition = useCallback(() => {
     const trimmedName = competitionName.trim();
     if (!trimmedName) {
@@ -145,15 +158,18 @@ export default function NewCompetitionPage() {
     }
     if (!selectedFormat) return;
 
-    // Create competition
-    createCompetition(trimmedName, selectedFormat, selectedTeamIds);
+    // Create competition with number of courts for win2out and two_match_rotation
+    const courtsToUse = (selectedFormat === "two_match_rotation" || selectedFormat === "win2out") 
+      ? numberOfCourts 
+      : undefined;
+    createCompetition(trimmedName, selectedFormat, selectedTeamIds, courtsToUse);
 
     // Get the newly created competition (it will be the last one)
     // We need to generate matches based on format type
     // This will be handled in the competition detail page
 
     router.push("/competitions");
-  }, [competitionName, selectedFormat, selectedTeamIds, createCompetition, router]);
+  }, [competitionName, selectedFormat, selectedTeamIds, numberOfCourts, createCompetition, router]);
 
   const handleQuickCreateTeam = useCallback(() => {
     const teamNumber = state.teams.length + 1;
@@ -425,6 +441,39 @@ export default function NewCompetitionPage() {
           <p className="text-sm text-destructive">{nameError}</p>
         )}
       </div>
+
+      {/* Number of Courts - For Win 2 & Out and 2 Match Rotation */}
+      {(selectedFormat === "two_match_rotation" || selectedFormat === "win2out") && maxCourts > 1 && (
+        <div className="space-y-3">
+          <label className="text-sm font-medium">
+            Number of Courts
+          </label>
+          <p className="text-xs text-muted-foreground">
+            Run multiple games simultaneously. More courts = faster rotation.
+          </p>
+          <div className="flex gap-2">
+            {Array.from({ length: Math.min(maxCourts, 4) }, (_, i) => i + 1).map((num) => (
+              <button
+                key={num}
+                type="button"
+                onClick={() => setNumberOfCourts(num)}
+                className={`
+                  flex-1 py-3 rounded-lg font-semibold transition-all duration-200
+                  ${numberOfCourts === num
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-card border border-border/50 hover:border-primary/30"
+                  }
+                `}
+              >
+                {num} Court{num > 1 ? "s" : ""}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground text-center">
+            {numberOfCourts * 2} teams play at once, {selectedTeamIds.length - numberOfCourts * 2} in queue
+          </p>
+        </div>
+      )}
 
       <div className="flex justify-between pt-4">
         <Button variant="outline" onClick={handleBack} className="gap-2">

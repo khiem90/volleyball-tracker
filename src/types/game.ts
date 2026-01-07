@@ -47,7 +47,7 @@ export interface PersistentTeam {
 }
 
 // Competition types
-export type CompetitionType = "round_robin" | "single_elimination" | "double_elimination" | "win2out";
+export type CompetitionType = "round_robin" | "single_elimination" | "double_elimination" | "win2out" | "two_match_rotation";
 
 export type CompetitionStatus = "draft" | "in_progress" | "completed";
 
@@ -83,6 +83,10 @@ export interface Competition {
   winnerId?: string;
   // Win 2 & Out specific state
   win2outState?: Win2OutState;
+  // Two Match Rotation specific state
+  twoMatchRotationState?: TwoMatchRotationState;
+  // Number of simultaneous courts (for two_match_rotation)
+  numberOfCourts?: number;
 }
 
 // Round Robin specific
@@ -138,14 +142,49 @@ export interface Win2OutTeamStatus {
   winStreak: number;
   isEliminated: boolean;
   eliminationReason?: Win2OutEliminationReason;
-  eliminatedAt?: number;
+  eliminatedAt?: number; // Repurposed as champion count in endless mode
   matchesPlayed: number;
+  currentCourt?: number; // Which court the team is currently on (undefined if in queue)
+}
+
+export interface Win2OutCourt {
+  courtNumber: number;
+  teamIds: [string, string];
+  currentChampionId?: string; // Team with win streak on this court
 }
 
 export interface Win2OutState {
   competitionId: string;
   teamStatuses: Win2OutTeamStatus[];
   queue: string[]; // Team IDs waiting to play
-  currentChampionId?: string; // Team currently on court with wins
+  courts: Win2OutCourt[]; // Multiple courts with teams
+  numberOfCourts: number; // Configuration setting
+  currentChampionId?: string; // Legacy - kept for single court compatibility
+  isComplete: boolean;
+}
+
+// Two Match Rotation format types
+export interface TwoMatchRotationTeamStatus {
+  teamId: string;
+  sessionMatches: number; // Matches played in current session (resets when returning from queue)
+  totalMatches: number;
+  totalWins: number;
+  totalLosses: number;
+  currentCourt?: number; // Which court the team is currently on (undefined if in queue)
+}
+
+export interface TwoMatchRotationCourt {
+  courtNumber: number;
+  teamIds: [string, string];
+  isFirstMatch: boolean; // Each court tracks its own first match state
+  matchId?: string; // Current match ID for this court
+}
+
+export interface TwoMatchRotationState {
+  competitionId: string;
+  teamStatuses: TwoMatchRotationTeamStatus[];
+  queue: string[]; // Team IDs waiting to play
+  courts: TwoMatchRotationCourt[]; // Multiple courts with teams
+  numberOfCourts: number; // Configuration setting
   isComplete: boolean;
 }

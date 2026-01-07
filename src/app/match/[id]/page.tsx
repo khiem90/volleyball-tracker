@@ -16,6 +16,7 @@ import {
 import { ArrowLeft, Minus, Plus, Trophy, Undo2, Check } from "lucide-react";
 import { advanceWinner } from "@/lib/singleElimination";
 import { processMatchResult } from "@/lib/win2out";
+import { processMatchResult as processTwoMatchRotationResult } from "@/lib/twoMatchRotation";
 
 export default function MatchPage() {
   const params = useParams();
@@ -144,6 +145,34 @@ export default function MatchPage() {
       updateCompetition({
         ...competition,
         win2outState: updatedState,
+        status: updatedState.isComplete ? "completed" : "in_progress",
+      });
+
+      // Create next match if there is one
+      if (nextMatch) {
+        addMatch(nextMatch);
+      }
+    }
+
+    // Handle Two Match Rotation format
+    if (competition && competition.type === "two_match_rotation" && competition.twoMatchRotationState) {
+      // Create a completed match object for processing
+      const completedMatch = {
+        ...match,
+        winnerId,
+        status: "completed" as const,
+        completedAt: Date.now(),
+      };
+
+      const { updatedState, nextMatch } = processTwoMatchRotationResult(
+        competition.twoMatchRotationState,
+        completedMatch
+      );
+
+      // Update competition with new state
+      updateCompetition({
+        ...competition,
+        twoMatchRotationState: updatedState,
         status: updatedState.isComplete ? "completed" : "in_progress",
       });
 

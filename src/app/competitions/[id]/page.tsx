@@ -8,6 +8,7 @@ import { Standings } from "@/components/Standings";
 import { Bracket } from "@/components/Bracket";
 import { DoubleBracket } from "@/components/DoubleBracket";
 import { Win2OutView } from "@/components/Win2OutView";
+import { TwoMatchRotationView } from "@/components/TwoMatchRotationView";
 import { useApp } from "@/context/AppContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,14 +32,19 @@ import {
 import { generateRoundRobinSchedule, calculateStandings } from "@/lib/roundRobin";
 import { generateSingleEliminationBracket, advanceWinner } from "@/lib/singleElimination";
 import { generateDoubleEliminationBracket } from "@/lib/doubleElimination";
-import { initializeWin2OutState, generateFirstMatch } from "@/lib/win2out";
-import type { Match, Win2OutState } from "@/types/game";
+import { initializeWin2OutState, generateInitialMatches as generateWin2OutInitialMatches } from "@/lib/win2out";
+import { 
+  initializeTwoMatchRotationState, 
+  generateInitialMatches as generateTwoMatchRotationInitialMatches 
+} from "@/lib/twoMatchRotation";
+import type { Match, Win2OutState, TwoMatchRotationState } from "@/types/game";
 
 const typeLabels: Record<string, string> = {
   round_robin: "Round Robin",
   single_elimination: "Single Elimination",
   double_elimination: "Double Elimination",
   win2out: "Win 2 & Out",
+  two_match_rotation: "2 Match Rotation",
 };
 
 export default function CompetitionDetailPage() {
@@ -94,15 +100,33 @@ export default function CompetitionDetailPage() {
         newMatches = generateDoubleEliminationBracket(competition.teamIds, competition.id);
         break;
       case "win2out": {
-        // Initialize win2out state and create first match
-        const win2outState = initializeWin2OutState(competition.id, competition.teamIds);
-        const firstMatch = generateFirstMatch(competition.id, competition.teamIds);
-        newMatches = [firstMatch];
+        // Initialize win2out state and create matches for all courts
+        const numCourts = competition.numberOfCourts || 1;
+        const win2outState = initializeWin2OutState(competition.id, competition.teamIds, numCourts);
+        const initialMatches = generateWin2OutInitialMatches(competition.id, competition.teamIds, numCourts);
+        newMatches = initialMatches;
         
         // Update competition with win2out state
         updateCompetition({
           ...competition,
           win2outState,
+          status: "in_progress",
+        });
+        addMatches(newMatches);
+        setShowStartConfirm(false);
+        return; // Early return since we already updated status
+      }
+      case "two_match_rotation": {
+        // Initialize two match rotation state and create matches for all courts
+        const numCourts = competition.numberOfCourts || 1;
+        const twoMatchRotationState = initializeTwoMatchRotationState(competition.id, competition.teamIds, numCourts);
+        const initialMatches = generateTwoMatchRotationInitialMatches(competition.id, competition.teamIds, numCourts);
+        newMatches = initialMatches;
+        
+        // Update competition with two match rotation state
+        updateCompetition({
+          ...competition,
+          twoMatchRotationState,
           status: "in_progress",
         });
         addMatches(newMatches);
@@ -461,6 +485,16 @@ export default function CompetitionDetailPage() {
         {competition.status !== "draft" && competition.type === "win2out" && competition.win2outState && (
           <Win2OutView
             state={competition.win2outState}
+            matches={matches}
+            teams={competitionTeams}
+            onMatchClick={handleMatchClick}
+          />
+        )}
+
+        {/* Two Match Rotation View */}
+        {competition.status !== "draft" && competition.type === "two_match_rotation" && competition.twoMatchRotationState && (
+          <TwoMatchRotationView
+            state={competition.twoMatchRotationState}
             matches={matches}
             teams={competitionTeams}
             onMatchClick={handleMatchClick}

@@ -3,23 +3,23 @@
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, Clock, Flame, Play, RefreshCw, Crown } from "lucide-react";
-import { getTeamsByStatus, getCurrentChampionStreak, getChampionCount } from "@/lib/win2out";
-import type { Match, PersistentTeam, Win2OutState } from "@/types/game";
+import { Users, Trophy, Clock, Play, RotateCw } from "lucide-react";
+import { getTeamsByStatus, getSessionMatchCount } from "@/lib/twoMatchRotation";
+import type { Match, PersistentTeam, TwoMatchRotationState } from "@/types/game";
 
-interface Win2OutViewProps {
-  state: Win2OutState;
+interface TwoMatchRotationViewProps {
+  state: TwoMatchRotationState;
   matches: Match[];
   teams: PersistentTeam[];
   onMatchClick?: (match: Match) => void;
 }
 
-export const Win2OutView = ({
+export const TwoMatchRotationView = ({
   state,
   matches,
   teams,
   onMatchClick,
-}: Win2OutViewProps) => {
+}: TwoMatchRotationViewProps) => {
   const teamsMap = useMemo(() => {
     const map = new Map<string, PersistentTeam>();
     teams.forEach((team) => map.set(team.id, team));
@@ -34,7 +34,7 @@ export const Win2OutView = ({
     return teamsMap.get(teamId)?.color || "#3b82f6";
   };
 
-  const { inQueue } = useMemo(
+  const { inQueue, leaderboard } = useMemo(
     () => getTeamsByStatus(state),
     [state]
   );
@@ -62,6 +62,14 @@ export const Win2OutView = ({
     }
   };
 
+  const getSessionDisplay = (teamId: string, court: typeof state.courts[0] | undefined) => {
+    const sessionMatches = getSessionMatchCount(state, teamId);
+    if (court?.isFirstMatch) {
+      return "First match";
+    }
+    return `${sessionMatches}/2 matches`;
+  };
+
   // Get court info for a match
   const getCourtForMatch = (match: Match) => {
     return state.courts.find(
@@ -74,37 +82,13 @@ export const Win2OutView = ({
     return state.courts.some((c) => c.teamIds.includes(teamId));
   };
 
-  // Get team's streak by finding their court
-  const getTeamStreak = (teamId: string) => {
-    const court = state.courts.find((c) => c.teamIds.includes(teamId));
-    if (court?.currentChampionId === teamId) {
-      return getCurrentChampionStreak(state, court.courtNumber);
-    }
-    return 0;
-  };
-
-  // Build leaderboard sorted by champion count, then matches played
-  const leaderboard = useMemo(() => {
-    return [...state.teamStatuses]
-      .map((status) => ({
-        ...status,
-        championCount: getChampionCount(state, status.teamId),
-      }))
-      .sort((a, b) => {
-        if (b.championCount !== a.championCount) {
-          return b.championCount - a.championCount;
-        }
-        return b.matchesPlayed - a.matchesPlayed;
-      });
-  }, [state]);
-
   return (
     <div className="space-y-6">
-      {/* Endless Mode Banner */}
+      {/* Mode Banner */}
       <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground bg-card/30 rounded-lg py-2 px-4">
-        <RefreshCw className="w-4 h-4 animate-spin-slow" />
+        <RotateCw className="w-4 h-4" />
         <span>
-          Win 2 & Out • {state.numberOfCourts} Court{state.numberOfCourts > 1 ? "s" : ""} • Win 2 in a row → Champion → Back to queue!
+          2 Match Rotation • {state.numberOfCourts} Court{state.numberOfCourts > 1 ? "s" : ""} • Play 2 matches then rotate
         </span>
       </div>
 
@@ -113,8 +97,6 @@ export const Win2OutView = ({
         <div className={`grid gap-4 ${activeMatches.length > 1 ? "md:grid-cols-2" : ""}`}>
           {activeMatches.map((match) => {
             const court = getCourtForMatch(match);
-            const homeStreak = getTeamStreak(match.homeTeamId);
-            const awayStreak = getTeamStreak(match.awayTeamId);
             
             return (
               <Card 
@@ -127,6 +109,11 @@ export const Win2OutView = ({
                       <Play className="w-5 h-5 text-primary" />
                       Court {court?.courtNumber || match.position}
                     </div>
+                    {court?.isFirstMatch && (
+                      <span className="text-xs bg-amber-500/20 text-amber-500 px-2 py-1 rounded-full">
+                        First Match
+                      </span>
+                    )}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -145,29 +132,17 @@ export const Win2OutView = ({
                     {/* Home Team */}
                     <div className="text-center flex-1">
                       <div
-                        className="w-14 h-14 mx-auto mb-2 rounded-xl flex items-center justify-center relative"
+                        className="w-14 h-14 mx-auto mb-2 rounded-xl flex items-center justify-center"
                         style={{
                           background: `linear-gradient(135deg, ${getTeamColor(match.homeTeamId)}, ${getTeamColor(match.homeTeamId)}cc)`,
                         }}
                       >
                         <Users className="w-7 h-7 text-white" />
-                        {homeStreak > 0 && (
-                          <div className="absolute -top-2 -right-2 w-6 h-6 bg-amber-500 rounded-full flex items-center justify-center">
-                            <Flame className="w-4 h-4 text-white" />
-                          </div>
-                        )}
                       </div>
                       <p className="font-semibold text-sm">{getTeamName(match.homeTeamId)}</p>
-                      {homeStreak > 0 && (
-                        <p className="text-xs text-amber-500 font-medium">
-                          🔥 {homeStreak} win - 1 more = crown!
-                        </p>
-                      )}
-                      {getChampionCount(state, match.homeTeamId) > 0 && (
-                        <p className="text-xs text-muted-foreground">
-                          👑 ×{getChampionCount(state, match.homeTeamId)}
-                        </p>
-                      )}
+                      <p className="text-xs text-muted-foreground">
+                        {getSessionDisplay(match.homeTeamId, court)}
+                      </p>
                     </div>
 
                     {/* VS */}
@@ -182,29 +157,17 @@ export const Win2OutView = ({
                     {/* Away Team */}
                     <div className="text-center flex-1">
                       <div
-                        className="w-14 h-14 mx-auto mb-2 rounded-xl flex items-center justify-center relative"
+                        className="w-14 h-14 mx-auto mb-2 rounded-xl flex items-center justify-center"
                         style={{
                           background: `linear-gradient(135deg, ${getTeamColor(match.awayTeamId)}, ${getTeamColor(match.awayTeamId)}cc)`,
                         }}
                       >
                         <Users className="w-7 h-7 text-white" />
-                        {awayStreak > 0 && (
-                          <div className="absolute -top-2 -right-2 w-6 h-6 bg-amber-500 rounded-full flex items-center justify-center">
-                            <Flame className="w-4 h-4 text-white" />
-                          </div>
-                        )}
                       </div>
                       <p className="font-semibold text-sm">{getTeamName(match.awayTeamId)}</p>
-                      {awayStreak > 0 && (
-                        <p className="text-xs text-amber-500 font-medium">
-                          🔥 {awayStreak} win - 1 more = crown!
-                        </p>
-                      )}
-                      {getChampionCount(state, match.awayTeamId) > 0 && (
-                        <p className="text-xs text-muted-foreground">
-                          👑 ×{getChampionCount(state, match.awayTeamId)}
-                        </p>
-                      )}
+                      <p className="text-xs text-muted-foreground">
+                        {getSessionDisplay(match.awayTeamId, court)}
+                      </p>
                     </div>
                   </div>
                 </CardContent>
@@ -238,113 +201,111 @@ export const Win2OutView = ({
             </p>
           ) : (
             <div className="flex flex-wrap gap-2">
-              {inQueue.map((status, index) => {
-                const champCount = getChampionCount(state, status.teamId);
-
-                return (
+              {inQueue.map((status, index) => (
+                <div
+                  key={`${status.teamId}-${index}`}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg bg-card border border-border/50"
+                >
+                  <span className="text-xs text-muted-foreground font-medium w-5">
+                    #{index + 1}
+                  </span>
                   <div
-                    key={`${status.teamId}-${index}`}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg bg-card border border-border/50"
+                    className="w-6 h-6 rounded-md flex items-center justify-center"
+                    style={{
+                      background: `linear-gradient(135deg, ${getTeamColor(status.teamId)}, ${getTeamColor(status.teamId)}cc)`,
+                    }}
                   >
-                    <span className="text-xs text-muted-foreground font-medium w-5">
-                      #{index + 1}
-                    </span>
-                    <div
-                      className="w-6 h-6 rounded-md flex items-center justify-center"
-                      style={{
-                        background: `linear-gradient(135deg, ${getTeamColor(status.teamId)}, ${getTeamColor(status.teamId)}cc)`,
-                      }}
-                    >
-                      <Users className="w-3 h-3 text-white" />
-                    </div>
-                    <span className="font-medium text-sm">{getTeamName(status.teamId)}</span>
-                    {champCount > 0 && (
-                      <span className="text-xs text-amber-500 font-medium">
-                        👑×{champCount}
-                      </span>
-                    )}
+                    <Users className="w-3 h-3 text-white" />
                   </div>
-                );
-              })}
+                  <span className="font-medium text-sm">{getTeamName(status.teamId)}</span>
+                  <span className="text-xs text-muted-foreground">
+                    ({status.totalWins}W/{status.totalLosses}L)
+                  </span>
+                </div>
+              ))}
             </div>
           )}
         </CardContent>
       </Card>
 
       {/* Leaderboard */}
-      <Card className="border-amber-500/30 bg-amber-500/5">
-        <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <Crown className="w-5 h-5 text-amber-500" />
-            Leaderboard
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            {leaderboard.map((status, index) => {
-              const champCount = status.championCount;
-              const onCourt = isTeamOnCourt(status.teamId);
-              
-              return (
-                <div
-                  key={status.teamId}
-                  className={`
-                    flex items-center gap-3 p-3 rounded-lg
-                    ${index === 0 && champCount > 0 ? "bg-amber-500/20 border border-amber-500/30" : "bg-card border border-border/50"}
-                    ${onCourt ? "ring-2 ring-primary/30" : ""}
-                  `}
-                >
-                  {/* Rank */}
-                  <div className={`
-                    w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm
-                    ${index === 0 && champCount > 0 ? "bg-amber-500 text-white" : ""}
-                    ${index === 1 && champCount > 0 ? "bg-slate-400 text-white" : ""}
-                    ${index === 2 && champCount > 0 ? "bg-amber-700 text-white" : ""}
-                    ${(index > 2 || champCount === 0) ? "bg-card text-muted-foreground" : ""}
-                  `}>
-                    {index + 1}
-                  </div>
-
-                  {/* Team */}
+      {leaderboard.length > 0 && (
+        <Card className="border-amber-500/30 bg-amber-500/5">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Trophy className="w-5 h-5 text-amber-500" />
+              Leaderboard
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {leaderboard.map((status, index) => {
+                const onCourt = isTeamOnCourt(status.teamId);
+                const winRate = status.totalMatches > 0 
+                  ? Math.round((status.totalWins / status.totalMatches) * 100) 
+                  : 0;
+                
+                return (
                   <div
-                    className="w-8 h-8 rounded-lg flex items-center justify-center"
-                    style={{
-                      background: `linear-gradient(135deg, ${getTeamColor(status.teamId)}, ${getTeamColor(status.teamId)}cc)`,
-                    }}
+                    key={status.teamId}
+                    className={`
+                      flex items-center gap-3 p-3 rounded-lg
+                      ${index === 0 ? "bg-amber-500/20 border border-amber-500/30" : "bg-card border border-border/50"}
+                      ${onCourt ? "ring-2 ring-primary/30" : ""}
+                    `}
                   >
-                    <Users className="w-4 h-4 text-white" />
-                  </div>
+                    {/* Rank */}
+                    <div className={`
+                      w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm
+                      ${index === 0 ? "bg-amber-500 text-white" : ""}
+                      ${index === 1 ? "bg-slate-400 text-white" : ""}
+                      ${index === 2 ? "bg-amber-700 text-white" : ""}
+                      ${index > 2 ? "bg-card text-muted-foreground" : ""}
+                    `}>
+                      {index + 1}
+                    </div>
 
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className={`font-medium truncate ${index === 0 && champCount > 0 ? "text-amber-500" : ""}`}>
-                        {getTeamName(status.teamId)}
+                    {/* Team */}
+                    <div
+                      className="w-8 h-8 rounded-lg flex items-center justify-center"
+                      style={{
+                        background: `linear-gradient(135deg, ${getTeamColor(status.teamId)}, ${getTeamColor(status.teamId)}cc)`,
+                      }}
+                    >
+                      <Users className="w-4 h-4 text-white" />
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className={`font-medium truncate ${index === 0 ? "text-amber-500" : ""}`}>
+                          {getTeamName(status.teamId)}
+                        </p>
+                        {onCourt && (
+                          <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full">
+                            Playing
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {status.totalMatches} matches • {winRate}% win rate
                       </p>
-                      {onCourt && (
-                        <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full">
-                          Playing
-                        </span>
-                      )}
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      {status.matchesPlayed} matches played
-                    </p>
-                  </div>
 
-                  {/* Champion count */}
-                  <div className="text-right">
-                    <div className="flex items-center gap-1 text-amber-500 font-bold">
-                      <Crown className="w-4 h-4" />
-                      <span>{champCount}</span>
+                    {/* Stats */}
+                    <div className="text-right">
+                      <div className="flex items-center gap-2">
+                        <span className="text-emerald-500 font-bold">{status.totalWins}W</span>
+                        <span className="text-muted-foreground">/</span>
+                        <span className="text-red-400 font-medium">{status.totalLosses}L</span>
+                      </div>
                     </div>
-                    <p className="text-xs text-muted-foreground">crowns</p>
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Match History */}
       {completedMatches.length > 0 && (
