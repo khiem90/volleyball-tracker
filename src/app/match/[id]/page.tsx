@@ -43,8 +43,7 @@ export default function MatchPage() {
     updateMatchScore,
     startMatch,
     completeMatch,
-    updateCompetition,
-    addMatch,
+    completeMatchWithNextMatch,
     canEdit,
     isSharedMode,
   } = useApp();
@@ -138,6 +137,67 @@ export default function MatchPage() {
     const winnerId =
       match.homeScore > match.awayScore ? match.homeTeamId : match.awayTeamId;
 
+    // Handle Win 2 & Out format - use atomic function to avoid race conditions
+    if (
+      competition &&
+      competition.type === "win2out" &&
+      competition.win2outState
+    ) {
+      const completedMatch = {
+        ...match,
+        winnerId,
+        status: "completed" as const,
+        completedAt: Date.now(),
+      };
+
+      const { updatedState, nextMatch } = processMatchResult(
+        competition.win2outState,
+        completedMatch
+      );
+
+      const updatedCompetition = {
+        ...competition,
+        win2outState: updatedState,
+        status: updatedState.isComplete ? ("completed" as const) : ("in_progress" as const),
+      };
+
+      completeMatchWithNextMatch(matchId, winnerId, updatedCompetition, nextMatch);
+      setShowCompleteDialog(false);
+      router.push(`/competitions/${competition.id}`);
+      return;
+    }
+
+    // Handle Two Match Rotation format - use atomic function to avoid race conditions
+    if (
+      competition &&
+      competition.type === "two_match_rotation" &&
+      competition.twoMatchRotationState
+    ) {
+      const completedMatch = {
+        ...match,
+        winnerId,
+        status: "completed" as const,
+        completedAt: Date.now(),
+      };
+
+      const { updatedState, nextMatch } = processTwoMatchRotationResult(
+        competition.twoMatchRotationState,
+        completedMatch
+      );
+
+      const updatedCompetition = {
+        ...competition,
+        twoMatchRotationState: updatedState,
+        status: updatedState.isComplete ? ("completed" as const) : ("in_progress" as const),
+      };
+
+      completeMatchWithNextMatch(matchId, winnerId, updatedCompetition, nextMatch);
+      setShowCompleteDialog(false);
+      router.push(`/competitions/${competition.id}`);
+      return;
+    }
+
+    // For other formats (round_robin, elimination), use the standard flow
     completeMatch(matchId, winnerId);
 
     // Handle bracket advancement for elimination tournaments
@@ -171,64 +231,6 @@ export default function MatchPage() {
       });
     }
 
-    // Handle Win 2 & Out format
-    if (
-      competition &&
-      competition.type === "win2out" &&
-      competition.win2outState
-    ) {
-      const completedMatch = {
-        ...match,
-        winnerId,
-        status: "completed" as const,
-        completedAt: Date.now(),
-      };
-
-      const { updatedState, nextMatch } = processMatchResult(
-        competition.win2outState,
-        completedMatch
-      );
-
-      updateCompetition({
-        ...competition,
-        win2outState: updatedState,
-        status: updatedState.isComplete ? "completed" : "in_progress",
-      });
-
-      if (nextMatch) {
-        addMatch(nextMatch);
-      }
-    }
-
-    // Handle Two Match Rotation format
-    if (
-      competition &&
-      competition.type === "two_match_rotation" &&
-      competition.twoMatchRotationState
-    ) {
-      const completedMatch = {
-        ...match,
-        winnerId,
-        status: "completed" as const,
-        completedAt: Date.now(),
-      };
-
-      const { updatedState, nextMatch } = processTwoMatchRotationResult(
-        competition.twoMatchRotationState,
-        completedMatch
-      );
-
-      updateCompetition({
-        ...competition,
-        twoMatchRotationState: updatedState,
-        status: updatedState.isComplete ? "completed" : "in_progress",
-      });
-
-      if (nextMatch) {
-        addMatch(nextMatch);
-      }
-    }
-
     setShowCompleteDialog(false);
 
     // Navigate back to competition or dashboard
@@ -243,9 +245,8 @@ export default function MatchPage() {
     competition,
     state.matches,
     completeMatch,
+    completeMatchWithNextMatch,
     updateMatchScore,
-    updateCompetition,
-    addMatch,
     router,
   ]);
 

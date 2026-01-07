@@ -316,6 +316,12 @@ interface AppContextValue {
   updateMatchScore: (matchId: string, homeScore: number, awayScore: number) => void;
   startMatch: (matchId: string) => void;
   completeMatch: (matchId: string, winnerId: string) => void;
+  completeMatchWithNextMatch: (
+    matchId: string,
+    winnerId: string,
+    updatedCompetition: Competition,
+    nextMatch: Omit<Match, "id" | "createdAt"> | null
+  ) => void;
   deleteMatch: (matchId: string) => void;
   getMatchById: (id: string) => Match | undefined;
   getMatchesByCompetition: (competitionId: string) => Match[];
@@ -654,6 +660,54 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     }
   }, [isSharedMode, canEdit, session, syncAllData]);
 
+  // Atomically complete a match, update competition, and add next match (for win2out/two_match_rotation)
+  const completeMatchWithNextMatch = useCallback(
+    (
+      matchId: string,
+      winnerId: string,
+      updatedCompetition: Competition,
+      nextMatch: Omit<Match, "id" | "createdAt"> | null
+    ) => {
+      if (isSharedMode && !canEdit) return;
+
+      if (isSharedMode && session) {
+        // Update the completed match
+        let newMatches = (session.matches || []).map((match) =>
+          match.id === matchId
+            ? { ...match, status: "completed" as MatchStatus, completedAt: Date.now(), winnerId }
+            : match
+        );
+
+        // Add the next match if provided
+        if (nextMatch) {
+          const newMatch: Match = {
+            ...nextMatch,
+            id: generateId(),
+            createdAt: Date.now(),
+          };
+          newMatches = [...newMatches, newMatch];
+
+          // Update competition matchIds
+          updatedCompetition = {
+            ...updatedCompetition,
+            matchIds: [...(updatedCompetition.matchIds || []), newMatch.id],
+          };
+        }
+
+        // Single atomic update
+        syncAllData({ matches: newMatches, competition: updatedCompetition });
+      } else {
+        // For local mode, dispatch in sequence
+        dispatch({ type: "COMPLETE_MATCH", matchId, winnerId });
+        dispatch({ type: "UPDATE_COMPETITION", competition: updatedCompetition });
+        if (nextMatch) {
+          dispatch({ type: "ADD_MATCH", match: nextMatch });
+        }
+      }
+    },
+    [isSharedMode, canEdit, session, syncAllData]
+  );
+
   const deleteMatch = useCallback((matchId: string) => {
     if (isSharedMode && !canEdit) return;
     
@@ -714,6 +768,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     updateMatchScore,
     startMatch,
     completeMatch,
+    completeMatchWithNextMatch,
     deleteMatch,
     getMatchById,
     getMatchesByCompetition,

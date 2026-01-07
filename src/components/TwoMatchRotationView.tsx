@@ -5,7 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Users, Trophy, Clock, Play, RotateCw } from "lucide-react";
 import { getTeamsByStatus, getSessionMatchCount } from "@/lib/twoMatchRotation";
-import type { Match, PersistentTeam, TwoMatchRotationState } from "@/types/game";
+import type {
+  Match,
+  PersistentTeam,
+  TwoMatchRotationState,
+} from "@/types/game";
 
 interface TwoMatchRotationViewProps {
   state: TwoMatchRotationState;
@@ -47,11 +51,12 @@ export const TwoMatchRotationView = ({
     // For each court, find the most recent pending/in_progress match for those teams
     state.courts.forEach((court) => {
       const [team1, team2] = court.teamIds;
-      
+
       // Find matches where both teams are exactly the ones on this court
       const courtMatches = matches.filter((m) => {
-        const isActiveStatus = m.status === "pending" || m.status === "in_progress";
-        const teamsMatch = 
+        const isActiveStatus =
+          m.status === "pending" || m.status === "in_progress";
+        const teamsMatch =
           (m.homeTeamId === team1 && m.awayTeamId === team2) ||
           (m.homeTeamId === team2 && m.awayTeamId === team1);
         return isActiveStatus && teamsMatch;
@@ -60,8 +65,8 @@ export const TwoMatchRotationView = ({
       // Only take the most recent one (by createdAt or id)
       if (courtMatches.length > 0 && !seenCourts.has(court.courtNumber)) {
         // Sort by createdAt descending, take the most recent
-        const sortedMatches = courtMatches.sort((a, b) => 
-          (b.createdAt || 0) - (a.createdAt || 0)
+        const sortedMatches = courtMatches.sort(
+          (a, b) => (b.createdAt || 0) - (a.createdAt || 0)
         );
         result.push(sortedMatches[0]);
         seenCourts.add(court.courtNumber);
@@ -85,7 +90,10 @@ export const TwoMatchRotationView = ({
     }
   };
 
-  const getSessionDisplay = (teamId: string, court: typeof state.courts[0] | undefined) => {
+  const getSessionDisplay = (
+    teamId: string,
+    court: (typeof state.courts)[0] | undefined
+  ) => {
     const sessionMatches = getSessionMatchCount(state, teamId);
     if (court?.isFirstMatch) {
       return "First match";
@@ -96,7 +104,9 @@ export const TwoMatchRotationView = ({
   // Get court info for a match
   const getCourtForMatch = (match: Match) => {
     return state.courts.find(
-      (c) => c.teamIds.includes(match.homeTeamId) && c.teamIds.includes(match.awayTeamId)
+      (c) =>
+        c.teamIds.includes(match.homeTeamId) &&
+        c.teamIds.includes(match.awayTeamId)
     );
   };
 
@@ -111,19 +121,24 @@ export const TwoMatchRotationView = ({
       <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground bg-card/30 rounded-lg py-2 px-4">
         <RotateCw className="w-4 h-4" />
         <span>
-          2 Match Rotation • {state.numberOfCourts} Court{state.numberOfCourts > 1 ? "s" : ""} • Play 2 matches then rotate
+          2 Match Rotation • {state.numberOfCourts} Court
+          {state.numberOfCourts > 1 ? "s" : ""} • Play 2 matches then rotate
         </span>
       </div>
 
       {/* Active Courts / Matches */}
       {activeMatches.length > 0 ? (
-        <div className={`grid gap-4 ${activeMatches.length > 1 ? "md:grid-cols-2" : ""}`}>
+        <div
+          className={`grid gap-4 ${
+            activeMatches.length > 1 ? "md:grid-cols-2" : ""
+          }`}
+        >
           {activeMatches.map((match) => {
             const court = getCourtForMatch(match);
-            
+
             return (
-              <Card 
-                key={match.id} 
+              <Card
+                key={match.id}
                 className="border-primary/30 bg-linear-to-br from-primary/5 to-primary/10"
               >
                 <CardHeader className="pb-2">
@@ -150,19 +165,25 @@ export const TwoMatchRotationView = ({
                         handleMatchClick(match);
                       }
                     }}
-                    aria-label={`Click to play match on Court ${court?.courtNumber || match.position}`}
+                    aria-label={`Click to play match on Court ${
+                      court?.courtNumber || match.position
+                    }`}
                   >
                     {/* Home Team */}
                     <div className="text-center flex-1">
                       <div
                         className="w-14 h-14 mx-auto mb-2 rounded-xl flex items-center justify-center"
                         style={{
-                          background: `linear-gradient(135deg, ${getTeamColor(match.homeTeamId)}, ${getTeamColor(match.homeTeamId)}cc)`,
+                          background: `linear-gradient(135deg, ${getTeamColor(
+                            match.homeTeamId
+                          )}, ${getTeamColor(match.homeTeamId)}cc)`,
                         }}
                       >
                         <Users className="w-7 h-7 text-white" />
                       </div>
-                      <p className="font-semibold text-sm">{getTeamName(match.homeTeamId)}</p>
+                      <p className="font-semibold text-sm">
+                        {getTeamName(match.homeTeamId)}
+                      </p>
                       <p className="text-xs text-muted-foreground">
                         {getSessionDisplay(match.homeTeamId, court)}
                       </p>
@@ -170,7 +191,9 @@ export const TwoMatchRotationView = ({
 
                     {/* VS */}
                     <div className="text-center">
-                      <div className="text-xl font-bold text-muted-foreground">VS</div>
+                      <div className="text-xl font-bold text-muted-foreground">
+                        VS
+                      </div>
                       <Button size="sm" className="mt-2 gap-1">
                         <Play className="w-4 h-4" />
                         Play
@@ -182,12 +205,16 @@ export const TwoMatchRotationView = ({
                       <div
                         className="w-14 h-14 mx-auto mb-2 rounded-xl flex items-center justify-center"
                         style={{
-                          background: `linear-gradient(135deg, ${getTeamColor(match.awayTeamId)}, ${getTeamColor(match.awayTeamId)}cc)`,
+                          background: `linear-gradient(135deg, ${getTeamColor(
+                            match.awayTeamId
+                          )}, ${getTeamColor(match.awayTeamId)}cc)`,
                         }}
                       >
                         <Users className="w-7 h-7 text-white" />
                       </div>
-                      <p className="font-semibold text-sm">{getTeamName(match.awayTeamId)}</p>
+                      <p className="font-semibold text-sm">
+                        {getTeamName(match.awayTeamId)}
+                      </p>
                       <p className="text-xs text-muted-foreground">
                         {getSessionDisplay(match.awayTeamId, court)}
                       </p>
@@ -235,12 +262,16 @@ export const TwoMatchRotationView = ({
                   <div
                     className="w-6 h-6 rounded-md flex items-center justify-center"
                     style={{
-                      background: `linear-gradient(135deg, ${getTeamColor(status.teamId)}, ${getTeamColor(status.teamId)}cc)`,
+                      background: `linear-gradient(135deg, ${getTeamColor(
+                        status.teamId
+                      )}, ${getTeamColor(status.teamId)}cc)`,
                     }}
                   >
                     <Users className="w-3 h-3 text-white" />
                   </div>
-                  <span className="font-medium text-sm">{getTeamName(status.teamId)}</span>
+                  <span className="font-medium text-sm">
+                    {getTeamName(status.teamId)}
+                  </span>
                   <span className="text-xs text-muted-foreground">
                     ({status.totalWins}W/{status.totalLosses}L)
                   </span>
@@ -264,27 +295,34 @@ export const TwoMatchRotationView = ({
             <div className="space-y-2">
               {leaderboard.map((status, index) => {
                 const onCourt = isTeamOnCourt(status.teamId);
-                const winRate = status.totalMatches > 0 
-                  ? Math.round((status.totalWins / status.totalMatches) * 100) 
-                  : 0;
-                
+                const winRate =
+                  status.totalMatches > 0
+                    ? Math.round((status.totalWins / status.totalMatches) * 100)
+                    : 0;
+
                 return (
                   <div
                     key={status.teamId}
                     className={`
                       flex items-center gap-3 p-3 rounded-lg
-                      ${index === 0 ? "bg-amber-500/20 border border-amber-500/30" : "bg-card border border-border/50"}
+                      ${
+                        index === 0
+                          ? "bg-amber-500/20 border border-amber-500/30"
+                          : "bg-card border border-border/50"
+                      }
                       ${onCourt ? "ring-2 ring-primary/30" : ""}
                     `}
                   >
                     {/* Rank */}
-                    <div className={`
+                    <div
+                      className={`
                       w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm
                       ${index === 0 ? "bg-amber-500 text-white" : ""}
                       ${index === 1 ? "bg-slate-400 text-white" : ""}
                       ${index === 2 ? "bg-amber-700 text-white" : ""}
                       ${index > 2 ? "bg-card text-muted-foreground" : ""}
-                    `}>
+                    `}
+                    >
                       {index + 1}
                     </div>
 
@@ -292,7 +330,9 @@ export const TwoMatchRotationView = ({
                     <div
                       className="w-8 h-8 rounded-lg flex items-center justify-center"
                       style={{
-                        background: `linear-gradient(135deg, ${getTeamColor(status.teamId)}, ${getTeamColor(status.teamId)}cc)`,
+                        background: `linear-gradient(135deg, ${getTeamColor(
+                          status.teamId
+                        )}, ${getTeamColor(status.teamId)}cc)`,
                       }}
                     >
                       <Users className="w-4 h-4 text-white" />
@@ -300,7 +340,11 @@ export const TwoMatchRotationView = ({
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className={`font-medium truncate ${index === 0 ? "text-amber-500" : ""}`}>
+                        <p
+                          className={`font-medium truncate ${
+                            index === 0 ? "text-amber-500" : ""
+                          }`}
+                        >
                           {getTeamName(status.teamId)}
                         </p>
                         {onCourt && (
@@ -317,9 +361,13 @@ export const TwoMatchRotationView = ({
                     {/* Stats */}
                     <div className="text-right">
                       <div className="flex items-center gap-2">
-                        <span className="text-emerald-500 font-bold">{status.totalWins}W</span>
+                        <span className="text-emerald-500 font-bold">
+                          {status.totalWins}W
+                        </span>
                         <span className="text-muted-foreground">/</span>
-                        <span className="text-red-400 font-medium">{status.totalLosses}L</span>
+                        <span className="text-red-400 font-medium">
+                          {status.totalLosses}L
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -334,7 +382,9 @@ export const TwoMatchRotationView = ({
       {completedMatches.length > 0 && (
         <Card className="border-border/50 bg-card/30">
           <CardHeader className="pb-2">
-            <CardTitle className="text-lg">Match History ({completedMatches.length} matches)</CardTitle>
+            <CardTitle className="text-lg">
+              Match History ({completedMatches.length} matches)
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-2 max-h-60 overflow-y-auto">
@@ -355,9 +405,17 @@ export const TwoMatchRotationView = ({
                       </span>
                       <div
                         className="w-3 h-3 rounded-full shrink-0"
-                        style={{ backgroundColor: getTeamColor(match.homeTeamId) }}
+                        style={{
+                          backgroundColor: getTeamColor(match.homeTeamId),
+                        }}
                       />
-                      <span className={`truncate ${homeWon ? "font-semibold text-emerald-500" : "text-muted-foreground"}`}>
+                      <span
+                        className={`truncate ${
+                          homeWon
+                            ? "font-semibold text-emerald-500"
+                            : "text-muted-foreground"
+                        }`}
+                      >
                         {getTeamName(match.homeTeamId)}
                       </span>
                     </div>
@@ -367,12 +425,20 @@ export const TwoMatchRotationView = ({
                     </span>
 
                     <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
-                      <span className={`truncate ${!homeWon ? "font-semibold text-emerald-500" : "text-muted-foreground"}`}>
+                      <span
+                        className={`truncate ${
+                          !homeWon
+                            ? "font-semibold text-emerald-500"
+                            : "text-muted-foreground"
+                        }`}
+                      >
                         {getTeamName(match.awayTeamId)}
                       </span>
                       <div
                         className="w-3 h-3 rounded-full shrink-0"
-                        style={{ backgroundColor: getTeamColor(match.awayTeamId) }}
+                        style={{
+                          backgroundColor: getTeamColor(match.awayTeamId),
+                        }}
                       />
                     </div>
                   </div>
