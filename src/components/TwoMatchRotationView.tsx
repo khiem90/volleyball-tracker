@@ -101,7 +101,7 @@ export const TwoMatchRotationView = ({
             return (
               <Card 
                 key={match.id} 
-                className="border-primary/30 bg-gradient-to-br from-primary/5 to-primary/10"
+                className="border-primary/30 bg-linear-to-br from-primary/5 to-primary/10"
               >
                 <CardHeader className="pb-2">
                   <CardTitle className="flex items-center justify-between text-lg">

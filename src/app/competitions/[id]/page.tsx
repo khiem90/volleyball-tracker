@@ -30,14 +30,14 @@ import {
   Clock,
 } from "lucide-react";
 import { generateRoundRobinSchedule, calculateStandings } from "@/lib/roundRobin";
-import { generateSingleEliminationBracket, advanceWinner } from "@/lib/singleElimination";
+import { generateSingleEliminationBracket } from "@/lib/singleElimination";
 import { generateDoubleEliminationBracket } from "@/lib/doubleElimination";
 import { initializeWin2OutState, generateInitialMatches as generateWin2OutInitialMatches } from "@/lib/win2out";
 import { 
   initializeTwoMatchRotationState, 
   generateInitialMatches as generateTwoMatchRotationInitialMatches 
 } from "@/lib/twoMatchRotation";
-import type { Match, Win2OutState, TwoMatchRotationState } from "@/types/game";
+import type { Match } from "@/types/game";
 
 const typeLabels: Record<string, string> = {
   round_robin: "Round Robin",
@@ -59,9 +59,6 @@ export default function CompetitionDetailPage() {
     addMatches,
     startCompetition,
     updateCompetition,
-    updateMatchScore,
-    startMatch,
-    completeMatch,
     completeCompetition,
   } = useApp();
 
@@ -274,7 +271,7 @@ export default function CompetitionDetailPage() {
 
         {/* Winner Banner */}
         {winner && (
-          <Card className="mb-8 border-amber-500/50 bg-gradient-to-r from-amber-500/10 to-amber-600/10">
+          <Card className="mb-8 border-amber-500/50 bg-linear-to-r from-amber-500/10 to-amber-600/10">
             <CardContent className="py-6">
               <div className="flex items-center justify-center gap-4">
                 <div
@@ -509,7 +506,7 @@ export default function CompetitionDetailPage() {
             <DialogTitle>Start Competition?</DialogTitle>
             <DialogDescription>
               This will generate the {typeLabels[competition.type].toLowerCase()} schedule for{" "}
-              {competition.teamIds.length} teams. You won't be able to add or remove teams after starting.
+              {competition.teamIds.length} teams. You won&apos;t be able to add or remove teams after starting.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex-row gap-2 sm:gap-2">

@@ -5,7 +5,13 @@ import { useRouter } from "next/navigation";
 import { Navigation } from "@/components/Navigation";
 import { useApp } from "@/context/AppContext";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   ArrowLeft,
   ArrowRight,
@@ -18,7 +24,7 @@ import {
   Crown,
   RotateCw,
 } from "lucide-react";
-import type { CompetitionType, PersistentTeam } from "@/types/game";
+import type { CompetitionType } from "@/types/game";
 
 type Step = "format" | "teams" | "name";
 
@@ -35,14 +41,16 @@ const formatOptions: FormatOption[] = [
   {
     type: "round_robin",
     label: "Round Robin",
-    description: "Every team plays against every other team once. Best for leagues.",
+    description:
+      "Every team plays against every other team once. Best for leagues.",
     icon: <RefreshCw className="w-8 h-8" />,
     minTeams: 3,
   },
   {
     type: "single_elimination",
     label: "Single Elimination",
-    description: "Lose once and you're out. Fast and exciting tournament format.",
+    description:
+      "Lose once and you're out. Fast and exciting tournament format.",
     icon: <Brackets className="w-8 h-8" />,
     minTeams: 2,
     requiresPowerOf2: true,
@@ -50,7 +58,8 @@ const formatOptions: FormatOption[] = [
   {
     type: "double_elimination",
     label: "Double Elimination",
-    description: "Must lose twice to be eliminated. More forgiving tournament format.",
+    description:
+      "Must lose twice to be eliminated. More forgiving tournament format.",
     icon: <Layers className="w-8 h-8" />,
     minTeams: 4,
     requiresPowerOf2: true,
@@ -58,14 +67,16 @@ const formatOptions: FormatOption[] = [
   {
     type: "win2out",
     label: "Win 2 & Out",
-    description: "True endless! Winner stays, win 2 = champion & back to queue. Track who gets crowned most!",
+    description:
+      "True endless! Winner stays, win 2 = champion & back to queue. Track who gets crowned most!",
     icon: <Crown className="w-8 h-8" />,
     minTeams: 3,
   },
   {
     type: "two_match_rotation",
     label: "2 Match Rotation",
-    description: "Play 2 matches then rotate. First match winner stays, then everyone gets 2 games before rotating.",
+    description:
+      "Play 2 matches then rotate. First match winner stays, then everyone gets 2 games before rotating.",
     icon: <RotateCw className="w-8 h-8" />,
     minTeams: 3,
   },
@@ -75,13 +86,15 @@ export default function NewCompetitionPage() {
   const router = useRouter();
   const { state, addTeam } = useApp();
   const [step, setStep] = useState<Step>("format");
-  const [selectedFormat, setSelectedFormat] = useState<CompetitionType | null>(null);
+  const [selectedFormat, setSelectedFormat] = useState<CompetitionType | null>(
+    null
+  );
   const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>([]);
   const [competitionName, setCompetitionName] = useState("");
   const [nameError, setNameError] = useState("");
   const [numberOfCourts, setNumberOfCourts] = useState(1);
 
-  const { createCompetition, addMatches, startCompetition } = useApp();
+  const { createCompetition } = useApp();
 
   const currentFormat = useMemo(
     () => formatOptions.find((f) => f.type === selectedFormat),
@@ -126,7 +139,9 @@ export default function NewCompetitionPage() {
 
   const handleTeamToggle = useCallback((teamId: string) => {
     setSelectedTeamIds((prev) =>
-      prev.includes(teamId) ? prev.filter((id) => id !== teamId) : [...prev, teamId]
+      prev.includes(teamId)
+        ? prev.filter((id) => id !== teamId)
+        : [...prev, teamId]
     );
   }, []);
 
@@ -159,17 +174,30 @@ export default function NewCompetitionPage() {
     if (!selectedFormat) return;
 
     // Create competition with number of courts for win2out and two_match_rotation
-    const courtsToUse = (selectedFormat === "two_match_rotation" || selectedFormat === "win2out") 
-      ? numberOfCourts 
-      : undefined;
-    createCompetition(trimmedName, selectedFormat, selectedTeamIds, courtsToUse);
+    const courtsToUse =
+      selectedFormat === "two_match_rotation" || selectedFormat === "win2out"
+        ? numberOfCourts
+        : undefined;
+    createCompetition(
+      trimmedName,
+      selectedFormat,
+      selectedTeamIds,
+      courtsToUse
+    );
 
     // Get the newly created competition (it will be the last one)
     // We need to generate matches based on format type
     // This will be handled in the competition detail page
 
     router.push("/competitions");
-  }, [competitionName, selectedFormat, selectedTeamIds, numberOfCourts, createCompetition, router]);
+  }, [
+    competitionName,
+    selectedFormat,
+    selectedTeamIds,
+    numberOfCourts,
+    createCompetition,
+    router,
+  ]);
 
   const handleQuickCreateTeam = useCallback(() => {
     const teamNumber = state.teams.length + 1;
@@ -192,14 +220,20 @@ export default function NewCompetitionPage() {
                 transition-all duration-300
                 ${isActive ? "bg-primary text-primary-foreground" : ""}
                 ${isPast ? "bg-emerald-500 text-white" : ""}
-                ${!isActive && !isPast ? "bg-card border border-border/50 text-muted-foreground" : ""}
+                ${
+                  !isActive && !isPast
+                    ? "bg-card border border-border/50 text-muted-foreground"
+                    : ""
+                }
               `}
             >
               {isPast ? <Check className="w-4 h-4" /> : idx + 1}
             </div>
             {idx < 2 && (
               <div
-                className={`w-12 h-0.5 ${isPast ? "bg-emerald-500" : "bg-border"}`}
+                className={`w-12 h-0.5 ${
+                  isPast ? "bg-emerald-500" : "bg-border"
+                }`}
               />
             )}
           </div>
@@ -212,7 +246,9 @@ export default function NewCompetitionPage() {
     <div className="space-y-6">
       <div className="text-center mb-8">
         <h2 className="text-2xl font-bold mb-2">Choose Format</h2>
-        <p className="text-muted-foreground">Select how teams will compete against each other</p>
+        <p className="text-muted-foreground">
+          Select how teams will compete against each other
+        </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -224,9 +260,10 @@ export default function NewCompetitionPage() {
               key={option.type}
               className={`
                 cursor-pointer transition-all duration-300
-                ${isSelected
-                  ? "border-primary bg-primary/5 ring-2 ring-primary/20"
-                  : "border-border/50 bg-card/50 hover:bg-card hover:border-primary/30"
+                ${
+                  isSelected
+                    ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                    : "border-border/50 bg-card/50 hover:bg-card hover:border-primary/30"
                 }
               `}
               onClick={() => handleFormatSelect(option.type)}
@@ -245,9 +282,10 @@ export default function NewCompetitionPage() {
                   className={`
                     w-16 h-16 mx-auto rounded-xl flex items-center justify-center mb-4
                     transition-all duration-300
-                    ${isSelected
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-gradient-to-br from-violet-500/20 to-purple-600/20 text-violet-400"
+                    ${
+                      isSelected
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-linear-to-br from-violet-500/20 to-purple-600/20 text-violet-400"
                     }
                   `}
                 >
@@ -287,7 +325,8 @@ export default function NewCompetitionPage() {
       <div className="text-center mb-8">
         <h2 className="text-2xl font-bold mb-2">Select Teams</h2>
         <p className="text-muted-foreground">
-          Choose which teams will participate in this {currentFormat?.label.toLowerCase()}
+          Choose which teams will participate in this{" "}
+          {currentFormat?.label.toLowerCase()}
         </p>
       </div>
 
@@ -296,8 +335,14 @@ export default function NewCompetitionPage() {
         <div className="text-center py-12">
           <Users className="w-16 h-16 mx-auto mb-4 text-muted-foreground/30" />
           <h3 className="text-lg font-semibold mb-2">No teams available</h3>
-          <p className="text-muted-foreground mb-4">Create some teams first to build a competition.</p>
-          <Button onClick={handleQuickCreateTeam} variant="outline" className="gap-2">
+          <p className="text-muted-foreground mb-4">
+            Create some teams first to build a competition.
+          </p>
+          <Button
+            onClick={handleQuickCreateTeam}
+            variant="outline"
+            className="gap-2"
+          >
             <Users className="w-4 h-4" />
             Quick Create Team
           </Button>
@@ -306,11 +351,20 @@ export default function NewCompetitionPage() {
         <>
           <div className="flex items-center justify-between mb-4">
             <p
-              className={`text-sm ${teamValidation.valid ? "text-emerald-500" : "text-muted-foreground"}`}
+              className={`text-sm ${
+                teamValidation.valid
+                  ? "text-emerald-500"
+                  : "text-muted-foreground"
+              }`}
             >
               {teamValidation.message}
             </p>
-            <Button onClick={handleQuickCreateTeam} variant="ghost" size="sm" className="gap-2">
+            <Button
+              onClick={handleQuickCreateTeam}
+              variant="ghost"
+              size="sm"
+              className="gap-2"
+            >
               <Users className="w-4 h-4" />
               Quick Add Team
             </Button>
@@ -326,9 +380,10 @@ export default function NewCompetitionPage() {
                   key={team.id}
                   className={`
                     cursor-pointer transition-all duration-200
-                    ${isSelected
-                      ? "border-primary ring-2 ring-primary/20"
-                      : "border-border/50 bg-card/30 hover:bg-card/60"
+                    ${
+                      isSelected
+                        ? "border-primary ring-2 ring-primary/20"
+                        : "border-border/50 bg-card/30 hover:bg-card/60"
                     }
                   `}
                   onClick={() => handleTeamToggle(team.id)}
@@ -345,7 +400,7 @@ export default function NewCompetitionPage() {
                   <CardContent className="p-3">
                     <div className="flex items-center gap-3">
                       <div
-                        className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                        className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
                         style={{
                           background: `linear-gradient(135deg, ${teamColor}, ${teamColor}99)`,
                         }}
@@ -387,14 +442,16 @@ export default function NewCompetitionPage() {
     <div className="space-y-6 max-w-md mx-auto">
       <div className="text-center mb-8">
         <h2 className="text-2xl font-bold mb-2">Name Your Competition</h2>
-        <p className="text-muted-foreground">Give your competition a memorable name</p>
+        <p className="text-muted-foreground">
+          Give your competition a memorable name
+        </p>
       </div>
 
       {/* Summary */}
       <Card className="border-border/50 bg-card/30">
         <CardContent className="p-4">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-xl bg-linear-to-br from-violet-500 to-purple-600 flex items-center justify-center">
               <Trophy className="w-6 h-6 text-white" />
             </div>
             <div>
@@ -426,9 +483,10 @@ export default function NewCompetitionPage() {
             w-full px-4 py-3 rounded-lg text-lg
             bg-card border transition-all duration-200
             outline-none focus:ring-2
-            ${nameError
-              ? "border-destructive focus:ring-destructive/30"
-              : "border-border/50 focus:border-primary focus:ring-primary/30"
+            ${
+              nameError
+                ? "border-destructive focus:ring-destructive/30"
+                : "border-border/50 focus:border-primary focus:ring-primary/30"
             }
           `}
           onKeyDown={(e) => {
@@ -437,43 +495,46 @@ export default function NewCompetitionPage() {
             }
           }}
         />
-        {nameError && (
-          <p className="text-sm text-destructive">{nameError}</p>
-        )}
+        {nameError && <p className="text-sm text-destructive">{nameError}</p>}
       </div>
 
       {/* Number of Courts - For Win 2 & Out and 2 Match Rotation */}
-      {(selectedFormat === "two_match_rotation" || selectedFormat === "win2out") && maxCourts > 1 && (
-        <div className="space-y-3">
-          <label className="text-sm font-medium">
-            Number of Courts
-          </label>
-          <p className="text-xs text-muted-foreground">
-            Run multiple games simultaneously. More courts = faster rotation.
-          </p>
-          <div className="flex gap-2">
-            {Array.from({ length: Math.min(maxCourts, 4) }, (_, i) => i + 1).map((num) => (
-              <button
-                key={num}
-                type="button"
-                onClick={() => setNumberOfCourts(num)}
-                className={`
+      {(selectedFormat === "two_match_rotation" ||
+        selectedFormat === "win2out") &&
+        maxCourts > 1 && (
+          <div className="space-y-3">
+            <label className="text-sm font-medium">Number of Courts</label>
+            <p className="text-xs text-muted-foreground">
+              Run multiple games simultaneously. More courts = faster rotation.
+            </p>
+            <div className="flex gap-2">
+              {Array.from(
+                { length: Math.min(maxCourts, 4) },
+                (_, i) => i + 1
+              ).map((num) => (
+                <button
+                  key={num}
+                  type="button"
+                  onClick={() => setNumberOfCourts(num)}
+                  className={`
                   flex-1 py-3 rounded-lg font-semibold transition-all duration-200
-                  ${numberOfCourts === num
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-card border border-border/50 hover:border-primary/30"
+                  ${
+                    numberOfCourts === num
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-card border border-border/50 hover:border-primary/30"
                   }
                 `}
-              >
-                {num} Court{num > 1 ? "s" : ""}
-              </button>
-            ))}
+                >
+                  {num} Court{num > 1 ? "s" : ""}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground text-center">
+              {numberOfCourts * 2} teams play at once,{" "}
+              {selectedTeamIds.length - numberOfCourts * 2} in queue
+            </p>
           </div>
-          <p className="text-xs text-muted-foreground text-center">
-            {numberOfCourts * 2} teams play at once, {selectedTeamIds.length - numberOfCourts * 2} in queue
-          </p>
-        </div>
-      )}
+        )}
 
       <div className="flex justify-between pt-4">
         <Button variant="outline" onClick={handleBack} className="gap-2">
@@ -518,4 +579,3 @@ export default function NewCompetitionPage() {
     </div>
   );
 }
-
