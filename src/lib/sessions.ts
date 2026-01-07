@@ -45,6 +45,32 @@ const generateSessionId = (): string => {
   return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
 };
 
+const sanitizeForFirestore = <T>(value: T): T => {
+  if (value === null || value === undefined) {
+    return value;
+  }
+
+  if (Array.isArray(value)) {
+    const cleaned = value
+      .map((item) => sanitizeForFirestore(item))
+      .filter((item) => item !== undefined);
+    return cleaned as T;
+  }
+
+  if (typeof value === "object") {
+    if (value instanceof Date) {
+      return value;
+    }
+
+    const cleanedEntries = Object.entries(value as Record<string, unknown>)
+      .filter(([, entryValue]) => entryValue !== undefined)
+      .map(([key, entryValue]) => [key, sanitizeForFirestore(entryValue)]);
+    return Object.fromEntries(cleanedEntries) as T;
+  }
+
+  return value;
+};
+
 // ============================================
 // Session CRUD Operations
 // ============================================
@@ -81,7 +107,8 @@ export const createSession = async (
     updatedAt: Date.now(),
   };
 
-  await setDoc(doc(db, SESSIONS_COLLECTION, sessionId), session);
+  const sanitizedSession = sanitizeForFirestore(session);
+  await setDoc(doc(db, SESSIONS_COLLECTION, sessionId), sanitizedSession);
 
   return { session, adminToken };
 };
@@ -131,10 +158,11 @@ export const updateSession = async (
   }
   
   const docRef = doc(db, SESSIONS_COLLECTION, sessionId);
-  await updateDoc(docRef, {
+  const sanitizedUpdates = sanitizeForFirestore({
     ...updates,
     updatedAt: Date.now(),
   });
+  await updateDoc(docRef, sanitizedUpdates);
 };
 
 /**
