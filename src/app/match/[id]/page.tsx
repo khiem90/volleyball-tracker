@@ -585,40 +585,43 @@ export default function MatchPage() {
               <Trophy className="w-5 h-5 text-primary" />
               End Match?
             </DialogTitle>
-            <DialogDescription className="space-y-3 pt-2">
-              <div className="flex items-center justify-center gap-4 p-4 rounded-xl bg-muted/50">
-                <div className="text-center">
-                  <div
-                    className="w-10 h-10 rounded-lg mx-auto mb-1"
-                    style={{ backgroundColor: homeColor }}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    {homeTeam.name}
-                  </p>
-                  <p className="text-2xl font-bold">{match.homeScore}</p>
-                </div>
-                <span className="text-muted-foreground">-</span>
-                <div className="text-center">
-                  <div
-                    className="w-10 h-10 rounded-lg mx-auto mb-1"
-                    style={{ backgroundColor: awayColor }}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    {awayTeam.name}
-                  </p>
-                  <p className="text-2xl font-bold">{match.awayScore}</p>
-                </div>
-              </div>
-              <div className="text-center pt-2">
-                <p className="text-sm text-muted-foreground">Winner</p>
-                <p className="font-semibold text-lg text-emerald-500">
-                  {match.homeScore > match.awayScore
-                    ? homeTeam.name
-                    : awayTeam.name}
-                </p>
-              </div>
+            <DialogDescription>
+              Confirm the final score and winner
             </DialogDescription>
           </DialogHeader>
+          <div className="space-y-3 pt-2">
+            <div className="flex items-center justify-center gap-4 p-4 rounded-xl bg-muted/50">
+              <div className="text-center">
+                <div
+                  className="w-10 h-10 rounded-lg mx-auto mb-1"
+                  style={{ backgroundColor: homeColor }}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {homeTeam.name}
+                </p>
+                <p className="text-2xl font-bold">{match.homeScore}</p>
+              </div>
+              <span className="text-muted-foreground">-</span>
+              <div className="text-center">
+                <div
+                  className="w-10 h-10 rounded-lg mx-auto mb-1"
+                  style={{ backgroundColor: awayColor }}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {awayTeam.name}
+                </p>
+                <p className="text-2xl font-bold">{match.awayScore}</p>
+              </div>
+            </div>
+            <div className="text-center pt-2">
+              <p className="text-sm text-muted-foreground">Winner</p>
+              <p className="font-semibold text-lg text-emerald-500">
+                {match.homeScore > match.awayScore
+                  ? homeTeam.name
+                  : awayTeam.name}
+              </p>
+            </div>
+          </div>
           <DialogFooter className="flex-row gap-2 sm:gap-2">
             <Button
               variant="outline"
