@@ -7,6 +7,7 @@ import {
   useState,
   useCallback,
   useRef,
+  useMemo,
   type ReactNode,
 } from "react";
 import { useAuth } from "./AuthContext";
@@ -272,13 +273,24 @@ export const SessionProvider = ({ children }: SessionProviderProps) => {
 
   // End the session (save summary and delete from Firestore) - only creator can do this
   const endSession = useCallback(async (): Promise<SessionSummary | null> => {
-    if (!session) return null;
+    if (!session) {
+      console.error("endSession: No session to end");
+      return null;
+    }
 
     // Only creator can end the session
-    const isCreator = user?.uid === session.creatorId || 
+    const canEnd = user?.uid === session.creatorId || 
       (currentAdminToken && session.adminToken === currentAdminToken && !session.creatorId);
     
-    if (!isCreator) {
+    console.log("endSession check:", {
+      userId: user?.uid,
+      sessionCreatorId: session.creatorId,
+      hasAdminToken: !!currentAdminToken,
+      tokenMatches: currentAdminToken === session.adminToken,
+      canEnd,
+    });
+    
+    if (!canEnd) {
       setError("Only the session creator can end the session");
       return null;
     }
@@ -332,7 +344,17 @@ export const SessionProvider = ({ children }: SessionProviderProps) => {
   const canEdit = role === "creator" || role === "admin";
 
   // Check if user is the creator
-  const isCreator = role === "creator";
+  // isCreator should match the logic in endSession - either:
+  // 1. User is signed in and is the session creator, OR
+  // 2. User has the admin token AND session was created anonymously (creatorId is null)
+  const isCreator = useMemo(() => {
+    if (!session) return false;
+    // Signed-in user is the creator
+    if (user?.uid && session.creatorId === user.uid) return true;
+    // Anonymous creator with admin token
+    if (currentAdminToken && session.adminToken === currentAdminToken && !session.creatorId) return true;
+    return false;
+  }, [session, user, currentAdminToken]);
 
   // Update competition data
   const updateCompetition = useCallback(
