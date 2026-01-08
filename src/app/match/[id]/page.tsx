@@ -56,26 +56,57 @@ export default function MatchPage() {
 
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
   const [history, setHistory] = useState<{ home: number; away: number }[]>([]);
+  const [isPortrait, setIsPortrait] = useState(false);
 
-  // Try to lock orientation to landscape when in fullscreen
+  // Detect portrait orientation for CSS-based rotation
   useEffect(() => {
+    const checkOrientation = () => {
+      if (!isFullscreen) {
+        setIsPortrait(false);
+        return;
+      }
+      const portrait = window.innerHeight > window.innerWidth;
+      setIsPortrait(portrait);
+    };
+
+    // Check on mount and when fullscreen changes
+    checkOrientation();
+    
+    window.addEventListener("resize", checkOrientation);
+    window.addEventListener("orientationchange", checkOrientation);
+
+    // Try native orientation lock (works on some Android devices)
     const lockOrientation = async () => {
-      if (isFullscreen && screen.orientation && 'lock' in screen.orientation) {
+      if (isFullscreen && screen.orientation && "lock" in screen.orientation) {
         try {
-          await (screen.orientation as ScreenOrientation & { lock: (orientation: string) => Promise<void> }).lock('landscape');
-        } catch (err) {
-          // Orientation lock may not be supported or allowed
-          console.log('Could not lock orientation:', err);
+          await (
+            screen.orientation as ScreenOrientation & {
+              lock: (orientation: string) => Promise<void>;
+            }
+          ).lock("landscape");
+        } catch {
+          // Will fall back to CSS rotation
         }
-      } else if (!isFullscreen && screen.orientation && 'unlock' in screen.orientation) {
+      } else if (
+        !isFullscreen &&
+        screen.orientation &&
+        "unlock" in screen.orientation
+      ) {
         try {
-          (screen.orientation as ScreenOrientation & { unlock: () => void }).unlock();
-        } catch (err) {
-          console.log('Could not unlock orientation:', err);
+          (
+            screen.orientation as ScreenOrientation & { unlock: () => void }
+          ).unlock();
+        } catch {
+          // Ignore
         }
       }
     };
     lockOrientation();
+
+    return () => {
+      window.removeEventListener("resize", checkOrientation);
+      window.removeEventListener("orientationchange", checkOrientation);
+    };
   }, [isFullscreen]);
 
   const match = useMemo(() => getMatchById(matchId), [getMatchById, matchId]);
@@ -321,8 +352,26 @@ export default function MatchPage() {
   const homeLeading = match.homeScore > match.awayScore;
   const awayLeading = match.awayScore > match.homeScore;
 
+  // CSS rotation style for forcing landscape in fullscreen portrait mode
+  const fullscreenRotationStyle = isFullscreen && isPortrait ? {
+    transform: 'rotate(90deg)',
+    transformOrigin: 'center center',
+    width: '100vh',
+    height: '100vw',
+    position: 'fixed' as const,
+    top: '50%',
+    left: '50%',
+    marginTop: '-50vw',
+    marginLeft: '-50vh',
+  } : {};
+
   return (
-    <div className={`min-h-screen bg-background flex flex-col ${isFullscreen ? 'fullscreen-mode' : ''}`}>
+    <div
+      className={`min-h-screen bg-background flex flex-col ${
+        isFullscreen ? "fullscreen-mode" : ""
+      }`}
+      style={fullscreenRotationStyle}
+    >
       {/* Header - hidden in fullscreen mode */}
       {!isFullscreen && (
         <header className="glass border-b border-border/40 px-4 py-3 z-50">
@@ -451,7 +500,11 @@ export default function MatchPage() {
       )}
 
       {/* Score Panels - always side-by-side in fullscreen */}
-      <div className={`flex-1 flex ${isFullscreen ? 'flex-row' : 'flex-col md:flex-row'}`}>
+      <div
+        className={`flex-1 flex ${
+          isFullscreen ? "flex-row" : "flex-col md:flex-row"
+        }`}
+      >
         {/* Home Team */}
         <div
           role={canEdit ? "button" : undefined}
@@ -501,18 +554,22 @@ export default function MatchPage() {
           )}
 
           {/* Team Name */}
-          <h2 className={`text-white/90 font-semibold relative z-10 ${
-            isFullscreen ? 'text-2xl md:text-3xl mb-2' : 'text-lg md:text-xl mb-4'
-          }`}>
+          <h2
+            className={`text-white/90 font-semibold relative z-10 ${
+              isFullscreen
+                ? "text-2xl md:text-3xl mb-2"
+                : "text-lg md:text-xl mb-4"
+            }`}
+          >
             {homeTeam.name}
           </h2>
 
           {/* Score */}
           <span
             className={`text-white font-black leading-none tracking-tighter min-w-[1.5ch] text-center drop-shadow-2xl relative z-10 ${
-              isFullscreen 
-                ? 'text-[10rem] md:text-[16rem] lg:text-[20rem]' 
-                : 'text-[6rem] md:text-[12rem]'
+              isFullscreen
+                ? "text-[10rem] md:text-[16rem] lg:text-[20rem]"
+                : "text-[6rem] md:text-[12rem]"
             }`}
             style={{
               textShadow:
@@ -523,8 +580,8 @@ export default function MatchPage() {
           </span>
 
           {/* Controls - hidden in fullscreen, only show if can edit */}
-          {!isFullscreen && (
-            canEdit ? (
+          {!isFullscreen &&
+            (canEdit ? (
               <div className="flex items-center gap-4 mt-6 relative z-10">
                 <Button
                   variant="outline"
@@ -560,9 +617,8 @@ export default function MatchPage() {
                   Live Score
                 </span>
               </div>
-            )
-          )}
-          
+            ))}
+
           {/* Fullscreen tap hint */}
           {isFullscreen && canEdit && (
             <span className="text-white/40 text-sm font-medium mt-4 relative z-10">
@@ -614,18 +670,22 @@ export default function MatchPage() {
           )}
 
           {/* Team Name */}
-          <h2 className={`text-white/90 font-semibold relative z-10 ${
-            isFullscreen ? 'text-2xl md:text-3xl mb-2' : 'text-lg md:text-xl mb-4'
-          }`}>
+          <h2
+            className={`text-white/90 font-semibold relative z-10 ${
+              isFullscreen
+                ? "text-2xl md:text-3xl mb-2"
+                : "text-lg md:text-xl mb-4"
+            }`}
+          >
             {awayTeam.name}
           </h2>
 
           {/* Score */}
           <span
             className={`text-white font-black leading-none tracking-tighter min-w-[1.5ch] text-center drop-shadow-2xl relative z-10 ${
-              isFullscreen 
-                ? 'text-[10rem] md:text-[16rem] lg:text-[20rem]' 
-                : 'text-[6rem] md:text-[12rem]'
+              isFullscreen
+                ? "text-[10rem] md:text-[16rem] lg:text-[20rem]"
+                : "text-[6rem] md:text-[12rem]"
             }`}
             style={{
               textShadow:
@@ -636,8 +696,8 @@ export default function MatchPage() {
           </span>
 
           {/* Controls - hidden in fullscreen, only show if can edit */}
-          {!isFullscreen && (
-            canEdit ? (
+          {!isFullscreen &&
+            (canEdit ? (
               <div className="flex items-center gap-4 mt-6 relative z-10">
                 <Button
                   variant="outline"
@@ -673,9 +733,8 @@ export default function MatchPage() {
                   Live Score
                 </span>
               </div>
-            )
-          )}
-          
+            ))}
+
           {/* Fullscreen tap hint */}
           {isFullscreen && canEdit && (
             <span className="text-white/40 text-sm font-medium mt-4 relative z-10">
