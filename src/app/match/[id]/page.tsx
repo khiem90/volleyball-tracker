@@ -71,7 +71,7 @@ export default function MatchPage() {
 
     // Check on mount and when fullscreen changes
     checkOrientation();
-    
+
     window.addEventListener("resize", checkOrientation);
     window.addEventListener("orientationchange", checkOrientation);
 
@@ -353,17 +353,20 @@ export default function MatchPage() {
   const awayLeading = match.awayScore > match.homeScore;
 
   // CSS rotation style for forcing landscape in fullscreen portrait mode
-  const fullscreenRotationStyle = isFullscreen && isPortrait ? {
-    transform: 'rotate(90deg)',
-    transformOrigin: 'center center',
-    width: '100vh',
-    height: '100vw',
-    position: 'fixed' as const,
-    top: '50%',
-    left: '50%',
-    marginTop: '-50vw',
-    marginLeft: '-50vh',
-  } : {};
+  const fullscreenRotationStyle =
+    isFullscreen && isPortrait
+      ? {
+          transform: "rotate(90deg)",
+          transformOrigin: "center center",
+          width: "100vh",
+          height: "100vw",
+          position: "fixed" as const,
+          top: "50%",
+          left: "50%",
+          marginTop: "-50vw",
+          marginLeft: "-50vh",
+        }
+      : {};
 
   return (
     <div
