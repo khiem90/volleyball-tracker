@@ -135,7 +135,7 @@ export default function SummaryPage() {
     if (!summary) return {};
     const map: Record<string, { name: string; color: string }> = {};
     summary.teams.forEach((team) => {
-      map[team.id] = { name: team.name, color: team.color };
+      map[team.id] = { name: team.name, color: team.color || "#6b7280" };
     });
     return map;
   }, [summary]);
