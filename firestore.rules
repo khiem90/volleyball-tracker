@@ -19,8 +19,16 @@ service cloud.firestore {
         // We allow writes but the app enforces the token check
         || true;
       
+      // Delete allowed if:
+      // 1. User is the creator (creatorId matches), OR
+      // 2. User is in adminIds (has admin access), OR
+      // 3. Session was created anonymously (creatorId is null) - app validates admin token
       allow delete: if 
-        request.auth != null && request.auth.uid == resource.data.creatorId;
+        request.auth != null && (
+          request.auth.uid == resource.data.creatorId
+          || request.auth.uid in resource.data.adminIds
+          || resource.data.creatorId == null
+        );
     }
     
     // Session summaries collection
