@@ -28,6 +28,7 @@ import {
   Shield,
   Maximize,
   Minimize,
+  RotateCcw,
 } from "lucide-react";
 import { useFullscreen } from "@/hooks/useFullscreen";
 import { advanceWinner } from "@/lib/singleElimination";
@@ -56,58 +57,45 @@ export default function MatchPage() {
 
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
   const [history, setHistory] = useState<{ home: number; away: number }[]>([]);
-  const [isPortrait, setIsPortrait] = useState(false);
+  const [showRotatePrompt, setShowRotatePrompt] = useState(false);
 
-  // Detect portrait orientation for CSS-based rotation
+  // Check if device is in landscape mode
+  const isLandscape = useCallback(() => {
+    return window.innerWidth > window.innerHeight;
+  }, []);
+
+  // Handle fullscreen toggle with orientation check
+  const handleFullscreenToggle = useCallback(() => {
+    if (isFullscreen) {
+      toggleFullscreen();
+    } else {
+      // Only allow fullscreen in landscape mode
+      if (isLandscape()) {
+        toggleFullscreen();
+      } else {
+        setShowRotatePrompt(true);
+      }
+    }
+  }, [isFullscreen, isLandscape, toggleFullscreen]);
+
+  // Exit fullscreen if device rotates to portrait
   useEffect(() => {
-    const checkOrientation = () => {
-      if (!isFullscreen) {
-        setIsPortrait(false);
-        return;
-      }
-      const portrait = window.innerHeight > window.innerWidth;
-      setIsPortrait(portrait);
-    };
+    if (!isFullscreen) return;
 
-    // Check on mount and when fullscreen changes
-    checkOrientation();
-
-    window.addEventListener("resize", checkOrientation);
-    window.addEventListener("orientationchange", checkOrientation);
-
-    // Try native orientation lock (works on some Android devices)
-    const lockOrientation = async () => {
-      if (isFullscreen && screen.orientation && "lock" in screen.orientation) {
-        try {
-          await (
-            screen.orientation as ScreenOrientation & {
-              lock: (orientation: string) => Promise<void>;
-            }
-          ).lock("landscape");
-        } catch {
-          // Will fall back to CSS rotation
-        }
-      } else if (
-        !isFullscreen &&
-        screen.orientation &&
-        "unlock" in screen.orientation
-      ) {
-        try {
-          (
-            screen.orientation as ScreenOrientation & { unlock: () => void }
-          ).unlock();
-        } catch {
-          // Ignore
-        }
+    const handleOrientationChange = () => {
+      if (!isLandscape()) {
+        toggleFullscreen();
       }
     };
-    lockOrientation();
+
+    window.addEventListener("resize", handleOrientationChange);
+    window.addEventListener("orientationchange", handleOrientationChange);
 
     return () => {
-      window.removeEventListener("resize", checkOrientation);
-      window.removeEventListener("orientationchange", checkOrientation);
+      window.removeEventListener("resize", handleOrientationChange);
+      window.removeEventListener("orientationchange", handleOrientationChange);
     };
-  }, [isFullscreen]);
+  }, [isFullscreen, isLandscape, toggleFullscreen]);
 
   const match = useMemo(() => getMatchById(matchId), [getMatchById, matchId]);
   const competition = useMemo(
@@ -352,28 +340,11 @@ export default function MatchPage() {
   const homeLeading = match.homeScore > match.awayScore;
   const awayLeading = match.awayScore > match.homeScore;
 
-  // CSS rotation style for forcing landscape in fullscreen portrait mode
-  const fullscreenRotationStyle =
-    isFullscreen && isPortrait
-      ? {
-          transform: "rotate(90deg)",
-          transformOrigin: "center center",
-          width: "100vh",
-          height: "100vw",
-          position: "fixed" as const,
-          top: "50%",
-          left: "50%",
-          marginTop: "-50vw",
-          marginLeft: "-50vh",
-        }
-      : {};
-
   return (
     <div
       className={`min-h-screen bg-background flex flex-col ${
         isFullscreen ? "fullscreen-mode" : ""
       }`}
-      style={fullscreenRotationStyle}
     >
       {/* Header - hidden in fullscreen mode */}
       {!isFullscreen && (
@@ -426,9 +397,9 @@ export default function MatchPage() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={toggleFullscreen}
+                onClick={handleFullscreenToggle}
                 className="gap-2"
-                title="Enter fullscreen mode"
+                title="Enter fullscreen mode (landscape only)"
               >
                 <Maximize className="w-4 h-4" />
                 <span className="hidden sm:inline">Fullscreen</span>
@@ -492,7 +463,7 @@ export default function MatchPage() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={toggleFullscreen}
+            onClick={handleFullscreenToggle}
             className="gap-2 rounded-full"
             title="Exit fullscreen"
           >
@@ -802,6 +773,39 @@ export default function MatchPage() {
             >
               <Trophy className="w-4 h-4" />
               Confirm Winner
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Rotate Device Prompt */}
+      <Dialog open={showRotatePrompt} onOpenChange={setShowRotatePrompt}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <RotateCcw className="w-5 h-5 text-primary" />
+              Rotate Your Device
+            </DialogTitle>
+            <DialogDescription>
+              Fullscreen mode is only available in landscape orientation
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col items-center py-6">
+            <div className="relative w-24 h-16 border-4 border-primary rounded-xl mb-4 animate-pulse">
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+                <RotateCcw className="w-8 h-8 text-primary" />
+              </div>
+            </div>
+            <p className="text-sm text-muted-foreground text-center">
+              Please rotate your device to landscape mode, then try again.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button
+              onClick={() => setShowRotatePrompt(false)}
+              className="w-full"
+            >
+              Got it
             </Button>
           </DialogFooter>
         </DialogContent>

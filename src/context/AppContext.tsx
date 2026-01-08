@@ -415,24 +415,6 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     }
   }, [localState, isSharedMode]);
 
-  // Sync to Firestore helper
-  const syncToFirestore = useCallback(
-    async (newState: AppState) => {
-      if (isSharedMode && canEdit && session) {
-        try {
-          await syncAllData({
-            competition: newState.competitions[0] || null,
-            teams: newState.teams,
-            matches: newState.matches,
-          });
-        } catch (error) {
-          console.error("Failed to sync to Firestore:", error);
-        }
-      }
-    },
-    [isSharedMode, canEdit, session, syncAllData]
-  );
-
   // Team actions
   const addTeam = useCallback(
     (name: string, color?: string) => {
