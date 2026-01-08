@@ -603,7 +603,16 @@ export default function CompetitionDetailPage() {
       </Dialog>
 
       {/* Create Session Dialog */}
-      <CreateSessionDialog open={showCreateSession} onOpenChange={setShowCreateSession} />
+      <CreateSessionDialog 
+        open={showCreateSession} 
+        onOpenChange={setShowCreateSession}
+        defaultName={competition?.name}
+        competitionData={competition ? {
+          competition,
+          teams: competitionTeams,
+          matches,
+        } : undefined}
+      />
     </div>
   );
 }

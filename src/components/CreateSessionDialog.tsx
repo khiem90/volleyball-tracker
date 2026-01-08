@@ -20,6 +20,11 @@ interface CreateSessionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   defaultName?: string;
+  competitionData?: {
+    competition: import("@/types/game").Competition | null;
+    teams: import("@/types/game").PersistentTeam[];
+    matches: import("@/types/game").Match[];
+  };
   onCreated?: (shareCode: string, adminToken: string) => void;
 }
 
@@ -27,6 +32,7 @@ export const CreateSessionDialog = ({
   open,
   onOpenChange,
   defaultName = "",
+  competitionData,
   onCreated,
 }: CreateSessionDialogProps) => {
   const { createNewSession, isLoading, error } = useSession();
@@ -43,14 +49,14 @@ export const CreateSessionDialog = ({
     if (!sessionName.trim()) return;
 
     try {
-      const result = await createNewSession(sessionName.trim());
+      const result = await createNewSession(sessionName.trim(), competitionData);
       setCreatedData(result);
       setStep("created");
       onCreated?.(result.shareCode, result.adminToken);
     } catch (err) {
       console.error("Failed to create session:", err);
     }
-  }, [sessionName, createNewSession, onCreated]);
+  }, [sessionName, createNewSession, competitionData, onCreated]);
 
   const handleCopyCode = useCallback(async () => {
     if (!createdData) return;

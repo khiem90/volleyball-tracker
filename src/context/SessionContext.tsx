@@ -41,7 +41,7 @@ interface SessionContextValue {
   isSharedMode: boolean;
   
   // Session management
-  createNewSession: (name: string) => Promise<{ shareCode: string; adminToken: string }>;
+  createNewSession: (name: string, data?: { competition?: Competition | null; teams?: PersistentTeam[]; matches?: Match[] }) => Promise<{ shareCode: string; adminToken: string }>;
   joinSession: (shareCode: string) => Promise<boolean>;
   leaveSession: () => void;
   endSession: () => Promise<SessionSummary | null>; // Only creator can end session, returns summary
@@ -135,14 +135,20 @@ export const SessionProvider = ({ children }: SessionProviderProps) => {
 
   // Create a new session
   const createNewSession = useCallback(
-    async (name: string): Promise<{ shareCode: string; adminToken: string }> => {
+    async (
+      name: string,
+      data?: { competition?: Competition | null; teams?: PersistentTeam[]; matches?: Match[] }
+    ): Promise<{ shareCode: string; adminToken: string }> => {
       setIsLoading(true);
       setError(null);
 
       try {
         const { session: newSession, adminToken } = await createSession(
           name,
-          user?.uid || null
+          user?.uid || null,
+          data?.competition || null,
+          data?.teams || [],
+          data?.matches || []
         );
 
         // Store admin token for anonymous access
