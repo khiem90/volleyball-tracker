@@ -596,9 +596,7 @@ export default function MatchPage() {
                   className="w-10 h-10 rounded-lg mx-auto mb-1"
                   style={{ backgroundColor: homeColor }}
                 />
-                <p className="text-xs text-muted-foreground">
-                  {homeTeam.name}
-                </p>
+                <p className="text-xs text-muted-foreground">{homeTeam.name}</p>
                 <p className="text-2xl font-bold">{match.homeScore}</p>
               </div>
               <span className="text-muted-foreground">-</span>
@@ -607,9 +605,7 @@ export default function MatchPage() {
                   className="w-10 h-10 rounded-lg mx-auto mb-1"
                   style={{ backgroundColor: awayColor }}
                 />
-                <p className="text-xs text-muted-foreground">
-                  {awayTeam.name}
-                </p>
+                <p className="text-xs text-muted-foreground">{awayTeam.name}</p>
                 <p className="text-2xl font-bold">{match.awayScore}</p>
               </div>
             </div>
