@@ -26,7 +26,10 @@ import {
   Crown,
   Eye,
   Shield,
+  Maximize,
+  Minimize,
 } from "lucide-react";
+import { useFullscreen } from "@/hooks/useFullscreen";
 import { advanceWinner } from "@/lib/singleElimination";
 import { processMatchResult } from "@/lib/win2out";
 import { processMatchResult as processTwoMatchRotationResult } from "@/lib/twoMatchRotation";
@@ -49,9 +52,31 @@ export default function MatchPage() {
   } = useApp();
 
   const { role } = useSession();
+  const { isFullscreen, toggleFullscreen } = useFullscreen();
 
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
   const [history, setHistory] = useState<{ home: number; away: number }[]>([]);
+
+  // Try to lock orientation to landscape when in fullscreen
+  useEffect(() => {
+    const lockOrientation = async () => {
+      if (isFullscreen && screen.orientation && 'lock' in screen.orientation) {
+        try {
+          await (screen.orientation as ScreenOrientation & { lock: (orientation: string) => Promise<void> }).lock('landscape');
+        } catch (err) {
+          // Orientation lock may not be supported or allowed
+          console.log('Could not lock orientation:', err);
+        }
+      } else if (!isFullscreen && screen.orientation && 'unlock' in screen.orientation) {
+        try {
+          (screen.orientation as ScreenOrientation & { unlock: () => void }).unlock();
+        } catch (err) {
+          console.log('Could not unlock orientation:', err);
+        }
+      }
+    };
+    lockOrientation();
+  }, [isFullscreen]);
 
   const match = useMemo(() => getMatchById(matchId), [getMatchById, matchId]);
   const competition = useMemo(
@@ -297,83 +322,136 @@ export default function MatchPage() {
   const awayLeading = match.awayScore > match.homeScore;
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
-      <header className="glass border-b border-border/40 px-4 py-3 z-50">
-        <div className="flex items-center justify-between max-w-4xl mx-auto">
+    <div className={`min-h-screen bg-background flex flex-col ${isFullscreen ? 'fullscreen-mode' : ''}`}>
+      {/* Header - hidden in fullscreen mode */}
+      {!isFullscreen && (
+        <header className="glass border-b border-border/40 px-4 py-3 z-50">
+          <div className="flex items-center justify-between max-w-4xl mx-auto">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                if (competition) {
+                  router.push(`/competitions/${competition.id}`);
+                } else {
+                  router.push("/");
+                }
+              }}
+              className="gap-2"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span className="hidden sm:inline">Back</span>
+            </Button>
+
+            <div className="text-center">
+              <h1 className="text-sm font-medium text-muted-foreground">
+                {competition?.name || "Quick Match"}
+              </h1>
+              <Badge variant="secondary" className="mt-1 text-xs">
+                {match.status === "in_progress" ? "Live" : "In Progress"}
+              </Badge>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {isSharedMode && (
+                <Badge
+                  variant="outline"
+                  className={`gap-1 text-xs ${
+                    role === "viewer"
+                      ? "bg-muted text-muted-foreground"
+                      : "bg-blue-500/20 text-blue-500 border-blue-500/30"
+                  }`}
+                >
+                  {role === "viewer" ? (
+                    <Eye className="w-3 h-3" />
+                  ) : (
+                    <Shield className="w-3 h-3" />
+                  )}
+                  {role}
+                </Badge>
+              )}
+              {isSharedMode && <ShareButton />}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={toggleFullscreen}
+                className="gap-2"
+                title="Enter fullscreen mode"
+              >
+                <Maximize className="w-4 h-4" />
+                <span className="hidden sm:inline">Fullscreen</span>
+              </Button>
+              {canEdit && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleUndo}
+                    disabled={history.length < 2}
+                    className="gap-2"
+                  >
+                    <Undo2 className="w-4 h-4" />
+                    <span className="hidden sm:inline">Undo</span>
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleOpenCompleteDialog}
+                    disabled={!canComplete}
+                    className="gap-2 shadow-lg shadow-primary/20"
+                  >
+                    <Check className="w-4 h-4" />
+                    <span className="hidden sm:inline">End Match</span>
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+        </header>
+      )}
+
+      {/* Fullscreen Controls - floating bar at bottom */}
+      {isFullscreen && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 bg-background/80 backdrop-blur-lg rounded-full px-4 py-2 border border-border/40 shadow-xl">
+          {canEdit && (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleUndo}
+                disabled={history.length < 2}
+                className="gap-2 rounded-full"
+              >
+                <Undo2 className="w-4 h-4" />
+                Undo
+              </Button>
+              <div className="w-px h-6 bg-border" />
+              <Button
+                size="sm"
+                onClick={handleOpenCompleteDialog}
+                disabled={!canComplete}
+                className="gap-2 rounded-full shadow-lg shadow-primary/20"
+              >
+                <Check className="w-4 h-4" />
+                End Match
+              </Button>
+              <div className="w-px h-6 bg-border" />
+            </>
+          )}
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => {
-              if (competition) {
-                router.push(`/competitions/${competition.id}`);
-              } else {
-                router.push("/");
-              }
-            }}
-            className="gap-2"
+            onClick={toggleFullscreen}
+            className="gap-2 rounded-full"
+            title="Exit fullscreen"
           >
-            <ArrowLeft className="w-4 h-4" />
-            <span className="hidden sm:inline">Back</span>
+            <Minimize className="w-4 h-4" />
+            Exit
           </Button>
-
-          <div className="text-center">
-            <h1 className="text-sm font-medium text-muted-foreground">
-              {competition?.name || "Quick Match"}
-            </h1>
-            <Badge variant="secondary" className="mt-1 text-xs">
-              {match.status === "in_progress" ? "Live" : "In Progress"}
-            </Badge>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {isSharedMode && (
-              <Badge
-                variant="outline"
-                className={`gap-1 text-xs ${
-                  role === "viewer"
-                    ? "bg-muted text-muted-foreground"
-                    : "bg-blue-500/20 text-blue-500 border-blue-500/30"
-                }`}
-              >
-                {role === "viewer" ? (
-                  <Eye className="w-3 h-3" />
-                ) : (
-                  <Shield className="w-3 h-3" />
-                )}
-                {role}
-              </Badge>
-            )}
-            {isSharedMode && <ShareButton />}
-            {canEdit && (
-              <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleUndo}
-                  disabled={history.length < 2}
-                  className="gap-2"
-                >
-                  <Undo2 className="w-4 h-4" />
-                  <span className="hidden sm:inline">Undo</span>
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={handleOpenCompleteDialog}
-                  disabled={!canComplete}
-                  className="gap-2 shadow-lg shadow-primary/20"
-                >
-                  <Check className="w-4 h-4" />
-                  <span className="hidden sm:inline">End Match</span>
-                </Button>
-              </>
-            )}
-          </div>
         </div>
-      </header>
+      )}
 
-      {/* Score Panels */}
-      <div className="flex-1 flex flex-col md:flex-row">
+      {/* Score Panels - always side-by-side in fullscreen */}
+      <div className={`flex-1 flex ${isFullscreen ? 'flex-row' : 'flex-col md:flex-row'}`}>
         {/* Home Team */}
         <div
           role={canEdit ? "button" : undefined}
@@ -423,13 +501,19 @@ export default function MatchPage() {
           )}
 
           {/* Team Name */}
-          <h2 className="text-white/90 text-lg md:text-xl font-semibold mb-4 relative z-10">
+          <h2 className={`text-white/90 font-semibold relative z-10 ${
+            isFullscreen ? 'text-2xl md:text-3xl mb-2' : 'text-lg md:text-xl mb-4'
+          }`}>
             {homeTeam.name}
           </h2>
 
           {/* Score */}
           <span
-            className="text-white font-black text-[6rem] md:text-[12rem] leading-none tracking-tighter min-w-[1.5ch] text-center drop-shadow-2xl relative z-10"
+            className={`text-white font-black leading-none tracking-tighter min-w-[1.5ch] text-center drop-shadow-2xl relative z-10 ${
+              isFullscreen 
+                ? 'text-[10rem] md:text-[16rem] lg:text-[20rem]' 
+                : 'text-[6rem] md:text-[12rem]'
+            }`}
             style={{
               textShadow:
                 "0 4px 40px rgba(0,0,0,0.3), 0 0 80px rgba(255,255,255,0.15)",
@@ -438,43 +522,52 @@ export default function MatchPage() {
             {match.homeScore}
           </span>
 
-          {/* Controls - only show if can edit */}
-          {canEdit ? (
-            <div className="flex items-center gap-4 mt-6 relative z-10">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDeductPoint("home");
-                }}
-                aria-label={`Deduct point from ${homeTeam.name}`}
-                className="h-12 w-12 rounded-full bg-white/10 hover:bg-white/20 border-white/20 text-white transition-all duration-200 hover:scale-110 active:scale-95"
-              >
-                <Minus className="w-5 h-5" />
-              </Button>
-              <span className="text-white/60 text-sm font-medium px-2">
-                Tap to score
-              </span>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleAddPoint("home");
-                }}
-                aria-label={`Add point to ${homeTeam.name}`}
-                className="h-12 w-12 rounded-full bg-white/10 hover:bg-white/20 border-white/20 text-white transition-all duration-200 hover:scale-110 active:scale-95"
-              >
-                <Plus className="w-5 h-5" />
-              </Button>
-            </div>
-          ) : (
-            <div className="mt-6 relative z-10">
-              <span className="text-white/40 text-sm font-medium">
-                Live Score
-              </span>
-            </div>
+          {/* Controls - hidden in fullscreen, only show if can edit */}
+          {!isFullscreen && (
+            canEdit ? (
+              <div className="flex items-center gap-4 mt-6 relative z-10">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeductPoint("home");
+                  }}
+                  aria-label={`Deduct point from ${homeTeam.name}`}
+                  className="h-12 w-12 rounded-full bg-white/10 hover:bg-white/20 border-white/20 text-white transition-all duration-200 hover:scale-110 active:scale-95"
+                >
+                  <Minus className="w-5 h-5" />
+                </Button>
+                <span className="text-white/60 text-sm font-medium px-2">
+                  Tap to score
+                </span>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleAddPoint("home");
+                  }}
+                  aria-label={`Add point to ${homeTeam.name}`}
+                  className="h-12 w-12 rounded-full bg-white/10 hover:bg-white/20 border-white/20 text-white transition-all duration-200 hover:scale-110 active:scale-95"
+                >
+                  <Plus className="w-5 h-5" />
+                </Button>
+              </div>
+            ) : (
+              <div className="mt-6 relative z-10">
+                <span className="text-white/40 text-sm font-medium">
+                  Live Score
+                </span>
+              </div>
+            )
+          )}
+          
+          {/* Fullscreen tap hint */}
+          {isFullscreen && canEdit && (
+            <span className="text-white/40 text-sm font-medium mt-4 relative z-10">
+              Tap to score
+            </span>
           )}
         </div>
 
@@ -521,13 +614,19 @@ export default function MatchPage() {
           )}
 
           {/* Team Name */}
-          <h2 className="text-white/90 text-lg md:text-xl font-semibold mb-4 relative z-10">
+          <h2 className={`text-white/90 font-semibold relative z-10 ${
+            isFullscreen ? 'text-2xl md:text-3xl mb-2' : 'text-lg md:text-xl mb-4'
+          }`}>
             {awayTeam.name}
           </h2>
 
           {/* Score */}
           <span
-            className="text-white font-black text-[6rem] md:text-[12rem] leading-none tracking-tighter min-w-[1.5ch] text-center drop-shadow-2xl relative z-10"
+            className={`text-white font-black leading-none tracking-tighter min-w-[1.5ch] text-center drop-shadow-2xl relative z-10 ${
+              isFullscreen 
+                ? 'text-[10rem] md:text-[16rem] lg:text-[20rem]' 
+                : 'text-[6rem] md:text-[12rem]'
+            }`}
             style={{
               textShadow:
                 "0 4px 40px rgba(0,0,0,0.3), 0 0 80px rgba(255,255,255,0.15)",
@@ -536,43 +635,52 @@ export default function MatchPage() {
             {match.awayScore}
           </span>
 
-          {/* Controls - only show if can edit */}
-          {canEdit ? (
-            <div className="flex items-center gap-4 mt-6 relative z-10">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDeductPoint("away");
-                }}
-                aria-label={`Deduct point from ${awayTeam.name}`}
-                className="h-12 w-12 rounded-full bg-white/10 hover:bg-white/20 border-white/20 text-white transition-all duration-200 hover:scale-110 active:scale-95"
-              >
-                <Minus className="w-5 h-5" />
-              </Button>
-              <span className="text-white/60 text-sm font-medium px-2">
-                Tap to score
-              </span>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleAddPoint("away");
-                }}
-                aria-label={`Add point to ${awayTeam.name}`}
-                className="h-12 w-12 rounded-full bg-white/10 hover:bg-white/20 border-white/20 text-white transition-all duration-200 hover:scale-110 active:scale-95"
-              >
-                <Plus className="w-5 h-5" />
-              </Button>
-            </div>
-          ) : (
-            <div className="mt-6 relative z-10">
-              <span className="text-white/40 text-sm font-medium">
-                Live Score
-              </span>
-            </div>
+          {/* Controls - hidden in fullscreen, only show if can edit */}
+          {!isFullscreen && (
+            canEdit ? (
+              <div className="flex items-center gap-4 mt-6 relative z-10">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeductPoint("away");
+                  }}
+                  aria-label={`Deduct point from ${awayTeam.name}`}
+                  className="h-12 w-12 rounded-full bg-white/10 hover:bg-white/20 border-white/20 text-white transition-all duration-200 hover:scale-110 active:scale-95"
+                >
+                  <Minus className="w-5 h-5" />
+                </Button>
+                <span className="text-white/60 text-sm font-medium px-2">
+                  Tap to score
+                </span>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleAddPoint("away");
+                  }}
+                  aria-label={`Add point to ${awayTeam.name}`}
+                  className="h-12 w-12 rounded-full bg-white/10 hover:bg-white/20 border-white/20 text-white transition-all duration-200 hover:scale-110 active:scale-95"
+                >
+                  <Plus className="w-5 h-5" />
+                </Button>
+              </div>
+            ) : (
+              <div className="mt-6 relative z-10">
+                <span className="text-white/40 text-sm font-medium">
+                  Live Score
+                </span>
+              </div>
+            )
+          )}
+          
+          {/* Fullscreen tap hint */}
+          {isFullscreen && canEdit && (
+            <span className="text-white/40 text-sm font-medium mt-4 relative z-10">
+              Tap to score
+            </span>
           )}
         </div>
       </div>
