@@ -41,12 +41,16 @@
   --radius-2xl: calc(var(--radius) + 8px);
   --radius-3xl: calc(var(--radius) + 12px);
   --radius-4xl: calc(var(--radius) + 16px);
-  
+
   /* Custom team colors */
   --color-team-blue: oklch(0.55 0.2 250);
   --color-team-blue-dark: oklch(0.35 0.15 250);
   --color-team-orange: oklch(0.65 0.2 45);
   --color-team-orange-dark: oklch(0.45 0.15 45);
+
+  /* Glass card colors */
+  --color-glass: var(--glass);
+  --color-glass-border: var(--glass-border);
 }
 
 /* Mobile landscape mode - when height is limited, optimize for score visibility */
@@ -99,12 +103,12 @@ body {
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb {
-  background-color: hsl(var(--muted-foreground) / 0.2);
+  background-color: oklch(0.5 0.05 45 / 0.3);
   border-radius: 999px;
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background-color: hsl(var(--muted-foreground) / 0.4);
+  background-color: oklch(0.6 0.1 45 / 0.5);
 }
 
 /* Prevent text selection on score panels */
@@ -121,47 +125,57 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Coral Sunset Theme - Warm, energetic, and distinctive */
+/* ============================================
+   SPORTS ORANGE/AMBER THEME
+   Inspired by Sporta app - warm, energetic, bold
+   ============================================ */
 :root {
-  --radius: 0.625rem;
-  
-  /* Deep charcoal background with warm undertone */
-  --background: oklch(0.13 0.015 30);
-  --foreground: oklch(0.96 0.01 60);
-  
-  /* Cards with subtle warmth */
-  --card: oklch(0.17 0.015 30);
-  --card-foreground: oklch(0.96 0.01 60);
-  
-  --popover: oklch(0.17 0.015 30);
-  --popover-foreground: oklch(0.96 0.01 60);
-  
-  /* Coral primary - vibrant and warm */
-  --primary: oklch(0.72 0.18 25);
-  --primary-foreground: oklch(0.13 0.015 30);
-  
-  /* Muted slate with warmth */
-  --secondary: oklch(0.22 0.012 30);
+  --radius: 0.75rem;
+
+  /* Deep warm black background */
+  --background: oklch(0.1 0.02 35);
+  --foreground: oklch(0.95 0.01 60);
+
+  /* Glass cards - semi-transparent with warm tint */
+  --card: oklch(0.16 0.02 40 / 0.7);
+  --card-foreground: oklch(0.95 0.01 60);
+
+  --popover: oklch(0.14 0.02 40 / 0.95);
+  --popover-foreground: oklch(0.95 0.01 60);
+
+  /* Orange primary - vibrant and sporty */
+  --primary: oklch(0.72 0.19 45);
+  --primary-foreground: oklch(0.12 0.02 40);
+
+  /* Amber accent for highlights */
+  --amber: oklch(0.78 0.15 55);
+
+  /* Muted slate with warm undertone */
+  --secondary: oklch(0.22 0.015 40);
   --secondary-foreground: oklch(0.92 0.01 60);
-  
-  --muted: oklch(0.20 0.012 30);
-  --muted-foreground: oklch(0.58 0.02 60);
-  
-  /* Warm accent */
-  --accent: oklch(0.25 0.02 30);
-  --accent-foreground: oklch(0.96 0.01 60);
-  
-  /* Warm red for destructive */
-  --destructive: oklch(0.58 0.22 25);
-  
-  /* Borders and inputs */
-  --border: oklch(0.28 0.015 30);
-  --input: oklch(0.22 0.012 30);
-  --ring: oklch(0.72 0.18 25);
-  
+
+  --muted: oklch(0.18 0.015 40);
+  --muted-foreground: oklch(0.6 0.025 55);
+
+  /* Warm accent for hover states */
+  --accent: oklch(0.24 0.03 45);
+  --accent-foreground: oklch(0.95 0.01 60);
+
+  /* Destructive - warm red */
+  --destructive: oklch(0.55 0.22 25);
+
+  /* Borders and inputs - subtle warm tone */
+  --border: oklch(0.26 0.02 45 / 0.5);
+  --input: oklch(0.2 0.015 40);
+  --ring: oklch(0.72 0.19 45);
+
+  /* Glass specific */
+  --glass: oklch(0.15 0.02 40 / 0.6);
+  --glass-border: oklch(0.35 0.03 45 / 0.3);
+
   /* Chart colors - warm gradient palette */
-  --chart-1: oklch(0.72 0.18 25);
-  --chart-2: oklch(0.70 0.16 55);
+  --chart-1: oklch(0.72 0.19 45);
+  --chart-2: oklch(0.78 0.15 55);
   --chart-3: oklch(0.68 0.15 145);
   --chart-4: oklch(0.65 0.18 200);
   --chart-5: oklch(0.62 0.16 280);
@@ -176,61 +190,150 @@ body {
   }
 }
 
-/* Glass morphism effect */
-.glass {
-  background: oklch(0.15 0.015 30 / 0.85);
-  backdrop-filter: blur(16px) saturate(1.8);
-  -webkit-backdrop-filter: blur(16px) saturate(1.8);
+/* ============================================
+   BACKGROUND IMAGE HANDLING
+   ============================================ */
+.bg-volleyball {
+  position: relative;
+  background-color: var(--background);
 }
 
-/* Subtle noise texture overlay */
-.noise-overlay::before {
+.bg-volleyball::before {
   content: "";
-  position: absolute;
+  position: fixed;
   inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
-  opacity: 0.03;
-  pointer-events: none;
-  mix-blend-mode: overlay;
+  background-image: var(--bg-image, none);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  z-index: -2;
 }
 
-/* Score panel gradients */
+.bg-volleyball::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    oklch(0.1 0.02 35 / 0.3) 0%,
+    oklch(0.1 0.02 35 / 0.6) 30%,
+    oklch(0.1 0.02 35 / 0.85) 70%,
+    oklch(0.1 0.02 35 / 0.95) 100%
+  );
+  z-index: -1;
+}
+
+/* ============================================
+   GLASSMORPHISM EFFECTS (Optimized blur values)
+   ============================================ */
+.glass {
+  background: var(--glass);
+  backdrop-filter: blur(12px) saturate(1.5);
+  -webkit-backdrop-filter: blur(12px) saturate(1.5);
+  border: 1px solid var(--glass-border);
+}
+
+.glass-card {
+  background: oklch(0.15 0.02 40 / 0.6);
+  backdrop-filter: blur(12px) saturate(1.4);
+  -webkit-backdrop-filter: blur(12px) saturate(1.4);
+  border: 1px solid oklch(0.4 0.04 45 / 0.2);
+  box-shadow: 0 4px 20px oklch(0 0 0 / 0.15);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.glass-card-hover:hover {
+  border-color: oklch(0.72 0.19 45 / 0.3);
+  box-shadow: 0 8px 30px oklch(0 0 0 / 0.2);
+  transform: translateY(-2px);
+}
+
+.glass-nav {
+  background: oklch(0.12 0.02 40 / 0.85);
+  backdrop-filter: blur(16px) saturate(1.6);
+  -webkit-backdrop-filter: blur(16px) saturate(1.6);
+  border: 1px solid oklch(0.35 0.03 45 / 0.25);
+  box-shadow: 0 4px 20px oklch(0 0 0 / 0.25);
+}
+
+.glass-input {
+  background: oklch(0.12 0.02 40 / 0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid oklch(0.35 0.03 45 / 0.2);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.glass-input:focus {
+  border-color: oklch(0.72 0.19 45 / 0.5);
+  box-shadow: 0 0 0 3px oklch(0.72 0.19 45 / 0.15);
+}
+
+/* ============================================
+   SCORE PANEL GRADIENTS
+   ============================================ */
 .team-blue-gradient {
-  background: linear-gradient(135deg, 
-    oklch(0.5 0.18 250) 0%, 
-    oklch(0.4 0.15 255) 50%, 
+  background: linear-gradient(
+    135deg,
+    oklch(0.5 0.18 250) 0%,
+    oklch(0.4 0.15 255) 50%,
     oklch(0.3 0.12 260) 100%
   );
 }
 
 .team-orange-gradient {
-  background: linear-gradient(135deg, 
-    oklch(0.65 0.2 40) 0%, 
-    oklch(0.55 0.18 45) 50%, 
+  background: linear-gradient(
+    135deg,
+    oklch(0.65 0.2 40) 0%,
+    oklch(0.55 0.18 45) 50%,
     oklch(0.45 0.15 50) 100%
   );
 }
 
-/* Glow effects */
+/* ============================================
+   GLOW EFFECTS
+   ============================================ */
 .glow-primary {
-  box-shadow: 0 0 30px -5px oklch(0.72 0.18 25 / 0.4);
+  box-shadow: 0 0 30px -5px oklch(0.72 0.19 45 / 0.5);
+}
+
+.glow-amber {
+  box-shadow: 0 0 25px -5px oklch(0.78 0.15 55 / 0.4);
 }
 
 .glow-success {
   box-shadow: 0 0 20px -5px oklch(0.68 0.15 145 / 0.4);
 }
 
-/* Animated gradient background */
+.glow-live {
+  box-shadow: 0 0 10px oklch(0.72 0.19 45 / 0.6),
+    0 0 20px oklch(0.72 0.19 45 / 0.3), 0 0 30px oklch(0.72 0.19 45 / 0.1);
+}
+
+/* ============================================
+   ANIMATED GRADIENTS
+   ============================================ */
 .animated-gradient {
   background: linear-gradient(
     -45deg,
-    oklch(0.72 0.18 25 / 0.1),
-    oklch(0.70 0.16 55 / 0.1),
-    oklch(0.68 0.15 145 / 0.05),
-    oklch(0.13 0.015 30)
+    oklch(0.72 0.19 45 / 0.15),
+    oklch(0.78 0.15 55 / 0.1),
+    oklch(0.65 0.1 35 / 0.05),
+    oklch(0.1 0.02 35)
   );
   background-size: 400% 400%;
   animation: gradientShift 15s ease infinite;
+}
+
+.animated-gradient-subtle {
+  background: linear-gradient(
+    135deg,
+    oklch(0.72 0.19 45 / 0.08) 0%,
+    transparent 50%,
+    oklch(0.78 0.15 55 / 0.05) 100%
+  );
+  background-size: 200% 200%;
+  animation: gradientShift 20s ease infinite;
 }
 
 @keyframes gradientShift {
@@ -245,7 +348,23 @@ body {
   }
 }
 
-/* Subtle shine effect on hover */
+/* ============================================
+   NOISE TEXTURE OVERLAY
+   ============================================ */
+.noise-overlay::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  opacity: 0.02;
+  pointer-events: none;
+  mix-blend-mode: overlay;
+  border-radius: inherit;
+}
+
+/* ============================================
+   SHINE/SHIMMER EFFECTS
+   ============================================ */
 .shine-hover {
   position: relative;
   overflow: hidden;
@@ -259,7 +378,7 @@ body {
     115deg,
     transparent 0%,
     transparent 40%,
-    oklch(1 0 0 / 0.08) 50%,
+    oklch(1 0 0 / 0.1) 50%,
     transparent 60%,
     transparent 100%
   );
@@ -271,22 +390,110 @@ body {
   transform: translateX(100%);
 }
 
-/* Card hover lift effect */
+/* ============================================
+   CARD INTERACTIONS
+   ============================================ */
 .card-lift {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .card-lift:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 30px -10px oklch(0 0 0 / 0.3);
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px -10px oklch(0 0 0 / 0.4);
 }
 
-/* Smooth color transitions */
+/* ============================================
+   COLOR TRANSITIONS
+   ============================================ */
 .color-transition {
-  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+  transition: color 0.15s ease, background-color 0.15s ease,
+    border-color 0.15s ease;
 }
 
-/* Icon container styles */
+/* ============================================
+   STATUS BADGES
+   ============================================ */
+.status-draft {
+  background: oklch(0.45 0.05 250 / 0.25);
+  color: oklch(0.7 0.08 250);
+}
+
+.status-active {
+  background: oklch(0.72 0.19 45 / 0.25);
+  color: oklch(0.85 0.16 50);
+}
+
+.status-complete {
+  background: oklch(0.68 0.15 145 / 0.25);
+  color: oklch(0.78 0.15 145);
+}
+
+.status-live {
+  background: oklch(0.72 0.19 45 / 0.3);
+  color: oklch(0.9 0.15 50);
+  animation: livePulse 2s ease-in-out infinite;
+}
+
+@keyframes livePulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* ============================================
+   LIVE INDICATOR DOT
+   ============================================ */
+.live-dot {
+  position: relative;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: oklch(0.72 0.19 45);
+}
+
+.live-dot::before {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  background: oklch(0.72 0.19 45 / 0.4);
+  animation: liveDotPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes liveDotPulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.4;
+  }
+  50% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+/* ============================================
+   FOCUS STATES
+   ============================================ */
+:focus-visible {
+  outline: 2px solid oklch(0.72 0.19 45);
+  outline-offset: 2px;
+}
+
+/* ============================================
+   BUTTON STATES
+   ============================================ */
+button:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+/* ============================================
+   ICON CONTAINER
+   ============================================ */
 .icon-container {
   display: flex;
   align-items: center;
@@ -294,45 +501,139 @@ body {
   border-radius: var(--radius-lg);
 }
 
-/* Status badge variants */
-.status-draft {
-  background: oklch(0.45 0.05 250 / 0.2);
-  color: oklch(0.7 0.08 250);
+/* ============================================
+   ORANGE GRADIENT BUTTONS
+   ============================================ */
+.btn-orange-gradient {
+  background: linear-gradient(
+    135deg,
+    oklch(0.72 0.19 45) 0%,
+    oklch(0.65 0.2 40) 100%
+  );
+  box-shadow: 0 4px 15px oklch(0.72 0.19 45 / 0.3),
+    inset 0 1px 0 oklch(1 0 0 / 0.15);
+  transition: all 0.2s ease;
 }
 
-.status-active {
-  background: oklch(0.70 0.16 55 / 0.2);
-  color: oklch(0.80 0.16 55);
+.btn-orange-gradient:hover {
+  box-shadow: 0 6px 25px oklch(0.72 0.19 45 / 0.4),
+    inset 0 1px 0 oklch(1 0 0 / 0.2);
+  transform: translateY(-1px);
 }
 
-.status-complete {
-  background: oklch(0.68 0.15 145 / 0.2);
-  color: oklch(0.78 0.15 145);
+.btn-orange-gradient:active {
+  transform: translateY(0) scale(0.98);
 }
 
-/* Focus visible styles */
-:focus-visible {
-  outline: 2px solid oklch(0.72 0.18 25);
-  outline-offset: 2px;
+/* ============================================
+   VS DIVIDER STYLING
+   ============================================ */
+.vs-divider {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-/* Better button active states */
-button:active:not(:disabled) {
-  transform: scale(0.98);
+.vs-divider::before,
+.vs-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    oklch(0.72 0.19 45 / 0.3),
+    transparent
+  );
 }
 
-/* Smooth page transitions */
-main {
-  animation: fadeIn 0.3s ease;
+/* ============================================
+   SCORE DISPLAY
+   ============================================ */
+.score-text {
+  text-shadow: 0 4px 40px oklch(0 0 0 / 0.4), 0 0 80px oklch(1 0 0 / 0.1);
 }
 
+.score-glow {
+  filter: drop-shadow(0 0 20px oklch(1 0 0 / 0.2));
+}
+
+/* ============================================
+   REDUCED MOTION SUPPORT
+   ============================================ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .glass-card-hover:hover {
+    transform: none;
+  }
+
+  .card-lift:hover {
+    transform: none;
+  }
+
+  .btn-orange-gradient:hover {
+    transform: none;
+  }
+
+  .shine-hover::after {
+    display: none;
+  }
+
+  .animated-gradient,
+  .animated-gradient-subtle {
+    animation: none;
+    background-size: 100% 100%;
+  }
+}
+
+/* ============================================
+   GPU ACCELERATION HINTS
+   ============================================ */
+.glass-card,
+.glass-nav,
+.glass-input {
+  will-change: auto;
+  transform: translateZ(0);
+}
+
+/* ============================================
+   SIMPLE CSS ANIMATIONS (lighter than framer-motion)
+   ============================================ */
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(10px);
   }
   to {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out forwards;
+}
+
+.animate-fade-in-delay-1 {
+  animation: fadeIn 0.4s ease-out 0.1s forwards;
+  opacity: 0;
+}
+
+.animate-fade-in-delay-2 {
+  animation: fadeIn 0.4s ease-out 0.2s forwards;
+  opacity: 0;
+}
+
+.animate-fade-in-delay-3 {
+  animation: fadeIn 0.4s ease-out 0.3s forwards;
+  opacity: 0;
 }

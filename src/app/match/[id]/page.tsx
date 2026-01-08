@@ -3,6 +3,7 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { motion, AnimatePresence } from "framer-motion";
 import { useApp } from "@/context/AppContext";
 import { useSession } from "@/context/SessionContext";
 import { Button } from "@/components/ui/button";
@@ -29,6 +30,7 @@ import {
   Maximize,
   Minimize,
   RotateCcw,
+  Play,
 } from "lucide-react";
 import { useFullscreen } from "@/hooks/useFullscreen";
 import { advanceWinner } from "@/lib/singleElimination";
@@ -59,17 +61,14 @@ export default function MatchPage() {
   const [history, setHistory] = useState<{ home: number; away: number }[]>([]);
   const [showRotatePrompt, setShowRotatePrompt] = useState(false);
 
-  // Check if device is in landscape mode
   const isLandscape = useCallback(() => {
     return window.innerWidth > window.innerHeight;
   }, []);
 
-  // Handle fullscreen toggle with orientation check
   const handleFullscreenToggle = useCallback(() => {
     if (isFullscreen) {
       toggleFullscreen();
     } else {
-      // Only allow fullscreen in landscape mode
       if (isLandscape()) {
         toggleFullscreen();
       } else {
@@ -78,7 +77,6 @@ export default function MatchPage() {
     }
   }, [isFullscreen, isLandscape, toggleFullscreen]);
 
-  // Exit fullscreen if device rotates to portrait
   useEffect(() => {
     if (!isFullscreen) return;
 
@@ -113,7 +111,6 @@ export default function MatchPage() {
     [state.teams, match?.awayTeamId]
   );
 
-  // Start match if pending
   useEffect(() => {
     if (match && match.status === "pending") {
       startMatch(matchId);
@@ -177,7 +174,6 @@ export default function MatchPage() {
     const winnerId =
       match.homeScore > match.awayScore ? match.homeTeamId : match.awayTeamId;
 
-    // Handle Win 2 & Out format - use atomic function to avoid race conditions
     if (
       competition &&
       competition.type === "win2out" &&
@@ -214,7 +210,6 @@ export default function MatchPage() {
       return;
     }
 
-    // Handle Two Match Rotation format - use atomic function to avoid race conditions
     if (
       competition &&
       competition.type === "two_match_rotation" &&
@@ -251,10 +246,8 @@ export default function MatchPage() {
       return;
     }
 
-    // For other formats (round_robin, elimination), use the standard flow
     completeMatch(matchId, winnerId);
 
-    // Handle bracket advancement for elimination tournaments
     if (
       competition &&
       (competition.type === "single_elimination" ||
@@ -287,7 +280,6 @@ export default function MatchPage() {
 
     setShowCompleteDialog(false);
 
-    // Navigate back to competition or dashboard
     if (competition) {
       router.push(`/competitions/${competition.id}`);
     } else {
@@ -315,8 +307,12 @@ export default function MatchPage() {
   if (!match || !homeTeam || !awayTeam) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-20 h-20 mx-auto mb-4 rounded-3xl bg-muted/50 flex items-center justify-center">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center"
+        >
+          <div className="w-20 h-20 mx-auto mb-4 rounded-3xl bg-muted/30 flex items-center justify-center">
             <Trophy className="w-10 h-10 text-muted-foreground/30" />
           </div>
           <h2 className="text-xl font-semibold mb-2">Match not found</h2>
@@ -324,12 +320,12 @@ export default function MatchPage() {
             This match may have been deleted.
           </p>
           <Link href="/">
-            <Button variant="outline" className="gap-2">
+            <Button variant="outline" className="gap-2 rounded-xl glass-input">
               <ArrowLeft className="w-4 h-4" />
               Back to Dashboard
             </Button>
           </Link>
-        </div>
+        </motion.div>
       </div>
     );
   }
@@ -348,7 +344,11 @@ export default function MatchPage() {
     >
       {/* Header - hidden in fullscreen mode */}
       {!isFullscreen && (
-        <header className="glass border-b border-border/40 px-4 py-3 z-50">
+        <motion.header
+          initial={{ y: -20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          className="glass-nav border-b border-border/20 px-4 py-3 z-50"
+        >
           <div className="flex items-center justify-between max-w-4xl mx-auto">
             <Button
               variant="ghost"
@@ -360,7 +360,7 @@ export default function MatchPage() {
                   router.push("/");
                 }
               }}
-              className="gap-2"
+              className="gap-2 rounded-xl"
             >
               <ArrowLeft className="w-4 h-4" />
               <span className="hidden sm:inline">Back</span>
@@ -370,8 +370,9 @@ export default function MatchPage() {
               <h1 className="text-sm font-medium text-muted-foreground">
                 {competition?.name || "Quick Match"}
               </h1>
-              <Badge variant="secondary" className="mt-1 text-xs">
-                {match.status === "in_progress" ? "Live" : "In Progress"}
+              <Badge className="mt-1 status-live gap-1">
+                <Play className="w-3 h-3" />
+                Live
               </Badge>
             </div>
 
@@ -379,10 +380,10 @@ export default function MatchPage() {
               {isSharedMode && (
                 <Badge
                   variant="outline"
-                  className={`gap-1 text-xs ${
+                  className={`gap-1 text-xs rounded-lg ${
                     role === "viewer"
-                      ? "bg-muted text-muted-foreground"
-                      : "bg-blue-500/20 text-blue-500 border-blue-500/30"
+                      ? "bg-muted/50 text-muted-foreground"
+                      : "bg-primary/20 text-primary border-primary/30"
                   }`}
                 >
                   {role === "viewer" ? (
@@ -398,7 +399,7 @@ export default function MatchPage() {
                 variant="outline"
                 size="sm"
                 onClick={handleFullscreenToggle}
-                className="gap-2"
+                className="gap-2 rounded-xl glass-input"
                 title="Enter fullscreen mode (landscape only)"
               >
                 <Maximize className="w-4 h-4" />
@@ -411,7 +412,7 @@ export default function MatchPage() {
                     size="sm"
                     onClick={handleUndo}
                     disabled={history.length < 2}
-                    className="gap-2"
+                    className="gap-2 rounded-xl glass-input"
                   >
                     <Undo2 className="w-4 h-4" />
                     <span className="hidden sm:inline">Undo</span>
@@ -420,7 +421,7 @@ export default function MatchPage() {
                     size="sm"
                     onClick={handleOpenCompleteDialog}
                     disabled={!canComplete}
-                    className="gap-2 shadow-lg shadow-primary/20"
+                    className="gap-2 btn-orange-gradient rounded-xl"
                   >
                     <Check className="w-4 h-4" />
                     <span className="hidden sm:inline">End Match</span>
@@ -429,58 +430,65 @@ export default function MatchPage() {
               )}
             </div>
           </div>
-        </header>
+        </motion.header>
       )}
 
       {/* Fullscreen Controls - floating bar at bottom */}
-      {isFullscreen && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 bg-background/80 backdrop-blur-lg rounded-full px-4 py-2 border border-border/40 shadow-xl">
-          {canEdit && (
-            <>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleUndo}
-                disabled={history.length < 2}
-                className="gap-2 rounded-full"
-              >
-                <Undo2 className="w-4 h-4" />
-                Undo
-              </Button>
-              <div className="w-px h-6 bg-border" />
-              <Button
-                size="sm"
-                onClick={handleOpenCompleteDialog}
-                disabled={!canComplete}
-                className="gap-2 rounded-full shadow-lg shadow-primary/20"
-              >
-                <Check className="w-4 h-4" />
-                End Match
-              </Button>
-              <div className="w-px h-6 bg-border" />
-            </>
-          )}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleFullscreenToggle}
-            className="gap-2 rounded-full"
-            title="Exit fullscreen"
+      <AnimatePresence>
+        {isFullscreen && (
+          <motion.div
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 100, opacity: 0 }}
+            className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 glass-nav rounded-full px-4 py-2"
           >
-            <Minimize className="w-4 h-4" />
-            Exit
-          </Button>
-        </div>
-      )}
+            {canEdit && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleUndo}
+                  disabled={history.length < 2}
+                  className="gap-2 rounded-full"
+                >
+                  <Undo2 className="w-4 h-4" />
+                  Undo
+                </Button>
+                <div className="w-px h-6 bg-border/30" />
+                <Button
+                  size="sm"
+                  onClick={handleOpenCompleteDialog}
+                  disabled={!canComplete}
+                  className="gap-2 rounded-full btn-orange-gradient"
+                >
+                  <Check className="w-4 h-4" />
+                  End Match
+                </Button>
+                <div className="w-px h-6 bg-border/30" />
+              </>
+            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleFullscreenToggle}
+              className="gap-2 rounded-full"
+              title="Exit fullscreen"
+            >
+              <Minimize className="w-4 h-4" />
+              Exit
+            </Button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* Score Panels - always side-by-side in fullscreen */}
+      {/* Score Panels */}
       <div
         className={`flex-1 flex ${
           isFullscreen ? "flex-row" : "flex-col md:flex-row"
         }`}
       >
         {/* Home Team */}
-        <div
+        <motion.div
           role={canEdit ? "button" : undefined}
           tabIndex={canEdit ? 0 : undefined}
           onClick={canEdit ? () => handleAddPoint("home") : undefined}
@@ -492,11 +500,12 @@ export default function MatchPage() {
                 }
               : undefined
           }
-          className={`flex-1 flex flex-col items-center justify-center p-6 relative overflow-hidden select-none focus:outline-none transition-transform ${
-            canEdit ? "cursor-pointer active:scale-[0.99]" : ""
+          whileTap={canEdit ? { scale: 0.99 } : undefined}
+          className={`flex-1 flex flex-col items-center justify-center p-6 relative overflow-hidden select-none focus:outline-none ${
+            canEdit ? "cursor-pointer" : ""
           }`}
           style={{
-            background: `linear-gradient(135deg, ${homeColor}, ${homeColor}cc)`,
+            background: `linear-gradient(135deg, ${homeColor}, ${homeColor}bb)`,
           }}
           aria-label={
             canEdit
@@ -507,25 +516,38 @@ export default function MatchPage() {
           {/* Decorative elements */}
           <div className="absolute -top-32 -left-32 w-80 h-80 rounded-full bg-white/5 blur-3xl" />
           <div className="absolute -bottom-32 -right-32 w-96 h-96 rounded-full bg-white/5 blur-3xl" />
-          <div className="absolute top-0 right-0 w-full h-full bg-linear-to-br from-white/5 to-transparent" />
+          <div className="absolute top-0 right-0 w-full h-full bg-linear-to-br from-white/10 to-transparent" />
 
           {/* View-only indicator */}
           {!canEdit && isSharedMode && (
-            <div className="absolute top-4 right-4 flex items-center gap-1.5 bg-white/20 backdrop-blur-sm rounded-full px-3 py-1.5">
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="absolute top-4 right-4 flex items-center gap-1.5 bg-white/20 backdrop-blur-sm rounded-full px-3 py-1.5"
+            >
               <Eye className="w-4 h-4 text-white/80" />
               <span className="text-xs font-medium text-white/80">
                 View Only
               </span>
-            </div>
+            </motion.div>
           )}
 
           {/* Leading indicator */}
-          {homeLeading && (
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-1.5 bg-white/20 backdrop-blur-sm rounded-full px-3 py-1.5">
-              <Crown className="w-4 h-4 text-amber-300" />
-              <span className="text-xs font-semibold text-white">Leading</span>
-            </div>
-          )}
+          <AnimatePresence>
+            {homeLeading && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8, y: -10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.8, y: -10 }}
+                className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-1.5 bg-amber-500/30 backdrop-blur-sm rounded-full px-3 py-1.5 border border-amber-400/30"
+              >
+                <Crown className="w-4 h-4 text-amber-300" />
+                <span className="text-xs font-semibold text-white">
+                  Leading
+                </span>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Team Name */}
           <h2
@@ -538,52 +560,67 @@ export default function MatchPage() {
             {homeTeam.name}
           </h2>
 
-          {/* Score */}
-          <span
-            className={`text-white font-black leading-none tracking-tighter min-w-[1.5ch] text-center drop-shadow-2xl relative z-10 ${
-              isFullscreen
-                ? "text-[10rem] md:text-[16rem] lg:text-[20rem]"
-                : "text-[6rem] md:text-[12rem]"
-            }`}
-            style={{
-              textShadow:
-                "0 4px 40px rgba(0,0,0,0.3), 0 0 80px rgba(255,255,255,0.15)",
-            }}
-          >
-            {match.homeScore}
-          </span>
+          {/* Animated Score */}
+          <div className="relative z-10">
+            <AnimatePresence mode="popLayout">
+              <motion.span
+                key={match.homeScore}
+                initial={{ opacity: 0, y: 30, scale: 0.8 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -30, scale: 0.8 }}
+                transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                className={`text-white font-black leading-none tracking-tighter min-w-[1.5ch] text-center inline-block score-text ${
+                  isFullscreen
+                    ? "text-[10rem] md:text-[16rem] lg:text-[20rem]"
+                    : "text-[6rem] md:text-[12rem]"
+                }`}
+              >
+                {match.homeScore}
+              </motion.span>
+            </AnimatePresence>
+          </div>
 
-          {/* Controls - hidden in fullscreen, only show if can edit */}
+          {/* Controls */}
           {!isFullscreen &&
             (canEdit ? (
               <div className="flex items-center gap-4 mt-6 relative z-10">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDeductPoint("home");
-                  }}
-                  aria-label={`Deduct point from ${homeTeam.name}`}
-                  className="h-12 w-12 rounded-full bg-white/10 hover:bg-white/20 border-white/20 text-white transition-all duration-200 hover:scale-110 active:scale-95"
+                <motion.div
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.95 }}
                 >
-                  <Minus className="w-5 h-5" />
-                </Button>
-                <span className="text-white/60 text-sm font-medium px-2">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeductPoint("home");
+                    }}
+                    aria-label={`Deduct point from ${homeTeam.name}`}
+                    className="h-12 w-12 rounded-full bg-white/10 hover:bg-white/20 border-white/20 text-white"
+                  >
+                    <Minus className="w-5 h-5" />
+                  </Button>
+                </motion.div>
+                <span className="text-white/50 text-sm font-medium px-2">
                   Tap to score
                 </span>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleAddPoint("home");
-                  }}
-                  aria-label={`Add point to ${homeTeam.name}`}
-                  className="h-12 w-12 rounded-full bg-white/10 hover:bg-white/20 border-white/20 text-white transition-all duration-200 hover:scale-110 active:scale-95"
+                <motion.div
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.95 }}
                 >
-                  <Plus className="w-5 h-5" />
-                </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAddPoint("home");
+                    }}
+                    aria-label={`Add point to ${homeTeam.name}`}
+                    className="h-12 w-12 rounded-full bg-white/10 hover:bg-white/20 border-white/20 text-white"
+                  >
+                    <Plus className="w-5 h-5" />
+                  </Button>
+                </motion.div>
               </div>
             ) : (
               <div className="mt-6 relative z-10">
@@ -593,20 +630,19 @@ export default function MatchPage() {
               </div>
             ))}
 
-          {/* Fullscreen tap hint */}
           {isFullscreen && canEdit && (
             <span className="text-white/40 text-sm font-medium mt-4 relative z-10">
               Tap to score
             </span>
           )}
-        </div>
+        </motion.div>
 
         {/* Divider */}
-        <div className="hidden md:block w-1 bg-background" />
-        <div className="block md:hidden h-1 bg-background" />
+        <div className="hidden md:block w-1 bg-background/50" />
+        <div className="block md:hidden h-1 bg-background/50" />
 
         {/* Away Team */}
-        <div
+        <motion.div
           role={canEdit ? "button" : undefined}
           tabIndex={canEdit ? 0 : undefined}
           onClick={canEdit ? () => handleAddPoint("away") : undefined}
@@ -618,11 +654,12 @@ export default function MatchPage() {
                 }
               : undefined
           }
-          className={`flex-1 flex flex-col items-center justify-center p-6 relative overflow-hidden select-none focus:outline-none transition-transform ${
-            canEdit ? "cursor-pointer active:scale-[0.99]" : ""
+          whileTap={canEdit ? { scale: 0.99 } : undefined}
+          className={`flex-1 flex flex-col items-center justify-center p-6 relative overflow-hidden select-none focus:outline-none ${
+            canEdit ? "cursor-pointer" : ""
           }`}
           style={{
-            background: `linear-gradient(135deg, ${awayColor}, ${awayColor}cc)`,
+            background: `linear-gradient(135deg, ${awayColor}, ${awayColor}bb)`,
           }}
           aria-label={
             canEdit
@@ -633,15 +670,24 @@ export default function MatchPage() {
           {/* Decorative elements */}
           <div className="absolute -top-32 -left-32 w-80 h-80 rounded-full bg-white/5 blur-3xl" />
           <div className="absolute -bottom-32 -right-32 w-96 h-96 rounded-full bg-white/5 blur-3xl" />
-          <div className="absolute top-0 right-0 w-full h-full bg-linear-to-br from-white/5 to-transparent" />
+          <div className="absolute top-0 right-0 w-full h-full bg-linear-to-br from-white/10 to-transparent" />
 
           {/* Leading indicator */}
-          {awayLeading && (
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-1.5 bg-white/20 backdrop-blur-sm rounded-full px-3 py-1.5">
-              <Crown className="w-4 h-4 text-amber-300" />
-              <span className="text-xs font-semibold text-white">Leading</span>
-            </div>
-          )}
+          <AnimatePresence>
+            {awayLeading && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8, y: -10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.8, y: -10 }}
+                className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-1.5 bg-amber-500/30 backdrop-blur-sm rounded-full px-3 py-1.5 border border-amber-400/30"
+              >
+                <Crown className="w-4 h-4 text-amber-300" />
+                <span className="text-xs font-semibold text-white">
+                  Leading
+                </span>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Team Name */}
           <h2
@@ -654,52 +700,67 @@ export default function MatchPage() {
             {awayTeam.name}
           </h2>
 
-          {/* Score */}
-          <span
-            className={`text-white font-black leading-none tracking-tighter min-w-[1.5ch] text-center drop-shadow-2xl relative z-10 ${
-              isFullscreen
-                ? "text-[10rem] md:text-[16rem] lg:text-[20rem]"
-                : "text-[6rem] md:text-[12rem]"
-            }`}
-            style={{
-              textShadow:
-                "0 4px 40px rgba(0,0,0,0.3), 0 0 80px rgba(255,255,255,0.15)",
-            }}
-          >
-            {match.awayScore}
-          </span>
+          {/* Animated Score */}
+          <div className="relative z-10">
+            <AnimatePresence mode="popLayout">
+              <motion.span
+                key={match.awayScore}
+                initial={{ opacity: 0, y: 30, scale: 0.8 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -30, scale: 0.8 }}
+                transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                className={`text-white font-black leading-none tracking-tighter min-w-[1.5ch] text-center inline-block score-text ${
+                  isFullscreen
+                    ? "text-[10rem] md:text-[16rem] lg:text-[20rem]"
+                    : "text-[6rem] md:text-[12rem]"
+                }`}
+              >
+                {match.awayScore}
+              </motion.span>
+            </AnimatePresence>
+          </div>
 
-          {/* Controls - hidden in fullscreen, only show if can edit */}
+          {/* Controls */}
           {!isFullscreen &&
             (canEdit ? (
               <div className="flex items-center gap-4 mt-6 relative z-10">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDeductPoint("away");
-                  }}
-                  aria-label={`Deduct point from ${awayTeam.name}`}
-                  className="h-12 w-12 rounded-full bg-white/10 hover:bg-white/20 border-white/20 text-white transition-all duration-200 hover:scale-110 active:scale-95"
+                <motion.div
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.95 }}
                 >
-                  <Minus className="w-5 h-5" />
-                </Button>
-                <span className="text-white/60 text-sm font-medium px-2">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeductPoint("away");
+                    }}
+                    aria-label={`Deduct point from ${awayTeam.name}`}
+                    className="h-12 w-12 rounded-full bg-white/10 hover:bg-white/20 border-white/20 text-white"
+                  >
+                    <Minus className="w-5 h-5" />
+                  </Button>
+                </motion.div>
+                <span className="text-white/50 text-sm font-medium px-2">
                   Tap to score
                 </span>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleAddPoint("away");
-                  }}
-                  aria-label={`Add point to ${awayTeam.name}`}
-                  className="h-12 w-12 rounded-full bg-white/10 hover:bg-white/20 border-white/20 text-white transition-all duration-200 hover:scale-110 active:scale-95"
+                <motion.div
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.95 }}
                 >
-                  <Plus className="w-5 h-5" />
-                </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAddPoint("away");
+                    }}
+                    aria-label={`Add point to ${awayTeam.name}`}
+                    className="h-12 w-12 rounded-full bg-white/10 hover:bg-white/20 border-white/20 text-white"
+                  >
+                    <Plus className="w-5 h-5" />
+                  </Button>
+                </motion.div>
               </div>
             ) : (
               <div className="mt-6 relative z-10">
@@ -709,18 +770,17 @@ export default function MatchPage() {
               </div>
             ))}
 
-          {/* Fullscreen tap hint */}
           {isFullscreen && canEdit && (
             <span className="text-white/40 text-sm font-medium mt-4 relative z-10">
               Tap to score
             </span>
           )}
-        </div>
+        </motion.div>
       </div>
 
       {/* Complete Match Dialog */}
       <Dialog open={showCompleteDialog} onOpenChange={setShowCompleteDialog}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md glass-card border-glass-border">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Trophy className="w-5 h-5 text-primary" />
@@ -731,28 +791,40 @@ export default function MatchPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 pt-2">
-            <div className="flex items-center justify-center gap-4 p-4 rounded-xl bg-muted/50">
+            <div className="flex items-center justify-center gap-6 p-4 rounded-xl bg-accent/20">
               <div className="text-center">
                 <div
-                  className="w-10 h-10 rounded-lg mx-auto mb-1"
-                  style={{ backgroundColor: homeColor }}
+                  className="w-12 h-12 rounded-xl mx-auto mb-2 shadow-lg"
+                  style={{
+                    backgroundColor: homeColor,
+                    boxShadow: `0 8px 20px ${homeColor}40`,
+                  }}
                 />
-                <p className="text-xs text-muted-foreground">{homeTeam.name}</p>
-                <p className="text-2xl font-bold">{match.homeScore}</p>
+                <p className="text-xs text-muted-foreground mb-1">
+                  {homeTeam.name}
+                </p>
+                <p className="text-3xl font-bold">{match.homeScore}</p>
               </div>
-              <span className="text-muted-foreground">-</span>
+              <span className="text-2xl text-muted-foreground font-light">
+                :
+              </span>
               <div className="text-center">
                 <div
-                  className="w-10 h-10 rounded-lg mx-auto mb-1"
-                  style={{ backgroundColor: awayColor }}
+                  className="w-12 h-12 rounded-xl mx-auto mb-2 shadow-lg"
+                  style={{
+                    backgroundColor: awayColor,
+                    boxShadow: `0 8px 20px ${awayColor}40`,
+                  }}
                 />
-                <p className="text-xs text-muted-foreground">{awayTeam.name}</p>
-                <p className="text-2xl font-bold">{match.awayScore}</p>
+                <p className="text-xs text-muted-foreground mb-1">
+                  {awayTeam.name}
+                </p>
+                <p className="text-3xl font-bold">{match.awayScore}</p>
               </div>
             </div>
-            <div className="text-center pt-2">
-              <p className="text-sm text-muted-foreground">Winner</p>
-              <p className="font-semibold text-lg text-emerald-500">
+            <div className="text-center pt-2 pb-2">
+              <p className="text-sm text-muted-foreground mb-1">Winner</p>
+              <p className="font-semibold text-xl text-emerald-400">
                 {match.homeScore > match.awayScore
                   ? homeTeam.name
                   : awayTeam.name}
@@ -763,13 +835,13 @@ export default function MatchPage() {
             <Button
               variant="outline"
               onClick={() => setShowCompleteDialog(false)}
-              className="flex-1"
+              className="flex-1 rounded-xl"
             >
               Continue Playing
             </Button>
             <Button
               onClick={handleCompleteMatch}
-              className="flex-1 gap-2 shadow-lg shadow-primary/20"
+              className="flex-1 gap-2 btn-orange-gradient rounded-xl"
             >
               <Trophy className="w-4 h-4" />
               Confirm Winner
@@ -780,7 +852,7 @@ export default function MatchPage() {
 
       {/* Rotate Device Prompt */}
       <Dialog open={showRotatePrompt} onOpenChange={setShowRotatePrompt}>
-        <DialogContent className="sm:max-w-sm">
+        <DialogContent className="sm:max-w-sm glass-card border-glass-border">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <RotateCcw className="w-5 h-5 text-primary" />
@@ -791,11 +863,15 @@ export default function MatchPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col items-center py-6">
-            <div className="relative w-24 h-16 border-4 border-primary rounded-xl mb-4 animate-pulse">
+            <motion.div
+              animate={{ rotate: [0, 90, 0] }}
+              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+              className="relative w-24 h-16 border-4 border-primary rounded-xl mb-4"
+            >
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
                 <RotateCcw className="w-8 h-8 text-primary" />
               </div>
-            </div>
+            </motion.div>
             <p className="text-sm text-muted-foreground text-center">
               Please rotate your device to landscape mode, then try again.
             </p>
@@ -803,7 +879,7 @@ export default function MatchPage() {
           <DialogFooter>
             <Button
               onClick={() => setShowRotatePrompt(false)}
-              className="w-full"
+              className="w-full btn-orange-gradient rounded-xl"
             >
               Got it
             </Button>
