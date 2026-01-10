@@ -261,7 +261,7 @@ export const useMatchPage = () => {
         .filter((m) => m.competitionId === competition.id)
         .map((m) =>
           m.id === match.id
-            ? { ...m, status: "completed", winnerId }
+            ? { ...m, status: "completed" as const, winnerId }
             : m
         );
 
