@@ -136,6 +136,10 @@ export const useNewCompetitionPage = () => {
     }
   }, [step, selectedFormat, teamValidation.valid]);
 
+  const handleBackToCompetitions = useCallback(() => {
+    router.push("/competitions");
+  }, [router]);
+
   const handleBack = useCallback(() => {
     if (step === "teams") {
       setStep("format");
@@ -176,6 +180,7 @@ export const useNewCompetitionPage = () => {
     formatOptions,
     handleToggleSelectAll,
     handleBack,
+    handleBackToCompetitions,
     handleCreateCompetition,
     handleFormatSelect,
     handleNext,
