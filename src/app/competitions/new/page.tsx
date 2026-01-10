@@ -29,6 +29,7 @@ export default function NewCompetitionPage() {
     handleQuickCreateTeam,
     handleTeamToggle,
     maxCourts,
+    matchSeriesLength,
     nameError,
     numberOfCourts,
     allSelected,
@@ -37,6 +38,7 @@ export default function NewCompetitionPage() {
     setCompetitionName,
     setNameError,
     setNumberOfCourts,
+    setMatchSeriesLength,
     step,
     teamValidation,
     teams,
@@ -364,6 +366,36 @@ export default function NewCompetitionPage() {
           <p className="text-xs text-muted-foreground text-center">
             {numberOfCourts * 2} teams play at once, {selectedTeamIds.length - numberOfCourts * 2} in queue
           </p>
+        </div>
+      )}
+
+      {/* Matches per matchup */}
+      {(selectedFormat === "round_robin" ||
+        selectedFormat === "single_elimination" ||
+        selectedFormat === "double_elimination") && (
+        <div className="space-y-3">
+          <label className="text-sm font-medium">Matches per Matchup</label>
+          <p className="text-xs text-muted-foreground">
+            Choose how many games teams play to decide a winner (best of).
+          </p>
+          <div className="flex gap-2">
+            {[1, 3, 5, 7].map((count) => (
+              <button
+                key={count}
+                type="button"
+                onClick={() => setMatchSeriesLength(count)}
+                className={`
+                  flex-1 py-3 rounded-xl font-semibold transition-all duration-200 cursor-pointer
+                  ${matchSeriesLength === count
+                    ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                    : "bg-card border border-border/40 hover:border-primary/30"
+                  }
+                `}
+              >
+                {count === 1 ? "Single Game" : `Best of ${count}`}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 

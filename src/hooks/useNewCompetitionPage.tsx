@@ -70,6 +70,7 @@ export const useNewCompetitionPage = () => {
   const [competitionName, setCompetitionName] = useState("");
   const [nameError, setNameError] = useState("");
   const [numberOfCourts, setNumberOfCourts] = useState(1);
+  const [matchSeriesLength, setMatchSeriesLength] = useState(1);
 
   const currentFormat = useMemo(
     () => formatOptions.find((f) => f.type === selectedFormat),
@@ -164,10 +165,30 @@ export const useNewCompetitionPage = () => {
       selectedFormat === "two_match_rotation" || selectedFormat === "win2out"
         ? numberOfCourts
         : undefined;
-    createCompetition(trimmedName, selectedFormat, selectedTeamIds, courtsToUse);
+    const seriesLengthToUse =
+      selectedFormat === "round_robin" ||
+      selectedFormat === "single_elimination" ||
+      selectedFormat === "double_elimination"
+        ? matchSeriesLength
+        : undefined;
+    createCompetition(
+      trimmedName,
+      selectedFormat,
+      selectedTeamIds,
+      courtsToUse,
+      seriesLengthToUse
+    );
 
     router.push("/competitions");
-  }, [competitionName, selectedFormat, selectedTeamIds, numberOfCourts, createCompetition, router]);
+  }, [
+    competitionName,
+    selectedFormat,
+    selectedTeamIds,
+    numberOfCourts,
+    matchSeriesLength,
+    createCompetition,
+    router,
+  ]);
 
   const handleQuickCreateTeam = useCallback(() => {
     const teamNumber = state.teams.length + 1;
@@ -192,9 +213,11 @@ export const useNewCompetitionPage = () => {
     allSelected,
     selectedFormat,
     selectedTeamIds,
+    matchSeriesLength,
     setCompetitionName,
     setNameError,
     setNumberOfCourts,
+    setMatchSeriesLength,
     setSelectedTeamIds,
     setStep,
     step,

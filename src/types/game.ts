@@ -68,6 +68,10 @@ export interface Match {
   winnerId?: string;
   createdAt: number;
   completedAt?: number;
+  seriesLength?: number;
+  homeWins?: number;
+  awayWins?: number;
+  seriesGame?: number;
 }
 
 // Competition
@@ -81,6 +85,7 @@ export interface Competition {
   createdAt: number;
   completedAt?: number;
   winnerId?: string;
+  matchSeriesLength?: number;
   // Win 2 & Out specific state
   win2outState?: Win2OutState;
   // Two Match Rotation specific state

@@ -341,6 +341,7 @@ export default function SessionPage() {
                   state={competition.win2outState}
                   teams={teams}
                   matches={matches}
+                  competition={competition}
                   onMatchClick={canEdit ? handleMatchClick : undefined}
                 />
             )}
@@ -351,6 +352,7 @@ export default function SessionPage() {
                   state={competition.twoMatchRotationState}
                   teams={teams}
                   matches={matches}
+                  competition={competition}
                   onMatchClick={canEdit ? handleMatchClick : undefined}
                 />
             )}

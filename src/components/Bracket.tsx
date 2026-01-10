@@ -55,20 +55,25 @@ export const Bracket = ({
 
   const getMatchHeight = (round: number) => {
     // Each subsequent round needs more spacing
-    const baseHeight = 80;
+    const baseHeight = 140;
     const multiplier = Math.pow(2, round - 1);
     return baseHeight * multiplier;
   };
 
   const handleMatchClick = (match: Match) => {
-    if (onMatchClick && match.homeTeamId && match.awayTeamId) {
+    if (
+      onMatchClick &&
+      match.homeTeamId &&
+      match.awayTeamId &&
+      match.status !== "completed"
+    ) {
       onMatchClick(match);
     }
   };
 
   return (
     <div className="overflow-x-auto pb-4">
-      <div className="flex gap-8 min-w-max">
+      <div className="flex w-full min-w-max justify-between gap-10">
         {roundMatches.map((roundMatchList, roundIndex) => {
           const round = roundIndex + 1;
           const matchHeight = getMatchHeight(round);
@@ -87,32 +92,36 @@ export const Bracket = ({
               <div className="flex flex-col justify-around flex-1">
                 {roundMatchList.map((match) => {
                   const isClickable = match.homeTeamId && match.awayTeamId;
+                  const isPlayable = isClickable && match.status !== "completed";
                   const isCompleted = match.status === "completed";
                   const homeWon = match.winnerId === match.homeTeamId;
                   const awayWon = match.winnerId === match.awayTeamId;
+                  const actionLabel =
+                    match.status === "in_progress" ? "Continue" : "Start";
 
                   return (
                     <div
                       key={match.id}
-                      className="relative group"
+                      className="relative"
                       style={{ height: matchHeight }}
                     >
                       <div className="absolute top-1/2 -translate-y-1/2 w-full">
                         <Card
                           className={`
-                            w-48 overflow-hidden border-border/50 bg-card/50
+                            group relative w-56 overflow-hidden border-border/40 bg-card/40 py-0 gap-0
+                            transition-[border-color,box-shadow,transform]
                             ${
-                              isClickable
-                                ? "cursor-pointer hover:border-primary/50 hover:bg-card transition-all"
-                                : "opacity-75"
+                              isPlayable
+                                ? "cursor-pointer hover:border-primary/40 hover:shadow-md hover:shadow-primary/10 hover:-translate-y-0.5"
+                                : "opacity-60"
                             }
                           `}
                           onClick={() => handleMatchClick(match)}
-                          role={isClickable ? "button" : undefined}
-                          tabIndex={isClickable ? 0 : undefined}
+                          role={isPlayable ? "button" : undefined}
+                          tabIndex={isPlayable ? 0 : undefined}
                           onKeyDown={(e) => {
                             if (
-                              isClickable &&
+                              isPlayable &&
                               (e.key === "Enter" || e.key === " ")
                             ) {
                               e.preventDefault();
@@ -123,14 +132,15 @@ export const Bracket = ({
                           {/* Home Team */}
                           <div
                             className={`
-                              flex items-center justify-between px-3 py-2 border-b border-border/30
+                              flex items-center justify-between px-4 py-3 border-b border-border/30
+                              ${isPlayable ? "group-hover:bg-primary/5" : ""}
                               ${homeWon ? "bg-emerald-500/10" : ""}
                               ${isCompleted && !homeWon ? "opacity-50" : ""}
                             `}
                           >
                             <div className="flex items-center gap-2 min-w-0">
                               <div
-                                className="w-2 h-2 rounded-full shrink-0"
+                                className="w-2.5 h-2.5 rounded-full shrink-0"
                                 style={{
                                   backgroundColor: getTeamColor(
                                     match.homeTeamId
@@ -138,7 +148,7 @@ export const Bracket = ({
                                 }}
                               />
                               <span
-                                className={`text-sm truncate ${
+                                className={`text-[13px] truncate ${
                                   homeWon
                                     ? "font-semibold text-emerald-500"
                                     : ""
@@ -149,7 +159,7 @@ export const Bracket = ({
                             </div>
                             {isCompleted && (
                               <span
-                                className={`text-sm font-bold tabular-nums ${
+                                className={`text-[13px] font-bold tabular-nums ${
                                   homeWon ? "text-emerald-500" : ""
                                 }`}
                               >
@@ -161,14 +171,15 @@ export const Bracket = ({
                           {/* Away Team */}
                           <div
                             className={`
-                              flex items-center justify-between px-3 py-2
+                              flex items-center justify-between px-4 py-3
+                              ${isPlayable ? "group-hover:bg-primary/5" : ""}
                               ${awayWon ? "bg-emerald-500/10" : ""}
                               ${isCompleted && !awayWon ? "opacity-50" : ""}
                             `}
                           >
                             <div className="flex items-center gap-2 min-w-0">
                               <div
-                                className="w-2 h-2 rounded-full shrink-0"
+                                className="w-2.5 h-2.5 rounded-full shrink-0"
                                 style={{
                                   backgroundColor: getTeamColor(
                                     match.awayTeamId
@@ -176,7 +187,7 @@ export const Bracket = ({
                                 }}
                               />
                               <span
-                                className={`text-sm truncate ${
+                                className={`text-[13px] truncate ${
                                   awayWon
                                     ? "font-semibold text-emerald-500"
                                     : ""
@@ -187,7 +198,7 @@ export const Bracket = ({
                             </div>
                             {isCompleted && (
                               <span
-                                className={`text-sm font-bold tabular-nums ${
+                                className={`text-[13px] font-bold tabular-nums ${
                                   awayWon ? "text-emerald-500" : ""
                                 }`}
                               >
@@ -199,6 +210,26 @@ export const Bracket = ({
                           {/* Status Indicator */}
                           {match.status === "in_progress" && (
                             <div className="absolute -top-1 -right-1 w-3 h-3 bg-amber-500 rounded-full animate-pulse" />
+                          )}
+
+                          {/* Match Pairing Indicator */}
+                          {isClickable && (
+                            <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-2 text-[10px] uppercase tracking-widest text-muted-foreground/70">
+                              <span className="h-px w-6 bg-border/40" />
+                              <span className="rounded-full border border-border/40 bg-background/70 px-1.5 py-0.5">
+                                vs
+                              </span>
+                              <span className="h-px w-6 bg-border/40" />
+                            </div>
+                          )}
+
+                          {/* Hover Action */}
+                          {isPlayable && (
+                            <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 transition-opacity group-hover:opacity-100 pointer-events-none">
+                              <span className="text-[10px] uppercase tracking-wider text-primary/80 bg-primary/10 border border-primary/20 rounded-full px-2 py-0.5">
+                                {actionLabel}
+                              </span>
+                            </div>
                           )}
 
                           {/* Edit Button (only for pending matches when canEdit) */}
@@ -244,7 +275,7 @@ export const Bracket = ({
                 Champion
               </span>
             </div>
-            <div className="w-48">
+            <div className="w-56">
               {(() => {
                 const finalMatch = matches.find((m) => m.round === totalRounds);
                 if (!finalMatch?.winnerId) return null;

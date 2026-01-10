@@ -66,6 +66,20 @@ export const useCompetitionDetailPage = () => {
     if (!competition) return;
 
     let newMatches: Omit<Match, "id" | "createdAt">[] = [];
+    const seriesLength =
+      competition.matchSeriesLength && competition.matchSeriesLength > 1
+        ? competition.matchSeriesLength
+        : 1;
+    const withSeries = (matches: Omit<Match, "id" | "createdAt">[]) =>
+      seriesLength > 1
+        ? matches.map((match) => ({
+            ...match,
+            seriesLength,
+            homeWins: 0,
+            awayWins: 0,
+            seriesGame: 1,
+          }))
+        : matches;
 
     switch (competition.type) {
       case "round_robin":
@@ -73,18 +87,21 @@ export const useCompetitionDetailPage = () => {
           competition.teamIds,
           competition.id
         );
+        newMatches = withSeries(newMatches);
         break;
       case "single_elimination":
         newMatches = generateSingleEliminationBracket(
           competition.teamIds,
           competition.id
         );
+        newMatches = withSeries(newMatches);
         break;
       case "double_elimination":
         newMatches = generateDoubleEliminationBracket(
           competition.teamIds,
           competition.id
         );
+        newMatches = withSeries(newMatches);
         break;
       case "win2out": {
         const numCourts = competition.numberOfCourts || 1;

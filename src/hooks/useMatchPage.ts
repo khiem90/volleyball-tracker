@@ -7,6 +7,7 @@ import { advanceWinner } from "@/lib/singleElimination";
 import { calculateStandings } from "@/lib/roundRobin";
 import { processMatchResult } from "@/lib/win2out";
 import { processMatchResult as processTwoMatchRotationResult } from "@/lib/twoMatchRotation";
+import type { Match } from "@/types/game";
 
 export const useMatchPage = () => {
   const params = useParams();
@@ -18,15 +19,17 @@ export const useMatchPage = () => {
     getMatchById,
     getCompetitionById,
     updateMatchScore,
+    updateMatch,
     startMatch,
     completeMatch,
     completeMatchWithNextMatch,
     completeCompetition,
+    updateMatchTeams,
     canEdit,
     isSharedMode,
   } = useApp();
 
-  const { role } = useSession();
+  const { role, updateMatches } = useSession();
   const { isFullscreen, toggleFullscreen } = useFullscreen();
 
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
@@ -83,6 +86,35 @@ export const useMatchPage = () => {
     [state.teams, match?.awayTeamId]
   );
 
+  const seriesInfo = useMemo(() => {
+    const supportsSeries =
+      !!competition &&
+      (competition.type === "round_robin" ||
+        competition.type === "single_elimination" ||
+        competition.type === "double_elimination");
+    const seriesLength = supportsSeries
+      ? match?.seriesLength ?? competition?.matchSeriesLength ?? 1
+      : 1;
+    const isSeries = supportsSeries && seriesLength > 1;
+    const homeWins = isSeries ? match?.homeWins ?? 0 : 0;
+    const awayWins = isSeries ? match?.awayWins ?? 0 : 0;
+
+    const gamesPlayed = homeWins + awayWins;
+
+    return {
+      isSeries,
+      seriesLength,
+      homeWins,
+      awayWins,
+      winsNeeded: isSeries ? Math.ceil(seriesLength / 2) : 1,
+      gameNumber: isSeries
+        ? match?.status === "completed"
+          ? gamesPlayed
+          : gamesPlayed + 1
+        : 1,
+    };
+  }, [competition, match]);
+
   useEffect(() => {
     if (match && match.status === "pending") {
       startMatch(matchId);
@@ -91,7 +123,7 @@ export const useMatchPage = () => {
 
   const handleAddPoint = useCallback(
     (team: "home" | "away") => {
-      if (!match || !canEdit) return;
+      if (!match || !canEdit || match.status === "completed") return;
       const currentHome = match.homeScore;
       const currentAway = match.awayScore;
       const newHome = team === "home" ? currentHome + 1 : currentHome;
@@ -112,7 +144,7 @@ export const useMatchPage = () => {
 
   const handleDeductPoint = useCallback(
     (team: "home" | "away") => {
-      if (!match || !canEdit) return;
+      if (!match || !canEdit || match.status === "completed") return;
       const currentHome = match.homeScore;
       const currentAway = match.awayScore;
       const newHome =
@@ -134,17 +166,56 @@ export const useMatchPage = () => {
   );
 
   const handleUndo = useCallback(() => {
-    if (!match || history.length < 2) return;
+    if (!match || history.length < 2 || match.status === "completed") return;
     const prevState = history[history.length - 2];
     setHistory((prev) => prev.slice(0, -1));
     updateMatchScore(matchId, prevState.home, prevState.away);
   }, [match, matchId, history, updateMatchScore]);
 
   const handleCompleteMatch = useCallback(() => {
-    if (!match) return;
+    if (!match || match.status === "completed") return;
 
     const winnerId =
       match.homeScore > match.awayScore ? match.homeTeamId : match.awayTeamId;
+
+    const supportsSeries =
+      !!competition &&
+      (competition.type === "round_robin" ||
+        competition.type === "single_elimination" ||
+        competition.type === "double_elimination");
+    const seriesLength = supportsSeries
+      ? match.seriesLength ?? competition?.matchSeriesLength ?? 1
+      : 1;
+    const isSeries = supportsSeries && seriesLength > 1;
+    const winsNeeded = Math.ceil(seriesLength / 2);
+    const homeWins = match.homeWins ?? 0;
+    const awayWins = match.awayWins ?? 0;
+    const nextHomeWins =
+      winnerId === match.homeTeamId ? homeWins + 1 : homeWins;
+    const nextAwayWins =
+      winnerId === match.awayTeamId ? awayWins + 1 : awayWins;
+    const seriesUpdates = isSeries
+      ? {
+          seriesLength,
+          homeWins: nextHomeWins,
+          awayWins: nextAwayWins,
+          seriesGame: (match.seriesGame ?? 1) + 1,
+        }
+      : {};
+
+    if (isSeries && nextHomeWins < winsNeeded && nextAwayWins < winsNeeded) {
+      updateMatch(matchId, {
+        ...seriesUpdates,
+        homeScore: 0,
+        awayScore: 0,
+        status: "in_progress",
+        winnerId: undefined,
+        completedAt: undefined,
+      });
+      setHistory([]);
+      setShowCompleteDialog(false);
+      return;
+    }
 
     if (
       competition &&
@@ -156,6 +227,7 @@ export const useMatchPage = () => {
         winnerId,
         status: "completed" as const,
         completedAt: Date.now(),
+        ...seriesUpdates,
       };
 
       const { updatedState, nextMatch } = processMatchResult(
@@ -192,6 +264,7 @@ export const useMatchPage = () => {
         winnerId,
         status: "completed" as const,
         completedAt: Date.now(),
+        ...seriesUpdates,
       };
 
       const { updatedState, nextMatch } = processTwoMatchRotationResult(
@@ -218,36 +291,95 @@ export const useMatchPage = () => {
       return;
     }
 
-    completeMatch(matchId, winnerId);
+    let completionMatches: Match[] | null = null;
 
     if (
       competition &&
       (competition.type === "single_elimination" ||
         competition.type === "double_elimination")
     ) {
+      const completedMatch: Match = {
+        ...match,
+        winnerId,
+        status: "completed",
+        completedAt: Date.now(),
+        ...seriesUpdates,
+      };
+
       const competitionMatches = state.matches.filter(
         (m) => m.competitionId === competition.id
       );
-      const updatedMatches = advanceWinner(competitionMatches, match, winnerId);
+      const matchesWithCompleted = competitionMatches.map((m) =>
+        m.id === match.id ? completedMatch : m
+      );
+      const updatedMatches = advanceWinner(
+        matchesWithCompleted,
+        completedMatch,
+        winnerId
+      );
 
-      updatedMatches.forEach((updatedMatch) => {
-        if (updatedMatch.id !== match.id) {
-          const original = competitionMatches.find(
-            (m) => m.id === updatedMatch.id
-          );
-          if (
-            original &&
-            (original.homeTeamId !== updatedMatch.homeTeamId ||
-              original.awayTeamId !== updatedMatch.awayTeamId)
-          ) {
-            updateMatchScore(
-              updatedMatch.id,
-              updatedMatch.homeScore,
-              updatedMatch.awayScore
-            );
-          }
+      if (isSharedMode) {
+        const updatedMap = new Map(
+          updatedMatches.map((updatedMatch) => [updatedMatch.id, updatedMatch])
+        );
+        const mergedMatches = state.matches.map((m) =>
+          m.competitionId === competition.id
+            ? updatedMap.get(m.id) || m
+            : m
+        );
+        void updateMatches(mergedMatches);
+      } else {
+        if (isSeries) {
+          updateMatch(matchId, seriesUpdates);
         }
-      });
+        completeMatch(matchId, winnerId);
+        updatedMatches.forEach((updatedMatch) => {
+          if (updatedMatch.id !== match.id) {
+            const original = competitionMatches.find(
+              (m) => m.id === updatedMatch.id
+            );
+            if (
+              original &&
+              (original.homeTeamId !== updatedMatch.homeTeamId ||
+                original.awayTeamId !== updatedMatch.awayTeamId)
+            ) {
+              updateMatchTeams(
+                updatedMatch.id,
+                updatedMatch.homeTeamId,
+                updatedMatch.awayTeamId
+              );
+            }
+          }
+        });
+      }
+
+      completionMatches = matchesWithCompleted;
+    } else {
+      const completedMatch: Match = {
+        ...match,
+        winnerId,
+        status: "completed",
+        completedAt: Date.now(),
+        ...seriesUpdates,
+      };
+
+      if (isSharedMode) {
+        const mergedMatches = state.matches.map((m) =>
+          m.id === match.id ? completedMatch : m
+        );
+        void updateMatches(mergedMatches);
+      } else {
+        if (isSeries) {
+          updateMatch(matchId, seriesUpdates);
+        }
+        completeMatch(matchId, winnerId);
+      }
+
+      if (competition) {
+        completionMatches = state.matches
+          .filter((m) => m.competitionId === competition.id)
+          .map((m) => (m.id === match.id ? completedMatch : m));
+      }
     }
 
     if (
@@ -257,13 +389,15 @@ export const useMatchPage = () => {
         competition.type === "single_elimination" ||
         competition.type === "double_elimination")
     ) {
-      const competitionMatches = state.matches
-        .filter((m) => m.competitionId === competition.id)
-        .map((m) =>
-          m.id === match.id
-            ? { ...m, status: "completed" as const, winnerId }
-            : m
-        );
+      const competitionMatches =
+        completionMatches ||
+        state.matches
+          .filter((m) => m.competitionId === competition.id)
+          .map((m) =>
+            m.id === match.id
+              ? { ...m, status: "completed" as const, winnerId }
+              : m
+          );
 
       const allMatchesComplete =
         competitionMatches.length > 0 &&
@@ -310,12 +444,15 @@ export const useMatchPage = () => {
     completeMatch,
     completeMatchWithNextMatch,
     completeCompetition,
-    updateMatchScore,
+    updateMatch,
+    updateMatchTeams,
+    updateMatches,
+    isSharedMode,
     router,
   ]);
 
   const handleOpenCompleteDialog = useCallback(() => {
-    if (!match) return;
+    if (!match || match.status === "completed") return;
     if (match.homeScore === match.awayScore) {
       return;
     }
@@ -330,7 +467,10 @@ export const useMatchPage = () => {
     }
   }, [competition, router]);
 
-  const canComplete = match ? match.homeScore !== match.awayScore : false;
+  const canComplete =
+    match &&
+    match.status !== "completed" &&
+    match.homeScore !== match.awayScore;
   const homeColor = homeTeam?.color || "#3b82f6";
   const awayColor = awayTeam?.color || "#f97316";
   const homeLeading = match ? match.homeScore > match.awayScore : false;
@@ -358,6 +498,7 @@ export const useMatchPage = () => {
     isSharedMode,
     match,
     role,
+    seriesInfo,
     setShowCompleteDialog,
     setShowRotatePrompt,
     showCompleteDialog,

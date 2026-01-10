@@ -53,6 +53,7 @@ export default function MatchPage() {
     isSharedMode,
     match,
     role,
+    seriesInfo,
     setShowCompleteDialog,
     setShowRotatePrompt,
     showCompleteDialog,
@@ -85,6 +86,15 @@ export default function MatchPage() {
     );
   }
 
+  const endLabel = seriesInfo.isSeries ? "End Game" : "End Match";
+  const dialogTitle = seriesInfo.isSeries ? "End Game?" : "End Match?";
+  const dialogDescription = seriesInfo.isSeries
+    ? "Confirm the final score for this game"
+    : "Confirm the final score and winner";
+  const confirmLabel = seriesInfo.isSeries
+    ? "Confirm Result"
+    : "Confirm Winner";
+
   return (
     <div
       className={`min-h-screen bg-background flex flex-col ${
@@ -113,10 +123,28 @@ export default function MatchPage() {
               <h1 className="text-sm font-medium text-muted-foreground">
                 {competition?.name || "Quick Match"}
               </h1>
-              <Badge className="mt-1 status-live gap-1">
-                <Play className="w-3 h-3" />
-                Live
-              </Badge>
+              <div className="mt-1 flex items-center justify-center gap-2">
+                <Badge className="status-live gap-1">
+                  <Play className="w-3 h-3" />
+                  Live
+                </Badge>
+                {seriesInfo.isSeries && (
+                  <>
+                    <Badge variant="secondary" className="text-xs">
+                      Best of {seriesInfo.seriesLength}
+                    </Badge>
+                    <Badge variant="outline" className="text-xs">
+                      Game {seriesInfo.gameNumber}
+                    </Badge>
+                  </>
+                )}
+              </div>
+              {seriesInfo.isSeries && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  {homeTeam.name} {seriesInfo.homeWins} -{" "}
+                  {seriesInfo.awayWins} {awayTeam.name}
+                </p>
+              )}
             </div>
 
             <div className="flex items-center gap-2">
@@ -167,7 +195,7 @@ export default function MatchPage() {
                     className="gap-2 btn-orange-gradient rounded-xl"
                   >
                     <Check className="w-4 h-4" />
-                    <span className="hidden sm:inline">End Match</span>
+                    <span className="hidden sm:inline">{endLabel}</span>
                   </Button>
                 </>
               )}
@@ -205,7 +233,7 @@ export default function MatchPage() {
                   className="gap-2 rounded-full btn-orange-gradient"
                 >
                   <Check className="w-4 h-4" />
-                  End Match
+                  {endLabel}
                 </Button>
                 <div className="w-px h-6 bg-border/30" />
               </>
@@ -527,10 +555,10 @@ export default function MatchPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Trophy className="w-5 h-5 text-primary" />
-              End Match?
+              {dialogTitle}
             </DialogTitle>
             <DialogDescription>
-              Confirm the final score and winner
+              {dialogDescription}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 pt-2">
@@ -587,7 +615,7 @@ export default function MatchPage() {
               className="flex-1 gap-2 btn-orange-gradient rounded-xl"
             >
               <Trophy className="w-4 h-4" />
-              Confirm Winner
+              {confirmLabel}
             </Button>
           </DialogFooter>
         </DialogContent>

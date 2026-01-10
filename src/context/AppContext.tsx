@@ -53,6 +53,7 @@ type AppAction =
       competitionType: CompetitionType;
       teamIds: string[];
       numberOfCourts?: number;
+      matchSeriesLength?: number;
     }
   | { type: "UPDATE_COMPETITION"; competition: Competition }
   | { type: "DELETE_COMPETITION"; id: string }
@@ -69,6 +70,7 @@ type AppAction =
     }
   | { type: "START_MATCH"; matchId: string }
   | { type: "COMPLETE_MATCH"; matchId: string; winnerId: string }
+  | { type: "UPDATE_MATCH"; matchId: string; updates: Partial<Match> }
   | { type: "DELETE_MATCH"; matchId: string }
   // Admin match management actions
   | {
@@ -131,6 +133,7 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
         status: "draft",
         createdAt: Date.now(),
         numberOfCourts: action.numberOfCourts,
+        matchSeriesLength: action.matchSeriesLength,
       };
       return {
         ...state,
@@ -287,6 +290,17 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
       };
     }
 
+    case "UPDATE_MATCH": {
+      return {
+        ...state,
+        matches: state.matches.map((match) =>
+          match.id === action.matchId
+            ? { ...match, ...action.updates }
+            : match
+        ),
+      };
+    }
+
     case "DELETE_MATCH": {
       const match = state.matches.find((m) => m.id === action.matchId);
       if (!match) return state;
@@ -373,7 +387,8 @@ interface AppContextValue {
     name: string,
     type: CompetitionType,
     teamIds: string[],
-    numberOfCourts?: number
+    numberOfCourts?: number,
+    matchSeriesLength?: number
   ) => string;
   updateCompetition: (competition: Competition) => void;
   deleteCompetition: (id: string) => void;
@@ -393,6 +408,7 @@ interface AppContextValue {
     homeScore: number,
     awayScore: number
   ) => void;
+  updateMatch: (matchId: string, updates: Partial<Match>) => void;
   startMatch: (matchId: string) => void;
   completeMatch: (matchId: string, winnerId: string) => void;
   completeMatchWithNextMatch: (
@@ -538,7 +554,8 @@ export const AppProvider = ({ children }: AppProviderProps) => {
       name: string,
       type: CompetitionType,
       teamIds: string[],
-      numberOfCourts?: number
+      numberOfCourts?: number,
+      matchSeriesLength?: number
     ) => {
       if (isSharedMode && !canEdit) return "";
 
@@ -552,6 +569,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         status: "draft",
         createdAt: Date.now(),
         numberOfCourts,
+        matchSeriesLength,
       };
 
       if (isSharedMode && session) {
@@ -563,6 +581,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
           competitionType: type,
           teamIds,
           numberOfCourts,
+          matchSeriesLength,
         });
       }
 
@@ -758,6 +777,22 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         syncAllData({ matches: newMatches });
       } else {
         dispatch({ type: "UPDATE_MATCH_SCORE", matchId, homeScore, awayScore });
+      }
+    },
+    [isSharedMode, canEdit, session, syncAllData]
+  );
+
+  const updateMatch = useCallback(
+    (matchId: string, updates: Partial<Match>) => {
+      if (isSharedMode && !canEdit) return;
+
+      if (isSharedMode && session) {
+        const newMatches = (session.matches || []).map((match) =>
+          match.id === matchId ? { ...match, ...updates } : match
+        );
+        syncAllData({ matches: newMatches });
+      } else {
+        dispatch({ type: "UPDATE_MATCH", matchId, updates });
       }
     },
     [isSharedMode, canEdit, session, syncAllData]
@@ -1341,6 +1376,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     addMatch,
     addMatches,
     updateMatchScore,
+    updateMatch,
     startMatch,
     completeMatch,
     completeMatchWithNextMatch,
