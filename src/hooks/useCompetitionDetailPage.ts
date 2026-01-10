@@ -2,6 +2,7 @@ import { useEffect, useMemo, useCallback, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useApp } from "@/context/AppContext";
 import { useSession } from "@/context/SessionContext";
+import { useAuth } from "@/context/AuthContext";
 import {
   generateRoundRobinSchedule,
   calculateStandings,
@@ -34,12 +35,16 @@ export const useCompetitionDetailPage = () => {
     canEdit,
   } = useApp();
 
-  const { isSharedMode } = useSession();
+  const { isSharedMode, isCreator, createNewSession, endSession } = useSession();
+  const { isConfigured } = useAuth();
 
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
   const [editingMatch, setEditingMatch] = useState<Match | null>(null);
   const [showStartConfirm, setShowStartConfirm] = useState(false);
   const [showCreateSession, setShowCreateSession] = useState(false);
+  const [showEndConfirm, setShowEndConfirm] = useState(false);
+  const [isEndingCompetition, setIsEndingCompetition] = useState(false);
+  const [shouldAutoCreateSession, setShouldAutoCreateSession] = useState(false);
 
   const competition = useMemo(
     () => getCompetitionById(competitionId),
@@ -98,6 +103,9 @@ export const useCompetitionDetailPage = () => {
           initialMatches
         );
         setShowStartConfirm(false);
+        if (!isSharedMode) {
+          setShouldAutoCreateSession(true);
+        }
         return;
       }
       case "two_match_rotation": {
@@ -118,6 +126,9 @@ export const useCompetitionDetailPage = () => {
           initialMatches
         );
         setShowStartConfirm(false);
+        if (!isSharedMode) {
+          setShouldAutoCreateSession(true);
+        }
         return;
       }
     }
@@ -125,7 +136,10 @@ export const useCompetitionDetailPage = () => {
     addMatches(newMatches);
     startCompetition(competition.id);
     setShowStartConfirm(false);
-  }, [competition, addMatches, startCompetition, startCompetitionWithMatches]);
+    if (!isSharedMode) {
+      setShouldAutoCreateSession(true);
+    }
+  }, [competition, addMatches, startCompetition, startCompetitionWithMatches, isSharedMode]);
 
   const handleMatchClick = useCallback((match: Match) => {
     setSelectedMatch(match);
@@ -165,6 +179,63 @@ export const useCompetitionDetailPage = () => {
     }
   }, [competition, matches, completeCompetition]);
 
+  useEffect(() => {
+    if (!shouldAutoCreateSession) return;
+    if (!competition || competition.status !== "in_progress") return;
+    if (isSharedMode || !isConfigured) {
+      setShouldAutoCreateSession(false);
+      return;
+    }
+
+    const sessionCompetition = {
+      ...competition,
+      matchIds: matches.map((match) => match.id),
+    };
+
+    let isActive = true;
+
+    const startSession = async () => {
+      try {
+        await createNewSession(competition.name, {
+          competition: sessionCompetition,
+          teams: competitionTeams,
+          matches,
+        });
+      } catch (err) {
+        console.error("Failed to auto-create session:", err);
+      } finally {
+        if (isActive) {
+          setShouldAutoCreateSession(false);
+        }
+      }
+    };
+
+    startSession();
+
+    return () => {
+      isActive = false;
+    };
+  }, [
+    shouldAutoCreateSession,
+    competition,
+    competitionTeams,
+    matches,
+    isSharedMode,
+    isConfigured,
+    createNewSession,
+  ]);
+
+  const handleEndCompetition = useCallback(async () => {
+    if (!competition || !isSharedMode) return;
+    setIsEndingCompetition(true);
+    const summary = await endSession();
+    setIsEndingCompetition(false);
+    setShowEndConfirm(false);
+    if (summary) {
+      router.push(`/summary/${summary.shareCode}`);
+    }
+  }, [competition, isSharedMode, endSession, router]);
+
   const completedMatches = matches.filter(
     (m) => m.status === "completed"
   ).length;
@@ -193,8 +264,11 @@ export const useCompetitionDetailPage = () => {
     handleMatchClick,
     handlePlayMatch,
     handleStartCompetition,
+    handleEndCompetition,
     inProgressMatches,
     isSharedMode,
+    isCreator,
+    isEndingCompetition,
     matches,
     pendingMatches,
     selectedMatch,
@@ -202,8 +276,10 @@ export const useCompetitionDetailPage = () => {
     setSelectedMatch,
     setShowCreateSession,
     setShowStartConfirm,
+    setShowEndConfirm,
     showCreateSession,
     showStartConfirm,
+    showEndConfirm,
     standings,
     totalProgress,
     winner,

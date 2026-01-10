@@ -34,6 +34,8 @@ import {
   Swords,
   Globe,
   Pencil,
+  Trash2,
+  Loader2,
 } from "lucide-react";
 import { EditMatchDialog } from "@/components/EditMatchDialog";
 import { useCompetitionDetailPage } from "@/hooks/useCompetitionDetailPage";
@@ -56,8 +58,11 @@ export default function CompetitionDetailPage() {
     handleMatchClick,
     handlePlayMatch,
     handleStartCompetition,
+    handleEndCompetition,
     inProgressMatches,
     isSharedMode,
+    isCreator,
+    isEndingCompetition,
     matches,
     pendingMatches,
     selectedMatch,
@@ -65,8 +70,10 @@ export default function CompetitionDetailPage() {
     setSelectedMatch,
     setShowCreateSession,
     setShowStartConfirm,
+    setShowEndConfirm,
     showCreateSession,
     showStartConfirm,
+    showEndConfirm,
     standings,
     totalProgress,
     winner,
@@ -165,7 +172,19 @@ export default function CompetitionDetailPage() {
             {/* Session sharing controls - only show for in_progress competitions */}
             {competition.status === "in_progress" &&
               (isSharedMode ? (
-                <ShareButton />
+                <>
+                  {isCreator && (
+                    <Button
+                      variant="destructive"
+                      onClick={() => setShowEndConfirm(true)}
+                      className="gap-2"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      End Competition
+                    </Button>
+                  )}
+                  <ShareButton />
+                </>
               ) : (
                 <Button
                   onClick={() => setShowCreateSession(true)}
@@ -628,6 +647,49 @@ export default function CompetitionDetailPage() {
             : undefined
         }
       />
+
+      {/* End Competition Confirmation Dialog */}
+      <Dialog open={showEndConfirm} onOpenChange={setShowEndConfirm}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="w-5 h-5" />
+              End Competition?
+            </DialogTitle>
+            <DialogDescription>
+              This will end the competition and close the live session for all viewers. A summary will be created.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-row gap-2 sm:gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowEndConfirm(false)}
+              disabled={isEndingCompetition}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleEndCompetition}
+              disabled={isEndingCompetition}
+              className="flex-1 gap-2"
+            >
+              {isEndingCompetition ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Ending...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-4 h-4" />
+                  End Competition
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Match Dialog */}
       <EditMatchDialog
