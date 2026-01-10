@@ -20,6 +20,7 @@ export default function NewCompetitionPage() {
     competitionName,
     currentFormat,
     formatOptions,
+    handleToggleSelectAll,
     handleBack,
     handleCreateCompetition,
     handleFormatSelect,
@@ -29,6 +30,7 @@ export default function NewCompetitionPage() {
     maxCourts,
     nameError,
     numberOfCourts,
+    allSelected,
     selectedFormat,
     selectedTeamIds,
     setCompetitionName,
@@ -190,10 +192,20 @@ export default function NewCompetitionPage() {
             >
               {teamValidation.message}
             </Badge>
-            <Button onClick={handleQuickCreateTeam} variant="ghost" size="sm" className="gap-2">
-              <Users className="w-4 h-4" />
-              Quick Add Team
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={handleToggleSelectAll}
+                variant="outline"
+                size="sm"
+                aria-pressed={allSelected}
+              >
+                {allSelected ? "Deselect All" : "Select All"}
+              </Button>
+              <Button onClick={handleQuickCreateTeam} variant="ghost" size="sm" className="gap-2">
+                <Users className="w-4 h-4" />
+                Quick Add Team
+              </Button>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">

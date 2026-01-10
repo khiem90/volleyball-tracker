@@ -76,6 +76,12 @@ export const useNewCompetitionPage = () => {
     [selectedFormat]
   );
 
+  const allTeamIds = useMemo(() => state.teams.map((team) => team.id), [state.teams]);
+  const allSelected = useMemo(() => {
+    if (state.teams.length === 0) return false;
+    return state.teams.every((team) => selectedTeamIds.includes(team.id));
+  }, [state.teams, selectedTeamIds]);
+
   const isPowerOf2 = useCallback((n: number) => {
     return n > 0 && (n & (n - 1)) === 0;
   }, []);
@@ -117,6 +123,10 @@ export const useNewCompetitionPage = () => {
       prev.includes(teamId) ? prev.filter((id) => id !== teamId) : [...prev, teamId]
     );
   }, []);
+
+  const handleToggleSelectAll = useCallback(() => {
+    setSelectedTeamIds(allSelected ? [] : allTeamIds);
+  }, [allSelected, allTeamIds]);
 
   const handleNext = useCallback(() => {
     if (step === "format" && selectedFormat) {
@@ -164,6 +174,7 @@ export const useNewCompetitionPage = () => {
     competitionName,
     currentFormat,
     formatOptions,
+    handleToggleSelectAll,
     handleBack,
     handleCreateCompetition,
     handleFormatSelect,
@@ -173,6 +184,7 @@ export const useNewCompetitionPage = () => {
     maxCourts,
     nameError,
     numberOfCourts,
+    allSelected,
     selectedFormat,
     selectedTeamIds,
     setCompetitionName,
