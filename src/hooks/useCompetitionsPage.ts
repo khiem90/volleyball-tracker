@@ -8,6 +8,11 @@ export const useCompetitionsPage = () => {
   const { state, deleteCompetition } = useApp();
   const [filter, setFilter] = useState<FilterOption>("all");
 
+  const visibleCompetitions = useMemo(
+    () => state.competitions.filter((c) => c.status !== "completed"),
+    [state.competitions]
+  );
+
   const handleDeleteCompetition = useCallback(
     (id: string) => {
       deleteCompetition(id);
@@ -20,12 +25,12 @@ export const useCompetitionsPage = () => {
   }, []);
 
   const filteredCompetitions = useMemo(() => {
-    const competitions = [...state.competitions].sort(
+    const competitions = [...visibleCompetitions].sort(
       (a, b) => b.createdAt - a.createdAt
     );
     if (filter === "all") return competitions;
     return competitions.filter((c) => c.status === filter);
-  }, [state.competitions, filter]);
+  }, [visibleCompetitions, filter]);
 
   const getMatchStats = useCallback(
     (competitionId: string) => {
@@ -43,18 +48,17 @@ export const useCompetitionsPage = () => {
 
   const counts = useMemo(
     () => ({
-      all: state.competitions.length,
-      draft: state.competitions.filter((c) => c.status === "draft").length,
-      in_progress: state.competitions.filter((c) => c.status === "in_progress")
+      all: visibleCompetitions.length,
+      draft: visibleCompetitions.filter((c) => c.status === "draft").length,
+      in_progress: visibleCompetitions.filter((c) => c.status === "in_progress")
         .length,
-      completed: state.competitions.filter((c) => c.status === "completed")
-        .length,
+      completed: 0,
     }),
-    [state.competitions]
+    [visibleCompetitions]
   );
 
   return {
-    competitions: state.competitions,
+    competitions: visibleCompetitions,
     counts,
     filter,
     filteredCompetitions,

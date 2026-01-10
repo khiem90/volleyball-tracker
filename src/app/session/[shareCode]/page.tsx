@@ -23,17 +23,8 @@ import {
   AlertCircle,
   LogIn,
   Home,
-  Trash2,
   LogOut,
 } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { useSessionPage } from "@/hooks/useSessionPage";
 
 export default function SessionPage() {
@@ -42,23 +33,19 @@ export default function SessionPage() {
     competition,
     completedMatches,
     error,
-    handleEndSession,
     handleLeaveSession,
     handleMatchClick,
     inProgressMatches,
     isConfigured,
     isCreator,
-    isEndingSession,
     isLoading,
     matches,
     pendingMatches,
     role,
     session,
     setShowAuth,
-    setShowEndSessionDialog,
     shareCode,
     showAuth,
-    showEndSessionDialog,
     standings,
     teams,
     teamsMap,
@@ -194,18 +181,6 @@ export default function SessionPage() {
                 >
                   <LogOut className="w-4 h-4" />
                   <span className="hidden sm:inline">Leave</span>
-                </Button>
-              )}
-              {/* End session button (creator only) */}
-              {isCreator && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowEndSessionDialog(true)}
-                  className="gap-2 cursor-pointer text-destructive hover:text-destructive hover:bg-destructive/10"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  <span className="hidden sm:inline">End Session</span>
                 </Button>
               )}
             </div>
@@ -460,48 +435,6 @@ export default function SessionPage() {
         onSuccess={() => {}}
       />
 
-      {/* End Session Confirmation Dialog */}
-      <Dialog open={showEndSessionDialog} onOpenChange={setShowEndSessionDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-destructive">
-              <Trash2 className="w-5 h-5" />
-              End Session?
-            </DialogTitle>
-            <DialogDescription>
-              This will permanently delete this session and all its data. All viewers will lose access immediately. This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="flex-row gap-2 sm:gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setShowEndSessionDialog(false)}
-              disabled={isEndingSession}
-              className="flex-1 cursor-pointer"
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleEndSession}
-              disabled={isEndingSession}
-              className="flex-1 gap-2 cursor-pointer"
-            >
-              {isEndingSession ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Ending...
-                </>
-              ) : (
-                <>
-                  <Trash2 className="w-4 h-4" />
-                  End Session
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

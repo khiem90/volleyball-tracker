@@ -18,7 +18,6 @@ export const useSessionPage = () => {
     error,
     joinSession,
     leaveSession,
-    endSession,
     applyAdminToken,
     canEdit,
     isCreator,
@@ -27,8 +26,6 @@ export const useSessionPage = () => {
 
   const [showAuth, setShowAuth] = useState(false);
   const [hasJoined, setHasJoined] = useState(false);
-  const [showEndSessionDialog, setShowEndSessionDialog] = useState(false);
-  const [isEndingSession, setIsEndingSession] = useState(false);
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
@@ -51,16 +48,6 @@ export const useSessionPage = () => {
       }
     }
   }, [adminTokenFromUrl, session, canEdit, applyAdminToken, router, shareCode]);
-
-  const handleEndSession = useCallback(async () => {
-    setIsEndingSession(true);
-    const summary = await endSession();
-    setIsEndingSession(false);
-    setShowEndSessionDialog(false);
-    if (summary) {
-      router.push(`/summary/${summary.shareCode}`);
-    }
-  }, [endSession, router]);
 
   const handleLeaveSession = useCallback(() => {
     leaveSession();
@@ -154,23 +141,19 @@ export const useSessionPage = () => {
     competition,
     completedMatches,
     error,
-    handleEndSession,
     handleLeaveSession,
     handleMatchClick,
     inProgressMatches,
     isConfigured,
     isCreator,
-    isEndingSession,
     isLoading,
     matches,
     pendingMatches,
     role,
     session,
     setShowAuth,
-    setShowEndSessionDialog,
     shareCode,
     showAuth,
-    showEndSessionDialog,
     standings,
     teams,
     teamsMap,

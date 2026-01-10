@@ -4,6 +4,7 @@ import { useApp } from "@/context/AppContext";
 import { useSession } from "@/context/SessionContext";
 import { useFullscreen } from "@/hooks/useFullscreen";
 import { advanceWinner } from "@/lib/singleElimination";
+import { calculateStandings } from "@/lib/roundRobin";
 import { processMatchResult } from "@/lib/win2out";
 import { processMatchResult as processTwoMatchRotationResult } from "@/lib/twoMatchRotation";
 
@@ -20,6 +21,7 @@ export const useMatchPage = () => {
     startMatch,
     completeMatch,
     completeMatchWithNextMatch,
+    completeCompetition,
     canEdit,
     isSharedMode,
   } = useApp();
@@ -248,6 +250,51 @@ export const useMatchPage = () => {
       });
     }
 
+    if (
+      competition &&
+      competition.status === "in_progress" &&
+      (competition.type === "round_robin" ||
+        competition.type === "single_elimination" ||
+        competition.type === "double_elimination")
+    ) {
+      const competitionMatches = state.matches
+        .filter((m) => m.competitionId === competition.id)
+        .map((m) =>
+          m.id === match.id
+            ? { ...m, status: "completed", winnerId }
+            : m
+        );
+
+      const allMatchesComplete =
+        competitionMatches.length > 0 &&
+        competitionMatches.every((m) => m.status === "completed");
+
+      if (allMatchesComplete) {
+        let competitionWinnerId: string | undefined;
+
+        if (competition.type === "round_robin") {
+          const standings = calculateStandings(
+            competition.teamIds,
+            competitionMatches
+          );
+          competitionWinnerId = standings[0]?.teamId;
+        } else {
+          const finalMatch = competitionMatches.find((m) => {
+            if (competition.type === "single_elimination") {
+              const totalRounds = Math.log2(competition.teamIds.length);
+              return m.round === totalRounds && !m.bracket;
+            }
+            return m.bracket === "grand_finals";
+          });
+          competitionWinnerId = finalMatch?.winnerId;
+        }
+
+        if (competitionWinnerId) {
+          completeCompetition(competition.id, competitionWinnerId);
+        }
+      }
+    }
+
     setShowCompleteDialog(false);
 
     if (competition) {
@@ -262,6 +309,7 @@ export const useMatchPage = () => {
     state.matches,
     completeMatch,
     completeMatchWithNextMatch,
+    completeCompetition,
     updateMatchScore,
     router,
   ]);

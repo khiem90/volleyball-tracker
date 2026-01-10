@@ -7,6 +7,7 @@ import {
   useEffect,
   useCallback,
   useMemo,
+  useRef,
   type ReactNode,
 } from "react";
 import type {
@@ -382,6 +383,7 @@ interface AppContextValue {
     matches: Omit<Match, "id" | "createdAt">[]
   ) => void;
   completeCompetition: (id: string, winnerId?: string) => void;
+  removeCompetitionLocal: (id: string) => void;
   getCompetitionById: (id: string) => Competition | undefined;
   // Match actions
   addMatch: (match: Omit<Match, "id" | "createdAt">) => void;
@@ -444,20 +446,23 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     return localState;
   }, [isSharedMode, session, localState]);
 
-  // Load state from localStorage on mount (only for local mode)
+  const hasLoadedLocalState = useRef(false);
+
+  // Load state from localStorage on mount
   useEffect(() => {
-    if (!isSharedMode) {
-      try {
-        const stored = localStorage.getItem(STORAGE_KEY);
-        if (stored) {
-          const parsed = JSON.parse(stored) as AppState;
-          dispatch({ type: "LOAD_STATE", state: parsed });
-        }
-      } catch (error) {
-        console.error("Failed to load state from localStorage:", error);
+    if (hasLoadedLocalState.current) return;
+    hasLoadedLocalState.current = true;
+
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored) as AppState;
+        dispatch({ type: "LOAD_STATE", state: parsed });
       }
+    } catch (error) {
+      console.error("Failed to load state from localStorage:", error);
     }
-  }, [isSharedMode]);
+  }, []);
 
   // Save state to localStorage whenever it changes (only for local mode)
   useEffect(() => {
@@ -661,12 +666,15 @@ export const AppProvider = ({ children }: AppProviderProps) => {
             winnerId,
           },
         });
-      } else {
-        dispatch({ type: "COMPLETE_COMPETITION", id, winnerId });
       }
+      dispatch({ type: "COMPLETE_COMPETITION", id, winnerId });
     },
     [isSharedMode, canEdit, session, syncAllData]
   );
+
+  const removeCompetitionLocal = useCallback((id: string) => {
+    dispatch({ type: "DELETE_COMPETITION", id });
+  }, []);
 
   const getCompetitionById = useCallback(
     (id: string) => state.competitions.find((comp) => comp.id === id),
@@ -1328,6 +1336,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     startCompetition,
     startCompetitionWithMatches,
     completeCompetition,
+    removeCompetitionLocal,
     getCompetitionById,
     addMatch,
     addMatches,

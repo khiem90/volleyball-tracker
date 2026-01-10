@@ -32,6 +32,7 @@ export const useCompetitionDetailPage = () => {
     startCompetition,
     startCompetitionWithMatches,
     completeCompetition,
+    removeCompetitionLocal,
     canEdit,
   } = useApp();
 
@@ -228,13 +229,24 @@ export const useCompetitionDetailPage = () => {
   const handleEndCompetition = useCallback(async () => {
     if (!competition || !isSharedMode) return;
     setIsEndingCompetition(true);
+    if (competition.status !== "completed") {
+      completeCompetition(competition.id);
+    }
     const summary = await endSession();
     setIsEndingCompetition(false);
     setShowEndConfirm(false);
     if (summary) {
+      removeCompetitionLocal(competition.id);
       router.push(`/summary/${summary.shareCode}`);
     }
-  }, [competition, isSharedMode, endSession, router]);
+  }, [
+    competition,
+    isSharedMode,
+    completeCompetition,
+    endSession,
+    removeCompetitionLocal,
+    router,
+  ]);
 
   const completedMatches = matches.filter(
     (m) => m.status === "completed"

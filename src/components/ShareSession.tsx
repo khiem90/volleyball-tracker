@@ -24,10 +24,7 @@ import {
   Crown,
   Shield,
   Eye,
-  Trash2,
-  Loader2,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
 
 interface ShareSessionProps {
   open: boolean;
@@ -35,13 +32,10 @@ interface ShareSessionProps {
 }
 
 export const ShareSession = ({ open, onOpenChange }: ShareSessionProps) => {
-  const { session, role, getShareUrl, getAdminShareUrl, isSharedMode, endSession, isCreator } = useSession();
-  const router = useRouter();
+  const { session, role, getShareUrl, getAdminShareUrl, isSharedMode } = useSession();
 
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedAdminLink, setCopiedAdminLink] = useState(false);
-  const [showEndConfirm, setShowEndConfirm] = useState(false);
-  const [isEnding, setIsEnding] = useState(false);
 
   const shareUrl = getShareUrl();
   const adminShareUrl = getAdminShareUrl();
@@ -86,17 +80,6 @@ export const ShareSession = ({ open, onOpenChange }: ShareSessionProps) => {
       handleCopyLink();
     }
   }, [shareUrl, session, handleCopyLink]);
-
-  const handleEndSession = useCallback(async () => {
-    setIsEnding(true);
-    const summary = await endSession();
-    setIsEnding(false);
-    onOpenChange(false);
-    if (summary) {
-      // Redirect creator to their session summary
-      router.push(`/summary/${summary.shareCode}`);
-    }
-  }, [endSession, onOpenChange, router]);
 
   if (!session || !isSharedMode) {
     return null;
@@ -217,67 +200,6 @@ export const ShareSession = ({ open, onOpenChange }: ShareSessionProps) => {
             </>
           )}
 
-          {/* End Session - Only show for creator */}
-          {isCreator && (
-            <>
-              <Separator />
-              <div className="space-y-2">
-                <label className="text-sm font-medium flex items-center gap-2 text-destructive">
-                  <Trash2 className="w-4 h-4" />
-                  End Session
-                </label>
-                {!showEndConfirm ? (
-                  <>
-                    <p className="text-xs text-muted-foreground">
-                      Permanently delete this session. All viewers will lose access.
-                    </p>
-                    <Button
-                      variant="outline"
-                      onClick={() => setShowEndConfirm(true)}
-                      className="w-full cursor-pointer text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
-                    >
-                      <Trash2 className="w-4 h-4 mr-2" />
-                      End Session
-                    </Button>
-                  </>
-                ) : (
-                  <div className="space-y-2 p-3 rounded-lg bg-destructive/10 border border-destructive/30">
-                    <p className="text-sm font-medium text-destructive">
-                      Are you sure? This cannot be undone.
-                    </p>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        onClick={() => setShowEndConfirm(false)}
-                        disabled={isEnding}
-                        className="flex-1 cursor-pointer"
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        onClick={handleEndSession}
-                        disabled={isEnding}
-                        className="flex-1 gap-2 cursor-pointer"
-                      >
-                        {isEnding ? (
-                          <>
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                            Ending...
-                          </>
-                        ) : (
-                          <>
-                            <Trash2 className="w-4 h-4" />
-                            Confirm
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </>
-          )}
         </div>
 
         <DialogFooter className="flex-row gap-2 sm:gap-2">
