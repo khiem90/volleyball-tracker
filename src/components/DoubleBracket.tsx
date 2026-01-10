@@ -79,7 +79,7 @@ export const DoubleBracket = ({ matches, teams, totalTeams, onMatchClick, onEdit
           >
             <div className="flex items-center gap-1.5 min-w-0">
               <div
-                className="w-2 h-2 rounded-full flex-shrink-0"
+                className="w-2 h-2 rounded-full shrink-0"
                 style={{ backgroundColor: getTeamColor(match.homeTeamId) }}
               />
               <span className={`truncate ${homeWon ? "font-semibold text-emerald-500" : ""}`}>
@@ -103,7 +103,7 @@ export const DoubleBracket = ({ matches, teams, totalTeams, onMatchClick, onEdit
           >
             <div className="flex items-center gap-1.5 min-w-0">
               <div
-                className="w-2 h-2 rounded-full flex-shrink-0"
+                className="w-2 h-2 rounded-full shrink-0"
                 style={{ backgroundColor: getTeamColor(match.awayTeamId) }}
               />
               <span className={`truncate ${awayWon ? "font-semibold text-emerald-500" : ""}`}>

@@ -130,7 +130,7 @@ export const Bracket = ({
                           >
                             <div className="flex items-center gap-2 min-w-0">
                               <div
-                                className="w-2 h-2 rounded-full flex-shrink-0"
+                                className="w-2 h-2 rounded-full shrink-0"
                                 style={{
                                   backgroundColor: getTeamColor(
                                     match.homeTeamId
@@ -168,7 +168,7 @@ export const Bracket = ({
                           >
                             <div className="flex items-center gap-2 min-w-0">
                               <div
-                                className="w-2 h-2 rounded-full flex-shrink-0"
+                                className="w-2 h-2 rounded-full shrink-0"
                                 style={{
                                   backgroundColor: getTeamColor(
                                     match.awayTeamId
