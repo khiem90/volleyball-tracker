@@ -69,6 +69,18 @@ type AppAction =
   | { type: "START_MATCH"; matchId: string }
   | { type: "COMPLETE_MATCH"; matchId: string; winnerId: string }
   | { type: "DELETE_MATCH"; matchId: string }
+  // Admin match management actions
+  | {
+      type: "UPDATE_MATCH_TEAMS";
+      matchId: string;
+      homeTeamId: string;
+      awayTeamId: string;
+    }
+  | {
+      type: "UPDATE_MATCH_COURT";
+      matchId: string;
+      courtNumber: number;
+    }
   // State actions
   | { type: "LOAD_STATE"; state: AppState }
   | { type: "RESET_STATE" };
@@ -298,6 +310,36 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
       };
     }
 
+    // Admin match management actions
+    case "UPDATE_MATCH_TEAMS": {
+      return {
+        ...state,
+        matches: state.matches.map((match) =>
+          match.id === action.matchId
+            ? {
+                ...match,
+                homeTeamId: action.homeTeamId,
+                awayTeamId: action.awayTeamId,
+              }
+            : match
+        ),
+      };
+    }
+
+    case "UPDATE_MATCH_COURT": {
+      return {
+        ...state,
+        matches: state.matches.map((match) =>
+          match.id === action.matchId
+            ? {
+                ...match,
+                position: action.courtNumber,
+              }
+            : match
+        ),
+      };
+    }
+
     // State actions
     case "LOAD_STATE": {
       return action.state;
@@ -360,6 +402,19 @@ interface AppContextValue {
   deleteMatch: (matchId: string) => void;
   getMatchById: (id: string) => Match | undefined;
   getMatchesByCompetition: (competitionId: string) => Match[];
+  // Admin match management actions
+  updateMatchTeams: (
+    matchId: string,
+    homeTeamId: string,
+    awayTeamId: string
+  ) => void;
+  updateMatchCourt: (matchId: string, courtNumber: number) => void;
+  swapCourtTeams: (
+    competitionId: string,
+    court1: number,
+    court2: number
+  ) => void;
+  reorderQueue: (competitionId: string, newQueue: string[]) => void;
   // Utility
   resetState: () => void;
 }
@@ -826,6 +881,421 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     [isSharedMode, canEdit, session, syncAllData]
   );
 
+  // Admin match management - Update teams playing a match
+  const updateMatchTeams = useCallback(
+    (matchId: string, homeTeamId: string, awayTeamId: string) => {
+      if (isSharedMode && !canEdit) return;
+
+      // Find the match to get original team IDs
+      const match = isSharedMode
+        ? (session?.matches || []).find((m) => m.id === matchId)
+        : state.matches.find((m) => m.id === matchId);
+
+      if (!match) return;
+
+      // Find the competition this match belongs to
+      const competition = isSharedMode
+        ? session?.competition
+        : match.competitionId
+          ? state.competitions.find((c) => c.id === match.competitionId)
+          : null;
+
+      // Calculate which teams are being swapped in/out
+      const oldTeams = [match.homeTeamId, match.awayTeamId];
+      const newTeams = [homeTeamId, awayTeamId];
+      const teamsBeingRemoved = oldTeams.filter((t) => !newTeams.includes(t));
+      const teamsBeingAdded = newTeams.filter((t) => !oldTeams.includes(t));
+
+      // Helper to update queue - swap teams in/out
+      const updateQueue = (currentQueue: string[]): string[] => {
+        let newQueue = [...currentQueue];
+
+        // For each team being added from queue, find its position and replace with removed team
+        for (let i = 0; i < teamsBeingAdded.length; i++) {
+          const addedTeam = teamsBeingAdded[i];
+          const removedTeam = teamsBeingRemoved[i];
+
+          const queueIndex = newQueue.indexOf(addedTeam);
+          if (queueIndex !== -1 && removedTeam) {
+            // Replace the added team's position with the removed team
+            newQueue[queueIndex] = removedTeam;
+          } else if (queueIndex !== -1) {
+            // Just remove the added team from queue
+            newQueue.splice(queueIndex, 1);
+          } else if (removedTeam && !newQueue.includes(removedTeam)) {
+            // Team being removed wasn't in queue, add it to the end
+            newQueue.push(removedTeam);
+          }
+        }
+
+        // Handle case where there are more removed teams than added teams
+        for (let i = teamsBeingAdded.length; i < teamsBeingRemoved.length; i++) {
+          const removedTeam = teamsBeingRemoved[i];
+          if (removedTeam && !newQueue.includes(removedTeam)) {
+            newQueue.push(removedTeam);
+          }
+        }
+
+        return newQueue;
+      };
+
+      if (isSharedMode && session) {
+        // Update the match teams
+        const newMatches = (session.matches || []).map((m) =>
+          m.id === matchId ? { ...m, homeTeamId, awayTeamId } : m
+        );
+
+        // For Win2Out/TwoMatchRotation, also update the court state and queue
+        let updatedCompetition = session.competition;
+        if (updatedCompetition?.win2outState) {
+          const courtIndex = updatedCompetition.win2outState.courts.findIndex(
+            (c) =>
+              c.teamIds.includes(match.homeTeamId) &&
+              c.teamIds.includes(match.awayTeamId)
+          );
+          if (courtIndex !== -1) {
+            const newCourts = [...updatedCompetition.win2outState.courts];
+            newCourts[courtIndex] = {
+              ...newCourts[courtIndex],
+              teamIds: [homeTeamId, awayTeamId],
+            };
+            const newQueue = updateQueue(updatedCompetition.win2outState.queue);
+            updatedCompetition = {
+              ...updatedCompetition,
+              win2outState: {
+                ...updatedCompetition.win2outState,
+                courts: newCourts,
+                queue: newQueue,
+              },
+            };
+          }
+        }
+        if (updatedCompetition?.twoMatchRotationState) {
+          const courtIndex =
+            updatedCompetition.twoMatchRotationState.courts.findIndex(
+              (c) =>
+                c.teamIds.includes(match.homeTeamId) &&
+                c.teamIds.includes(match.awayTeamId)
+            );
+          if (courtIndex !== -1) {
+            const newCourts = [
+              ...updatedCompetition.twoMatchRotationState.courts,
+            ];
+            newCourts[courtIndex] = {
+              ...newCourts[courtIndex],
+              teamIds: [homeTeamId, awayTeamId],
+            };
+            const newQueue = updateQueue(
+              updatedCompetition.twoMatchRotationState.queue
+            );
+            updatedCompetition = {
+              ...updatedCompetition,
+              twoMatchRotationState: {
+                ...updatedCompetition.twoMatchRotationState,
+                courts: newCourts,
+                queue: newQueue,
+              },
+            };
+          }
+        }
+
+        syncAllData({ matches: newMatches, competition: updatedCompetition });
+      } else {
+        // Local mode - update match first
+        dispatch({
+          type: "UPDATE_MATCH_TEAMS",
+          matchId,
+          homeTeamId,
+          awayTeamId,
+        });
+
+        // For Win2Out/TwoMatchRotation, also update the competition's court state and queue
+        if (competition) {
+          let updatedCompetition = { ...competition };
+
+          if (updatedCompetition.win2outState) {
+            const courtIndex = updatedCompetition.win2outState.courts.findIndex(
+              (c) =>
+                c.teamIds.includes(match.homeTeamId) &&
+                c.teamIds.includes(match.awayTeamId)
+            );
+            if (courtIndex !== -1) {
+              const newCourts = [...updatedCompetition.win2outState.courts];
+              newCourts[courtIndex] = {
+                ...newCourts[courtIndex],
+                teamIds: [homeTeamId, awayTeamId],
+              };
+              const newQueue = updateQueue(updatedCompetition.win2outState.queue);
+              updatedCompetition = {
+                ...updatedCompetition,
+                win2outState: {
+                  ...updatedCompetition.win2outState,
+                  courts: newCourts,
+                  queue: newQueue,
+                },
+              };
+              dispatch({
+                type: "UPDATE_COMPETITION",
+                competition: updatedCompetition,
+              });
+            }
+          }
+
+          if (updatedCompetition.twoMatchRotationState) {
+            const courtIndex =
+              updatedCompetition.twoMatchRotationState.courts.findIndex(
+                (c) =>
+                  c.teamIds.includes(match.homeTeamId) &&
+                  c.teamIds.includes(match.awayTeamId)
+              );
+            if (courtIndex !== -1) {
+              const newCourts = [
+                ...updatedCompetition.twoMatchRotationState.courts,
+              ];
+              newCourts[courtIndex] = {
+                ...newCourts[courtIndex],
+                teamIds: [homeTeamId, awayTeamId],
+              };
+              const newQueue = updateQueue(
+                updatedCompetition.twoMatchRotationState.queue
+              );
+              updatedCompetition = {
+                ...updatedCompetition,
+                twoMatchRotationState: {
+                  ...updatedCompetition.twoMatchRotationState,
+                  courts: newCourts,
+                  queue: newQueue,
+                },
+              };
+              dispatch({
+                type: "UPDATE_COMPETITION",
+                competition: updatedCompetition,
+              });
+            }
+          }
+        }
+      }
+    },
+    [
+      isSharedMode,
+      canEdit,
+      session,
+      state.matches,
+      state.competitions,
+      syncAllData,
+    ]
+  );
+
+  // Admin match management - Update court assignment for a match
+  const updateMatchCourt = useCallback(
+    (matchId: string, courtNumber: number) => {
+      if (isSharedMode && !canEdit) return;
+
+      if (isSharedMode && session) {
+        const newMatches = (session.matches || []).map((m) =>
+          m.id === matchId ? { ...m, position: courtNumber } : m
+        );
+        syncAllData({ matches: newMatches });
+      } else {
+        dispatch({ type: "UPDATE_MATCH_COURT", matchId, courtNumber });
+      }
+    },
+    [isSharedMode, canEdit, session, syncAllData]
+  );
+
+  // Admin match management - Swap teams between two courts (for Win2Out/TwoMatchRotation)
+  const swapCourtTeams = useCallback(
+    (competitionId: string, court1: number, court2: number) => {
+      if (isSharedMode && !canEdit) return;
+
+      const competition = isSharedMode
+        ? session?.competition
+        : state.competitions.find((c) => c.id === competitionId);
+
+      if (!competition) return;
+
+      let updatedCompetition = { ...competition };
+      let matchUpdates: { matchId: string; homeTeamId: string; awayTeamId: string }[] = [];
+      const currentMatches = isSharedMode
+        ? session?.matches || []
+        : state.matches;
+
+      // Handle Win2Out
+      if (updatedCompetition.win2outState) {
+        const courts = [...updatedCompetition.win2outState.courts];
+        const courtIndex1 = courts.findIndex((c) => c.courtNumber === court1);
+        const courtIndex2 = courts.findIndex((c) => c.courtNumber === court2);
+
+        if (courtIndex1 !== -1 && courtIndex2 !== -1) {
+          // Swap the team IDs
+          const temp = courts[courtIndex1].teamIds;
+          courts[courtIndex1] = {
+            ...courts[courtIndex1],
+            teamIds: courts[courtIndex2].teamIds,
+          };
+          courts[courtIndex2] = { ...courts[courtIndex2], teamIds: temp };
+
+          // Find and update the matches for these courts
+          const match1 = currentMatches.find(
+            (m) =>
+              m.competitionId === competitionId &&
+              (m.status === "pending" || m.status === "in_progress") &&
+              m.position === court1
+          );
+          const match2 = currentMatches.find(
+            (m) =>
+              m.competitionId === competitionId &&
+              (m.status === "pending" || m.status === "in_progress") &&
+              m.position === court2
+          );
+
+          if (match1) {
+            matchUpdates.push({
+              matchId: match1.id,
+              homeTeamId: courts[courtIndex1].teamIds[0],
+              awayTeamId: courts[courtIndex1].teamIds[1],
+            });
+          }
+          if (match2) {
+            matchUpdates.push({
+              matchId: match2.id,
+              homeTeamId: courts[courtIndex2].teamIds[0],
+              awayTeamId: courts[courtIndex2].teamIds[1],
+            });
+          }
+
+          updatedCompetition = {
+            ...updatedCompetition,
+            win2outState: {
+              ...updatedCompetition.win2outState,
+              courts,
+            },
+          };
+        }
+      }
+
+      // Handle TwoMatchRotation
+      if (updatedCompetition.twoMatchRotationState) {
+        const courts = [...updatedCompetition.twoMatchRotationState.courts];
+        const courtIndex1 = courts.findIndex((c) => c.courtNumber === court1);
+        const courtIndex2 = courts.findIndex((c) => c.courtNumber === court2);
+
+        if (courtIndex1 !== -1 && courtIndex2 !== -1) {
+          // Swap the team IDs
+          const temp = courts[courtIndex1].teamIds;
+          courts[courtIndex1] = {
+            ...courts[courtIndex1],
+            teamIds: courts[courtIndex2].teamIds,
+          };
+          courts[courtIndex2] = { ...courts[courtIndex2], teamIds: temp };
+
+          // Find and update the matches for these courts
+          const match1 = currentMatches.find(
+            (m) =>
+              m.competitionId === competitionId &&
+              (m.status === "pending" || m.status === "in_progress") &&
+              m.position === court1
+          );
+          const match2 = currentMatches.find(
+            (m) =>
+              m.competitionId === competitionId &&
+              (m.status === "pending" || m.status === "in_progress") &&
+              m.position === court2
+          );
+
+          if (match1) {
+            matchUpdates.push({
+              matchId: match1.id,
+              homeTeamId: courts[courtIndex1].teamIds[0],
+              awayTeamId: courts[courtIndex1].teamIds[1],
+            });
+          }
+          if (match2) {
+            matchUpdates.push({
+              matchId: match2.id,
+              homeTeamId: courts[courtIndex2].teamIds[0],
+              awayTeamId: courts[courtIndex2].teamIds[1],
+            });
+          }
+
+          updatedCompetition = {
+            ...updatedCompetition,
+            twoMatchRotationState: {
+              ...updatedCompetition.twoMatchRotationState,
+              courts,
+            },
+          };
+        }
+      }
+
+      // Apply updates
+      if (isSharedMode && session) {
+        let newMatches = [...(session.matches || [])];
+        matchUpdates.forEach((update) => {
+          newMatches = newMatches.map((m) =>
+            m.id === update.matchId
+              ? { ...m, homeTeamId: update.homeTeamId, awayTeamId: update.awayTeamId }
+              : m
+          );
+        });
+        syncAllData({ matches: newMatches, competition: updatedCompetition });
+      } else {
+        dispatch({ type: "UPDATE_COMPETITION", competition: updatedCompetition });
+        matchUpdates.forEach((update) => {
+          dispatch({
+            type: "UPDATE_MATCH_TEAMS",
+            matchId: update.matchId,
+            homeTeamId: update.homeTeamId,
+            awayTeamId: update.awayTeamId,
+          });
+        });
+      }
+    },
+    [isSharedMode, canEdit, session, state.competitions, state.matches, syncAllData]
+  );
+
+  // Admin match management - Reorder the queue (for Win2Out/TwoMatchRotation)
+  const reorderQueue = useCallback(
+    (competitionId: string, newQueue: string[]) => {
+      if (isSharedMode && !canEdit) return;
+
+      const competition = isSharedMode
+        ? session?.competition
+        : state.competitions.find((c) => c.id === competitionId);
+
+      if (!competition) return;
+
+      let updatedCompetition = { ...competition };
+
+      if (updatedCompetition.win2outState) {
+        updatedCompetition = {
+          ...updatedCompetition,
+          win2outState: {
+            ...updatedCompetition.win2outState,
+            queue: newQueue,
+          },
+        };
+      }
+
+      if (updatedCompetition.twoMatchRotationState) {
+        updatedCompetition = {
+          ...updatedCompetition,
+          twoMatchRotationState: {
+            ...updatedCompetition.twoMatchRotationState,
+            queue: newQueue,
+          },
+        };
+      }
+
+      if (isSharedMode && session) {
+        syncAllData({ competition: updatedCompetition });
+      } else {
+        dispatch({ type: "UPDATE_COMPETITION", competition: updatedCompetition });
+      }
+    },
+    [isSharedMode, canEdit, session, state.competitions, syncAllData]
+  );
+
   const getMatchById = useCallback(
     (id: string) => state.matches.find((match) => match.id === id),
     [state.matches]
@@ -868,6 +1338,10 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     deleteMatch,
     getMatchById,
     getMatchesByCompetition,
+    updateMatchTeams,
+    updateMatchCourt,
+    swapCourtTeams,
+    reorderQueue,
     resetState,
   };
 

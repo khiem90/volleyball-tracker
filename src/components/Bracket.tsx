@@ -1,9 +1,11 @@
 "use client";
 
 import { useMemo } from "react";
-import Link from "next/link";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Pencil } from "lucide-react";
 import { getRoundName } from "@/lib/singleElimination";
+import { useApp } from "@/context/AppContext";
 import type { Match, PersistentTeam } from "@/types/game";
 
 interface BracketProps {
@@ -11,9 +13,17 @@ interface BracketProps {
   teams: PersistentTeam[];
   totalTeams: number;
   onMatchClick?: (match: Match) => void;
+  onEditMatch?: (match: Match) => void;
 }
 
-export const Bracket = ({ matches, teams, totalTeams, onMatchClick }: BracketProps) => {
+export const Bracket = ({
+  matches,
+  teams,
+  totalTeams,
+  onMatchClick,
+  onEditMatch,
+}: BracketProps) => {
+  const { canEdit } = useApp();
   const totalRounds = Math.log2(totalTeams);
 
   const teamsMap = useMemo(() => {
@@ -84,20 +94,27 @@ export const Bracket = ({ matches, teams, totalTeams, onMatchClick }: BracketPro
                   return (
                     <div
                       key={match.id}
-                      className="relative"
+                      className="relative group"
                       style={{ height: matchHeight }}
                     >
                       <div className="absolute top-1/2 -translate-y-1/2 w-full">
                         <Card
                           className={`
                             w-48 overflow-hidden border-border/50 bg-card/50
-                            ${isClickable ? "cursor-pointer hover:border-primary/50 hover:bg-card transition-all" : "opacity-75"}
+                            ${
+                              isClickable
+                                ? "cursor-pointer hover:border-primary/50 hover:bg-card transition-all"
+                                : "opacity-75"
+                            }
                           `}
                           onClick={() => handleMatchClick(match)}
                           role={isClickable ? "button" : undefined}
                           tabIndex={isClickable ? 0 : undefined}
                           onKeyDown={(e) => {
-                            if (isClickable && (e.key === "Enter" || e.key === " ")) {
+                            if (
+                              isClickable &&
+                              (e.key === "Enter" || e.key === " ")
+                            ) {
                               e.preventDefault();
                               handleMatchClick(match);
                             }
@@ -114,14 +131,28 @@ export const Bracket = ({ matches, teams, totalTeams, onMatchClick }: BracketPro
                             <div className="flex items-center gap-2 min-w-0">
                               <div
                                 className="w-2 h-2 rounded-full flex-shrink-0"
-                                style={{ backgroundColor: getTeamColor(match.homeTeamId) }}
+                                style={{
+                                  backgroundColor: getTeamColor(
+                                    match.homeTeamId
+                                  ),
+                                }}
                               />
-                              <span className={`text-sm truncate ${homeWon ? "font-semibold text-emerald-500" : ""}`}>
+                              <span
+                                className={`text-sm truncate ${
+                                  homeWon
+                                    ? "font-semibold text-emerald-500"
+                                    : ""
+                                }`}
+                              >
                                 {getTeamName(match.homeTeamId)}
                               </span>
                             </div>
                             {isCompleted && (
-                              <span className={`text-sm font-bold tabular-nums ${homeWon ? "text-emerald-500" : ""}`}>
+                              <span
+                                className={`text-sm font-bold tabular-nums ${
+                                  homeWon ? "text-emerald-500" : ""
+                                }`}
+                              >
                                 {match.homeScore}
                               </span>
                             )}
@@ -138,14 +169,28 @@ export const Bracket = ({ matches, teams, totalTeams, onMatchClick }: BracketPro
                             <div className="flex items-center gap-2 min-w-0">
                               <div
                                 className="w-2 h-2 rounded-full flex-shrink-0"
-                                style={{ backgroundColor: getTeamColor(match.awayTeamId) }}
+                                style={{
+                                  backgroundColor: getTeamColor(
+                                    match.awayTeamId
+                                  ),
+                                }}
                               />
-                              <span className={`text-sm truncate ${awayWon ? "font-semibold text-emerald-500" : ""}`}>
+                              <span
+                                className={`text-sm truncate ${
+                                  awayWon
+                                    ? "font-semibold text-emerald-500"
+                                    : ""
+                                }`}
+                              >
                                 {getTeamName(match.awayTeamId)}
                               </span>
                             </div>
                             {isCompleted && (
-                              <span className={`text-sm font-bold tabular-nums ${awayWon ? "text-emerald-500" : ""}`}>
+                              <span
+                                className={`text-sm font-bold tabular-nums ${
+                                  awayWon ? "text-emerald-500" : ""
+                                }`}
+                              >
                                 {match.awayScore}
                               </span>
                             )}
@@ -155,6 +200,25 @@ export const Bracket = ({ matches, teams, totalTeams, onMatchClick }: BracketPro
                           {match.status === "in_progress" && (
                             <div className="absolute -top-1 -right-1 w-3 h-3 bg-amber-500 rounded-full animate-pulse" />
                           )}
+
+                          {/* Edit Button (only for pending matches when canEdit) */}
+                          {canEdit &&
+                            onEditMatch &&
+                            match.status === "pending" &&
+                            isClickable && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="absolute -top-2 -left-2 h-6 w-6 bg-background border border-border/50 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onEditMatch(match);
+                                }}
+                                aria-label="Edit match assignment"
+                              >
+                                <Pencil className="w-3 h-3" />
+                              </Button>
+                            )}
                         </Card>
 
                         {/* Connector Lines - simplified for now */}
@@ -171,10 +235,14 @@ export const Bracket = ({ matches, teams, totalTeams, onMatchClick }: BracketPro
         })}
 
         {/* Winner Display */}
-        {matches.some((m) => m.round === totalRounds && m.status === "completed") && (
+        {matches.some(
+          (m) => m.round === totalRounds && m.status === "completed"
+        ) && (
           <div className="flex flex-col justify-center">
             <div className="text-center mb-4">
-              <span className="text-sm font-medium text-amber-500">Champion</span>
+              <span className="text-sm font-medium text-amber-500">
+                Champion
+              </span>
             </div>
             <div className="w-48">
               {(() => {
@@ -187,12 +255,16 @@ export const Bracket = ({ matches, teams, totalTeams, onMatchClick }: BracketPro
                     <div
                       className="w-12 h-12 mx-auto rounded-xl flex items-center justify-center mb-2"
                       style={{
-                        background: `linear-gradient(135deg, ${winner?.color || "#f59e0b"}, ${winner?.color || "#f59e0b"}99)`,
+                        background: `linear-gradient(135deg, ${
+                          winner?.color || "#f59e0b"
+                        }, ${winner?.color || "#f59e0b"}99)`,
                       }}
                     >
                       <span className="text-2xl">🏆</span>
                     </div>
-                    <p className="font-bold text-amber-500">{winner?.name || "Champion"}</p>
+                    <p className="font-bold text-amber-500">
+                      {winner?.name || "Champion"}
+                    </p>
                   </Card>
                 );
               })()}
@@ -203,4 +275,3 @@ export const Bracket = ({ matches, teams, totalTeams, onMatchClick }: BracketPro
     </div>
   );
 };
-

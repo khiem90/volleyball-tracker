@@ -1,20 +1,33 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, Trophy, Clock, Play, RotateCw } from "lucide-react";
+import {
+  Users,
+  Trophy,
+  Clock,
+  Play,
+  RotateCw,
+  Pencil,
+  Settings2,
+} from "lucide-react";
 import { getTeamsByStatus, getSessionMatchCount } from "@/lib/twoMatchRotation";
+import { useApp } from "@/context/AppContext";
+import { EditMatchDialog } from "@/components/EditMatchDialog";
+import { EditQueueDialog } from "@/components/EditQueueDialog";
 import type {
   Match,
   PersistentTeam,
   TwoMatchRotationState,
+  Competition,
 } from "@/types/game";
 
 interface TwoMatchRotationViewProps {
   state: TwoMatchRotationState;
   matches: Match[];
   teams: PersistentTeam[];
+  competition?: Competition | null;
   onMatchClick?: (match: Match) => void;
 }
 
@@ -22,8 +35,13 @@ export const TwoMatchRotationView = ({
   state,
   matches,
   teams,
+  competition,
   onMatchClick,
 }: TwoMatchRotationViewProps) => {
+  const { canEdit } = useApp();
+  const [editingMatch, setEditingMatch] = useState<Match | null>(null);
+  const [showEditQueue, setShowEditQueue] = useState(false);
+
   const teamsMap = useMemo(() => {
     const map = new Map<string, PersistentTeam>();
     teams.forEach((team) => map.set(team.id, team));
@@ -147,11 +165,27 @@ export const TwoMatchRotationView = ({
                       <Play className="w-5 h-5 text-primary" />
                       Court {court?.courtNumber || match.position}
                     </div>
-                    {court?.isFirstMatch && (
-                      <span className="text-xs bg-amber-500/20 text-amber-500 px-2 py-1 rounded-full">
-                        First Match
-                      </span>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {court?.isFirstMatch && (
+                        <span className="text-xs bg-amber-500/20 text-amber-500 px-2 py-1 rounded-full">
+                          First Match
+                        </span>
+                      )}
+                      {canEdit && match.status === "pending" && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingMatch(match);
+                          }}
+                          aria-label="Edit match assignment"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -189,15 +223,41 @@ export const TwoMatchRotationView = ({
                       </p>
                     </div>
 
-                    {/* VS */}
+                    {/* VS / Score */}
                     <div className="text-center">
-                      <div className="text-xl font-bold text-muted-foreground">
-                        VS
-                      </div>
-                      <Button size="sm" className="mt-2 gap-1">
-                        <Play className="w-4 h-4" />
-                        Play
-                      </Button>
+                      {match.status === "in_progress" ? (
+                        <>
+                          <div className="flex items-center justify-center gap-3 mb-2">
+                            <span className="text-3xl font-bold tabular-nums text-primary">
+                              {match.homeScore}
+                            </span>
+                            <span className="text-lg text-muted-foreground">
+                              :
+                            </span>
+                            <span className="text-3xl font-bold tabular-nums text-primary">
+                              {match.awayScore}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-center gap-1 text-xs text-amber-500 mb-2">
+                            <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                            Live
+                          </div>
+                          <Button size="sm" className="gap-1">
+                            <Play className="w-4 h-4" />
+                            Continue
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <div className="text-xl font-bold text-muted-foreground">
+                            VS
+                          </div>
+                          <Button size="sm" className="mt-2 gap-1">
+                            <Play className="w-4 h-4" />
+                            Play
+                          </Button>
+                        </>
+                      )}
                     </div>
 
                     {/* Away Team */}
@@ -239,9 +299,23 @@ export const TwoMatchRotationView = ({
       {/* Queue */}
       <Card className="border-blue-500/30 bg-blue-500/5">
         <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <Clock className="w-5 h-5 text-blue-500" />
-            Queue ({inQueue.length} waiting)
+          <CardTitle className="flex items-center justify-between text-lg">
+            <div className="flex items-center gap-2">
+              <Clock className="w-5 h-5 text-blue-500" />
+              Queue ({inQueue.length} waiting)
+            </div>
+            {canEdit && inQueue.length > 1 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-1.5 text-blue-500 hover:text-blue-400"
+                onClick={() => setShowEditQueue(true)}
+                aria-label="Edit queue order"
+              >
+                <Settings2 className="w-4 h-4" />
+                Reorder
+              </Button>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -448,6 +522,24 @@ export const TwoMatchRotationView = ({
           </CardContent>
         </Card>
       )}
+
+      {/* Edit Match Dialog */}
+      <EditMatchDialog
+        open={!!editingMatch}
+        onOpenChange={(open) => !open && setEditingMatch(null)}
+        match={editingMatch}
+        matches={matches}
+        teams={teams}
+        competition={competition}
+      />
+
+      {/* Edit Queue Dialog */}
+      <EditQueueDialog
+        open={showEditQueue}
+        onOpenChange={setShowEditQueue}
+        competition={competition || null}
+        teams={teams}
+      />
     </div>
   );
 };

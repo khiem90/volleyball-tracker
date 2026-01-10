@@ -38,14 +38,22 @@ import {
   Swords,
   Share2,
   Globe,
+  Pencil,
 } from "lucide-react";
-import { generateRoundRobinSchedule, calculateStandings } from "@/lib/roundRobin";
+import { EditMatchDialog } from "@/components/EditMatchDialog";
+import {
+  generateRoundRobinSchedule,
+  calculateStandings,
+} from "@/lib/roundRobin";
 import { generateSingleEliminationBracket } from "@/lib/singleElimination";
 import { generateDoubleEliminationBracket } from "@/lib/doubleElimination";
-import { initializeWin2OutState, generateInitialMatches as generateWin2OutInitialMatches } from "@/lib/win2out";
-import { 
-  initializeTwoMatchRotationState, 
-  generateInitialMatches as generateTwoMatchRotationInitialMatches 
+import {
+  initializeWin2OutState,
+  generateInitialMatches as generateWin2OutInitialMatches,
+} from "@/lib/win2out";
+import {
+  initializeTwoMatchRotationState,
+  generateInitialMatches as generateTwoMatchRotationInitialMatches,
 } from "@/lib/twoMatchRotation";
 import type { Match } from "@/types/game";
 
@@ -70,12 +78,14 @@ export default function CompetitionDetailPage() {
     startCompetition,
     startCompetitionWithMatches,
     completeCompetition,
+    canEdit,
   } = useApp();
 
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
+  const [editingMatch, setEditingMatch] = useState<Match | null>(null);
   const [showStartConfirm, setShowStartConfirm] = useState(false);
   const [showCreateSession, setShowCreateSession] = useState(false);
-  
+
   const { isSharedMode } = useSession();
 
   const competition = useMemo(
@@ -101,19 +111,36 @@ export default function CompetitionDetailPage() {
 
     switch (competition.type) {
       case "round_robin":
-        newMatches = generateRoundRobinSchedule(competition.teamIds, competition.id);
+        newMatches = generateRoundRobinSchedule(
+          competition.teamIds,
+          competition.id
+        );
         break;
       case "single_elimination":
-        newMatches = generateSingleEliminationBracket(competition.teamIds, competition.id);
+        newMatches = generateSingleEliminationBracket(
+          competition.teamIds,
+          competition.id
+        );
         break;
       case "double_elimination":
-        newMatches = generateDoubleEliminationBracket(competition.teamIds, competition.id);
+        newMatches = generateDoubleEliminationBracket(
+          competition.teamIds,
+          competition.id
+        );
         break;
       case "win2out": {
         const numCourts = competition.numberOfCourts || 1;
-        const win2outState = initializeWin2OutState(competition.id, competition.teamIds, numCourts);
-        const initialMatches = generateWin2OutInitialMatches(competition.id, competition.teamIds, numCourts);
-        
+        const win2outState = initializeWin2OutState(
+          competition.id,
+          competition.teamIds,
+          numCourts
+        );
+        const initialMatches = generateWin2OutInitialMatches(
+          competition.id,
+          competition.teamIds,
+          numCourts
+        );
+
         // Use atomic function to avoid race condition in shared mode
         startCompetitionWithMatches(
           { ...competition, win2outState },
@@ -124,9 +151,17 @@ export default function CompetitionDetailPage() {
       }
       case "two_match_rotation": {
         const numCourts = competition.numberOfCourts || 1;
-        const twoMatchRotationState = initializeTwoMatchRotationState(competition.id, competition.teamIds, numCourts);
-        const initialMatches = generateTwoMatchRotationInitialMatches(competition.id, competition.teamIds, numCourts);
-        
+        const twoMatchRotationState = initializeTwoMatchRotationState(
+          competition.id,
+          competition.teamIds,
+          numCourts
+        );
+        const initialMatches = generateTwoMatchRotationInitialMatches(
+          competition.id,
+          competition.teamIds,
+          numCourts
+        );
+
         // Use atomic function to avoid race condition in shared mode
         startCompetitionWithMatches(
           { ...competition, twoMatchRotationState },
@@ -157,7 +192,8 @@ export default function CompetitionDetailPage() {
   useEffect(() => {
     if (!competition || competition.status !== "in_progress") return;
 
-    const allMatchesComplete = matches.length > 0 && matches.every((m) => m.status === "completed");
+    const allMatchesComplete =
+      matches.length > 0 && matches.every((m) => m.status === "completed");
 
     if (allMatchesComplete) {
       let winnerId: string | undefined;
@@ -191,7 +227,9 @@ export default function CompetitionDetailPage() {
             <div className="w-24 h-24 mx-auto mb-6 rounded-3xl bg-muted/50 flex items-center justify-center">
               <Trophy className="w-12 h-12 text-muted-foreground/30" />
             </div>
-            <h2 className="text-2xl font-semibold mb-3">Competition not found</h2>
+            <h2 className="text-2xl font-semibold mb-3">
+              Competition not found
+            </h2>
             <p className="text-muted-foreground mb-8">
               This competition may have been deleted.
             </p>
@@ -207,14 +245,20 @@ export default function CompetitionDetailPage() {
     );
   }
 
-  const completedMatches = matches.filter((m) => m.status === "completed").length;
-  const inProgressMatches = matches.filter((m) => m.status === "in_progress").length;
+  const completedMatches = matches.filter(
+    (m) => m.status === "completed"
+  ).length;
+  const inProgressMatches = matches.filter(
+    (m) => m.status === "in_progress"
+  ).length;
   const pendingMatches = matches.filter((m) => m.status === "pending").length;
-  const totalProgress = matches.length > 0 ? (completedMatches / matches.length) * 100 : 0;
+  const totalProgress =
+    matches.length > 0 ? (completedMatches / matches.length) * 100 : 0;
 
-  const standings = competition.type === "round_robin"
-    ? calculateStandings(competition.teamIds, matches)
-    : null;
+  const standings =
+    competition.type === "round_robin"
+      ? calculateStandings(competition.teamIds, matches)
+      : null;
 
   const winner = competition.winnerId
     ? state.teams.find((t) => t.id === competition.winnerId)
@@ -227,7 +271,10 @@ export default function CompetitionDetailPage() {
       <main className="max-w-6xl mx-auto px-4 py-8">
         {/* Back Link */}
         <Link href="/competitions">
-          <Button variant="ghost" className="mb-6 gap-2 text-muted-foreground hover:text-foreground">
+          <Button
+            variant="ghost"
+            className="mb-6 gap-2 text-muted-foreground hover:text-foreground"
+          >
             <ArrowLeft className="w-4 h-4" />
             Back to Competitions
           </Button>
@@ -237,12 +284,16 @@ export default function CompetitionDetailPage() {
         <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-8">
           <div>
             <div className="flex items-center gap-3 mb-2 flex-wrap">
-              <h1 className="text-3xl font-bold tracking-tight">{competition.name}</h1>
-              <Badge className={`
+              <h1 className="text-3xl font-bold tracking-tight">
+                {competition.name}
+              </h1>
+              <Badge
+                className={`
                 ${competition.status === "draft" ? "status-draft" : ""}
                 ${competition.status === "in_progress" ? "status-active" : ""}
                 ${competition.status === "completed" ? "status-complete" : ""}
-              `}>
+              `}
+              >
                 {competition.status === "draft" && "Draft"}
                 {competition.status === "in_progress" && "Live"}
                 {competition.status === "completed" && "Completed"}
@@ -266,27 +317,30 @@ export default function CompetitionDetailPage() {
 
           <div className="flex items-center gap-3">
             {competition.status === "draft" && (
-              <Button onClick={() => setShowStartConfirm(true)} className="gap-2 shadow-lg shadow-primary/20" size="lg">
+              <Button
+                onClick={() => setShowStartConfirm(true)}
+                className="gap-2 shadow-lg shadow-primary/20"
+                size="lg"
+              >
                 <Play className="w-5 h-5" />
                 Start Competition
               </Button>
             )}
-            
+
             {/* Session sharing controls - only show for in_progress competitions */}
-            {competition.status === "in_progress" && (
-              isSharedMode ? (
+            {competition.status === "in_progress" &&
+              (isSharedMode ? (
                 <ShareButton />
               ) : (
-                <Button 
-                  onClick={() => setShowCreateSession(true)} 
-                  variant="outline" 
+                <Button
+                  onClick={() => setShowCreateSession(true)}
+                  variant="outline"
                   className="gap-2 cursor-pointer"
                 >
                   <Globe className="w-4 h-4" />
                   Share Live
                 </Button>
-              )
-            )}
+              ))}
           </div>
         </div>
 
@@ -300,7 +354,9 @@ export default function CompetitionDetailPage() {
                   <div
                     className="w-20 h-20 rounded-2xl flex items-center justify-center shadow-xl"
                     style={{
-                      background: `linear-gradient(135deg, ${winner.color || "#f59e0b"}, ${winner.color || "#f59e0b"}99)`,
+                      background: `linear-gradient(135deg, ${
+                        winner.color || "#f59e0b"
+                      }, ${winner.color || "#f59e0b"}99)`,
                     }}
                   >
                     <span className="text-3xl font-bold text-white">
@@ -312,7 +368,9 @@ export default function CompetitionDetailPage() {
                   </div>
                 </div>
                 <div className="text-center">
-                  <p className="text-sm text-amber-500 font-semibold uppercase tracking-wider mb-1">Champion</p>
+                  <p className="text-sm text-amber-500 font-semibold uppercase tracking-wider mb-1">
+                    Champion
+                  </p>
                   <p className="text-3xl font-bold">{winner.name}</p>
                 </div>
               </div>
@@ -328,21 +386,27 @@ export default function CompetitionDetailPage() {
                 <CardContent className="py-4 text-center">
                   <CheckCircle2 className="w-6 h-6 mx-auto mb-2 text-emerald-500" />
                   <div className="text-2xl font-bold">{completedMatches}</div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Completed</p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider">
+                    Completed
+                  </p>
                 </CardContent>
               </Card>
               <Card className="border-border/40 bg-card/30">
                 <CardContent className="py-4 text-center">
                   <Clock className="w-6 h-6 mx-auto mb-2 text-amber-500" />
                   <div className="text-2xl font-bold">{inProgressMatches}</div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider">In Progress</p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider">
+                    In Progress
+                  </p>
                 </CardContent>
               </Card>
               <Card className="border-border/40 bg-card/30">
                 <CardContent className="py-4 text-center">
                   <Play className="w-6 h-6 mx-auto mb-2 text-sky-500" />
                   <div className="text-2xl font-bold">{pendingMatches}</div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Pending</p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider">
+                    Pending
+                  </p>
                 </CardContent>
               </Card>
             </div>
@@ -378,7 +442,9 @@ export default function CompetitionDetailPage() {
                     <div
                       className="w-10 h-10 rounded-lg flex items-center justify-center shadow-md"
                       style={{
-                        background: `linear-gradient(135deg, ${team.color || "#3b82f6"}, ${team.color || "#3b82f6"}99)`,
+                        background: `linear-gradient(135deg, ${
+                          team.color || "#3b82f6"
+                        }, ${team.color || "#3b82f6"}99)`,
                       }}
                     >
                       <span className="text-sm font-bold text-white">
@@ -394,162 +460,242 @@ export default function CompetitionDetailPage() {
         )}
 
         {/* Round Robin - Show standings and matches */}
-        {competition.status !== "draft" && competition.type === "round_robin" && standings && (
-          <div className="space-y-6">
-            <Standings standings={standings} teams={competitionTeams} />
+        {competition.status !== "draft" &&
+          competition.type === "round_robin" &&
+          standings && (
+            <div className="space-y-6">
+              <Standings standings={standings} teams={competitionTeams} />
 
-            {/* Match Schedule */}
+              {/* Match Schedule */}
+              <Card className="border-border/40 bg-card/30">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Swords className="w-5 h-5 text-primary" />
+                    Match Schedule
+                  </CardTitle>
+                </CardHeader>
+                <Separator />
+                <CardContent className="pt-4">
+                  <div className="space-y-2">
+                    {matches
+                      .sort((a, b) => {
+                        const statusOrder = {
+                          in_progress: 0,
+                          pending: 1,
+                          completed: 2,
+                        };
+                        const statusDiff =
+                          statusOrder[a.status] - statusOrder[b.status];
+                        if (statusDiff !== 0) return statusDiff;
+                        if (a.round !== b.round) return a.round - b.round;
+                        return a.position - b.position;
+                      })
+                      .map((match) => {
+                        const homeTeam = competitionTeams.find(
+                          (t) => t.id === match.homeTeamId
+                        );
+                        const awayTeam = competitionTeams.find(
+                          (t) => t.id === match.awayTeamId
+                        );
+                        const homeWon = match.winnerId === match.homeTeamId;
+                        const awayWon = match.winnerId === match.awayTeamId;
+
+                        return (
+                          <div
+                            key={match.id}
+                            className={`
+                            p-4 rounded-xl border transition-all duration-200 group
+                            ${
+                              match.status === "in_progress"
+                                ? "border-amber-500/40 bg-amber-500/5 ring-1 ring-amber-500/20"
+                                : "border-border/40 bg-card"
+                            }
+                            ${
+                              match.status !== "completed"
+                                ? "cursor-pointer hover:border-primary/40 hover:bg-accent/30"
+                                : ""
+                            }
+                          `}
+                            onClick={() => {
+                              if (
+                                match.status === "pending" ||
+                                match.status === "in_progress"
+                              ) {
+                                handleMatchClick(match);
+                              }
+                            }}
+                            role={
+                              match.status !== "completed"
+                                ? "button"
+                                : undefined
+                            }
+                            tabIndex={
+                              match.status !== "completed" ? 0 : undefined
+                            }
+                            onKeyDown={(e) => {
+                              if (
+                                (e.key === "Enter" || e.key === " ") &&
+                                match.status !== "completed"
+                              ) {
+                                handleMatchClick(match);
+                              }
+                            }}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3 flex-1 min-w-0">
+                                <div
+                                  className="w-3 h-3 rounded-full shrink-0"
+                                  style={{
+                                    backgroundColor:
+                                      homeTeam?.color || "#3b82f6",
+                                  }}
+                                />
+                                <span
+                                  className={`truncate ${
+                                    homeWon
+                                      ? "font-semibold text-emerald-500"
+                                      : ""
+                                  }`}
+                                >
+                                  {homeTeam?.name || "TBD"}
+                                </span>
+                              </div>
+
+                              <div className="flex items-center gap-2 shrink-0 px-4">
+                                {match.status === "completed" ? (
+                                  <span className="text-lg font-bold tabular-nums">
+                                    {match.homeScore} - {match.awayScore}
+                                  </span>
+                                ) : (
+                                  <>
+                                    <Badge
+                                      className={
+                                        match.status === "in_progress"
+                                          ? "status-active"
+                                          : "status-draft"
+                                      }
+                                    >
+                                      {match.status === "in_progress"
+                                        ? "Live"
+                                        : "Pending"}
+                                    </Badge>
+                                    {canEdit && match.status === "pending" && (
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setEditingMatch(match);
+                                        }}
+                                        aria-label={`Edit match ${homeTeam?.name} vs ${awayTeam?.name}`}
+                                      >
+                                        <Pencil className="w-3.5 h-3.5" />
+                                      </Button>
+                                    )}
+                                  </>
+                                )}
+                              </div>
+
+                              <div className="flex items-center gap-3 flex-1 min-w-0 justify-end">
+                                <span
+                                  className={`truncate ${
+                                    awayWon
+                                      ? "font-semibold text-emerald-500"
+                                      : ""
+                                  }`}
+                                >
+                                  {awayTeam?.name || "TBD"}
+                                </span>
+                                <div
+                                  className="w-3 h-3 rounded-full shrink-0"
+                                  style={{
+                                    backgroundColor:
+                                      awayTeam?.color || "#f97316",
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+        {/* Single Elimination Bracket */}
+        {competition.status !== "draft" &&
+          competition.type === "single_elimination" && (
             <Card className="border-border/40 bg-card/30">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Swords className="w-5 h-5 text-primary" />
-                  Match Schedule
+                  <Trophy className="w-5 h-5 text-primary" />
+                  Tournament Bracket
                 </CardTitle>
               </CardHeader>
               <Separator />
               <CardContent className="pt-4">
-                <div className="space-y-2">
-                  {matches
-                    .sort((a, b) => {
-                      const statusOrder = { in_progress: 0, pending: 1, completed: 2 };
-                      const statusDiff = statusOrder[a.status] - statusOrder[b.status];
-                      if (statusDiff !== 0) return statusDiff;
-                      if (a.round !== b.round) return a.round - b.round;
-                      return a.position - b.position;
-                    })
-                    .map((match) => {
-                      const homeTeam = competitionTeams.find((t) => t.id === match.homeTeamId);
-                      const awayTeam = competitionTeams.find((t) => t.id === match.awayTeamId);
-                      const homeWon = match.winnerId === match.homeTeamId;
-                      const awayWon = match.winnerId === match.awayTeamId;
-
-                      return (
-                        <div
-                          key={match.id}
-                          className={`
-                            p-4 rounded-xl border transition-all duration-200
-                            ${match.status === "in_progress"
-                              ? "border-amber-500/40 bg-amber-500/5 ring-1 ring-amber-500/20"
-                              : "border-border/40 bg-card"
-                            }
-                            ${match.status !== "completed" ? "cursor-pointer hover:border-primary/40 hover:bg-accent/30" : ""}
-                          `}
-                          onClick={() => {
-                            if (match.status === "pending" || match.status === "in_progress") {
-                              handleMatchClick(match);
-                            }
-                          }}
-                          role={match.status !== "completed" ? "button" : undefined}
-                          tabIndex={match.status !== "completed" ? 0 : undefined}
-                          onKeyDown={(e) => {
-                            if ((e.key === "Enter" || e.key === " ") && match.status !== "completed") {
-                              handleMatchClick(match);
-                            }
-                          }}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3 flex-1 min-w-0">
-                              <div
-                                className="w-3 h-3 rounded-full shrink-0"
-                                style={{ backgroundColor: homeTeam?.color || "#3b82f6" }}
-                              />
-                              <span className={`truncate ${homeWon ? "font-semibold text-emerald-500" : ""}`}>
-                                {homeTeam?.name || "TBD"}
-                              </span>
-                            </div>
-
-                            <div className="flex items-center gap-4 shrink-0 px-4">
-                              {match.status === "completed" ? (
-                                <span className="text-lg font-bold tabular-nums">
-                                  {match.homeScore} - {match.awayScore}
-                                </span>
-                              ) : (
-                                <Badge className={match.status === "in_progress" ? "status-active" : "status-draft"}>
-                                  {match.status === "in_progress" ? "Live" : "Pending"}
-                                </Badge>
-                              )}
-                            </div>
-
-                            <div className="flex items-center gap-3 flex-1 min-w-0 justify-end">
-                              <span className={`truncate ${awayWon ? "font-semibold text-emerald-500" : ""}`}>
-                                {awayTeam?.name || "TBD"}
-                              </span>
-                              <div
-                                className="w-3 h-3 rounded-full shrink-0"
-                                style={{ backgroundColor: awayTeam?.color || "#f97316" }}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                </div>
+                <Bracket
+                  matches={matches}
+                  teams={competitionTeams}
+                  totalTeams={competition.teamIds.length}
+                  onMatchClick={handleMatchClick}
+                  onEditMatch={canEdit ? setEditingMatch : undefined}
+                />
               </CardContent>
             </Card>
-          </div>
-        )}
-
-        {/* Single Elimination Bracket */}
-        {competition.status !== "draft" && competition.type === "single_elimination" && (
-          <Card className="border-border/40 bg-card/30">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Trophy className="w-5 h-5 text-primary" />
-                Tournament Bracket
-              </CardTitle>
-            </CardHeader>
-            <Separator />
-            <CardContent className="pt-4">
-              <Bracket
-                matches={matches}
-                teams={competitionTeams}
-                totalTeams={competition.teamIds.length}
-                onMatchClick={handleMatchClick}
-              />
-            </CardContent>
-          </Card>
-        )}
+          )}
 
         {/* Double Elimination Bracket */}
-        {competition.status !== "draft" && competition.type === "double_elimination" && (
-          <Card className="border-border/40 bg-card/30">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Trophy className="w-5 h-5 text-primary" />
-                Tournament Bracket
-              </CardTitle>
-            </CardHeader>
-            <Separator />
-            <CardContent className="pt-4">
-              <DoubleBracket
-                matches={matches}
-                teams={competitionTeams}
-                totalTeams={competition.teamIds.length}
-                onMatchClick={handleMatchClick}
-              />
-            </CardContent>
-          </Card>
-        )}
+        {competition.status !== "draft" &&
+          competition.type === "double_elimination" && (
+            <Card className="border-border/40 bg-card/30">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Trophy className="w-5 h-5 text-primary" />
+                  Tournament Bracket
+                </CardTitle>
+              </CardHeader>
+              <Separator />
+              <CardContent className="pt-4">
+                <DoubleBracket
+                  matches={matches}
+                  teams={competitionTeams}
+                  totalTeams={competition.teamIds.length}
+                  onMatchClick={handleMatchClick}
+                  onEditMatch={canEdit ? setEditingMatch : undefined}
+                />
+              </CardContent>
+            </Card>
+          )}
 
         {/* Win 2 & Out View */}
-        {competition.status !== "draft" && competition.type === "win2out" && competition.win2outState && (
-          <Win2OutView
-            state={competition.win2outState}
-            matches={matches}
-            teams={competitionTeams}
-            onMatchClick={handleMatchClick}
-          />
-        )}
+        {competition.status !== "draft" &&
+          competition.type === "win2out" &&
+          competition.win2outState && (
+            <Win2OutView
+              state={competition.win2outState}
+              matches={matches}
+              teams={competitionTeams}
+              competition={competition}
+              onMatchClick={handleMatchClick}
+            />
+          )}
 
         {/* Two Match Rotation View */}
-        {competition.status !== "draft" && competition.type === "two_match_rotation" && competition.twoMatchRotationState && (
-          <TwoMatchRotationView
-            state={competition.twoMatchRotationState}
-            matches={matches}
-            teams={competitionTeams}
-            onMatchClick={handleMatchClick}
-          />
-        )}
+        {competition.status !== "draft" &&
+          competition.type === "two_match_rotation" &&
+          competition.twoMatchRotationState && (
+            <TwoMatchRotationView
+              state={competition.twoMatchRotationState}
+              matches={matches}
+              teams={competitionTeams}
+              competition={competition}
+              onMatchClick={handleMatchClick}
+            />
+          )}
       </main>
 
       {/* Start Competition Confirmation */}
@@ -561,15 +707,24 @@ export default function CompetitionDetailPage() {
               Start Competition?
             </DialogTitle>
             <DialogDescription>
-              This will generate the {typeLabels[competition.type].toLowerCase()} schedule for{" "}
-              {competition.teamIds.length} teams. You won&apos;t be able to add or remove teams after starting.
+              This will generate the{" "}
+              {typeLabels[competition.type].toLowerCase()} schedule for{" "}
+              {competition.teamIds.length} teams. You won&apos;t be able to add
+              or remove teams after starting.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex-row gap-2 sm:gap-2">
-            <Button variant="outline" onClick={() => setShowStartConfirm(false)} className="flex-1">
+            <Button
+              variant="outline"
+              onClick={() => setShowStartConfirm(false)}
+              className="flex-1"
+            >
               Cancel
             </Button>
-            <Button onClick={handleStartCompetition} className="flex-1 gap-2 shadow-lg shadow-primary/20">
+            <Button
+              onClick={handleStartCompetition}
+              className="flex-1 gap-2 shadow-lg shadow-primary/20"
+            >
               <Play className="w-4 h-4" />
               Start
             </Button>
@@ -578,40 +733,75 @@ export default function CompetitionDetailPage() {
       </Dialog>
 
       {/* Match Action Dialog */}
-      <Dialog open={!!selectedMatch} onOpenChange={() => setSelectedMatch(null)}>
+      <Dialog
+        open={!!selectedMatch}
+        onOpenChange={() => setSelectedMatch(null)}
+      >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Swords className="w-5 h-5 text-primary" />
-              {selectedMatch?.status === "in_progress" ? "Continue Match" : "Start Match"}
+              {selectedMatch?.status === "in_progress"
+                ? "Continue Match"
+                : "Start Match"}
             </DialogTitle>
             <DialogDescription>
-              {competitionTeams.find((t) => t.id === selectedMatch?.homeTeamId)?.name} vs{" "}
-              {competitionTeams.find((t) => t.id === selectedMatch?.awayTeamId)?.name}
+              {
+                competitionTeams.find((t) => t.id === selectedMatch?.homeTeamId)
+                  ?.name
+              }{" "}
+              vs{" "}
+              {
+                competitionTeams.find((t) => t.id === selectedMatch?.awayTeamId)
+                  ?.name
+              }
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex-row gap-2 sm:gap-2">
-            <Button variant="outline" onClick={() => setSelectedMatch(null)} className="flex-1">
+            <Button
+              variant="outline"
+              onClick={() => setSelectedMatch(null)}
+              className="flex-1"
+            >
               Cancel
             </Button>
-            <Button onClick={handlePlayMatch} className="flex-1 gap-2 shadow-lg shadow-primary/20">
+            <Button
+              onClick={handlePlayMatch}
+              className="flex-1 gap-2 shadow-lg shadow-primary/20"
+            >
               <Play className="w-4 h-4" />
-              {selectedMatch?.status === "in_progress" ? "Continue" : "Play Match"}
+              {selectedMatch?.status === "in_progress"
+                ? "Continue"
+                : "Play Match"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Create Session Dialog */}
-      <CreateSessionDialog 
-        open={showCreateSession} 
+      <CreateSessionDialog
+        open={showCreateSession}
         onOpenChange={setShowCreateSession}
         defaultName={competition?.name}
-        competitionData={competition ? {
-          competition,
-          teams: competitionTeams,
-          matches,
-        } : undefined}
+        competitionData={
+          competition
+            ? {
+                competition,
+                teams: competitionTeams,
+                matches,
+              }
+            : undefined
+        }
+      />
+
+      {/* Edit Match Dialog */}
+      <EditMatchDialog
+        open={!!editingMatch}
+        onOpenChange={(open) => !open && setEditingMatch(null)}
+        match={editingMatch}
+        matches={matches}
+        teams={competitionTeams}
+        competition={competition}
       />
     </div>
   );

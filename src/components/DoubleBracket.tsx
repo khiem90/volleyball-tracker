@@ -2,7 +2,10 @@
 
 import { useMemo } from "react";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Pencil } from "lucide-react";
 import { getDoubleBracketStructure, getDoubleElimRoundName } from "@/lib/doubleElimination";
+import { useApp } from "@/context/AppContext";
 import type { Match, PersistentTeam } from "@/types/game";
 
 interface DoubleBracketProps {
@@ -10,9 +13,11 @@ interface DoubleBracketProps {
   teams: PersistentTeam[];
   totalTeams: number;
   onMatchClick?: (match: Match) => void;
+  onEditMatch?: (match: Match) => void;
 }
 
-export const DoubleBracket = ({ matches, teams, totalTeams, onMatchClick }: DoubleBracketProps) => {
+export const DoubleBracket = ({ matches, teams, totalTeams, onMatchClick, onEditMatch }: DoubleBracketProps) => {
+  const { canEdit } = useApp();
   const winnersRounds = Math.log2(totalTeams);
 
   const teamsMap = useMemo(() => {
@@ -48,75 +53,92 @@ export const DoubleBracket = ({ matches, teams, totalTeams, onMatchClick }: Doub
     const awayWon = match.winnerId === match.awayTeamId;
 
     return (
-      <Card
-        key={match.id}
-        className={`
-          w-44 overflow-hidden border-border/50 bg-card/50
-          ${isClickable ? "cursor-pointer hover:border-primary/50 hover:bg-card transition-all" : "opacity-75"}
-        `}
-        onClick={() => handleMatchClick(match)}
-        role={isClickable ? "button" : undefined}
-        tabIndex={isClickable ? 0 : undefined}
-        onKeyDown={(e) => {
-          if (isClickable && (e.key === "Enter" || e.key === " ")) {
-            e.preventDefault();
-            handleMatchClick(match);
-          }
-        }}
-      >
-        {/* Home Team */}
-        <div
+      <div key={match.id} className="relative group">
+        <Card
           className={`
-            flex items-center justify-between px-2 py-1.5 border-b border-border/30 text-xs
-            ${homeWon ? "bg-emerald-500/10" : ""}
-            ${isCompleted && !homeWon ? "opacity-50" : ""}
+            w-44 overflow-hidden border-border/50 bg-card/50 relative
+            ${isClickable ? "cursor-pointer hover:border-primary/50 hover:bg-card transition-all" : "opacity-75"}
           `}
+          onClick={() => handleMatchClick(match)}
+          role={isClickable ? "button" : undefined}
+          tabIndex={isClickable ? 0 : undefined}
+          onKeyDown={(e) => {
+            if (isClickable && (e.key === "Enter" || e.key === " ")) {
+              e.preventDefault();
+              handleMatchClick(match);
+            }
+          }}
         >
-          <div className="flex items-center gap-1.5 min-w-0">
-            <div
-              className="w-2 h-2 rounded-full flex-shrink-0"
-              style={{ backgroundColor: getTeamColor(match.homeTeamId) }}
-            />
-            <span className={`truncate ${homeWon ? "font-semibold text-emerald-500" : ""}`}>
-              {getTeamName(match.homeTeamId)}
-            </span>
+          {/* Home Team */}
+          <div
+            className={`
+              flex items-center justify-between px-2 py-1.5 border-b border-border/30 text-xs
+              ${homeWon ? "bg-emerald-500/10" : ""}
+              ${isCompleted && !homeWon ? "opacity-50" : ""}
+            `}
+          >
+            <div className="flex items-center gap-1.5 min-w-0">
+              <div
+                className="w-2 h-2 rounded-full flex-shrink-0"
+                style={{ backgroundColor: getTeamColor(match.homeTeamId) }}
+              />
+              <span className={`truncate ${homeWon ? "font-semibold text-emerald-500" : ""}`}>
+                {getTeamName(match.homeTeamId)}
+              </span>
+            </div>
+            {isCompleted && (
+              <span className={`font-bold tabular-nums ${homeWon ? "text-emerald-500" : ""}`}>
+                {match.homeScore}
+              </span>
+            )}
           </div>
-          {isCompleted && (
-            <span className={`font-bold tabular-nums ${homeWon ? "text-emerald-500" : ""}`}>
-              {match.homeScore}
-            </span>
-          )}
-        </div>
 
-        {/* Away Team */}
-        <div
-          className={`
-            flex items-center justify-between px-2 py-1.5 text-xs
-            ${awayWon ? "bg-emerald-500/10" : ""}
-            ${isCompleted && !awayWon ? "opacity-50" : ""}
-          `}
-        >
-          <div className="flex items-center gap-1.5 min-w-0">
-            <div
-              className="w-2 h-2 rounded-full flex-shrink-0"
-              style={{ backgroundColor: getTeamColor(match.awayTeamId) }}
-            />
-            <span className={`truncate ${awayWon ? "font-semibold text-emerald-500" : ""}`}>
-              {getTeamName(match.awayTeamId)}
-            </span>
+          {/* Away Team */}
+          <div
+            className={`
+              flex items-center justify-between px-2 py-1.5 text-xs
+              ${awayWon ? "bg-emerald-500/10" : ""}
+              ${isCompleted && !awayWon ? "opacity-50" : ""}
+            `}
+          >
+            <div className="flex items-center gap-1.5 min-w-0">
+              <div
+                className="w-2 h-2 rounded-full flex-shrink-0"
+                style={{ backgroundColor: getTeamColor(match.awayTeamId) }}
+              />
+              <span className={`truncate ${awayWon ? "font-semibold text-emerald-500" : ""}`}>
+                {getTeamName(match.awayTeamId)}
+              </span>
+            </div>
+            {isCompleted && (
+              <span className={`font-bold tabular-nums ${awayWon ? "text-emerald-500" : ""}`}>
+                {match.awayScore}
+              </span>
+            )}
           </div>
-          {isCompleted && (
-            <span className={`font-bold tabular-nums ${awayWon ? "text-emerald-500" : ""}`}>
-              {match.awayScore}
-            </span>
-          )}
-        </div>
 
-        {/* Status Indicator */}
-        {match.status === "in_progress" && (
-          <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-500 rounded-full animate-pulse" />
+          {/* Status Indicator */}
+          {match.status === "in_progress" && (
+            <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-500 rounded-full animate-pulse" />
+          )}
+        </Card>
+
+        {/* Edit Button (only for pending matches) */}
+        {canEdit && onEditMatch && match.status === "pending" && isClickable && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute -top-2 -left-2 h-6 w-6 bg-background border border-border/50 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm z-10"
+            onClick={(e) => {
+              e.stopPropagation();
+              onEditMatch(match);
+            }}
+            aria-label="Edit match assignment"
+          >
+            <Pencil className="w-3 h-3" />
+          </Button>
         )}
-      </Card>
+      </div>
     );
   };
 
