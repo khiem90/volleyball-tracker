@@ -19,7 +19,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Trophy, Trash2, Users, Calendar, ChevronRight, RefreshCw, Brackets, Layers, Crown, RotateCw, Play } from "lucide-react";
+import { Trash2, Users, Calendar, ChevronRight, RefreshCw, Brackets, Layers, Crown, RotateCw, Play } from "lucide-react";
 import type { Competition, CompetitionStatus, CompetitionType } from "@/types/game";
 
 interface CompetitionCardProps {

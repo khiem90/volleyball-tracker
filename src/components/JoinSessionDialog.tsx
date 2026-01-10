@@ -46,7 +46,7 @@ export const JoinSessionDialog = ({ open, onOpenChange }: JoinSessionDialogProps
       } else {
         setError("Session not found. Check the code and try again.");
       }
-    } catch (err) {
+    } catch {
       setError("Failed to join session. Please try again.");
     } finally {
       setIsLoading(false);

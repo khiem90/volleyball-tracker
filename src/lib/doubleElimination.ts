@@ -17,7 +17,6 @@ export const generateDoubleEliminationBracket = (
   }
 
   const winnersRounds = Math.log2(n);
-  const losersRounds = (winnersRounds - 1) * 2; // Losers bracket has more rounds
 
   // Generate seeded matchups for first round
   const seededOrder = getSeededMatchups(n);

@@ -17,7 +17,6 @@ import {
   updateSessionData,
   subscribeToSession,
   getSessionRole,
-  hasAdminAccess,
   validateAdminToken,
   getSessionUrl,
   getAdminUrl,
@@ -105,7 +104,7 @@ export const SessionProvider = ({ children }: SessionProviderProps) => {
           // Auto-rejoin the stored session
           joinSession(shareCode);
         }
-      } catch (err) {
+      } catch {
         // Invalid stored data, clear it
         localStorage.removeItem(SESSION_STORAGE_KEY);
       }

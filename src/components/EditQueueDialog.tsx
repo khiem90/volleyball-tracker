@@ -75,6 +75,7 @@ export const EditQueueDialog = ({
   }, [competition, teamsOnCourt]);
 
   // Reset queue when dialog opens or queue changes
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (open) {
       setQueue([...currentQueue]);
@@ -82,6 +83,7 @@ export const EditQueueDialog = ({
       setDragOverIndex(null);
     }
   }, [open, currentQueue]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Check if queue has changed
   const hasChanges = useMemo(() => {

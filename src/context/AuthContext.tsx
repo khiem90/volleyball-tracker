@@ -70,6 +70,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [isConfigured] = useState(() => isFirebaseConfigured());
 
   // Listen to auth state changes
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!isConfigured || !auth) {
       setIsLoading(false);
@@ -87,6 +88,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
     return () => unsubscribe();
   }, [isConfigured]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Sign in with Google
   const signInWithGoogle = useCallback(async () => {

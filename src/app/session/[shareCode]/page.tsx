@@ -1,14 +1,9 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
-import { useParams, useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { useSession } from "@/context/SessionContext";
-import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { SessionAuth } from "@/components/SessionAuth";
 import { ShareButton } from "@/components/ShareSession";
 import { Bracket } from "@/components/Bracket";
@@ -39,146 +34,36 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import type { RoundRobinStanding, PersistentTeam } from "@/types/game";
+import { useSessionPage } from "@/hooks/useSessionPage";
 
 export default function SessionPage() {
-  const params = useParams();
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const shareCode = params.shareCode as string;
-  const adminTokenFromUrl = searchParams.get("admin");
-
   const {
-    session,
-    role,
-    isLoading,
-    error,
-    isSharedMode,
-    joinSession,
-    leaveSession,
-    endSession,
-    applyAdminToken,
     canEdit,
+    competition,
+    completedMatches,
+    error,
+    handleEndSession,
+    handleLeaveSession,
+    handleMatchClick,
+    inProgressMatches,
+    isConfigured,
     isCreator,
-  } = useSession();
-  const { user, isConfigured } = useAuth();
-
-  const [showAuth, setShowAuth] = useState(false);
-  const [hasJoined, setHasJoined] = useState(false);
-  const [showEndSessionDialog, setShowEndSessionDialog] = useState(false);
-  const [isEndingSession, setIsEndingSession] = useState(false);
-
-  // Join session on mount
-  useEffect(() => {
-    if (shareCode && !hasJoined && isConfigured) {
-      setHasJoined(true);
-      joinSession(shareCode).then((success) => {
-        if (!success) {
-          // Session not found, handled by error state
-        }
-      });
-    }
-  }, [shareCode, hasJoined, joinSession, isConfigured]);
-
-  // Apply admin token from URL if provided
-  useEffect(() => {
-    if (adminTokenFromUrl && session && !canEdit) {
-      const success = applyAdminToken(adminTokenFromUrl);
-      if (success) {
-        // Remove token from URL for security
-        router.replace(`/session/${shareCode}`);
-      }
-    }
-  }, [adminTokenFromUrl, session, canEdit, applyAdminToken, router, shareCode]);
-
-  // Handle ending the session
-  const handleEndSession = async () => {
-    setIsEndingSession(true);
-    const summary = await endSession();
-    setIsEndingSession(false);
-    setShowEndSessionDialog(false);
-    if (summary) {
-      // Redirect creator to their session summary
-      router.push(`/summary/${summary.shareCode}`);
-    }
-  };
-
-  // Handle leaving the session (go back to local mode)
-  const handleLeaveSession = () => {
-    leaveSession();
-    router.push("/");
-  };
-
-  // Get teams map for lookups
-  const teamsMap = useMemo(() => {
-    const map = new Map<string, PersistentTeam>();
-    if (session?.teams) {
-      session.teams.forEach((team) => map.set(team.id, team));
-    }
-    return map;
-  }, [session?.teams]);
-
-  // Calculate round robin standings if applicable
-  const standings = useMemo((): RoundRobinStanding[] | null => {
-    if (!session?.competition || session.competition.type !== "round_robin") {
-      return null;
-    }
-
-    const standingsMap = new Map<string, RoundRobinStanding>();
-
-    // Initialize standings
-    session.competition.teamIds.forEach((teamId) => {
-      standingsMap.set(teamId, {
-        teamId,
-        played: 0,
-        won: 0,
-        lost: 0,
-        pointsFor: 0,
-        pointsAgainst: 0,
-        pointsDiff: 0,
-        competitionPoints: 0,
-      });
-    });
-
-    // Calculate from completed matches
-    const completedMatches = (session.matches || []).filter(
-      (m) => m.competitionId === session.competition?.id && m.status === "completed"
-    );
-
-    completedMatches.forEach((match) => {
-      const homeStanding = standingsMap.get(match.homeTeamId);
-      const awayStanding = standingsMap.get(match.awayTeamId);
-
-      if (homeStanding && awayStanding) {
-        homeStanding.played++;
-        awayStanding.played++;
-        homeStanding.pointsFor += match.homeScore;
-        homeStanding.pointsAgainst += match.awayScore;
-        awayStanding.pointsFor += match.awayScore;
-        awayStanding.pointsAgainst += match.homeScore;
-
-        if (match.homeScore > match.awayScore) {
-          homeStanding.won++;
-          homeStanding.competitionPoints += 3;
-          awayStanding.lost++;
-        } else {
-          awayStanding.won++;
-          awayStanding.competitionPoints += 3;
-          homeStanding.lost++;
-        }
-
-        homeStanding.pointsDiff = homeStanding.pointsFor - homeStanding.pointsAgainst;
-        awayStanding.pointsDiff = awayStanding.pointsFor - awayStanding.pointsAgainst;
-      }
-    });
-
-    return Array.from(standingsMap.values()).sort((a, b) => {
-      if (b.competitionPoints !== a.competitionPoints) {
-        return b.competitionPoints - a.competitionPoints;
-      }
-      return b.pointsDiff - a.pointsDiff;
-    });
-  }, [session]);
+    isEndingSession,
+    isLoading,
+    matches,
+    pendingMatches,
+    role,
+    session,
+    setShowAuth,
+    setShowEndSessionDialog,
+    shareCode,
+    showAuth,
+    showEndSessionDialog,
+    standings,
+    teams,
+    teamsMap,
+    user,
+  } = useSessionPage();
 
   // Role badge styling
   const roleIcon = {
@@ -259,14 +144,6 @@ export default function SessionPage() {
       </div>
     );
   }
-
-  const competition = session.competition;
-  const matches = session.matches || [];
-  const teams = session.teams || [];
-
-  const pendingMatches = matches.filter((m) => m.status === "pending");
-  const inProgressMatches = matches.filter((m) => m.status === "in_progress");
-  const completedMatches = matches.filter((m) => m.status === "completed");
 
   return (
     <div className="min-h-screen bg-background">
@@ -409,7 +286,7 @@ export default function SessionPage() {
                     matches={matches.filter((m) => m.competitionId === competition.id)}
                     teams={teams}
                     totalTeams={competition.teamIds.length}
-                    onMatchClick={canEdit ? (match) => router.push(`/match/${match.id}`) : undefined}
+                    onMatchClick={canEdit ? handleMatchClick : undefined}
                   />
                 </CardContent>
               </Card>
@@ -425,7 +302,7 @@ export default function SessionPage() {
                     matches={matches.filter((m) => m.competitionId === competition.id)}
                     teams={teams}
                     totalTeams={competition.teamIds.length}
-                    onMatchClick={canEdit ? (match) => router.push(`/match/${match.id}`) : undefined}
+                    onMatchClick={canEdit ? handleMatchClick : undefined}
                   />
                 </CardContent>
               </Card>
@@ -485,22 +362,22 @@ export default function SessionPage() {
 
             {/* Win 2 Out View */}
             {competition.type === "win2out" && competition.win2outState && (
-              <Win2OutView
-                state={competition.win2outState}
-                teams={teams}
-                matches={matches}
-                onMatchClick={canEdit ? (match) => router.push(`/match/${match.id}`) : undefined}
-              />
+                <Win2OutView
+                  state={competition.win2outState}
+                  teams={teams}
+                  matches={matches}
+                  onMatchClick={canEdit ? handleMatchClick : undefined}
+                />
             )}
 
             {/* Two Match Rotation View */}
             {competition.type === "two_match_rotation" && competition.twoMatchRotationState && (
-              <TwoMatchRotationView
-                state={competition.twoMatchRotationState}
-                teams={teams}
-                matches={matches}
-                onMatchClick={canEdit ? (match) => router.push(`/match/${match.id}`) : undefined}
-              />
+                <TwoMatchRotationView
+                  state={competition.twoMatchRotationState}
+                  teams={teams}
+                  matches={matches}
+                  onMatchClick={canEdit ? handleMatchClick : undefined}
+                />
             )}
           </>
         )}
@@ -525,7 +402,7 @@ export default function SessionPage() {
                     className={`flex items-center justify-between p-4 rounded-xl bg-muted/50 ${
                       canEdit ? "cursor-pointer hover:bg-muted transition-colors" : ""
                     }`}
-                    onClick={canEdit ? () => router.push(`/match/${match.id}`) : undefined}
+                    onClick={canEdit ? () => handleMatchClick(match) : undefined}
                   >
                     <div className="flex items-center gap-3">
                       <div

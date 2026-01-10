@@ -1,12 +1,10 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { Navigation } from "@/components/Navigation";
 import { Background } from "@/components/Background";
 import { CompetitionCard } from "@/components/CompetitionCard";
-import { useApp } from "@/context/AppContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -17,58 +15,18 @@ import {
   StaggerItem,
   slideUp,
 } from "@/components/motion";
-import type { CompetitionStatus } from "@/types/game";
-
-type FilterOption = "all" | CompetitionStatus;
+import { useCompetitionsPage } from "@/hooks/useCompetitionsPage";
 
 export default function CompetitionsPage() {
-  const { state, deleteCompetition } = useApp();
-  const [filter, setFilter] = useState<FilterOption>("all");
-
-  const handleDeleteCompetition = useCallback(
-    (id: string) => {
-      deleteCompetition(id);
-    },
-    [deleteCompetition]
-  );
-
-  const handleFilterChange = useCallback((value: string) => {
-    setFilter(value as FilterOption);
-  }, []);
-
-  const filteredCompetitions = useMemo(() => {
-    const competitions = [...state.competitions].sort(
-      (a, b) => b.createdAt - a.createdAt
-    );
-    if (filter === "all") return competitions;
-    return competitions.filter((c) => c.status === filter);
-  }, [state.competitions, filter]);
-
-  const getMatchStats = useCallback(
-    (competitionId: string) => {
-      const matches = state.matches.filter(
-        (m) => m.competitionId === competitionId
-      );
-      const completedMatches = matches.filter((m) => m.status === "completed");
-      return {
-        total: matches.length,
-        completed: completedMatches.length,
-      };
-    },
-    [state.matches]
-  );
-
-  const getCounts = useMemo(
-    () => ({
-      all: state.competitions.length,
-      draft: state.competitions.filter((c) => c.status === "draft").length,
-      in_progress: state.competitions.filter((c) => c.status === "in_progress")
-        .length,
-      completed: state.competitions.filter((c) => c.status === "completed")
-        .length,
-    }),
-    [state.competitions]
-  );
+  const {
+    competitions,
+    counts,
+    filter,
+    filteredCompetitions,
+    getMatchStats,
+    handleDeleteCompetition,
+    handleFilterChange,
+  } = useCompetitionsPage();
 
   return (
     <Background variant="default">
@@ -91,7 +49,7 @@ export default function CompetitionsPage() {
                 variant="secondary"
                 className="text-sm bg-primary/20 text-primary"
               >
-                {state.competitions.length}
+                {competitions.length}
               </Badge>
             </div>
             <p className="text-muted-foreground">
@@ -110,7 +68,7 @@ export default function CompetitionsPage() {
 
         {/* Filter Tabs */}
         <AnimatePresence>
-          {state.competitions.length > 0 && (
+          {competitions.length > 0 && (
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -128,7 +86,7 @@ export default function CompetitionsPage() {
                       variant="secondary"
                       className="h-5 px-1.5 text-xs bg-background/20"
                     >
-                      {getCounts.all}
+                      {counts.all}
                     </Badge>
                   </TabsTrigger>
                   <TabsTrigger
@@ -140,7 +98,7 @@ export default function CompetitionsPage() {
                       variant="secondary"
                       className="h-5 px-1.5 text-xs bg-background/20"
                     >
-                      {getCounts.in_progress}
+                      {counts.in_progress}
                     </Badge>
                   </TabsTrigger>
                   <TabsTrigger
@@ -152,7 +110,7 @@ export default function CompetitionsPage() {
                       variant="secondary"
                       className="h-5 px-1.5 text-xs bg-background/20"
                     >
-                      {getCounts.draft}
+                      {counts.draft}
                     </Badge>
                   </TabsTrigger>
                   <TabsTrigger
@@ -164,7 +122,7 @@ export default function CompetitionsPage() {
                       variant="secondary"
                       className="h-5 px-1.5 text-xs bg-background/20"
                     >
-                      {getCounts.completed}
+                      {counts.completed}
                     </Badge>
                   </TabsTrigger>
                 </TabsList>
@@ -174,7 +132,7 @@ export default function CompetitionsPage() {
         </AnimatePresence>
 
         {/* Competitions List */}
-        {state.competitions.length === 0 ? (
+        {competitions.length === 0 ? (
           <MotionDiv
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}

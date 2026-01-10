@@ -31,7 +31,7 @@ export const SessionAuth = ({
   showViewerOption = true,
 }: SessionAuthProps) => {
   const { signInWithGoogle, signInWithEmail, signUpWithEmail, isConfigured } = useAuth();
-  const { applyAdminToken, session } = useSession();
+  const { applyAdminToken } = useSession();
 
   const [activeTab, setActiveTab] = useState<"signin" | "signup" | "admin">("signin");
   const [email, setEmail] = useState("");

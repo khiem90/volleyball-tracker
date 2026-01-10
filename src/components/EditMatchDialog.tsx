@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Dialog,
   DialogContent,
@@ -38,6 +38,7 @@ export const EditMatchDialog = ({
   const [error, setError] = useState<string>("");
 
   // Reset form when match changes
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (match) {
       setHomeTeamId(match.homeTeamId);
@@ -45,6 +46,7 @@ export const EditMatchDialog = ({
       setError("");
     }
   }, [match]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Get teams currently playing on OTHER courts (not this match)
   const teamsOnOtherCourts = useMemo(() => {
@@ -73,14 +75,14 @@ export const EditMatchDialog = ({
   }, [teams, competition]);
 
   // Check if a team is on another court
-  const isTeamOnOtherCourt = (teamId: string) => {
+  const isTeamOnOtherCourt = useCallback((teamId: string) => {
     if (!teamId) return false;
     // Allow teams that are currently in this match
     if (match && (teamId === match.homeTeamId || teamId === match.awayTeamId)) {
       return false;
     }
     return teamsOnOtherCourts.has(teamId);
-  };
+  }, [match, teamsOnOtherCourts]);
 
   // Check if the selected matchup is valid
   const isValidMatchup = useMemo(() => {
@@ -90,7 +92,7 @@ export const EditMatchDialog = ({
     if (isTeamOnOtherCourt(homeTeamId) || isTeamOnOtherCourt(awayTeamId))
       return false;
     return true;
-  }, [homeTeamId, awayTeamId, teamsOnOtherCourts]);
+  }, [homeTeamId, awayTeamId, isTeamOnOtherCourt]);
 
   // Check if anything has changed
   const hasChanges = useMemo(() => {

@@ -908,7 +908,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
 
       // Helper to update queue - swap teams in/out
       const updateQueue = (currentQueue: string[]): string[] => {
-        let newQueue = [...currentQueue];
+        const newQueue = [...currentQueue];
 
         // For each team being added from queue, find its position and replace with removed team
         for (let i = 0; i < teamsBeingAdded.length; i++) {
@@ -1115,7 +1115,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
       if (!competition) return;
 
       let updatedCompetition = { ...competition };
-      let matchUpdates: { matchId: string; homeTeamId: string; awayTeamId: string }[] = [];
+      const matchUpdates: { matchId: string; homeTeamId: string; awayTeamId: string }[] = [];
       const currentMatches = isSharedMode
         ? session?.matches || []
         : state.matches;

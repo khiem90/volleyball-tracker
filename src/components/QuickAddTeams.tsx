@@ -11,7 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Users, Minus, Plus, Sparkles, Check } from "lucide-react";
+import { Minus, Plus, Sparkles, Check } from "lucide-react";
 
 // Color style presets
 const colorStyles = [

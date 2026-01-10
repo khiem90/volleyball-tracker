@@ -1,15 +1,15 @@
 "use client";
 
-import { useMemo, useCallback, memo } from "react";
+import { memo } from "react";
 import Link from "next/link";
 import { Navigation } from "@/components/Navigation";
 import { Background } from "@/components/Background";
-import { useApp } from "@/context/AppContext";
 import { Users, Trophy, Zap, Plus, Clock, CheckCircle2, ArrowRight, TrendingUp, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { GlassCard, GlassCardContent, GlassCardHeader, GlassCardTitle, GlassCardDescription, StatCard } from "@/components/ui/glass-card";
+import { useDashboardPage } from "@/hooks/useDashboardPage";
 
 // Memoized stat card wrapper
 const StatsGrid = memo(({ 
@@ -147,48 +147,16 @@ const RecentMatchItem = memo(({
 RecentMatchItem.displayName = "RecentMatchItem";
 
 export default function DashboardPage() {
-  const { state } = useApp();
-
-  // Memoize filtered data
-  const activeCompetitions = useMemo(
-    () => state.competitions.filter((c) => c.status === "in_progress"),
-    [state.competitions]
-  );
-
-  const completedCompetitions = useMemo(
-    () => state.competitions.filter((c) => c.status === "completed"),
-    [state.competitions]
-  );
-
-  const recentMatches = useMemo(
-    () => state.matches
-      .filter((m) => m.status === "completed")
-      .sort((a, b) => (b.completedAt || 0) - (a.completedAt || 0))
-      .slice(0, 5),
-    [state.matches]
-  );
-
-  // Memoize team lookup functions
-  const getTeamName = useCallback(
-    (teamId: string) => state.teams.find((t) => t.id === teamId)?.name || "Unknown Team",
-    [state.teams]
-  );
-
-  const getTeamColor = useCallback(
-    (teamId: string) => state.teams.find((t) => t.id === teamId)?.color || "#666",
-    [state.teams]
-  );
-
-  // Memoize match stats calculation
-  const getMatchStats = useCallback(
-    (competitionId: string) => {
-      const compMatches = state.matches.filter(m => m.competitionId === competitionId);
-      const completedCount = compMatches.filter(m => m.status === "completed").length;
-      const progress = compMatches.length > 0 ? (completedCount / compMatches.length) * 100 : 0;
-      return { total: compMatches.length, completed: completedCount, progress };
-    },
-    [state.matches]
-  );
+  const {
+    activeCompetitions,
+    completedCompetitions,
+    getMatchStats,
+    getTeamColor,
+    getTeamName,
+    matchesCount,
+    recentMatches,
+    teamsCount,
+  } = useDashboardPage();
 
   return (
     <Background variant="default">
@@ -223,10 +191,10 @@ export default function DashboardPage() {
 
         {/* Stats Overview - Memoized */}
         <StatsGrid 
-          teamsCount={state.teams.length}
+          teamsCount={teamsCount}
           activeCount={activeCompetitions.length}
           completedCount={completedCompetitions.length}
-          matchesCount={state.matches.length}
+          matchesCount={matchesCount}
         />
 
         {/* Quick Actions Grid */}
@@ -250,7 +218,7 @@ export default function DashboardPage() {
             shadowColor="shadow-sky-500/30"
             badge={
               <Badge variant="secondary" className="ml-2 bg-sky-500/20 text-sky-400">
-                {state.teams.length}
+                {teamsCount}
               </Badge>
             }
           />

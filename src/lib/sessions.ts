@@ -11,7 +11,7 @@ import {
   where,
   type Unsubscribe,
 } from "firebase/firestore";
-import { db, isFirebaseConfigured } from "./firebase";
+import { db } from "./firebase";
 import type { Session, SessionRole, SessionSummary, SessionStats } from "@/types/session";
 import type { Competition, PersistentTeam, Match } from "@/types/game";
 

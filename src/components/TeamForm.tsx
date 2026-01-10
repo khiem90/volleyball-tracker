@@ -42,6 +42,7 @@ export const TeamForm = ({ open, onOpenChange, team, onSubmit }: TeamFormProps) 
   const isEditing = !!team;
 
   // Reset form when dialog opens/closes or team changes
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (open) {
       if (team) {
@@ -54,6 +55,7 @@ export const TeamForm = ({ open, onOpenChange, team, onSubmit }: TeamFormProps) 
       setError("");
     }
   }, [open, team]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleNameChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
     setName(e.target.value);

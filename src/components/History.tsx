@@ -2,7 +2,6 @@
 
 import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Undo2, Plus, Minus } from "lucide-react";
 import type { ScoreEvent } from "@/types/game";
 

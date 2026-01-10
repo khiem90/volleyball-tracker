@@ -1,71 +1,36 @@
 "use client";
 
-import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Navigation } from "@/components/Navigation";
 import { Background } from "@/components/Background";
 import { TeamCard } from "@/components/TeamCard";
 import { TeamForm } from "@/components/TeamForm";
 import { QuickAddTeams } from "@/components/QuickAddTeams";
-import { useApp } from "@/context/AppContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Users, Sparkles, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { MotionDiv, StaggerContainer, StaggerItem, slideUp } from "@/components/motion";
-import type { PersistentTeam } from "@/types/game";
+import { useTeamsPage } from "@/hooks/useTeamsPage";
 
 export default function TeamsPage() {
-  const { state, addTeam, updateTeam, deleteTeam } = useApp();
-  const [formOpen, setFormOpen] = useState(false);
-  const [quickAddOpen, setQuickAddOpen] = useState(false);
-  const [editingTeam, setEditingTeam] = useState<PersistentTeam | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
-
-  const handleCreateClick = useCallback(() => {
-    setEditingTeam(null);
-    setFormOpen(true);
-  }, []);
-
-  const handleQuickAddClick = useCallback(() => {
-    setQuickAddOpen(true);
-  }, []);
-
-  const handleEditTeam = useCallback((team: PersistentTeam) => {
-    setEditingTeam(team);
-    setFormOpen(true);
-  }, []);
-
-  const handleDeleteTeam = useCallback(
-    (id: string) => {
-      deleteTeam(id);
-    },
-    [deleteTeam]
-  );
-
-  const handleFormSubmit = useCallback(
-    (name: string, color: string) => {
-      if (editingTeam) {
-        updateTeam(editingTeam.id, name, color);
-      } else {
-        addTeam(name, color);
-      }
-    },
-    [editingTeam, addTeam, updateTeam]
-  );
-
-  const handleQuickAddTeams = useCallback(
-    (teams: { name: string; color: string }[]) => {
-      teams.forEach((team) => {
-        addTeam(team.name, team.color);
-      });
-    },
-    [addTeam]
-  );
-
-  const filteredTeams = [...state.teams]
-    .filter((team) => team.name.toLowerCase().includes(searchQuery.toLowerCase()))
-    .sort((a, b) => b.createdAt - a.createdAt);
+  const {
+    teams,
+    formOpen,
+    setFormOpen,
+    quickAddOpen,
+    setQuickAddOpen,
+    editingTeam,
+    searchQuery,
+    setSearchQuery,
+    filteredTeams,
+    handleCreateClick,
+    handleQuickAddClick,
+    handleEditTeam,
+    handleDeleteTeam,
+    handleFormSubmit,
+    handleQuickAddTeams,
+  } = useTeamsPage();
 
   return (
     <Background variant="default">
@@ -83,7 +48,7 @@ export default function TeamsPage() {
             <div className="flex items-center gap-3 mb-1">
               <h1 className="text-3xl font-bold tracking-tight">Teams</h1>
               <Badge variant="secondary" className="text-sm bg-primary/20 text-primary">
-                {state.teams.length}
+                {teams.length}
               </Badge>
             </div>
             <p className="text-muted-foreground">
@@ -108,7 +73,7 @@ export default function TeamsPage() {
 
         {/* Search Bar */}
         <AnimatePresence>
-          {state.teams.length > 0 && (
+          {teams.length > 0 && (
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -128,7 +93,7 @@ export default function TeamsPage() {
         </AnimatePresence>
 
         {/* Teams Grid */}
-        {state.teams.length === 0 ? (
+        {teams.length === 0 ? (
           <MotionDiv
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -190,7 +155,7 @@ export default function TeamsPage() {
         open={quickAddOpen}
         onOpenChange={setQuickAddOpen}
         onAddTeams={handleQuickAddTeams}
-        existingTeamCount={state.teams.length}
+        existingTeamCount={teams.length}
       />
     </Background>
   );

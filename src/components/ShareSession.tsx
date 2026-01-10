@@ -14,14 +14,12 @@ import {
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { useSession } from "@/context/SessionContext";
-import { useAuth } from "@/context/AuthContext";
 import {
   Share2,
   Copy,
   Check,
   Link2,
   KeyRound,
-  QrCode,
   Users,
   Crown,
   Shield,
@@ -38,12 +36,10 @@ interface ShareSessionProps {
 
 export const ShareSession = ({ open, onOpenChange }: ShareSessionProps) => {
   const { session, role, getShareUrl, getAdminShareUrl, isSharedMode, endSession, isCreator } = useSession();
-  const { user } = useAuth();
   const router = useRouter();
 
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedAdminLink, setCopiedAdminLink] = useState(false);
-  const [showQR, setShowQR] = useState(false);
   const [showEndConfirm, setShowEndConfirm] = useState(false);
   const [isEnding, setIsEnding] = useState(false);
 
@@ -82,7 +78,7 @@ export const ShareSession = ({ open, onOpenChange }: ShareSessionProps) => {
           text: `Watch the live score for ${session.name}`,
           url: shareUrl,
         });
-      } catch (err) {
+      } catch {
         // User cancelled or error
         handleCopyLink();
       }
