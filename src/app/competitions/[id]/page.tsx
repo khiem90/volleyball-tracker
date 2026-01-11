@@ -2,40 +2,26 @@
 
 import Link from "next/link";
 import { Navigation } from "@/components/Navigation";
-import { Standings } from "@/components/Standings";
 import { Bracket } from "@/components/Bracket";
 import { DoubleBracket } from "@/components/DoubleBracket";
 import { Win2OutView } from "@/components/Win2OutView";
 import { TwoMatchRotationView } from "@/components/TwoMatchRotationView";
 import { CreateSessionDialog } from "@/components/CreateSessionDialog";
-import { ShareButton } from "@/components/ShareSession";
+import { CompetitionNotFound } from "@/components/competition-detail/CompetitionNotFound";
+import { CompetitionHeader } from "@/components/competition-detail/CompetitionHeader";
+import { CompetitionWinnerBanner } from "@/components/competition-detail/CompetitionWinnerBanner";
+import { CompetitionStats } from "@/components/competition-detail/CompetitionStats";
+import { CompetitionDraftTeams } from "@/components/competition-detail/CompetitionDraftTeams";
+import { CompetitionRoundRobinSection } from "@/components/competition-detail/CompetitionRoundRobinSection";
+import { StartCompetitionDialog } from "@/components/competition-detail/StartCompetitionDialog";
+import { MatchActionDialog } from "@/components/competition-detail/MatchActionDialog";
+import { EndCompetitionDialog } from "@/components/competition-detail/EndCompetitionDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
   ArrowLeft,
-  Play,
   Trophy,
-  Users,
-  Calendar,
-  CheckCircle2,
-  Clock,
-  Crown,
-  Swords,
-  Globe,
-  Pencil,
-  Trash2,
-  Loader2,
 } from "lucide-react";
 import { EditMatchDialog } from "@/components/EditMatchDialog";
 import { useCompetitionDetailPage } from "@/hooks/useCompetitionDetailPage";
@@ -65,6 +51,7 @@ export default function CompetitionDetailPage() {
     isEndingCompetition,
     matches,
     pendingMatches,
+    roundRobinMatches,
     selectedMatch,
     setEditingMatch,
     setSelectedMatch,
@@ -80,30 +67,7 @@ export default function CompetitionDetailPage() {
   } = useCompetitionDetailPage();
 
   if (!competition) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Navigation />
-        <main className="max-w-6xl mx-auto px-4 py-8">
-          <div className="text-center py-16">
-            <div className="w-24 h-24 mx-auto mb-6 rounded-3xl bg-muted/50 flex items-center justify-center">
-              <Trophy className="w-12 h-12 text-muted-foreground/30" />
-            </div>
-            <h2 className="text-2xl font-semibold mb-3">
-              Competition not found
-            </h2>
-            <p className="text-muted-foreground mb-8">
-              This competition may have been deleted.
-            </p>
-            <Link href="/competitions">
-              <Button variant="outline" className="gap-2">
-                <ArrowLeft className="w-4 h-4" />
-                Back to Competitions
-              </Button>
-            </Link>
-          </div>
-        </main>
-      </div>
-    );
+    return <CompetitionNotFound />;
   }
 
   return (
@@ -123,360 +87,43 @@ export default function CompetitionDetailPage() {
         </Link>
 
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-8">
-          <div>
-            <div className="flex items-center gap-3 mb-2 flex-wrap">
-              <h1 className="text-3xl font-bold tracking-tight">
-                {competition.name}
-              </h1>
-              <Badge
-                className={`
-                ${competition.status === "draft" ? "status-draft" : ""}
-                ${competition.status === "in_progress" ? "status-active" : ""}
-                ${competition.status === "completed" ? "status-complete" : ""}
-              `}
-              >
-                {competition.status === "draft" && "Draft"}
-                {competition.status === "in_progress" && "Live"}
-                {competition.status === "completed" && "Completed"}
-              </Badge>
-            </div>
-            <div className="flex flex-wrap items-center gap-4 text-muted-foreground">
-              <span className="flex items-center gap-1.5">
-                <Trophy className="w-4 h-4 text-primary" />
-                {typeLabels[competition.type]}
-              </span>
-              <span className="flex items-center gap-1.5">
-                <Users className="w-4 h-4" />
-                {competition.teamIds.length} teams
-              </span>
-              <span className="flex items-center gap-1.5">
-                <Calendar className="w-4 h-4" />
-                {new Date(competition.createdAt).toLocaleDateString()}
-              </span>
-            </div>
-          </div>
+        <CompetitionHeader
+          competition={competition}
+          typeLabel={typeLabels[competition.type]}
+          isSharedMode={isSharedMode}
+          isCreator={isCreator}
+          onShowStartConfirm={() => setShowStartConfirm(true)}
+          onShowCreateSession={() => setShowCreateSession(true)}
+          onShowEndConfirm={() => setShowEndConfirm(true)}
+        />
 
-          <div className="flex items-center gap-3">
-            {competition.status === "draft" && (
-              <Button
-                onClick={() => setShowStartConfirm(true)}
-                className="gap-2 shadow-lg shadow-primary/20"
-                size="lg"
-              >
-                <Play className="w-5 h-5" />
-                Start Competition
-              </Button>
-            )}
+        <CompetitionWinnerBanner winner={winner} />
 
-            {/* Session sharing controls - only show for in_progress competitions */}
-            {competition.status === "in_progress" &&
-              (isSharedMode ? (
-                <>
-                  {isCreator && (
-                    <Button
-                      variant="destructive"
-                      onClick={() => setShowEndConfirm(true)}
-                      className="gap-2"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                      End Competition
-                    </Button>
-                  )}
-                  <ShareButton />
-                </>
-              ) : (
-                <Button
-                  onClick={() => setShowCreateSession(true)}
-                  variant="outline"
-                  className="gap-2 cursor-pointer"
-                >
-                  <Globe className="w-4 h-4" />
-                  Share Live
-                </Button>
-              ))}
-          </div>
-        </div>
+        <CompetitionStats
+          status={competition.status}
+          completedMatches={completedMatches}
+          inProgressMatches={inProgressMatches}
+          pendingMatches={pendingMatches}
+          matchesCount={matches.length}
+          totalProgress={totalProgress}
+        />
 
-        {/* Winner Banner */}
-        {winner && (
-          <Card className="mb-8 border-amber-500/40 bg-linear-to-r from-amber-500/10 via-amber-500/5 to-transparent overflow-hidden">
-            <div className="h-1 w-full bg-linear-to-r from-amber-500 to-amber-600" />
-            <CardContent className="py-6">
-              <div className="flex items-center justify-center gap-6">
-                <div className="relative">
-                  <div
-                    className="w-20 h-20 rounded-2xl flex items-center justify-center shadow-xl"
-                    style={{
-                      background: `linear-gradient(135deg, ${
-                        winner.color || "#f59e0b"
-                      }, ${winner.color || "#f59e0b"}99)`,
-                    }}
-                  >
-                    <span className="text-3xl font-bold text-white">
-                      {winner.name.charAt(0).toUpperCase()}
-                    </span>
-                  </div>
-                  <div className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-amber-500 flex items-center justify-center shadow-lg">
-                    <Crown className="w-4 h-4 text-white" />
-                  </div>
-                </div>
-                <div className="text-center">
-                  <p className="text-sm text-amber-500 font-semibold uppercase tracking-wider mb-1">
-                    Champion
-                  </p>
-                  <p className="text-3xl font-bold">{winner.name}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Stats */}
-        {competition.status !== "draft" && (
-          <div className="mb-8">
-            <div className="grid grid-cols-3 gap-4 mb-4">
-              <Card className="border-border/40 bg-card/30">
-                <CardContent className="py-4 text-center">
-                  <CheckCircle2 className="w-6 h-6 mx-auto mb-2 text-emerald-500" />
-                  <div className="text-2xl font-bold">{completedMatches}</div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider">
-                    Completed
-                  </p>
-                </CardContent>
-              </Card>
-              <Card className="border-border/40 bg-card/30">
-                <CardContent className="py-4 text-center">
-                  <Clock className="w-6 h-6 mx-auto mb-2 text-amber-500" />
-                  <div className="text-2xl font-bold">{inProgressMatches}</div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider">
-                    In Progress
-                  </p>
-                </CardContent>
-              </Card>
-              <Card className="border-border/40 bg-card/30">
-                <CardContent className="py-4 text-center">
-                  <Play className="w-6 h-6 mx-auto mb-2 text-sky-500" />
-                  <div className="text-2xl font-bold">{pendingMatches}</div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider">
-                    Pending
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-            {matches.length > 0 && (
-              <div className="px-1">
-                <div className="flex justify-between text-xs text-muted-foreground mb-1.5">
-                  <span>Overall Progress</span>
-                  <span>{Math.round(totalProgress)}%</span>
-                </div>
-                <Progress value={totalProgress} className="h-2" />
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Draft State - Show teams */}
         {competition.status === "draft" && (
-          <Card className="border-border/40 bg-card/30">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="w-5 h-5 text-primary" />
-                Participating Teams
-              </CardTitle>
-            </CardHeader>
-            <Separator />
-            <CardContent className="pt-4">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {competitionTeams.map((team) => (
-                  <div
-                    key={team.id}
-                    className="flex items-center gap-3 p-3 rounded-xl bg-card border border-border/40"
-                  >
-                    <div
-                      className="w-10 h-10 rounded-lg flex items-center justify-center shadow-md"
-                      style={{
-                        background: `linear-gradient(135deg, ${
-                          team.color || "#3b82f6"
-                        }, ${team.color || "#3b82f6"}99)`,
-                      }}
-                    >
-                      <span className="text-sm font-bold text-white">
-                        {team.name.charAt(0).toUpperCase()}
-                      </span>
-                    </div>
-                    <span className="font-medium truncate">{team.name}</span>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          <CompetitionDraftTeams teams={competitionTeams} />
         )}
 
         {/* Round Robin - Show standings and matches */}
         {competition.status !== "draft" &&
           competition.type === "round_robin" &&
           standings && (
-            <div className="space-y-6">
-              <Standings standings={standings} teams={competitionTeams} />
-
-              {/* Match Schedule */}
-              <Card className="border-border/40 bg-card/30">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Swords className="w-5 h-5 text-primary" />
-                    Match Schedule
-                  </CardTitle>
-                </CardHeader>
-                <Separator />
-                <CardContent className="pt-4">
-                  <div className="space-y-2">
-                    {matches
-                      .sort((a, b) => {
-                        const statusOrder = {
-                          in_progress: 0,
-                          pending: 1,
-                          completed: 2,
-                        };
-                        const statusDiff =
-                          statusOrder[a.status] - statusOrder[b.status];
-                        if (statusDiff !== 0) return statusDiff;
-                        if (a.round !== b.round) return a.round - b.round;
-                        return a.position - b.position;
-                      })
-                      .map((match) => {
-                        const homeTeam = competitionTeams.find(
-                          (t) => t.id === match.homeTeamId
-                        );
-                        const awayTeam = competitionTeams.find(
-                          (t) => t.id === match.awayTeamId
-                        );
-                        const homeWon = match.winnerId === match.homeTeamId;
-                        const awayWon = match.winnerId === match.awayTeamId;
-
-                        return (
-                          <div
-                            key={match.id}
-                            className={`
-                            p-4 rounded-xl border transition-all duration-200 group
-                            ${
-                              match.status === "in_progress"
-                                ? "border-amber-500/40 bg-amber-500/5 ring-1 ring-amber-500/20"
-                                : "border-border/40 bg-card"
-                            }
-                            ${
-                              match.status !== "completed"
-                                ? "cursor-pointer hover:border-primary/40 hover:bg-accent/30"
-                                : ""
-                            }
-                          `}
-                            onClick={() => {
-                              if (
-                                match.status === "pending" ||
-                                match.status === "in_progress"
-                              ) {
-                                handleMatchClick(match);
-                              }
-                            }}
-                            role={
-                              match.status !== "completed"
-                                ? "button"
-                                : undefined
-                            }
-                            tabIndex={
-                              match.status !== "completed" ? 0 : undefined
-                            }
-                            onKeyDown={(e) => {
-                              if (
-                                (e.key === "Enter" || e.key === " ") &&
-                                match.status !== "completed"
-                              ) {
-                                handleMatchClick(match);
-                              }
-                            }}
-                          >
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-3 flex-1 min-w-0">
-                                <div
-                                  className="w-3 h-3 rounded-full shrink-0"
-                                  style={{
-                                    backgroundColor:
-                                      homeTeam?.color || "#3b82f6",
-                                  }}
-                                />
-                                <span
-                                  className={`truncate ${
-                                    homeWon
-                                      ? "font-semibold text-emerald-500"
-                                      : ""
-                                  }`}
-                                >
-                                  {homeTeam?.name || "TBD"}
-                                </span>
-                              </div>
-
-                              <div className="flex items-center gap-2 shrink-0 px-4">
-                                {match.status === "completed" ? (
-                                  <span className="text-lg font-bold tabular-nums">
-                                    {match.homeScore} - {match.awayScore}
-                                  </span>
-                                ) : (
-                                  <>
-                                    <Badge
-                                      className={
-                                        match.status === "in_progress"
-                                          ? "status-active"
-                                          : "status-draft"
-                                      }
-                                    >
-                                      {match.status === "in_progress"
-                                        ? "Live"
-                                        : "Pending"}
-                                    </Badge>
-                                    {canEdit && match.status === "pending" && (
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setEditingMatch(match);
-                                        }}
-                                        aria-label={`Edit match ${homeTeam?.name} vs ${awayTeam?.name}`}
-                                      >
-                                        <Pencil className="w-3.5 h-3.5" />
-                                      </Button>
-                                    )}
-                                  </>
-                                )}
-                              </div>
-
-                              <div className="flex items-center gap-3 flex-1 min-w-0 justify-end">
-                                <span
-                                  className={`truncate ${
-                                    awayWon
-                                      ? "font-semibold text-emerald-500"
-                                      : ""
-                                  }`}
-                                >
-                                  {awayTeam?.name || "TBD"}
-                                </span>
-                                <div
-                                  className="w-3 h-3 rounded-full shrink-0"
-                                  style={{
-                                    backgroundColor:
-                                      awayTeam?.color || "#f97316",
-                                  }}
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+            <CompetitionRoundRobinSection
+              standings={standings}
+              teams={competitionTeams}
+              matches={roundRobinMatches}
+              canEdit={canEdit}
+              onMatchClick={handleMatchClick}
+              onEditMatch={setEditingMatch}
+            />
           )}
 
         {/* Single Elimination Bracket */}
@@ -553,84 +200,22 @@ export default function CompetitionDetailPage() {
       </main>
 
       {/* Start Competition Confirmation */}
-      <Dialog open={showStartConfirm} onOpenChange={setShowStartConfirm}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Play className="w-5 h-5 text-primary" />
-              Start Competition?
-            </DialogTitle>
-            <DialogDescription>
-              This will generate the{" "}
-              {typeLabels[competition.type].toLowerCase()} schedule for{" "}
-              {competition.teamIds.length} teams. You won&apos;t be able to add
-              or remove teams after starting.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="flex-row gap-2 sm:gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setShowStartConfirm(false)}
-              className="flex-1"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleStartCompetition}
-              className="flex-1 gap-2 shadow-lg shadow-primary/20"
-            >
-              <Play className="w-4 h-4" />
-              Start
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <StartCompetitionDialog
+        open={showStartConfirm}
+        onOpenChange={setShowStartConfirm}
+        typeLabel={typeLabels[competition.type]}
+        teamCount={competition.teamIds.length}
+        onStart={handleStartCompetition}
+      />
 
       {/* Match Action Dialog */}
-      <Dialog
+      <MatchActionDialog
         open={!!selectedMatch}
-        onOpenChange={() => setSelectedMatch(null)}
-      >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Swords className="w-5 h-5 text-primary" />
-              {selectedMatch?.status === "in_progress"
-                ? "Continue Match"
-                : "Start Match"}
-            </DialogTitle>
-            <DialogDescription>
-              {
-                competitionTeams.find((t) => t.id === selectedMatch?.homeTeamId)
-                  ?.name
-              }{" "}
-              vs{" "}
-              {
-                competitionTeams.find((t) => t.id === selectedMatch?.awayTeamId)
-                  ?.name
-              }
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="flex-row gap-2 sm:gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setSelectedMatch(null)}
-              className="flex-1"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handlePlayMatch}
-              className="flex-1 gap-2 shadow-lg shadow-primary/20"
-            >
-              <Play className="w-4 h-4" />
-              {selectedMatch?.status === "in_progress"
-                ? "Continue"
-                : "Play Match"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        onOpenChange={(open) => !open && setSelectedMatch(null)}
+        match={selectedMatch}
+        teams={competitionTeams}
+        onPlayMatch={handlePlayMatch}
+      />
 
       {/* Create Session Dialog */}
       <CreateSessionDialog
@@ -649,47 +234,12 @@ export default function CompetitionDetailPage() {
       />
 
       {/* End Competition Confirmation Dialog */}
-      <Dialog open={showEndConfirm} onOpenChange={setShowEndConfirm}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-destructive">
-              <Trash2 className="w-5 h-5" />
-              End Competition?
-            </DialogTitle>
-            <DialogDescription>
-              This will end the competition and close the live session for all viewers. A summary will be created.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="flex-row gap-2 sm:gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setShowEndConfirm(false)}
-              disabled={isEndingCompetition}
-              className="flex-1"
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleEndCompetition}
-              disabled={isEndingCompetition}
-              className="flex-1 gap-2"
-            >
-              {isEndingCompetition ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Ending...
-                </>
-              ) : (
-                <>
-                  <Trash2 className="w-4 h-4" />
-                  End Competition
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <EndCompetitionDialog
+        open={showEndConfirm}
+        onOpenChange={setShowEndConfirm}
+        isEnding={isEndingCompetition}
+        onEndCompetition={handleEndCompetition}
+      />
 
       {/* Edit Match Dialog */}
       <EditMatchDialog

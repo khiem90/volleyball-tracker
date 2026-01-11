@@ -17,7 +17,15 @@ import {
   initializeTwoMatchRotationState,
   generateInitialMatches as generateTwoMatchRotationInitialMatches,
 } from "@/lib/twoMatchRotation";
-import type { Match } from "@/types/game";
+import type { Match, PersistentTeam } from "@/types/game";
+
+export interface RoundRobinMatchRow {
+  match: Match;
+  homeTeam?: PersistentTeam;
+  awayTeam?: PersistentTeam;
+  homeWon: boolean;
+  awayWon: boolean;
+}
 
 export const useCompetitionDetailPage = () => {
   const params = useParams();
@@ -61,6 +69,42 @@ export const useCompetitionDetailPage = () => {
     if (!competition) return [];
     return state.teams.filter((t) => competition.teamIds.includes(t.id));
   }, [competition, state.teams]);
+
+  const competitionTeamsMap = useMemo(() => {
+    const map = new Map<string, PersistentTeam>();
+    competitionTeams.forEach((team) => map.set(team.id, team));
+    return map;
+  }, [competitionTeams]);
+
+  const roundRobinMatches = useMemo<RoundRobinMatchRow[]>(() => {
+    if (!competition || competition.type !== "round_robin") return [];
+
+    const statusOrder = {
+      in_progress: 0,
+      pending: 1,
+      completed: 2,
+    } as const;
+
+    return [...matches]
+      .sort((a, b) => {
+        const statusDiff = statusOrder[a.status] - statusOrder[b.status];
+        if (statusDiff !== 0) return statusDiff;
+        if (a.round !== b.round) return a.round - b.round;
+        return a.position - b.position;
+      })
+      .map((match) => {
+        const homeTeam = competitionTeamsMap.get(match.homeTeamId);
+        const awayTeam = competitionTeamsMap.get(match.awayTeamId);
+
+        return {
+          match,
+          homeTeam,
+          awayTeam,
+          homeWon: match.winnerId === match.homeTeamId,
+          awayWon: match.winnerId === match.awayTeamId,
+        };
+      });
+  }, [competition, matches, competitionTeamsMap]);
 
   const handleStartCompetition = useCallback(() => {
     if (!competition) return;
@@ -300,6 +344,7 @@ export const useCompetitionDetailPage = () => {
     isEndingCompetition,
     matches,
     pendingMatches,
+    roundRobinMatches,
     selectedMatch,
     setEditingMatch,
     setSelectedMatch,

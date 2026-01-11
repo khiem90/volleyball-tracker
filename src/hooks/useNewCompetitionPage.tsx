@@ -6,7 +6,7 @@ import type { CompetitionType } from "@/types/game";
 
 export type Step = "format" | "teams" | "name";
 
-interface FormatOption {
+export interface FormatOption {
   type: CompetitionType;
   label: string;
   description: string;
@@ -141,6 +141,11 @@ export const useNewCompetitionPage = () => {
     router.push("/competitions");
   }, [router]);
 
+  const handleCompetitionNameChange = useCallback((value: string) => {
+    setCompetitionName(value);
+    setNameError("");
+  }, []);
+
   const handleBack = useCallback(() => {
     if (step === "teams") {
       setStep("format");
@@ -202,6 +207,7 @@ export const useNewCompetitionPage = () => {
     handleToggleSelectAll,
     handleBack,
     handleBackToCompetitions,
+    handleCompetitionNameChange,
     handleCreateCompetition,
     handleFormatSelect,
     handleNext,
@@ -211,14 +217,12 @@ export const useNewCompetitionPage = () => {
     nameError,
     numberOfCourts,
     allSelected,
-    selectedFormat,
-    selectedTeamIds,
-    matchSeriesLength,
-    setCompetitionName,
-    setNameError,
-    setNumberOfCourts,
-    setMatchSeriesLength,
-    setSelectedTeamIds,
+      selectedFormat,
+      selectedTeamIds,
+      matchSeriesLength,
+      setNumberOfCourts,
+      setMatchSeriesLength,
+      setSelectedTeamIds,
     setStep,
     step,
     teamValidation,
