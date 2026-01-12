@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Pencil } from "lucide-react";
@@ -119,7 +120,9 @@ export const DoubleBracket = ({ matches, teams, totalTeams, onMatchClick, onEdit
 
           {/* Status Indicator */}
           {match.status === "in_progress" && (
-            <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-500 rounded-full animate-pulse" />
+            <Badge className="status-live absolute top-1.5 right-1.5 text-[9px] font-semibold uppercase tracking-wider">
+              Live
+            </Badge>
           )}
         </Card>
 

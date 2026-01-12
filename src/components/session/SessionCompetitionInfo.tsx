@@ -43,7 +43,7 @@ export const SessionCompetitionInfo = ({
                 <Play className="w-3 h-3" />
               )}
               {competition.status === "draft" && <Clock className="w-3 h-3" />}
-              {competition.status}
+              {competition.status.replace(/_/g, " ")}
             </Badge>
           </CardDescription>
         </div>

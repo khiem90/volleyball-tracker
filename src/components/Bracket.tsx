@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Pencil } from "lucide-react";
@@ -209,7 +210,9 @@ export const Bracket = ({
 
                           {/* Status Indicator */}
                           {match.status === "in_progress" && (
-                            <div className="absolute -top-1 -right-1 w-3 h-3 bg-amber-500 rounded-full animate-pulse" />
+                            <Badge className="status-live absolute top-2 right-2 text-[10px] font-semibold uppercase tracking-wider">
+                              Live
+                            </Badge>
                           )}
 
                           {/* Match Pairing Indicator */}
