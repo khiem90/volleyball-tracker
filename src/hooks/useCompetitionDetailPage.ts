@@ -325,7 +325,7 @@ export const useCompetitionDetailPage = () => {
       : null;
 
   const winner = competition?.winnerId
-    ? state.teams.find((t) => t.id === competition.winnerId)
+    ? state.teams.find((t) => t.id === competition.winnerId) ?? null
     : null;
 
   return {
