@@ -62,14 +62,30 @@ export const useSessionPage = () => {
     return map;
   }, [session]);
 
+  const competition = session?.competition || null;
+  const matches = useMemo(() => {
+    const sessionMatches = session?.matches || [];
+    if (!competition) {
+      return sessionMatches;
+    }
+    if (competition.matchIds && competition.matchIds.length > 0) {
+      const matchIdSet = new Set(competition.matchIds);
+      return sessionMatches.filter((match) => matchIdSet.has(match.id));
+    }
+    return sessionMatches.filter(
+      (match) => match.competitionId === competition.id
+    );
+  }, [session, competition]);
+  const teams = session?.teams || [];
+
   const standings = useMemo((): RoundRobinStanding[] | null => {
-    if (!session?.competition || session.competition.type !== "round_robin") {
+    if (!competition || competition.type !== "round_robin") {
       return null;
     }
 
     const standingsMap = new Map<string, RoundRobinStanding>();
 
-    session.competition.teamIds.forEach((teamId) => {
+    competition.teamIds.forEach((teamId) => {
       standingsMap.set(teamId, {
         teamId,
         played: 0,
@@ -82,9 +98,7 @@ export const useSessionPage = () => {
       });
     });
 
-    const completedMatches = (session.matches || []).filter(
-      (m) => m.competitionId === session.competition?.id && m.status === "completed"
-    );
+    const completedMatches = matches.filter((m) => m.status === "completed");
 
     completedMatches.forEach((match) => {
       const homeStanding = standingsMap.get(match.homeTeamId);
@@ -119,11 +133,7 @@ export const useSessionPage = () => {
       }
       return b.pointsDiff - a.pointsDiff;
     });
-  }, [session]);
-
-  const competition = session?.competition || null;
-  const matches = session?.matches || [];
-  const teams = session?.teams || [];
+  }, [competition, matches]);
 
   const pendingMatches = matches.filter((m) => m.status === "pending");
   const inProgressMatches = matches.filter((m) => m.status === "in_progress");

@@ -46,6 +46,7 @@ export const Win2OutView = ({
   const { canEdit } = useApp();
   const [editingMatch, setEditingMatch] = useState<Match | null>(null);
   const [showEditQueue, setShowEditQueue] = useState(false);
+  const canPlayMatch = canEdit && Boolean(onMatchClick);
 
   const teamsMap = useMemo(() => {
     const map = new Map<string, PersistentTeam>();
@@ -81,7 +82,7 @@ export const Win2OutView = ({
   );
 
   const handleMatchClick = (match: Match) => {
-    if (onMatchClick) {
+    if (canPlayMatch && onMatchClick) {
       onMatchClick(match);
     }
   };
@@ -177,18 +178,30 @@ export const Win2OutView = ({
                 </CardHeader>
                 <CardContent>
                   <div
-                    className="flex items-center justify-center gap-4 py-4 cursor-pointer hover:opacity-80 transition-opacity"
-                    onClick={() => handleMatchClick(match)}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        handleMatchClick(match);
-                      }
-                    }}
-                    aria-label={`Click to play match on Court ${
-                      court?.courtNumber || match.position
+                    className={`flex items-center justify-center gap-4 py-4 ${
+                      canPlayMatch
+                        ? "cursor-pointer hover:opacity-80 transition-opacity"
+                        : ""
                     }`}
+                    onClick={canPlayMatch ? () => handleMatchClick(match) : undefined}
+                    role={canPlayMatch ? "button" : undefined}
+                    tabIndex={canPlayMatch ? 0 : undefined}
+                    onKeyDown={
+                      canPlayMatch
+                        ? (e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              handleMatchClick(match);
+                            }
+                          }
+                        : undefined
+                    }
+                    aria-label={
+                      canPlayMatch
+                        ? `Click to play match on Court ${
+                            court?.courtNumber || match.position
+                          }`
+                        : undefined
+                    }
                   >
                     {/* Home Team */}
                     <div className="text-center flex-1">
@@ -241,20 +254,24 @@ export const Win2OutView = ({
                             <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
                             Live
                           </div>
-                          <Button size="sm" className="gap-1">
-                            <Play className="w-4 h-4" />
-                            Continue
-                          </Button>
+                          {canPlayMatch && (
+                            <Button size="sm" className="gap-1">
+                              <Play className="w-4 h-4" />
+                              Continue
+                            </Button>
+                          )}
                         </>
                       ) : (
                         <>
                           <div className="text-xl font-bold text-muted-foreground">
                             VS
                           </div>
-                          <Button size="sm" className="mt-2 gap-1">
-                            <Play className="w-4 h-4" />
-                            Play
-                          </Button>
+                          {canPlayMatch && (
+                            <Button size="sm" className="mt-2 gap-1">
+                              <Play className="w-4 h-4" />
+                              Play
+                            </Button>
+                          )}
                         </>
                       )}
                     </div>

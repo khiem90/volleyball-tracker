@@ -9,6 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useApp } from "@/context/AppContext";
 import { Play, Swords } from "lucide-react";
 import type { Match, PersistentTeam } from "@/types/game";
 
@@ -27,6 +28,8 @@ export const MatchActionDialog = ({
   teams,
   onPlayMatch,
 }: MatchActionDialogProps) => {
+  const { canEdit } = useApp();
+
   if (!match) {
     return null;
   }
@@ -55,10 +58,15 @@ export const MatchActionDialog = ({
           >
             Cancel
           </Button>
-          <Button onClick={onPlayMatch} className="flex-1 gap-2 shadow-lg shadow-primary/20">
-            <Play className="w-4 h-4" />
-            {match.status === "in_progress" ? "Continue" : "Play Match"}
-          </Button>
+          {canEdit && (
+            <Button
+              onClick={onPlayMatch}
+              className="flex-1 gap-2 shadow-lg shadow-primary/20"
+            >
+              <Play className="w-4 h-4" />
+              {match.status === "in_progress" ? "Continue" : "Play Match"}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
