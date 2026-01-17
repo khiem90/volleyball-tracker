@@ -67,32 +67,30 @@ export const TeamsStep = ({
       </div>
     ) : (
       <>
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-center gap-3 mb-4">
           <Badge
             variant={teamValidation.valid ? "default" : "secondary"}
             className={teamValidation.valid ? "bg-emerald-500" : ""}
           >
             {teamValidation.message}
           </Badge>
-          <div className="flex items-center gap-2">
-            <Button
-              onClick={onToggleSelectAll}
-              variant="outline"
-              size="sm"
-              aria-pressed={allSelected}
-            >
-              {allSelected ? "Deselect All" : "Select All"}
-            </Button>
-            <Button
-              onClick={onQuickCreateTeam}
-              variant="ghost"
-              size="sm"
-              className="gap-2"
-            >
-              <Users className="w-4 h-4" />
-              Quick Add Team
-            </Button>
-          </div>
+          <Button
+            onClick={onToggleSelectAll}
+            variant="outline"
+            size="sm"
+            aria-pressed={allSelected}
+          >
+            {allSelected ? "Deselect All" : "Select All"}
+          </Button>
+          <Button
+            onClick={onQuickCreateTeam}
+            variant="ghost"
+            size="sm"
+            className="gap-2"
+          >
+            <Users className="w-4 h-4" />
+            Quick Add Team
+          </Button>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
@@ -122,12 +120,6 @@ export const TeamsStep = ({
                   }
                 }}
               >
-                {isSelected && (
-                  <div
-                    className="h-1 w-full"
-                    style={{ backgroundColor: teamColor }}
-                  />
-                )}
                 <CardContent className="p-3">
                   <div className="flex items-center gap-3">
                     <div
