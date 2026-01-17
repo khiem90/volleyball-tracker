@@ -12,7 +12,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ShareButton } from "@/components/ShareSession";
 import {
   ArrowLeft,
   Minus,
@@ -22,7 +21,6 @@ import {
   Check,
   Crown,
   Eye,
-  Shield,
   Maximize,
   Minimize,
   RotateCcw,
@@ -52,7 +50,6 @@ export default function MatchPage() {
     isFullscreen,
     isSharedMode,
     match,
-    role,
     seriesInfo,
     setShowCompleteDialog,
     setShowRotatePrompt,
@@ -120,10 +117,7 @@ export default function MatchPage() {
             </Button>
 
             <div className="text-center">
-              <h1 className="text-sm font-medium text-muted-foreground">
-                {competition?.name || "Quick Match"}
-              </h1>
-              <div className="mt-1 flex items-center justify-center gap-2">
+              <div className="flex items-center justify-center gap-2">
                 <Badge className="status-live gap-1">
                   <Play className="w-3 h-3" />
                   Live
@@ -148,24 +142,6 @@ export default function MatchPage() {
             </div>
 
             <div className="flex items-center gap-2">
-              {isSharedMode && (
-                <Badge
-                  variant="outline"
-                  className={`gap-1 text-xs rounded-lg ${
-                    role === "viewer"
-                      ? "bg-muted/50 text-muted-foreground"
-                      : "bg-primary/20 text-primary border-primary/30"
-                  }`}
-                >
-                  {role === "viewer" ? (
-                    <Eye className="w-3 h-3" />
-                  ) : (
-                    <Shield className="w-3 h-3" />
-                  )}
-                  {role}
-                </Badge>
-              )}
-              {isSharedMode && <ShareButton />}
               <Button
                 variant="outline"
                 size="sm"

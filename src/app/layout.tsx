@@ -13,6 +13,17 @@ export const metadata: Metadata = {
   title: "VolleyballScore - Track Your Game",
   description: "A simple and elegant volleyball score tracker app. Keep track of points for both teams with ease.",
   keywords: ["volleyball", "score", "tracker", "sports", "game"],
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "VB Tracker",
+  },
+  icons: {
+    apple: [
+      { url: "/icons/apple-touch-icon.svg", sizes: "180x180", type: "image/svg+xml" },
+    ],
+  },
 };
 
 export const viewport: Viewport = {

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <rect width="192" height="192" fill="#0f172a" rx="24"/>
+  <circle cx="96" cy="96" r="60" fill="none" stroke="#f8fafc" stroke-width="4"/>
+  <path d="M96 36 C96 96 96 96 156 96" fill="none" stroke="#f8fafc" stroke-width="3"/>
+  <path d="M96 156 C96 96 96 96 36 96" fill="none" stroke="#f8fafc" stroke-width="3"/>
+  <path d="M48 52 C96 96 96 96 144 140" fill="none" stroke="#f8fafc" stroke-width="3"/>
+  <text x="96" y="180" text-anchor="middle" font-family="system-ui, sans-serif" font-size="14" font-weight="600" fill="#f8fafc">VB</text>
+</svg>
