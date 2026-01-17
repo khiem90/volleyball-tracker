@@ -22,7 +22,7 @@ export const DoubleBracket = ({ matches, teams, totalTeams, onMatchClick, onEdit
   const { canEdit } = useApp();
   const winnersRounds = Math.log2(totalTeams);
 
-  const { getTeamName: getTeamNameFromMap, getTeamColor } = useTeamsMap(teams);
+  const { getTeamName: getTeamNameFromMap, getTeamColor, getTeam } = useTeamsMap(teams);
 
   const bracketData = useMemo(
     () => getDoubleBracketStructure(matches, totalTeams),
@@ -204,21 +204,24 @@ export const DoubleBracket = ({ matches, teams, totalTeams, onMatchClick, onEdit
             {renderMatchCard(bracketData.grandFinals)}
 
             {/* Champion Display */}
-            {bracketData.grandFinals.status === "completed" && bracketData.grandFinals.winnerId && (
-              <Card className="p-4 border-amber-500/50 bg-amber-500/10 text-center">
-                <div
-                  className="w-12 h-12 mx-auto rounded-xl flex items-center justify-center mb-2"
-                  style={{
-                    background: `linear-gradient(135deg, ${teamsMap.get(bracketData.grandFinals.winnerId)?.color || "#f59e0b"}, ${teamsMap.get(bracketData.grandFinals.winnerId)?.color || "#f59e0b"}99)`,
-                  }}
-                >
-                  <span className="text-2xl">🏆</span>
-                </div>
-                <p className="font-bold text-amber-500">
-                  {teamsMap.get(bracketData.grandFinals.winnerId)?.name || "Champion"}
-                </p>
-              </Card>
-            )}
+            {bracketData.grandFinals.status === "completed" && bracketData.grandFinals.winnerId && (() => {
+              const winner = getTeam(bracketData.grandFinals.winnerId);
+              return (
+                <Card className="p-4 border-amber-500/50 bg-amber-500/10 text-center">
+                  <div
+                    className="w-12 h-12 mx-auto rounded-xl flex items-center justify-center mb-2"
+                    style={{
+                      background: `linear-gradient(135deg, ${winner?.color || "#f59e0b"}, ${winner?.color || "#f59e0b"}99)`,
+                    }}
+                  >
+                    <span className="text-2xl">🏆</span>
+                  </div>
+                  <p className="font-bold text-amber-500">
+                    {winner?.name || "Champion"}
+                  </p>
+                </Card>
+              );
+            })()}
           </div>
         </div>
       )}
