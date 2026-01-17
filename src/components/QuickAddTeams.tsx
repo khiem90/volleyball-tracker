@@ -149,7 +149,7 @@ export const QuickAddTeams = ({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col">
-        <DialogHeader className="flex-shrink-0">
+        <DialogHeader className="shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-primary" />
             Quick Add Teams
@@ -286,7 +286,7 @@ export const QuickAddTeams = ({
           </div>
         </div>
 
-        <DialogFooter className="flex-row gap-2 sm:gap-2 flex-shrink-0 pt-4 border-t">
+        <DialogFooter className="flex-row gap-2 sm:gap-2 shrink-0 pt-4 border-t">
           <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
             Cancel
           </Button>

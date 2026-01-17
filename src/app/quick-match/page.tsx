@@ -90,7 +90,7 @@ export default function QuickMatchPage() {
             >
               <GlassCard hover={false} className="overflow-hidden">
                 {/* Gradient top bar */}
-                <div className="h-1.5 w-full bg-gradient-to-r from-sky-500 via-primary to-amber-500" />
+                <div className="h-1.5 w-full bg-linear-to-r from-sky-500 via-primary to-amber-500" />
                 
                 <GlassCardContent className="py-10">
                   <div className="flex items-center justify-center gap-4 md:gap-10">
