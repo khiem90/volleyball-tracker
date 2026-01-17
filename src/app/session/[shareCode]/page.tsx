@@ -1,12 +1,27 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { SessionAuth } from "@/components/SessionAuth";
-import { Bracket } from "@/components/Bracket";
-import { DoubleBracket } from "@/components/DoubleBracket";
-import { Win2OutView } from "@/components/Win2OutView";
-import { TwoMatchRotationView } from "@/components/TwoMatchRotationView";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useSessionPage } from "@/hooks/useSessionPage";
+
+// Lazy load tournament view components - only one is rendered based on competition type
+const Bracket = dynamic(
+  () => import("@/components/Bracket").then((mod) => ({ default: mod.Bracket })),
+  { ssr: false }
+);
+const DoubleBracket = dynamic(
+  () => import("@/components/DoubleBracket").then((mod) => ({ default: mod.DoubleBracket })),
+  { ssr: false }
+);
+const Win2OutView = dynamic(
+  () => import("@/components/Win2OutView").then((mod) => ({ default: mod.Win2OutView })),
+  { ssr: false }
+);
+const TwoMatchRotationView = dynamic(
+  () => import("@/components/TwoMatchRotationView").then((mod) => ({ default: mod.TwoMatchRotationView })),
+  { ssr: false }
+);
 import { SessionHeader } from "@/components/session/SessionHeader";
 import { SessionCompetitionInfo } from "@/components/session/SessionCompetitionInfo";
 import { SessionStatsGrid } from "@/components/session/SessionStatsGrid";

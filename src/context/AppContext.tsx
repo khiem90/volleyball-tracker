@@ -462,6 +462,19 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     return localState;
   }, [isSharedMode, session, localState]);
 
+  // Memoized maps for O(1) lookups instead of O(n) array finds
+  const competitionsMap = useMemo(() => {
+    const map = new Map<string, Competition>();
+    state.competitions.forEach((comp) => map.set(comp.id, comp));
+    return map;
+  }, [state.competitions]);
+
+  const matchesMap = useMemo(() => {
+    const map = new Map<string, Match>();
+    state.matches.forEach((match) => map.set(match.id, match));
+    return map;
+  }, [state.matches]);
+
   const hasLoadedLocalState = useRef(false);
 
   // Load state from localStorage on mount
@@ -696,8 +709,8 @@ export const AppProvider = ({ children }: AppProviderProps) => {
   }, []);
 
   const getCompetitionById = useCallback(
-    (id: string) => state.competitions.find((comp) => comp.id === id),
-    [state.competitions]
+    (id: string) => competitionsMap.get(id),
+    [competitionsMap]
   );
 
   // Match actions
@@ -1340,8 +1353,8 @@ export const AppProvider = ({ children }: AppProviderProps) => {
   );
 
   const getMatchById = useCallback(
-    (id: string) => state.matches.find((match) => match.id === id),
-    [state.matches]
+    (id: string) => matchesMap.get(id),
+    [matchesMap]
   );
 
   const getMatchesByCompetition = useCallback(

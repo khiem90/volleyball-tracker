@@ -1,0 +1,1 @@
+export { VolleyScoreLogo } from "./VolleyScoreLogo";

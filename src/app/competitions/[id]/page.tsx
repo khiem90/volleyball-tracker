@@ -1,11 +1,8 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { Navigation } from "@/components/Navigation";
-import { Bracket } from "@/components/Bracket";
-import { DoubleBracket } from "@/components/DoubleBracket";
-import { Win2OutView } from "@/components/Win2OutView";
-import { TwoMatchRotationView } from "@/components/TwoMatchRotationView";
 import { CreateSessionDialog } from "@/components/CreateSessionDialog";
 import { CompetitionNotFound } from "@/components/competition-detail/CompetitionNotFound";
 import { CompetitionHeader } from "@/components/competition-detail/CompetitionHeader";
@@ -25,6 +22,24 @@ import {
 } from "lucide-react";
 import { EditMatchDialog } from "@/components/EditMatchDialog";
 import { useCompetitionDetailPage } from "@/hooks/useCompetitionDetailPage";
+
+// Lazy load tournament view components - only one is rendered based on competition type
+const Bracket = dynamic(
+  () => import("@/components/Bracket").then((mod) => ({ default: mod.Bracket })),
+  { ssr: false }
+);
+const DoubleBracket = dynamic(
+  () => import("@/components/DoubleBracket").then((mod) => ({ default: mod.DoubleBracket })),
+  { ssr: false }
+);
+const Win2OutView = dynamic(
+  () => import("@/components/Win2OutView").then((mod) => ({ default: mod.Win2OutView })),
+  { ssr: false }
+);
+const TwoMatchRotationView = dynamic(
+  () => import("@/components/TwoMatchRotationView").then((mod) => ({ default: mod.TwoMatchRotationView })),
+  { ssr: false }
+);
 
 const typeLabels: Record<string, string> = {
   round_robin: "Round Robin",

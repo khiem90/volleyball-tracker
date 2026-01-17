@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useCallback } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Pencil } from "lucide-react";
 import { getDoubleBracketStructure, getDoubleElimRoundName } from "@/lib/doubleElimination";
 import { useApp } from "@/context/AppContext";
+import { useTeamsMap } from "@/hooks/useTeamsMap";
 import type { Match, PersistentTeam } from "@/types/game";
 
 interface DoubleBracketProps {
@@ -21,25 +22,21 @@ export const DoubleBracket = ({ matches, teams, totalTeams, onMatchClick, onEdit
   const { canEdit } = useApp();
   const winnersRounds = Math.log2(totalTeams);
 
-  const teamsMap = useMemo(() => {
-    const map = new Map<string, PersistentTeam>();
-    teams.forEach((team) => map.set(team.id, team));
-    return map;
-  }, [teams]);
+  const { getTeamName: getTeamNameFromMap, getTeamColor } = useTeamsMap(teams);
 
   const bracketData = useMemo(
     () => getDoubleBracketStructure(matches, totalTeams),
     [matches, totalTeams]
   );
 
-  const getTeamName = (teamId: string) => {
-    if (!teamId) return "TBD";
-    return teamsMap.get(teamId)?.name || "Unknown";
-  };
-
-  const getTeamColor = (teamId: string) => {
-    return teamsMap.get(teamId)?.color || "#64748b";
-  };
+  const getTeamName = useCallback(
+    (teamId: string) => {
+      if (!teamId) return "TBD";
+      const name = getTeamNameFromMap(teamId);
+      return name === "Unknown Team" ? "Unknown" : name;
+    },
+    [getTeamNameFromMap]
+  );
 
   const handleMatchClick = (match: Match) => {
     if (onMatchClick && match.homeTeamId && match.awayTeamId) {

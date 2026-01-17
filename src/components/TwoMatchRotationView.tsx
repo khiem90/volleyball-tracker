@@ -1,21 +1,19 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import {
-  Users,
-  Trophy,
-  Clock,
-  Play,
-  RotateCw,
-  Pencil,
-  Settings2,
-} from "lucide-react";
+import { useMemo, useState, useCallback } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Clock, RotateCw } from "lucide-react";
 import { getTeamsByStatus, getSessionMatchCount } from "@/lib/twoMatchRotation";
 import { useApp } from "@/context/AppContext";
+import { useTeamsMap } from "@/hooks/useTeamsMap";
 import { EditMatchDialog } from "@/components/EditMatchDialog";
 import { EditQueueDialog } from "@/components/EditQueueDialog";
+import {
+  TwoMatchCourtCard,
+  TwoMatchQueueSection,
+  TwoMatchLeaderboard,
+  MatchHistorySection,
+} from "@/components/rotation-views";
 import type {
   Match,
   PersistentTeam,
@@ -43,19 +41,7 @@ export const TwoMatchRotationView = ({
   const [showEditQueue, setShowEditQueue] = useState(false);
   const canPlayMatch = canEdit && Boolean(onMatchClick);
 
-  const teamsMap = useMemo(() => {
-    const map = new Map<string, PersistentTeam>();
-    teams.forEach((team) => map.set(team.id, team));
-    return map;
-  }, [teams]);
-
-  const getTeamName = (teamId: string) => {
-    return teamsMap.get(teamId)?.name || "Unknown Team";
-  };
-
-  const getTeamColor = (teamId: string) => {
-    return teamsMap.get(teamId)?.color || "#3b82f6";
-  };
+  const { getTeamName, getTeamColor } = useTeamsMap(teams);
 
   const { inQueue, leaderboard } = useMemo(
     () => getTeamsByStatus(state),
@@ -67,11 +53,9 @@ export const TwoMatchRotationView = ({
     const result: Match[] = [];
     const seenCourts = new Set<number>();
 
-    // For each court, find the most recent pending/in_progress match for those teams
     state.courts.forEach((court) => {
       const [team1, team2] = court.teamIds;
 
-      // Find matches where both teams are exactly the ones on this court
       const courtMatches = matches.filter((m) => {
         const isActiveStatus =
           m.status === "pending" || m.status === "in_progress";
@@ -81,9 +65,7 @@ export const TwoMatchRotationView = ({
         return isActiveStatus && teamsMatch;
       });
 
-      // Only take the most recent one (by createdAt or id)
       if (courtMatches.length > 0 && !seenCourts.has(court.courtNumber)) {
-        // Sort by createdAt descending, take the most recent
         const sortedMatches = courtMatches.sort(
           (a, b) => (b.createdAt || 0) - (a.createdAt || 0)
         );
@@ -103,36 +85,42 @@ export const TwoMatchRotationView = ({
     [matches]
   );
 
-  const handleMatchClick = (match: Match) => {
-    if (canPlayMatch && onMatchClick) {
-      onMatchClick(match);
-    }
-  };
+  const getSessionDisplay = useCallback(
+    (teamId: string, court: (typeof state.courts)[0] | undefined) => {
+      const sessionMatches = getSessionMatchCount(state, teamId);
+      if (court?.isFirstMatch) {
+        return "First match";
+      }
+      return `${sessionMatches}/2 matches`;
+    },
+    [state]
+  );
 
-  const getSessionDisplay = (
-    teamId: string,
-    court: (typeof state.courts)[0] | undefined
-  ) => {
-    const sessionMatches = getSessionMatchCount(state, teamId);
-    if (court?.isFirstMatch) {
-      return "First match";
-    }
-    return `${sessionMatches}/2 matches`;
-  };
+  const getCourtForMatch = useCallback(
+    (match: Match) => {
+      return state.courts.find(
+        (c) =>
+          c.teamIds.includes(match.homeTeamId) &&
+          c.teamIds.includes(match.awayTeamId)
+      );
+    },
+    [state.courts]
+  );
 
-  // Get court info for a match
-  const getCourtForMatch = (match: Match) => {
-    return state.courts.find(
-      (c) =>
-        c.teamIds.includes(match.homeTeamId) &&
-        c.teamIds.includes(match.awayTeamId)
-    );
-  };
+  const isTeamOnCourt = useCallback(
+    (teamId: string) => {
+      return state.courts.some((c) => c.teamIds.includes(teamId));
+    },
+    [state.courts]
+  );
 
-  // Check if a team is on any court
-  const isTeamOnCourt = (teamId: string) => {
-    return state.courts.some((c) => c.teamIds.includes(teamId));
-  };
+  const handleEditMatch = useCallback((match: Match) => {
+    setEditingMatch(match);
+  }, []);
+
+  const handleEditQueue = useCallback(() => {
+    setShowEditQueue(true);
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -156,149 +144,20 @@ export const TwoMatchRotationView = ({
             const court = getCourtForMatch(match);
 
             return (
-              <Card
+              <TwoMatchCourtCard
                 key={match.id}
-                className="border-primary/30 bg-linear-to-br from-primary/5 to-primary/10"
-              >
-                <CardHeader className="pb-2">
-                  <CardTitle className="flex items-center justify-between text-lg">
-                    <div className="flex items-center gap-2">
-                      <Play className="w-5 h-5 text-primary" />
-                      Court {court?.courtNumber || match.position}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {court?.isFirstMatch && (
-                        <span className="text-xs bg-amber-500/20 text-amber-500 px-2 py-1 rounded-full">
-                          First Match
-                        </span>
-                      )}
-                      {canEdit && match.status === "pending" && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setEditingMatch(match);
-                          }}
-                          aria-label="Edit match assignment"
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div
-                    className={`flex items-center justify-center gap-4 py-4 ${
-                      canPlayMatch
-                        ? "cursor-pointer hover:opacity-80 transition-opacity"
-                        : ""
-                    }`}
-                    onClick={canPlayMatch ? () => handleMatchClick(match) : undefined}
-                    role={canPlayMatch ? "button" : undefined}
-                    tabIndex={canPlayMatch ? 0 : undefined}
-                    onKeyDown={
-                      canPlayMatch
-                        ? (e) => {
-                            if (e.key === "Enter" || e.key === " ") {
-                              handleMatchClick(match);
-                            }
-                          }
-                        : undefined
-                    }
-                    aria-label={
-                      canPlayMatch
-                        ? `Click to play match on Court ${
-                            court?.courtNumber || match.position
-                          }`
-                        : undefined
-                    }
-                  >
-                    {/* Home Team */}
-                    <div className="text-center flex-1">
-                      <div
-                        className="w-14 h-14 mx-auto mb-2 rounded-xl flex items-center justify-center"
-                        style={{
-                          background: `linear-gradient(135deg, ${getTeamColor(
-                            match.homeTeamId
-                          )}, ${getTeamColor(match.homeTeamId)}cc)`,
-                        }}
-                      >
-                        <Users className="w-7 h-7 text-white" />
-                      </div>
-                      <p className="font-semibold text-sm">
-                        {getTeamName(match.homeTeamId)}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {getSessionDisplay(match.homeTeamId, court)}
-                      </p>
-                    </div>
-
-                    {/* VS / Score */}
-                    <div className="text-center">
-                      {match.status === "in_progress" ? (
-                        <>
-                          <div className="flex items-center justify-center gap-3 mb-2">
-                            <span className="text-3xl font-bold tabular-nums text-primary">
-                              {match.homeScore}
-                            </span>
-                            <span className="text-lg text-muted-foreground">
-                              :
-                            </span>
-                            <span className="text-3xl font-bold tabular-nums text-primary">
-                              {match.awayScore}
-                            </span>
-                          </div>
-                          <div className="flex items-center justify-center gap-1 text-xs text-amber-500 mb-2">
-                            <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-                            Live
-                          </div>
-                          {canPlayMatch && (
-                            <Button size="sm" className="gap-1">
-                              <Play className="w-4 h-4" />
-                              Continue
-                            </Button>
-                          )}
-                        </>
-                      ) : (
-                        <>
-                          <div className="text-xl font-bold text-muted-foreground">
-                            VS
-                          </div>
-                          {canPlayMatch && (
-                            <Button size="sm" className="mt-2 gap-1">
-                              <Play className="w-4 h-4" />
-                              Play
-                            </Button>
-                          )}
-                        </>
-                      )}
-                    </div>
-
-                    {/* Away Team */}
-                    <div className="text-center flex-1">
-                      <div
-                        className="w-14 h-14 mx-auto mb-2 rounded-xl flex items-center justify-center"
-                        style={{
-                          background: `linear-gradient(135deg, ${getTeamColor(
-                            match.awayTeamId
-                          )}, ${getTeamColor(match.awayTeamId)}cc)`,
-                        }}
-                      >
-                        <Users className="w-7 h-7 text-white" />
-                      </div>
-                      <p className="font-semibold text-sm">
-                        {getTeamName(match.awayTeamId)}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {getSessionDisplay(match.awayTeamId, court)}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                match={match}
+                courtNumber={court?.courtNumber || match.position}
+                isFirstMatch={court?.isFirstMatch}
+                homeSessionDisplay={getSessionDisplay(match.homeTeamId, court)}
+                awaySessionDisplay={getSessionDisplay(match.awayTeamId, court)}
+                getTeamName={getTeamName}
+                getTeamColor={getTeamColor}
+                canEdit={canEdit}
+                canPlayMatch={canPlayMatch}
+                onMatchClick={onMatchClick}
+                onEditMatch={handleEditMatch}
+              />
             );
           })}
         </div>
@@ -314,231 +173,28 @@ export const TwoMatchRotationView = ({
       )}
 
       {/* Queue */}
-      <Card className="border-blue-500/30 bg-blue-500/5">
-        <CardHeader className="pb-2">
-          <CardTitle className="flex items-center justify-between text-lg">
-            <div className="flex items-center gap-2">
-              <Clock className="w-5 h-5 text-blue-500" />
-              Queue ({inQueue.length} waiting)
-            </div>
-            {canEdit && inQueue.length > 1 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="gap-1.5 text-blue-500 hover:text-blue-400"
-                onClick={() => setShowEditQueue(true)}
-                aria-label="Edit queue order"
-              >
-                <Settings2 className="w-4 h-4" />
-                Reorder
-              </Button>
-            )}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {inQueue.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-4 text-center">
-              All teams are on court!
-            </p>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {inQueue.map((status, index) => (
-                <div
-                  key={`${status.teamId}-${index}`}
-                  className="flex items-center gap-2 px-3 py-2 rounded-lg bg-card border border-border/50"
-                >
-                  <span className="text-xs text-muted-foreground font-medium w-5">
-                    #{index + 1}
-                  </span>
-                  <div
-                    className="w-6 h-6 rounded-md flex items-center justify-center"
-                    style={{
-                      background: `linear-gradient(135deg, ${getTeamColor(
-                        status.teamId
-                      )}, ${getTeamColor(status.teamId)}cc)`,
-                    }}
-                  >
-                    <Users className="w-3 h-3 text-white" />
-                  </div>
-                  <span className="font-medium text-sm">
-                    {getTeamName(status.teamId)}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    ({status.totalWins}W/{status.totalLosses}L)
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <TwoMatchQueueSection
+        queue={inQueue}
+        getTeamName={getTeamName}
+        getTeamColor={getTeamColor}
+        canEdit={canEdit}
+        onEditQueue={handleEditQueue}
+      />
 
       {/* Leaderboard */}
-      {leaderboard.length > 0 && (
-        <Card className="border-amber-500/30 bg-amber-500/5">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Trophy className="w-5 h-5 text-amber-500" />
-              Leaderboard
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {leaderboard.map((status, index) => {
-                const onCourt = isTeamOnCourt(status.teamId);
-                const winRate =
-                  status.totalMatches > 0
-                    ? Math.round((status.totalWins / status.totalMatches) * 100)
-                    : 0;
-
-                return (
-                  <div
-                    key={status.teamId}
-                    className={`
-                      flex items-center gap-3 p-3 rounded-lg
-                      ${
-                        index === 0
-                          ? "bg-amber-500/20 border border-amber-500/30"
-                          : "bg-card border border-border/50"
-                      }
-                      ${onCourt ? "ring-2 ring-primary/30" : ""}
-                    `}
-                  >
-                    {/* Rank */}
-                    <div
-                      className={`
-                      w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm
-                      ${index === 0 ? "bg-amber-500 text-white" : ""}
-                      ${index === 1 ? "bg-slate-400 text-white" : ""}
-                      ${index === 2 ? "bg-amber-700 text-white" : ""}
-                      ${index > 2 ? "bg-card text-muted-foreground" : ""}
-                    `}
-                    >
-                      {index + 1}
-                    </div>
-
-                    {/* Team */}
-                    <div
-                      className="w-8 h-8 rounded-lg flex items-center justify-center"
-                      style={{
-                        background: `linear-gradient(135deg, ${getTeamColor(
-                          status.teamId
-                        )}, ${getTeamColor(status.teamId)}cc)`,
-                      }}
-                    >
-                      <Users className="w-4 h-4 text-white" />
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p
-                          className={`font-medium truncate ${
-                            index === 0 ? "text-amber-500" : ""
-                          }`}
-                        >
-                          {getTeamName(status.teamId)}
-                        </p>
-                        {onCourt && (
-                          <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full">
-                            Playing
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        {status.totalMatches} matches • {winRate}% win rate
-                      </p>
-                    </div>
-
-                    {/* Stats */}
-                    <div className="text-right">
-                      <div className="flex items-center gap-2">
-                        <span className="text-emerald-500 font-bold">
-                          {status.totalWins}W
-                        </span>
-                        <span className="text-muted-foreground">/</span>
-                        <span className="text-red-400 font-medium">
-                          {status.totalLosses}L
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      <TwoMatchLeaderboard
+        leaderboard={leaderboard}
+        getTeamName={getTeamName}
+        getTeamColor={getTeamColor}
+        isTeamOnCourt={isTeamOnCourt}
+      />
 
       {/* Match History */}
-      {completedMatches.length > 0 && (
-        <Card className="border-border/50 bg-card/30">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg">
-              Match History ({completedMatches.length} matches)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2 max-h-60 overflow-y-auto">
-              {completedMatches.slice(0, 20).map((match, index) => {
-                const homeWon = match.winnerId === match.homeTeamId;
-
-                return (
-                  <div
-                    key={match.id}
-                    className="flex items-center justify-between p-3 rounded-lg bg-card border border-border/50"
-                  >
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <span className="text-xs text-muted-foreground w-8 shrink-0">
-                        #{completedMatches.length - index}
-                      </span>
-                      <span className="text-xs text-muted-foreground shrink-0">
-                        C{match.position}
-                      </span>
-                      <div
-                        className="w-3 h-3 rounded-full shrink-0"
-                        style={{
-                          backgroundColor: getTeamColor(match.homeTeamId),
-                        }}
-                      />
-                      <span
-                        className={`truncate ${
-                          homeWon
-                            ? "font-semibold text-emerald-500"
-                            : "text-muted-foreground"
-                        }`}
-                      >
-                        {getTeamName(match.homeTeamId)}
-                      </span>
-                    </div>
-
-                    <span className="font-bold tabular-nums px-3 shrink-0">
-                      {match.homeScore} - {match.awayScore}
-                    </span>
-
-                    <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
-                      <span
-                        className={`truncate ${
-                          !homeWon
-                            ? "font-semibold text-emerald-500"
-                            : "text-muted-foreground"
-                        }`}
-                      >
-                        {getTeamName(match.awayTeamId)}
-                      </span>
-                      <div
-                        className="w-3 h-3 rounded-full shrink-0"
-                        style={{
-                          backgroundColor: getTeamColor(match.awayTeamId),
-                        }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      <MatchHistorySection
+        matches={completedMatches}
+        getTeamName={getTeamName}
+        getTeamColor={getTeamColor}
+      />
 
       {/* Edit Match Dialog */}
       <EditMatchDialog

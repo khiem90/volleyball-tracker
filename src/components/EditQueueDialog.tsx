@@ -19,6 +19,8 @@ import {
 } from "lucide-react";
 import type { PersistentTeam, Competition } from "@/types/game";
 import { useApp } from "@/context/AppContext";
+import { useTeamsMap } from "@/hooks/useTeamsMap";
+import { useTeamsOnCourt } from "@/hooks/useTeamsOnCourt";
 
 interface EditQueueDialogProps {
   open: boolean;
@@ -34,29 +36,13 @@ export const EditQueueDialog = ({
   teams,
 }: EditQueueDialogProps) => {
   const { reorderQueue, canEdit } = useApp();
+  const { getTeamName, getTeamColor } = useTeamsMap(teams);
+  const teamsOnCourt = useTeamsOnCourt(competition);
 
   const [queue, setQueue] = useState<string[]>([]);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const dragNodeRef = useRef<HTMLDivElement | null>(null);
-
-  // Get teams currently on court
-  const teamsOnCourt = useMemo(() => {
-    if (!competition) return new Set<string>();
-    const onCourt = new Set<string>();
-
-    if (competition.win2outState) {
-      competition.win2outState.courts.forEach((court) => {
-        court.teamIds.forEach((id) => onCourt.add(id));
-      });
-    }
-    if (competition.twoMatchRotationState) {
-      competition.twoMatchRotationState.courts.forEach((court) => {
-        court.teamIds.forEach((id) => onCourt.add(id));
-      });
-    }
-    return onCourt;
-  }, [competition]);
 
   // Get the current queue from competition state (filtering out teams on court)
   const currentQueue = useMemo(() => {
@@ -90,14 +76,6 @@ export const EditQueueDialog = ({
     if (queue.length !== currentQueue.length) return true;
     return queue.some((teamId, index) => teamId !== currentQueue[index]);
   }, [queue, currentQueue]);
-
-  const getTeamName = (teamId: string) => {
-    return teams.find((t) => t.id === teamId)?.name || "Unknown Team";
-  };
-
-  const getTeamColor = (teamId: string) => {
-    return teams.find((t) => t.id === teamId)?.color || "#3b82f6";
-  };
 
   const handleMoveUp = (index: number) => {
     if (index <= 0) return;

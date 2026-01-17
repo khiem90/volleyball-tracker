@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Users, Repeat, AlertCircle } from "lucide-react";
 import type { Match, PersistentTeam, Competition } from "@/types/game";
 import { useApp } from "@/context/AppContext";
+import { useTeamsMap } from "@/hooks/useTeamsMap";
 
 interface EditMatchDialogProps {
   open: boolean;
@@ -32,6 +33,7 @@ export const EditMatchDialog = ({
   competition,
 }: EditMatchDialogProps) => {
   const { updateMatchTeams, canEdit } = useApp();
+  const { getTeamName, getTeamColor } = useTeamsMap(teams);
 
   const [homeTeamId, setHomeTeamId] = useState<string>("");
   const [awayTeamId, setAwayTeamId] = useState<string>("");
@@ -123,14 +125,6 @@ export const EditMatchDialog = ({
     }
 
     onOpenChange(false);
-  };
-
-  const getTeamName = (teamId: string) => {
-    return teams.find((t) => t.id === teamId)?.name || "Unknown Team";
-  };
-
-  const getTeamColor = (teamId: string) => {
-    return teams.find((t) => t.id === teamId)?.color || "#3b82f6";
   };
 
   if (!canEdit) return null;
