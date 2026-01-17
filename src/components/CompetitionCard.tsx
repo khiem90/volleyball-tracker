@@ -162,7 +162,7 @@ export const CompetitionCard = memo(({
                           size="icon"
                           onClick={handleDeleteClick}
                           aria-label={`Delete ${competition.name}`}
-                          className="h-9 w-9 rounded-xl hover:bg-destructive/20 text-destructive hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="h-9 w-9 rounded-xl hover:bg-destructive/20 text-destructive hover:text-destructive opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
