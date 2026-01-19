@@ -54,9 +54,6 @@ export const FormatStep = ({
               }
             }}
           >
-            {isSelected && (
-              <div className={`h-1 w-full bg-linear-to-r ${option.gradient}`} />
-            )}
             <CardHeader className="text-center pb-2">
               <div
                 className={`
