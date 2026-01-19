@@ -110,6 +110,15 @@ body {
   background-color: oklch(0.5 0.1 200 / 0.5);
 }
 
+/* Dark mode scrollbar */
+.dark .scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: oklch(0.4 0.06 200 / 0.4);
+}
+
+.dark .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background-color: oklch(0.5 0.1 200 / 0.6);
+}
+
 /* Prevent text selection on score panels */
 .select-none {
   -webkit-user-select: none;
@@ -194,6 +203,76 @@ body {
   --cloud: oklch(1 0 0 / 0.8);
 }
 
+/* ============================================
+   DARK THEME - Night Game Atmosphere
+   Deep charcoal with cool undertones + glowing accents
+   ============================================ */
+.dark {
+  --radius: 0.75rem;
+
+  /* Deep charcoal backgrounds */
+  --background: oklch(0.13 0.015 240);
+  --foreground: oklch(0.93 0.01 220);
+
+  /* Elevated card surfaces */
+  --card: oklch(0.18 0.012 240);
+  --card-foreground: oklch(0.93 0.01 220);
+  --card-shadow: oklch(0 0 0 / 0.4);
+
+  --popover: oklch(0.16 0.015 240);
+  --popover-foreground: oklch(0.93 0.01 220);
+
+  /* Teal primary - enhanced glow for dark */
+  --primary: oklch(0.65 0.16 200);
+  --primary-foreground: oklch(0.12 0.02 200);
+
+  /* Teal accent variations */
+  --teal-light: oklch(0.35 0.08 200);
+  --teal-dark: oklch(0.55 0.14 200);
+
+  /* Muted secondary */
+  --secondary: oklch(0.22 0.015 240);
+  --secondary-foreground: oklch(0.85 0.01 220);
+
+  --muted: oklch(0.2 0.01 240);
+  --muted-foreground: oklch(0.6 0.02 220);
+
+  /* Accent for hover states */
+  --accent: oklch(0.24 0.02 200);
+  --accent-foreground: oklch(0.93 0.01 220);
+
+  /* Destructive - vivid red on dark */
+  --destructive: oklch(0.6 0.22 25);
+  --destructive-light: oklch(0.25 0.08 25);
+
+  /* Borders and inputs */
+  --border: oklch(0.28 0.015 240);
+  --input: oklch(0.2 0.01 240);
+  --ring: oklch(0.65 0.16 200);
+
+  /* Status colors - boosted for dark contrast */
+  --status-draft: oklch(0.65 0.14 250);
+  --status-draft-bg: oklch(0.22 0.04 250);
+  --status-active: oklch(0.7 0.16 200);
+  --status-active-bg: oklch(0.22 0.05 200);
+  --status-complete: oklch(0.65 0.14 145);
+  --status-complete-bg: oklch(0.22 0.04 145);
+  --status-live: oklch(0.7 0.2 30);
+  --status-live-bg: oklch(0.25 0.06 30);
+
+  /* Chart colors - luminous on dark */
+  --chart-1: oklch(0.7 0.16 200);
+  --chart-2: oklch(0.7 0.14 180);
+  --chart-3: oklch(0.65 0.14 145);
+  --chart-4: oklch(0.65 0.14 250);
+  --chart-5: oklch(0.7 0.18 45);
+
+  /* Decorative colors */
+  --wave-light: oklch(0.2 0.03 200);
+  --wave-medium: oklch(0.25 0.05 200);
+  --cloud: oklch(0.2 0.02 240 / 0.5);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -215,6 +294,15 @@ body {
     oklch(0.94 0.03 200) 100%
   );
   min-height: 100vh;
+}
+
+.dark .bg-tournament {
+  background: linear-gradient(
+    180deg,
+    oklch(0.13 0.015 240) 0%,
+    oklch(0.12 0.018 240) 50%,
+    oklch(0.11 0.02 240) 100%
+  );
 }
 
 /* Decorative wave pattern */
@@ -249,12 +337,25 @@ body {
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
+.dark .soft-card {
+  box-shadow:
+    0 1px 3px oklch(0 0 0 / 0.3),
+    0 4px 12px oklch(0 0 0 / 0.4);
+}
+
 .soft-card-hover:hover {
   border-color: oklch(0.55 0.14 200 / 0.3);
   box-shadow:
     0 2px 8px oklch(0 0 0 / 0.06),
     0 8px 24px oklch(0.55 0.1 200 / 0.1);
   transform: translateY(-2px);
+}
+
+.dark .soft-card-hover:hover {
+  border-color: oklch(0.65 0.16 200 / 0.4);
+  box-shadow:
+    0 2px 8px oklch(0 0 0 / 0.4),
+    0 8px 24px oklch(0.65 0.16 200 / 0.15);
 }
 
 /* Legacy glass-card class for compatibility - now soft card */
@@ -268,12 +369,25 @@ body {
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
+.dark .glass-card {
+  box-shadow:
+    0 1px 3px oklch(0 0 0 / 0.3),
+    0 4px 12px oklch(0 0 0 / 0.4);
+}
+
 .glass-card-hover:hover {
   border-color: oklch(0.55 0.14 200 / 0.3);
   box-shadow:
     0 2px 8px oklch(0 0 0 / 0.06),
     0 8px 24px oklch(0.55 0.1 200 / 0.1);
   transform: translateY(-2px);
+}
+
+.dark .glass-card-hover:hover {
+  border-color: oklch(0.65 0.16 200 / 0.4);
+  box-shadow:
+    0 2px 8px oklch(0 0 0 / 0.4),
+    0 8px 24px oklch(0.65 0.16 200 / 0.15);
 }
 
 /* Navigation bar - light with subtle shadow */
@@ -283,6 +397,14 @@ body {
   box-shadow:
     0 1px 3px oklch(0 0 0 / 0.03),
     0 4px 16px oklch(0 0 0 / 0.06);
+}
+
+.dark .glass-nav {
+  background: oklch(0.16 0.015 240 / 0.95);
+  border: 1px solid oklch(0.28 0.015 240 / 0.8);
+  box-shadow:
+    0 1px 3px oklch(0 0 0 / 0.2),
+    0 4px 16px oklch(0 0 0 / 0.3);
 }
 
 /* Input fields - light theme */
@@ -806,4 +928,97 @@ button:active:not(:disabled) {
 ::selection {
   background: oklch(0.55 0.14 200 / 0.2);
   color: oklch(0.2 0.02 220);
+}
+
+.dark ::selection {
+  background: oklch(0.65 0.16 200 / 0.3);
+  color: oklch(0.95 0.01 220);
+}
+
+/* ============================================
+   THEME TOGGLE - Stadium Lighting Control
+   ============================================ */
+.theme-toggle-track {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  border-radius: 12px;
+  background: oklch(0.92 0.04 55);
+  border: 1px solid oklch(0.85 0.06 55 / 0.5);
+  cursor: pointer;
+  overflow: hidden;
+  transition: background 0.3s ease, border-color 0.3s ease;
+  flex-shrink: 0;
+}
+
+.theme-toggle-track:hover {
+  border-color: oklch(0.75 0.1 55);
+}
+
+.theme-toggle-track:focus-visible {
+  outline: 2px solid oklch(0.55 0.14 200);
+  outline-offset: 2px;
+}
+
+.dark .theme-toggle-track {
+  background: oklch(0.22 0.03 240);
+  border-color: oklch(0.35 0.05 200 / 0.5);
+}
+
+.dark .theme-toggle-track:hover {
+  border-color: oklch(0.5 0.1 200);
+}
+
+.theme-toggle-glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.theme-toggle-orb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow:
+    0 1px 3px oklch(0 0 0 / 0.15),
+    0 2px 6px oklch(0 0 0 / 0.1);
+}
+
+.dark .theme-toggle-orb {
+  box-shadow:
+    0 1px 3px oklch(0 0 0 / 0.3),
+    0 0 8px oklch(0.7 0.1 250 / 0.3);
+}
+
+.theme-toggle-icon {
+  width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Sun rays rotation animation */
+@keyframes rotateSunRays {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.sun-rays {
+  transform-origin: center;
+  animation: rotateSunRays 12s linear infinite;
+}
+
+.dark ::placeholder {
+  color: oklch(0.5 0.02 240);
 }

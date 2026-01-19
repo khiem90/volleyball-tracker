@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useAuth } from "@/context/AuthContext";
 import { SessionAuth } from "./SessionAuth";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 const navItems = [
   { href: "/", label: "Home", icon: HomeIcon, description: "Overview & stats" },
@@ -179,8 +180,9 @@ export const Navigation = memo(() => {
               ))}
             </div>
 
-            {/* Right side - User actions */}
-            <div className="hidden md:flex items-center gap-2 pr-2 shrink-0">
+            {/* Right side - Theme toggle & User actions */}
+            <div className="hidden md:flex items-center gap-3 pr-2 shrink-0">
+              <ThemeToggle />
               {isConfigured && (
                 user ? (
                   <TooltipProvider>
@@ -273,7 +275,14 @@ export const Navigation = memo(() => {
                     />
                   ))}
 
-                  {isConfigured && (
+                  {/* Theme toggle in mobile menu */}
+                <Separator className="my-4 bg-border" />
+                <div className="flex items-center justify-between px-4 py-2">
+                  <span className="text-sm font-medium text-muted-foreground">Theme</span>
+                  <ThemeToggle />
+                </div>
+
+                {isConfigured && (
                     <>
                       <Separator className="my-4 bg-border" />
 

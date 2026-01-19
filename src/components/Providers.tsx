@@ -3,6 +3,7 @@
 import { AppProvider } from "@/context/AppContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { SessionProvider } from "@/context/SessionContext";
+import { ThemeProvider } from "@/context/ThemeContext";
 import type { ReactNode } from "react";
 
 interface ProvidersProps {
@@ -11,10 +12,12 @@ interface ProvidersProps {
 
 export const Providers = ({ children }: ProvidersProps) => {
   return (
-    <AuthProvider>
-      <SessionProvider>
-        <AppProvider>{children}</AppProvider>
-      </SessionProvider>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <SessionProvider>
+          <AppProvider>{children}</AppProvider>
+        </SessionProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 };
