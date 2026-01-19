@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Pencil } from "lucide-react";
-import { getDoubleBracketStructure, getDoubleElimRoundName } from "@/lib/doubleElimination";
+import { getDoubleBracketStructure, getDoubleElimRoundName, getTotalWinnersRounds } from "@/lib/doubleElimination";
 import { useApp } from "@/context/AppContext";
 import { useTeamsMap } from "@/hooks/useTeamsMap";
 import type { Match, PersistentTeam } from "@/types/game";
@@ -20,7 +20,8 @@ interface DoubleBracketProps {
 
 export const DoubleBracket = ({ matches, teams, totalTeams, onMatchClick, onEditMatch }: DoubleBracketProps) => {
   const { canEdit } = useApp();
-  const winnersRounds = Math.log2(totalTeams);
+  // Use getTotalWinnersRounds to handle non-power-of-2 team counts (byes)
+  const winnersRounds = getTotalWinnersRounds(totalTeams);
 
   const { getTeamName: getTeamNameFromMap, getTeamColor, getTeam } = useTeamsMap(teams);
 
@@ -39,13 +40,20 @@ export const DoubleBracket = ({ matches, teams, totalTeams, onMatchClick, onEdit
   );
 
   const handleMatchClick = (match: Match) => {
-    if (onMatchClick && match.homeTeamId && match.awayTeamId) {
+    if (onMatchClick && match.homeTeamId && match.awayTeamId && !match.isBye) {
       onMatchClick(match);
     }
   };
 
+  // For bye matches, get the team that has an ID
+  const getByeTeamName = (teamId: string) => {
+    if (!teamId) return "BYE";
+    return getTeamName(teamId);
+  };
+
   const renderMatchCard = (match: Match) => {
-    const isClickable = match.homeTeamId && match.awayTeamId;
+    const isBye = match.isBye === true;
+    const isClickable = match.homeTeamId && match.awayTeamId && !isBye;
     const isCompleted = match.status === "completed";
     const homeWon = match.winnerId === match.homeTeamId;
     const awayWon = match.winnerId === match.awayTeamId;
@@ -55,7 +63,7 @@ export const DoubleBracket = ({ matches, teams, totalTeams, onMatchClick, onEdit
         <Card
           className={`
             w-44 overflow-hidden border-border/50 bg-card/50 relative
-            ${isClickable ? "cursor-pointer hover:border-primary/50 hover:bg-card transition-all" : "opacity-75"}
+            ${isClickable ? "cursor-pointer hover:border-primary/50 hover:bg-card transition-all" : isBye ? "opacity-50 border-dashed" : "opacity-75"}
           `}
           onClick={() => handleMatchClick(match)}
           role={isClickable ? "button" : undefined}
@@ -72,19 +80,23 @@ export const DoubleBracket = ({ matches, teams, totalTeams, onMatchClick, onEdit
             className={`
               flex items-center justify-between px-2 py-1.5 border-b border-border/30 text-xs
               ${homeWon ? "bg-emerald-500/10" : ""}
-              ${isCompleted && !homeWon ? "opacity-50" : ""}
+              ${isCompleted && !homeWon && !isBye ? "opacity-50" : ""}
             `}
           >
             <div className="flex items-center gap-1.5 min-w-0">
-              <div
-                className="w-2 h-2 rounded-full shrink-0"
-                style={{ backgroundColor: getTeamColor(match.homeTeamId) }}
-              />
-              <span className={`truncate ${homeWon ? "font-semibold text-emerald-500" : ""}`}>
-                {getTeamName(match.homeTeamId)}
+              {match.homeTeamId ? (
+                <div
+                  className="w-2 h-2 rounded-full shrink-0"
+                  style={{ backgroundColor: getTeamColor(match.homeTeamId) }}
+                />
+              ) : (
+                <div className="w-2 h-2 rounded-full shrink-0 border border-border/50 border-dashed" />
+              )}
+              <span className={`truncate ${homeWon ? "font-semibold text-emerald-500" : ""} ${!match.homeTeamId ? "text-muted-foreground/60 italic" : ""}`}>
+                {isBye ? getByeTeamName(match.homeTeamId) : getTeamName(match.homeTeamId)}
               </span>
             </div>
-            {isCompleted && (
+            {isCompleted && !isBye && (
               <span className={`font-bold tabular-nums ${homeWon ? "text-emerald-500" : ""}`}>
                 {match.homeScore}
               </span>
@@ -96,19 +108,23 @@ export const DoubleBracket = ({ matches, teams, totalTeams, onMatchClick, onEdit
             className={`
               flex items-center justify-between px-2 py-1.5 text-xs
               ${awayWon ? "bg-emerald-500/10" : ""}
-              ${isCompleted && !awayWon ? "opacity-50" : ""}
+              ${isCompleted && !awayWon && !isBye ? "opacity-50" : ""}
             `}
           >
             <div className="flex items-center gap-1.5 min-w-0">
-              <div
-                className="w-2 h-2 rounded-full shrink-0"
-                style={{ backgroundColor: getTeamColor(match.awayTeamId) }}
-              />
-              <span className={`truncate ${awayWon ? "font-semibold text-emerald-500" : ""}`}>
-                {getTeamName(match.awayTeamId)}
+              {match.awayTeamId ? (
+                <div
+                  className="w-2 h-2 rounded-full shrink-0"
+                  style={{ backgroundColor: getTeamColor(match.awayTeamId) }}
+                />
+              ) : (
+                <div className="w-2 h-2 rounded-full shrink-0 border border-border/50 border-dashed" />
+              )}
+              <span className={`truncate ${awayWon ? "font-semibold text-emerald-500" : ""} ${!match.awayTeamId ? "text-muted-foreground/60 italic" : ""}`}>
+                {isBye ? getByeTeamName(match.awayTeamId) : getTeamName(match.awayTeamId)}
               </span>
             </div>
-            {isCompleted && (
+            {isCompleted && !isBye && (
               <span className={`font-bold tabular-nums ${awayWon ? "text-emerald-500" : ""}`}>
                 {match.awayScore}
               </span>
@@ -120,6 +136,15 @@ export const DoubleBracket = ({ matches, teams, totalTeams, onMatchClick, onEdit
             <Badge className="status-live absolute top-1.5 right-1.5 text-[9px] font-semibold uppercase tracking-wider">
               Live
             </Badge>
+          )}
+
+          {/* Bye Indicator */}
+          {isBye && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <span className="text-[9px] uppercase tracking-wider text-muted-foreground/50 bg-background/70 px-1.5 py-0.5 rounded-full border border-dashed border-border/30">
+                bye
+              </span>
+            </div>
           )}
         </Card>
 

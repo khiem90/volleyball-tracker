@@ -72,6 +72,7 @@ export interface Match {
   homeWins?: number;
   awayWins?: number;
   seriesGame?: number;
+  isBye?: boolean; // True if this match was won by bye (opponent didn't exist)
 }
 
 // Competition

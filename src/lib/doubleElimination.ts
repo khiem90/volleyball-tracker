@@ -1,8 +1,21 @@
 import type { Match } from "@/types/game";
 
+// Special marker for bye positions
+const BYE_MARKER = "__BYE__";
+
+/**
+ * Get the next power of 2 >= n
+ */
+const nextPowerOf2 = (n: number): number => {
+  let power = 1;
+  while (power < n) power *= 2;
+  return power;
+};
+
 /**
  * Generates a double elimination bracket.
  * Winners bracket + Losers bracket + Grand Finals.
+ * Supports non-power-of-2 team counts by adding byes.
  */
 export const generateDoubleEliminationBracket = (
   teamIds: string[],
@@ -11,48 +24,98 @@ export const generateDoubleEliminationBracket = (
   const matches: Omit<Match, "id" | "createdAt">[] = [];
   const n = teamIds.length;
 
-  // Ensure power of 2 and at least 4 teams
-  if (n < 4 || (n & (n - 1)) !== 0) {
-    throw new Error("Team count must be a power of 2 (minimum 4) for double elimination");
+  if (n < 4) {
+    throw new Error("Need at least 4 teams for double elimination");
   }
 
-  const winnersRounds = Math.log2(n);
+  // Calculate bracket size (next power of 2)
+  const bracketSize = nextPowerOf2(n);
+  const winnersRounds = Math.log2(bracketSize);
+  const byeCount = bracketSize - n;
+
+  // Create virtual team list with byes filling the lowest seed positions
+  const virtualTeams: string[] = [...teamIds];
+  for (let i = 0; i < byeCount; i++) {
+    virtualTeams.push(BYE_MARKER);
+  }
 
   // Generate seeded matchups for first round
-  const seededOrder = getSeededMatchups(n);
+  const seededOrder = getSeededMatchups(bracketSize);
 
   // ==================
   // Winners Bracket
   // ==================
 
+  // Track bye advances for winners bracket
+  const winnersByeAdvances: Map<number, string> = new Map();
+
   // First round of winners bracket
   for (let i = 0; i < seededOrder.length; i += 2) {
     const homeIndex = seededOrder[i];
     const awayIndex = seededOrder[i + 1];
+    const homeTeam = virtualTeams[homeIndex];
+    const awayTeam = virtualTeams[awayIndex];
+    const position = Math.floor(i / 2) + 1;
 
-    matches.push({
-      competitionId,
-      homeTeamId: teamIds[homeIndex],
-      awayTeamId: teamIds[awayIndex],
-      homeScore: 0,
-      awayScore: 0,
-      status: "pending",
-      round: 1,
-      position: Math.floor(i / 2) + 1,
-      bracket: "winners",
-    });
+    // Check if this is a bye match
+    if (homeTeam === BYE_MARKER || awayTeam === BYE_MARKER) {
+      const advancingTeam = homeTeam === BYE_MARKER ? awayTeam : homeTeam;
+      winnersByeAdvances.set(position, advancingTeam);
+
+      // Create a "bye" match that's already completed
+      matches.push({
+        competitionId,
+        homeTeamId: homeTeam === BYE_MARKER ? "" : homeTeam,
+        awayTeamId: awayTeam === BYE_MARKER ? "" : awayTeam,
+        homeScore: homeTeam === BYE_MARKER ? 0 : 1,
+        awayScore: awayTeam === BYE_MARKER ? 0 : 1,
+        status: "completed",
+        round: 1,
+        position,
+        bracket: "winners",
+        winnerId: advancingTeam,
+        isBye: true,
+      });
+    } else {
+      matches.push({
+        competitionId,
+        homeTeamId: homeTeam,
+        awayTeamId: awayTeam,
+        homeScore: 0,
+        awayScore: 0,
+        status: "pending",
+        round: 1,
+        position,
+        bracket: "winners",
+      });
+    }
   }
 
   // Subsequent rounds of winners bracket (placeholders)
-  let matchesInPrevRound = n / 2;
+  let matchesInPrevRound = bracketSize / 2;
   for (let round = 2; round <= winnersRounds; round++) {
     const matchesInRound = matchesInPrevRound / 2;
 
     for (let pos = 1; pos <= matchesInRound; pos++) {
+      // Check if any teams advance via bye to this match
+      let homeTeamId = "";
+      let awayTeamId = "";
+
+      if (round === 2) {
+        const homeSourcePos = pos * 2 - 1;
+        const awaySourcePos = pos * 2;
+        if (winnersByeAdvances.has(homeSourcePos)) {
+          homeTeamId = winnersByeAdvances.get(homeSourcePos)!;
+        }
+        if (winnersByeAdvances.has(awaySourcePos)) {
+          awayTeamId = winnersByeAdvances.get(awaySourcePos)!;
+        }
+      }
+
       matches.push({
         competitionId,
-        homeTeamId: "",
-        awayTeamId: "",
+        homeTeamId,
+        awayTeamId,
         homeScore: 0,
         awayScore: 0,
         status: "pending",
@@ -70,14 +133,15 @@ export const generateDoubleEliminationBracket = (
   // ==================
 
   // Losers bracket rounds
-  // Round L1: First round losers play each other (n/4 matches)
+  // Round L1: First round losers play each other (bracketSize/4 matches)
   // Round L2: L1 winners vs second round losers
   // Continue alternating...
 
-  let losersMatchCount = n / 4; // Start with half of first round losers
+  let losersMatchCount = bracketSize / 4;
   let losersRound = 1;
 
   // First round of losers (losers from winners round 1)
+  // Note: bye matches don't produce losers, so some L1 matches may have pre-filled teams
   for (let pos = 1; pos <= losersMatchCount; pos++) {
     matches.push({
       competitionId,
@@ -223,7 +287,9 @@ export const getDoubleBracketStructure = (
   matches: Match[],
   totalTeams: number
 ): DoubleBracketData => {
-  const winnersRounds = Math.log2(totalTeams);
+  // Calculate bracket size as next power of 2 for proper round calculation
+  const bracketSize = nextPowerOf2(totalTeams);
+  const winnersRounds = Math.log2(bracketSize);
 
   const winners: Match[][] = [];
   const losers: Match[][] = [];
@@ -253,5 +319,12 @@ export const getDoubleBracketStructure = (
   const grandFinals = matches.find((m) => m.bracket === "grand_finals") || null;
 
   return { winners, losers, grandFinals };
+};
+
+/**
+ * Get total winners rounds for a given team count (accounts for byes).
+ */
+export const getTotalWinnersRounds = (teamCount: number): number => {
+  return Math.log2(nextPowerOf2(teamCount));
 };
 

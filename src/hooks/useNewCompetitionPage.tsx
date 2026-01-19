@@ -12,7 +12,6 @@ export interface FormatOption {
   description: string;
   icon: React.ReactNode;
   minTeams: number;
-  requiresPowerOf2?: boolean;
   gradient: string;
 }
 
@@ -31,7 +30,6 @@ export const formatOptions: FormatOption[] = [
     description: "Lose once and you're out. Fast and exciting tournament format.",
     icon: <Brackets className="w-7 h-7" />,
     minTeams: 2,
-    requiresPowerOf2: true,
     gradient: "from-violet-500 to-purple-600",
   },
   {
@@ -40,7 +38,6 @@ export const formatOptions: FormatOption[] = [
     description: "Must lose twice to be eliminated. More forgiving tournament format.",
     icon: <Layers className="w-7 h-7" />,
     minTeams: 4,
-    requiresPowerOf2: true,
     gradient: "from-blue-500 to-indigo-600",
   },
   {
@@ -105,11 +102,17 @@ export const useNewCompetitionPage = () => {
       };
     }
 
-    if (currentFormat.requiresPowerOf2 && !isPowerOf2(count)) {
-      const next = nextPowerOf2(count);
+    // For elimination formats, show bye info if not a power of 2
+    if (
+      (currentFormat.type === "single_elimination" ||
+        currentFormat.type === "double_elimination") &&
+      !isPowerOf2(count)
+    ) {
+      const bracketSize = nextPowerOf2(count);
+      const byeCount = bracketSize - count;
       return {
-        valid: false,
-        message: `Select ${next} teams for a balanced bracket (power of 2)`,
+        valid: true,
+        message: `${count} teams selected (${byeCount} bye${byeCount > 1 ? "s" : ""})`,
       };
     }
 

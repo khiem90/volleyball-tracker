@@ -80,7 +80,6 @@ export const FormatStep = ({
               <div className="flex justify-center mt-3">
                 <Badge variant="secondary" className="text-xs">
                   Min {option.minTeams} teams
-                  {option.requiresPowerOf2 && " (power of 2)"}
                 </Badge>
               </div>
             </CardContent>

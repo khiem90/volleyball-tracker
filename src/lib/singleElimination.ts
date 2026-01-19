@@ -1,8 +1,21 @@
 import type { Match } from "@/types/game";
 
+// Special marker for bye positions
+const BYE_MARKER = "__BYE__";
+
+/**
+ * Get the next power of 2 >= n
+ */
+const nextPowerOf2 = (n: number): number => {
+  let power = 1;
+  while (power < n) power *= 2;
+  return power;
+};
+
 /**
  * Generates a single elimination bracket.
  * Teams are seeded in order provided.
+ * Supports non-power-of-2 team counts by adding byes.
  */
 export const generateSingleEliminationBracket = (
   teamIds: string[],
@@ -11,44 +24,96 @@ export const generateSingleEliminationBracket = (
   const matches: Omit<Match, "id" | "createdAt">[] = [];
   const n = teamIds.length;
 
-  // Ensure power of 2
-  if (n < 2 || (n & (n - 1)) !== 0) {
-    throw new Error("Team count must be a power of 2 for single elimination");
+  if (n < 2) {
+    throw new Error("Need at least 2 teams for single elimination");
   }
 
-  const totalRounds = Math.log2(n);
+  // Calculate bracket size (next power of 2)
+  const bracketSize = nextPowerOf2(n);
+  const totalRounds = Math.log2(bracketSize);
+  const byeCount = bracketSize - n;
+
+  // Create virtual team list with byes filling the lowest seed positions
+  // Teams are seeded 1 through n, byes fill positions n+1 through bracketSize
+  const virtualTeams: string[] = [...teamIds];
+  for (let i = 0; i < byeCount; i++) {
+    virtualTeams.push(BYE_MARKER);
+  }
 
   // Generate first round matches (seeded)
   // Standard seeding: 1v8, 4v5, 2v7, 3v6 for 8 teams
-  const seededOrder = getSeededMatchups(n);
+  const seededOrder = getSeededMatchups(bracketSize);
 
-  // First round
+  // First round - track which teams advance via bye
+  const byeAdvances: Map<number, string> = new Map();
+
   for (let i = 0; i < seededOrder.length; i += 2) {
     const homeIndex = seededOrder[i];
     const awayIndex = seededOrder[i + 1];
+    const homeTeam = virtualTeams[homeIndex];
+    const awayTeam = virtualTeams[awayIndex];
+    const position = Math.floor(i / 2) + 1;
 
-    matches.push({
-      competitionId,
-      homeTeamId: teamIds[homeIndex],
-      awayTeamId: teamIds[awayIndex],
-      homeScore: 0,
-      awayScore: 0,
-      status: "pending",
-      round: 1,
-      position: Math.floor(i / 2) + 1,
-    });
+    // Check if this is a bye match
+    if (homeTeam === BYE_MARKER || awayTeam === BYE_MARKER) {
+      // One team has a bye - they auto-advance to round 2
+      const advancingTeam = homeTeam === BYE_MARKER ? awayTeam : homeTeam;
+      byeAdvances.set(position, advancingTeam);
+
+      // Create a "bye" match that's already completed
+      matches.push({
+        competitionId,
+        homeTeamId: homeTeam === BYE_MARKER ? "" : homeTeam,
+        awayTeamId: awayTeam === BYE_MARKER ? "" : awayTeam,
+        homeScore: homeTeam === BYE_MARKER ? 0 : 1,
+        awayScore: awayTeam === BYE_MARKER ? 0 : 1,
+        status: "completed",
+        round: 1,
+        position,
+        winnerId: advancingTeam,
+        isBye: true,
+      });
+    } else {
+      // Normal match
+      matches.push({
+        competitionId,
+        homeTeamId: homeTeam,
+        awayTeamId: awayTeam,
+        homeScore: 0,
+        awayScore: 0,
+        status: "pending",
+        round: 1,
+        position,
+      });
+    }
   }
 
   // Generate placeholder matches for subsequent rounds
-  let matchesInPrevRound = n / 2;
+  let matchesInPrevRound = bracketSize / 2;
   for (let round = 2; round <= totalRounds; round++) {
     const matchesInRound = matchesInPrevRound / 2;
 
     for (let pos = 1; pos <= matchesInRound; pos++) {
+      // Check if any teams advance via bye to this match
+      let homeTeamId = "";
+      let awayTeamId = "";
+
+      if (round === 2) {
+        // Check bye advances from round 1
+        const homeSourcePos = pos * 2 - 1;
+        const awaySourcePos = pos * 2;
+        if (byeAdvances.has(homeSourcePos)) {
+          homeTeamId = byeAdvances.get(homeSourcePos)!;
+        }
+        if (byeAdvances.has(awaySourcePos)) {
+          awayTeamId = byeAdvances.get(awaySourcePos)!;
+        }
+      }
+
       matches.push({
         competitionId,
-        homeTeamId: "", // To be determined
-        awayTeamId: "", // To be determined
+        homeTeamId,
+        awayTeamId,
         homeScore: 0,
         awayScore: 0,
         status: "pending",
@@ -141,7 +206,9 @@ export const getBracketStructure = (
   matches: Match[],
   totalTeams: number
 ): BracketMatch[][] => {
-  const totalRounds = Math.log2(totalTeams);
+  // Calculate bracket size as next power of 2 for proper round calculation
+  const bracketSize = nextPowerOf2(totalTeams);
+  const totalRounds = Math.log2(bracketSize);
   const bracket: BracketMatch[][] = [];
 
   for (let round = 1; round <= totalRounds; round++) {
@@ -179,5 +246,12 @@ export const getRoundName = (round: number, totalRounds: number): string => {
     default:
       return `Round ${round}`;
   }
+};
+
+/**
+ * Get total rounds for a given team count (accounts for byes).
+ */
+export const getTotalRounds = (teamCount: number): number => {
+  return Math.log2(nextPowerOf2(teamCount));
 };
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useCallback } from "react";
-import { getRoundName } from "@/lib/singleElimination";
+import { getRoundName, getTotalRounds } from "@/lib/singleElimination";
 import { useApp } from "@/context/AppContext";
 import { useTeamsMap } from "@/hooks/useTeamsMap";
 import { BracketMatchCard, ChampionDisplay } from "@/components/bracket";
@@ -23,7 +23,8 @@ export const Bracket = ({
   onEditMatch,
 }: BracketProps) => {
   const { canEdit } = useApp();
-  const totalRounds = Math.log2(totalTeams);
+  // Use getTotalRounds to handle non-power-of-2 team counts (byes)
+  const totalRounds = getTotalRounds(totalTeams);
 
   const { getTeamName: getTeamNameFromMap, getTeamColor, getTeam } = useTeamsMap(teams);
 
