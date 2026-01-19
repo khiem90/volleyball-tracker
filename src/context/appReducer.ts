@@ -44,6 +44,7 @@ type CompetitionAction =
       teamIds: string[];
       numberOfCourts?: number;
       matchSeriesLength?: number;
+      instantWinEnabled?: boolean;
     }
   | { type: "UPDATE_COMPETITION"; competition: Competition }
   | { type: "DELETE_COMPETITION"; id: string }
@@ -137,6 +138,7 @@ export const appReducer = (state: AppState, action: AppAction): AppState => {
         createdAt: Date.now(),
         numberOfCourts: action.numberOfCourts,
         matchSeriesLength: action.matchSeriesLength,
+        instantWinEnabled: action.instantWinEnabled,
       };
       return {
         ...state,

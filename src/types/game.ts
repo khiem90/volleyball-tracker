@@ -92,6 +92,8 @@ export interface Competition {
   twoMatchRotationState?: TwoMatchRotationState;
   // Number of simultaneous courts (for two_match_rotation)
   numberOfCourts?: number;
+  // Instant win mode - tap team to declare winner without scoring
+  instantWinEnabled?: boolean;
 }
 
 // Round Robin specific

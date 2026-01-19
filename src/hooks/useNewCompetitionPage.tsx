@@ -71,6 +71,7 @@ export const useNewCompetitionPage = () => {
   const [nameError, setNameError] = useState("");
   const [numberOfCourts, setNumberOfCourts] = useState(1);
   const [matchSeriesLength, setMatchSeriesLength] = useState(1);
+  const [instantWinEnabled, setInstantWinEnabled] = useState(false);
 
   const currentFormat = useMemo(
     () => formatOptions.find((f) => f.type === selectedFormat),
@@ -176,12 +177,17 @@ export const useNewCompetitionPage = () => {
       selectedFormat === "double_elimination"
         ? matchSeriesLength
         : undefined;
+    const instantWinToUse =
+      selectedFormat === "two_match_rotation" || selectedFormat === "win2out"
+        ? instantWinEnabled
+        : undefined;
     createCompetition(
       trimmedName,
       selectedFormat,
       selectedTeamIds,
       courtsToUse,
-      seriesLengthToUse
+      seriesLengthToUse,
+      instantWinToUse
     );
 
     router.push("/competitions");
@@ -191,6 +197,7 @@ export const useNewCompetitionPage = () => {
     selectedTeamIds,
     numberOfCourts,
     matchSeriesLength,
+    instantWinEnabled,
     createCompetition,
     router,
   ]);
@@ -217,12 +224,14 @@ export const useNewCompetitionPage = () => {
     nameError,
     numberOfCourts,
     allSelected,
-      selectedFormat,
-      selectedTeamIds,
-      matchSeriesLength,
-      setNumberOfCourts,
-      setMatchSeriesLength,
-      setSelectedTeamIds,
+    selectedFormat,
+    selectedTeamIds,
+    matchSeriesLength,
+    instantWinEnabled,
+    setNumberOfCourts,
+    setMatchSeriesLength,
+    setInstantWinEnabled,
+    setSelectedTeamIds,
     setStep,
     step,
     teamValidation,

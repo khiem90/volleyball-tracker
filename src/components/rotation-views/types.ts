@@ -18,8 +18,10 @@ export interface ActiveCourtCardProps {
   getTeamColor: (teamId: string) => string;
   canEdit: boolean;
   canPlayMatch: boolean;
+  instantWinEnabled?: boolean;
   onMatchClick?: (match: Match) => void;
   onEditMatch?: (match: Match) => void;
+  onInstantWin?: (winnerId: string) => void;
 }
 
 export interface TeamQueueSectionProps {

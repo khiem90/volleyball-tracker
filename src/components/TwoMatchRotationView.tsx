@@ -3,8 +3,9 @@
 import { useMemo, useState, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Clock, RotateCw } from "lucide-react";
-import { getTeamsByStatus, getSessionMatchCount } from "@/lib/twoMatchRotation";
+import { getTeamsByStatus, getSessionMatchCount, processMatchResult } from "@/lib/twoMatchRotation";
 import { useApp } from "@/context/AppContext";
+import type { MatchStatus } from "@/types/game";
 import { useTeamsMap } from "@/hooks/useTeamsMap";
 import { EditMatchDialog } from "@/components/EditMatchDialog";
 import { EditQueueDialog } from "@/components/EditQueueDialog";
@@ -36,12 +37,62 @@ export const TwoMatchRotationView = ({
   competition,
   onMatchClick,
 }: TwoMatchRotationViewProps) => {
-  const { canEdit } = useApp();
+  const { canEdit, completeMatchWithNextMatch, startMatch, updateMatchScore } = useApp();
   const [editingMatch, setEditingMatch] = useState<Match | null>(null);
   const [showEditQueue, setShowEditQueue] = useState(false);
   const canPlayMatch = canEdit && Boolean(onMatchClick);
 
   const { getTeamName, getTeamColor } = useTeamsMap(teams);
+
+  // Instant win handler
+  const handleInstantWin = useCallback(
+    (winnerId: string, match: Match) => {
+      if (!competition || !canEdit) return;
+
+      // Determine scores (winner gets 25, loser gets 0)
+      const homeScore = winnerId === match.homeTeamId ? 25 : 0;
+      const awayScore = winnerId === match.awayTeamId ? 25 : 0;
+
+      // Ensure match is started first if pending
+      if (match.status === "pending") {
+        startMatch(match.id);
+      }
+
+      // Update the match score first
+      updateMatchScore(match.id, homeScore, awayScore);
+
+      // Create the completed match object for processing
+      const completedMatch: Match = {
+        ...match,
+        homeScore,
+        awayScore,
+        winnerId,
+        status: "completed" as MatchStatus,
+        completedAt: Date.now(),
+      };
+
+      // Process the result to get updated state and next match
+      const { updatedState, nextMatch } = processMatchResult(
+        state,
+        completedMatch
+      );
+
+      // Update competition with new state
+      const updatedCompetition = {
+        ...competition,
+        twoMatchRotationState: updatedState,
+      };
+
+      // Complete match and set up next match
+      completeMatchWithNextMatch(
+        match.id,
+        winnerId,
+        updatedCompetition,
+        nextMatch
+      );
+    },
+    [competition, canEdit, state, completeMatchWithNextMatch, startMatch, updateMatchScore]
+  );
 
   const { inQueue, leaderboard } = useMemo(
     () => getTeamsByStatus(state),
@@ -155,8 +206,10 @@ export const TwoMatchRotationView = ({
                 getTeamColor={getTeamColor}
                 canEdit={canEdit}
                 canPlayMatch={canPlayMatch}
+                instantWinEnabled={competition?.instantWinEnabled}
                 onMatchClick={onMatchClick}
                 onEditMatch={handleEditMatch}
+                onInstantWin={(winnerId) => handleInstantWin(winnerId, match)}
               />
             );
           })}

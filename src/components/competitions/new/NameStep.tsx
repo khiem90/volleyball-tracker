@@ -16,12 +16,14 @@ interface NameStepProps {
   maxCourts: number;
   numberOfCourts: number;
   matchSeriesLength: number;
+  instantWinEnabled: boolean;
   nameError: string;
   onNameChange: (value: string) => void;
   onBack: () => void;
   onCreateCompetition: () => void;
   onSelectCourts: (count: number) => void;
   onSelectSeriesLength: (count: number) => void;
+  onSelectInstantWin: (enabled: boolean) => void;
 }
 
 export const NameStep = ({
@@ -32,12 +34,14 @@ export const NameStep = ({
   maxCourts,
   numberOfCourts,
   matchSeriesLength,
+  instantWinEnabled,
   nameError,
   onNameChange,
   onBack,
   onCreateCompetition,
   onSelectCourts,
   onSelectSeriesLength,
+  onSelectInstantWin,
 }: NameStepProps) => (
   <div className="space-y-6 max-w-md mx-auto">
     <div className="text-center mb-8">
@@ -121,6 +125,50 @@ export const NameStep = ({
           </p>
         </div>
       )}
+
+    {(selectedFormat === "two_match_rotation" || selectedFormat === "win2out") && (
+      <div className="space-y-3">
+        <label className="text-sm font-medium">Scoring Mode</label>
+        <p className="text-xs text-muted-foreground">
+          Choose how match winners are determined.
+        </p>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => onSelectInstantWin(false)}
+            className={`
+              flex-1 py-3 rounded-xl font-semibold transition-all duration-200 cursor-pointer
+              ${
+                !instantWinEnabled
+                  ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                  : "bg-card border border-border/40 hover:border-primary/30"
+              }
+            `}
+          >
+            Score Points
+          </button>
+          <button
+            type="button"
+            onClick={() => onSelectInstantWin(true)}
+            className={`
+              flex-1 py-3 rounded-xl font-semibold transition-all duration-200 cursor-pointer
+              ${
+                instantWinEnabled
+                  ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                  : "bg-card border border-border/40 hover:border-primary/30"
+              }
+            `}
+          >
+            Instant Win
+          </button>
+        </div>
+        <p className="text-xs text-muted-foreground text-center">
+          {instantWinEnabled
+            ? "Tap a team to instantly declare them winner"
+            : "Track points and complete matches manually"}
+        </p>
+      </div>
+    )}
 
     {(selectedFormat === "round_robin" ||
       selectedFormat === "single_elimination" ||

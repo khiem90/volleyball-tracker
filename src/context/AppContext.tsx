@@ -46,7 +46,8 @@ interface AppContextValue {
     type: CompetitionType,
     teamIds: string[],
     numberOfCourts?: number,
-    matchSeriesLength?: number
+    matchSeriesLength?: number,
+    instantWinEnabled?: boolean
   ) => string;
   updateCompetition: (competition: Competition) => void;
   deleteCompetition: (id: string) => void;
@@ -226,7 +227,8 @@ export const AppProvider = ({ children }: AppProviderProps) => {
       type: CompetitionType,
       teamIds: string[],
       numberOfCourts?: number,
-      matchSeriesLength?: number
+      matchSeriesLength?: number,
+      instantWinEnabled?: boolean
     ) => {
       if (isSharedMode && !canEdit) return "";
 
@@ -241,6 +243,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         createdAt: Date.now(),
         numberOfCourts,
         matchSeriesLength,
+        instantWinEnabled,
       };
 
       if (isSharedMode && session) {
@@ -253,6 +256,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
           teamIds,
           numberOfCourts,
           matchSeriesLength,
+          instantWinEnabled,
         });
       }
 

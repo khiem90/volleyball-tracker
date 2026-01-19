@@ -27,11 +27,13 @@ export default function NewCompetitionPage() {
     matchSeriesLength,
     nameError,
     numberOfCourts,
+    instantWinEnabled,
     allSelected,
     selectedFormat,
     selectedTeamIds,
     setMatchSeriesLength,
     setNumberOfCourts,
+    setInstantWinEnabled,
     step,
     teamValidation,
     teams,
@@ -89,12 +91,14 @@ export default function NewCompetitionPage() {
             maxCourts={maxCourts}
             numberOfCourts={numberOfCourts}
             matchSeriesLength={matchSeriesLength}
+            instantWinEnabled={instantWinEnabled}
             nameError={nameError}
             onNameChange={handleCompetitionNameChange}
             onBack={handleBack}
             onCreateCompetition={handleCreateCompetition}
             onSelectCourts={setNumberOfCourts}
             onSelectSeriesLength={setMatchSeriesLength}
+            onSelectInstantWin={setInstantWinEnabled}
           />
         )}
       </main>

@@ -3,7 +3,7 @@
 import { memo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, Flame, Play, Pencil } from "lucide-react";
+import { Users, Flame, Play, Pencil, Zap } from "lucide-react";
 import type { ActiveCourtCardProps } from "./types";
 
 export const ActiveCourtCard = memo(function ActiveCourtCard({
@@ -17,8 +17,10 @@ export const ActiveCourtCard = memo(function ActiveCourtCard({
   getTeamColor,
   canEdit,
   canPlayMatch,
+  instantWinEnabled,
   onMatchClick,
   onEditMatch,
+  onInstantWin,
 }: ActiveCourtCardProps) {
   const handleMatchClick = () => {
     if (canPlayMatch && onMatchClick) {
@@ -51,17 +53,24 @@ export const ActiveCourtCard = memo(function ActiveCourtCard({
         </CardTitle>
       </CardHeader>
       <CardContent>
+        {/* Instant win indicator */}
+        {instantWinEnabled && canEdit && (
+          <div className="flex items-center justify-center gap-1 text-xs text-primary mb-2">
+            <Zap className="w-3 h-3" />
+            Tap team to win
+          </div>
+        )}
         <div
           className={`flex items-center justify-center gap-4 py-4 ${
-            canPlayMatch
+            canPlayMatch && !instantWinEnabled
               ? "cursor-pointer hover:opacity-80 transition-opacity"
               : ""
           }`}
-          onClick={canPlayMatch ? handleMatchClick : undefined}
-          role={canPlayMatch ? "button" : undefined}
-          tabIndex={canPlayMatch ? 0 : undefined}
+          onClick={canPlayMatch && !instantWinEnabled ? handleMatchClick : undefined}
+          role={canPlayMatch && !instantWinEnabled ? "button" : undefined}
+          tabIndex={canPlayMatch && !instantWinEnabled ? 0 : undefined}
           onKeyDown={
-            canPlayMatch
+            canPlayMatch && !instantWinEnabled
               ? (e) => {
                   if (e.key === "Enter" || e.key === " ") {
                     handleMatchClick();
@@ -70,11 +79,42 @@ export const ActiveCourtCard = memo(function ActiveCourtCard({
               : undefined
           }
           aria-label={
-            canPlayMatch ? `Click to play match on Court ${courtNumber}` : undefined
+            canPlayMatch && !instantWinEnabled ? `Click to play match on Court ${courtNumber}` : undefined
           }
         >
           {/* Home Team */}
-          <div className="text-center flex-1">
+          <div
+            className={`text-center flex-1 ${
+              instantWinEnabled && canEdit
+                ? "cursor-pointer hover:scale-105 active:scale-95 transition-transform rounded-xl p-2 hover:bg-primary/10"
+                : ""
+            }`}
+            onClick={
+              instantWinEnabled && canEdit
+                ? (e) => {
+                    e.stopPropagation();
+                    onInstantWin?.(match.homeTeamId);
+                  }
+                : undefined
+            }
+            role={instantWinEnabled && canEdit ? "button" : undefined}
+            tabIndex={instantWinEnabled && canEdit ? 0 : undefined}
+            onKeyDown={
+              instantWinEnabled && canEdit
+                ? (e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.stopPropagation();
+                      onInstantWin?.(match.homeTeamId);
+                    }
+                  }
+                : undefined
+            }
+            aria-label={
+              instantWinEnabled && canEdit
+                ? `Declare ${getTeamName(match.homeTeamId)} as winner`
+                : undefined
+            }
+          >
             <div
               className="w-14 h-14 mx-auto mb-2 rounded-xl flex items-center justify-center relative"
               style={{
@@ -122,7 +162,7 @@ export const ActiveCourtCard = memo(function ActiveCourtCard({
                   <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
                   Live
                 </div>
-                {canPlayMatch && (
+                {canPlayMatch && !instantWinEnabled && (
                   <Button size="sm" className="gap-1">
                     <Play className="w-4 h-4" />
                     Continue
@@ -132,7 +172,7 @@ export const ActiveCourtCard = memo(function ActiveCourtCard({
             ) : (
               <>
                 <div className="text-xl font-bold text-muted-foreground">VS</div>
-                {canPlayMatch && (
+                {canPlayMatch && !instantWinEnabled && (
                   <Button size="sm" className="mt-2 gap-1">
                     <Play className="w-4 h-4" />
                     Play
@@ -143,7 +183,38 @@ export const ActiveCourtCard = memo(function ActiveCourtCard({
           </div>
 
           {/* Away Team */}
-          <div className="text-center flex-1">
+          <div
+            className={`text-center flex-1 ${
+              instantWinEnabled && canEdit
+                ? "cursor-pointer hover:scale-105 active:scale-95 transition-transform rounded-xl p-2 hover:bg-primary/10"
+                : ""
+            }`}
+            onClick={
+              instantWinEnabled && canEdit
+                ? (e) => {
+                    e.stopPropagation();
+                    onInstantWin?.(match.awayTeamId);
+                  }
+                : undefined
+            }
+            role={instantWinEnabled && canEdit ? "button" : undefined}
+            tabIndex={instantWinEnabled && canEdit ? 0 : undefined}
+            onKeyDown={
+              instantWinEnabled && canEdit
+                ? (e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.stopPropagation();
+                      onInstantWin?.(match.awayTeamId);
+                    }
+                  }
+                : undefined
+            }
+            aria-label={
+              instantWinEnabled && canEdit
+                ? `Declare ${getTeamName(match.awayTeamId)} as winner`
+                : undefined
+            }
+          >
             <div
               className="w-14 h-14 mx-auto mb-2 rounded-xl flex items-center justify-center relative"
               style={{
