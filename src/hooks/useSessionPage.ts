@@ -91,6 +91,7 @@ export const useSessionPage = () => {
         played: 0,
         won: 0,
         lost: 0,
+        tied: 0,
         pointsFor: 0,
         pointsAgainst: 0,
         pointsDiff: 0,
@@ -112,14 +113,27 @@ export const useSessionPage = () => {
         awayStanding.pointsFor += match.awayScore;
         awayStanding.pointsAgainst += match.homeScore;
 
+        // Get points from competition config or use defaults
+        const pointsForWin = competition.config?.pointsForWin ?? 3;
+        const pointsForTie = competition.config?.pointsForTie ?? 1;
+        const pointsForLoss = competition.config?.pointsForLoss ?? 0;
+
         if (match.homeScore > match.awayScore) {
           homeStanding.won++;
-          homeStanding.competitionPoints += 3;
+          homeStanding.competitionPoints += pointsForWin;
           awayStanding.lost++;
-        } else {
+          awayStanding.competitionPoints += pointsForLoss;
+        } else if (match.awayScore > match.homeScore) {
           awayStanding.won++;
-          awayStanding.competitionPoints += 3;
+          awayStanding.competitionPoints += pointsForWin;
           homeStanding.lost++;
+          homeStanding.competitionPoints += pointsForLoss;
+        } else {
+          // Tie
+          homeStanding.tied++;
+          awayStanding.tied++;
+          homeStanding.competitionPoints += pointsForTie;
+          awayStanding.competitionPoints += pointsForTie;
         }
 
         homeStanding.pointsDiff = homeStanding.pointsFor - homeStanding.pointsAgainst;
