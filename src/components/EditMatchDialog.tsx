@@ -10,10 +10,15 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Users, Repeat, AlertCircle } from "lucide-react";
+import { Users, Repeat, AlertCircle, ArrowRightLeft } from "lucide-react";
 import type { Match, PersistentTeam, Competition } from "@/types/game";
 import { useApp } from "@/context/AppContext";
 import { useTeamsMap } from "@/hooks/useTeamsMap";
+import {
+  detectTeamSwap,
+  calculateSwapUpdates,
+  type SwapResult,
+} from "@/lib/eliminationSwap";
 
 interface EditMatchDialogProps {
   open: boolean;
@@ -32,12 +37,18 @@ export const EditMatchDialog = ({
   teams,
   competition,
 }: EditMatchDialogProps) => {
-  const { updateMatchTeams, canEdit } = useApp();
+  const { updateMatchTeams, swapMatchTeams, canEdit } = useApp();
   const { getTeamName, getTeamColor } = useTeamsMap(teams);
 
   const [homeTeamId, setHomeTeamId] = useState<string>("");
   const [awayTeamId, setAwayTeamId] = useState<string>("");
   const [error, setError] = useState<string>("");
+  const [swapInfo, setSwapInfo] = useState<SwapResult | null>(null);
+
+  // Check if this is an elimination bracket match
+  const isEliminationBracket =
+    competition?.type === "single_elimination" ||
+    competition?.type === "double_elimination";
 
   // Reset form when match changes
   /* eslint-disable react-hooks/set-state-in-effect */
@@ -46,9 +57,21 @@ export const EditMatchDialog = ({
       setHomeTeamId(match.homeTeamId);
       setAwayTeamId(match.awayTeamId);
       setError("");
+      setSwapInfo(null);
     }
   }, [match]);
   /* eslint-enable react-hooks/set-state-in-effect */
+
+  // Detect if a team swap is needed (for elimination brackets)
+  useEffect(() => {
+    if (!match || !isEliminationBracket) {
+      setSwapInfo(null);
+      return;
+    }
+
+    const result = detectTeamSwap(match, homeTeamId, awayTeamId, matches);
+    setSwapInfo(result.needsSwap ? result : null);
+  }, [match, homeTeamId, awayTeamId, matches, isEliminationBracket]);
 
   // Get teams currently playing on OTHER courts (not this match)
   const teamsOnOtherCourts = useMemo(() => {
@@ -76,15 +99,33 @@ export const EditMatchDialog = ({
     return teams.filter((t) => competition.teamIds.includes(t.id));
   }, [teams, competition]);
 
-  // Check if a team is on another court
-  const isTeamOnOtherCourt = useCallback((teamId: string) => {
-    if (!teamId) return false;
-    // Allow teams that are currently in this match
-    if (match && (teamId === match.homeTeamId || teamId === match.awayTeamId)) {
-      return false;
-    }
-    return teamsOnOtherCourts.has(teamId);
-  }, [match, teamsOnOtherCourts]);
+  // Check if a team is on another court (for validation)
+  // For elimination brackets, we allow teams in pending matches since we'll swap them
+  const isTeamOnOtherCourt = useCallback(
+    (teamId: string) => {
+      if (!teamId) return false;
+      // Allow teams that are currently in this match
+      if (match && (teamId === match.homeTeamId || teamId === match.awayTeamId)) {
+        return false;
+      }
+
+      // For elimination brackets, check if team is in an in_progress match only
+      // (pending matches are allowed since we'll swap)
+      if (isEliminationBracket && match) {
+        const inProgressMatch = matches.find(
+          (m) =>
+            m.id !== match.id &&
+            m.competitionId === match.competitionId &&
+            m.status === "in_progress" &&
+            (m.homeTeamId === teamId || m.awayTeamId === teamId)
+        );
+        return !!inProgressMatch;
+      }
+
+      return teamsOnOtherCourts.has(teamId);
+    },
+    [match, teamsOnOtherCourts, isEliminationBracket, matches]
+  );
 
   // Check if the selected matchup is valid
   const isValidMatchup = useMemo(() => {
@@ -121,7 +162,26 @@ export const EditMatchDialog = ({
 
     // Update teams if changed
     if (homeTeamId !== match.homeTeamId || awayTeamId !== match.awayTeamId) {
-      updateMatchTeams(match.id, homeTeamId, awayTeamId);
+      // Check if we need to do a swap with another match
+      if (
+        swapInfo?.needsSwap &&
+        swapInfo.otherMatchId &&
+        swapInfo.displacedTeamId &&
+        swapInfo.swappingTeamId
+      ) {
+        const updates = calculateSwapUpdates(
+          match.id,
+          homeTeamId,
+          awayTeamId,
+          swapInfo.otherMatchId,
+          swapInfo.displacedTeamId,
+          swapInfo.swappingTeamId,
+          matches
+        );
+        swapMatchTeams(updates);
+      } else {
+        updateMatchTeams(match.id, homeTeamId, awayTeamId);
+      }
     }
 
     onOpenChange(false);
@@ -270,6 +330,21 @@ export const EditMatchDialog = ({
                   />
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* Swap indicator for elimination brackets */}
+          {swapInfo?.needsSwap && swapInfo.displacedTeamId && swapInfo.swappingTeamId && (
+            <div className="mt-4 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30">
+              <p className="text-sm text-amber-600 dark:text-amber-400 flex items-center gap-2">
+                <ArrowRightLeft className="w-4 h-4 shrink-0" />
+                <span>
+                  <strong>{getTeamName(swapInfo.swappingTeamId)}</strong> is in
+                  Match {swapInfo.otherMatchPosition}. Saving will swap{" "}
+                  <strong>{getTeamName(swapInfo.displacedTeamId)}</strong> into
+                  that match.
+                </span>
+              </p>
             </div>
           )}
 

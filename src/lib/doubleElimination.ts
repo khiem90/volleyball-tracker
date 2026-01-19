@@ -13,13 +13,83 @@ const nextPowerOf2 = (n: number): number => {
 };
 
 /**
+ * Get seeded matchup order for tournament bracket.
+ */
+const getSeededMatchups = (n: number): number[] => {
+  if (n === 2) return [0, 1];
+
+  const result: number[] = [];
+  const half = n / 2;
+  const subMatchups = getSeededMatchups(half);
+
+  for (const seed of subMatchups) {
+    result.push(seed);
+    result.push(n - 1 - seed);
+  }
+
+  return result;
+};
+
+/**
+ * Reorder teams so that specified bye teams are placed at positions
+ * that will be matched against BYE_MARKER in the seeded bracket.
+ */
+const reorderTeamsForByes = (
+  teamIds: string[],
+  byeTeamIds: string[],
+  bracketSize: number
+): string[] => {
+  const n = teamIds.length;
+
+  // Create the seeded matchups to find which positions get byes
+  const seededOrder = getSeededMatchups(bracketSize);
+
+  // Find which seed positions will be matched against bye markers
+  const byeReceivingPositions: number[] = [];
+  for (let i = 0; i < seededOrder.length; i += 2) {
+    const homeIndex = seededOrder[i];
+    const awayIndex = seededOrder[i + 1];
+    if (awayIndex >= n && homeIndex < n) {
+      byeReceivingPositions.push(homeIndex);
+    }
+    if (homeIndex >= n && awayIndex < n) {
+      byeReceivingPositions.push(awayIndex);
+    }
+  }
+
+  // Create the reordered array: place bye teams at bye-receiving positions
+  const result: string[] = new Array(n).fill("");
+  const byeTeamSet = new Set(byeTeamIds);
+  const nonByeTeams = teamIds.filter((t) => !byeTeamSet.has(t));
+
+  // Place bye teams at bye-receiving positions
+  byeTeamIds.forEach((teamId, idx) => {
+    if (idx < byeReceivingPositions.length) {
+      result[byeReceivingPositions[idx]] = teamId;
+    }
+  });
+
+  // Fill remaining positions with non-bye teams
+  let nonByeIdx = 0;
+  for (let i = 0; i < n; i++) {
+    if (result[i] === "") {
+      result[i] = nonByeTeams[nonByeIdx++];
+    }
+  }
+
+  return result;
+};
+
+/**
  * Generates a double elimination bracket.
  * Winners bracket + Losers bracket + Grand Finals.
  * Supports non-power-of-2 team counts by adding byes.
+ * @param byeTeamIds - Optional array of team IDs that should receive first-round byes
  */
 export const generateDoubleEliminationBracket = (
   teamIds: string[],
-  competitionId: string
+  competitionId: string,
+  byeTeamIds?: string[]
 ): Omit<Match, "id" | "createdAt">[] => {
   const matches: Omit<Match, "id" | "createdAt">[] = [];
   const n = teamIds.length;
@@ -33,8 +103,14 @@ export const generateDoubleEliminationBracket = (
   const winnersRounds = Math.log2(bracketSize);
   const byeCount = bracketSize - n;
 
+  // Reorder teams if custom bye selection provided
+  const orderedTeamIds =
+    byeTeamIds && byeTeamIds.length === byeCount
+      ? reorderTeamsForByes(teamIds, byeTeamIds, bracketSize)
+      : teamIds;
+
   // Create virtual team list with byes filling the lowest seed positions
-  const virtualTeams: string[] = [...teamIds];
+  const virtualTeams: string[] = [...orderedTeamIds];
   for (let i = 0; i < byeCount; i++) {
     virtualTeams.push(BYE_MARKER);
   }
@@ -224,24 +300,6 @@ export const generateDoubleEliminationBracket = (
   });
 
   return matches;
-};
-
-/**
- * Get seeded matchup order for tournament bracket.
- */
-const getSeededMatchups = (n: number): number[] => {
-  if (n === 2) return [0, 1];
-
-  const result: number[] = [];
-  const half = n / 2;
-  const subMatchups = getSeededMatchups(half);
-
-  for (const seed of subMatchups) {
-    result.push(seed);
-    result.push(n - 1 - seed);
-  }
-
-  return result;
 };
 
 /**

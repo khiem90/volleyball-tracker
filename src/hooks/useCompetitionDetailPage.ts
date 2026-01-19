@@ -106,7 +106,7 @@ export const useCompetitionDetailPage = () => {
       });
   }, [competition, matches, competitionTeamsMap]);
 
-  const handleStartCompetition = useCallback(() => {
+  const handleStartCompetition = useCallback((byeTeamIds?: string[]) => {
     if (!competition) return;
 
     let newMatches: Omit<Match, "id" | "createdAt">[] = [];
@@ -136,14 +136,16 @@ export const useCompetitionDetailPage = () => {
       case "single_elimination":
         newMatches = generateSingleEliminationBracket(
           competition.teamIds,
-          competition.id
+          competition.id,
+          byeTeamIds
         );
         newMatches = withSeries(newMatches);
         break;
       case "double_elimination":
         newMatches = generateDoubleEliminationBracket(
           competition.teamIds,
-          competition.id
+          competition.id,
+          byeTeamIds
         );
         newMatches = withSeries(newMatches);
         break;

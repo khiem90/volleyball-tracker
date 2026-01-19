@@ -85,6 +85,9 @@ interface AppContextValue {
     homeTeamId: string,
     awayTeamId: string
   ) => void;
+  swapMatchTeams: (
+    updates: { matchId: string; homeTeamId: string; awayTeamId: string }[]
+  ) => void;
   updateMatchCourt: (matchId: string, courtNumber: number) => void;
   swapCourtTeams: (
     competitionId: string,
@@ -804,6 +807,26 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     ]
   );
 
+  // Admin match management - Swap teams between matches (for elimination brackets)
+  const swapMatchTeams = useCallback(
+    (updates: { matchId: string; homeTeamId: string; awayTeamId: string }[]) => {
+      if (isSharedMode && !canEdit) return;
+
+      if (isSharedMode && session) {
+        const newMatches = (session.matches || []).map((m) => {
+          const update = updates.find((u) => u.matchId === m.id);
+          return update
+            ? { ...m, homeTeamId: update.homeTeamId, awayTeamId: update.awayTeamId }
+            : m;
+        });
+        syncAllData({ matches: newMatches });
+      } else {
+        dispatch({ type: "SWAP_MATCH_TEAMS", updates });
+      }
+    },
+    [isSharedMode, canEdit, session, syncAllData]
+  );
+
   // Admin match management - Update court assignment for a match
   const updateMatchCourt = useCallback(
     (matchId: string, courtNumber: number) => {
@@ -1059,6 +1082,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     getMatchById,
     getMatchesByCompetition,
     updateMatchTeams,
+    swapMatchTeams,
     updateMatchCourt,
     swapCourtTeams,
     reorderQueue,

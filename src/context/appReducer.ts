@@ -72,6 +72,10 @@ type MatchAction =
       awayTeamId: string;
     }
   | {
+      type: "SWAP_MATCH_TEAMS";
+      updates: { matchId: string; homeTeamId: string; awayTeamId: string }[];
+    }
+  | {
       type: "UPDATE_MATCH_COURT";
       matchId: string;
       courtNumber: number;
@@ -340,6 +344,23 @@ export const appReducer = (state: AppState, action: AppAction): AppState => {
               }
             : match
         ),
+      };
+    }
+
+    case "SWAP_MATCH_TEAMS": {
+      return {
+        ...state,
+        matches: state.matches.map((match) => {
+          const update = action.updates.find((u) => u.matchId === match.id);
+          if (update) {
+            return {
+              ...match,
+              homeTeamId: update.homeTeamId,
+              awayTeamId: update.awayTeamId,
+            };
+          }
+          return match;
+        }),
       };
     }
 

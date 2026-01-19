@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { EditMatchDialog } from "@/components/EditMatchDialog";
 import { useCompetitionDetailPage } from "@/hooks/useCompetitionDetailPage";
+import { getPlayInMatchCount } from "@/lib/singleElimination";
 
 // Lazy load tournament view components - only one is rendered based on competition type
 const Bracket = dynamic(
@@ -220,6 +221,9 @@ export default function CompetitionDetailPage() {
         onOpenChange={setShowStartConfirm}
         typeLabel={typeLabels[competition.type]}
         teamCount={competition.teamIds.length}
+        teams={competitionTeams}
+        competitionType={competition.type}
+        playInMatchCount={getPlayInMatchCount(competition.teamIds.length)}
         onStart={handleStartCompetition}
       />
 
