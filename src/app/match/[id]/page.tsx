@@ -13,19 +13,19 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  ArrowLeft,
-  Minus,
-  Plus,
-  Trophy,
-  Undo2,
-  Check,
-  Crown,
-  Eye,
-  Maximize,
-  Minimize,
-  RotateCcw,
-  Play,
-} from "lucide-react";
+  ArrowLeftIcon,
+  MinusIcon,
+  PlusIcon,
+  TrophyIcon,
+  ArrowUturnLeftIcon,
+  CheckIcon,
+  EyeIcon,
+  ArrowsPointingOutIcon,
+  ArrowsPointingInIcon,
+  ArrowPathIcon,
+  PlayIcon,
+} from "@heroicons/react/24/outline";
+import { CrownIcon } from "@/lib/icons";
 import { useMatchPage } from "@/hooks/useMatchPage";
 
 export default function MatchPage() {
@@ -66,7 +66,7 @@ export default function MatchPage() {
           className="text-center"
         >
           <div className="w-20 h-20 mx-auto mb-4 rounded-3xl bg-muted/30 flex items-center justify-center">
-            <Trophy className="w-10 h-10 text-muted-foreground/30" />
+            <TrophyIcon className="w-10 h-10 text-muted-foreground/30" />
           </div>
           <h2 className="text-xl font-semibold mb-2">Match not found</h2>
           <p className="text-muted-foreground mb-6">
@@ -74,7 +74,7 @@ export default function MatchPage() {
           </p>
           <Link href="/">
             <Button variant="outline" className="gap-2 rounded-xl glass-input">
-              <ArrowLeft className="w-4 h-4" />
+              <ArrowLeftIcon className="w-4 h-4" />
               Back to Dashboard
             </Button>
           </Link>
@@ -112,14 +112,14 @@ export default function MatchPage() {
               onClick={handleBack}
               className="gap-2 rounded-xl"
             >
-              <ArrowLeft className="w-4 h-4" />
+              <ArrowLeftIcon className="w-4 h-4" />
               <span className="hidden sm:inline">Back</span>
             </Button>
 
             <div className="text-center">
               <div className="flex items-center justify-center gap-2">
                 <Badge className="status-live gap-1">
-                  <Play className="w-3 h-3" />
+                  <PlayIcon className="w-3 h-3" />
                   Live
                 </Badge>
                 {seriesInfo.isSeries && (
@@ -149,7 +149,7 @@ export default function MatchPage() {
                 className="gap-2 rounded-xl glass-input"
                 title="Enter fullscreen mode (landscape only)"
               >
-                <Maximize className="w-4 h-4" />
+                <ArrowsPointingOutIcon className="w-4 h-4" />
                 <span className="hidden sm:inline">Fullscreen</span>
               </Button>
               {canEdit && (
@@ -161,16 +161,16 @@ export default function MatchPage() {
                     disabled={history.length < 2}
                     className="gap-2 rounded-xl glass-input"
                   >
-                    <Undo2 className="w-4 h-4" />
+                    <ArrowUturnLeftIcon className="w-4 h-4" />
                     <span className="hidden sm:inline">Undo</span>
                   </Button>
                   <Button
                     size="sm"
                     onClick={handleOpenCompleteDialog}
                     disabled={!canComplete}
-                    className="gap-2 btn-orange-gradient rounded-xl"
+                    className="gap-2 btn-teal-gradient rounded-xl"
                   >
-                    <Check className="w-4 h-4" />
+                    <CheckIcon className="w-4 h-4" />
                     <span className="hidden sm:inline">{endLabel}</span>
                   </Button>
                 </>
@@ -198,7 +198,7 @@ export default function MatchPage() {
                   disabled={history.length < 2}
                   className="gap-2 rounded-full"
                 >
-                  <Undo2 className="w-4 h-4" />
+                  <ArrowUturnLeftIcon className="w-4 h-4" />
                   Undo
                 </Button>
                 <div className="w-px h-6 bg-border/30" />
@@ -206,9 +206,9 @@ export default function MatchPage() {
                   size="sm"
                   onClick={handleOpenCompleteDialog}
                   disabled={!canComplete}
-                  className="gap-2 rounded-full btn-orange-gradient"
+                  className="gap-2 rounded-full btn-teal-gradient"
                 >
-                  <Check className="w-4 h-4" />
+                  <CheckIcon className="w-4 h-4" />
                   {endLabel}
                 </Button>
                 <div className="w-px h-6 bg-border/30" />
@@ -221,7 +221,7 @@ export default function MatchPage() {
               className="gap-2 rounded-full"
               title="Exit fullscreen"
             >
-              <Minimize className="w-4 h-4" />
+              <ArrowsPointingInIcon className="w-4 h-4" />
               Exit
             </Button>
           </motion.div>
@@ -272,7 +272,7 @@ export default function MatchPage() {
               animate={{ opacity: 1, y: 0 }}
               className="absolute top-4 right-4 flex items-center gap-1.5 bg-white/20 backdrop-blur-sm rounded-full px-3 py-1.5"
             >
-              <Eye className="w-4 h-4 text-white/80" />
+              <EyeIcon className="w-4 h-4 text-white/80" />
               <span className="text-xs font-medium text-white/80">
                 View Only
               </span>
@@ -288,7 +288,7 @@ export default function MatchPage() {
                 exit={{ opacity: 0, scale: 0.8, y: -10 }}
                 className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-1.5 bg-amber-500/30 backdrop-blur-sm rounded-full px-3 py-1.5 border border-amber-400/30"
               >
-                <Crown className="w-4 h-4 text-amber-300" />
+                <CrownIcon className="w-4 h-4 text-amber-300" />
                 <span className="text-xs font-semibold text-white">
                   Leading
                 </span>
@@ -345,7 +345,7 @@ export default function MatchPage() {
                     aria-label={`Deduct point from ${homeTeam.name}`}
                     className="h-12 w-12 rounded-full bg-white/10 hover:bg-white/20 border-white/20 text-white"
                   >
-                    <Minus className="w-5 h-5" />
+                    <MinusIcon className="w-5 h-5" />
                   </Button>
                 </motion.div>
                 <span className="text-white/50 text-sm font-medium px-2">
@@ -365,7 +365,7 @@ export default function MatchPage() {
                     aria-label={`Add point to ${homeTeam.name}`}
                     className="h-12 w-12 rounded-full bg-white/10 hover:bg-white/20 border-white/20 text-white"
                   >
-                    <Plus className="w-5 h-5" />
+                    <PlusIcon className="w-5 h-5" />
                   </Button>
                 </motion.div>
               </div>
@@ -428,7 +428,7 @@ export default function MatchPage() {
                 exit={{ opacity: 0, scale: 0.8, y: -10 }}
                 className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-1.5 bg-amber-500/30 backdrop-blur-sm rounded-full px-3 py-1.5 border border-amber-400/30"
               >
-                <Crown className="w-4 h-4 text-amber-300" />
+                <CrownIcon className="w-4 h-4 text-amber-300" />
                 <span className="text-xs font-semibold text-white">
                   Leading
                 </span>
@@ -485,7 +485,7 @@ export default function MatchPage() {
                     aria-label={`Deduct point from ${awayTeam.name}`}
                     className="h-12 w-12 rounded-full bg-white/10 hover:bg-white/20 border-white/20 text-white"
                   >
-                    <Minus className="w-5 h-5" />
+                    <MinusIcon className="w-5 h-5" />
                   </Button>
                 </motion.div>
                 <span className="text-white/50 text-sm font-medium px-2">
@@ -505,7 +505,7 @@ export default function MatchPage() {
                     aria-label={`Add point to ${awayTeam.name}`}
                     className="h-12 w-12 rounded-full bg-white/10 hover:bg-white/20 border-white/20 text-white"
                   >
-                    <Plus className="w-5 h-5" />
+                    <PlusIcon className="w-5 h-5" />
                   </Button>
                 </motion.div>
               </div>
@@ -530,7 +530,7 @@ export default function MatchPage() {
         <DialogContent className="sm:max-w-md glass-card border-glass-border">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Trophy className="w-5 h-5 text-primary" />
+              <TrophyIcon className="w-5 h-5 text-primary" />
               {dialogTitle}
             </DialogTitle>
             <DialogDescription>
@@ -588,9 +588,9 @@ export default function MatchPage() {
             </Button>
             <Button
               onClick={handleCompleteMatch}
-              className="flex-1 gap-2 btn-orange-gradient rounded-xl"
+              className="flex-1 gap-2 btn-teal-gradient rounded-xl"
             >
-              <Trophy className="w-4 h-4" />
+              <TrophyIcon className="w-4 h-4" />
               {confirmLabel}
             </Button>
           </DialogFooter>
@@ -602,7 +602,7 @@ export default function MatchPage() {
         <DialogContent className="sm:max-w-sm glass-card border-glass-border">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <RotateCcw className="w-5 h-5 text-primary" />
+              <ArrowPathIcon className="w-5 h-5 text-primary" />
               Rotate Your Device
             </DialogTitle>
             <DialogDescription>
@@ -616,7 +616,7 @@ export default function MatchPage() {
               className="relative w-24 h-16 border-4 border-primary rounded-xl mb-4"
             >
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-                <RotateCcw className="w-8 h-8 text-primary" />
+                <ArrowPathIcon className="w-8 h-8 text-primary" />
               </div>
             </motion.div>
             <p className="text-sm text-muted-foreground text-center">
@@ -626,7 +626,7 @@ export default function MatchPage() {
           <DialogFooter>
             <Button
               onClick={() => setShowRotatePrompt(false)}
-              className="w-full btn-orange-gradient rounded-xl"
+              className="w-full btn-teal-gradient rounded-xl"
             >
               Got it
             </Button>

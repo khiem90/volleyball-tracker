@@ -1,4 +1,4 @@
-import { Check } from "lucide-react";
+import { CheckIcon } from "@heroicons/react/24/outline";
 import type { Step } from "@/hooks/useNewCompetitionPage";
 
 interface StepIndicatorProps {
@@ -29,7 +29,7 @@ export const StepIndicator = ({ step }: StepIndicatorProps) => {
                   ${!isActive && !isPast ? "bg-card border border-border/50 text-muted-foreground" : ""}
                 `}
               >
-                {isPast ? <Check className="w-5 h-5" /> : index + 1}
+                {isPast ? <CheckIcon className="w-5 h-5" /> : index + 1}
               </div>
               <span
                 className={`text-xs font-medium ${

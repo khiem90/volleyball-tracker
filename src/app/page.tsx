@@ -3,69 +3,80 @@
 import { memo } from "react";
 import Link from "next/link";
 import { Navigation } from "@/components/Navigation";
-import { Background } from "@/components/Background";
-import { Users, Trophy, Zap, Plus, Clock, CheckCircle2, ArrowRight, TrendingUp, Play } from "lucide-react";
+import {
+  UserGroupIcon,
+  TrophyIcon,
+  BoltIcon,
+  PlusIcon,
+  ClockIcon,
+  CheckCircleIcon,
+  ArrowRightIcon,
+  ChartBarIcon,
+  PlayIcon,
+} from "@heroicons/react/24/outline";
+import { TrophyIcon as TrophySolid } from "@heroicons/react/24/solid";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { GlassCard, GlassCardContent, GlassCardHeader, GlassCardTitle, GlassCardDescription, StatCard } from "@/components/ui/glass-card";
+import { EmptyCompetitions, EmptyMatches } from "@/components/illustrations";
 import { useDashboardPage } from "@/hooks/useDashboardPage";
 
 // Memoized stat card wrapper
-const StatsGrid = memo(({ 
-  teamsCount, 
-  activeCount, 
-  completedCount, 
-  matchesCount 
-}: { 
-  teamsCount: number; 
-  activeCount: number; 
-  completedCount: number; 
+const StatsGrid = memo(({
+  teamsCount,
+  activeCount,
+  completedCount,
+  matchesCount
+}: {
+  teamsCount: number;
+  activeCount: number;
+  completedCount: number;
   matchesCount: number;
 }) => (
   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10 animate-fade-in">
     <StatCard
-      icon={<Users className="w-4 h-4" />}
+      icon={<UserGroupIcon className="w-4 h-4" />}
       label="Teams"
       value={teamsCount}
       iconColor="text-primary"
     />
     <StatCard
-      icon={<Clock className="w-4 h-4" />}
+      icon={<ClockIcon className="w-4 h-4" />}
       label="Active"
       value={activeCount}
-      iconColor="text-amber-500"
+      iconColor="text-amber-600"
     />
     <StatCard
-      icon={<CheckCircle2 className="w-4 h-4" />}
+      icon={<CheckCircleIcon className="w-4 h-4" />}
       label="Done"
       value={completedCount}
-      iconColor="text-emerald-500"
+      iconColor="text-emerald-600"
     />
     <StatCard
-      icon={<TrendingUp className="w-4 h-4" />}
+      icon={<ChartBarIcon className="w-4 h-4" />}
       label="Matches"
       value={matchesCount}
-      iconColor="text-sky-500"
+      iconColor="text-sky-600"
     />
   </div>
 ));
 StatsGrid.displayName = "StatsGrid";
 
 // Memoized quick action card
-const QuickActionCard = memo(({ 
-  href, 
-  icon: Icon, 
-  title, 
-  description, 
-  gradientFrom, 
-  gradientTo, 
+const QuickActionCard = memo(({
+  href,
+  icon: Icon,
+  title,
+  description,
+  gradientFrom,
+  gradientTo,
   shadowColor,
-  badge 
-}: { 
-  href: string; 
-  icon: React.ComponentType<{ className?: string }>; 
-  title: string; 
+  badge
+}: {
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
   description: string;
   gradientFrom: string;
   gradientTo: string;
@@ -75,14 +86,14 @@ const QuickActionCard = memo(({
   <Link href={href} className="block group">
     <GlassCard className="h-full">
       <GlassCardHeader className="pb-2">
-        <div 
+        <div
           className={`w-14 h-14 rounded-2xl bg-linear-to-br ${gradientFrom} ${gradientTo} flex items-center justify-center mb-4 group-hover:scale-105 transition-transform shadow-lg ${shadowColor}`}
         >
           <Icon className="w-7 h-7 text-white" />
         </div>
         <GlassCardTitle className="text-xl flex items-center gap-2">
           {title}
-          <ArrowRight className="w-4 h-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
+          <ArrowRightIcon className="w-4 h-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
         </GlassCardTitle>
         <GlassCardDescription>
           {description}
@@ -95,48 +106,48 @@ const QuickActionCard = memo(({
 QuickActionCard.displayName = "QuickActionCard";
 
 // Memoized recent match item
-const RecentMatchItem = memo(({ 
-  match, 
-  homeTeam, 
-  awayTeam, 
-  homeColor, 
-  awayColor 
-}: { 
-  match: { id: string; homeScore: number; awayScore: number; winnerId?: string; homeTeamId: string; awayTeamId: string }; 
-  homeTeam: string; 
-  awayTeam: string; 
-  homeColor: string; 
+const RecentMatchItem = memo(({
+  match,
+  homeTeam,
+  awayTeam,
+  homeColor,
+  awayColor
+}: {
+  match: { id: string; homeScore: number; awayScore: number; winnerId?: string; homeTeamId: string; awayTeamId: string };
+  homeTeam: string;
+  awayTeam: string;
+  homeColor: string;
   awayColor: string;
 }) => {
   const homeWon = match.winnerId === match.homeTeamId;
 
   return (
-    <div className="p-3 rounded-xl bg-accent/20 border border-border/20">
+    <div className="p-3 rounded-xl bg-accent/50 border border-border">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 flex-1 min-w-0">
-          <div 
-            className="w-3 h-3 rounded-full shrink-0 ring-2 ring-white/10"
+          <div
+            className="w-3 h-3 rounded-full shrink-0 ring-2 ring-white shadow-sm"
             style={{ backgroundColor: homeColor }}
           />
-          <span className={`truncate text-sm ${homeWon ? "font-semibold text-emerald-400" : "text-muted-foreground"}`}>
+          <span className={`truncate text-sm ${homeWon ? "font-semibold text-emerald-600" : "text-muted-foreground"}`}>
             {homeTeam}
           </span>
         </div>
-        <div className="flex items-center gap-3 shrink-0 px-3 py-1 rounded-lg bg-background/30">
-          <span className={`text-lg font-mono font-bold ${homeWon ? "text-emerald-400" : "text-muted-foreground"}`}>
+        <div className="flex items-center gap-3 shrink-0 px-3 py-1 rounded-lg bg-white shadow-soft-sm border border-border">
+          <span className={`text-lg font-mono font-bold ${homeWon ? "text-emerald-600" : "text-muted-foreground"}`}>
             {match.homeScore}
           </span>
           <span className="text-xs text-muted-foreground">:</span>
-          <span className={`text-lg font-mono font-bold ${!homeWon ? "text-emerald-400" : "text-muted-foreground"}`}>
+          <span className={`text-lg font-mono font-bold ${!homeWon ? "text-emerald-600" : "text-muted-foreground"}`}>
             {match.awayScore}
           </span>
         </div>
         <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
-          <span className={`truncate text-sm ${!homeWon ? "font-semibold text-emerald-400" : "text-muted-foreground"}`}>
+          <span className={`truncate text-sm ${!homeWon ? "font-semibold text-emerald-600" : "text-muted-foreground"}`}>
             {awayTeam}
           </span>
-          <div 
-            className="w-3 h-3 rounded-full shrink-0 ring-2 ring-white/10"
+          <div
+            className="w-3 h-3 rounded-full shrink-0 ring-2 ring-white shadow-sm"
             style={{ backgroundColor: awayColor }}
           />
         </div>
@@ -159,11 +170,18 @@ export default function DashboardPage() {
   } = useDashboardPage();
 
   return (
-    <Background variant="default">
+    <div className="min-h-screen bg-background">
+      {/* Decorative background elements */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="decorative-blob w-150 h-150 -top-48 -right-48 opacity-40" />
+        <div className="decorative-blob w-100 h-100 top-1/3 -left-32 opacity-30" />
+        <div className="decorative-blob w-75 h-75 bottom-20 right-1/4 opacity-20" />
+      </div>
+
       <Navigation />
 
-      <main className="max-w-6xl mx-auto px-4 pb-12">
-        {/* Hero Section - CSS animation instead of framer-motion */}
+      <main className="relative max-w-6xl mx-auto px-4 pb-12">
+        {/* Hero Section */}
         <div className="text-center pt-8 pb-12 animate-fade-in">
           <h1 className="text-4xl md:text-6xl lg:text-7xl font-black tracking-tight mb-4">
             <span className="text-foreground">Track.</span>{" "}
@@ -175,22 +193,22 @@ export default function DashboardPage() {
           </p>
           <div className="flex flex-wrap justify-center gap-4">
             <Link href="/quick-match">
-              <Button size="lg" className="gap-2 btn-orange-gradient text-primary-foreground font-semibold px-8 h-12 rounded-xl">
-                <Zap className="w-5 h-5" />
+              <Button size="lg" variant="teal-gradient" className="gap-2 px-8 h-12 rounded-xl">
+                <BoltIcon className="w-5 h-5" />
                 Quick Match
               </Button>
             </Link>
             <Link href="/competitions/new">
-              <Button size="lg" variant="outline" className="gap-2 glass-input hover:bg-accent/30 h-12 rounded-xl px-8">
-                <Trophy className="w-5 h-5" />
+              <Button size="lg" variant="outline" className="gap-2 h-12 rounded-xl px-8">
+                <TrophyIcon className="w-5 h-5" />
                 New Competition
               </Button>
             </Link>
           </div>
         </div>
 
-        {/* Stats Overview - Memoized */}
-        <StatsGrid 
+        {/* Stats Overview */}
+        <StatsGrid
           teamsCount={teamsCount}
           activeCount={activeCompetitions.length}
           completedCount={completedCompetitions.length}
@@ -201,35 +219,35 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
           <QuickActionCard
             href="/quick-match"
-            icon={Zap}
+            icon={BoltIcon}
             title="Quick Match"
             description="Start a quick match between two teams instantly"
             gradientFrom="from-primary"
-            gradientTo="to-amber-500"
-            shadowColor="shadow-primary/30"
+            gradientTo="to-teal-400"
+            shadowColor="shadow-primary/25"
           />
           <QuickActionCard
             href="/teams"
-            icon={Users}
+            icon={UserGroupIcon}
             title="Manage Teams"
             description="Create and organize your teams"
             gradientFrom="from-sky-500"
             gradientTo="to-blue-600"
-            shadowColor="shadow-sky-500/30"
+            shadowColor="shadow-sky-500/25"
             badge={
-              <Badge variant="secondary" className="ml-2 bg-sky-500/20 text-sky-400">
+              <Badge variant="secondary" className="ml-2 bg-sky-100 text-sky-600 border-sky-200">
                 {teamsCount}
               </Badge>
             }
           />
           <QuickActionCard
             href="/competitions/new"
-            icon={Trophy}
+            icon={TrophyIcon}
             title="New Competition"
             description="Create a tournament, round robin, or league"
             gradientFrom="from-violet-500"
             gradientTo="to-purple-600"
-            shadowColor="shadow-violet-500/30"
+            shadowColor="shadow-violet-500/25"
           />
         </div>
 
@@ -250,21 +268,19 @@ export default function DashboardPage() {
               <Link href="/competitions">
                 <Button variant="ghost" size="sm" className="gap-1 text-muted-foreground hover:text-foreground rounded-xl">
                   View All
-                  <ArrowRight className="w-3 h-3" />
+                  <ArrowRightIcon className="w-3 h-3" />
                 </Button>
               </Link>
             </GlassCardHeader>
-            <div className="h-px bg-border/30 mx-5" />
+            <div className="h-px bg-border mx-5" />
             <GlassCardContent className="pt-4">
               {activeCompetitions.length === 0 ? (
-                <div className="text-center py-8">
-                  <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-muted/30 flex items-center justify-center">
-                    <Trophy className="w-8 h-8 text-muted-foreground/40" />
-                  </div>
+                <div className="text-center py-6">
+                  <EmptyCompetitions className="w-32 h-32 mx-auto mb-4" />
                   <p className="text-muted-foreground mb-3">No active competitions</p>
                   <Link href="/competitions/new">
-                    <Button variant="outline" size="sm" className="gap-1 rounded-xl glass-input">
-                      <Plus className="w-4 h-4" />
+                    <Button variant="outline" size="sm" className="gap-1 rounded-xl">
+                      <PlusIcon className="w-4 h-4" />
                       Create one
                     </Button>
                   </Link>
@@ -273,17 +289,17 @@ export default function DashboardPage() {
                 <div className="space-y-3">
                   {activeCompetitions.slice(0, 3).map((comp) => {
                     const matchStats = getMatchStats(comp.id);
-                    
+
                     return (
                       <Link
                         key={comp.id}
                         href={`/competitions/${comp.id}`}
-                        className="block p-4 rounded-xl bg-accent/20 hover:bg-accent/40 border border-border/20 hover:border-primary/30 transition-all duration-200 group"
+                        className="block p-4 rounded-xl bg-accent/50 hover:bg-accent border border-border hover:border-primary/30 transition-all duration-200 group"
                       >
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-linear-to-br from-primary to-amber-500 flex items-center justify-center shadow-md">
-                              <Trophy className="w-5 h-5 text-primary-foreground" />
+                            <div className="w-10 h-10 rounded-xl bg-linear-to-br from-primary to-teal-400 flex items-center justify-center shadow-soft">
+                              <TrophySolid className="w-5 h-5 text-primary-foreground" />
                             </div>
                             <div>
                               <p className="font-semibold group-hover:text-primary transition-colors">{comp.name}</p>
@@ -293,7 +309,7 @@ export default function DashboardPage() {
                             </div>
                           </div>
                           <Badge className="status-live gap-1">
-                            <Play className="w-3 h-3" />
+                            <PlayIcon className="w-3 h-3" />
                             Live
                           </Badge>
                         </div>
@@ -316,22 +332,20 @@ export default function DashboardPage() {
           <GlassCard hover={false}>
             <GlassCardHeader className="pb-2">
               <GlassCardTitle className="flex items-center gap-2 text-lg">
-                <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                <CheckCircleIcon className="w-5 h-5 text-emerald-600" />
                 Recent Results
               </GlassCardTitle>
               <GlassCardDescription>Latest completed matches</GlassCardDescription>
             </GlassCardHeader>
-            <div className="h-px bg-border/30 mx-5" />
+            <div className="h-px bg-border mx-5" />
             <GlassCardContent className="pt-4">
               {recentMatches.length === 0 ? (
-                <div className="text-center py-8">
-                  <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-muted/30 flex items-center justify-center">
-                    <Zap className="w-8 h-8 text-muted-foreground/40" />
-                  </div>
+                <div className="text-center py-6">
+                  <EmptyMatches className="w-32 h-32 mx-auto mb-4" />
                   <p className="text-muted-foreground mb-3">No matches played yet</p>
                   <Link href="/quick-match">
-                    <Button variant="outline" size="sm" className="gap-1 rounded-xl glass-input">
-                      <Plus className="w-4 h-4" />
+                    <Button variant="outline" size="sm" className="gap-1 rounded-xl">
+                      <PlusIcon className="w-4 h-4" />
                       Start a match
                     </Button>
                   </Link>
@@ -354,6 +368,6 @@ export default function DashboardPage() {
           </GlassCard>
         </div>
       </main>
-    </Background>
+    </div>
   );
 }

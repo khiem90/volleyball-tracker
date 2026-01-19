@@ -4,7 +4,17 @@ import { useState, memo, useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
-import { Home, Users, Trophy, Zap, Menu, LogIn, LogOut, History } from "lucide-react";
+import {
+  HomeIcon,
+  UserGroupIcon,
+  BoltIcon,
+  TrophyIcon,
+  ClockIcon,
+  Bars3Icon,
+  ArrowRightOnRectangleIcon,
+  ArrowLeftOnRectangleIcon,
+} from "@heroicons/react/24/outline";
+import { TrophyIcon as TrophySolid } from "@heroicons/react/24/solid";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -26,23 +36,23 @@ import { useAuth } from "@/context/AuthContext";
 import { SessionAuth } from "./SessionAuth";
 
 const navItems = [
-  { href: "/", label: "Home", icon: Home, description: "Overview & stats" },
-  { href: "/teams", label: "Teams", icon: Users, description: "Manage your teams" },
-  { href: "/quick-match", label: "Quick", icon: Zap, description: "Start a fast game" },
-  { href: "/competitions", label: "Compete", icon: Trophy, description: "Tournaments & leagues" },
-  { href: "/summaries", label: "History", icon: History, description: "Session history" },
+  { href: "/", label: "Home", icon: HomeIcon, description: "Overview & stats" },
+  { href: "/teams", label: "Teams", icon: UserGroupIcon, description: "Manage your teams" },
+  { href: "/quick-match", label: "Quick", icon: BoltIcon, description: "Start a fast game" },
+  { href: "/competitions", label: "Compete", icon: TrophyIcon, description: "Tournaments & leagues" },
+  { href: "/summaries", label: "History", icon: ClockIcon, description: "Session history" },
 ];
 
 // Memoized nav item component
-const NavItem = memo(({ 
-  href, 
-  label, 
-  icon: Icon, 
-  isActive 
-}: { 
-  href: string; 
-  label: string; 
-  icon: React.ComponentType<{ className?: string }>; 
+const NavItem = memo(({
+  href,
+  label,
+  icon: Icon,
+  isActive
+}: {
+  href: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
   isActive: boolean;
 }) => (
   <Link
@@ -53,13 +63,13 @@ const NavItem = memo(({
   >
     {/* Active indicator with layoutId for smooth animation */}
     {isActive && (
-      <motion.span 
+      <motion.span
         layoutId="nav-active-indicator"
-        className="absolute inset-0 bg-primary rounded-xl shadow-lg shadow-primary/30"
+        className="absolute inset-0 bg-primary rounded-xl shadow-soft"
         transition={{ type: "spring", stiffness: 400, damping: 30 }}
       />
     )}
-    <Icon className={`w-4 h-4 relative z-10 transition-colors ${
+    <Icon className={`w-5 h-5 relative z-10 transition-colors ${
       isActive ? "text-primary-foreground" : "text-muted-foreground group-hover:text-foreground"
     }`} />
     <span className={`relative z-10 transition-colors ${
@@ -72,17 +82,17 @@ const NavItem = memo(({
 NavItem.displayName = "NavItem";
 
 // Memoized mobile nav item
-const MobileNavItem = memo(({ 
-  href, 
-  label, 
+const MobileNavItem = memo(({
+  href,
+  label,
   description,
-  icon: Icon, 
-  isActive 
-}: { 
-  href: string; 
-  label: string; 
+  icon: Icon,
+  isActive
+}: {
+  href: string;
+  label: string;
   description: string;
-  icon: React.ComponentType<{ className?: string }>; 
+  icon: React.ComponentType<{ className?: string }>;
   isActive: boolean;
 }) => (
   <SheetClose asChild>
@@ -92,17 +102,17 @@ const MobileNavItem = memo(({
         flex items-center gap-4 px-4 py-3 rounded-xl
         transition-all duration-200
         ${isActive
-          ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25"
-          : "hover:bg-accent/50"
+          ? "bg-primary text-primary-foreground shadow-soft"
+          : "hover:bg-accent"
         }
       `}
       aria-current={isActive ? "page" : undefined}
     >
       <div className={`
         w-10 h-10 rounded-xl flex items-center justify-center
-        ${isActive 
-          ? "bg-primary-foreground/20" 
-          : "bg-accent/50"
+        ${isActive
+          ? "bg-primary-foreground/20"
+          : "bg-accent"
         }
       `}>
         <Icon className="w-5 h-5" />
@@ -137,9 +147,9 @@ export const Navigation = memo(() => {
   return (
     <>
       {/* Floating Navigation Bar - CSS animation instead of framer-motion */}
-      <nav className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-2xl animate-fade-in">
-        <div className="glass-nav rounded-2xl px-2 py-2">
-          <div className="flex items-center justify-between gap-2">
+      <nav className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-4xl animate-fade-in">
+        <div className="glass-nav rounded-2xl px-2 py-2 overflow-hidden">
+          <div className="flex items-center gap-2">
             {/* Logo - visible on mobile and as accent on desktop */}
             <Link
               href="/"
@@ -147,11 +157,11 @@ export const Navigation = memo(() => {
               aria-label="Tournament Tracker Home"
             >
               <div className="relative">
-                <div className="w-9 h-9 bg-linear-to-br from-primary via-primary/90 to-amber-500 rounded-xl flex items-center justify-center shadow-lg shadow-primary/30 group-hover:shadow-primary/50 transition-all duration-300 group-hover:scale-105">
-                  <Trophy className="w-5 h-5 text-primary-foreground" />
+                <div className="w-9 h-9 bg-linear-to-br from-primary via-primary/90 to-teal-400 rounded-xl flex items-center justify-center shadow-soft group-hover:shadow-soft-md transition-all duration-300 group-hover:scale-105">
+                  <TrophySolid className="w-5 h-5 text-primary-foreground" />
                 </div>
               </div>
-              <span className="hidden lg:block text-sm font-bold tracking-tight">
+              <span className="hidden lg:block text-sm font-bold tracking-tight text-foreground">
                 Tournament<span className="text-primary">Tracker</span>
               </span>
             </Link>
@@ -170,7 +180,7 @@ export const Navigation = memo(() => {
             </div>
 
             {/* Right side - User actions */}
-            <div className="hidden md:flex items-center gap-2 pr-2">
+            <div className="hidden md:flex items-center gap-2 pr-2 shrink-0">
               {isConfigured && (
                 user ? (
                   <TooltipProvider>
@@ -180,11 +190,11 @@ export const Navigation = memo(() => {
                           variant="ghost"
                           size="icon"
                           onClick={() => signOut()}
-                          className="cursor-pointer rounded-xl h-9 w-9 hover:bg-accent/50"
+                          className="cursor-pointer rounded-xl h-9 w-9 hover:bg-accent"
                         >
                           <Avatar className="w-7 h-7 ring-2 ring-primary/20">
                             <AvatarImage src={user.photoURL || undefined} alt={user.displayName || "User"} />
-                            <AvatarFallback className="text-xs bg-primary/20 text-primary">
+                            <AvatarFallback className="text-xs bg-primary/10 text-primary">
                               {user.displayName?.charAt(0) || user.email?.charAt(0) || "U"}
                             </AvatarFallback>
                           </Avatar>
@@ -202,9 +212,9 @@ export const Navigation = memo(() => {
                     variant="ghost"
                     size="sm"
                     onClick={() => setShowAuth(true)}
-                    className="gap-2 cursor-pointer rounded-xl hover:bg-accent/50"
+                    className="gap-2 cursor-pointer rounded-xl hover:bg-accent"
                   >
-                    <LogIn className="w-4 h-4" />
+                    <ArrowRightOnRectangleIcon className="w-4 h-4" />
                     <span className="hidden lg:inline">Sign In</span>
                   </Button>
                 )
@@ -215,42 +225,42 @@ export const Navigation = memo(() => {
             <Sheet>
               <SheetTrigger asChild className="md:hidden">
                 <Button variant="ghost" size="icon" aria-label="Open menu" className="rounded-xl h-9 w-9">
-                  <Menu className="w-5 h-5" />
+                  <Bars3Icon className="w-5 h-5" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-80 p-0 glass-card border-l border-glass-border">
+              <SheetContent side="right" className="w-80 p-0 bg-card border-l border-border">
                 <SheetHeader className="p-6 pb-4">
                   <SheetTitle className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-linear-to-br from-primary to-amber-500 rounded-xl flex items-center justify-center shadow-lg shadow-primary/20">
-                      <Trophy className="w-5 h-5 text-primary-foreground" />
+                    <div className="w-10 h-10 bg-linear-to-br from-primary to-teal-400 rounded-xl flex items-center justify-center shadow-soft">
+                      <TrophySolid className="w-5 h-5 text-primary-foreground" />
                     </div>
                     <div>
-                      <span className="font-bold">Tournament Tracker</span>
+                      <span className="font-bold text-foreground">Tournament Tracker</span>
                     </div>
                   </SheetTitle>
                 </SheetHeader>
-                
+
                 {/* User info in mobile */}
                 {isConfigured && user && (
                   <>
-                    <div className="px-6 py-3 flex items-center gap-3 bg-accent/30">
-                      <Avatar className="w-10 h-10 ring-2 ring-primary/30">
+                    <div className="px-6 py-3 flex items-center gap-3 bg-accent/50">
+                      <Avatar className="w-10 h-10 ring-2 ring-primary/20">
                         <AvatarImage src={user.photoURL || undefined} alt={user.displayName || "User"} />
-                        <AvatarFallback className="bg-primary/20 text-primary">
+                        <AvatarFallback className="bg-primary/10 text-primary">
                           {user.displayName?.charAt(0) || user.email?.charAt(0) || "U"}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{user.displayName || "User"}</p>
+                        <p className="font-medium truncate text-foreground">{user.displayName || "User"}</p>
                         <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                       </div>
                     </div>
-                    <Separator className="bg-border/30" />
+                    <Separator className="bg-border" />
                   </>
                 )}
-                
-                <Separator className="bg-border/30" />
-                
+
+                <Separator className="bg-border" />
+
                 <div className="p-4 space-y-2">
                   {navItems.map((item) => (
                     <MobileNavItem
@@ -265,7 +275,7 @@ export const Navigation = memo(() => {
 
                   {isConfigured && (
                     <>
-                      <Separator className="my-4 bg-border/30" />
+                      <Separator className="my-4 bg-border" />
 
                       {user ? (
                         <SheetClose asChild>
@@ -275,7 +285,7 @@ export const Navigation = memo(() => {
                             className="w-full flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-destructive/10 text-destructive transition-all duration-200 cursor-pointer"
                           >
                             <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-destructive/10">
-                              <LogOut className="w-5 h-5" />
+                              <ArrowLeftOnRectangleIcon className="w-5 h-5" />
                             </div>
                             <div className="flex flex-col text-left">
                               <span className="font-medium">Sign Out</span>
@@ -288,13 +298,13 @@ export const Navigation = memo(() => {
                           <button
                             type="button"
                             onClick={() => setShowAuth(true)}
-                            className="w-full flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-accent/50 transition-all duration-200 cursor-pointer"
+                            className="w-full flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-accent transition-all duration-200 cursor-pointer"
                           >
-                            <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-accent/50">
-                              <LogIn className="w-5 h-5" />
+                            <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-accent">
+                              <ArrowRightOnRectangleIcon className="w-5 h-5" />
                             </div>
                             <div className="flex flex-col text-left">
-                              <span className="font-medium">Sign In</span>
+                              <span className="font-medium text-foreground">Sign In</span>
                               <span className="text-xs text-muted-foreground">Access your sessions</span>
                             </div>
                           </button>

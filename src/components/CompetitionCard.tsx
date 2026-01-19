@@ -19,7 +19,16 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Trash2, Users, Calendar, ChevronRight, RefreshCw, Brackets, Layers, Crown, RotateCw, Play } from "lucide-react";
+import {
+  TrashIcon,
+  UserGroupIcon,
+  CalendarIcon,
+  ChevronRightIcon,
+  ArrowPathIcon,
+  Square3Stack3DIcon,
+  PlayIcon,
+} from "@heroicons/react/24/outline";
+import { BracketIcon, CrownIcon, RotationIcon } from "@/lib/icons";
 import type { Competition, CompetitionStatus, CompetitionType } from "@/types/game";
 
 interface CompetitionCardProps {
@@ -38,7 +47,7 @@ const statusConfig: Record<CompetitionStatus, { label: string; className: string
   in_progress: {
     label: "Live",
     className: "status-live",
-    icon: <Play className="w-3 h-3" />,
+    icon: <PlayIcon className="w-3 h-3" />,
   },
   completed: {
     label: "Done",
@@ -46,30 +55,30 @@ const statusConfig: Record<CompetitionStatus, { label: string; className: string
   },
 };
 
-const typeConfig: Record<CompetitionType, { label: string; icon: React.ElementType; gradient: string }> = {
+const typeConfig: Record<CompetitionType, { label: string; icon: React.ComponentType<{ className?: string }>; gradient: string }> = {
   round_robin: {
     label: "Round Robin",
-    icon: RefreshCw,
+    icon: ArrowPathIcon,
     gradient: "from-emerald-500 to-teal-600",
   },
   single_elimination: {
     label: "Single Elimination",
-    icon: Brackets,
+    icon: BracketIcon,
     gradient: "from-violet-500 to-purple-600",
   },
   double_elimination: {
     label: "Double Elimination",
-    icon: Layers,
+    icon: Square3Stack3DIcon,
     gradient: "from-blue-500 to-indigo-600",
   },
   win2out: {
     label: "Win 2 & Out",
-    icon: Crown,
-    gradient: "from-primary to-amber-500",
+    icon: CrownIcon,
+    gradient: "from-primary to-teal-400",
   },
   two_match_rotation: {
     label: "2 Match Rotation",
-    icon: RotateCw,
+    icon: RotationIcon,
     gradient: "from-rose-500 to-pink-600",
   },
 };
@@ -102,12 +111,12 @@ export const CompetitionCard = memo(({
   const status = statusConfig[competition.status];
   const typeInfo = typeConfig[competition.type] || typeConfig.round_robin;
   const TypeIcon = typeInfo.icon;
-  
+
   const createdDate = useMemo(
     () => new Date(competition.createdAt).toLocaleDateString(),
     [competition.createdAt]
   );
-  
+
   const progress = useMemo(
     () => matchCount > 0 ? Math.round((completedMatchCount / matchCount) * 100) : 0,
     [matchCount, completedMatchCount]
@@ -117,15 +126,15 @@ export const CompetitionCard = memo(({
     <TooltipProvider>
       <>
         <Link href={`/competitions/${competition.id}`} className="block group">
-          {/* Using CSS hover instead of framer-motion */}
-          <div className="glass-card glass-card-hover rounded-2xl overflow-hidden">
+          {/* Card with soft shadow */}
+          <div className="soft-card soft-card-hover rounded-2xl overflow-hidden">
             <div className="flex">
               {/* Type Icon Section */}
               <div className={`w-20 shrink-0 bg-linear-to-br ${typeInfo.gradient} flex items-center justify-center relative overflow-hidden`}>
                 <TypeIcon className="w-8 h-8 text-white relative z-10" />
                 <div className="absolute inset-0 bg-white/10" />
               </div>
-              
+
               {/* Content Section */}
               <div className="flex-1 p-5 min-w-0">
                 <div className="flex items-start justify-between gap-4">
@@ -144,11 +153,11 @@ export const CompetitionCard = memo(({
                     </p>
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       <span className="flex items-center gap-1.5">
-                        <Users className="w-4 h-4 text-primary/70" />
+                        <UserGroupIcon className="w-4 h-4 text-primary/70" />
                         {teamCount} teams
                       </span>
                       <span className="flex items-center gap-1.5">
-                        <Calendar className="w-4 h-4 text-primary/70" />
+                        <CalendarIcon className="w-4 h-4 text-primary/70" />
                         {createdDate}
                       </span>
                     </div>
@@ -162,20 +171,20 @@ export const CompetitionCard = memo(({
                           size="icon"
                           onClick={handleDeleteClick}
                           aria-label={`Delete ${competition.name}`}
-                          className="h-9 w-9 rounded-xl hover:bg-destructive/20 text-destructive hover:text-destructive opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+                          className="h-9 w-9 rounded-xl hover:bg-destructive/10 text-destructive hover:text-destructive opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <TrashIcon className="w-4 h-4" />
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>Delete competition</TooltipContent>
                     </Tooltip>
-                    <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+                    <ChevronRightIcon className="w-5 h-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
                   </div>
                 </div>
 
                 {/* Progress bar for in-progress competitions */}
                 {competition.status === "in_progress" && matchCount > 0 && (
-                  <div className="mt-4 pt-4 border-t border-border/20">
+                  <div className="mt-4 pt-4 border-t border-border">
                     <div className="flex items-center justify-between text-xs mb-2">
                       <span className="text-muted-foreground">Progress</span>
                       <span className="font-medium text-primary">{completedMatchCount}/{matchCount} matches</span>
@@ -190,10 +199,10 @@ export const CompetitionCard = memo(({
 
         {/* Delete Confirmation Dialog */}
         <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-          <DialogContent className="sm:max-w-md glass-card border-glass-border">
+          <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <Trash2 className="w-5 h-5 text-destructive" />
+                <TrashIcon className="w-5 h-5 text-destructive" />
                 Delete Competition?
               </DialogTitle>
               <DialogDescription>
@@ -205,7 +214,7 @@ export const CompetitionCard = memo(({
                 Cancel
               </Button>
               <Button variant="destructive" onClick={handleConfirmDelete} className="flex-1 gap-2 rounded-xl">
-                <Trash2 className="w-4 h-4" />
+                <TrashIcon className="w-4 h-4" />
                 Delete
               </Button>
             </DialogFooter>

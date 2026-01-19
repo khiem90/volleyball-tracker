@@ -16,7 +16,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Pencil, Trash2, Calendar } from "lucide-react";
+import { PencilSquareIcon, TrashIcon, CalendarIcon } from "@heroicons/react/24/outline";
 import type { PersistentTeam } from "@/types/game";
 
 interface TeamCardProps {
@@ -45,21 +45,21 @@ export const TeamCard = memo(({ team, onEdit, onDelete }: TeamCardProps) => {
     onEdit(team);
   }, [onEdit, team]);
 
-  const teamColor = team.color || "#f97316";
+  const teamColor = team.color || "#0d9488";
   const createdDate = new Date(team.createdAt).toLocaleDateString();
   const initial = team.name.charAt(0).toUpperCase();
 
   return (
     <TooltipProvider>
       <>
-        {/* Using CSS hover instead of framer-motion */}
-        <div className="group glass-card glass-card-hover rounded-2xl overflow-hidden">
+        {/* Card with soft shadow */}
+        <div className="group soft-card soft-card-hover rounded-2xl overflow-hidden">
           {/* Color accent bar */}
-          <div 
+          <div
             className="h-1.5 w-full"
             style={{ backgroundColor: teamColor }}
           />
-          
+
           <div className="p-5">
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-center gap-4 flex-1 min-w-0">
@@ -68,8 +68,8 @@ export const TeamCard = memo(({ team, onEdit, onDelete }: TeamCardProps) => {
                   <div
                     className="w-14 h-14 rounded-xl flex items-center justify-center shrink-0 shadow-lg relative overflow-hidden"
                     style={{
-                      background: `linear-gradient(135deg, ${teamColor}, ${teamColor}aa)`,
-                      boxShadow: `0 8px 24px ${teamColor}40`,
+                      background: `linear-gradient(135deg, ${teamColor}, ${teamColor}cc)`,
+                      boxShadow: `0 6px 20px ${teamColor}30`,
                     }}
                   >
                     <span className="text-xl font-bold text-white relative z-10">
@@ -78,13 +78,13 @@ export const TeamCard = memo(({ team, onEdit, onDelete }: TeamCardProps) => {
                     <div className="absolute inset-0 bg-white/10" />
                   </div>
                 </div>
-                
+
                 <div className="min-w-0 flex-1">
                   <h3 className="font-semibold text-lg truncate mb-1 group-hover:text-primary transition-colors">
                     {team.name}
                   </h3>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Calendar className="w-3 h-3" />
+                    <CalendarIcon className="w-3.5 h-3.5" />
                     <span>{createdDate}</span>
                   </div>
                 </div>
@@ -99,14 +99,14 @@ export const TeamCard = memo(({ team, onEdit, onDelete }: TeamCardProps) => {
                       size="icon"
                       onClick={handleEditClick}
                       aria-label={`Edit ${team.name}`}
-                      className="h-9 w-9 rounded-xl hover:bg-primary/20 hover:text-primary"
+                      className="h-9 w-9 rounded-xl hover:bg-primary/10 hover:text-primary"
                     >
-                      <Pencil className="w-4 h-4" />
+                      <PencilSquareIcon className="w-4 h-4" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>Edit team</TooltipContent>
                 </Tooltip>
-                
+
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
@@ -114,9 +114,9 @@ export const TeamCard = memo(({ team, onEdit, onDelete }: TeamCardProps) => {
                       size="icon"
                       onClick={handleDeleteClick}
                       aria-label={`Delete ${team.name}`}
-                      className="h-9 w-9 rounded-xl hover:bg-destructive/20 text-destructive hover:text-destructive"
+                      className="h-9 w-9 rounded-xl hover:bg-destructive/10 text-destructive hover:text-destructive"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <TrashIcon className="w-4 h-4" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>Delete team</TooltipContent>
@@ -128,10 +128,10 @@ export const TeamCard = memo(({ team, onEdit, onDelete }: TeamCardProps) => {
 
         {/* Delete Confirmation Dialog */}
         <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-          <DialogContent className="sm:max-w-md glass-card border-glass-border">
+          <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <Trash2 className="w-5 h-5 text-destructive" />
+                <TrashIcon className="w-5 h-5 text-destructive" />
                 Delete Team?
               </DialogTitle>
               <DialogDescription>
@@ -143,7 +143,7 @@ export const TeamCard = memo(({ team, onEdit, onDelete }: TeamCardProps) => {
                 Cancel
               </Button>
               <Button variant="destructive" onClick={handleConfirmDelete} className="flex-1 gap-2 rounded-xl">
-                <Trash2 className="w-4 h-4" />
+                <TrashIcon className="w-4 h-4" />
                 Delete
               </Button>
             </DialogFooter>

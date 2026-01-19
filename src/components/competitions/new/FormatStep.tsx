@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight } from "lucide-react";
+import { ArrowRightIcon } from "@heroicons/react/24/outline";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -96,7 +96,7 @@ export const FormatStep = ({
         size="lg"
       >
         Next
-        <ArrowRight className="w-4 h-4" />
+        <ArrowRightIcon className="w-4 h-4" />
       </Button>
     </div>
   </div>

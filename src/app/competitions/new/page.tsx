@@ -2,7 +2,7 @@
 
 import { Navigation } from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeftIcon } from "@heroicons/react/24/outline";
 import { useNewCompetitionPage } from "@/hooks/useNewCompetitionPage";
 import { StepIndicator } from "@/components/competitions/new/StepIndicator";
 import { FormatStep } from "@/components/competitions/new/FormatStep";
@@ -64,7 +64,7 @@ export default function NewCompetitionPage() {
           onClick={handleBackToCompetitions}
           className="mb-6 gap-2 text-muted-foreground hover:text-foreground"
         >
-          <ArrowLeft className="w-4 h-4" />
+          <ArrowLeftIcon className="w-4 h-4" />
           Back to Competitions
         </Button>
 

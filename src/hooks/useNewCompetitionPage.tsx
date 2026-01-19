@@ -1,7 +1,8 @@
 import { useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useApp } from "@/context/AppContext";
-import { RefreshCw, Brackets, Layers, Crown, RotateCw } from "lucide-react";
+import { ArrowPathIcon, Square3Stack3DIcon } from "@heroicons/react/24/outline";
+import { BracketIcon, CrownIcon, RotationIcon } from "@/lib/icons";
 import type { CompetitionType } from "@/types/game";
 import type { CompetitionConfig } from "@/types/competition-config";
 import { DEFAULT_COMPETITION_CONFIG } from "@/types/competition-config";
@@ -22,7 +23,7 @@ export const formatOptions: FormatOption[] = [
     type: "round_robin",
     label: "Round Robin",
     description: "Every team plays against every other team once. Best for leagues.",
-    icon: <RefreshCw className="w-7 h-7" />,
+    icon: <ArrowPathIcon className="w-7 h-7" />,
     minTeams: 3,
     gradient: "from-emerald-500 to-teal-600",
   },
@@ -30,7 +31,7 @@ export const formatOptions: FormatOption[] = [
     type: "single_elimination",
     label: "Single Elimination",
     description: "Lose once and you're out. Fast and exciting tournament format.",
-    icon: <Brackets className="w-7 h-7" />,
+    icon: <BracketIcon className="w-7 h-7" />,
     minTeams: 2,
     gradient: "from-violet-500 to-purple-600",
   },
@@ -38,7 +39,7 @@ export const formatOptions: FormatOption[] = [
     type: "double_elimination",
     label: "Double Elimination",
     description: "Must lose twice to be eliminated. More forgiving tournament format.",
-    icon: <Layers className="w-7 h-7" />,
+    icon: <Square3Stack3DIcon className="w-7 h-7" />,
     minTeams: 4,
     gradient: "from-blue-500 to-indigo-600",
   },
@@ -46,15 +47,15 @@ export const formatOptions: FormatOption[] = [
     type: "win2out",
     label: "Win 2 & Out",
     description: "True endless! Winner stays, win 2 = champion & back to queue. Track who gets crowned most!",
-    icon: <Crown className="w-7 h-7" />,
+    icon: <CrownIcon className="w-7 h-7" />,
     minTeams: 3,
-    gradient: "from-amber-500 to-orange-600",
+    gradient: "from-primary to-teal-400",
   },
   {
     type: "two_match_rotation",
     label: "2 Match Rotation",
     description: "Play 2 matches then rotate. First match winner stays, then everyone gets 2 games before rotating.",
-    icon: <RotateCw className="w-7 h-7" />,
+    icon: <RotationIcon className="w-7 h-7" />,
     minTeams: 3,
     gradient: "from-rose-500 to-pink-600",
   },

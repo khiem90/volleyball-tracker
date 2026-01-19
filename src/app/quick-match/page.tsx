@@ -2,12 +2,18 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { Navigation } from "@/components/Navigation";
-import { Background } from "@/components/Background";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { GlassCard, GlassCardContent, GlassCardHeader, GlassCardTitle, GlassCardDescription } from "@/components/ui/glass-card";
 import { MotionDiv, slideUp, springSmooth } from "@/components/motion";
-import { Users, Zap, Check, Plus, Shuffle, Swords } from "lucide-react";
+import {
+  UserGroupIcon,
+  BoltIcon,
+  CheckIcon,
+  PlusIcon,
+  ArrowsRightLeftIcon,
+} from "@heroicons/react/24/outline";
+import { SwordsIcon } from "@/lib/icons";
 import { useQuickMatchPage } from "@/hooks/useQuickMatchPage";
 
 export default function QuickMatchPage() {
@@ -27,10 +33,16 @@ export default function QuickMatchPage() {
   } = useQuickMatchPage();
 
   return (
-    <Background variant="default">
+    <div className="min-h-screen bg-background">
+      {/* Decorative background elements */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="decorative-blob w-150 h-150 -top-48 -right-48 opacity-30" />
+        <div className="decorative-blob w-100 h-100 bottom-20 -left-32 opacity-20" />
+      </div>
+
       <Navigation />
 
-      <main className="max-w-5xl mx-auto px-4 pb-12">
+      <main className="relative max-w-5xl mx-auto px-4 pb-12">
         {/* Header */}
         <MotionDiv
           initial="hidden"
@@ -38,13 +50,13 @@ export default function QuickMatchPage() {
           variants={slideUp}
           className="text-center mb-10"
         >
-          <motion.div 
-            className="w-20 h-20 mx-auto mb-4 rounded-3xl bg-linear-to-br from-primary to-amber-500 flex items-center justify-center shadow-2xl shadow-primary/40"
+          <motion.div
+            className="w-20 h-20 mx-auto mb-4 rounded-3xl bg-linear-to-br from-primary to-teal-400 flex items-center justify-center shadow-2xl shadow-primary/40"
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ type: "spring", stiffness: 300, damping: 20 }}
           >
-            <Zap className="w-10 h-10 text-primary-foreground" />
+            <BoltIcon className="w-10 h-10 text-primary-foreground" />
           </motion.div>
           <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-2">Quick Match</h1>
           <p className="text-muted-foreground max-w-md mx-auto">
@@ -62,7 +74,7 @@ export default function QuickMatchPage() {
             <GlassCard hover={false} className="text-center max-w-md mx-auto">
               <GlassCardContent className="py-12">
                 <div className="w-20 h-20 mx-auto mb-4 rounded-3xl bg-muted/30 flex items-center justify-center">
-                  <Users className="w-10 h-10 text-muted-foreground/40" />
+                  <UserGroupIcon className="w-10 h-10 text-muted-foreground/40" />
                 </div>
                 <h3 className="text-xl font-semibold mb-2">
                   {availableTeams.length === 0
@@ -72,8 +84,8 @@ export default function QuickMatchPage() {
                 <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
                   Create some teams first to start a quick match.
                 </p>
-                <Button onClick={handleQuickCreateTeam} className="gap-2 btn-orange-gradient rounded-xl" size="lg">
-                  <Plus className="w-5 h-5" />
+                <Button onClick={handleQuickCreateTeam} className="gap-2 btn-teal-gradient rounded-xl" size="lg">
+                  <PlusIcon className="w-5 h-5" />
                   Create Team
                 </Button>
               </GlassCardContent>
@@ -123,7 +135,7 @@ export default function QuickMatchPage() {
                               </span>
                             </div>
                             <p className="font-semibold text-lg md:text-xl">{homeTeam.name}</p>
-                            <Badge variant="secondary" className="mt-2 bg-sky-500/20 text-sky-400">Home</Badge>
+                            <Badge variant="secondary" className="mt-2 bg-sky-100 text-sky-600">Home</Badge>
                           </motion.div>
                         ) : (
                           <motion.div
@@ -132,7 +144,7 @@ export default function QuickMatchPage() {
                             animate={{ opacity: 1 }}
                           >
                             <div className="w-24 h-24 md:w-28 md:h-28 mx-auto mb-3 rounded-2xl bg-muted/30 border-2 border-dashed border-border/50 flex items-center justify-center">
-                              <Users className="w-10 h-10 text-muted-foreground/30" />
+                              <UserGroupIcon className="w-10 h-10 text-muted-foreground/30" />
                             </div>
                             <p className="text-muted-foreground">Select team</p>
                           </motion.div>
@@ -148,7 +160,7 @@ export default function QuickMatchPage() {
                       transition={{ delay: 0.4, type: "spring", stiffness: 300 }}
                     >
                       <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-linear-to-br from-primary/20 to-amber-500/20 flex items-center justify-center border border-primary/30 relative">
-                        <Swords className="w-8 h-8 md:w-10 md:h-10 text-primary" />
+                        <SwordsIcon className="w-8 h-8 md:w-10 md:h-10 text-primary" />
                         {/* Pulse effect when both teams selected */}
                         {canStart && (
                           <motion.div
@@ -191,7 +203,7 @@ export default function QuickMatchPage() {
                               </span>
                             </div>
                             <p className="font-semibold text-lg md:text-xl">{awayTeam.name}</p>
-                            <Badge variant="secondary" className="mt-2 bg-amber-500/20 text-amber-400">Away</Badge>
+                            <Badge variant="secondary" className="mt-2 bg-amber-100 text-amber-600">Away</Badge>
                           </motion.div>
                         ) : (
                           <motion.div
@@ -200,7 +212,7 @@ export default function QuickMatchPage() {
                             animate={{ opacity: 1 }}
                           >
                             <div className="w-24 h-24 md:w-28 md:h-28 mx-auto mb-3 rounded-2xl bg-muted/30 border-2 border-dashed border-border/50 flex items-center justify-center">
-                              <Users className="w-10 h-10 text-muted-foreground/30" />
+                              <UserGroupIcon className="w-10 h-10 text-muted-foreground/30" />
                             </div>
                             <p className="text-muted-foreground">Select team</p>
                           </motion.div>
@@ -224,7 +236,7 @@ export default function QuickMatchPage() {
                   <GlassCardHeader className="pb-3">
                     <GlassCardTitle className="text-lg flex items-center gap-2">
                       <div className="w-8 h-8 rounded-lg bg-sky-500/20 flex items-center justify-center">
-                        <Users className="w-4 h-4 text-sky-400" />
+                        <UserGroupIcon className="w-4 h-4 text-sky-500" />
                       </div>
                       Home Team
                     </GlassCardTitle>
@@ -273,7 +285,7 @@ export default function QuickMatchPage() {
                                 animate={{ scale: 1 }}
                                 transition={springSmooth}
                               >
-                                <Check className="w-5 h-5 text-primary shrink-0" />
+                                <CheckIcon className="w-5 h-5 text-primary shrink-0" />
                               </motion.div>
                             )}
                           </motion.button>
@@ -294,7 +306,7 @@ export default function QuickMatchPage() {
                   <GlassCardHeader className="pb-3">
                     <GlassCardTitle className="text-lg flex items-center gap-2">
                       <div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center">
-                        <Users className="w-4 h-4 text-amber-400" />
+                        <UserGroupIcon className="w-4 h-4 text-amber-500" />
                       </div>
                       Away Team
                     </GlassCardTitle>
@@ -343,7 +355,7 @@ export default function QuickMatchPage() {
                                 animate={{ scale: 1 }}
                                 transition={springSmooth}
                               >
-                                <Check className="w-5 h-5 text-primary shrink-0" />
+                                <CheckIcon className="w-5 h-5 text-primary shrink-0" />
                               </motion.div>
                             )}
                           </motion.button>
@@ -382,7 +394,7 @@ export default function QuickMatchPage() {
                 className="gap-2 rounded-xl h-12 px-8 glass-input hover:bg-accent/30"
                 size="lg"
               >
-                <Shuffle className="w-5 h-5" />
+                <ArrowsRightLeftIcon className="w-5 h-5" />
                 Random Teams
               </Button>
               <motion.div
@@ -392,10 +404,10 @@ export default function QuickMatchPage() {
                 <Button
                   onClick={handleStartMatch}
                   disabled={!canStart}
-                  className="gap-2 btn-orange-gradient text-primary-foreground rounded-xl h-12 px-10 font-semibold disabled:opacity-50"
+                  className="gap-2 btn-teal-gradient text-primary-foreground rounded-xl h-12 px-10 font-semibold disabled:opacity-50"
                   size="lg"
                 >
-                  <Zap className="w-5 h-5" />
+                  <BoltIcon className="w-5 h-5" />
                   Start Match
                 </Button>
               </motion.div>
@@ -403,6 +415,6 @@ export default function QuickMatchPage() {
           </>
         )}
       </main>
-    </Background>
+    </div>
   );
 }
