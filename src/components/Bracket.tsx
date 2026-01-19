@@ -4,7 +4,7 @@ import { useMemo, useCallback } from "react";
 import { getRoundName, getTotalRounds } from "@/lib/singleElimination";
 import { useApp } from "@/context/AppContext";
 import { useTeamsMap } from "@/hooks/useTeamsMap";
-import { BracketMatchCard, ChampionDisplay } from "@/components/bracket";
+import { BracketMatchCard, ChampionDisplay } from "@/components/bracket-parts";
 import type { Match, PersistentTeam } from "@/types/game";
 
 interface BracketProps {
