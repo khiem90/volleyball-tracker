@@ -225,7 +225,7 @@ export const Navigation = memo(() => {
 
             {/* Mobile Menu Button */}
             <Sheet>
-              <SheetTrigger asChild className="md:hidden">
+              <SheetTrigger asChild className="md:hidden ml-auto">
                 <Button variant="ghost" size="icon" aria-label="Open menu" className="rounded-xl h-9 w-9">
                   <Bars3Icon className="w-5 h-5" />
                 </Button>
