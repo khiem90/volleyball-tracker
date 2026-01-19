@@ -141,31 +141,18 @@ export const Navigation = memo(() => {
         <div className="glass-nav rounded-2xl px-2 py-2">
           <div className="flex items-center justify-between gap-2">
             {/* Logo - visible on mobile and as accent on desktop */}
-            <Link 
-              href="/" 
-              className="flex items-center gap-2 pl-2 md:pl-3 group shrink-0" 
-              aria-label="VolleyScore Home"
+            <Link
+              href="/"
+              className="flex items-center gap-2 pl-2 md:pl-3 group shrink-0"
+              aria-label="Tournament Tracker Home"
             >
               <div className="relative">
                 <div className="w-9 h-9 bg-linear-to-br from-primary via-primary/90 to-amber-500 rounded-xl flex items-center justify-center shadow-lg shadow-primary/30 group-hover:shadow-primary/50 transition-all duration-300 group-hover:scale-105">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    className="w-5 h-5 text-primary-foreground"
-                    aria-hidden="true"
-                  >
-                    <circle cx="12" cy="12" r="9" />
-                    <path d="M12 3c0 9 9 9 9 9" strokeWidth="1.5" />
-                    <path d="M12 3c0 9-9 9-9 9" strokeWidth="1.5" />
-                    <path d="M3 12c9 0 9 9 9 9" strokeWidth="1.5" />
-                  </svg>
+                  <Trophy className="w-5 h-5 text-primary-foreground" />
                 </div>
               </div>
               <span className="hidden lg:block text-sm font-bold tracking-tight">
-                Volley<span className="text-primary">Score</span>
+                Tournament<span className="text-primary">Tracker</span>
               </span>
             </Link>
 
@@ -235,23 +222,10 @@ export const Navigation = memo(() => {
                 <SheetHeader className="p-6 pb-4">
                   <SheetTitle className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-linear-to-br from-primary to-amber-500 rounded-xl flex items-center justify-center shadow-lg shadow-primary/20">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        className="w-5 h-5 text-primary-foreground"
-                        aria-hidden="true"
-                      >
-                        <circle cx="12" cy="12" r="9" />
-                        <path d="M12 3c0 9 9 9 9 9" strokeWidth="1.5" />
-                        <path d="M12 3c0 9-9 9-9 9" strokeWidth="1.5" />
-                        <path d="M3 12c9 0 9 9 9 9" strokeWidth="1.5" />
-                      </svg>
+                      <Trophy className="w-5 h-5 text-primary-foreground" />
                     </div>
                     <div>
-                      <span className="font-bold">VolleyScore</span>
+                      <span className="font-bold">Tournament Tracker</span>
                     </div>
                   </SheetTitle>
                 </SheetHeader>

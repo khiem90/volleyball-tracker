@@ -10,6 +10,7 @@ export interface RotationViewContext {
 export interface ActiveCourtCardProps {
   match: Match;
   courtNumber: number;
+  venueName?: string;
   homeStreak?: number;
   awayStreak?: number;
   homeChampionCount?: number;

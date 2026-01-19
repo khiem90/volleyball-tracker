@@ -224,7 +224,7 @@ export const useCompetitionDetailPage = () => {
       let winnerId: string | undefined;
 
       if (competition.type === "round_robin") {
-        const standings = calculateStandings(competition.teamIds, matches);
+        const standings = calculateStandings(competition.teamIds, matches, competition.config);
         winnerId = standings[0]?.teamId;
       } else {
         const finalMatch = matches.find((m) => {
@@ -323,7 +323,7 @@ export const useCompetitionDetailPage = () => {
 
   const standings =
     competition && competition.type === "round_robin"
-      ? calculateStandings(competition.teamIds, matches)
+      ? calculateStandings(competition.teamIds, matches, competition.config)
       : null;
 
   const winner = competition?.winnerId

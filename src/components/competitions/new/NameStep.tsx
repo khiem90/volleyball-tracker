@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Trophy } from "lucide-react";
+import { ArrowLeft, Trophy, ChevronDown, ChevronUp, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -24,6 +24,19 @@ interface NameStepProps {
   onSelectCourts: (count: number) => void;
   onSelectSeriesLength: (count: number) => void;
   onSelectInstantWin: (enabled: boolean) => void;
+  // Advanced settings
+  showAdvancedSettings: boolean;
+  onToggleAdvancedSettings: () => void;
+  pointsForWin: number;
+  onPointsForWinChange: (value: number) => void;
+  pointsForTie: number;
+  onPointsForTieChange: (value: number) => void;
+  pointsForLoss: number;
+  onPointsForLossChange: (value: number) => void;
+  allowTies: boolean;
+  onAllowTiesChange: (value: boolean) => void;
+  venueName: string;
+  onVenueNameChange: (value: string) => void;
 }
 
 export const NameStep = ({
@@ -42,6 +55,18 @@ export const NameStep = ({
   onSelectCourts,
   onSelectSeriesLength,
   onSelectInstantWin,
+  showAdvancedSettings,
+  onToggleAdvancedSettings,
+  pointsForWin,
+  onPointsForWinChange,
+  pointsForTie,
+  onPointsForTieChange,
+  pointsForLoss,
+  onPointsForLossChange,
+  allowTies,
+  onAllowTiesChange,
+  venueName,
+  onVenueNameChange,
 }: NameStepProps) => (
   <div className="space-y-6 max-w-md mx-auto">
     <div className="text-center mb-8">
@@ -94,9 +119,9 @@ export const NameStep = ({
     {(selectedFormat === "two_match_rotation" || selectedFormat === "win2out") &&
       maxCourts > 1 && (
         <div className="space-y-3">
-          <label className="text-sm font-medium">Number of Courts</label>
+          <label className="text-sm font-medium">Number of {venueName}s</label>
           <p className="text-xs text-muted-foreground">
-            Run multiple games simultaneously. More courts = faster rotation.
+            Run multiple games simultaneously. More {venueName}s = faster rotation.
           </p>
           <div className="flex gap-2">
             {Array.from({ length: Math.min(maxCourts, 4) }, (_, i) => i + 1).map(
@@ -114,7 +139,7 @@ export const NameStep = ({
                     }
                   `}
                 >
-                  {num} Court{num > 1 ? "s" : ""}
+                  {num} {venueName}{num > 1 ? "s" : ""}
                 </button>
               )
             )}
@@ -198,6 +223,123 @@ export const NameStep = ({
           ))}
         </div>
       </div>
+    )}
+
+    {/* Advanced Settings - Show for formats that need customization */}
+    {(selectedFormat === "round_robin" ||
+      selectedFormat === "two_match_rotation" ||
+      selectedFormat === "win2out") && (
+      <>
+        <Separator />
+        <div className="space-y-4">
+          <button
+            type="button"
+            onClick={onToggleAdvancedSettings}
+            className="w-full flex items-center justify-between py-2 px-1 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+          >
+            <span className="flex items-center gap-2">
+              <Settings2 className="w-4 h-4" />
+              Advanced Settings
+            </span>
+            {showAdvancedSettings ? (
+              <ChevronUp className="w-4 h-4" />
+            ) : (
+              <ChevronDown className="w-4 h-4" />
+            )}
+          </button>
+
+          {showAdvancedSettings && (
+            <div className="space-y-4 p-4 rounded-xl bg-card/30 border border-border/40">
+              {/* Standings Points - Only for Round Robin */}
+              {selectedFormat === "round_robin" && (
+                <>
+                  <div className="space-y-3">
+                    <label className="text-sm font-medium">Standings Points</label>
+                    <p className="text-xs text-muted-foreground">
+                      Configure points awarded for wins, ties, and losses.
+                    </p>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-xs text-muted-foreground">Win</label>
+                        <Input
+                          type="number"
+                          min="0"
+                          max="10"
+                          value={pointsForWin}
+                          onChange={(e) => onPointsForWinChange(Number(e.target.value))}
+                          className="text-center"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs text-muted-foreground">Tie</label>
+                        <Input
+                          type="number"
+                          min="0"
+                          max="10"
+                          value={pointsForTie}
+                          onChange={(e) => onPointsForTieChange(Number(e.target.value))}
+                          className="text-center"
+                          disabled={!allowTies}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs text-muted-foreground">Loss</label>
+                        <Input
+                          type="number"
+                          min="0"
+                          max="10"
+                          value={pointsForLoss}
+                          onChange={(e) => onPointsForLossChange(Number(e.target.value))}
+                          className="text-center"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Allow Ties */}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <label className="text-sm font-medium">Allow Ties</label>
+                      <p className="text-xs text-muted-foreground">
+                        Enable if matches can end in a draw
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => onAllowTiesChange(!allowTies)}
+                      className={`
+                        relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer
+                        ${allowTies ? "bg-primary" : "bg-muted"}
+                      `}
+                    >
+                      <span
+                        className={`
+                          inline-block h-4 w-4 transform rounded-full bg-white transition-transform
+                          ${allowTies ? "translate-x-6" : "translate-x-1"}
+                        `}
+                      />
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {/* Venue Name */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Venue Name</label>
+                <p className="text-xs text-muted-foreground">
+                  Customize terminology (e.g., court, field, table)
+                </p>
+                <Input
+                  type="text"
+                  value={venueName}
+                  onChange={(e) => onVenueNameChange(e.target.value)}
+                  placeholder="court"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      </>
     )}
 
     <Separator />

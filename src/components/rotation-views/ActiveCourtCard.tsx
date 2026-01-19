@@ -9,6 +9,7 @@ import type { ActiveCourtCardProps } from "./types";
 export const ActiveCourtCard = memo(function ActiveCourtCard({
   match,
   courtNumber,
+  venueName = "Court",
   homeStreak = 0,
   awayStreak = 0,
   homeChampionCount = 0,
@@ -22,6 +23,8 @@ export const ActiveCourtCard = memo(function ActiveCourtCard({
   onEditMatch,
   onInstantWin,
 }: ActiveCourtCardProps) {
+  // Capitalize venue name for display
+  const displayVenueName = venueName.charAt(0).toUpperCase() + venueName.slice(1);
   const handleMatchClick = () => {
     if (canPlayMatch && onMatchClick) {
       onMatchClick(match);
@@ -34,7 +37,7 @@ export const ActiveCourtCard = memo(function ActiveCourtCard({
         <CardTitle className="flex items-center justify-between text-lg">
           <div className="flex items-center gap-2">
             <Play className="w-5 h-5 text-primary" />
-            Court {courtNumber}
+            {displayVenueName} {courtNumber}
           </div>
           {canEdit && match.status === "pending" && onEditMatch && (
             <Button
@@ -79,7 +82,7 @@ export const ActiveCourtCard = memo(function ActiveCourtCard({
               : undefined
           }
           aria-label={
-            canPlayMatch && !instantWinEnabled ? `Click to play match on Court ${courtNumber}` : undefined
+            canPlayMatch && !instantWinEnabled ? `Click to play match on ${displayVenueName} ${courtNumber}` : undefined
           }
         >
           {/* Home Team */}

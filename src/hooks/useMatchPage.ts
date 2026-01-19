@@ -409,7 +409,8 @@ export const useMatchPage = () => {
         if (competition.type === "round_robin") {
           const standings = calculateStandings(
             competition.teamIds,
-            competitionMatches
+            competitionMatches,
+            competition.config
           );
           competitionWinnerId = standings[0]?.teamId;
         } else {

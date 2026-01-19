@@ -9,6 +9,7 @@ import type { Match } from "@/types/game";
 interface TwoMatchCourtCardProps {
   match: Match;
   courtNumber: number;
+  venueName?: string;
   isFirstMatch?: boolean;
   homeSessionDisplay: string;
   awaySessionDisplay: string;
@@ -25,6 +26,7 @@ interface TwoMatchCourtCardProps {
 export const TwoMatchCourtCard = memo(function TwoMatchCourtCard({
   match,
   courtNumber,
+  venueName = "Court",
   isFirstMatch = false,
   homeSessionDisplay,
   awaySessionDisplay,
@@ -37,6 +39,9 @@ export const TwoMatchCourtCard = memo(function TwoMatchCourtCard({
   onEditMatch,
   onInstantWin,
 }: TwoMatchCourtCardProps) {
+  // Capitalize venue name for display
+  const displayVenueName = venueName.charAt(0).toUpperCase() + venueName.slice(1);
+
   const handleMatchClick = () => {
     if (canPlayMatch && onMatchClick) {
       onMatchClick(match);
@@ -49,7 +54,7 @@ export const TwoMatchCourtCard = memo(function TwoMatchCourtCard({
         <CardTitle className="flex items-center justify-between text-lg">
           <div className="flex items-center gap-2">
             <Play className="w-5 h-5 text-primary" />
-            Court {courtNumber}
+            {displayVenueName} {courtNumber}
           </div>
           <div className="flex items-center gap-2">
             {isFirstMatch && (
@@ -101,7 +106,7 @@ export const TwoMatchCourtCard = memo(function TwoMatchCourtCard({
               : undefined
           }
           aria-label={
-            canPlayMatch && !instantWinEnabled ? `Click to play match on Court ${courtNumber}` : undefined
+            canPlayMatch && !instantWinEnabled ? `Click to play match on ${displayVenueName} ${courtNumber}` : undefined
           }
         >
           {/* Home Team */}

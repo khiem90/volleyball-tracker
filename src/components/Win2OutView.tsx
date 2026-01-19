@@ -12,6 +12,7 @@ import {
 import { useApp } from "@/context/AppContext";
 import type { MatchStatus } from "@/types/game";
 import { useTeamsMap } from "@/hooks/useTeamsMap";
+import { useTerminology, capitalize } from "@/hooks/useTerminology";
 import { EditMatchDialog } from "@/components/EditMatchDialog";
 import { EditQueueDialog } from "@/components/EditQueueDialog";
 import {
@@ -46,6 +47,11 @@ export const Win2OutView = ({
   const [editingMatch, setEditingMatch] = useState<Match | null>(null);
   const [showEditQueue, setShowEditQueue] = useState(false);
   const canPlayMatch = canEdit && Boolean(onMatchClick);
+
+  // Get dynamic terminology from competition config
+  const terminology = useTerminology(competition?.id);
+  const venueName = terminology.venue;
+  const venueNameCapitalized = capitalize(venueName);
 
   // Instant win handler
   const handleInstantWin = useCallback(
@@ -180,7 +186,7 @@ export const Win2OutView = ({
       <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground bg-card/30 rounded-lg py-2 px-4">
         <RefreshCw className="w-4 h-4 animate-spin-slow" />
         <span>
-          Win 2 & Out • {state.numberOfCourts} Court
+          Win 2 & Out • {state.numberOfCourts} {venueNameCapitalized}
           {state.numberOfCourts > 1 ? "s" : ""} • Win 2 in a row → Champion →
           Back to queue!
         </span>
@@ -200,6 +206,7 @@ export const Win2OutView = ({
                 key={match.id}
                 match={match}
                 courtNumber={court?.courtNumber || match.position}
+                venueName={venueName}
                 homeStreak={getTeamStreak(match.homeTeamId)}
                 awayStreak={getTeamStreak(match.awayTeamId)}
                 homeChampionCount={getChampionCount(state, match.homeTeamId)}

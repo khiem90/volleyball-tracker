@@ -23,7 +23,8 @@ import type { AuthUser } from "@/types/session";
 // ============================================
 // Constants
 // ============================================
-const ADMIN_TOKENS_KEY = "volleyball-admin-tokens";
+const ADMIN_TOKENS_KEY = "tournament-admin-tokens";
+const OLD_ADMIN_TOKENS_KEY = "volleyball-admin-tokens"; // For migration
 
 // ============================================
 // Context Types
@@ -133,7 +134,18 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const getAdminTokens = useCallback((): Record<string, string> => {
     if (typeof window === "undefined") return {};
     try {
-      const stored = localStorage.getItem(ADMIN_TOKENS_KEY);
+      let stored = localStorage.getItem(ADMIN_TOKENS_KEY);
+
+      // Migration: check for old key if new key doesn't exist
+      if (!stored) {
+        const oldStored = localStorage.getItem(OLD_ADMIN_TOKENS_KEY);
+        if (oldStored) {
+          localStorage.setItem(ADMIN_TOKENS_KEY, oldStored);
+          localStorage.removeItem(OLD_ADMIN_TOKENS_KEY);
+          stored = oldStored;
+        }
+      }
+
       return stored ? JSON.parse(stored) : {};
     } catch {
       return {};

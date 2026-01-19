@@ -35,16 +35,16 @@ GradientOverlay.displayName = "GradientOverlay";
 const DecorativeElements = memo(() => (
   <>
     {/* Top-right glow - simplified */}
-    <div 
-      className="fixed top-0 right-0 w-[400px] h-[400px] z-[-1] pointer-events-none opacity-60"
+    <div
+      className="fixed top-0 right-0 w-100 h-100 z-[-1] pointer-events-none opacity-60"
       style={{
         background: "radial-gradient(circle, oklch(0.72 0.19 45 / 0.1) 0%, transparent 60%)",
         transform: "translate(30%, -30%)",
       }}
     />
     {/* Bottom-left glow - simplified */}
-    <div 
-      className="fixed bottom-0 left-0 w-[350px] h-[350px] z-[-1] pointer-events-none opacity-50"
+    <div
+      className="fixed bottom-0 left-0 w-87.5 h-87.5 z-[-1] pointer-events-none opacity-50"
       style={{
         background: "radial-gradient(circle, oklch(0.78 0.15 55 / 0.08) 0%, transparent 60%)",
         transform: "translate(-30%, 30%)",
@@ -73,10 +73,10 @@ const FallbackGradient = memo(({ show }: { show: boolean }) => {
 });
 FallbackGradient.displayName = "FallbackGradient";
 
-export const Background = memo(({ 
-  variant = "default", 
-  imageSrc = "/assets/volleyball-bg.jpg",
-  children 
+export const Background = memo(({
+  variant = "default",
+  imageSrc,
+  children
 }: BackgroundProps) => {
   const [imageError, setImageError] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
@@ -89,12 +89,12 @@ export const Background = memo(({
     setImageLoaded(true);
   }, []);
 
-  const showFallback = imageError || !imageLoaded;
+  const showFallback = !imageSrc || imageError || !imageLoaded;
 
   return (
     <div className="relative min-h-screen bg-background">
       {/* Background Image Layer - lazy loaded (no priority) */}
-      {!imageError && (
+      {imageSrc && !imageError && (
         <div className="fixed inset-0 z-[-2]">
           <Image
             src={imageSrc}

@@ -10,14 +10,14 @@ const outfit = Outfit({
 });
 
 export const metadata: Metadata = {
-  title: "VolleyballScore - Track Your Game",
-  description: "A simple and elegant volleyball score tracker app. Keep track of points for both teams with ease.",
-  keywords: ["volleyball", "score", "tracker", "sports", "game"],
+  title: "Tournament Tracker - Manage Your Competitions",
+  description: "A flexible tournament management app. Track scores, manage teams, and organize competitions for any sport.",
+  keywords: ["tournament", "score", "tracker", "sports", "competition", "bracket"],
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "VB Tracker",
+    title: "Tournaments",
   },
   icons: {
     apple: [

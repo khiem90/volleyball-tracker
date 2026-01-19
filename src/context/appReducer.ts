@@ -6,11 +6,13 @@ import type {
   CompetitionType,
   MatchStatus,
 } from "@/types/game";
+import type { CompetitionConfig } from "@/types/competition-config";
 
 // ============================================
 // Constants
 // ============================================
-export const STORAGE_KEY = "volleyball-tracker-state";
+export const STORAGE_KEY = "tournament-tracker-state";
+export const OLD_STORAGE_KEY = "volleyball-tracker-state"; // For migration
 
 export const generateId = (): string => {
   return `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
@@ -45,6 +47,7 @@ type CompetitionAction =
       numberOfCourts?: number;
       matchSeriesLength?: number;
       instantWinEnabled?: boolean;
+      config?: CompetitionConfig;
     }
   | { type: "UPDATE_COMPETITION"; competition: Competition }
   | { type: "DELETE_COMPETITION"; id: string }
@@ -143,6 +146,7 @@ export const appReducer = (state: AppState, action: AppAction): AppState => {
         numberOfCourts: action.numberOfCourts,
         matchSeriesLength: action.matchSeriesLength,
         instantWinEnabled: action.instantWinEnabled,
+        config: action.config,
       };
       return {
         ...state,

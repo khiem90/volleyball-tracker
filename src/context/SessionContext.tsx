@@ -25,7 +25,8 @@ import {
 } from "@/lib/sessions";
 
 // LocalStorage key for persisting session
-const SESSION_STORAGE_KEY = "volleyball_tracker_session";
+const SESSION_STORAGE_KEY = "tournament_tracker_session";
+const OLD_SESSION_STORAGE_KEY = "volleyball_tracker_session"; // For migration
 import type { Session, SessionRole, SessionSummary } from "@/types/session";
 import type { Competition, PersistentTeam, Match } from "@/types/game";
 
@@ -94,9 +95,20 @@ export const SessionProvider = ({ children }: SessionProviderProps) => {
     };
   }, []);
 
-  // Restore session from localStorage on mount
+  // Restore session from localStorage on mount (with migration from old key)
   useEffect(() => {
-    const storedSession = localStorage.getItem(SESSION_STORAGE_KEY);
+    let storedSession = localStorage.getItem(SESSION_STORAGE_KEY);
+
+    // Migration: check for old key if new key doesn't exist
+    if (!storedSession) {
+      const oldStored = localStorage.getItem(OLD_SESSION_STORAGE_KEY);
+      if (oldStored) {
+        localStorage.setItem(SESSION_STORAGE_KEY, oldStored);
+        localStorage.removeItem(OLD_SESSION_STORAGE_KEY);
+        storedSession = oldStored;
+      }
+    }
+
     if (storedSession) {
       try {
         const { shareCode } = JSON.parse(storedSession);

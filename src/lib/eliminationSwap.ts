@@ -11,12 +11,16 @@ export interface SwapResult {
 /**
  * Detect if changing teams in a match would require swapping with another match.
  * This happens when the new team is already assigned to another pending match.
+ *
+ * @param sameRoundOnly - If true (default), only look for swaps within the same round.
+ *                        Set to false for rotation formats where round checking doesn't apply.
  */
 export const detectTeamSwap = (
   currentMatch: Match,
   newHomeTeamId: string,
   newAwayTeamId: string,
-  allMatches: Match[]
+  allMatches: Match[],
+  sameRoundOnly: boolean = true
 ): SwapResult => {
   // Get original teams in current match
   const originalTeams = [currentMatch.homeTeamId, currentMatch.awayTeamId].filter(Boolean);
@@ -32,12 +36,14 @@ export const detectTeamSwap = (
     return { needsSwap: false };
   }
 
-  // Find if incoming team is already in another pending match in the same round
+  // Find if incoming team is already in another pending match
+  // For elimination brackets: check same round
+  // For rotation formats: check any pending match
   const otherMatch = allMatches.find(
     (m) =>
       m.id !== currentMatch.id &&
       m.competitionId === currentMatch.competitionId &&
-      m.round === currentMatch.round &&
+      (!sameRoundOnly || m.round === currentMatch.round) &&
       m.status === "pending" &&
       !m.isBye &&
       (m.homeTeamId === incomingTeam || m.awayTeamId === incomingTeam)

@@ -171,7 +171,7 @@ export default function DashboardPage() {
             <span className="text-foreground">Win.</span>
           </h1>
           <p className="text-muted-foreground text-lg md:text-xl max-w-2xl mx-auto mb-8">
-            Your ultimate volleyball companion. Track scores, manage teams, and organize competitions with ease.
+            Your ultimate tournament companion. Track scores, manage teams, and organize competitions with ease.
           </p>
           <div className="flex flex-wrap justify-center gap-4">
             <Link href="/quick-match">

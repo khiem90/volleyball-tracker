@@ -17,6 +17,7 @@ interface TwoMatchQueueSectionProps {
   getTeamColor: (teamId: string) => string;
   canEdit: boolean;
   onEditQueue?: () => void;
+  venueName?: string;
 }
 
 export const TwoMatchQueueSection = memo(function TwoMatchQueueSection({
@@ -25,6 +26,7 @@ export const TwoMatchQueueSection = memo(function TwoMatchQueueSection({
   getTeamColor,
   canEdit,
   onEditQueue,
+  venueName = "court",
 }: TwoMatchQueueSectionProps) {
   return (
     <Card className="border-blue-500/30 bg-blue-500/5">
@@ -51,7 +53,7 @@ export const TwoMatchQueueSection = memo(function TwoMatchQueueSection({
       <CardContent>
         {queue.length === 0 ? (
           <p className="text-sm text-muted-foreground py-4 text-center">
-            All teams are on court!
+            All teams are on {venueName}!
           </p>
         ) : (
           <div className="flex flex-wrap gap-2">

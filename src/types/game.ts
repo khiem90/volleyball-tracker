@@ -1,3 +1,5 @@
+import type { CompetitionConfig } from "./competition-config";
+
 // ============================================
 // Legacy types for single match scoring
 // ============================================
@@ -95,6 +97,8 @@ export interface Competition {
   numberOfCourts?: number;
   // Instant win mode - tap team to declare winner without scoring
   instantWinEnabled?: boolean;
+  // User-configurable scoring rules and terminology
+  config?: CompetitionConfig;
 }
 
 // Round Robin specific
@@ -103,10 +107,11 @@ export interface RoundRobinStanding {
   played: number;
   won: number;
   lost: number;
+  tied: number; // Number of tied matches (if ties allowed)
   pointsFor: number;
   pointsAgainst: number;
   pointsDiff: number;
-  competitionPoints: number; // 3 for win, 0 for loss
+  competitionPoints: number; // Configurable via CompetitionConfig (default: 3 for win, 0 for loss)
 }
 
 // Bracket node for tournament visualization

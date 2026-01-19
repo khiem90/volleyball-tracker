@@ -38,6 +38,19 @@ export default function NewCompetitionPage() {
     teamValidation,
     teams,
     teamsCount,
+    // Advanced settings
+    showAdvancedSettings,
+    setShowAdvancedSettings,
+    pointsForWin,
+    setPointsForWin,
+    pointsForTie,
+    setPointsForTie,
+    pointsForLoss,
+    setPointsForLoss,
+    allowTies,
+    setAllowTies,
+    venueName,
+    setVenueName,
   } = useNewCompetitionPage();
 
   return (
@@ -99,6 +112,18 @@ export default function NewCompetitionPage() {
             onSelectCourts={setNumberOfCourts}
             onSelectSeriesLength={setMatchSeriesLength}
             onSelectInstantWin={setInstantWinEnabled}
+            showAdvancedSettings={showAdvancedSettings}
+            onToggleAdvancedSettings={() => setShowAdvancedSettings(!showAdvancedSettings)}
+            pointsForWin={pointsForWin}
+            onPointsForWinChange={setPointsForWin}
+            pointsForTie={pointsForTie}
+            onPointsForTieChange={setPointsForTie}
+            pointsForLoss={pointsForLoss}
+            onPointsForLossChange={setPointsForLoss}
+            allowTies={allowTies}
+            onAllowTiesChange={setAllowTies}
+            venueName={venueName}
+            onVenueNameChange={setVenueName}
           />
         )}
       </main>

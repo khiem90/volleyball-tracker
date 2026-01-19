@@ -25,6 +25,7 @@ import {
   initialState,
   generateId,
   STORAGE_KEY,
+  OLD_STORAGE_KEY,
 } from "./appReducer";
 
 // ============================================
@@ -47,7 +48,8 @@ interface AppContextValue {
     teamIds: string[],
     numberOfCourts?: number,
     matchSeriesLength?: number,
-    instantWinEnabled?: boolean
+    instantWinEnabled?: boolean,
+    config?: Competition["config"]
   ) => string;
   updateCompetition: (competition: Competition) => void;
   deleteCompetition: (id: string) => void;
@@ -139,13 +141,26 @@ export const AppProvider = ({ children }: AppProviderProps) => {
 
   const hasLoadedLocalState = useRef(false);
 
-  // Load state from localStorage on mount
+  // Load state from localStorage on mount (with migration from old key)
   useEffect(() => {
     if (hasLoadedLocalState.current) return;
     hasLoadedLocalState.current = true;
 
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
+      let stored = localStorage.getItem(STORAGE_KEY);
+
+      // Migration: check for old storage key if new key doesn't exist
+      if (!stored && OLD_STORAGE_KEY) {
+        const oldStored = localStorage.getItem(OLD_STORAGE_KEY);
+        if (oldStored) {
+          // Migrate data from old key to new key
+          localStorage.setItem(STORAGE_KEY, oldStored);
+          localStorage.removeItem(OLD_STORAGE_KEY);
+          stored = oldStored;
+          console.log("Migrated data from old storage key to new storage key");
+        }
+      }
+
       if (stored) {
         const parsed = JSON.parse(stored) as AppState;
         dispatch({ type: "LOAD_STATE", state: parsed });
@@ -231,7 +246,8 @@ export const AppProvider = ({ children }: AppProviderProps) => {
       teamIds: string[],
       numberOfCourts?: number,
       matchSeriesLength?: number,
-      instantWinEnabled?: boolean
+      instantWinEnabled?: boolean,
+      config?: Competition["config"]
     ) => {
       if (isSharedMode && !canEdit) return "";
 
@@ -247,6 +263,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         numberOfCourts,
         matchSeriesLength,
         instantWinEnabled,
+        config,
       };
 
       if (isSharedMode && session) {
@@ -260,6 +277,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
           numberOfCourts,
           matchSeriesLength,
           instantWinEnabled,
+          config,
         });
       }
 

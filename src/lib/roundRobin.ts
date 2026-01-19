@@ -1,4 +1,6 @@
-import type { Match } from "@/types/game";
+import type { Match, RoundRobinStanding } from "@/types/game";
+import type { CompetitionConfig } from "@/types/competition-config";
+import { DEFAULT_COMPETITION_CONFIG } from "@/types/competition-config";
 
 /**
  * Generates a round robin schedule where every team plays every other team once.
@@ -57,22 +59,21 @@ export const generateRoundRobinSchedule = (
 
 /**
  * Calculate standings from completed matches
+ * @param teamIds - Array of team IDs in the competition
+ * @param matches - Array of matches
+ * @param config - Optional competition config for custom scoring rules
  */
-export interface RoundRobinStanding {
-  teamId: string;
-  played: number;
-  won: number;
-  lost: number;
-  pointsFor: number;
-  pointsAgainst: number;
-  pointsDiff: number;
-  competitionPoints: number; // 3 for win, 0 for loss
-}
-
 export const calculateStandings = (
   teamIds: string[],
-  matches: Match[]
+  matches: Match[],
+  config?: CompetitionConfig
 ): RoundRobinStanding[] => {
+  // Use provided config or defaults
+  const pointsForWin = config?.pointsForWin ?? DEFAULT_COMPETITION_CONFIG.pointsForWin;
+  const pointsForTie = config?.pointsForTie ?? 0;
+  const pointsForLoss = config?.pointsForLoss ?? DEFAULT_COMPETITION_CONFIG.pointsForLoss;
+  const allowTies = config?.allowTies ?? DEFAULT_COMPETITION_CONFIG.allowTies;
+
   // Initialize standings for all teams
   const standingsMap = new Map<string, RoundRobinStanding>();
 
@@ -82,6 +83,7 @@ export const calculateStandings = (
       played: 0,
       won: 0,
       lost: 0,
+      tied: 0,
       pointsFor: 0,
       pointsAgainst: 0,
       pointsDiff: 0,
@@ -111,14 +113,21 @@ export const calculateStandings = (
       // Determine winner
       if (match.homeScore > match.awayScore) {
         homeStanding.won++;
-        homeStanding.competitionPoints += 3;
+        homeStanding.competitionPoints += pointsForWin;
         awayStanding.lost++;
+        awayStanding.competitionPoints += pointsForLoss;
       } else if (match.awayScore > match.homeScore) {
         awayStanding.won++;
-        awayStanding.competitionPoints += 3;
+        awayStanding.competitionPoints += pointsForWin;
         homeStanding.lost++;
+        homeStanding.competitionPoints += pointsForLoss;
+      } else if (allowTies) {
+        // It's a tie and ties are allowed
+        homeStanding.tied++;
+        awayStanding.tied++;
+        homeStanding.competitionPoints += pointsForTie;
+        awayStanding.competitionPoints += pointsForTie;
       }
-      // Ties: no additional points (volleyball typically doesn't have ties)
 
       // Update point differential
       homeStanding.pointsDiff = homeStanding.pointsFor - homeStanding.pointsAgainst;
@@ -141,4 +150,7 @@ export const calculateStandings = (
 
   return standings;
 };
+
+// Re-export the type for convenience
+export type { RoundRobinStanding };
 

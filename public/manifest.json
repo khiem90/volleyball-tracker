@@ -1,7 +1,7 @@
 {
-  "name": "Volleyball Tracker",
-  "short_name": "VB Tracker",
-  "description": "Track volleyball matches and tournaments",
+  "name": "Tournament Tracker",
+  "short_name": "Tournaments",
+  "description": "Track matches and manage tournaments for any sport",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0f172a",

@@ -7,6 +7,7 @@ import { getTeamsByStatus, getSessionMatchCount, processMatchResult } from "@/li
 import { useApp } from "@/context/AppContext";
 import type { MatchStatus } from "@/types/game";
 import { useTeamsMap } from "@/hooks/useTeamsMap";
+import { useTerminology, capitalize } from "@/hooks/useTerminology";
 import { EditMatchDialog } from "@/components/EditMatchDialog";
 import { EditQueueDialog } from "@/components/EditQueueDialog";
 import {
@@ -43,6 +44,11 @@ export const TwoMatchRotationView = ({
   const canPlayMatch = canEdit && Boolean(onMatchClick);
 
   const { getTeamName, getTeamColor } = useTeamsMap(teams);
+
+  // Get dynamic terminology from competition config
+  const terminology = useTerminology(competition?.id);
+  const venueName = terminology.venue;
+  const venueNameCapitalized = capitalize(venueName);
 
   // Instant win handler
   const handleInstantWin = useCallback(
@@ -179,7 +185,7 @@ export const TwoMatchRotationView = ({
       <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground bg-card/30 rounded-lg py-2 px-4">
         <RotateCw className="w-4 h-4" />
         <span>
-          2 Match Rotation • {state.numberOfCourts} Court
+          2 Match Rotation • {state.numberOfCourts} {venueNameCapitalized}
           {state.numberOfCourts > 1 ? "s" : ""} • Play 2 matches then rotate
         </span>
       </div>
@@ -199,6 +205,7 @@ export const TwoMatchRotationView = ({
                 key={match.id}
                 match={match}
                 courtNumber={court?.courtNumber || match.position}
+                venueName={venueName}
                 isFirstMatch={court?.isFirstMatch}
                 homeSessionDisplay={getSessionDisplay(match.homeTeamId, court)}
                 awaySessionDisplay={getSessionDisplay(match.awayTeamId, court)}
@@ -232,6 +239,7 @@ export const TwoMatchRotationView = ({
         getTeamColor={getTeamColor}
         canEdit={canEdit}
         onEditQueue={handleEditQueue}
+        venueName={venueName}
       />
 
       {/* Leaderboard */}

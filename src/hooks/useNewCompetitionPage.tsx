@@ -3,6 +3,8 @@ import { useRouter } from "next/navigation";
 import { useApp } from "@/context/AppContext";
 import { RefreshCw, Brackets, Layers, Crown, RotateCw } from "lucide-react";
 import type { CompetitionType } from "@/types/game";
+import type { CompetitionConfig } from "@/types/competition-config";
+import { DEFAULT_COMPETITION_CONFIG } from "@/types/competition-config";
 
 export type Step = "format" | "teams" | "name";
 
@@ -69,6 +71,13 @@ export const useNewCompetitionPage = () => {
   const [numberOfCourts, setNumberOfCourts] = useState(1);
   const [matchSeriesLength, setMatchSeriesLength] = useState(1);
   const [instantWinEnabled, setInstantWinEnabled] = useState(false);
+  const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
+  // Competition config state
+  const [pointsForWin, setPointsForWin] = useState(DEFAULT_COMPETITION_CONFIG.pointsForWin);
+  const [pointsForTie, setPointsForTie] = useState(0);
+  const [pointsForLoss, setPointsForLoss] = useState(DEFAULT_COMPETITION_CONFIG.pointsForLoss);
+  const [allowTies, setAllowTies] = useState(DEFAULT_COMPETITION_CONFIG.allowTies);
+  const [venueName, setVenueName] = useState(DEFAULT_COMPETITION_CONFIG.terminology.venue);
 
   const currentFormat = useMemo(
     () => formatOptions.find((f) => f.type === selectedFormat),
@@ -184,13 +193,37 @@ export const useNewCompetitionPage = () => {
       selectedFormat === "two_match_rotation" || selectedFormat === "win2out"
         ? instantWinEnabled
         : undefined;
+
+    // Build config only if user has customized settings
+    const isCustomized =
+      pointsForWin !== DEFAULT_COMPETITION_CONFIG.pointsForWin ||
+      pointsForLoss !== DEFAULT_COMPETITION_CONFIG.pointsForLoss ||
+      allowTies !== DEFAULT_COMPETITION_CONFIG.allowTies ||
+      venueName !== DEFAULT_COMPETITION_CONFIG.terminology.venue;
+
+    const config: CompetitionConfig | undefined = isCustomized
+      ? {
+          pointsForWin,
+          pointsForTie: allowTies ? pointsForTie : undefined,
+          pointsForLoss,
+          allowTies,
+          terminology: {
+            venue: venueName,
+            venuePlural: venueName + "s",
+            match: DEFAULT_COMPETITION_CONFIG.terminology.match,
+            matchPlural: DEFAULT_COMPETITION_CONFIG.terminology.matchPlural,
+          },
+        }
+      : undefined;
+
     createCompetition(
       trimmedName,
       selectedFormat,
       selectedTeamIds,
       courtsToUse,
       seriesLengthToUse,
-      instantWinToUse
+      instantWinToUse,
+      config
     );
 
     router.push("/competitions");
@@ -201,6 +234,11 @@ export const useNewCompetitionPage = () => {
     numberOfCourts,
     matchSeriesLength,
     instantWinEnabled,
+    pointsForWin,
+    pointsForTie,
+    pointsForLoss,
+    allowTies,
+    venueName,
     createCompetition,
     router,
   ]);
@@ -240,5 +278,18 @@ export const useNewCompetitionPage = () => {
     teamValidation,
     teams: state.teams,
     teamsCount: state.teams.length,
+    // Advanced settings
+    showAdvancedSettings,
+    setShowAdvancedSettings,
+    pointsForWin,
+    setPointsForWin,
+    pointsForTie,
+    setPointsForTie,
+    pointsForLoss,
+    setPointsForLoss,
+    allowTies,
+    setAllowTies,
+    venueName,
+    setVenueName,
   };
 };
