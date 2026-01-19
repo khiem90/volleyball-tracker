@@ -141,12 +141,13 @@ export default function TeamsPage() {
           </MotionDiv>
         ) : (
           <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredTeams.map((team) => (
+            {filteredTeams.map((team, index) => (
               <StaggerItem key={team.id}>
                 <TeamCard
                   team={team}
                   onEdit={handleEditTeam}
                   onDelete={handleDeleteTeam}
+                  index={index}
                 />
               </StaggerItem>
             ))}

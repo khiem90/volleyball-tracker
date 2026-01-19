@@ -31,23 +31,31 @@ const GradientOverlay = memo(({ variant }: { variant: string }) => {
 });
 GradientOverlay.displayName = "GradientOverlay";
 
-// Memoized decorative elements - only render for default variant
+// Memoized decorative elements - playful colored gradients
 const DecorativeElements = memo(() => (
   <>
-    {/* Top-right glow - simplified */}
+    {/* Top-right glow - mint tinted */}
     <div
-      className="fixed top-0 right-0 w-100 h-100 z-[-1] pointer-events-none opacity-60"
+      className="fixed top-0 right-0 w-100 h-100 z-[-1] pointer-events-none opacity-50"
       style={{
-        background: "radial-gradient(circle, oklch(0.72 0.19 45 / 0.1) 0%, transparent 60%)",
+        background: "radial-gradient(circle, oklch(0.85 0.08 165 / 0.15) 0%, transparent 60%)",
         transform: "translate(30%, -30%)",
       }}
     />
-    {/* Bottom-left glow - simplified */}
+    {/* Bottom-left glow - lavender tinted */}
     <div
-      className="fixed bottom-0 left-0 w-87.5 h-87.5 z-[-1] pointer-events-none opacity-50"
+      className="fixed bottom-0 left-0 w-87.5 h-87.5 z-[-1] pointer-events-none opacity-40"
       style={{
-        background: "radial-gradient(circle, oklch(0.78 0.15 55 / 0.08) 0%, transparent 60%)",
+        background: "radial-gradient(circle, oklch(0.85 0.06 290 / 0.12) 0%, transparent 60%)",
         transform: "translate(-30%, 30%)",
+      }}
+    />
+    {/* Center-right glow - sky tinted */}
+    <div
+      className="fixed top-1/2 right-0 w-80 h-80 z-[-1] pointer-events-none opacity-30"
+      style={{
+        background: "radial-gradient(circle, oklch(0.88 0.06 235 / 0.1) 0%, transparent 70%)",
+        transform: "translate(40%, -50%)",
       }}
     />
   </>

@@ -19,13 +19,17 @@ import {
 import { PencilSquareIcon, TrashIcon, CalendarIcon } from "@heroicons/react/24/outline";
 import type { PersistentTeam } from "@/types/game";
 
+// Playful card color cycle
+const cardColors = ["mint", "lavender", "sky", "peach", "sage"] as const;
+
 interface TeamCardProps {
   team: PersistentTeam;
   onEdit: (team: PersistentTeam) => void;
   onDelete: (id: string) => void;
+  index?: number; // For cycling through playful colors
 }
 
-export const TeamCard = memo(({ team, onEdit, onDelete }: TeamCardProps) => {
+export const TeamCard = memo(({ team, onEdit, onDelete, index = 0 }: TeamCardProps) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const handleDeleteClick = useCallback(() => {
@@ -48,25 +52,20 @@ export const TeamCard = memo(({ team, onEdit, onDelete }: TeamCardProps) => {
   const teamColor = team.color || "#0d9488";
   const createdDate = new Date(team.createdAt).toLocaleDateString();
   const initial = team.name.charAt(0).toUpperCase();
+  const cardColorClass = `playful-card-${cardColors[index % cardColors.length]}`;
 
   return (
     <TooltipProvider>
       <>
-        {/* Card with soft shadow */}
-        <div className="group soft-card soft-card-hover rounded-2xl overflow-hidden">
-          {/* Color accent bar */}
-          <div
-            className="h-1.5 w-full"
-            style={{ backgroundColor: teamColor }}
-          />
-
+        {/* Card with playful colorful background */}
+        <div className={`group playful-card ${cardColorClass} rounded-3xl overflow-hidden`}>
           <div className="p-5">
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-center gap-4 flex-1 min-w-0">
-                {/* Team avatar with gradient */}
+                {/* Team avatar - more rounded and playful */}
                 <div className="relative">
                   <div
-                    className="w-14 h-14 rounded-xl flex items-center justify-center shrink-0 shadow-lg relative overflow-hidden"
+                    className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 shadow-lg relative overflow-hidden ring-3 ring-white/50"
                     style={{
                       background: `linear-gradient(135deg, ${teamColor}, ${teamColor}cc)`,
                       boxShadow: `0 6px 20px ${teamColor}30`,

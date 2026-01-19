@@ -44,7 +44,7 @@ const navItems = [
   { href: "/summaries", label: "History", icon: ClockIcon, description: "Session history" },
 ];
 
-// Memoized nav item component
+// Memoized nav item component - Pill shaped with gradient active state
 const NavItem = memo(({
   href,
   label,
@@ -58,15 +58,16 @@ const NavItem = memo(({
 }) => (
   <Link
     href={href}
-    className="relative flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors duration-200"
+    className="relative flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200 hover:scale-[1.02]"
     aria-label={label}
     aria-current={isActive ? "page" : undefined}
   >
-    {/* Active indicator with layoutId for smooth animation */}
+    {/* Active indicator with layoutId for smooth animation - gradient pill */}
     {isActive && (
       <motion.span
         layoutId="nav-active-indicator"
-        className="absolute inset-0 bg-primary rounded-xl shadow-soft"
+        className="absolute inset-0 bg-linear-to-r from-primary to-primary/80 rounded-full"
+        style={{ boxShadow: '0 4px 14px oklch(0.55 0.14 200 / 0.3)' }}
         transition={{ type: "spring", stiffness: 400, damping: 30 }}
       />
     )}
@@ -82,7 +83,7 @@ const NavItem = memo(({
 ));
 NavItem.displayName = "NavItem";
 
-// Memoized mobile nav item
+// Memoized mobile nav item - More rounded and playful
 const MobileNavItem = memo(({
   href,
   label,
@@ -100,11 +101,11 @@ const MobileNavItem = memo(({
     <Link
       href={href}
       className={`
-        flex items-center gap-4 px-4 py-3 rounded-xl
+        flex items-center gap-4 px-4 py-3 rounded-2xl
         transition-all duration-200
         ${isActive
-          ? "bg-primary text-primary-foreground shadow-soft"
-          : "hover:bg-accent"
+          ? "bg-linear-to-r from-primary to-primary/80 text-primary-foreground shadow-soft"
+          : "hover:bg-accent hover:scale-[1.01]"
         }
       `}
       aria-current={isActive ? "page" : undefined}
@@ -119,7 +120,7 @@ const MobileNavItem = memo(({
         <Icon className="w-5 h-5" />
       </div>
       <div className="flex flex-col">
-        <span className="font-medium">{label}</span>
+        <span className="font-semibold">{label}</span>
         <span className={`text-xs ${isActive ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
           {description}
         </span>

@@ -201,6 +201,18 @@ body {
   --wave-light: oklch(0.92 0.05 200);
   --wave-medium: oklch(0.85 0.08 200);
   --cloud: oklch(1 0 0 / 0.8);
+
+  /* Playful card colors - Cool & Fresh palette */
+  --card-mint: oklch(0.94 0.045 165);
+  --card-mint-border: oklch(0.88 0.06 165 / 0.4);
+  --card-lavender: oklch(0.94 0.04 290);
+  --card-lavender-border: oklch(0.85 0.06 290 / 0.4);
+  --card-sky: oklch(0.95 0.04 235);
+  --card-sky-border: oklch(0.88 0.06 235 / 0.4);
+  --card-peach: oklch(0.95 0.04 55);
+  --card-peach-border: oklch(0.88 0.06 55 / 0.4);
+  --card-sage: oklch(0.94 0.035 145);
+  --card-sage-border: oklch(0.88 0.05 145 / 0.4);
 }
 
 /* ============================================
@@ -271,6 +283,18 @@ body {
   --wave-light: oklch(0.2 0.03 200);
   --wave-medium: oklch(0.25 0.05 200);
   --cloud: oklch(0.2 0.02 240 / 0.5);
+
+  /* Playful card colors - Dark mode (muted versions) */
+  --card-mint: oklch(0.22 0.03 165);
+  --card-mint-border: oklch(0.32 0.04 165 / 0.5);
+  --card-lavender: oklch(0.22 0.025 290);
+  --card-lavender-border: oklch(0.32 0.04 290 / 0.5);
+  --card-sky: oklch(0.22 0.025 235);
+  --card-sky-border: oklch(0.32 0.04 235 / 0.5);
+  --card-peach: oklch(0.23 0.025 55);
+  --card-peach-border: oklch(0.33 0.04 55 / 0.5);
+  --card-sage: oklch(0.22 0.02 145);
+  --card-sage-border: oklch(0.32 0.035 145 / 0.5);
 }
 
 @layer base {
@@ -388,6 +412,133 @@ body {
   box-shadow:
     0 2px 8px oklch(0 0 0 / 0.4),
     0 8px 24px oklch(0.65 0.16 200 / 0.15);
+}
+
+/* ============================================
+   PLAYFUL CARD VARIANTS - Cool & Fresh
+   ============================================ */
+.playful-card {
+  background: var(--card);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-3xl);
+  box-shadow:
+    0 2px 8px oklch(0 0 0 / 0.04),
+    0 6px 20px oklch(0.55 0.1 200 / 0.06);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.playful-card:hover {
+  transform: translateY(-3px) scale(1.01);
+  box-shadow:
+    0 4px 12px oklch(0 0 0 / 0.06),
+    0 12px 32px oklch(0.55 0.1 200 / 0.1);
+}
+
+.dark .playful-card {
+  box-shadow:
+    0 2px 8px oklch(0 0 0 / 0.3),
+    0 6px 20px oklch(0 0 0 / 0.4);
+}
+
+.dark .playful-card:hover {
+  box-shadow:
+    0 4px 12px oklch(0 0 0 / 0.4),
+    0 12px 32px oklch(0.65 0.16 200 / 0.15);
+}
+
+/* Mint card variant */
+.playful-card-mint {
+  background: var(--card-mint);
+  border-color: var(--card-mint-border);
+}
+
+.playful-card-mint:hover {
+  border-color: oklch(0.75 0.1 165 / 0.6);
+}
+
+/* Lavender card variant */
+.playful-card-lavender {
+  background: var(--card-lavender);
+  border-color: var(--card-lavender-border);
+}
+
+.playful-card-lavender:hover {
+  border-color: oklch(0.75 0.08 290 / 0.6);
+}
+
+/* Sky card variant */
+.playful-card-sky {
+  background: var(--card-sky);
+  border-color: var(--card-sky-border);
+}
+
+.playful-card-sky:hover {
+  border-color: oklch(0.75 0.1 235 / 0.6);
+}
+
+/* Peach card variant */
+.playful-card-peach {
+  background: var(--card-peach);
+  border-color: var(--card-peach-border);
+}
+
+.playful-card-peach:hover {
+  border-color: oklch(0.75 0.1 55 / 0.6);
+}
+
+/* Sage card variant */
+.playful-card-sage {
+  background: var(--card-sage);
+  border-color: var(--card-sage-border);
+}
+
+.playful-card-sage:hover {
+  border-color: oklch(0.75 0.08 145 / 0.6);
+}
+
+/* ============================================
+   PLAYFUL BUTTON STYLES
+   ============================================ */
+.btn-playful {
+  border-radius: 9999px;
+  font-weight: 600;
+  padding: 0.75rem 1.5rem;
+  transition: all 0.2s ease;
+}
+
+.btn-playful-primary {
+  background: linear-gradient(135deg, oklch(0.55 0.14 200) 0%, oklch(0.5 0.15 195) 100%);
+  color: white;
+  box-shadow: 0 4px 14px oklch(0.55 0.14 200 / 0.3);
+}
+
+.btn-playful-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px oklch(0.55 0.14 200 / 0.4);
+}
+
+.btn-playful-primary:active {
+  transform: translateY(0) scale(0.98);
+}
+
+/* Text highlight effect - subtle underline style */
+.text-highlight {
+  position: relative;
+  display: inline;
+  background: linear-gradient(to top, oklch(0.55 0.14 200 / 0.15) 0%, oklch(0.55 0.14 200 / 0.15) 40%, transparent 40%);
+  padding: 0 0.15em;
+}
+
+.text-highlight-mint {
+  background: linear-gradient(to top, oklch(0.8 0.08 165 / 0.3) 0%, oklch(0.8 0.08 165 / 0.3) 40%, transparent 40%);
+}
+
+.text-highlight-lavender {
+  background: linear-gradient(to top, oklch(0.8 0.06 290 / 0.3) 0%, oklch(0.8 0.06 290 / 0.3) 40%, transparent 40%);
+}
+
+.text-highlight-sky {
+  background: linear-gradient(to top, oklch(0.8 0.08 235 / 0.3) 0%, oklch(0.8 0.08 235 / 0.3) 40%, transparent 40%);
 }
 
 /* Navigation bar - light with subtle shadow */
@@ -870,11 +1021,24 @@ button:active:not(:disabled) {
   border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
   background: linear-gradient(
     135deg,
-    oklch(0.92 0.05 200 / 0.5),
-    oklch(0.95 0.03 210 / 0.3)
+    oklch(0.9 0.05 165 / 0.4),
+    oklch(0.92 0.04 200 / 0.25)
   );
   pointer-events: none;
-  filter: blur(40px);
+  filter: blur(50px);
+}
+
+/* Playful blob variants - different colors */
+.decorative-blob:nth-child(1) {
+  background: linear-gradient(135deg, oklch(0.9 0.05 165 / 0.35), oklch(0.92 0.04 200 / 0.2));
+}
+
+.decorative-blob:nth-child(2) {
+  background: linear-gradient(135deg, oklch(0.9 0.04 290 / 0.3), oklch(0.92 0.03 235 / 0.2));
+}
+
+.decorative-blob:nth-child(3) {
+  background: linear-gradient(135deg, oklch(0.92 0.04 235 / 0.25), oklch(0.94 0.03 165 / 0.15));
 }
 
 /* ============================================

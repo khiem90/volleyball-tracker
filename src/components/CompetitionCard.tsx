@@ -126,10 +126,10 @@ export const CompetitionCard = memo(({
     <TooltipProvider>
       <>
         <Link href={`/competitions/${competition.id}`} className="block group">
-          {/* Card with soft shadow */}
-          <div className="soft-card soft-card-hover rounded-2xl overflow-hidden">
+          {/* Card with playful rounded styling */}
+          <div className="playful-card rounded-3xl overflow-hidden">
             <div className="flex">
-              {/* Type Icon Section */}
+              {/* Type Icon Section - More rounded */}
               <div className={`w-20 shrink-0 bg-linear-to-br ${typeInfo.gradient} flex items-center justify-center relative overflow-hidden`}>
                 <TypeIcon className="w-8 h-8 text-white relative z-10" />
                 <div className="absolute inset-0 bg-white/10" />
@@ -143,7 +143,7 @@ export const CompetitionCard = memo(({
                       <h3 className="font-semibold text-lg truncate group-hover:text-primary transition-colors">
                         {competition.name}
                       </h3>
-                      <Badge className={`${status.className} gap-1`}>
+                      <Badge className={`${status.className} gap-1 rounded-full px-2.5`}>
                         {status.icon}
                         {status.label}
                       </Badge>

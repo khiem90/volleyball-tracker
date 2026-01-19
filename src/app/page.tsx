@@ -22,7 +22,7 @@ import { GlassCard, GlassCardContent, GlassCardHeader, GlassCardTitle, GlassCard
 import { EmptyCompetitions, EmptyMatches } from "@/components/illustrations";
 import { useDashboardPage } from "@/hooks/useDashboardPage";
 
-// Memoized stat card wrapper
+// Memoized stat card wrapper - each card gets a different playful color
 const StatsGrid = memo(({
   teamsCount,
   activeCount,
@@ -40,30 +40,34 @@ const StatsGrid = memo(({
       label="Teams"
       value={teamsCount}
       iconColor="text-primary"
+      index={0}
     />
     <StatCard
       icon={<ClockIcon className="w-4 h-4" />}
       label="Active"
       value={activeCount}
       iconColor="text-amber-600"
+      index={1}
     />
     <StatCard
       icon={<CheckCircleIcon className="w-4 h-4" />}
       label="Done"
       value={completedCount}
       iconColor="text-emerald-600"
+      index={2}
     />
     <StatCard
       icon={<ChartBarIcon className="w-4 h-4" />}
       label="Matches"
       value={matchesCount}
       iconColor="text-sky-600"
+      index={3}
     />
   </div>
 ));
 StatsGrid.displayName = "StatsGrid";
 
-// Memoized quick action card
+// Memoized quick action card - more rounded and playful
 const QuickActionCard = memo(({
   href,
   icon: Icon,
@@ -84,14 +88,14 @@ const QuickActionCard = memo(({
   badge?: React.ReactNode;
 }) => (
   <Link href={href} className="block group">
-    <GlassCard className="h-full">
+    <GlassCard className="h-full rounded-3xl">
       <GlassCardHeader className="pb-2">
         <div
           className={`w-14 h-14 rounded-2xl bg-linear-to-br ${gradientFrom} ${gradientTo} flex items-center justify-center mb-4 group-hover:scale-105 transition-transform shadow-lg ${shadowColor}`}
         >
           <Icon className="w-7 h-7 text-white" />
         </div>
-        <GlassCardTitle className="text-xl flex items-center gap-2">
+        <GlassCardTitle className="text-xl flex items-center gap-2 font-bold">
           {title}
           <ArrowRightIcon className="w-4 h-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
         </GlassCardTitle>
@@ -122,7 +126,7 @@ const RecentMatchItem = memo(({
   const homeWon = match.winnerId === match.homeTeamId;
 
   return (
-    <div className="p-3 rounded-xl bg-accent/50 border border-border">
+    <div className="p-3 rounded-2xl bg-accent/50 border border-border">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <div
@@ -133,7 +137,7 @@ const RecentMatchItem = memo(({
             {homeTeam}
           </span>
         </div>
-        <div className="flex items-center gap-3 shrink-0 px-3 py-1 rounded-lg bg-white shadow-soft-sm border border-border">
+        <div className="flex items-center gap-3 shrink-0 px-3 py-1 rounded-xl bg-white shadow-soft-sm border border-border">
           <span className={`text-lg font-mono font-bold ${homeWon ? "text-emerald-600" : "text-muted-foreground"}`}>
             {match.homeScore}
           </span>
@@ -185,7 +189,7 @@ export default function DashboardPage() {
         <div className="text-center pt-8 pb-12 animate-fade-in">
           <h1 className="text-4xl md:text-6xl lg:text-7xl font-black tracking-tight mb-4">
             <span className="text-foreground">Track.</span>{" "}
-            <span className="text-primary">Score.</span>{" "}
+            <span className="text-highlight text-primary">Score.</span>{" "}
             <span className="text-foreground">Win.</span>
           </h1>
           <p className="text-muted-foreground text-lg md:text-xl max-w-2xl mx-auto mb-8">
@@ -193,13 +197,13 @@ export default function DashboardPage() {
           </p>
           <div className="flex flex-wrap justify-center gap-4">
             <Link href="/quick-match">
-              <Button size="lg" variant="teal-gradient" className="gap-2 px-8 h-12 rounded-xl">
+              <Button size="pill" variant="playful" className="gap-2 px-8">
                 <BoltIcon className="w-5 h-5" />
                 Quick Match
               </Button>
             </Link>
             <Link href="/competitions/new">
-              <Button size="lg" variant="outline" className="gap-2 h-12 rounded-xl px-8">
+              <Button size="pill" variant="outline" className="gap-2 px-8">
                 <TrophyIcon className="w-5 h-5" />
                 New Competition
               </Button>
@@ -235,7 +239,7 @@ export default function DashboardPage() {
             gradientTo="to-blue-600"
             shadowColor="shadow-sky-500/25"
             badge={
-              <Badge variant="secondary" className="ml-2 bg-sky-100 text-sky-600 border-sky-200">
+              <Badge variant="secondary" className="ml-2 bg-sky-100 text-sky-600 border-sky-200 rounded-full">
                 {teamsCount}
               </Badge>
             }
