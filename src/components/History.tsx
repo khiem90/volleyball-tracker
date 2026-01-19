@@ -20,10 +20,10 @@ export const History = ({ events, onUndo }: HistoryProps) => {
   const recentEvents = useMemo(() => events.slice(0, 8), [events]);
 
   return (
-    <div className="flex-shrink-0 glass border-t border-border/50 px-4 py-3 h-40">
+    <div className="shrink-0 glass border-t border-border/50 px-4 py-3 h-40">
       <div className="max-w-4xl mx-auto h-full flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between mb-2 flex-shrink-0">
+        <div className="flex items-center justify-between mb-2 shrink-0">
           <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
             Score History
           </h3>
@@ -93,7 +93,7 @@ export const History = ({ events, onUndo }: HistoryProps) => {
         )}
 
         {events.length > 8 && (
-          <p className="text-muted-foreground/60 text-xs text-center mt-1 flex-shrink-0">
+          <p className="text-muted-foreground/60 text-xs text-center mt-1 shrink-0">
             Showing 8 of {events.length} events
           </p>
         )}
