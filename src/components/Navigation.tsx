@@ -3,7 +3,6 @@
 import { useState, memo, useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { motion } from "framer-motion";
 import {
   HomeIcon,
   UserGroupIcon,
@@ -44,41 +43,33 @@ const navItems = [
   { href: "/summaries", label: "History", icon: ClockIcon, description: "Session history" },
 ];
 
-// Memoized nav item component - Pill shaped with gradient active state
+// Memoized nav item component - Flat uppercase style
 const NavItem = memo(({
   href,
   label,
-  icon: Icon,
   isActive
 }: {
   href: string;
   label: string;
-  icon: React.ComponentType<{ className?: string }>;
   isActive: boolean;
 }) => (
   <Link
     href={href}
-    className="relative flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200 hover:scale-[1.02]"
+    className={`
+      relative px-4 py-2 uppercase tracking-wider text-sm font-bold transition-colors duration-200
+      ${isActive
+        ? "text-primary"
+        : "text-foreground hover:text-primary"
+      }
+    `}
     aria-label={label}
     aria-current={isActive ? "page" : undefined}
   >
-    {/* Active indicator with layoutId for smooth animation - gradient pill */}
+    {label}
+    {/* Active underline indicator */}
     {isActive && (
-      <motion.span
-        layoutId="nav-active-indicator"
-        className="absolute inset-0 bg-linear-to-r from-primary to-primary/80 rounded-full"
-        style={{ boxShadow: '0 4px 14px oklch(0.55 0.14 200 / 0.3)' }}
-        transition={{ type: "spring", stiffness: 400, damping: 30 }}
-      />
+      <span className="absolute bottom-0 left-4 right-4 h-0.5 bg-primary rounded-full" />
     )}
-    <Icon className={`w-5 h-5 relative z-10 transition-colors ${
-      isActive ? "text-primary-foreground" : "text-muted-foreground group-hover:text-foreground"
-    }`} />
-    <span className={`relative z-10 transition-colors ${
-      isActive ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground"
-    }`}>
-      {label}
-    </span>
   </Link>
 ));
 NavItem.displayName = "NavItem";
@@ -104,7 +95,7 @@ const MobileNavItem = memo(({
         flex items-center gap-4 px-4 py-3 rounded-2xl
         transition-all duration-200
         ${isActive
-          ? "bg-linear-to-r from-primary to-primary/80 text-primary-foreground shadow-soft"
+          ? "bg-primary text-primary-foreground shadow-soft"
           : "hover:bg-accent hover:scale-[1.01]"
         }
       `}
@@ -148,42 +139,40 @@ export const Navigation = memo(() => {
 
   return (
     <>
-      {/* Floating Navigation Bar - CSS animation instead of framer-motion */}
-      <nav className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-4xl animate-fade-in">
-        <div className="glass-nav rounded-2xl px-2 py-2 overflow-hidden">
-          <div className="flex items-center gap-2">
-            {/* Logo - visible on mobile and as accent on desktop */}
+      {/* Flat Full-Width Navigation Bar */}
+      <nav className="sticky top-0 z-50 w-full bg-background border-b border-border">
+        <div className="max-w-7xl mx-auto px-4 md:px-8">
+          <div className="flex items-center justify-between h-16">
+            {/* Logo - Left */}
             <Link
               href="/"
-              className="flex items-center gap-2 pl-2 md:pl-3 group shrink-0"
+              className="flex items-center gap-3 group shrink-0"
               aria-label="Tournament Tracker Home"
             >
               <div className="relative">
-                <div className="w-9 h-9 bg-linear-to-br from-primary via-primary/90 to-teal-400 rounded-xl flex items-center justify-center shadow-soft group-hover:shadow-soft-md transition-all duration-300 group-hover:scale-105">
-                  <TrophySolid className="w-5 h-5 text-primary-foreground" />
-                </div>
+                <TrophySolid className="w-8 h-8 text-primary group-hover:scale-105 transition-transform duration-200" />
               </div>
-              <span className="hidden lg:block text-sm font-bold tracking-tight text-foreground">
-                Tournament<span className="text-primary">Tracker</span>
+              <span className="hidden sm:block text-lg font-black tracking-tight text-foreground uppercase">
+                Volley<span className="text-primary">Score</span>
               </span>
             </Link>
 
-            {/* Desktop Navigation - Pill Items */}
-            <div className="hidden md:flex items-center gap-1 flex-1 justify-center">
+            {/* Desktop Navigation - Center */}
+            <div className="hidden md:flex items-center gap-2">
               {navItems.map((item) => (
                 <NavItem
                   key={item.href}
                   href={item.href}
                   label={item.label}
-                  icon={item.icon}
                   isActive={pathname === item.href}
                 />
               ))}
             </div>
 
-            {/* Right side - Theme toggle & User actions */}
-            <div className="hidden md:flex items-center gap-3 pr-2 shrink-0">
+            {/* Right side - CTA, Theme toggle & User actions */}
+            <div className="hidden md:flex items-center gap-4 shrink-0">
               <ThemeToggle />
+
               {isConfigured && (
                 user ? (
                   <TooltipProvider>
@@ -193,7 +182,7 @@ export const Navigation = memo(() => {
                           variant="ghost"
                           size="icon"
                           onClick={() => signOut()}
-                          className="cursor-pointer rounded-xl h-9 w-9 hover:bg-accent"
+                          className="cursor-pointer rounded-lg h-9 w-9 hover:bg-accent"
                         >
                           <Avatar className="w-7 h-7 ring-2 ring-primary/20">
                             <AvatarImage src={user.photoURL || undefined} alt={user.displayName || "User"} />
@@ -215,30 +204,38 @@ export const Navigation = memo(() => {
                     variant="ghost"
                     size="sm"
                     onClick={() => setShowAuth(true)}
-                    className="gap-2 cursor-pointer rounded-xl hover:bg-accent"
+                    className="gap-2 cursor-pointer rounded-lg hover:bg-accent"
                   >
                     <ArrowRightOnRectangleIcon className="w-4 h-4" />
                     <span className="hidden lg:inline">Sign In</span>
                   </Button>
                 )
               )}
+
+              {/* CTA Button */}
+              <Link href="/quick-match">
+                <Button
+                  variant="default"
+                  className="uppercase tracking-wider font-bold text-sm rounded-lg shadow-lg hover:shadow-xl transition-shadow"
+                >
+                  Quick Match
+                </Button>
+              </Link>
             </div>
 
             {/* Mobile Menu Button */}
             <Sheet>
-              <SheetTrigger asChild className="md:hidden ml-auto">
-                <Button variant="ghost" size="icon" aria-label="Open menu" className="rounded-xl h-9 w-9">
-                  <Bars3Icon className="w-5 h-5" />
+              <SheetTrigger asChild className="md:hidden">
+                <Button variant="ghost" size="icon" aria-label="Open menu" className="rounded-lg h-10 w-10">
+                  <Bars3Icon className="w-6 h-6" />
                 </Button>
               </SheetTrigger>
               <SheetContent side="right" className="w-80 p-0 bg-card border-l border-border">
                 <SheetHeader className="p-6 pb-4">
                   <SheetTitle className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-linear-to-br from-primary to-teal-400 rounded-xl flex items-center justify-center shadow-soft">
-                      <TrophySolid className="w-5 h-5 text-primary-foreground" />
-                    </div>
+                    <TrophySolid className="w-8 h-8 text-primary" />
                     <div>
-                      <span className="font-bold text-foreground">Tournament Tracker</span>
+                      <span className="font-black text-foreground uppercase">Volley<span className="text-primary">Score</span></span>
                     </div>
                   </SheetTitle>
                 </SheetHeader>
@@ -276,14 +273,28 @@ export const Navigation = memo(() => {
                     />
                   ))}
 
-                  {/* Theme toggle in mobile menu */}
-                <Separator className="my-4 bg-border" />
-                <div className="flex items-center justify-between px-4 py-2">
-                  <span className="text-sm font-medium text-muted-foreground">Theme</span>
-                  <ThemeToggle />
-                </div>
+                  {/* Quick Match CTA in mobile */}
+                  <Separator className="my-4 bg-border" />
+                  <SheetClose asChild>
+                    <Link href="/quick-match" className="block">
+                      <Button
+                        variant="default"
+                        className="w-full uppercase tracking-wider font-bold text-sm rounded-xl shadow-lg"
+                      >
+                        <BoltIcon className="w-5 h-5 mr-2" />
+                        Quick Match
+                      </Button>
+                    </Link>
+                  </SheetClose>
 
-                {isConfigured && (
+                  {/* Theme toggle in mobile menu */}
+                  <Separator className="my-4 bg-border" />
+                  <div className="flex items-center justify-between px-4 py-2">
+                    <span className="text-sm font-medium text-muted-foreground">Theme</span>
+                    <ThemeToggle />
+                  </div>
+
+                  {isConfigured && (
                     <>
                       <Separator className="my-4 bg-border" />
 
@@ -328,9 +339,6 @@ export const Navigation = memo(() => {
           </div>
         </div>
       </nav>
-
-      {/* Spacer to prevent content from hiding under fixed nav */}
-      <div className="h-20" />
 
       {/* Dialogs */}
       <SessionAuth open={showAuth} onOpenChange={setShowAuth} showViewerOption={false} />

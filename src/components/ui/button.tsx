@@ -20,8 +20,10 @@ const buttonVariants = cva(
           "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
         soft: "bg-accent text-accent-foreground border border-border hover:bg-accent/80 hover:border-primary/30",
-        "teal-gradient": "btn-teal-gradient text-white font-semibold",
+        "red-gradient": "btn-red-gradient text-white font-bold uppercase tracking-wider",
+        "teal-gradient": "btn-red-gradient text-white font-bold uppercase tracking-wider",
         playful: "btn-playful btn-playful-primary",
+        cta: "bg-primary text-primary-foreground font-bold uppercase tracking-wider hover:bg-primary/90 shadow-lg hover:shadow-xl",
       },
       size: {
         default: "h-9 px-4 py-2 has-[>svg]:px-3",

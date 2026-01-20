@@ -102,21 +102,21 @@ body {
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb {
-  background-color: oklch(0.7 0.05 200 / 0.3);
+  background-color: oklch(0.7 0.08 25 / 0.3);
   border-radius: 999px;
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background-color: oklch(0.5 0.1 200 / 0.5);
+  background-color: oklch(0.5 0.15 25 / 0.5);
 }
 
 /* Dark mode scrollbar */
 .dark .scrollbar-thin::-webkit-scrollbar-thumb {
-  background-color: oklch(0.4 0.06 200 / 0.4);
+  background-color: oklch(0.4 0.08 25 / 0.4);
 }
 
 .dark .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background-color: oklch(0.5 0.1 200 / 0.6);
+  background-color: oklch(0.5 0.12 25 / 0.6);
 }
 
 /* Prevent text selection on score panels */
@@ -134,155 +134,155 @@ body {
 }
 
 /* ============================================
-   SOFT SPORTS THEME - Light + Teal
-   Inspired by CatchMasters - friendly, airy, soft
+   PLAYFUL WARM THEME - Cream + Bold Red
+   Inspired by Don't Board Me - warm, playful, inviting
    ============================================ */
 :root {
   --radius: 0.75rem;
 
-  /* Light background with cool tint */
-  --background: oklch(0.975 0.008 220);
-  --foreground: oklch(0.2 0.02 220);
+  /* Warm cream background */
+  --background: oklch(0.96 0.025 70);
+  --foreground: oklch(0.18 0.02 60);
 
-  /* White cards with subtle shadows */
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.2 0.02 220);
-  --card-shadow: oklch(0.55 0.1 200 / 0.08);
+  /* Warm white cards */
+  --card: oklch(0.98 0.015 70);
+  --card-foreground: oklch(0.18 0.02 60);
+  --card-shadow: oklch(0.55 0.1 25 / 0.08);
 
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.2 0.02 220);
+  --popover: oklch(0.98 0.015 70);
+  --popover-foreground: oklch(0.18 0.02 60);
 
-  /* Teal primary - friendly and sporty */
-  --primary: oklch(0.55 0.14 200);
-  --primary-foreground: oklch(0.98 0.01 200);
+  /* Bold red primary - energetic and playful */
+  --primary: oklch(0.55 0.22 25);
+  --primary-foreground: oklch(0.99 0 0);
 
-  /* Teal accent variations */
-  --teal-light: oklch(0.92 0.04 200);
-  --teal-dark: oklch(0.45 0.12 200);
+  /* Red accent variations */
+  --red-light: oklch(0.92 0.06 25);
+  --red-dark: oklch(0.45 0.2 25);
 
-  /* Soft blue-grey secondary */
-  --secondary: oklch(0.94 0.015 210);
-  --secondary-foreground: oklch(0.3 0.02 220);
+  /* Warm beige secondary */
+  --secondary: oklch(0.94 0.02 70);
+  --secondary-foreground: oklch(0.25 0.02 60);
 
-  --muted: oklch(0.96 0.01 210);
-  --muted-foreground: oklch(0.45 0.02 220);
+  --muted: oklch(0.94 0.015 70);
+  --muted-foreground: oklch(0.45 0.02 60);
 
-  /* Light accent for hover states */
-  --accent: oklch(0.93 0.03 200);
-  --accent-foreground: oklch(0.25 0.02 220);
+  /* Cream accent for hover states */
+  --accent: oklch(0.93 0.025 70);
+  --accent-foreground: oklch(0.2 0.02 60);
 
-  /* Destructive - soft red */
-  --destructive: oklch(0.55 0.2 25);
+  /* Destructive - stays red */
+  --destructive: oklch(0.55 0.22 25);
   --destructive-light: oklch(0.95 0.04 25);
 
-  /* Borders and inputs - soft grey */
-  --border: oklch(0.88 0.01 220);
-  --input: oklch(0.96 0.008 220);
-  --ring: oklch(0.55 0.14 200);
+  /* Borders and inputs - warm grey */
+  --border: oklch(0.88 0.015 70);
+  --input: oklch(0.96 0.015 70);
+  --ring: oklch(0.55 0.22 25);
 
-  /* Status colors - light theme friendly */
+  /* Status colors - warm theme friendly */
   --status-draft: oklch(0.55 0.12 250);
   --status-draft-bg: oklch(0.94 0.03 250);
-  --status-active: oklch(0.55 0.15 200);
-  --status-active-bg: oklch(0.92 0.04 200);
+  --status-active: oklch(0.55 0.22 25);
+  --status-active-bg: oklch(0.95 0.04 25);
   --status-complete: oklch(0.55 0.12 145);
   --status-complete-bg: oklch(0.94 0.03 145);
-  --status-live: oklch(0.55 0.18 30);
-  --status-live-bg: oklch(0.95 0.04 30);
+  --status-live: oklch(0.55 0.22 25);
+  --status-live-bg: oklch(0.95 0.05 25);
 
-  /* Chart colors - teal gradient palette */
-  --chart-1: oklch(0.55 0.14 200);
-  --chart-2: oklch(0.6 0.12 180);
+  /* Chart colors - warm gradient palette */
+  --chart-1: oklch(0.55 0.22 25);
+  --chart-2: oklch(0.6 0.15 45);
   --chart-3: oklch(0.55 0.12 145);
   --chart-4: oklch(0.55 0.12 250);
-  --chart-5: oklch(0.6 0.15 45);
+  --chart-5: oklch(0.6 0.12 180);
 
   /* Decorative colors */
-  --wave-light: oklch(0.92 0.05 200);
-  --wave-medium: oklch(0.85 0.08 200);
+  --wave-light: oklch(0.94 0.04 55);
+  --wave-medium: oklch(0.9 0.06 45);
   --cloud: oklch(1 0 0 / 0.8);
 
-  /* Playful card colors - Cool & Fresh palette */
+  /* Playful card colors - Warm & Cozy palette */
   --card-mint: oklch(0.94 0.045 165);
   --card-mint-border: oklch(0.88 0.06 165 / 0.4);
   --card-lavender: oklch(0.94 0.04 290);
   --card-lavender-border: oklch(0.85 0.06 290 / 0.4);
   --card-sky: oklch(0.95 0.04 235);
   --card-sky-border: oklch(0.88 0.06 235 / 0.4);
-  --card-peach: oklch(0.95 0.04 55);
-  --card-peach-border: oklch(0.88 0.06 55 / 0.4);
+  --card-peach: oklch(0.95 0.05 55);
+  --card-peach-border: oklch(0.88 0.07 55 / 0.4);
   --card-sage: oklch(0.94 0.035 145);
   --card-sage-border: oklch(0.88 0.05 145 / 0.4);
 }
 
 /* ============================================
-   DARK THEME - Night Game Atmosphere
-   Deep charcoal with cool undertones + glowing accents
+   DARK THEME - Cozy Night Atmosphere
+   Deep warm charcoal with red glowing accents
    ============================================ */
 .dark {
   --radius: 0.75rem;
 
-  /* Deep charcoal backgrounds */
-  --background: oklch(0.13 0.015 240);
-  --foreground: oklch(0.93 0.01 220);
+  /* Deep warm charcoal backgrounds */
+  --background: oklch(0.14 0.01 50);
+  --foreground: oklch(0.93 0.01 70);
 
   /* Elevated card surfaces */
-  --card: oklch(0.18 0.012 240);
-  --card-foreground: oklch(0.93 0.01 220);
+  --card: oklch(0.19 0.01 50);
+  --card-foreground: oklch(0.93 0.01 70);
   --card-shadow: oklch(0 0 0 / 0.4);
 
-  --popover: oklch(0.16 0.015 240);
-  --popover-foreground: oklch(0.93 0.01 220);
+  --popover: oklch(0.17 0.01 50);
+  --popover-foreground: oklch(0.93 0.01 70);
 
-  /* Teal primary - enhanced glow for dark */
-  --primary: oklch(0.65 0.16 200);
-  --primary-foreground: oklch(0.12 0.02 200);
+  /* Red primary - enhanced glow for dark */
+  --primary: oklch(0.62 0.2 25);
+  --primary-foreground: oklch(0.98 0.01 25);
 
-  /* Teal accent variations */
-  --teal-light: oklch(0.35 0.08 200);
-  --teal-dark: oklch(0.55 0.14 200);
+  /* Red accent variations */
+  --red-light: oklch(0.35 0.1 25);
+  --red-dark: oklch(0.55 0.18 25);
 
   /* Muted secondary */
-  --secondary: oklch(0.22 0.015 240);
-  --secondary-foreground: oklch(0.85 0.01 220);
+  --secondary: oklch(0.22 0.01 50);
+  --secondary-foreground: oklch(0.85 0.01 70);
 
-  --muted: oklch(0.2 0.01 240);
-  --muted-foreground: oklch(0.6 0.02 220);
+  --muted: oklch(0.2 0.008 50);
+  --muted-foreground: oklch(0.6 0.015 70);
 
   /* Accent for hover states */
-  --accent: oklch(0.24 0.02 200);
-  --accent-foreground: oklch(0.93 0.01 220);
+  --accent: oklch(0.24 0.015 25);
+  --accent-foreground: oklch(0.93 0.01 70);
 
   /* Destructive - vivid red on dark */
-  --destructive: oklch(0.6 0.22 25);
+  --destructive: oklch(0.62 0.22 25);
   --destructive-light: oklch(0.25 0.08 25);
 
   /* Borders and inputs */
-  --border: oklch(0.28 0.015 240);
-  --input: oklch(0.2 0.01 240);
-  --ring: oklch(0.65 0.16 200);
+  --border: oklch(0.28 0.01 50);
+  --input: oklch(0.2 0.008 50);
+  --ring: oklch(0.62 0.2 25);
 
   /* Status colors - boosted for dark contrast */
   --status-draft: oklch(0.65 0.14 250);
   --status-draft-bg: oklch(0.22 0.04 250);
-  --status-active: oklch(0.7 0.16 200);
-  --status-active-bg: oklch(0.22 0.05 200);
+  --status-active: oklch(0.65 0.2 25);
+  --status-active-bg: oklch(0.25 0.06 25);
   --status-complete: oklch(0.65 0.14 145);
   --status-complete-bg: oklch(0.22 0.04 145);
-  --status-live: oklch(0.7 0.2 30);
-  --status-live-bg: oklch(0.25 0.06 30);
+  --status-live: oklch(0.65 0.2 25);
+  --status-live-bg: oklch(0.25 0.06 25);
 
   /* Chart colors - luminous on dark */
-  --chart-1: oklch(0.7 0.16 200);
-  --chart-2: oklch(0.7 0.14 180);
+  --chart-1: oklch(0.65 0.2 25);
+  --chart-2: oklch(0.7 0.15 45);
   --chart-3: oklch(0.65 0.14 145);
   --chart-4: oklch(0.65 0.14 250);
-  --chart-5: oklch(0.7 0.18 45);
+  --chart-5: oklch(0.7 0.12 180);
 
   /* Decorative colors */
-  --wave-light: oklch(0.2 0.03 200);
-  --wave-medium: oklch(0.25 0.05 200);
-  --cloud: oklch(0.2 0.02 240 / 0.5);
+  --wave-light: oklch(0.22 0.03 45);
+  --wave-medium: oklch(0.27 0.05 40);
+  --cloud: oklch(0.2 0.015 50 / 0.5);
 
   /* Playful card colors - Dark mode (muted versions) */
   --card-mint: oklch(0.22 0.03 165);
@@ -291,8 +291,8 @@ body {
   --card-lavender-border: oklch(0.32 0.04 290 / 0.5);
   --card-sky: oklch(0.22 0.025 235);
   --card-sky-border: oklch(0.32 0.04 235 / 0.5);
-  --card-peach: oklch(0.23 0.025 55);
-  --card-peach-border: oklch(0.33 0.04 55 / 0.5);
+  --card-peach: oklch(0.24 0.03 55);
+  --card-peach-border: oklch(0.34 0.05 55 / 0.5);
   --card-sage: oklch(0.22 0.02 145);
   --card-sage-border: oklch(0.32 0.035 145 / 0.5);
 }
@@ -313,9 +313,9 @@ body {
   position: relative;
   background: linear-gradient(
     180deg,
-    oklch(0.975 0.008 220) 0%,
-    oklch(0.96 0.02 210) 50%,
-    oklch(0.94 0.03 200) 100%
+    oklch(0.96 0.025 70) 0%,
+    oklch(0.95 0.03 65) 50%,
+    oklch(0.94 0.035 60) 100%
   );
   min-height: 100vh;
 }
@@ -323,9 +323,9 @@ body {
 .dark .bg-tournament {
   background: linear-gradient(
     180deg,
-    oklch(0.13 0.015 240) 0%,
-    oklch(0.12 0.018 240) 50%,
-    oklch(0.11 0.02 240) 100%
+    oklch(0.14 0.01 50) 0%,
+    oklch(0.13 0.012 50) 50%,
+    oklch(0.12 0.015 50) 100%
   );
 }
 
@@ -357,7 +357,7 @@ body {
   border-radius: var(--radius-2xl);
   box-shadow:
     0 1px 3px oklch(0 0 0 / 0.04),
-    0 4px 12px oklch(0.55 0.1 200 / 0.06);
+    0 4px 12px oklch(0.55 0.1 25 / 0.06);
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
@@ -368,18 +368,18 @@ body {
 }
 
 .soft-card-hover:hover {
-  border-color: oklch(0.55 0.14 200 / 0.3);
+  border-color: oklch(0.55 0.22 25 / 0.3);
   box-shadow:
     0 2px 8px oklch(0 0 0 / 0.06),
-    0 8px 24px oklch(0.55 0.1 200 / 0.1);
+    0 8px 24px oklch(0.55 0.15 25 / 0.1);
   transform: translateY(-2px);
 }
 
 .dark .soft-card-hover:hover {
-  border-color: oklch(0.65 0.16 200 / 0.4);
+  border-color: oklch(0.62 0.2 25 / 0.4);
   box-shadow:
     0 2px 8px oklch(0 0 0 / 0.4),
-    0 8px 24px oklch(0.65 0.16 200 / 0.15);
+    0 8px 24px oklch(0.62 0.2 25 / 0.15);
 }
 
 /* Legacy glass-card class for compatibility - now soft card */
@@ -389,7 +389,7 @@ body {
   border-radius: var(--radius-2xl);
   box-shadow:
     0 1px 3px oklch(0 0 0 / 0.04),
-    0 4px 12px oklch(0.55 0.1 200 / 0.06);
+    0 4px 12px oklch(0.55 0.1 25 / 0.06);
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
@@ -400,22 +400,22 @@ body {
 }
 
 .glass-card-hover:hover {
-  border-color: oklch(0.55 0.14 200 / 0.3);
+  border-color: oklch(0.55 0.22 25 / 0.3);
   box-shadow:
     0 2px 8px oklch(0 0 0 / 0.06),
-    0 8px 24px oklch(0.55 0.1 200 / 0.1);
+    0 8px 24px oklch(0.55 0.15 25 / 0.1);
   transform: translateY(-2px);
 }
 
 .dark .glass-card-hover:hover {
-  border-color: oklch(0.65 0.16 200 / 0.4);
+  border-color: oklch(0.62 0.2 25 / 0.4);
   box-shadow:
     0 2px 8px oklch(0 0 0 / 0.4),
-    0 8px 24px oklch(0.65 0.16 200 / 0.15);
+    0 8px 24px oklch(0.62 0.2 25 / 0.15);
 }
 
 /* ============================================
-   PLAYFUL CARD VARIANTS - Cool & Fresh
+   PLAYFUL CARD VARIANTS - Warm & Cozy
    ============================================ */
 .playful-card {
   background: var(--card);
@@ -423,7 +423,7 @@ body {
   border-radius: var(--radius-3xl);
   box-shadow:
     0 2px 8px oklch(0 0 0 / 0.04),
-    0 6px 20px oklch(0.55 0.1 200 / 0.06);
+    0 6px 20px oklch(0.55 0.1 25 / 0.06);
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
@@ -431,7 +431,7 @@ body {
   transform: translateY(-3px) scale(1.01);
   box-shadow:
     0 4px 12px oklch(0 0 0 / 0.06),
-    0 12px 32px oklch(0.55 0.1 200 / 0.1);
+    0 12px 32px oklch(0.55 0.15 25 / 0.1);
 }
 
 .dark .playful-card {
@@ -443,7 +443,7 @@ body {
 .dark .playful-card:hover {
   box-shadow:
     0 4px 12px oklch(0 0 0 / 0.4),
-    0 12px 32px oklch(0.65 0.16 200 / 0.15);
+    0 12px 32px oklch(0.62 0.2 25 / 0.15);
 }
 
 /* Mint card variant */
@@ -507,14 +507,14 @@ body {
 }
 
 .btn-playful-primary {
-  background: linear-gradient(135deg, oklch(0.55 0.14 200) 0%, oklch(0.5 0.15 195) 100%);
+  background: linear-gradient(135deg, oklch(0.55 0.22 25) 0%, oklch(0.5 0.24 20) 100%);
   color: white;
-  box-shadow: 0 4px 14px oklch(0.55 0.14 200 / 0.3);
+  box-shadow: 0 4px 14px oklch(0.55 0.22 25 / 0.3);
 }
 
 .btn-playful-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px oklch(0.55 0.14 200 / 0.4);
+  box-shadow: 0 6px 20px oklch(0.55 0.22 25 / 0.4);
 }
 
 .btn-playful-primary:active {
@@ -525,7 +525,7 @@ body {
 .text-highlight {
   position: relative;
   display: inline;
-  background: linear-gradient(to top, oklch(0.55 0.14 200 / 0.15) 0%, oklch(0.55 0.14 200 / 0.15) 40%, transparent 40%);
+  background: linear-gradient(to top, oklch(0.55 0.22 25 / 0.15) 0%, oklch(0.55 0.22 25 / 0.15) 40%, transparent 40%);
   padding: 0 0.15em;
 }
 
@@ -541,24 +541,31 @@ body {
   background: linear-gradient(to top, oklch(0.8 0.08 235 / 0.3) 0%, oklch(0.8 0.08 235 / 0.3) 40%, transparent 40%);
 }
 
-/* Navigation bar - light with subtle shadow */
+/* Navigation bar - flat, warm background */
 .glass-nav {
-  background: oklch(1 0 0 / 0.95);
-  border: 1px solid oklch(0.88 0.01 220 / 0.8);
-  box-shadow:
-    0 1px 3px oklch(0 0 0 / 0.03),
-    0 4px 16px oklch(0 0 0 / 0.06);
+  background: var(--background);
+  border-bottom: 1px solid var(--border);
+  box-shadow: none;
 }
 
 .dark .glass-nav {
-  background: oklch(0.16 0.015 240 / 0.95);
-  border: 1px solid oklch(0.28 0.015 240 / 0.8);
-  box-shadow:
-    0 1px 3px oklch(0 0 0 / 0.2),
-    0 4px 16px oklch(0 0 0 / 0.3);
+  background: var(--background);
+  border-bottom: 1px solid var(--border);
+  box-shadow: none;
 }
 
-/* Input fields - light theme */
+/* Flat nav style for redesigned navbar */
+.flat-nav {
+  background: var(--background);
+  border-bottom: 1px solid var(--border);
+}
+
+.dark .flat-nav {
+  background: var(--background);
+  border-bottom: 1px solid var(--border);
+}
+
+/* Input fields - warm theme */
 .glass-input {
   background: var(--input);
   border: 1px solid var(--border);
@@ -566,8 +573,8 @@ body {
 }
 
 .glass-input:focus {
-  border-color: oklch(0.55 0.14 200 / 0.5);
-  box-shadow: 0 0 0 3px oklch(0.55 0.14 200 / 0.12);
+  border-color: oklch(0.55 0.22 25 / 0.5);
+  box-shadow: 0 0 0 3px oklch(0.55 0.22 25 / 0.12);
 }
 
 /* ============================================
@@ -591,12 +598,12 @@ body {
   );
 }
 
-.team-teal-gradient {
+.team-red-gradient {
   background: linear-gradient(
     135deg,
-    oklch(0.55 0.14 200) 0%,
-    oklch(0.5 0.12 205) 50%,
-    oklch(0.45 0.1 210) 100%
+    oklch(0.55 0.22 25) 0%,
+    oklch(0.5 0.2 22) 50%,
+    oklch(0.45 0.18 20) 100%
   );
 }
 
@@ -604,28 +611,28 @@ body {
    SOFT SHADOW UTILITIES
    ============================================ */
 .shadow-soft-sm {
-  box-shadow: 0 1px 2px oklch(0 0 0 / 0.03), 0 2px 6px oklch(0.55 0.1 200 / 0.04);
+  box-shadow: 0 1px 2px oklch(0 0 0 / 0.03), 0 2px 6px oklch(0.55 0.1 25 / 0.04);
 }
 
 .shadow-soft {
-  box-shadow: 0 1px 3px oklch(0 0 0 / 0.04), 0 4px 12px oklch(0.55 0.1 200 / 0.06);
+  box-shadow: 0 1px 3px oklch(0 0 0 / 0.04), 0 4px 12px oklch(0.55 0.1 25 / 0.06);
 }
 
 .shadow-soft-md {
-  box-shadow: 0 2px 8px oklch(0 0 0 / 0.05), 0 8px 20px oklch(0.55 0.1 200 / 0.08);
+  box-shadow: 0 2px 8px oklch(0 0 0 / 0.05), 0 8px 20px oklch(0.55 0.1 25 / 0.08);
 }
 
 .shadow-soft-lg {
-  box-shadow: 0 4px 16px oklch(0 0 0 / 0.06), 0 12px 32px oklch(0.55 0.1 200 / 0.1);
+  box-shadow: 0 4px 16px oklch(0 0 0 / 0.06), 0 12px 32px oklch(0.55 0.15 25 / 0.1);
 }
 
-/* Teal glow for primary elements */
-.glow-teal {
-  box-shadow: 0 0 20px -5px oklch(0.55 0.14 200 / 0.35);
+/* Red glow for primary elements */
+.glow-red {
+  box-shadow: 0 0 20px -5px oklch(0.55 0.22 25 / 0.35);
 }
 
 .glow-primary {
-  box-shadow: 0 0 20px -5px oklch(0.55 0.14 200 / 0.35);
+  box-shadow: 0 0 20px -5px oklch(0.55 0.22 25 / 0.35);
 }
 
 .glow-amber {
@@ -637,19 +644,19 @@ body {
 }
 
 .glow-live {
-  box-shadow: 0 0 15px oklch(0.55 0.18 30 / 0.4);
+  box-shadow: 0 0 15px oklch(0.55 0.22 25 / 0.4);
 }
 
 /* ============================================
-   ANIMATED GRADIENTS - Subtle for light theme
+   ANIMATED GRADIENTS - Subtle for warm theme
    ============================================ */
 .animated-gradient {
   background: linear-gradient(
     -45deg,
-    oklch(0.95 0.03 200 / 0.5),
-    oklch(0.96 0.02 210 / 0.3),
-    oklch(0.97 0.015 220 / 0.2),
-    oklch(0.975 0.008 220)
+    oklch(0.95 0.03 55 / 0.5),
+    oklch(0.96 0.025 65 / 0.3),
+    oklch(0.96 0.02 70 / 0.2),
+    oklch(0.96 0.025 70)
   );
   background-size: 400% 400%;
   animation: gradientShift 15s ease infinite;
@@ -658,9 +665,9 @@ body {
 .animated-gradient-subtle {
   background: linear-gradient(
     135deg,
-    oklch(0.55 0.14 200 / 0.05) 0%,
+    oklch(0.55 0.22 25 / 0.05) 0%,
     transparent 50%,
-    oklch(0.6 0.1 180 / 0.03) 100%
+    oklch(0.6 0.15 45 / 0.03) 100%
   );
   background-size: 200% 200%;
   animation: gradientShift 20s ease infinite;
@@ -715,7 +722,7 @@ body {
 
 .card-lift:hover {
   transform: translateY(-4px);
-  box-shadow: 0 8px 30px -10px oklch(0.55 0.1 200 / 0.2);
+  box-shadow: 0 8px 30px -10px oklch(0.55 0.15 25 / 0.2);
 }
 
 /* ============================================
@@ -793,10 +800,10 @@ body {
 }
 
 /* ============================================
-   FOCUS STATES - Teal ring
+   FOCUS STATES - Red ring
    ============================================ */
 :focus-visible {
-  outline: 2px solid oklch(0.55 0.14 200);
+  outline: 2px solid oklch(0.55 0.22 25);
   outline-offset: 2px;
 }
 
@@ -818,50 +825,50 @@ button:active:not(:disabled) {
 }
 
 /* ============================================
-   TEAL GRADIENT BUTTONS (replaces orange)
+   RED GRADIENT BUTTONS
    ============================================ */
+.btn-red-gradient {
+  background: linear-gradient(
+    135deg,
+    oklch(0.55 0.22 25) 0%,
+    oklch(0.5 0.24 20) 100%
+  );
+  color: white;
+  box-shadow: 0 2px 8px oklch(0.55 0.22 25 / 0.25),
+    inset 0 1px 0 oklch(1 0 0 / 0.15);
+  transition: all 0.2s ease;
+}
+
+.btn-red-gradient:hover {
+  box-shadow: 0 4px 16px oklch(0.55 0.22 25 / 0.35),
+    inset 0 1px 0 oklch(1 0 0 / 0.2);
+  transform: translateY(-1px);
+}
+
+.btn-red-gradient:active {
+  transform: translateY(0) scale(0.98);
+}
+
+/* Legacy btn-teal-gradient for compatibility - now red */
 .btn-teal-gradient {
   background: linear-gradient(
     135deg,
-    oklch(0.55 0.14 200) 0%,
-    oklch(0.5 0.15 195) 100%
+    oklch(0.55 0.22 25) 0%,
+    oklch(0.5 0.24 20) 100%
   );
   color: white;
-  box-shadow: 0 2px 8px oklch(0.55 0.14 200 / 0.25),
+  box-shadow: 0 2px 8px oklch(0.55 0.22 25 / 0.25),
     inset 0 1px 0 oklch(1 0 0 / 0.15);
   transition: all 0.2s ease;
 }
 
 .btn-teal-gradient:hover {
-  box-shadow: 0 4px 16px oklch(0.55 0.14 200 / 0.35),
+  box-shadow: 0 4px 16px oklch(0.55 0.22 25 / 0.35),
     inset 0 1px 0 oklch(1 0 0 / 0.2);
   transform: translateY(-1px);
 }
 
 .btn-teal-gradient:active {
-  transform: translateY(0) scale(0.98);
-}
-
-/* Legacy btn-orange-gradient for compatibility */
-.btn-orange-gradient {
-  background: linear-gradient(
-    135deg,
-    oklch(0.55 0.14 200) 0%,
-    oklch(0.5 0.15 195) 100%
-  );
-  color: white;
-  box-shadow: 0 2px 8px oklch(0.55 0.14 200 / 0.25),
-    inset 0 1px 0 oklch(1 0 0 / 0.15);
-  transition: all 0.2s ease;
-}
-
-.btn-orange-gradient:hover {
-  box-shadow: 0 4px 16px oklch(0.55 0.14 200 / 0.35),
-    inset 0 1px 0 oklch(1 0 0 / 0.2);
-  transform: translateY(-1px);
-}
-
-.btn-orange-gradient:active {
   transform: translateY(0) scale(0.98);
 }
 
@@ -874,12 +881,12 @@ button:active:not(:disabled) {
 }
 
 .btn-soft:hover {
-  background: oklch(0.9 0.04 200);
-  border-color: oklch(0.55 0.14 200 / 0.3);
+  background: oklch(0.92 0.035 70);
+  border-color: oklch(0.55 0.22 25 / 0.3);
 }
 
 /* ============================================
-   VS DIVIDER STYLING - Light theme
+   VS DIVIDER STYLING - Warm theme
    ============================================ */
 .vs-divider {
   position: relative;
@@ -896,20 +903,20 @@ button:active:not(:disabled) {
   background: linear-gradient(
     to right,
     transparent,
-    oklch(0.55 0.14 200 / 0.3),
+    oklch(0.55 0.22 25 / 0.3),
     transparent
   );
 }
 
 /* ============================================
-   SCORE DISPLAY - Light theme
+   SCORE DISPLAY - Warm theme
    ============================================ */
 .score-text {
   text-shadow: 0 2px 10px oklch(0 0 0 / 0.1);
 }
 
 .score-glow {
-  filter: drop-shadow(0 0 10px oklch(0.55 0.14 200 / 0.2));
+  filter: drop-shadow(0 0 10px oklch(0.55 0.22 25 / 0.2));
 }
 
 /* ============================================
@@ -1010,8 +1017,8 @@ button:active:not(:disabled) {
   border-radius: 50%;
   background: linear-gradient(
     135deg,
-    oklch(0.55 0.14 200 / 0.08),
-    oklch(0.6 0.1 180 / 0.04)
+    oklch(0.55 0.22 25 / 0.08),
+    oklch(0.6 0.15 45 / 0.04)
   );
   pointer-events: none;
 }
@@ -1021,43 +1028,43 @@ button:active:not(:disabled) {
   border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
   background: linear-gradient(
     135deg,
-    oklch(0.9 0.05 165 / 0.4),
-    oklch(0.92 0.04 200 / 0.25)
+    oklch(0.92 0.05 55 / 0.4),
+    oklch(0.94 0.04 70 / 0.25)
   );
   pointer-events: none;
   filter: blur(50px);
 }
 
-/* Playful blob variants - different colors */
+/* Playful blob variants - warm colors */
 .decorative-blob:nth-child(1) {
-  background: linear-gradient(135deg, oklch(0.9 0.05 165 / 0.35), oklch(0.92 0.04 200 / 0.2));
+  background: linear-gradient(135deg, oklch(0.92 0.06 55 / 0.35), oklch(0.94 0.05 70 / 0.2));
 }
 
 .decorative-blob:nth-child(2) {
-  background: linear-gradient(135deg, oklch(0.9 0.04 290 / 0.3), oklch(0.92 0.03 235 / 0.2));
+  background: linear-gradient(135deg, oklch(0.92 0.05 45 / 0.3), oklch(0.94 0.04 60 / 0.2));
 }
 
 .decorative-blob:nth-child(3) {
-  background: linear-gradient(135deg, oklch(0.92 0.04 235 / 0.25), oklch(0.94 0.03 165 / 0.15));
+  background: linear-gradient(135deg, oklch(0.94 0.04 65 / 0.25), oklch(0.95 0.03 75 / 0.15));
 }
 
 /* ============================================
    ILLUSTRATION COLORS
    ============================================ */
 .illustration-primary {
-  fill: oklch(0.55 0.14 200);
+  fill: oklch(0.55 0.22 25);
 }
 
 .illustration-secondary {
-  fill: oklch(0.85 0.06 200);
+  fill: oklch(0.85 0.08 25);
 }
 
 .illustration-accent {
-  fill: oklch(0.65 0.12 180);
+  fill: oklch(0.65 0.15 45);
 }
 
 .illustration-light {
-  fill: oklch(0.95 0.02 200);
+  fill: oklch(0.95 0.03 70);
 }
 
 /* ============================================
@@ -1082,7 +1089,7 @@ button:active:not(:disabled) {
    INPUT PLACEHOLDER
    ============================================ */
 ::placeholder {
-  color: oklch(0.6 0.02 220);
+  color: oklch(0.6 0.015 60);
   opacity: 1;
 }
 
@@ -1090,13 +1097,13 @@ button:active:not(:disabled) {
    SELECTION HIGHLIGHT
    ============================================ */
 ::selection {
-  background: oklch(0.55 0.14 200 / 0.2);
-  color: oklch(0.2 0.02 220);
+  background: oklch(0.55 0.22 25 / 0.2);
+  color: oklch(0.18 0.02 60);
 }
 
 .dark ::selection {
-  background: oklch(0.65 0.16 200 / 0.3);
-  color: oklch(0.95 0.01 220);
+  background: oklch(0.62 0.2 25 / 0.3);
+  color: oklch(0.95 0.01 70);
 }
 
 /* ============================================
@@ -1120,17 +1127,17 @@ button:active:not(:disabled) {
 }
 
 .theme-toggle-track:focus-visible {
-  outline: 2px solid oklch(0.55 0.14 200);
+  outline: 2px solid oklch(0.55 0.22 25);
   outline-offset: 2px;
 }
 
 .dark .theme-toggle-track {
-  background: oklch(0.22 0.03 240);
-  border-color: oklch(0.35 0.05 200 / 0.5);
+  background: oklch(0.22 0.02 50);
+  border-color: oklch(0.35 0.08 25 / 0.5);
 }
 
 .dark .theme-toggle-track:hover {
-  border-color: oklch(0.5 0.1 200);
+  border-color: oklch(0.5 0.15 25);
 }
 
 .theme-toggle-glow {
@@ -1184,5 +1191,5 @@ button:active:not(:disabled) {
 }
 
 .dark ::placeholder {
-  color: oklch(0.5 0.02 240);
+  color: oklch(0.5 0.015 50);
 }

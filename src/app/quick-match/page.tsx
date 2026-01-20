@@ -51,7 +51,7 @@ export default function QuickMatchPage() {
           className="text-center mb-10"
         >
           <motion.div
-            className="w-20 h-20 mx-auto mb-4 rounded-3xl bg-linear-to-br from-primary to-teal-400 flex items-center justify-center shadow-2xl shadow-primary/40"
+            className="w-20 h-20 mx-auto mb-4 rounded-3xl bg-linear-to-br from-primary to-red-400 flex items-center justify-center shadow-2xl shadow-primary/40"
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ type: "spring", stiffness: 300, damping: 20 }}

@@ -25,7 +25,7 @@ export const formatOptions: FormatOption[] = [
     description: "Every team plays against every other team once. Best for leagues.",
     icon: <ArrowPathIcon className="w-7 h-7" />,
     minTeams: 3,
-    gradient: "from-emerald-500 to-teal-600",
+    gradient: "from-emerald-500 to-green-600",
   },
   {
     type: "single_elimination",
@@ -49,7 +49,7 @@ export const formatOptions: FormatOption[] = [
     description: "True endless! Winner stays, win 2 = champion & back to queue. Track who gets crowned most!",
     icon: <CrownIcon className="w-7 h-7" />,
     minTeams: 3,
-    gradient: "from-primary to-teal-400",
+    gradient: "from-primary to-red-400",
   },
   {
     type: "two_match_rotation",

@@ -59,7 +59,7 @@ const typeConfig: Record<CompetitionType, { label: string; icon: React.Component
   round_robin: {
     label: "Round Robin",
     icon: ArrowPathIcon,
-    gradient: "from-emerald-500 to-teal-600",
+    gradient: "from-emerald-500 to-green-600",
   },
   single_elimination: {
     label: "Single Elimination",
@@ -74,7 +74,7 @@ const typeConfig: Record<CompetitionType, { label: string; icon: React.Component
   win2out: {
     label: "Win 2 & Out",
     icon: CrownIcon,
-    gradient: "from-primary to-teal-400",
+    gradient: "from-primary to-red-400",
   },
   two_match_rotation: {
     label: "2 Match Rotation",

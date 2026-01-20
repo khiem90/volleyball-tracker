@@ -227,7 +227,7 @@ export default function DashboardPage() {
             title="Quick Match"
             description="Start a quick match between two teams instantly"
             gradientFrom="from-primary"
-            gradientTo="to-teal-400"
+            gradientTo="to-red-400"
             shadowColor="shadow-primary/25"
           />
           <QuickActionCard
@@ -302,7 +302,7 @@ export default function DashboardPage() {
                       >
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-linear-to-br from-primary to-teal-400 flex items-center justify-center shadow-soft">
+                            <div className="w-10 h-10 rounded-xl bg-linear-to-br from-primary to-red-400 flex items-center justify-center shadow-soft">
                               <TrophySolid className="w-5 h-5 text-primary-foreground" />
                             </div>
                             <div>

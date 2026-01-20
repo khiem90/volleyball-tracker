@@ -27,7 +27,7 @@ export const ThemeToggle = memo(() => {
         className="theme-toggle-glow"
         animate={{
           background: isDark
-            ? "radial-gradient(circle at 75% 50%, oklch(0.65 0.16 200 / 0.4), transparent 70%)"
+            ? "radial-gradient(circle at 75% 50%, oklch(0.62 0.2 25 / 0.4), transparent 70%)"
             : "radial-gradient(circle at 25% 50%, oklch(0.75 0.18 55 / 0.5), transparent 70%)",
         }}
         transition={{ duration: 0.4 }}
