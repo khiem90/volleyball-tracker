@@ -54,7 +54,7 @@ export const UndoToast = memo(
           {/* Content */}
           <div className="flex items-center gap-3 p-3">
             {/* Check icon */}
-            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+            <div className="shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
               <Check className="w-4 h-4 text-primary" aria-hidden="true" />
             </div>
 
@@ -70,7 +70,7 @@ export const UndoToast = memo(
               onClick={handleUndo}
               onKeyDown={handleKeyDown}
               disabled={isUndoing}
-              className="flex-shrink-0 gap-1.5 text-primary hover:text-primary hover:bg-primary/10"
+              className="shrink-0 gap-1.5 text-primary hover:text-primary hover:bg-primary/10"
               aria-label={`Undo action${additionalUndos > 0 ? `, ${additionalUndos} more available` : ""}`}
               tabIndex={0}
             >
@@ -87,7 +87,7 @@ export const UndoToast = memo(
               variant="ghost"
               size="icon-sm"
               onClick={onDismiss}
-              className="flex-shrink-0 text-muted-foreground hover:text-foreground"
+              className="shrink-0 text-muted-foreground hover:text-foreground"
               aria-label="Dismiss notification and clear undo history"
               tabIndex={0}
             >

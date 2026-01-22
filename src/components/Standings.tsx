@@ -82,7 +82,7 @@ export const Standings = ({ standings, teams }: StandingsProps) => {
                     <td className="py-3 px-2">
                       <div className="flex items-center gap-2">
                         <div
-                          className="w-3 h-3 rounded-full flex-shrink-0"
+                          className="w-3 h-3 rounded-full shrink-0"
                           style={{ backgroundColor: teamColor }}
                         />
                         <span className={`font-medium ${rank === 1 ? "text-amber-500" : ""}`}>
