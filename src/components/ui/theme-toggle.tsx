@@ -25,6 +25,7 @@ export const ThemeToggle = memo(() => {
       {/* Track glow effect */}
       <motion.span
         className="theme-toggle-glow"
+        initial={false}
         animate={{
           background: isDark
             ? "radial-gradient(circle at 75% 50%, oklch(0.62 0.2 25 / 0.4), transparent 70%)"
@@ -36,7 +37,7 @@ export const ThemeToggle = memo(() => {
       {/* Animated orb */}
       <motion.span
         className="theme-toggle-orb"
-        layout
+        initial={false}
         animate={{
           x: isDark ? 20 : 0,
           background: isDark
