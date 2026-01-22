@@ -76,7 +76,7 @@ export const Header = ({ isFullscreen = false, onReset, onToggleFullscreen }: He
               </svg>
             </div>
             <h1 className="text-xl md:text-2xl font-bold tracking-tight">
-              Volley<span className="text-primary">Score</span>
+              Tournament<span className="text-primary">Tracker</span>
             </h1>
           </div>
 

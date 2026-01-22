@@ -153,7 +153,7 @@ export const Navigation = memo(() => {
                 <TrophySolid className="w-8 h-8 text-primary group-hover:scale-105 transition-transform duration-200" />
               </div>
               <span className="hidden sm:block text-lg font-black tracking-tight text-foreground uppercase">
-                Volley<span className="text-primary">Score</span>
+                Tournament<span className="text-primary">Tracker</span>
               </span>
             </Link>
 
@@ -235,7 +235,7 @@ export const Navigation = memo(() => {
                   <SheetTitle className="flex items-center gap-3">
                     <TrophySolid className="w-8 h-8 text-primary" />
                     <div>
-                      <span className="font-black text-foreground uppercase">Volley<span className="text-primary">Score</span></span>
+                      <span className="font-black text-foreground uppercase">Tournament<span className="text-primary">Tracker</span></span>
                     </div>
                   </SheetTitle>
                 </SheetHeader>

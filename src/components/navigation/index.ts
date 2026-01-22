@@ -1,3 +1,3 @@
 export { AppLogo } from "./AppLogo";
-// Legacy export for backwards compatibility
-export { AppLogo as VolleyScoreLogo } from "./AppLogo";
+// Alias for semantic naming
+export { AppLogo as TournamentTrackerLogo } from "./AppLogo";
