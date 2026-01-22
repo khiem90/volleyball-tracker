@@ -3,7 +3,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Navigation } from "@/components/Navigation";
 import { TeamCard } from "@/components/TeamCard";
-import { TeamForm } from "@/components/TeamForm";
+import { TeamForm } from "@/components/dialogs/team-form";
 import { QuickAddTeams } from "@/components/QuickAddTeams";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";

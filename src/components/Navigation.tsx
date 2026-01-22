@@ -32,7 +32,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useAuth } from "@/context/AuthContext";
-import { SessionAuth } from "./SessionAuth";
+import { SessionAuth } from "@/components/auth";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 const navItems = [

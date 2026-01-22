@@ -34,15 +34,6 @@ export const slideUp: Variants = {
   },
 };
 
-export const scaleIn: Variants = {
-  hidden: { opacity: 0, scale: 0.95 },
-  visible: { 
-    opacity: 1, 
-    scale: 1,
-    transition: { duration: 0.25 }
-  },
-};
-
 // Number flip animation for scores - keep this one complex
 export const numberFlip: Variants = {
   initial: { opacity: 0, y: 15, scale: 0.9 },
@@ -60,16 +51,6 @@ export const numberFlip: Variants = {
   }
 };
 
-// Simplified card hover - use CSS .glass-card-hover instead when possible
-export const cardHover: Variants = {
-  rest: { y: 0 },
-  hover: { 
-    y: -3,
-    transition: { duration: 0.15 }
-  },
-  tap: { scale: 0.98 }
-};
-
 // Spring transitions
 export const springSmooth: Transition = {
   type: "spring",
@@ -82,8 +63,6 @@ export const springSmooth: Transition = {
 // ============================================
 
 export const MotionDiv = motion.div;
-export const MotionSpan = motion.span;
-export const MotionButton = motion.button;
 
 // ============================================
 // SIMPLE PAGE WRAPPER (CSS-based fade)
@@ -140,43 +119,3 @@ export const StaggerItem = memo(({ children, className }: StaggerItemProps) => {
   );
 });
 StaggerItem.displayName = "StaggerItem";
-
-// ============================================
-// ANIMATED SCORE NUMBER - Keep framer-motion for this
-// ============================================
-
-interface AnimatedScoreProps {
-  score: number;
-  className?: string;
-}
-
-export const AnimatedScore = memo(({ score, className }: AnimatedScoreProps) => {
-  return (
-    <motion.span
-      key={score}
-      initial="initial"
-      animate="animate"
-      exit="exit"
-      variants={numberFlip}
-      className={className}
-    >
-      {score}
-    </motion.span>
-  );
-});
-AnimatedScore.displayName = "AnimatedScore";
-
-// ============================================
-// LIVE PULSE - Use CSS animation instead
-// ============================================
-
-interface LivePulseProps {
-  className?: string;
-}
-
-export const LivePulse = memo(({ className }: LivePulseProps) => {
-  return (
-    <span className={`live-dot ${className || ""}`} />
-  );
-});
-LivePulse.displayName = "LivePulse";

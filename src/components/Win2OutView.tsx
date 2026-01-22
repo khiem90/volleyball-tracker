@@ -10,13 +10,11 @@ import {
   processMatchResult,
 } from "@/lib/win2out";
 import { useApp } from "@/context/AppContext";
-import { useUndo } from "@/components/GlobalUndoToast";
-import { createSnapshot } from "@/lib/undo";
-import type { MatchStatus } from "@/types/game";
 import { useTeamsMap } from "@/hooks/useTeamsMap";
 import { useTerminology, capitalize } from "@/hooks/useTerminology";
-import { EditMatchDialog } from "@/components/EditMatchDialog";
-import { EditQueueDialog } from "@/components/EditQueueDialog";
+import { useRotationInstantWin } from "@/hooks/useRotationInstantWin";
+import { EditMatchDialog } from "@/components/dialogs/edit-match";
+import { EditQueueDialog } from "@/components/dialogs/edit-queue";
 import {
   ActiveCourtCard,
   TeamQueueSection,
@@ -45,11 +43,9 @@ export const Win2OutView = ({
   competition,
   onMatchClick,
 }: Win2OutViewProps) => {
-  const { canEdit, completeMatchWithNextMatch, startMatch, updateMatchScore } = useApp();
-  const { pushUndo } = useUndo();
+  const { canEdit } = useApp();
   const [editingMatch, setEditingMatch] = useState<Match | null>(null);
   const [showEditQueue, setShowEditQueue] = useState(false);
-  const canPlayMatch = canEdit && Boolean(onMatchClick);
 
   // Get dynamic terminology from competition config
   const terminology = useTerminology(competition?.id);
@@ -58,69 +54,16 @@ export const Win2OutView = ({
 
   const { getTeamName, getTeamColor } = useTeamsMap(teams);
 
-  // Instant win handler with undo support
-  const handleInstantWin = useCallback(
-    (winnerId: string, match: Match) => {
-      if (!competition || !canEdit) return;
+  // Instant win handler using shared hook
+  const { handleInstantWin } = useRotationInstantWin({
+    competition,
+    state,
+    stateKey: "win2outState",
+    processMatchResult,
+    getTeamName,
+  });
 
-      // Capture snapshot BEFORE any modifications for undo
-      const snapshot = createSnapshot(match, competition);
-
-      // Determine scores (winner gets 25, loser gets 0)
-      const homeScore = winnerId === match.homeTeamId ? 25 : 0;
-      const awayScore = winnerId === match.awayTeamId ? 25 : 0;
-
-      // Ensure match is started first if pending
-      if (match.status === "pending") {
-        startMatch(match.id);
-      }
-
-      // Update the match score first
-      updateMatchScore(match.id, homeScore, awayScore);
-
-      // Create the completed match object for processing
-      const completedMatch: Match = {
-        ...match,
-        homeScore,
-        awayScore,
-        winnerId,
-        status: "completed" as MatchStatus,
-        completedAt: Date.now(),
-      };
-
-      // Process the result to get updated state and next match
-      const { updatedState, nextMatch } = processMatchResult(
-        state,
-        completedMatch
-      );
-
-      // Update competition with new state
-      const updatedCompetition = {
-        ...competition,
-        win2outState: updatedState,
-      };
-
-      // Complete match and set up next match, get new match ID for undo
-      const newMatchId = completeMatchWithNextMatch(
-        match.id,
-        winnerId,
-        updatedCompetition,
-        nextMatch
-      );
-
-      // Push undo entry
-      const winnerName = getTeamName(winnerId);
-      pushUndo({
-        actionType: "instant_win",
-        description: `${winnerName} won`,
-        snapshot: {
-          ...snapshot,
-          newMatchId,
-        },
-      });
-    },
-    [competition, canEdit, state, completeMatchWithNextMatch, startMatch, updateMatchScore, getTeamName, pushUndo]
-  );
+  const canPlayMatch = canEdit && Boolean(onMatchClick);
 
   const { inQueue } = useMemo(() => getTeamsByStatus(state), [state]);
 

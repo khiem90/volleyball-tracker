@@ -20,7 +20,7 @@ import {
   ArrowLeft,
   Trophy,
 } from "lucide-react";
-import { EditMatchDialog } from "@/components/EditMatchDialog";
+import { EditMatchDialog } from "@/components/dialogs/edit-match";
 import { useCompetitionDetailPage } from "@/hooks/useCompetitionDetailPage";
 import { getPlayInMatchCount } from "@/lib/singleElimination";
 

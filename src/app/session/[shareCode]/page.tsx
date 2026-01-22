@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { SessionAuth } from "@/components/SessionAuth";
+import { SessionAuth } from "@/components/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useSessionPage } from "@/hooks/useSessionPage";
 

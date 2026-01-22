@@ -1,6 +1,5 @@
 "use client";
 
-import { useState, useCallback, useEffect, type KeyboardEvent, type ChangeEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -11,21 +10,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { ColorPicker } from "@/components/ui/color-picker";
 import { Users, Check } from "lucide-react";
 import type { PersistentTeam } from "@/types/game";
-
-const TEAM_COLORS = [
-  "#ef4444", // Red
-  "#f97316", // Orange
-  "#eab308", // Yellow
-  "#22c55e", // Green
-  "#14b8a6", // Teal
-  "#06b6d4", // Cyan
-  "#3b82f6", // Blue
-  "#6366f1", // Indigo
-  "#8b5cf6", // Purple
-  "#ec4899", // Pink
-];
+import { useTeamForm } from "./useTeamForm";
 
 interface TeamFormProps {
   open: boolean;
@@ -35,63 +23,24 @@ interface TeamFormProps {
 }
 
 export const TeamForm = ({ open, onOpenChange, team, onSubmit }: TeamFormProps) => {
-  const [name, setName] = useState("");
-  const [color, setColor] = useState(TEAM_COLORS[0]);
-  const [error, setError] = useState("");
-
-  const isEditing = !!team;
-
-  // Reset form when dialog opens/closes or team changes
-  /* eslint-disable react-hooks/set-state-in-effect */
-  useEffect(() => {
-    if (open) {
-      if (team) {
-        setName(team.name);
-        setColor(team.color || TEAM_COLORS[0]);
-      } else {
-        setName("");
-        setColor(TEAM_COLORS[Math.floor(Math.random() * TEAM_COLORS.length)]);
-      }
-      setError("");
-    }
-  }, [open, team]);
-  /* eslint-enable react-hooks/set-state-in-effect */
-
-  const handleNameChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
-    setName(e.target.value);
-    setError("");
-  }, []);
-
-  const handleColorSelect = useCallback((selectedColor: string) => {
-    setColor(selectedColor);
-  }, []);
-
-  const handleSubmit = useCallback(() => {
-    const trimmedName = name.trim();
-    if (!trimmedName) {
-      setError("Team name is required");
-      return;
-    }
-    if (trimmedName.length < 2) {
-      setError("Team name must be at least 2 characters");
-      return;
-    }
-    onSubmit(trimmedName, color);
-    onOpenChange(false);
-  }, [name, color, onSubmit, onOpenChange]);
-
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === "Enter") {
-        handleSubmit();
-      }
-    },
-    [handleSubmit]
-  );
-
-  const handleCancel = useCallback(() => {
-    onOpenChange(false);
-  }, [onOpenChange]);
+  const {
+    name,
+    color,
+    error,
+    isEditing,
+    previewInitial,
+    previewName,
+    handleNameChange,
+    handleColorSelect,
+    handleSubmit,
+    handleKeyDown,
+    handleCancel,
+  } = useTeamForm({
+    open,
+    team,
+    onSubmit,
+    onClose: () => onOpenChange(false),
+  });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -136,27 +85,7 @@ export const TeamForm = ({ open, onOpenChange, team, onSubmit }: TeamFormProps) 
           {/* Color Picker */}
           <div className="space-y-3">
             <label className="text-sm font-medium">Team Color</label>
-            <div className="flex flex-wrap gap-2">
-              {TEAM_COLORS.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => handleColorSelect(c)}
-                  className={`
-                    w-10 h-10 rounded-xl transition-all duration-200 relative cursor-pointer
-                    hover:scale-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background
-                    ${color === c ? "ring-2 ring-offset-2 ring-offset-background ring-white scale-110" : ""}
-                  `}
-                  style={{ backgroundColor: c }}
-                  aria-label={`Select color ${c}`}
-                  aria-pressed={color === c}
-                >
-                  {color === c && (
-                    <Check className="w-5 h-5 text-white absolute inset-0 m-auto drop-shadow-md" />
-                  )}
-                </button>
-              ))}
-            </div>
+            <ColorPicker value={color} onChange={handleColorSelect} />
           </div>
 
           {/* Preview */}
@@ -170,13 +99,9 @@ export const TeamForm = ({ open, onOpenChange, team, onSubmit }: TeamFormProps) 
             >
               <div className="absolute inset-0 bg-white/5" />
               <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center relative z-10">
-                <span className="text-2xl font-bold">
-                  {name.trim().charAt(0).toUpperCase() || "T"}
-                </span>
+                <span className="text-2xl font-bold">{previewInitial}</span>
               </div>
-              <span className="font-semibold text-lg relative z-10">
-                {name.trim() || "Team Name"}
-              </span>
+              <span className="font-semibold text-lg relative z-10">{previewName}</span>
             </div>
           </div>
         </div>

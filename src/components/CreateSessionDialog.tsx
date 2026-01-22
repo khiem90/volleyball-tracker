@@ -14,7 +14,7 @@ import {
 import { useSession } from "@/context/SessionContext";
 import { useAuth } from "@/context/AuthContext";
 import { Share2, Globe, Copy, Check, Loader2 } from "lucide-react";
-import { SessionAuth } from "./SessionAuth";
+import { SessionAuth } from "@/components/auth";
 
 interface CreateSessionDialogProps {
   open: boolean;
