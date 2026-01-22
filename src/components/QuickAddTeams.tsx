@@ -226,7 +226,7 @@ export const QuickAddTeams = ({
                   className={`
                     p-3 rounded-xl text-left transition-all duration-200 cursor-pointer
                     ${selectedStyle === style.id
-                      ? "ring-2 ring-primary bg-primary/5"
+                      ? "ring-2 ring-inset ring-primary bg-primary/5"
                       : "bg-card border border-border/40 hover:border-primary/40"
                     }
                   `}
