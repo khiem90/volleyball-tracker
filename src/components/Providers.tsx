@@ -4,6 +4,7 @@ import { AppProvider } from "@/context/AppContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { SessionProvider } from "@/context/SessionContext";
 import { ThemeProvider } from "@/context/ThemeContext";
+import { GlobalUndoToast } from "@/components/GlobalUndoToast";
 import type { ReactNode } from "react";
 
 interface ProvidersProps {
@@ -15,7 +16,9 @@ export const Providers = ({ children }: ProvidersProps) => {
     <ThemeProvider>
       <AuthProvider>
         <SessionProvider>
-          <AppProvider>{children}</AppProvider>
+          <AppProvider>
+            <GlobalUndoToast>{children}</GlobalUndoToast>
+          </AppProvider>
         </SessionProvider>
       </AuthProvider>
     </ThemeProvider>

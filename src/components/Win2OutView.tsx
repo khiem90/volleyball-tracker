@@ -10,6 +10,8 @@ import {
   processMatchResult,
 } from "@/lib/win2out";
 import { useApp } from "@/context/AppContext";
+import { useUndo } from "@/components/GlobalUndoToast";
+import { createSnapshot } from "@/lib/undo";
 import type { MatchStatus } from "@/types/game";
 import { useTeamsMap } from "@/hooks/useTeamsMap";
 import { useTerminology, capitalize } from "@/hooks/useTerminology";
@@ -44,6 +46,7 @@ export const Win2OutView = ({
   onMatchClick,
 }: Win2OutViewProps) => {
   const { canEdit, completeMatchWithNextMatch, startMatch, updateMatchScore } = useApp();
+  const { pushUndo } = useUndo();
   const [editingMatch, setEditingMatch] = useState<Match | null>(null);
   const [showEditQueue, setShowEditQueue] = useState(false);
   const canPlayMatch = canEdit && Boolean(onMatchClick);
@@ -53,10 +56,15 @@ export const Win2OutView = ({
   const venueName = terminology.venue;
   const venueNameCapitalized = capitalize(venueName);
 
-  // Instant win handler
+  const { getTeamName, getTeamColor } = useTeamsMap(teams);
+
+  // Instant win handler with undo support
   const handleInstantWin = useCallback(
     (winnerId: string, match: Match) => {
       if (!competition || !canEdit) return;
+
+      // Capture snapshot BEFORE any modifications for undo
+      const snapshot = createSnapshot(match, competition);
 
       // Determine scores (winner gets 25, loser gets 0)
       const homeScore = winnerId === match.homeTeamId ? 25 : 0;
@@ -92,18 +100,27 @@ export const Win2OutView = ({
         win2outState: updatedState,
       };
 
-      // Complete match and set up next match
-      completeMatchWithNextMatch(
+      // Complete match and set up next match, get new match ID for undo
+      const newMatchId = completeMatchWithNextMatch(
         match.id,
         winnerId,
         updatedCompetition,
         nextMatch
       );
-    },
-    [competition, canEdit, state, completeMatchWithNextMatch, startMatch, updateMatchScore]
-  );
 
-  const { getTeamName, getTeamColor } = useTeamsMap(teams);
+      // Push undo entry
+      const winnerName = getTeamName(winnerId);
+      pushUndo({
+        actionType: "instant_win",
+        description: `${winnerName} won`,
+        snapshot: {
+          ...snapshot,
+          newMatchId,
+        },
+      });
+    },
+    [competition, canEdit, state, completeMatchWithNextMatch, startMatch, updateMatchScore, getTeamName, pushUndo]
+  );
 
   const { inQueue } = useMemo(() => getTeamsByStatus(state), [state]);
 

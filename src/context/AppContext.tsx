@@ -77,7 +77,7 @@ interface AppContextValue {
     winnerId: string,
     updatedCompetition: Competition,
     nextMatch: Omit<Match, "id" | "createdAt"> | null
-  ) => void;
+  ) => string | null;
   deleteMatch: (matchId: string) => void;
   getMatchById: (id: string) => Match | undefined;
   getMatchesByCompetition: (competitionId: string) => Match[];
@@ -536,14 +536,18 @@ export const AppProvider = ({ children }: AppProviderProps) => {
   );
 
   // Atomically complete a match, update competition, and add next match (for win2out/two_match_rotation)
+  // Returns the new match ID if a next match was created, otherwise null
   const completeMatchWithNextMatch = useCallback(
     (
       matchId: string,
       winnerId: string,
       updatedCompetition: Competition,
       nextMatch: Omit<Match, "id" | "createdAt"> | null
-    ) => {
-      if (isSharedMode && !canEdit) return;
+    ): string | null => {
+      if (isSharedMode && !canEdit) return null;
+
+      // Generate the new match ID upfront so we can return it
+      const newMatchId = nextMatch ? generateId() : null;
 
       if (isSharedMode && session) {
         // Update the completed match
@@ -559,10 +563,10 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         );
 
         // Add the next match if provided
-        if (nextMatch) {
+        if (nextMatch && newMatchId) {
           const newMatch: Match = {
             ...nextMatch,
-            id: generateId(),
+            id: newMatchId,
             createdAt: Date.now(),
           };
           newMatches = [...newMatches, newMatch];
@@ -583,10 +587,12 @@ export const AppProvider = ({ children }: AppProviderProps) => {
           type: "UPDATE_COMPETITION",
           competition: updatedCompetition,
         });
-        if (nextMatch) {
-          dispatch({ type: "ADD_MATCH", match: nextMatch });
+        if (nextMatch && newMatchId) {
+          dispatch({ type: "ADD_MATCH", match: { ...nextMatch, id: newMatchId } });
         }
       }
+
+      return newMatchId;
     },
     [isSharedMode, canEdit, session, syncAllData]
   );

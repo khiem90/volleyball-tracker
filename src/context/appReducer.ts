@@ -56,7 +56,7 @@ type CompetitionAction =
 
 // Match Actions
 type MatchAction =
-  | { type: "ADD_MATCH"; match: Omit<Match, "id" | "createdAt"> }
+  | { type: "ADD_MATCH"; match: Omit<Match, "id" | "createdAt"> & { id?: string } }
   | { type: "ADD_MATCHES"; matches: Omit<Match, "id" | "createdAt">[] }
   | {
       type: "UPDATE_MATCH_SCORE";
@@ -207,7 +207,7 @@ export const appReducer = (state: AppState, action: AppAction): AppState => {
     case "ADD_MATCH": {
       const newMatch: Match = {
         ...action.match,
-        id: generateId(),
+        id: action.match.id ?? generateId(),
         createdAt: Date.now(),
       };
 

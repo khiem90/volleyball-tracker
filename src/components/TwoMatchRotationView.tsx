@@ -5,6 +5,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Clock, RotateCw } from "lucide-react";
 import { getTeamsByStatus, getSessionMatchCount, processMatchResult } from "@/lib/twoMatchRotation";
 import { useApp } from "@/context/AppContext";
+import { useUndo } from "@/components/GlobalUndoToast";
+import { createSnapshot } from "@/lib/undo";
 import type { MatchStatus } from "@/types/game";
 import { useTeamsMap } from "@/hooks/useTeamsMap";
 import { useTerminology, capitalize } from "@/hooks/useTerminology";
@@ -39,6 +41,7 @@ export const TwoMatchRotationView = ({
   onMatchClick,
 }: TwoMatchRotationViewProps) => {
   const { canEdit, completeMatchWithNextMatch, startMatch, updateMatchScore } = useApp();
+  const { pushUndo } = useUndo();
   const [editingMatch, setEditingMatch] = useState<Match | null>(null);
   const [showEditQueue, setShowEditQueue] = useState(false);
   const canPlayMatch = canEdit && Boolean(onMatchClick);
@@ -50,10 +53,13 @@ export const TwoMatchRotationView = ({
   const venueName = terminology.venue;
   const venueNameCapitalized = capitalize(venueName);
 
-  // Instant win handler
+  // Instant win handler with undo support
   const handleInstantWin = useCallback(
     (winnerId: string, match: Match) => {
       if (!competition || !canEdit) return;
+
+      // Capture snapshot BEFORE any modifications for undo
+      const snapshot = createSnapshot(match, competition);
 
       // Determine scores (winner gets 25, loser gets 0)
       const homeScore = winnerId === match.homeTeamId ? 25 : 0;
@@ -89,15 +95,26 @@ export const TwoMatchRotationView = ({
         twoMatchRotationState: updatedState,
       };
 
-      // Complete match and set up next match
-      completeMatchWithNextMatch(
+      // Complete match and set up next match, get new match ID for undo
+      const newMatchId = completeMatchWithNextMatch(
         match.id,
         winnerId,
         updatedCompetition,
         nextMatch
       );
+
+      // Push undo entry
+      const winnerName = getTeamName(winnerId);
+      pushUndo({
+        actionType: "instant_win",
+        description: `${winnerName} won`,
+        snapshot: {
+          ...snapshot,
+          newMatchId,
+        },
+      });
     },
-    [competition, canEdit, state, completeMatchWithNextMatch, startMatch, updateMatchScore]
+    [competition, canEdit, state, completeMatchWithNextMatch, startMatch, updateMatchScore, getTeamName, pushUndo]
   );
 
   const { inQueue, leaderboard } = useMemo(
