@@ -8,11 +8,7 @@ import type { Match, Competition, MatchStatus } from "@/types/game";
 
 interface ProcessResult<TState> {
   updatedState: TState;
-  nextMatch: {
-    homeTeamId: string;
-    awayTeamId: string;
-    courtNumber?: number;
-  } | null;
+  nextMatch: Omit<Match, "id" | "createdAt"> | null;
 }
 
 interface UseRotationInstantWinProps<TState> {
