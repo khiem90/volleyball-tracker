@@ -35,8 +35,10 @@ import {
 import { MotionDiv, StaggerContainer, StaggerItem, slideUp } from "@/components/motion";
 import { EmptyHistory } from "@/components/illustrations";
 import { useSummariesPage } from "@/hooks/useSummariesPage";
+import { useRequireAuth } from "@/hooks/useRequireAuth";
 
 export default function SummariesPage() {
+  const { isLoading: authLoading, isAuthenticated } = useRequireAuth();
   const {
     copiedId,
     deleteTarget,
@@ -54,42 +56,19 @@ export default function SummariesPage() {
     user,
   } = useSummariesPage();
 
-  // Not logged in state
-  if (!user) {
+  // Show loading state while checking auth or redirecting
+  if (authLoading || !isAuthenticated) {
     return (
       <div className="min-h-screen bg-background">
-        <div className="fixed inset-0 overflow-hidden pointer-events-none">
-          <div className="decorative-blob w-150 h-150 -top-48 -right-48 opacity-30" />
-          <div className="decorative-blob w-100 h-100 bottom-20 -left-32 opacity-20" />
-        </div>
         <Navigation />
-        <main className="relative max-w-6xl mx-auto px-4 pb-12">
-          <MotionDiv
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col items-center justify-center min-h-[60vh]"
-          >
-            <GlassCard hover={false} className="max-w-md w-full">
-              <GlassCardHeader className="text-center">
-                <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-primary/10 flex items-center justify-center">
-                  <ClockIcon className="w-8 h-8 text-primary" />
-                </div>
-                <GlassCardTitle className="text-xl">Session History</GlassCardTitle>
-                <GlassCardDescription>
-                  Sign in to view your session summaries and match history.
-                </GlassCardDescription>
-              </GlassCardHeader>
-              <GlassCardContent>
-                <Button
-                  onClick={signInWithGoogle}
-                  className="w-full gap-2 cursor-pointer btn-teal-gradient rounded-xl"
-                >
-                  <ArrowRightEndOnRectangleIcon className="w-4 h-4" />
-                  Sign in with Google
-                </Button>
-              </GlassCardContent>
-            </GlassCard>
-          </MotionDiv>
+        <main className="max-w-6xl mx-auto px-4 pb-12">
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+              className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full"
+            />
+          </div>
         </main>
       </div>
     );

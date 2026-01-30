@@ -33,6 +33,7 @@ interface AuthContextValue {
   user: AuthUser | null;
   isLoading: boolean;
   isConfigured: boolean;
+  isGuest: boolean; // True when not authenticated and not loading
   // Auth methods
   signInWithGoogle: () => Promise<void>;
   signInWithEmail: (email: string, password: string) => Promise<void>;
@@ -198,6 +199,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     user,
     isLoading,
     isConfigured,
+    isGuest: !user && !isLoading,
     signInWithGoogle,
     signInWithEmail,
     signUpWithEmail,

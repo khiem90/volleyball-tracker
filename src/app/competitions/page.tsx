@@ -16,8 +16,10 @@ import {
 } from "@/components/motion";
 import { EmptyCompetitions } from "@/components/illustrations";
 import { useCompetitionsPage } from "@/hooks/useCompetitionsPage";
+import { useRequireAuth } from "@/hooks/useRequireAuth";
 
 export default function CompetitionsPage() {
+  const { isLoading, isAuthenticated } = useRequireAuth();
   const {
     competitions,
     counts,
@@ -27,6 +29,24 @@ export default function CompetitionsPage() {
     handleDeleteCompetition,
     handleFilterChange,
   } = useCompetitionsPage();
+
+  // Show loading state while checking auth
+  if (isLoading || !isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <main className="max-w-6xl mx-auto px-4 pb-12">
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+              className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full"
+            />
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">

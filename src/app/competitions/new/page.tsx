@@ -1,15 +1,18 @@
 "use client";
 
+import { motion } from "framer-motion";
 import { Navigation } from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
 import { ArrowLeftIcon } from "@heroicons/react/24/outline";
 import { useNewCompetitionPage } from "@/hooks/useNewCompetitionPage";
+import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { StepIndicator } from "@/components/competitions/new/StepIndicator";
 import { FormatStep } from "@/components/competitions/new/FormatStep";
 import { TeamsStep } from "@/components/competitions/new/TeamsStep";
 import { NameStep } from "@/components/competitions/new/NameStep";
 
 export default function NewCompetitionPage() {
+  const { isLoading, isAuthenticated } = useRequireAuth();
   const {
     competitionName,
     currentFormat,
@@ -52,6 +55,24 @@ export default function NewCompetitionPage() {
     venueName,
     setVenueName,
   } = useNewCompetitionPage();
+
+  // Show loading state while checking auth
+  if (isLoading || !isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <main className="max-w-4xl mx-auto px-4 py-8">
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+              className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full"
+            />
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">

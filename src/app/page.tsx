@@ -13,6 +13,8 @@ import {
   ArrowRightIcon,
   ChartBarIcon,
   PlayIcon,
+  LockClosedIcon,
+  ArrowRightEndOnRectangleIcon,
 } from "@heroicons/react/24/outline";
 import { TrophyIcon as TrophySolid } from "@heroicons/react/24/solid";
 import { Button } from "@/components/ui/button";
@@ -21,6 +23,7 @@ import { Progress } from "@/components/ui/progress";
 import { GlassCard, GlassCardContent, GlassCardHeader, GlassCardTitle, GlassCardDescription, StatCard } from "@/components/ui/glass-card";
 import { EmptyCompetitions, EmptyMatches } from "@/components/illustrations";
 import { useDashboardPage } from "@/hooks/useDashboardPage";
+import { useAuth } from "@/context/AuthContext";
 
 // Memoized stat card wrapper - each card gets a different playful color
 const StatsGrid = memo(({
@@ -162,6 +165,7 @@ const RecentMatchItem = memo(({
 RecentMatchItem.displayName = "RecentMatchItem";
 
 export default function DashboardPage() {
+  const { isGuest, user } = useAuth();
   const {
     activeCompetitions,
     completedCompetitions,
@@ -193,7 +197,9 @@ export default function DashboardPage() {
             <span className="text-foreground">Win.</span>
           </h1>
           <p className="text-muted-foreground text-lg md:text-xl max-w-2xl mx-auto mb-8">
-            Your ultimate tournament companion. Track scores, manage teams, and organize competitions with ease.
+            {isGuest
+              ? "Try a quick match as a guest, or sign in to unlock all features."
+              : "Your ultimate tournament companion. Track scores, manage teams, and organize competitions with ease."}
           </p>
           <div className="flex flex-wrap justify-center gap-4">
             <Link href="/quick-match">
@@ -202,22 +208,51 @@ export default function DashboardPage() {
                 Quick Match
               </Button>
             </Link>
-            <Link href="/competitions/new">
-              <Button size="pill" variant="outline" className="gap-2 px-8">
-                <TrophyIcon className="w-5 h-5" />
-                New Competition
-              </Button>
-            </Link>
+            {!isGuest && (
+              <Link href="/competitions/new">
+                <Button size="pill" variant="outline" className="gap-2 px-8">
+                  <TrophyIcon className="w-5 h-5" />
+                  New Competition
+                </Button>
+              </Link>
+            )}
           </div>
         </div>
 
-        {/* Stats Overview */}
-        <StatsGrid
-          teamsCount={teamsCount}
-          activeCount={activeCompetitions.length}
-          completedCount={completedCompetitions.length}
-          matchesCount={matchesCount}
-        />
+        {/* Stats Overview - Only for authenticated users */}
+        {!isGuest && (
+          <StatsGrid
+            teamsCount={teamsCount}
+            activeCount={activeCompetitions.length}
+            completedCount={completedCompetitions.length}
+            matchesCount={matchesCount}
+          />
+        )}
+
+        {/* Guest Welcome Banner */}
+        {isGuest && (
+          <GlassCard hover={false} className="mb-10">
+            <GlassCardContent className="py-6">
+              <div className="flex flex-col md:flex-row items-center gap-6">
+                <div className="w-16 h-16 rounded-2xl bg-linear-to-br from-amber-400 to-orange-500 flex items-center justify-center shrink-0 shadow-lg">
+                  <TrophySolid className="w-8 h-8 text-white" />
+                </div>
+                <div className="flex-1 text-center md:text-left">
+                  <h3 className="text-xl font-bold mb-1">Welcome, Guest!</h3>
+                  <p className="text-muted-foreground">
+                    Try a quick match with default teams, or sign in to create custom teams, run tournaments, and save your match history.
+                  </p>
+                </div>
+                <Link href="/login" className="shrink-0">
+                  <Button variant="teal-gradient" className="gap-2 rounded-xl">
+                    <ArrowRightEndOnRectangleIcon className="w-4 h-4" />
+                    Sign In
+                  </Button>
+                </Link>
+              </div>
+            </GlassCardContent>
+          </GlassCard>
+        )}
 
         {/* Quick Actions Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
@@ -225,13 +260,13 @@ export default function DashboardPage() {
             href="/quick-match"
             icon={BoltIcon}
             title="Quick Match"
-            description="Start a quick match between two teams instantly"
+            description={isGuest ? "Play a quick match with default teams" : "Start a quick match between two teams instantly"}
             gradientFrom="from-primary"
             gradientTo="to-red-400"
             shadowColor="shadow-primary/25"
           />
           <QuickActionCard
-            href="/teams"
+            href={isGuest ? "/login?redirect=/teams" : "/teams"}
             icon={UserGroupIcon}
             title="Manage Teams"
             description="Create and organize your teams"
@@ -239,13 +274,15 @@ export default function DashboardPage() {
             gradientTo="to-blue-600"
             shadowColor="shadow-sky-500/25"
             badge={
-              <Badge variant="secondary" className="ml-2 bg-sky-100 text-sky-600 border-sky-200 rounded-full">
-                {teamsCount}
-              </Badge>
+              !isGuest ? (
+                <Badge variant="secondary" className="ml-2 bg-sky-100 text-sky-600 border-sky-200 rounded-full dark:bg-sky-900/30 dark:text-sky-400 dark:border-sky-800">
+                  {teamsCount}
+                </Badge>
+              ) : undefined
             }
           />
           <QuickActionCard
-            href="/competitions/new"
+            href={isGuest ? "/login?redirect=/competitions/new" : "/competitions/new"}
             icon={TrophyIcon}
             title="New Competition"
             description="Create a tournament, round robin, or league"
@@ -255,7 +292,8 @@ export default function DashboardPage() {
           />
         </div>
 
-        {/* Active Competitions & Recent Activity */}
+        {/* Active Competitions & Recent Activity - Only for authenticated users */}
+        {!isGuest && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Active Competitions */}
           <GlassCard hover={false}>
@@ -371,6 +409,45 @@ export default function DashboardPage() {
             </GlassCardContent>
           </GlassCard>
         </div>
+        )}
+
+        {/* Guest Features Preview */}
+        {isGuest && (
+          <GlassCard hover={false}>
+            <GlassCardHeader>
+              <GlassCardTitle className="flex items-center gap-2 text-lg">
+                <LockClosedIcon className="w-5 h-5 text-primary" />
+                Unlock Full Features
+              </GlassCardTitle>
+              <GlassCardDescription>Sign in to access all Tournament Tracker features</GlassCardDescription>
+            </GlassCardHeader>
+            <div className="h-px bg-border mx-5" />
+            <GlassCardContent className="pt-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {[
+                  { icon: UserGroupIcon, label: "Custom Teams", description: "Create and manage your teams" },
+                  { icon: TrophyIcon, label: "Tournaments", description: "Run brackets and leagues" },
+                  { icon: ClockIcon, label: "Match History", description: "Track all your games" },
+                  { icon: ChartBarIcon, label: "Statistics", description: "View standings and stats" },
+                ].map((feature) => (
+                  <div key={feature.label} className="text-center p-4 rounded-xl bg-accent/30">
+                    <feature.icon className="w-8 h-8 mx-auto mb-2 text-primary" />
+                    <p className="font-medium text-sm">{feature.label}</p>
+                    <p className="text-xs text-muted-foreground">{feature.description}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-6 text-center">
+                <Link href="/login">
+                  <Button variant="teal-gradient" size="lg" className="gap-2 rounded-xl">
+                    <ArrowRightEndOnRectangleIcon className="w-5 h-5" />
+                    Sign In to Unlock
+                  </Button>
+                </Link>
+              </div>
+            </GlassCardContent>
+          </GlassCard>
+        )}
       </main>
     </div>
   );

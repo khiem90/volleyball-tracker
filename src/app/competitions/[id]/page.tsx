@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import { motion } from "framer-motion";
 import { Navigation } from "@/components/Navigation";
 import { CreateSessionDialog } from "@/components/CreateSessionDialog";
 import { CompetitionNotFound } from "@/components/competition-detail/CompetitionNotFound";
@@ -22,6 +23,7 @@ import {
 } from "lucide-react";
 import { EditMatchDialog } from "@/components/dialogs/edit-match";
 import { useCompetitionDetailPage } from "@/hooks/useCompetitionDetailPage";
+import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { getPlayInMatchCount } from "@/lib/singleElimination";
 
 // Lazy load tournament view components - only one is rendered based on competition type
@@ -51,6 +53,7 @@ const typeLabels: Record<string, string> = {
 };
 
 export default function CompetitionDetailPage() {
+  const { isLoading, isAuthenticated } = useRequireAuth();
   const {
     canEdit,
     competition,
@@ -81,6 +84,24 @@ export default function CompetitionDetailPage() {
     totalProgress,
     winner,
   } = useCompetitionDetailPage();
+
+  // Show loading state while checking auth
+  if (isLoading || !isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <main className="max-w-6xl mx-auto px-4 py-8">
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+              className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full"
+            />
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   if (!competition) {
     return <CompetitionNotFound />;

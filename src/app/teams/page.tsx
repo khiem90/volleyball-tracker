@@ -17,8 +17,10 @@ import { Input } from "@/components/ui/input";
 import { MotionDiv, StaggerContainer, StaggerItem, slideUp } from "@/components/motion";
 import { EmptyTeams } from "@/components/illustrations";
 import { useTeamsPage } from "@/hooks/useTeamsPage";
+import { useRequireAuth } from "@/hooks/useRequireAuth";
 
 export default function TeamsPage() {
+  const { isLoading, isAuthenticated } = useRequireAuth();
   const {
     teams,
     formOpen,
@@ -36,6 +38,24 @@ export default function TeamsPage() {
     handleFormSubmit,
     handleQuickAddTeams,
   } = useTeamsPage();
+
+  // Show loading state while checking auth
+  if (isLoading || !isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <main className="max-w-6xl mx-auto px-4 pt-8 pb-12">
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+              className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full"
+            />
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">

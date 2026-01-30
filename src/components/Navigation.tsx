@@ -15,6 +15,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { TrophyIcon as TrophySolid } from "@heroicons/react/24/solid";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Sheet,
@@ -123,7 +124,7 @@ MobileNavItem.displayName = "MobileNavItem";
 
 export const Navigation = memo(() => {
   const pathname = usePathname();
-  const { user, signOut, isConfigured } = useAuth();
+  const { user, signOut, isConfigured, isGuest } = useAuth();
   const [showAuth, setShowAuth] = useState(false);
 
   // Memoize whether to show nav
@@ -141,7 +142,7 @@ export const Navigation = memo(() => {
     <>
       {/* Flat Full-Width Navigation Bar */}
       <nav className="sticky top-0 z-50 w-full bg-background border-b border-border">
-        <div className="max-w-7xl mx-auto px-4 md:px-8">
+        <div className="max-w-6xl mx-auto px-4">
           <div className="flex items-center justify-between h-16">
             {/* Logo - Left */}
             <Link
@@ -200,27 +201,21 @@ export const Navigation = memo(() => {
                     </Tooltip>
                   </TooltipProvider>
                 ) : (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowAuth(true)}
-                    className="gap-2 cursor-pointer rounded-lg hover:bg-accent"
-                  >
-                    <ArrowRightOnRectangleIcon className="w-4 h-4" />
-                    <span className="hidden lg:inline">Sign In</span>
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Link href="/login">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="gap-2 cursor-pointer rounded-lg hover:bg-accent"
+                      >
+                        <ArrowRightOnRectangleIcon className="w-4 h-4" />
+                        <span className="hidden lg:inline">Sign In</span>
+                      </Button>
+                    </Link>
+                  </div>
                 )
               )}
 
-              {/* CTA Button */}
-              <Link href="/quick-match">
-                <Button
-                  variant="default"
-                  className="uppercase tracking-wider font-bold text-sm rounded-lg shadow-lg hover:shadow-xl transition-shadow"
-                >
-                  Quick Match
-                </Button>
-              </Link>
             </div>
 
             {/* Mobile Menu Button */}
@@ -315,21 +310,22 @@ export const Navigation = memo(() => {
                           </button>
                         </SheetClose>
                       ) : (
-                        <SheetClose asChild>
-                          <button
-                            type="button"
-                            onClick={() => setShowAuth(true)}
-                            className="w-full flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-accent transition-all duration-200 cursor-pointer"
-                          >
-                            <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-accent">
-                              <ArrowRightOnRectangleIcon className="w-5 h-5" />
-                            </div>
-                            <div className="flex flex-col text-left">
-                              <span className="font-medium text-foreground">Sign In</span>
-                              <span className="text-xs text-muted-foreground">Access your sessions</span>
-                            </div>
-                          </button>
-                        </SheetClose>
+                        <>
+                          <SheetClose asChild>
+                            <Link
+                              href="/login"
+                              className="w-full flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-accent transition-all duration-200 cursor-pointer"
+                            >
+                              <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-accent">
+                                <ArrowRightOnRectangleIcon className="w-5 h-5" />
+                              </div>
+                              <div className="flex flex-col text-left">
+                                <span className="font-medium text-foreground">Sign In</span>
+                                <span className="text-xs text-muted-foreground">Unlock all features</span>
+                              </div>
+                            </Link>
+                          </SheetClose>
+                        </>
                       )}
                     </>
                   )}
