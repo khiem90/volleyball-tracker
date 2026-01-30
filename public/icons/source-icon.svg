@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Background with rounded corners -->
+  <rect width="512" height="512" rx="64" ry="64" fill="#0f172a"/>
+
+  <!-- Golden Trophy with Face - Tournament Master style -->
+  <g stroke="#000000" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+
+    <!-- Left handle - golden C-shape -->
+    <path d="M155 150
+             C155 150, 90 150, 90 210
+             C90 270, 155 270, 155 270"
+          fill="none"
+          stroke="#f59e0b"
+          stroke-width="30"/>
+    <path d="M155 150
+             C155 150, 90 150, 90 210
+             C90 270, 155 270, 155 270"
+          fill="none"
+          stroke="#000000"
+          stroke-width="7"/>
+
+    <!-- Right handle - golden C-shape -->
+    <path d="M357 150
+             C357 150, 422 150, 422 210
+             C422 270, 357 270, 357 270"
+          fill="none"
+          stroke="#f59e0b"
+          stroke-width="30"/>
+    <path d="M357 150
+             C357 150, 422 150, 422 210
+             C422 270, 357 270, 357 270"
+          fill="none"
+          stroke="#000000"
+          stroke-width="7"/>
+
+    <!-- Main cup body - golden -->
+    <path d="M148 110
+             L364 110
+             L364 170
+             C364 280, 310 335, 256 355
+             C202 335, 148 280, 148 170
+             Z"
+          fill="#fbbf24"/>
+
+    <!-- Cup shading (darker gold on right) -->
+    <path d="M310 110
+             L364 110
+             L364 170
+             C364 280, 310 335, 256 355
+             L256 110
+             Z"
+          fill="#f59e0b"
+          stroke="none"/>
+
+    <!-- Cup highlight (left side shine) -->
+    <path d="M170 130
+             L195 130
+             L195 180
+             C195 250, 215 295, 235 315
+             L210 325
+             C185 295, 170 240, 170 180
+             Z"
+          fill="#fcd34d"
+          stroke="none"/>
+
+    <!-- Face - Angry/Determined Eyes -->
+    <!-- Left eye white -->
+    <ellipse cx="210" cy="195" rx="28" ry="32" fill="white"/>
+    <!-- Right eye white -->
+    <ellipse cx="302" cy="195" rx="28" ry="32" fill="white"/>
+
+    <!-- Left eyebrow (angled for determined look) -->
+    <line x1="175" y1="148" x2="235" y2="165" stroke="#000000" stroke-width="12" stroke-linecap="round"/>
+    <!-- Right eyebrow (angled for determined look) -->
+    <line x1="337" y1="148" x2="277" y2="165" stroke="#000000" stroke-width="12" stroke-linecap="round"/>
+
+    <!-- Left pupil - red/orange for intensity -->
+    <ellipse cx="215" cy="200" rx="14" ry="16" fill="#ef4444"/>
+    <ellipse cx="218" cy="196" rx="5" ry="6" fill="white"/>
+    <!-- Right pupil -->
+    <ellipse cx="307" cy="200" rx="14" ry="16" fill="#ef4444"/>
+    <ellipse cx="310" cy="196" rx="5" ry="6" fill="white"/>
+
+    <!-- Confident Smile -->
+    <path d="M205 265 Q256 310 307 265"
+          fill="none"
+          stroke="#000000"
+          stroke-width="10"
+          stroke-linecap="round"/>
+
+    <!-- Stem -->
+    <rect x="221" y="355" width="70" height="45" rx="5" fill="#f59e0b"/>
+    <!-- Stem highlight -->
+    <rect x="221" y="355" width="25" height="45" rx="5" fill="#fbbf24" stroke="none"/>
+
+    <!-- Base top plate -->
+    <rect x="186" y="400" width="140" height="24" rx="6" fill="#f59e0b"/>
+    <!-- Base top highlight -->
+    <rect x="186" y="400" width="50" height="24" rx="6" fill="#fbbf24" stroke="none"/>
+
+    <!-- Base bottom -->
+    <rect x="161" y="424" width="190" height="30" rx="8" fill="#d97706"/>
+    <!-- Base bottom highlight -->
+    <rect x="161" y="424" width="65" height="30" rx="8" fill="#f59e0b" stroke="none"/>
+  </g>
+</svg>
