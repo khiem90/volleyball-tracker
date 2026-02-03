@@ -12,6 +12,8 @@ import {
   Bars3Icon,
   ArrowRightOnRectangleIcon,
   ArrowLeftOnRectangleIcon,
+  WrenchScrewdriverIcon,
+  ChevronDownIcon,
 } from "@heroicons/react/24/outline";
 import { TrophyIcon as TrophySolid } from "@heroicons/react/24/solid";
 import { Button } from "@/components/ui/button";
@@ -35,6 +37,12 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { SessionAuth } from "@/components/auth";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const navItems = [
   { href: "/", label: "Home", icon: HomeIcon, description: "Overview & stats" },
@@ -168,6 +176,38 @@ export const Navigation = memo(() => {
                   isActive={pathname === item.href}
                 />
               ))}
+
+              {/* Tools Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  className={`
+                    relative px-4 py-2 uppercase tracking-wider text-sm font-bold transition-colors duration-200
+                    flex items-center gap-1 cursor-pointer
+                    ${pathname.startsWith("/tools")
+                      ? "text-primary"
+                      : "text-foreground hover:text-primary"
+                    }
+                    focus:outline-none
+                  `}
+                >
+                  Tools
+                  <ChevronDownIcon className="w-3.5 h-3.5" />
+                  {pathname.startsWith("/tools") && (
+                    <span className="absolute bottom-0 left-4 right-4 h-0.5 bg-primary rounded-full" />
+                  )}
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="center" className="min-w-50">
+                  <DropdownMenuItem asChild>
+                    <Link
+                      href="/tools/volleyball-rotations"
+                      className="flex items-center gap-2 cursor-pointer"
+                    >
+                      <WrenchScrewdriverIcon className="w-4 h-4" />
+                      <span>5-1 Rotations</span>
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
 
             {/* Right side - CTA, Theme toggle & User actions */}
@@ -267,6 +307,43 @@ export const Navigation = memo(() => {
                       isActive={pathname === item.href}
                     />
                   ))}
+
+                  {/* Tools Section */}
+                  <Separator className="my-4 bg-border" />
+                  <div className="px-4 py-2">
+                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      Tools
+                    </span>
+                  </div>
+                  <SheetClose asChild>
+                    <Link
+                      href="/tools/volleyball-rotations"
+                      className={`
+                        flex items-center gap-4 px-4 py-3 rounded-2xl
+                        transition-all duration-200
+                        ${pathname.startsWith("/tools/volleyball")
+                          ? "bg-primary text-primary-foreground shadow-soft"
+                          : "hover:bg-accent hover:scale-[1.01]"
+                        }
+                      `}
+                    >
+                      <div className={`
+                        w-10 h-10 rounded-xl flex items-center justify-center
+                        ${pathname.startsWith("/tools/volleyball")
+                          ? "bg-primary-foreground/20"
+                          : "bg-accent"
+                        }
+                      `}>
+                        <WrenchScrewdriverIcon className="w-5 h-5" />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="font-semibold">5-1 Rotations</span>
+                        <span className={`text-xs ${pathname.startsWith("/tools/volleyball") ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
+                          Volleyball rotation visualizer
+                        </span>
+                      </div>
+                    </Link>
+                  </SheetClose>
 
                   {/* Quick Match CTA in mobile */}
                   <Separator className="my-4 bg-border" />
