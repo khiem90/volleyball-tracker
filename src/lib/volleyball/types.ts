@@ -85,3 +85,83 @@ export type RotationState = {
   arrows: MovementArrow[];
   overlaps: OverlapConstraint[];
 };
+
+// ============================================
+// Custom Formation Types
+// ============================================
+
+/** Formation source tracking (for origin/fork history) */
+export type FormationSource =
+  | { type: "template"; id: string }
+  | { type: "builtin"; id: FormationType }
+  | { type: "custom"; id: string };
+
+/** Visibility options for user formations */
+export type FormationVisibility = "private" | "unlisted";
+
+/** Formation category for UI filtering */
+export type FormationCategory = "builtin" | "template" | "custom" | "shared";
+
+/** Single rotation frame containing all player positions and movements */
+export type RotationFrame = {
+  roleSpots: Record<PlayerRole, CourtPosition>;
+  movementArrows?: Partial<Record<PlayerRole, { from: CourtPosition; to: CourtPosition }>>;
+  adjacencyLines?: Array<[PlayerRole, PlayerRole]>;
+  notes?: string[];
+};
+
+/** Full formation data: 6 rotations x 2 modes */
+export type FormationData = {
+  serving: Record<RotationNumber, RotationFrame>;
+  receiving: Record<RotationNumber, RotationFrame>;
+};
+
+/** User-created formation document */
+export type UserFormation = {
+  id: string;
+  ownerUserId: string;
+  name: string;
+  description?: string;
+  tags?: string[];
+  visibility: FormationVisibility;
+  shareId?: string;
+  baseSource?: FormationSource;
+  data: FormationData;
+  createdAt: number;
+  updatedAt: number;
+};
+
+/** Template formation (base starter templates) */
+export type TemplateFormation = {
+  id: string;
+  name: string;
+  description: string;
+  data: FormationData;
+};
+
+/** Validation error for formation editor */
+export type FormationValidationError = {
+  type: "position" | "incomplete" | "overlap";
+  rotation?: RotationNumber;
+  mode?: GameMode;
+  role?: PlayerRole;
+  message: string;
+};
+
+/** Editor state for formation creation/editing */
+export type FormationEditorState = {
+  mode: "create" | "edit" | "duplicate";
+  currentRotation: RotationNumber;
+  currentMode: GameMode;
+  liberoActive: boolean;
+  selectedRole: PlayerRole | null;
+  isDragging: boolean;
+  hasUnsavedChanges: boolean;
+};
+
+/** Draft for autosave (localStorage) */
+export type FormationDraft = {
+  formation: Partial<UserFormation>;
+  lastSavedAt: number;
+  isDirty: boolean;
+};

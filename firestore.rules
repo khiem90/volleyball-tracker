@@ -35,13 +35,33 @@ service cloud.firestore {
     match /summaries/{summaryId} {
       // Anyone can read summaries (for sharing)
       allow read: if true;
-      
+
       // Only authenticated users can create summaries
       allow create: if request.auth != null;
-      
+
       // Only the creator can update or delete summaries
-      allow update, delete: if 
+      allow update, delete: if
         request.auth != null && request.auth.uid == resource.data.creatorId;
+    }
+
+    // User formations collection (for custom volleyball formations)
+    match /formations/{formationId} {
+      // Read allowed if:
+      // 1. User is the owner
+      // 2. Formation is unlisted (shareable)
+      allow read: if
+        (request.auth != null && resource.data.ownerUserId == request.auth.uid)
+        || resource.data.visibility == "unlisted";
+
+      // Create allowed if authenticated and setting self as owner
+      allow create: if
+        request.auth != null
+        && request.resource.data.ownerUserId == request.auth.uid;
+
+      // Update/delete allowed only by owner
+      allow update, delete: if
+        request.auth != null
+        && resource.data.ownerUserId == request.auth.uid;
     }
   }
 }
