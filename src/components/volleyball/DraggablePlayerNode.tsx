@@ -1,7 +1,7 @@
 "use client";
 
-import { memo, useCallback, useRef, useState } from "react";
-import { motion } from "framer-motion";
+import { memo, useCallback, useRef, useState, useEffect } from "react";
+import { motion, useMotionValue, animate as fmAnimate } from "framer-motion";
 import type { PlayerRole, CourtPosition } from "@/lib/volleyball/types";
 import { COURT_SVG, PLAYER_COLORS } from "@/lib/volleyball/constants";
 
@@ -44,9 +44,33 @@ export const DraggablePlayerNode = memo(
     const [isDragging, setIsDragging] = useState(false);
     const dragStartRef = useRef<{ x: number; y: number } | null>(null);
     const svgRef = useRef<SVGGElement>(null);
+    const rafRef = useRef<number | null>(null);
+    const pendingPositionRef = useRef<CourtPosition | null>(null);
 
     const coords = toSvgCoords(position.x, position.y);
     const color = PLAYER_COLORS[role]?.bg || "gray";
+
+    // Motion values for instant drag tracking (bypasses React re-render)
+    const motionX = useMotionValue(coords.x);
+    const motionY = useMotionValue(coords.y);
+
+    // Spring-animate to new coords when NOT dragging (keyboard moves, external updates)
+    useEffect(() => {
+      if (isDragging) return;
+      const ctrlX = fmAnimate(motionX, coords.x, { type: "spring", stiffness: 300, damping: 25 });
+      const ctrlY = fmAnimate(motionY, coords.y, { type: "spring", stiffness: 300, damping: 25 });
+      return () => {
+        ctrlX.stop();
+        ctrlY.stop();
+      };
+    }, [coords.x, coords.y, isDragging, motionX, motionY]);
+
+    // Cleanup RAF on unmount
+    useEffect(() => {
+      return () => {
+        if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+      };
+    }, []);
 
     // Clamp position to valid range
     const clampPosition = (pos: CourtPosition): CourtPosition => ({
@@ -60,7 +84,7 @@ export const DraggablePlayerNode = memo(
     };
 
     // Convert client coordinates to SVG coordinates
-    const clientToSvg = (clientX: number, clientY: number): { x: number; y: number } | null => {
+    const clientToSvg = useCallback((clientX: number, clientY: number): { x: number; y: number } | null => {
       const svg = getSvgElement();
       if (!svg) return null;
 
@@ -73,7 +97,7 @@ export const DraggablePlayerNode = memo(
 
       const svgPoint = point.matrixTransform(ctm.inverse());
       return { x: svgPoint.x, y: svgPoint.y };
-    };
+    }, []);
 
     const handlePointerDown = useCallback(
       (e: React.PointerEvent) => {
@@ -99,7 +123,7 @@ export const DraggablePlayerNode = memo(
           onSelect(role);
         }
       },
-      [disabled, preventDrag, onDragStart, onSelect, role]
+      [disabled, preventDrag, onDragStart, onSelect, role, clientToSvg]
     );
 
     const handlePointerMove = useCallback(
@@ -110,14 +134,29 @@ export const DraggablePlayerNode = memo(
         e.stopPropagation();
 
         const svgCoords = clientToSvg(e.clientX, e.clientY);
-        if (svgCoords) {
-          // Convert SVG coordinates to normalized court position
-          const normalizedPos = fromSvgCoords(svgCoords.x, svgCoords.y);
-          const clampedPos = clampPosition(normalizedPos);
-          onPositionChange(role, clampedPos);
+        if (!svgCoords) return;
+
+        // Convert SVG coordinates to normalized court position and clamp
+        const normalizedPos = fromSvgCoords(svgCoords.x, svgCoords.y);
+        const clampedPos = clampPosition(normalizedPos);
+
+        // Instant visual update via motion values (no React re-render needed)
+        const clampedSvg = toSvgCoords(clampedPos.x, clampedPos.y);
+        motionX.set(clampedSvg.x);
+        motionY.set(clampedSvg.y);
+
+        // RAF-throttle the React state commit to avoid excessive re-renders
+        pendingPositionRef.current = clampedPos;
+        if (rafRef.current === null) {
+          rafRef.current = requestAnimationFrame(() => {
+            rafRef.current = null;
+            if (pendingPositionRef.current) {
+              onPositionChange(role, pendingPositionRef.current);
+            }
+          });
         }
       },
-      [isDragging, fromSvgCoords, onPositionChange, role]
+      [isDragging, fromSvgCoords, toSvgCoords, onPositionChange, role, motionX, motionY, clientToSvg]
     );
 
     const handlePointerUp = useCallback(
@@ -130,11 +169,21 @@ export const DraggablePlayerNode = memo(
         // Release pointer capture
         (e.target as HTMLElement).releasePointerCapture(e.pointerId);
 
+        // Flush any pending position update so final position is always committed
+        if (rafRef.current !== null) {
+          cancelAnimationFrame(rafRef.current);
+          rafRef.current = null;
+        }
+        if (pendingPositionRef.current) {
+          onPositionChange(role, pendingPositionRef.current);
+          pendingPositionRef.current = null;
+        }
+
         setIsDragging(false);
         dragStartRef.current = null;
         onDragEnd?.();
       },
-      [isDragging, onDragEnd]
+      [isDragging, onDragEnd, onPositionChange, role]
     );
 
     const handleClick = useCallback(
@@ -164,11 +213,11 @@ export const DraggablePlayerNode = memo(
           onSelect(isSelected ? null : role);
         }
 
-        // Arrow key movement
+        // Arrow key movement: fine (0.005), medium (Shift: 0.02), coarse (Ctrl: 0.05)
         if (isSelected && ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
           e.preventDefault();
-          const step = e.shiftKey ? 0.05 : 0.02;
-          let newPos = { ...position };
+          const step = e.ctrlKey ? 0.05 : e.shiftKey ? 0.02 : 0.005;
+          const newPos = { ...position };
 
           switch (e.key) {
             case "ArrowUp":
@@ -194,22 +243,20 @@ export const DraggablePlayerNode = memo(
     return (
       <motion.g
         ref={svgRef}
-        initial={{ scale: 0, opacity: 0 }}
+        initial={{ scale: 0, opacity: 0, x: coords.x, y: coords.y }}
         animate={{
           scale: isDragging ? 1.1 : 1,
           opacity: 1,
-          x: coords.x,
-          y: coords.y,
         }}
         exit={{ scale: 0, opacity: 0 }}
         transition={{
           type: "spring",
           stiffness: isDragging ? 400 : 300,
           damping: isDragging ? 30 : 25,
-          x: { type: "spring", stiffness: 200, damping: 20 },
-          y: { type: "spring", stiffness: 200, damping: 20 },
         }}
         style={{
+          x: motionX,
+          y: motionY,
           originX: 0,
           originY: 0,
           cursor: disabled ? "default" : preventDrag ? "pointer" : isDragging ? "grabbing" : "grab",
@@ -314,24 +361,6 @@ export const DraggablePlayerNode = memo(
           </text>
         )}
 
-        {/* Libero badge */}
-        {role === "L" && (
-          <g transform={`translate(${NODE_RADIUS - 6}, ${-NODE_RADIUS + 6})`}>
-            <circle
-              r="8"
-              fill="oklch(0.60 0.18 310)"
-              stroke="white"
-              strokeWidth="1.5"
-            />
-            <text
-              textAnchor="middle"
-              dominantBaseline="central"
-              className="fill-white text-[8px] font-bold pointer-events-none"
-            >
-              L
-            </text>
-          </g>
-        )}
       </motion.g>
     );
   }

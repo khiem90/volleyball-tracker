@@ -66,7 +66,7 @@ export const DesktopNav = memo(function DesktopNav({
       ))}
 
       {/* Tools Dropdown */}
-      <DropdownMenu>
+      <DropdownMenu modal={false}>
         <DropdownMenuTrigger
           className={`
             relative px-4 py-2 uppercase tracking-wider text-sm font-bold transition-colors duration-200

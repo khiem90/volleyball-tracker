@@ -116,24 +116,6 @@ export const PlayerNode = memo(
           Z{player.zone}
         </text>
 
-        {/* Libero badge */}
-        {player.role === "L" && (
-          <g transform={`translate(${NODE_RADIUS - 6}, ${-NODE_RADIUS + 6})`}>
-            <circle
-              r="8"
-              fill="oklch(0.60 0.18 310)"
-              stroke="white"
-              strokeWidth="1.5"
-            />
-            <text
-              textAnchor="middle"
-              dominantBaseline="central"
-              className="fill-white text-[8px] font-bold pointer-events-none"
-            >
-              L
-            </text>
-          </g>
-        )}
       </motion.g>
     );
   }

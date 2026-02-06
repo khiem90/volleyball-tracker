@@ -42,13 +42,18 @@ export const ValidationPanel = memo(function ValidationPanel({
       )}
 
       {overlapWarnings.length > 0 && (
-        <div className="p-3 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 text-sm">
-          <p className="font-medium text-yellow-700 dark:text-yellow-300 mb-1">
+        <div className="p-3 rounded-lg bg-accent text-sm border border-border">
+          <p className="font-medium text-foreground mb-1">
             Overlap Warnings ({overlapWarnings.length})
           </p>
-          <p className="text-yellow-600 dark:text-yellow-400 text-xs">
-            Some positions may violate overlap rules.
-          </p>
+          <ul className="text-muted-foreground text-xs space-y-1">
+            {overlapWarnings.slice(0, 5).map((warn, i) => (
+              <li key={i}>{warn.message}</li>
+            ))}
+            {overlapWarnings.length > 5 && (
+              <li>...and {overlapWarnings.length - 5} more</li>
+            )}
+          </ul>
         </div>
       )}
     </div>

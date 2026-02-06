@@ -101,7 +101,7 @@ export default function SummariesPage() {
       </div>
       <Navigation />
 
-      <main className="relative max-w-6xl mx-auto px-4 pb-12">
+      <main className="relative max-w-6xl mx-auto px-4 pt-8 pb-12">
         {/* Header */}
         <MotionDiv
           initial="hidden"

@@ -160,11 +160,14 @@ const validateOverlaps = (
     }
 
     if (isViolation) {
+      const role1Name = zoneToRole[constraint.zone1] || `Z${constraint.zone1}`;
+      const role2Name = zoneToRole[constraint.zone2] || `Z${constraint.zone2}`;
+      const direction = constraint.type === 'front-back' ? 'behind' : 'right of';
       errors.push({
         type: 'overlap',
         rotation,
         mode,
-        message: `Overlap violation in R${rotation} ${mode}: ${constraint.description}`,
+        message: `R${rotation} ${mode}: ${role2Name} (zone ${constraint.zone2}) must be ${direction} ${role1Name} (zone ${constraint.zone1})`,
       });
     }
   }

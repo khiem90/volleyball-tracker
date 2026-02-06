@@ -239,10 +239,9 @@ export const FormationEditorModal = memo(
               )}
 
               {/* Main Content */}
-              <div className="flex-1 overflow-hidden">
-                <div className="h-full grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6 p-6">
+              <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-6 p-6">
                   {/* Left Sidebar - Controls & Metadata */}
-                  <div className="space-y-4 overflow-y-auto max-h-[calc(90vh-180px)] pr-2 scrollbar-thin">
+                  <div className="lg:w-80 shrink-0 space-y-4 overflow-y-auto min-h-0 px-2 scrollbar-thin">
                     <ArrowControls
                       isDrawingArrow={isDrawingArrow}
                       arrowStartRole={arrowStartRole}
@@ -289,7 +288,7 @@ export const FormationEditorModal = memo(
                   </div>
 
                   {/* Right - Court Editor */}
-                  <div className="space-y-4 lg:sticky lg:top-0 lg:self-start">
+                  <div className="flex-1 min-w-0 space-y-4">
                     {editor.currentFrame && (
                       <FormationEditorCourt
                         frame={editor.currentFrame}
@@ -312,10 +311,9 @@ export const FormationEditorModal = memo(
                     {/* Instructions */}
                     <div className="text-center text-sm text-muted-foreground">
                       <p>Drag players to reposition. Use arrow keys for fine adjustments.</p>
-                      <p className="text-xs mt-1">Shift + Arrow for larger steps • Press Esc to cancel</p>
+                      <p className="text-xs mt-1">Shift + Arrow for larger steps • Ctrl + Arrow for fast moves • Press Esc to cancel</p>
                     </div>
                   </div>
-                </div>
               </div>
 
               {/* Footer */}

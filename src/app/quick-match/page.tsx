@@ -56,7 +56,7 @@ export default function QuickMatchPage() {
 
         <Navigation />
 
-        <main className="relative max-w-5xl mx-auto px-4 pb-12">
+        <main className="relative max-w-5xl mx-auto px-4 pt-8 pb-12">
           {/* Header */}
           <MotionDiv
             initial="hidden"
@@ -231,7 +231,7 @@ export default function QuickMatchPage() {
 
       <Navigation />
 
-      <main className="relative max-w-5xl mx-auto px-4 pb-12">
+      <main className="relative max-w-5xl mx-auto px-4 pt-8 pb-12">
         {/* Header */}
         <MotionDiv
           initial="hidden"
