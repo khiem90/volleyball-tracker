@@ -3,20 +3,13 @@
 import { useState, useCallback, memo } from "react";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { PencilSquareIcon, TrashIcon, CalendarIcon } from "@heroicons/react/24/outline";
+import { DeleteConfirmDialog } from "@/components/shared";
 import type { PersistentTeam } from "@/types/game";
 
 // Playful card color cycle
@@ -40,10 +33,6 @@ export const TeamCard = memo(({ team, onEdit, onDelete, index = 0 }: TeamCardPro
     onDelete(team.id);
     setShowDeleteConfirm(false);
   }, [onDelete, team.id]);
-
-  const handleCancelDelete = useCallback(() => {
-    setShowDeleteConfirm(false);
-  }, []);
 
   const handleEditClick = useCallback(() => {
     onEdit(team);
@@ -125,29 +114,13 @@ export const TeamCard = memo(({ team, onEdit, onDelete, index = 0 }: TeamCardPro
           </div>
         </div>
 
-        {/* Delete Confirmation Dialog */}
-        <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <TrashIcon className="w-5 h-5 text-destructive" />
-                Delete Team?
-              </DialogTitle>
-              <DialogDescription>
-                Are you sure you want to delete <strong className="text-foreground">{team.name}</strong>? This action cannot be undone.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter className="flex-row gap-2 sm:gap-2">
-              <Button variant="outline" onClick={handleCancelDelete} className="flex-1 rounded-xl">
-                Cancel
-              </Button>
-              <Button variant="destructive" onClick={handleConfirmDelete} className="flex-1 gap-2 rounded-xl">
-                <TrashIcon className="w-4 h-4" />
-                Delete
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <DeleteConfirmDialog
+          open={showDeleteConfirm}
+          onOpenChange={setShowDeleteConfirm}
+          title="Delete Team?"
+          description={<>Are you sure you want to delete <strong className="text-foreground">{team.name}</strong>? This action cannot be undone.</>}
+          onConfirm={handleConfirmDelete}
+        />
       </>
     </TooltipProvider>
   );

@@ -5,30 +5,20 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Trophy,
-  Users,
-  Clock,
-  Share2,
-  Home,
   AlertCircle,
   Loader2,
   Check,
   ArrowLeft,
-  Calendar,
-  Timer,
-  Target,
-  Medal,
+  Share2,
+  Home,
   Trash2,
 } from "lucide-react";
+import { DeleteConfirmDialog } from "@/components/shared";
 import { useSummaryPage } from "@/hooks/useSummaryPage";
+import { SummaryOverviewCards } from "./SummaryOverviewCards";
+import { SummaryWinnerDisplay } from "./SummaryWinnerDisplay";
+import { SummaryStandings } from "./SummaryStandings";
+import { SummaryMatchHistory } from "./SummaryMatchHistory";
 
 export default function SummaryPage() {
   const {
@@ -141,199 +131,22 @@ export default function SummaryPage() {
       </header>
 
       <main className="max-w-6xl mx-auto px-4 py-8 space-y-8">
-        {/* Overview Cards */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Card className="bg-linear-to-br from-primary/5 to-primary/10 border-primary/20">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-primary/10">
-                  <Target className="w-5 h-5 text-primary" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Matches</p>
-                  <p className="text-2xl font-bold">{summary.stats.completedMatches}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        <SummaryOverviewCards
+          stats={summary.stats}
+          endedAt={summary.endedAt}
+          formatDuration={formatDuration}
+        />
 
-          <Card className="bg-linear-to-br from-blue-500/5 to-blue-500/10 border-blue-500/20">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-blue-500/10">
-                  <Users className="w-5 h-5 text-blue-500" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Teams</p>
-                  <p className="text-2xl font-bold">{summary.stats.totalTeams}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-linear-to-br from-amber-500/5 to-amber-500/10 border-amber-500/20">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-amber-500/10">
-                  <Timer className="w-5 h-5 text-amber-500" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Duration</p>
-                  <p className="text-2xl font-bold">{formatDuration(summary.stats.duration)}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-linear-to-br from-green-500/5 to-green-500/10 border-green-500/20">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-green-500/10">
-                  <Calendar className="w-5 h-5 text-green-500" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Ended</p>
-                  <p className="text-lg font-bold">
-                    {new Date(summary.endedAt).toLocaleDateString(undefined, {
-                      month: "short",
-                      day: "numeric",
-                    })}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Winner Section */}
         {summary.stats.winner && (
-          <Card className="bg-linear-to-br from-amber-500/5 via-amber-500/10 to-orange-500/5 border-amber-500/30">
-            <CardContent className="p-6">
-              <div className="flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">
-                <div className="p-4 rounded-2xl bg-amber-500/20">
-                  <Trophy className="w-10 h-10 text-amber-500" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm text-muted-foreground mb-1">Champion</p>
-                  <h2 className="text-2xl font-bold">{summary.stats.winner.teamName}</h2>
-                  <p className="text-muted-foreground">
-                    {summary.stats.winner.wins} wins
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <SummaryWinnerDisplay winner={summary.stats.winner} />
         )}
 
-        {/* Team Standings */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Medal className="w-5 h-5 text-primary" />
-              Final Standings
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {teamStats.map((stat, index) => (
-                <div
-                  key={stat.team.id}
-                  className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
-                >
-                  <span className="w-6 text-center font-bold text-muted-foreground">
-                    {index + 1}
-                  </span>
-                  <div
-                    className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: stat.team.color }}
-                  />
-                  <span className="flex-1 font-medium">{stat.team.name}</span>
-                  <Badge variant="default" className="bg-green-500/10 text-green-500 border-green-500/20">
-                    {stat.wins}W
-                  </Badge>
-                  <Badge variant="secondary" className="bg-destructive/10 text-destructive border-destructive/20">
-                    {stat.losses}L
-                  </Badge>
-                  <span className="text-sm text-muted-foreground w-16 text-right">
-                    {stat.pointsFor}-{stat.pointsAgainst}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        <SummaryStandings teamStats={teamStats} />
 
-        {/* Match History */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="w-5 h-5 text-primary" />
-              Match History
-            </CardTitle>
-            <CardDescription>
-              {completedMatches.length} completed matches
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {completedMatches.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">
-                No completed matches
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {completedMatches.map((match, index) => {
-                  const homeTeam = teamsMap[match.homeTeamId];
-                  const awayTeam = teamsMap[match.awayTeamId];
-                  const homeWon = match.winnerId === match.homeTeamId;
-
-                  return (
-                    <div
-                      key={match.id}
-                      className="flex items-center gap-3 p-3 rounded-lg bg-muted/30"
-                    >
-                      <span className="w-6 text-center text-xs text-muted-foreground">
-                        #{completedMatches.length - index}
-                      </span>
-                      <div className="flex-1 flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2 flex-1 min-w-0">
-                          <div
-                            className="w-2 h-2 rounded-full flex-shrink-0"
-                            style={{ backgroundColor: homeTeam?.color }}
-                          />
-                          <span
-                            className={`truncate ${homeWon ? "font-semibold" : "text-muted-foreground"}`}
-                          >
-                            {homeTeam?.name || "Unknown"}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2 text-lg font-mono">
-                          <span className={homeWon ? "text-green-500 font-bold" : ""}>
-                            {match.homeScore}
-                          </span>
-                          <span className="text-muted-foreground">-</span>
-                          <span className={!homeWon ? "text-green-500 font-bold" : ""}>
-                            {match.awayScore}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
-                          <span
-                            className={`truncate ${!homeWon ? "font-semibold" : "text-muted-foreground"}`}
-                          >
-                            {awayTeam?.name || "Unknown"}
-                          </span>
-                          <div
-                            className="w-2 h-2 rounded-full flex-shrink-0"
-                            style={{ backgroundColor: awayTeam?.color }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <SummaryMatchHistory
+          completedMatches={completedMatches}
+          teamsMap={teamsMap}
+        />
 
         {/* Session Info */}
         <Card>
@@ -356,44 +169,14 @@ export default function SummaryPage() {
         </Card>
       </main>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-destructive">
-              <Trash2 className="w-5 h-5" />
-              Delete Summary?
-            </DialogTitle>
-            <DialogDescription>
-              This will permanently delete this session summary and cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="flex-row gap-2 sm:gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setShowDeleteDialog(false)}
-              disabled={isDeleting}
-              className="flex-1 cursor-pointer"
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDelete}
-              disabled={isDeleting}
-              className="flex-1 gap-2 cursor-pointer"
-            >
-              {isDeleting ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Trash2 className="w-4 h-4" />
-              )}
-              {isDeleting ? "Deleting..." : "Delete"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <DeleteConfirmDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        title="Delete Summary?"
+        description="This will permanently delete this session summary and cannot be undone."
+        onConfirm={handleDelete}
+        isDeleting={isDeleting}
+      />
     </div>
   );
 }
-

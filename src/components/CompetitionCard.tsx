@@ -6,14 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -29,6 +21,7 @@ import {
   PlayIcon,
 } from "@heroicons/react/24/outline";
 import { BracketIcon, CrownIcon, RotationIcon } from "@/lib/icons";
+import { DeleteConfirmDialog } from "@/components/shared";
 import type { Competition, CompetitionStatus, CompetitionType } from "@/types/game";
 
 interface CompetitionCardProps {
@@ -102,10 +95,6 @@ export const CompetitionCard = memo(({
     onDelete(competition.id);
     setShowDeleteConfirm(false);
   }, [onDelete, competition.id]);
-
-  const handleCancelDelete = useCallback(() => {
-    setShowDeleteConfirm(false);
-  }, []);
 
   // Memoize computed values
   const status = statusConfig[competition.status];
@@ -197,29 +186,13 @@ export const CompetitionCard = memo(({
           </div>
         </Link>
 
-        {/* Delete Confirmation Dialog */}
-        <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <TrashIcon className="w-5 h-5 text-destructive" />
-                Delete Competition?
-              </DialogTitle>
-              <DialogDescription>
-                Are you sure you want to delete <strong className="text-foreground">{competition.name}</strong>? This will also delete all associated matches. This action cannot be undone.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter className="flex-row gap-2 sm:gap-2">
-              <Button variant="outline" onClick={handleCancelDelete} className="flex-1 rounded-xl">
-                Cancel
-              </Button>
-              <Button variant="destructive" onClick={handleConfirmDelete} className="flex-1 gap-2 rounded-xl">
-                <TrashIcon className="w-4 h-4" />
-                Delete
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <DeleteConfirmDialog
+          open={showDeleteConfirm}
+          onOpenChange={setShowDeleteConfirm}
+          title="Delete Competition?"
+          description={<>Are you sure you want to delete <strong className="text-foreground">{competition.name}</strong>? This will also delete all associated matches. This action cannot be undone.</>}
+          onConfirm={handleConfirmDelete}
+        />
       </>
     </TooltipProvider>
   );

@@ -1,7 +1,6 @@
 "use client";
 
 import { Suspense } from "react";
-import Link from "next/link";
 import { motion } from "framer-motion";
 import { Navigation } from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
@@ -23,6 +22,7 @@ import {
   LockClosedIcon,
   ExclamationCircleIcon,
 } from "@heroicons/react/24/outline";
+import { PageLoadingSpinner, DecorativeBackground } from "@/components/shared";
 import { useLoginPage } from "@/hooks/useLoginPage";
 
 const LoginPageContent = () => {
@@ -44,20 +44,7 @@ const LoginPageContent = () => {
 
   // Show loading while checking auth or redirecting
   if (isLoading || isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Navigation />
-        <main className="max-w-6xl mx-auto px-4 pb-12">
-          <div className="flex items-center justify-center min-h-[60vh]">
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-              className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full"
-            />
-          </div>
-        </main>
-      </div>
-    );
+    return <PageLoadingSpinner />;
   }
 
   const isSignUp = mode === "signup";
@@ -80,12 +67,7 @@ const LoginPageContent = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Decorative background elements */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="decorative-blob w-150 h-150 -top-48 -right-48 opacity-30" />
-        <div className="decorative-blob w-100 h-100 bottom-20 -left-32 opacity-20" />
-      </div>
-
+      <DecorativeBackground />
       <Navigation />
 
       <main className="relative max-w-md mx-auto px-4 pb-12">

@@ -1,9 +1,9 @@
 "use client";
 
-import { motion } from "framer-motion";
 import { Navigation } from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
 import { ArrowLeftIcon } from "@heroicons/react/24/outline";
+import { PageLoadingSpinner } from "@/components/shared";
 import { useNewCompetitionPage } from "@/hooks/useNewCompetitionPage";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { StepIndicator } from "@/components/competitions/new/StepIndicator";
@@ -41,37 +41,13 @@ export default function NewCompetitionPage() {
     teamValidation,
     teams,
     teamsCount,
-    // Advanced settings
-    showAdvancedSettings,
-    setShowAdvancedSettings,
-    pointsForWin,
-    setPointsForWin,
-    pointsForTie,
-    setPointsForTie,
-    pointsForLoss,
-    setPointsForLoss,
-    allowTies,
-    setAllowTies,
-    venueName,
-    setVenueName,
+    advancedSettings,
+    advancedSettingsHandlers,
   } = useNewCompetitionPage();
 
   // Show loading state while checking auth
   if (isLoading || !isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Navigation />
-        <main className="max-w-4xl mx-auto px-4 py-8">
-          <div className="flex items-center justify-center min-h-[60vh]">
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-              className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full"
-            />
-          </div>
-        </main>
-      </div>
-    );
+    return <PageLoadingSpinner maxWidth="max-w-4xl" />;
   }
 
   return (
@@ -133,18 +109,8 @@ export default function NewCompetitionPage() {
             onSelectCourts={setNumberOfCourts}
             onSelectSeriesLength={setMatchSeriesLength}
             onSelectInstantWin={setInstantWinEnabled}
-            showAdvancedSettings={showAdvancedSettings}
-            onToggleAdvancedSettings={() => setShowAdvancedSettings(!showAdvancedSettings)}
-            pointsForWin={pointsForWin}
-            onPointsForWinChange={setPointsForWin}
-            pointsForTie={pointsForTie}
-            onPointsForTieChange={setPointsForTie}
-            pointsForLoss={pointsForLoss}
-            onPointsForLossChange={setPointsForLoss}
-            allowTies={allowTies}
-            onAllowTiesChange={setAllowTies}
-            venueName={venueName}
-            onVenueNameChange={setVenueName}
+            advancedSettings={advancedSettings}
+            advancedSettingsHandlers={advancedSettingsHandlers}
           />
         )}
       </main>

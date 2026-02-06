@@ -8,13 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PlusIcon, TrophyIcon } from "@heroicons/react/24/outline";
-import {
-  MotionDiv,
-  StaggerContainer,
-  StaggerItem,
-  slideUp,
-} from "@/components/motion";
+import { MotionDiv, StaggerContainer, StaggerItem } from "@/components/motion";
 import { EmptyCompetitions } from "@/components/illustrations";
+import { PageLoadingSpinner, EmptyState, DecorativeBackground, PageHeader } from "@/components/shared";
 import { useCompetitionsPage } from "@/hooks/useCompetitionsPage";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 
@@ -30,67 +26,31 @@ export default function CompetitionsPage() {
     handleFilterChange,
   } = useCompetitionsPage();
 
-  // Show loading state while checking auth
   if (isLoading || !isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Navigation />
-        <main className="max-w-6xl mx-auto px-4 pb-12">
-          <div className="flex items-center justify-center min-h-[60vh]">
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-              className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full"
-            />
-          </div>
-        </main>
-      </div>
-    );
+    return <PageLoadingSpinner />;
   }
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Decorative background elements */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="decorative-blob w-150 h-150 -top-48 -right-48 opacity-30" />
-        <div className="decorative-blob w-100 h-100 bottom-20 -left-32 opacity-20" />
-      </div>
-
+      <DecorativeBackground />
       <Navigation />
 
       <main className="relative max-w-6xl mx-auto px-4 pt-8 pb-12">
-        {/* Header */}
-        <MotionDiv
-          initial="hidden"
-          animate="visible"
-          variants={slideUp}
-          className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6"
-        >
-          <div>
-            <div className="flex items-center gap-3 mb-1">
-              <h1 className="text-3xl font-bold tracking-tight">
-                Competitions
-              </h1>
-              <Badge
-                variant="secondary"
-                className="text-sm bg-primary/10 text-primary border-primary/20"
-              >
-                {competitions.length}
-              </Badge>
-            </div>
-            <p className="text-muted-foreground">
-              Manage your tournaments and leagues
-            </p>
-          </div>
-          <Link href="/competitions/new">
-            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-              <Button variant="teal-gradient" className="gap-2 rounded-xl">
-                <PlusIcon className="w-4 h-4" />
-                <span className="hidden sm:inline">New Competition</span>
-              </Button>
-            </motion.div>
-          </Link>
-        </MotionDiv>
+        <PageHeader
+          title="Competitions"
+          count={competitions.length}
+          description="Manage your tournaments and leagues"
+          actions={
+            <Link href="/competitions/new">
+              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                <Button variant="teal-gradient" className="gap-2 rounded-xl">
+                  <PlusIcon className="w-4 h-4" />
+                  <span className="hidden sm:inline">New Competition</span>
+                </Button>
+              </motion.div>
+            </Link>
+          }
+        />
 
         {/* Filter Tabs */}
         <AnimatePresence>
@@ -159,28 +119,23 @@ export default function CompetitionsPage() {
 
         {/* Competitions List */}
         {competitions.length === 0 ? (
-          <MotionDiv
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center py-16"
-          >
-            <EmptyCompetitions className="w-48 h-48 mx-auto mb-6" />
-            <h2 className="text-2xl font-semibold mb-3">No competitions yet</h2>
-            <p className="text-muted-foreground mb-8 max-w-md mx-auto">
-              Create your first competition to organize teams into tournaments,
-              round robins, or leagues.
-            </p>
-            <Link href="/competitions/new">
-              <Button
-                variant="teal-gradient"
-                className="gap-2 rounded-xl h-12"
-                size="lg"
-              >
-                <PlusIcon className="w-5 h-5" />
-                Create Your First Competition
-              </Button>
-            </Link>
-          </MotionDiv>
+          <EmptyState
+            illustration={<EmptyCompetitions className="w-48 h-48 mx-auto mb-6" />}
+            title="No competitions yet"
+            description="Create your first competition to organize teams into tournaments, round robins, or leagues."
+            actions={
+              <Link href="/competitions/new">
+                <Button
+                  variant="teal-gradient"
+                  className="gap-2 rounded-xl h-12"
+                  size="lg"
+                >
+                  <PlusIcon className="w-5 h-5" />
+                  Create Your First Competition
+                </Button>
+              </Link>
+            }
+          />
         ) : filteredCompetitions.length === 0 ? (
           <MotionDiv
             initial={{ opacity: 0 }}

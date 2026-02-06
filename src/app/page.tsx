@@ -22,6 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { GlassCard, GlassCardContent, GlassCardHeader, GlassCardTitle, GlassCardDescription, StatCard } from "@/components/ui/glass-card";
 import { EmptyCompetitions, EmptyMatches } from "@/components/illustrations";
+import { DecorativeBackground } from "@/components/shared";
 import { useDashboardPage } from "@/hooks/useDashboardPage";
 import { useAuth } from "@/context/AuthContext";
 
@@ -179,12 +180,7 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Decorative background elements */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="decorative-blob w-150 h-150 -top-48 -right-48 opacity-40" />
-        <div className="decorative-blob w-100 h-100 top-1/3 -left-32 opacity-30" />
-        <div className="decorative-blob w-75 h-75 bottom-20 right-1/4 opacity-20" />
-      </div>
+      <DecorativeBackground variant="dashboard" />
 
       <Navigation />
 

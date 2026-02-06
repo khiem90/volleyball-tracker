@@ -9,6 +9,24 @@ import { DEFAULT_COMPETITION_CONFIG } from "@/types/competition-config";
 
 export type Step = "format" | "teams" | "name";
 
+export type AdvancedSettings = {
+  showAdvancedSettings: boolean;
+  pointsForWin: number;
+  pointsForTie: number;
+  pointsForLoss: number;
+  allowTies: boolean;
+  venueName: string;
+};
+
+export type AdvancedSettingsHandlers = {
+  onToggleAdvancedSettings: () => void;
+  onPointsForWinChange: (value: number) => void;
+  onPointsForTieChange: (value: number) => void;
+  onPointsForLossChange: (value: number) => void;
+  onAllowTiesChange: (value: boolean) => void;
+  onVenueNameChange: (value: string) => void;
+};
+
 export interface FormatOption {
   type: CompetitionType;
   label: string;
@@ -279,18 +297,22 @@ export const useNewCompetitionPage = () => {
     teamValidation,
     teams: state.teams,
     teamsCount: state.teams.length,
-    // Advanced settings
-    showAdvancedSettings,
-    setShowAdvancedSettings,
-    pointsForWin,
-    setPointsForWin,
-    pointsForTie,
-    setPointsForTie,
-    pointsForLoss,
-    setPointsForLoss,
-    allowTies,
-    setAllowTies,
-    venueName,
-    setVenueName,
+    // Advanced settings (grouped)
+    advancedSettings: {
+      showAdvancedSettings,
+      pointsForWin,
+      pointsForTie,
+      pointsForLoss,
+      allowTies,
+      venueName,
+    } as AdvancedSettings,
+    advancedSettingsHandlers: {
+      onToggleAdvancedSettings: () => setShowAdvancedSettings((prev) => !prev),
+      onPointsForWinChange: setPointsForWin,
+      onPointsForTieChange: setPointsForTie,
+      onPointsForLossChange: setPointsForLoss,
+      onAllowTiesChange: setAllowTies,
+      onVenueNameChange: setVenueName,
+    } as AdvancedSettingsHandlers,
   };
 };
