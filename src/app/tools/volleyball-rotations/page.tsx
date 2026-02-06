@@ -15,21 +15,17 @@ import {
 } from "@/components/volleyball";
 import { useVolleyballRotation } from "@/hooks/useVolleyballRotation";
 import { useUserFormations } from "@/hooks/useUserFormations";
-import { useAuth } from "@/context/AuthContext";
 import { MotionDiv, slideUp } from "@/components/motion";
 import type { FormationType, UserFormation, FormationData, FormationVisibility } from "@/lib/volleyball/types";
 
 export default function VolleyballRotationsPage() {
   const router = useRouter();
-  const { user, isLoading: authLoading } = useAuth();
   const {
     formations: userFormations,
-    isLoading: formationsLoading,
     isAuthenticated,
     create,
     update,
     remove,
-    duplicate,
     share,
     unshare,
     getById,
@@ -49,7 +45,6 @@ export default function VolleyballRotationsPage() {
   const {
     rotation,
     mode,
-    formation,
     liberoActive,
     players,
     arrows,

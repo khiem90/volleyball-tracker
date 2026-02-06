@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -53,12 +53,14 @@ export const StartCompetitionDialog = ({
     return teams.slice(-playInTeamCount).map((t) => t.id);
   }, [showPlayInSelection, teams, playInTeamCount]);
 
-  // Reset selection when dialog opens
-  useEffect(() => {
+  // Reset selection when dialog opens (render-time state adjustment)
+  const [prevOpen, setPrevOpen] = useState(false);
+  if (open !== prevOpen) {
+    setPrevOpen(open);
     if (open) {
       setSelectedPlayInTeamIds(defaultPlayInTeamIds);
     }
-  }, [open, defaultPlayInTeamIds]);
+  }
 
   const handleToggleTeam = (teamId: string) => {
     setSelectedPlayInTeamIds((prev) => {

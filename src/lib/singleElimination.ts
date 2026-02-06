@@ -61,7 +61,6 @@ const reorderTeamsForByes = (
   bracketSize: number
 ): string[] => {
   const n = teamIds.length;
-  const byeCount = bracketSize - n;
 
   // Create the seeded matchups to find which positions get byes
   const seededOrder = getSeededMatchups(bracketSize);

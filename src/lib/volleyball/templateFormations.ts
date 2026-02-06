@@ -56,7 +56,6 @@ const buildRoleSpotsFromTraditional = (rotation: RotationNumber): Record<PlayerR
   // Add Libero position (based on back-row MB)
   const chart = ROTATION_CHART[rotation];
   const mb1Zone = Object.entries(chart).find(([, r]) => r === 'MB1')?.[0];
-  const mb2Zone = Object.entries(chart).find(([, r]) => r === 'MB2')?.[0];
   const backRowZones = [1, 5, 6];
   const mb1InBackRow = mb1Zone && backRowZones.includes(parseInt(mb1Zone));
   const backRowMB = mb1InBackRow ? 'MB1' : 'MB2';
@@ -211,7 +210,6 @@ export const builtinToFormationData = (formationType: string): FormationData => 
       // Add Libero position
       const chart = ROTATION_CHART[rotation];
       const mb1Zone = Object.entries(chart).find(([, r]) => r === 'MB1')?.[0];
-      const mb2Zone = Object.entries(chart).find(([, r]) => r === 'MB2')?.[0];
       const backRowZones = [1, 5, 6];
       const mb1InBackRow = mb1Zone && backRowZones.includes(parseInt(mb1Zone));
       const backRowMB = mb1InBackRow ? 'MB1' : 'MB2';

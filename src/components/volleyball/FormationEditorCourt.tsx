@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useCallback, useState, useRef, useEffect } from "react";
+import { memo, useCallback, useState, useRef } from "react";
 import { AnimatePresence } from "framer-motion";
 import { DraggablePlayerNode } from "./DraggablePlayerNode";
 import { CourtSvgDefs } from "./formation-editor/CourtSvgDefs";
@@ -209,12 +209,14 @@ export const FormationEditorCourt = memo(
       [isDrawingArrow, onArrowStartSelect, arrowStartRole, onSelectRole]
     );
 
-    // Reset cursor position when drawing mode changes
-    useEffect(() => {
-      if (!isDrawingArrow) {
+    // Reset cursor position when drawing mode ends (render-time state adjustment)
+    const [prevIsDrawingArrow, setPrevIsDrawingArrow] = useState(isDrawingArrow);
+    if (isDrawingArrow !== prevIsDrawingArrow) {
+      setPrevIsDrawingArrow(isDrawingArrow);
+      if (prevIsDrawingArrow && !isDrawingArrow) {
         setCursorPos(null);
       }
-    }, [isDrawingArrow]);
+    }
 
     // Get arrow start position for preview
     const getArrowStartPos = useCallback(() => {

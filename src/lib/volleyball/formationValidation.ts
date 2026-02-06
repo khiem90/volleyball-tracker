@@ -66,18 +66,6 @@ const validatePosition = (
 // Overlap Validation (Warnings Only)
 // ============================================
 
-/** Back row zones */
-const BACK_ROW_ZONES = [1, 5, 6];
-
-/** Get zone for a role in a rotation */
-const getRoleZone = (rotation: RotationNumber, role: PlayerRole): number => {
-  const chart = ROTATION_CHART[rotation];
-  for (const [zoneStr, r] of Object.entries(chart)) {
-    if (r === role) return parseInt(zoneStr);
-  }
-  return 0;
-};
-
 /** Check front-back overlap (front row player must be in front of corresponding back row player) */
 const checkFrontBackOverlap = (
   frontPos: CourtPosition,
@@ -141,7 +129,6 @@ const validateOverlaps = (
       // Need to determine which zone should be left/right based on zone numbers
       const leftZones = [4, 5]; // Left side
       const rightZones = [2, 1]; // Right side
-      const centerZones = [3, 6]; // Center
 
       let leftPos: CourtPosition | undefined;
       let rightPos: CourtPosition | undefined;

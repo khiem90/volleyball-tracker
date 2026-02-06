@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useState, useMemo, useRef, useCallback } from "react";
 import type { PersistentTeam, Competition } from "@/types/game";
 import { useApp } from "@/context/AppContext";
 import { useTeamsMap } from "@/hooks/useTeamsMap";
@@ -43,14 +43,16 @@ export const useEditQueueDialog = ({
     return queueData.filter((teamId) => !teamsOnCourt.has(teamId));
   }, [competition, teamsOnCourt]);
 
-  // Reset queue when dialog opens or queue changes
-  useEffect(() => {
+  // Reset queue when dialog opens (render-time state adjustment)
+  const [prevOpen, setPrevOpen] = useState(false);
+  if (open !== prevOpen) {
+    setPrevOpen(open);
     if (open) {
       setQueue([...currentQueue]);
       setDraggedIndex(null);
       setDragOverIndex(null);
     }
-  }, [open, currentQueue]);
+  }
 
   // Check if queue has changed
   const hasChanges = useMemo(() => {

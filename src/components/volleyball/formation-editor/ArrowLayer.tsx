@@ -2,7 +2,7 @@
 
 import { memo } from "react";
 import { motion } from "framer-motion";
-import type { CourtPosition, PlayerRole, RotationFrame } from "@/lib/volleyball/types";
+import type { PlayerRole, RotationFrame } from "@/lib/volleyball/types";
 import { toSvgCoords } from "@/lib/volleyball/coordinateUtils";
 
 type ArrowLayerProps = {

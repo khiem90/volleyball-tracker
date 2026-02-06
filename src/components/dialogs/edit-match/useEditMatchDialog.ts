@@ -1,13 +1,12 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback } from "react";
 import type { Match, PersistentTeam, Competition } from "@/types/game";
 import { useApp } from "@/context/AppContext";
 import { useTeamsMap } from "@/hooks/useTeamsMap";
 import {
   detectTeamSwap,
   calculateSwapUpdates,
-  type SwapResult,
 } from "@/lib/eliminationSwap";
 
 interface UseEditMatchDialogProps {
@@ -31,7 +30,6 @@ export const useEditMatchDialog = ({
   const [homeTeamId, setHomeTeamId] = useState<string>("");
   const [awayTeamId, setAwayTeamId] = useState<string>("");
   const [error, setError] = useState<string>("");
-  const [swapInfo, setSwapInfo] = useState<SwapResult | null>(null);
 
   // Check competition type for swap logic
   const isEliminationBracket =
@@ -41,26 +39,23 @@ export const useEditMatchDialog = ({
     competition?.type === "win2out" ||
     competition?.type === "two_match_rotation";
 
-  // Reset form when match changes
-  useEffect(() => {
+  // Reset form when match changes (render-time state adjustment)
+  const [prevMatch, setPrevMatch] = useState<Match | null>(null);
+  if (match !== prevMatch) {
+    setPrevMatch(match);
     if (match) {
       setHomeTeamId(match.homeTeamId);
       setAwayTeamId(match.awayTeamId);
       setError("");
-      setSwapInfo(null);
     }
-  }, [match]);
+  }
 
-  // Detect if a team swap is needed
-  useEffect(() => {
-    if (!match) {
-      setSwapInfo(null);
-      return;
-    }
-
+  // Derive swap info from current state (no effect needed)
+  const swapInfo = useMemo(() => {
+    if (!match) return null;
     const sameRoundOnly = isEliminationBracket;
     const result = detectTeamSwap(match, homeTeamId, awayTeamId, matches, sameRoundOnly);
-    setSwapInfo(result.needsSwap ? result : null);
+    return result.needsSwap ? result : null;
   }, [match, homeTeamId, awayTeamId, matches, isEliminationBracket]);
 
   // Get teams currently PLAYING on OTHER courts

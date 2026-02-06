@@ -174,19 +174,15 @@ export const useFormationEditor = (
 
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [copiedFrame, setCopiedFrame] = useState<RotationFrame | null>(null);
-  const [hasDraft, setHasDraft] = useState(false);
-
-  // Refs for initial data comparison
-  const initialDataRef = useRef<FormationData>(getInitialData());
-  const initialMetadataRef = useRef<FormationMetadata>(getInitialMetadata());
-
-  // Check for existing draft on mount
-  useEffect(() => {
+  const [hasDraft, setHasDraft] = useState(() => {
     if (typeof window !== "undefined") {
-      const draft = localStorage.getItem(DRAFT_STORAGE_KEY);
-      setHasDraft(!!draft);
+      return !!localStorage.getItem(DRAFT_STORAGE_KEY);
     }
-  }, []);
+    return false;
+  });
+
+  // Ref for initial data comparison
+  const initialDataRef = useRef<FormationData>(getInitialData());
 
   // Current frame
   const currentFrame = useMemo(() => {

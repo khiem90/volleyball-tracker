@@ -6,7 +6,6 @@ import type {
   RotationNumber,
   FormationCategory,
   UserFormation,
-  TemplateFormation,
 } from "@/lib/volleyball/types";
 import { getFormations } from "@/lib/volleyball/formations";
 import { getTemplateFormations } from "@/lib/volleyball/templateFormations";

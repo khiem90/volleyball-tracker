@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, type KeyboardEvent, type ChangeEvent } from "react";
+import { useState, useCallback, type KeyboardEvent, type ChangeEvent } from "react";
 import type { PersistentTeam } from "@/types/game";
 import { DEFAULT_TEAM_COLORS } from "@/components/ui/color-picker";
 
@@ -18,19 +18,22 @@ export const useTeamForm = ({ open, team, onSubmit, onClose }: UseTeamFormProps)
 
   const isEditing = !!team;
 
-  // Reset form when dialog opens/closes or team changes
-  useEffect(() => {
+  // Reset form when dialog opens (render-time state adjustment)
+  const [prevOpen, setPrevOpen] = useState(false);
+  if (open !== prevOpen) {
+    setPrevOpen(open);
     if (open) {
       if (team) {
         setName(team.name);
         setColor(team.color || DEFAULT_TEAM_COLORS[0]);
       } else {
         setName("");
+        // eslint-disable-next-line react-hooks/purity -- intentional random default color on dialog open
         setColor(DEFAULT_TEAM_COLORS[Math.floor(Math.random() * DEFAULT_TEAM_COLORS.length)]);
       }
       setError("");
     }
-  }, [open, team]);
+  }
 
   const handleNameChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
     setName(e.target.value);

@@ -1,7 +1,6 @@
 "use client";
 
 import { useApp } from "./AppContext";
-import type { Competition, CompetitionType, Match } from "@/types/game";
 
 /**
  * Hook for competition-related operations.

@@ -1,4 +1,4 @@
-import type { Match, PersistentTeam, Competition } from "@/types/game";
+import type { Match } from "@/types/game";
 
 export interface RotationViewContext {
   getTeamName: (teamId: string) => string;

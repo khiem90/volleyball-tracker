@@ -6,12 +6,12 @@ import { Navigation } from "@/components/Navigation";
 import { FormationCard, FormationEditorModal, ShareFormationDialog } from "@/components/volleyball";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { useUserFormations } from "@/hooks/useUserFormations";
-import { getTemplateFormations, cloneFormationData } from "@/lib/volleyball/templateFormations";
+import { getTemplateFormations } from "@/lib/volleyball/templateFormations";
 import type { UserFormation, FormationData, FormationVisibility } from "@/lib/volleyball/types";
 import { MotionDiv, slideUp } from "@/components/motion";
 
 export default function MyFormationsPage() {
-  const { isLoading: authLoading, isAuthenticated, user } = useRequireAuth();
+  const { isLoading: authLoading, isAuthenticated } = useRequireAuth();
   const {
     formations,
     isLoading: formationsLoading,
@@ -19,7 +19,6 @@ export default function MyFormationsPage() {
     create,
     update,
     remove,
-    duplicate,
     share,
     unshare,
   } = useUserFormations();

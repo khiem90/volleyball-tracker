@@ -166,7 +166,7 @@ const RecentMatchItem = memo(({
 RecentMatchItem.displayName = "RecentMatchItem";
 
 export default function DashboardPage() {
-  const { isGuest, user } = useAuth();
+  const { isGuest } = useAuth();
   const {
     activeCompetitions,
     completedCompetitions,

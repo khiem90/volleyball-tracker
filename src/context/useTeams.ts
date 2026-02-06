@@ -2,7 +2,6 @@
 
 import { useCallback } from "react";
 import { useApp } from "./AppContext";
-import type { PersistentTeam } from "@/types/game";
 
 /**
  * Hook for team-related operations.

@@ -5,17 +5,15 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Navigation } from "@/components/Navigation";
 import { VolleyballCourt, RotationControls, LegendPanel } from "@/components/volleyball";
-import { useAuth } from "@/context/AuthContext";
 import { useUserFormations } from "@/hooks/useUserFormations";
 import { getFormationByShareId } from "@/lib/volleyball/userFormations";
-import { buildPlayerPositions, buildMovementArrows } from "@/lib/volleyball/rotations";
 import { getOverlapConstraints } from "@/lib/volleyball/overlap";
 import type {
   UserFormation,
   RotationNumber,
   GameMode,
-  FormationType,
   PlayerPosition,
+  PlayerRole,
   MovementArrow,
 } from "@/lib/volleyball/types";
 import { PLAYER_COLORS, BACK_ROW_ZONES } from "@/lib/volleyball/constants";
@@ -27,7 +25,6 @@ export default function SharedFormationPage() {
   const router = useRouter();
   const shareId = params.shareId as string;
 
-  const { user, isLoading: authLoading } = useAuth();
   const { duplicate, isAuthenticated } = useUserFormations();
 
   const [formation, setFormation] = useState<UserFormation | null>(null);
@@ -129,7 +126,7 @@ export default function SharedFormationPage() {
     return Object.entries(frame.movementArrows)
       .filter(([, arrow]) => arrow !== undefined)
       .map(([role, arrow]) => ({
-        role: role as any,
+        role: role as PlayerRole,
         from: arrow!.from,
         to: arrow!.to,
       }));
