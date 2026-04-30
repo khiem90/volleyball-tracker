@@ -46,7 +46,7 @@ export const DEFAULT_COMPETITION_CONFIG: CompetitionConfig = {
 /**
  * Get a complete config by merging partial config with defaults
  */
-export const getCompetitionConfig = (
+const getCompetitionConfig = (
   partialConfig?: Partial<CompetitionConfig>
 ): CompetitionConfig => {
   if (!partialConfig) {

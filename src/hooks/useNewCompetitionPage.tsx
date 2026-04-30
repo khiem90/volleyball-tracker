@@ -36,7 +36,7 @@ export interface FormatOption {
   gradient: string;
 }
 
-export const formatOptions: FormatOption[] = [
+const formatOptions: FormatOption[] = [
   {
     type: "round_robin",
     label: "Round Robin",

@@ -6,7 +6,7 @@ const BYE_MARKER = "__BYE__";
 /**
  * Get the next power of 2 >= n
  */
-export const nextPowerOf2 = (n: number): number => {
+const nextPowerOf2 = (n: number): number => {
   let power = 1;
   while (power < n) power *= 2;
   return power;
@@ -15,7 +15,7 @@ export const nextPowerOf2 = (n: number): number => {
 /**
  * Get the largest power of 2 <= n
  */
-export const prevPowerOf2 = (n: number): number => {
+const prevPowerOf2 = (n: number): number => {
   let power = 1;
   while (power * 2 <= n) power *= 2;
   return power;
@@ -231,7 +231,7 @@ export const generateSingleEliminationBracket = (
 /**
  * Get the match that a winner advances to.
  */
-export const getNextMatchPosition = (
+const getNextMatchPosition = (
   round: number,
   position: number
 ): { round: number; position: number; slot: "home" | "away" } => {
@@ -282,7 +282,7 @@ export interface BracketMatch {
   awayTeamId?: string;
 }
 
-export const getBracketStructure = (
+const getBracketStructure = (
   matches: Match[],
   totalTeams: number
 ): BracketMatch[][] => {

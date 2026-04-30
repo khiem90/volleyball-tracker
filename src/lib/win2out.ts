@@ -93,7 +93,7 @@ export const generateInitialMatches = (
 /**
  * Legacy function for single court - generates first match only.
  */
-export const generateFirstMatch = (
+const generateFirstMatch = (
   competitionId: string,
   teamIds: string[]
 ): Omit<Match, "id" | "createdAt"> => {
@@ -343,7 +343,7 @@ export const getChampionCount = (state: Win2OutState, teamId: string): number =>
 /**
  * Get court info for a specific team.
  */
-export const getTeamCourt = (
+const getTeamCourt = (
   state: Win2OutState,
   teamId: string
 ): Win2OutCourt | null => {

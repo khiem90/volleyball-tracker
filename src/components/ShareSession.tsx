@@ -31,7 +31,7 @@ interface ShareSessionProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export const ShareSession = ({ open, onOpenChange }: ShareSessionProps) => {
+const ShareSession = ({ open, onOpenChange }: ShareSessionProps) => {
   const { session, role, getShareUrl, getAdminShareUrl, isSharedMode } = useSession();
 
   const [copiedLink, setCopiedLink] = useState(false);

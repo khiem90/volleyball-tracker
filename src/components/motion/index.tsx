@@ -17,7 +17,7 @@ import { motion, type Variants, type Transition } from "framer-motion";
 // ANIMATION VARIANTS (Simplified for performance)
 // ============================================
 
-export const fadeIn: Variants = {
+const fadeIn: Variants = {
   hidden: { opacity: 0 },
   visible: { 
     opacity: 1,
@@ -35,7 +35,7 @@ export const slideUp: Variants = {
 };
 
 // Number flip animation for scores - keep this one complex
-export const numberFlip: Variants = {
+const numberFlip: Variants = {
   initial: { opacity: 0, y: 15, scale: 0.9 },
   animate: { 
     opacity: 1, 
@@ -74,7 +74,7 @@ interface PageTransitionProps {
   className?: string;
 }
 
-export const PageTransition = memo(({ children, className }: PageTransitionProps) => {
+const PageTransition = memo(({ children, className }: PageTransitionProps) => {
   return (
     <div className={`animate-fade-in ${className || ""}`}>
       {children}

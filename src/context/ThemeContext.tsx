@@ -31,11 +31,22 @@ function getSystemTheme(): ResolvedTheme {
     : "light";
 }
 
+function getInitialTheme(): Theme {
+  if (typeof window === "undefined") return "system";
+  const stored = localStorage.getItem(STORAGE_KEY) as Theme | null;
+  return stored || "system";
+}
+
+function getInitialResolvedTheme(): ResolvedTheme {
+  if (typeof window === "undefined") return "light";
+  const theme = getInitialTheme();
+  if (theme === "system") return getSystemTheme();
+  return theme;
+}
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  // SSR-safe defaults — real values are loaded from localStorage in the mount effect.
-  // A pre-hydration script in the root layout applies the correct class to <html> to prevent a flash.
-  const [theme, setThemeState] = useState<Theme>("system");
-  const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>("light");
+  const [theme, setThemeState] = useState<Theme>(getInitialTheme);
+  const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>(getInitialResolvedTheme);
   const mountedRef = useRef(false);
 
   // Resolve theme based on setting
@@ -53,15 +64,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     root.style.colorScheme = resolved;
   }, []);
 
-  // Load persisted theme and apply after mount (avoids SSR hydration mismatch)
+  // Apply theme on mount
   useEffect(() => {
-    const stored = (localStorage.getItem(STORAGE_KEY) as Theme | null) || "system";
-    const resolved = stored === "system" ? getSystemTheme() : stored;
-    setThemeState(stored);
-    setResolvedTheme(resolved);
-    applyTheme(resolved);
+    applyTheme(resolvedTheme);
     mountedRef.current = true;
-  }, [applyTheme]);
+  }, [applyTheme, resolvedTheme]);
 
   // Listen for system theme changes
   useEffect(() => {

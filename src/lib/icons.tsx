@@ -220,7 +220,7 @@ export const BracketIcon = React.memo(({ className }: { className?: string }) =>
 BracketIcon.displayName = "BracketIcon";
 
 // Double bracket icon for double elimination
-export const DoubleBracketIcon = React.memo(({ className }: { className?: string }) => (
+const DoubleBracketIcon = React.memo(({ className }: { className?: string }) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     fill="none"
@@ -296,7 +296,7 @@ export const RotationIcon = React.memo(({ className }: { className?: string }) =
 RotationIcon.displayName = "RotationIcon";
 
 // VS icon for match display
-export const VsIcon = React.memo(({ className }: { className?: string }) => (
+const VsIcon = React.memo(({ className }: { className?: string }) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     fill="none"

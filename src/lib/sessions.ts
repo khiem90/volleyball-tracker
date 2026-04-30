@@ -117,7 +117,7 @@ export const createSession = async (
 /**
  * Get a session by ID
  */
-export const getSessionById = async (sessionId: string): Promise<Session | null> => {
+const getSessionById = async (sessionId: string): Promise<Session | null> => {
   if (!db) return null;
   
   const docRef = doc(db, SESSIONS_COLLECTION, sessionId);
@@ -150,7 +150,7 @@ export const getSessionByShareCode = async (shareCode: string): Promise<Session 
 /**
  * Update session data
  */
-export const updateSession = async (
+const updateSession = async (
   sessionId: string,
   updates: Partial<Omit<Session, "id" | "shareCode" | "adminToken" | "createdAt">>
 ): Promise<void> => {
@@ -169,7 +169,7 @@ export const updateSession = async (
 /**
  * Update session competition
  */
-export const updateSessionCompetition = async (
+const updateSessionCompetition = async (
   sessionId: string,
   competition: Competition
 ): Promise<void> => {
@@ -179,7 +179,7 @@ export const updateSessionCompetition = async (
 /**
  * Update session teams
  */
-export const updateSessionTeams = async (
+const updateSessionTeams = async (
   sessionId: string,
   teams: PersistentTeam[]
 ): Promise<void> => {
@@ -189,7 +189,7 @@ export const updateSessionTeams = async (
 /**
  * Update session matches
  */
-export const updateSessionMatches = async (
+const updateSessionMatches = async (
   sessionId: string,
   matches: Match[]
 ): Promise<void> => {
@@ -225,7 +225,7 @@ export const deleteSession = async (sessionId: string): Promise<void> => {
 /**
  * Grant admin access to a user
  */
-export const grantAdminAccess = async (
+const grantAdminAccess = async (
   sessionId: string,
   userId: string
 ): Promise<void> => {
@@ -249,7 +249,7 @@ export const grantAdminAccess = async (
 /**
  * Revoke admin access from a user
  */
-export const revokeAdminAccess = async (
+const revokeAdminAccess = async (
   sessionId: string,
   userId: string
 ): Promise<void> => {
@@ -314,7 +314,7 @@ export const subscribeToSession = (
 /**
  * Subscribe to session by share code
  */
-export const subscribeToSessionByShareCode = (
+const subscribeToSessionByShareCode = (
   shareCode: string,
   callback: (session: Session | null) => void,
   onError?: (error: Error) => void
@@ -355,7 +355,7 @@ export const subscribeToSessionByShareCode = (
 /**
  * Check if a user has admin access to a session
  */
-export const hasAdminAccess = (
+const hasAdminAccess = (
   session: Session,
   userId: string | null,
   adminToken: string | null
@@ -512,7 +512,7 @@ export const createSessionSummary = async (
 /**
  * Get a summary by ID
  */
-export const getSummaryById = async (
+const getSummaryById = async (
   summaryId: string
 ): Promise<SessionSummary | null> => {
   if (!db) return null;

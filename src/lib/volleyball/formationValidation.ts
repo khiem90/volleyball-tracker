@@ -169,7 +169,7 @@ const validateOverlaps = (
 /**
  * Validate a single rotation frame
  */
-export const validateRotationFrame = (
+const validateRotationFrame = (
   frame: RotationFrame | undefined,
   rotation: RotationNumber,
   mode: GameMode,
@@ -271,7 +271,7 @@ export const getOverlapWarnings = (data: FormationData): FormationValidationErro
 /**
  * Validate a single position update (for real-time feedback)
  */
-export const validatePositionUpdate = (
+const validatePositionUpdate = (
   position: CourtPosition
 ): FormationValidationError | null => {
   if (!isValidPosition(position)) {
@@ -286,7 +286,7 @@ export const validatePositionUpdate = (
 /**
  * Get summary of validation errors
  */
-export const getValidationSummary = (
+const getValidationSummary = (
   errors: FormationValidationError[]
 ): { blocking: number; warnings: number; byRotation: Record<number, number> } => {
   const blocking = errors.filter((e) => e.type !== 'overlap').length;

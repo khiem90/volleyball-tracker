@@ -11,7 +11,7 @@ export const generateUndoId = (): string => {
 /**
  * Deep clone a competition including nested state objects
  */
-export const deepCloneCompetition = (competition: Competition): Competition => {
+const deepCloneCompetition = (competition: Competition): Competition => {
   return {
     ...competition,
     teamIds: [...competition.teamIds],
@@ -64,7 +64,7 @@ export const createSnapshot = (
 /**
  * Create a human-readable description for an undo action
  */
-export const createUndoDescription = (
+const createUndoDescription = (
   actionType: UndoActionType,
   winnerName?: string
 ): string => {

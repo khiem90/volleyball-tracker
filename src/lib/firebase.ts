@@ -42,4 +42,4 @@ if (typeof window !== "undefined" && isFirebaseConfigured()) {
   }
 }
 
-export { app, auth, db };
+export { auth, db };

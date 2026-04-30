@@ -145,7 +145,7 @@ const generateStandard51FormationData = (): FormationData => {
 // Template Definitions
 // ============================================
 
-export const TEMPLATE_FORMATIONS: TemplateFormation[] = [
+const TEMPLATE_FORMATIONS: TemplateFormation[] = [
   {
     id: 'neutral',
     name: 'Neutral / Empty',
@@ -180,7 +180,7 @@ export const cloneFormationData = (data: FormationData): FormationData => {
 };
 
 /** Convert built-in formation to FormationData for editing */
-export const builtinToFormationData = (formationType: string): FormationData => {
+const builtinToFormationData = (formationType: string): FormationData => {
   const serving: Record<RotationNumber, RotationFrame> = {} as Record<RotationNumber, RotationFrame>;
   const receiving: Record<RotationNumber, RotationFrame> = {} as Record<RotationNumber, RotationFrame>;
 

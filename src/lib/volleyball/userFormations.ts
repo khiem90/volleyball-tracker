@@ -36,7 +36,7 @@ const generateFormationId = (): string => {
 };
 
 /** Generate share ID (short, URL-safe) */
-export const generateShareId = (): string => {
+const generateShareId = (): string => {
   return nanoid(10);
 };
 
@@ -144,7 +144,7 @@ export const duplicateFormation = async (
 /**
  * Get a formation by ID
  */
-export const getFormationById = async (
+const getFormationById = async (
   formationId: string
 ): Promise<UserFormation | null> => {
   if (!db) return null;
@@ -223,7 +223,7 @@ export const updateFormation = async (
 /**
  * Update formation data (positions/arrows)
  */
-export const updateFormationData = async (
+const updateFormationData = async (
   formationId: string,
   data: FormationData
 ): Promise<void> => {
@@ -233,7 +233,7 @@ export const updateFormationData = async (
 /**
  * Update formation metadata
  */
-export const updateFormationMetadata = async (
+const updateFormationMetadata = async (
   formationId: string,
   metadata: {
     name?: string;
@@ -346,7 +346,7 @@ export const subscribeToUserFormations = (
 /**
  * Subscribe to a single formation (real-time updates)
  */
-export const subscribeToFormation = (
+const subscribeToFormation = (
   formationId: string,
   callback: (formation: UserFormation | null) => void,
   onError?: (error: Error) => void
@@ -381,7 +381,7 @@ export const subscribeToFormation = (
 /**
  * Check if a user owns a formation
  */
-export const isFormationOwner = (
+const isFormationOwner = (
   formation: UserFormation,
   userId: string | null
 ): boolean => {
@@ -391,7 +391,7 @@ export const isFormationOwner = (
 /**
  * Check if a formation can be viewed by a user
  */
-export const canViewFormation = (
+const canViewFormation = (
   formation: UserFormation,
   userId: string | null
 ): boolean => {
@@ -412,7 +412,7 @@ export const canViewFormation = (
 /**
  * Check if a formation can be edited by a user
  */
-export const canEditFormation = (
+const canEditFormation = (
   formation: UserFormation,
   userId: string | null
 ): boolean => {
