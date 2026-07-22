@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Matchbook Asset Pack</title>
+  <link rel="stylesheet" href="./tokens.css" />
+  <style>
+    *{box-sizing:border-box}body{margin:0;padding:40px;color:var(--mb-navy);background:var(--mb-paper) url('./textures/paper-grain.svg');font-family:var(--mb-body)}
+    main{max-width:1200px;margin:auto}.mast{display:flex;align-items:center;justify-content:space-between;border-bottom:4px solid var(--mb-navy);padding-bottom:20px}.mast img{width:300px}.mast b{font:900 46px/1 var(--mb-display);color:var(--mb-coral)}
+    h2{margin:38px 0 14px;border-top:2px solid var(--mb-navy);border-bottom:1px solid var(--mb-rule);padding:10px 0;font:900 30px/1 var(--mb-display);text-transform:uppercase}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px}.card{min-height:150px;padding:16px;border:1px solid var(--mb-rule);background:rgba(255,250,241,.7);display:grid;place-items:center;text-align:center}.card img{width:82px;height:96px}.card span{font:800 16px var(--mb-display);text-transform:uppercase}
+    .tokens{display:flex;flex-wrap:wrap;gap:10px}.swatch{width:140px;height:90px;padding:12px;color:white;font-weight:800;display:flex;align-items:flex-end}.paper{color:var(--mb-navy);border:1px solid var(--mb-rule)}
+    .icons{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px}.icon{padding:14px 8px;border:1px solid var(--mb-rule);display:grid;gap:8px;place-items:center;background:rgba(255,250,241,.55)}.icon svg{width:28px;height:28px}.icon code{font-size:11px}
+    .court{width:100%;max-width:760px;border:1px solid var(--mb-rule)}
+  </style>
+</head>
+<body><main>
+  <header class="mast"><img src="./brand/lockup.svg" alt="Tournament Tracker"/><b>Asset Pack</b></header>
+  <h2>Color tokens</h2><div class="tokens">
+    <div class="swatch paper" style="background:#f7f0e4">paper</div><div class="swatch" style="background:#07324d">navy</div><div class="swatch" style="background:#ee4b34">coral</div><div class="swatch" style="background:#148f89">teal</div><div class="swatch" style="background:#e6a01f">gold</div><div class="swatch" style="background:#5a347d">plum</div>
+  </div>
+  <h2>Team crests</h2><div class="grid">
+    <div class="card"><img src="./teams/surge.svg"/><span>Surge</span></div><div class="card"><img src="./teams/tide.svg"/><span>Tide</span></div><div class="card"><img src="./teams/storm.svg"/><span>Storm</span></div><div class="card"><img src="./teams/apex.svg"/><span>Apex</span></div><div class="card"><img src="./teams/flare.svg"/><span>Flare</span></div><div class="card"><img src="./teams/peak.svg"/><span>Peak</span></div><div class="card"><img src="./teams/nova.svg"/><span>Nova</span></div><div class="card"><img src="./teams/riptide.svg"/><span>Riptide</span></div>
+  </div>
+  <h2>Volleyball court</h2><img class="court" src="./diagrams/volleyball-court.svg" alt="Volleyball court"/>
+  <h2>Icon sprite</h2><div class="icons" id="icons"></div>
+</main><script>
+const ids=['overview','teams','quick','compete','history','tools','settings','help','bell','plus','export','import','share','print','save','search','filter','calendar','clock','location','volleyball','bracket','chart','swap','court','check','warning','live','menu','chevron-right','chevron-down','clipboard','star'];
+document.querySelector('#icons').innerHTML=ids.map(id=>`<div class="icon"><svg aria-hidden="true"><use href="./icons/sprite.svg#${id}"></use></svg><code>${id}</code></div>`).join('');
+</script></body></html>

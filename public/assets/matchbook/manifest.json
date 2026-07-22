@@ -1,0 +1,34 @@
+{
+  "name": "Tournament Tracker Matchbook Asset Pack",
+  "version": "1.1.0",
+  "basePath": "/assets/matchbook",
+  "tokens": "tokens.css",
+  "brand": {
+    "crest": "brand/crest.svg",
+    "lockup": "brand/lockup.svg"
+  },
+  "teams": {
+    "surge": "teams/surge.svg",
+    "tide": "teams/tide.svg",
+    "storm": "teams/storm.svg",
+    "apex": "teams/apex.svg",
+    "flare": "teams/flare.svg",
+    "peak": "teams/peak.svg",
+    "nova": "teams/nova.svg",
+    "riptide": "teams/riptide.svg"
+  },
+  "diagrams": {
+    "volleyballCourt": "diagrams/volleyball-court.svg"
+  },
+  "textures": {
+    "paperGrain": "textures/paper-grain.svg"
+  },
+  "iconSprite": "icons/sprite.svg",
+  "iconIds": [
+    "overview", "teams", "quick", "compete", "history", "tools",
+    "settings", "help", "bell", "plus", "export", "import", "share",
+    "print", "save", "search", "filter", "calendar", "clock", "location",
+    "volleyball", "bracket", "chart", "swap", "court", "check",
+    "warning", "live", "menu", "chevron-right", "chevron-down", "clipboard", "star"
+  ]
+}

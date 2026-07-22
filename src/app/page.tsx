@@ -1,450 +1,193 @@
 "use client";
 
-import { memo } from "react";
 import Link from "next/link";
-import { Navigation } from "@/components/Navigation";
-import {
-  UserGroupIcon,
-  TrophyIcon,
-  BoltIcon,
-  PlusIcon,
-  ClockIcon,
-  CheckCircleIcon,
-  ArrowRightIcon,
-  ChartBarIcon,
-  PlayIcon,
-  LockClosedIcon,
-  ArrowRightEndOnRectangleIcon,
-} from "@heroicons/react/24/outline";
-import { TrophyIcon as TrophySolid } from "@heroicons/react/24/solid";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { GlassCard, GlassCardContent, GlassCardHeader, GlassCardTitle, GlassCardDescription, StatCard } from "@/components/ui/glass-card";
-import { EmptyCompetitions, EmptyMatches } from "@/components/illustrations";
-import { DecorativeBackground } from "@/components/shared";
-import { useDashboardPage } from "@/hooks/useDashboardPage";
+import Image from "next/image";
 import { useAuth } from "@/context/AuthContext";
+import { MatchbookSidebar } from "@/components/matchbook/Sidebar";
+import { MbIcon } from "@/components/matchbook/MbIcon";
+import { useMatchbookDashboard } from "@/components/matchbook/useMatchbookDashboard";
+import {
+  BracketPanel,
+  LeadersPanel,
+  LiveCourtsPanel,
+  MatchOfTheDayPanel,
+  ReadinessPanel,
+  RecentResultsPanel,
+  SchedulePanel,
+  StandingsPanel,
+} from "@/components/matchbook/panels";
 
-// Memoized stat card wrapper - each card gets a different playful color
-const StatsGrid = memo(({
-  teamsCount,
-  activeCount,
-  completedCount,
-  matchesCount
-}: {
-  teamsCount: number;
-  activeCount: number;
-  completedCount: number;
-  matchesCount: number;
-}) => (
-  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10 animate-fade-in">
-    <StatCard
-      icon={<UserGroupIcon className="w-4 h-4" />}
-      label="Teams"
-      value={teamsCount}
-      iconColor="text-primary"
-      index={0}
-    />
-    <StatCard
-      icon={<ClockIcon className="w-4 h-4" />}
-      label="Active"
-      value={activeCount}
-      iconColor="text-amber-600"
-      index={1}
-    />
-    <StatCard
-      icon={<CheckCircleIcon className="w-4 h-4" />}
-      label="Done"
-      value={completedCount}
-      iconColor="text-emerald-600"
-      index={2}
-    />
-    <StatCard
-      icon={<ChartBarIcon className="w-4 h-4" />}
-      label="Matches"
-      value={matchesCount}
-      iconColor="text-sky-600"
-      index={3}
-    />
-  </div>
-));
-StatsGrid.displayName = "StatsGrid";
-
-// Memoized quick action card - more rounded and playful
-const QuickActionCard = memo(({
-  href,
-  icon: Icon,
-  title,
-  description,
-  gradientFrom,
-  gradientTo,
-  shadowColor,
-  badge
-}: {
-  href: string;
-  icon: React.ComponentType<{ className?: string }>;
-  title: string;
-  description: string;
-  gradientFrom: string;
-  gradientTo: string;
-  shadowColor: string;
-  badge?: React.ReactNode;
-}) => (
-  <Link href={href} className="block group">
-    <GlassCard className="h-full rounded-3xl">
-      <GlassCardHeader className="pb-2">
-        <div
-          className={`w-14 h-14 rounded-2xl bg-linear-to-br ${gradientFrom} ${gradientTo} flex items-center justify-center mb-4 group-hover:scale-105 transition-transform shadow-lg ${shadowColor}`}
-        >
-          <Icon className="w-7 h-7 text-white" />
-        </div>
-        <GlassCardTitle className="text-xl flex items-center gap-2 font-bold">
-          {title}
-          <ArrowRightIcon className="w-4 h-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
-        </GlassCardTitle>
-        <GlassCardDescription>
-          {description}
-          {badge}
-        </GlassCardDescription>
-      </GlassCardHeader>
-    </GlassCard>
-  </Link>
-));
-QuickActionCard.displayName = "QuickActionCard";
-
-// Memoized recent match item
-const RecentMatchItem = memo(({
-  match,
-  homeTeam,
-  awayTeam,
-  homeColor,
-  awayColor
-}: {
-  match: { id: string; homeScore: number; awayScore: number; winnerId?: string; homeTeamId: string; awayTeamId: string };
-  homeTeam: string;
-  awayTeam: string;
-  homeColor: string;
-  awayColor: string;
-}) => {
-  const homeWon = match.winnerId === match.homeTeamId;
-
-  return (
-    <div className="p-3 rounded-2xl bg-accent/50 border border-border">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          <div
-            className="w-3 h-3 rounded-full shrink-0 ring-2 ring-white shadow-sm"
-            style={{ backgroundColor: homeColor }}
-          />
-          <span className={`truncate text-sm ${homeWon ? "font-semibold text-emerald-600" : "text-muted-foreground"}`}>
-            {homeTeam}
-          </span>
-        </div>
-        <div className="flex items-center gap-3 shrink-0 px-3 py-1 rounded-xl bg-white shadow-soft-sm border border-border">
-          <span className={`text-lg font-mono font-bold ${homeWon ? "text-emerald-600" : "text-muted-foreground"}`}>
-            {match.homeScore}
-          </span>
-          <span className="text-xs text-muted-foreground">:</span>
-          <span className={`text-lg font-mono font-bold ${!homeWon ? "text-emerald-600" : "text-muted-foreground"}`}>
-            {match.awayScore}
-          </span>
-        </div>
-        <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
-          <span className={`truncate text-sm ${!homeWon ? "font-semibold text-emerald-600" : "text-muted-foreground"}`}>
-            {awayTeam}
-          </span>
-          <div
-            className="w-3 h-3 rounded-full shrink-0 ring-2 ring-white shadow-sm"
-            style={{ backgroundColor: awayColor }}
-          />
-        </div>
-      </div>
-    </div>
-  );
-});
-RecentMatchItem.displayName = "RecentMatchItem";
+const MOBILE_NAV = [
+  { href: "/", label: "Overview" },
+  { href: "/teams", label: "Teams" },
+  { href: "/quick-match", label: "Quick" },
+  { href: "/competitions", label: "Compete" },
+  { href: "/summaries", label: "History" },
+  { href: "/tools/volleyball-rotations", label: "Tools" },
+];
 
 export default function DashboardPage() {
-  const { isGuest } = useAuth();
-  const {
-    activeCompetitions,
-    completedCompetitions,
-    getMatchStats,
-    getTeamColor,
-    getTeamName,
-    matchesCount,
-    recentMatches,
-    teamsCount,
-  } = useDashboardPage();
+  const { user, isGuest } = useAuth();
+  const data = useMatchbookDashboard();
+  const year = data.season.split(" ")[0];
 
   return (
-    <div className="min-h-screen bg-background">
-      <DecorativeBackground variant="dashboard" />
+    <div className="matchbook-surface min-h-screen">
+      <div className="flex">
+        <MatchbookSidebar league={data.league} season={data.season} />
 
-      <Navigation />
-
-      <main className="relative max-w-6xl mx-auto px-4 pb-12">
-        {/* Hero Section */}
-        <div className="text-center pt-8 pb-12 animate-fade-in">
-          <h1 className="text-4xl md:text-6xl lg:text-7xl font-black tracking-tight mb-4">
-            <span className="text-foreground">Track.</span>{" "}
-            <span className="text-highlight text-primary">Score.</span>{" "}
-            <span className="text-foreground">Win.</span>
-          </h1>
-          <p className="text-muted-foreground text-lg md:text-xl max-w-2xl mx-auto mb-8">
-            {isGuest
-              ? "Try a quick match as a guest, or sign in to unlock all features."
-              : "Your ultimate tournament companion. Track scores, manage teams, and organize competitions with ease."}
-          </p>
-          <div className="flex flex-wrap justify-center gap-4">
-            <Link href="/quick-match">
-              <Button size="pill" variant="playful" className="gap-2 px-8">
-                <BoltIcon className="w-5 h-5" />
-                Quick Match
-              </Button>
-            </Link>
-            {!isGuest && (
-              <Link href="/competitions/new">
-                <Button size="pill" variant="outline" className="gap-2 px-8">
-                  <TrophyIcon className="w-5 h-5" />
-                  New Competition
-                </Button>
+        <div className="min-w-0 flex-1">
+          {/* Mobile brand bar + nav */}
+          <div className="lg:hidden border-b border-mb-rule">
+            <div className="flex items-center justify-between px-4 pt-4 pb-2">
+              <Link href="/" className="flex items-center gap-2.5">
+                <Image
+                  src="/assets/matchbook/brand/crest.svg"
+                  alt="Tournament Tracker crest"
+                  width={34}
+                  height={40}
+                  priority
+                />
+                <span className="matchbook-display text-[0.95rem] font-bold leading-none">
+                  <span className="text-mb-navy">Tournament </span>
+                  <span className="text-mb-coral">Tracker</span>
+                </span>
               </Link>
-            )}
+              <Link
+                href={isGuest ? "/login" : "/quick-match"}
+                className="mb-btn mb-btn-coral px-3 py-1.5 text-[0.7rem]"
+              >
+                {isGuest ? "Sign In" : "Quick Match"}
+              </Link>
+            </div>
+            <nav className="flex gap-1 overflow-x-auto px-2 pb-1 scrollbar-thin">
+              {MOBILE_NAV.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="matchbook-display shrink-0 px-3 py-1.5 text-[0.74rem] font-semibold tracking-[0.08em] text-mb-navy first:text-mb-coral"
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </nav>
           </div>
-        </div>
 
-        {/* Stats Overview - Only for authenticated users */}
-        {!isGuest && (
-          <StatsGrid
-            teamsCount={teamsCount}
-            activeCount={activeCompetitions.length}
-            completedCount={completedCompetitions.length}
-            matchesCount={matchesCount}
-          />
-        )}
-
-        {/* Guest Welcome Banner */}
-        {isGuest && (
-          <GlassCard hover={false} className="mb-10">
-            <GlassCardContent className="py-6">
-              <div className="flex flex-col md:flex-row items-center gap-6">
-                <div className="w-16 h-16 rounded-2xl bg-linear-to-br from-amber-400 to-orange-500 flex items-center justify-center shrink-0 shadow-lg">
-                  <TrophySolid className="w-8 h-8 text-white" />
+          <main className="px-4 py-5 sm:px-6 lg:px-8">
+            {/* Masthead */}
+            <header className="mb-5 flex flex-wrap items-center gap-x-6 gap-y-4">
+              <div className="flex items-center gap-4">
+                <h1
+                  className="matchbook-display text-4xl font-bold leading-none tracking-[0.01em] sm:text-5xl"
+                  suppressHydrationWarning
+                >
+                  The <span className="text-mb-coral">{year}</span> Season
+                </h1>
+                <div className="flex flex-col items-center border-[2px] border-mb-coral px-2.5 py-1 text-mb-coral">
+                  <span className="matchbook-display text-[0.6rem] font-bold tracking-[0.28em]">
+                    Week
+                  </span>
+                  <span
+                    className="matchbook-display text-2xl font-bold leading-none tabular-nums"
+                    suppressHydrationWarning
+                  >
+                    {data.week}
+                  </span>
                 </div>
-                <div className="flex-1 text-center md:text-left">
-                  <h3 className="text-xl font-bold mb-1">Welcome, Guest!</h3>
-                  <p className="text-muted-foreground">
-                    Try a quick match with default teams, or sign in to create custom teams, run tournaments, and save your match history.
+                <div className="hidden sm:block">
+                  <p
+                    className="matchbook-display text-[0.74rem] font-bold tracking-[0.1em]"
+                    suppressHydrationWarning
+                  >
+                    {data.dateLine}
                   </p>
+                  <p className="mb-kicker">{data.matchesCompleted} matches completed</p>
                 </div>
-                <Link href="/login" className="shrink-0">
-                  <Button variant="teal-gradient" className="gap-2 rounded-xl">
-                    <ArrowRightEndOnRectangleIcon className="w-4 h-4" />
-                    Sign In
-                  </Button>
-                </Link>
               </div>
-            </GlassCardContent>
-          </GlassCard>
-        )}
 
-        {/* Quick Actions Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
-          <QuickActionCard
-            href="/quick-match"
-            icon={BoltIcon}
-            title="Quick Match"
-            description={isGuest ? "Play a quick match with default teams" : "Start a quick match between two teams instantly"}
-            gradientFrom="from-primary"
-            gradientTo="to-red-400"
-            shadowColor="shadow-primary/25"
-          />
-          <QuickActionCard
-            href={isGuest ? "/login?redirect=/teams" : "/teams"}
-            icon={UserGroupIcon}
-            title="Manage Teams"
-            description="Create and organize your teams"
-            gradientFrom="from-sky-500"
-            gradientTo="to-blue-600"
-            shadowColor="shadow-sky-500/25"
-            badge={
-              !isGuest ? (
-                <Badge variant="secondary" className="ml-2 bg-sky-100 text-sky-600 border-sky-200 rounded-full dark:bg-sky-900/30 dark:text-sky-400 dark:border-sky-800">
-                  {teamsCount}
-                </Badge>
-              ) : undefined
-            }
-          />
-          <QuickActionCard
-            href={isGuest ? "/login?redirect=/competitions/new" : "/competitions/new"}
-            icon={TrophyIcon}
-            title="New Competition"
-            description="Create a tournament, round robin, or league"
-            gradientFrom="from-violet-500"
-            gradientTo="to-purple-600"
-            shadowColor="shadow-violet-500/25"
-          />
-        </div>
-
-        {/* Active Competitions & Recent Activity - Only for authenticated users */}
-        {!isGuest && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Active Competitions */}
-          <GlassCard hover={false}>
-            <GlassCardHeader className="flex flex-row items-center justify-between pb-2">
-              <div>
-                <GlassCardTitle className="flex items-center gap-2 text-lg">
-                  {activeCompetitions.length > 0 && (
-                    <span className="live-dot" />
+              <div className="ml-auto flex items-center gap-3">
+                <Link href="/competitions" className="mb-btn mb-btn-navy">
+                  <MbIcon id="plus" size={14} />
+                  Record Result
+                </Link>
+                <Link href="/quick-match" className="mb-btn mb-btn-coral">
+                  <MbIcon id="quick" size={14} />
+                  Quick Match
+                </Link>
+                <div className="relative hidden md:block" title="Notifications">
+                  <MbIcon id="bell" size={22} className="text-mb-navy" />
+                  {data.liveCourts.length > 0 && (
+                    <span className="matchbook-display absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-mb-coral text-[0.6rem] font-bold text-white">
+                      {data.liveCourts.length}
+                    </span>
                   )}
-                  Live Competitions
-                </GlassCardTitle>
-                <GlassCardDescription>Competitions in progress</GlassCardDescription>
-              </div>
-              <Link href="/competitions">
-                <Button variant="ghost" size="sm" className="gap-1 text-muted-foreground hover:text-foreground rounded-xl">
-                  View All
-                  <ArrowRightIcon className="w-3 h-3" />
-                </Button>
-              </Link>
-            </GlassCardHeader>
-            <div className="h-px bg-border mx-5" />
-            <GlassCardContent className="pt-4">
-              {activeCompetitions.length === 0 ? (
-                <div className="text-center py-6">
-                  <EmptyCompetitions className="w-32 h-32 mx-auto mb-4" />
-                  <p className="text-muted-foreground mb-3">No active competitions</p>
-                  <Link href="/competitions/new">
-                    <Button variant="outline" size="sm" className="gap-1 rounded-xl">
-                      <PlusIcon className="w-4 h-4" />
-                      Create one
-                    </Button>
-                  </Link>
                 </div>
-              ) : (
-                <div className="space-y-3">
-                  {activeCompetitions.slice(0, 3).map((comp) => {
-                    const matchStats = getMatchStats(comp.id);
-
-                    return (
-                      <Link
-                        key={comp.id}
-                        href={`/competitions/${comp.id}`}
-                        className="block p-4 rounded-xl bg-accent/50 hover:bg-accent border border-border hover:border-primary/30 transition-all duration-200 group"
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-linear-to-br from-primary to-red-400 flex items-center justify-center shadow-soft">
-                              <TrophySolid className="w-5 h-5 text-primary-foreground" />
-                            </div>
-                            <div>
-                              <p className="font-semibold group-hover:text-primary transition-colors">{comp.name}</p>
-                              <p className="text-xs text-muted-foreground capitalize">
-                                {comp.type.replace("_", " ")} • {comp.teamIds.length} teams
-                              </p>
-                            </div>
-                          </div>
-                          <Badge className="status-live gap-1">
-                            <PlayIcon className="w-3 h-3" />
-                            Live
-                          </Badge>
-                        </div>
-                        <div className="mt-3">
-                          <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                            <span>Progress</span>
-                            <span>{matchStats.completed}/{matchStats.total} matches</span>
-                          </div>
-                          <Progress value={matchStats.progress} className="h-1.5" />
-                        </div>
-                      </Link>
-                    );
-                  })}
-                </div>
-              )}
-            </GlassCardContent>
-          </GlassCard>
-
-          {/* Recent Matches */}
-          <GlassCard hover={false}>
-            <GlassCardHeader className="pb-2">
-              <GlassCardTitle className="flex items-center gap-2 text-lg">
-                <CheckCircleIcon className="w-5 h-5 text-emerald-600" />
-                Recent Results
-              </GlassCardTitle>
-              <GlassCardDescription>Latest completed matches</GlassCardDescription>
-            </GlassCardHeader>
-            <div className="h-px bg-border mx-5" />
-            <GlassCardContent className="pt-4">
-              {recentMatches.length === 0 ? (
-                <div className="text-center py-6">
-                  <EmptyMatches className="w-32 h-32 mx-auto mb-4" />
-                  <p className="text-muted-foreground mb-3">No matches played yet</p>
-                  <Link href="/quick-match">
-                    <Button variant="outline" size="sm" className="gap-1 rounded-xl">
-                      <PlusIcon className="w-4 h-4" />
-                      Start a match
-                    </Button>
-                  </Link>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {recentMatches.map((match) => (
-                    <RecentMatchItem
-                      key={match.id}
-                      match={match}
-                      homeTeam={getTeamName(match.homeTeamId)}
-                      awayTeam={getTeamName(match.awayTeamId)}
-                      homeColor={getTeamColor(match.homeTeamId)}
-                      awayColor={getTeamColor(match.awayTeamId)}
+                <Link
+                  href="/login"
+                  className="hidden items-center gap-2.5 md:flex"
+                  title={isGuest ? "Sign in" : user?.email ?? "Account"}
+                >
+                  <span className="flex h-10 w-10 items-center justify-center rounded-full border-[1.5px] border-mb-navy bg-mb-paper-bright">
+                    <Image
+                      src="/assets/matchbook/brand/crest.svg"
+                      alt=""
+                      width={24}
+                      height={28}
                     />
-                  ))}
-                </div>
-              )}
-            </GlassCardContent>
-          </GlassCard>
-        </div>
-        )}
-
-        {/* Guest Features Preview */}
-        {isGuest && (
-          <GlassCard hover={false}>
-            <GlassCardHeader>
-              <GlassCardTitle className="flex items-center gap-2 text-lg">
-                <LockClosedIcon className="w-5 h-5 text-primary" />
-                Unlock Full Features
-              </GlassCardTitle>
-              <GlassCardDescription>Sign in to access all Tournament Tracker features</GlassCardDescription>
-            </GlassCardHeader>
-            <div className="h-px bg-border mx-5" />
-            <GlassCardContent className="pt-4">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {[
-                  { icon: UserGroupIcon, label: "Custom Teams", description: "Create and manage your teams" },
-                  { icon: TrophyIcon, label: "Tournaments", description: "Run brackets and leagues" },
-                  { icon: ClockIcon, label: "Match History", description: "Track all your games" },
-                  { icon: ChartBarIcon, label: "Statistics", description: "View standings and stats" },
-                ].map((feature) => (
-                  <div key={feature.label} className="text-center p-4 rounded-xl bg-accent/30">
-                    <feature.icon className="w-8 h-8 mx-auto mb-2 text-primary" />
-                    <p className="font-medium text-sm">{feature.label}</p>
-                    <p className="text-xs text-muted-foreground">{feature.description}</p>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-6 text-center">
-                <Link href="/login">
-                  <Button variant="teal-gradient" size="lg" className="gap-2 rounded-xl">
-                    <ArrowRightEndOnRectangleIcon className="w-5 h-5" />
-                    Sign In to Unlock
-                  </Button>
+                  </span>
+                  <span className="matchbook-display text-[0.72rem] font-bold leading-tight tracking-[0.08em]">
+                    {isGuest ? (
+                      <>
+                        Sign In
+                        <br />
+                        <span className="text-mb-ink-muted">Account</span>
+                      </>
+                    ) : (
+                      <>
+                        League
+                        <br />
+                        Account
+                      </>
+                    )}
+                  </span>
+                  <MbIcon id="chevron-down" size={13} className="text-mb-ink-muted" />
                 </Link>
               </div>
-            </GlassCardContent>
-          </GlassCard>
-        )}
-      </main>
+            </header>
+
+            {/* Panel grid */}
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-12">
+              <div className="md:col-span-2 xl:col-span-7">
+                <StandingsPanel
+                  title={`${data.league} Standings`}
+                  rows={data.standings}
+                />
+              </div>
+              <div className="md:col-span-2 xl:col-span-5">
+                <MatchOfTheDayPanel match={data.featured} />
+              </div>
+              <div className="xl:col-span-4">
+                <LiveCourtsPanel courts={data.liveCourts} />
+              </div>
+              <div className="xl:col-span-4">
+                <SchedulePanel items={data.schedule} />
+              </div>
+              <div className="md:col-span-2 xl:col-span-4">
+                <BracketPanel bracket={data.bracket} />
+              </div>
+              <div className="xl:col-span-4">
+                <RecentResultsPanel results={data.recentResults} />
+              </div>
+              <div className="xl:col-span-4">
+                <ReadinessPanel rows={data.readiness} />
+              </div>
+              <div className="md:col-span-2 xl:col-span-4">
+                <LeadersPanel leaders={data.leaders} totals={data.seasonTotals} />
+              </div>
+            </div>
+          </main>
+        </div>
+      </div>
     </div>
   );
 }
