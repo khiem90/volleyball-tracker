@@ -14,13 +14,7 @@ const NAV_ITEMS = [
   { href: "/tools/volleyball-rotations", label: "Tools", icon: "tools" },
 ];
 
-export const MatchbookSidebar = ({
-  league,
-  season,
-}: {
-  league: string;
-  season: string;
-}) => {
+export const MatchbookSidebar = () => {
   const pathname = usePathname();
 
   return (
@@ -39,24 +33,6 @@ export const MatchbookSidebar = ({
           <span className="block text-mb-coral">Tracker</span>
         </span>
       </Link>
-
-      {/* League / season selectors */}
-      <div className="px-5 space-y-3 pb-4">
-        <div>
-          <p className="mb-kicker mb-1">League</p>
-          <div className="mb-select">
-            <span className="truncate">{league}</span>
-            <MbIcon id="chevron-down" size={13} className="shrink-0 text-mb-ink-muted" />
-          </div>
-        </div>
-        <div>
-          <p className="mb-kicker mb-1">Season</p>
-          <div className="mb-select">
-            <span className="truncate">{season}</span>
-            <MbIcon id="chevron-down" size={13} className="shrink-0 text-mb-ink-muted" />
-          </div>
-        </div>
-      </div>
 
       <div className="border-t border-mb-rule mx-5 mb-2" />
 
@@ -93,18 +69,8 @@ export const MatchbookSidebar = ({
           className="flex items-center gap-2.5 py-1.5 text-[0.8rem] font-medium text-mb-navy hover:text-mb-coral transition-colors"
         >
           <MbIcon id="settings" size={16} />
-          Settings
+          Account
         </Link>
-        <div
-          className="flex items-center justify-between py-1.5 text-[0.8rem] font-medium text-mb-navy cursor-default"
-          title="Coming soon"
-        >
-          <span className="flex items-center gap-2.5">
-            <MbIcon id="help" size={16} />
-            Help &amp; Support
-          </span>
-          <MbIcon id="chevron-right" size={13} className="text-mb-ink-muted" />
-        </div>
       </div>
     </aside>
   );

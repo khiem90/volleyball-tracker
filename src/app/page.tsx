@@ -34,7 +34,7 @@ export default function DashboardPage() {
   return (
     <div className="matchbook-surface min-h-screen">
       <div className="flex">
-        <MatchbookSidebar league={data.league} season={data.season} />
+        <MatchbookSidebar />
 
         <div className="min-w-0 flex-1">
           {/* Mobile brand bar + nav */}
@@ -101,7 +101,11 @@ export default function DashboardPage() {
                   >
                     {data.dateLine}
                   </p>
-                  <p className="mb-kicker">{data.matchesCompleted} matches completed</p>
+                  <p className="mb-kicker">
+                    {data.isDemo
+                      ? "Example season preview"
+                      : `${data.matchesCompleted} matches completed`}
+                  </p>
                 </div>
               </div>
 
@@ -114,14 +118,6 @@ export default function DashboardPage() {
                   <MbIcon id="quick" size={14} />
                   Quick Match
                 </Link>
-                <div className="relative hidden md:block" title="Notifications">
-                  <MbIcon id="bell" size={22} className="text-mb-navy" />
-                  {data.liveCourts.length > 0 && (
-                    <span className="matchbook-display absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-mb-coral text-[0.6rem] font-bold text-white">
-                      {data.liveCourts.length}
-                    </span>
-                  )}
-                </div>
                 <Link
                   href="/login"
                   className="hidden items-center gap-2.5 md:flex"
@@ -144,7 +140,7 @@ export default function DashboardPage() {
                       </>
                     ) : (
                       <>
-                        League
+                        My
                         <br />
                         Account
                       </>
@@ -155,34 +151,67 @@ export default function DashboardPage() {
               </div>
             </header>
 
+            {/* Example-data notice for accounts with no data yet */}
+            {data.isDemo && (
+              <div className="mb-demo-banner mb-5">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-sm border-[1.5px] border-mb-gold text-mb-gold">
+                  <MbIcon id="volleyball" size={26} />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="matchbook-display text-[0.9rem] font-bold tracking-[0.06em]">
+                    <span className="text-mb-gold">Exhibition Preview</span> — this is
+                    example data
+                  </p>
+                  <p className="text-[0.8rem] text-mb-ink-muted">
+                    Every panel below is filled with sample teams and scores to show
+                    what your dashboard will look like.{" "}
+                    {isGuest
+                      ? "Sign in to start tracking your own teams and matches."
+                      : "Create a team and record a match to see your own numbers here."}
+                  </p>
+                </div>
+                <Link
+                  href={isGuest ? "/login" : "/teams"}
+                  className="mb-btn mb-btn-navy shrink-0"
+                >
+                  {isGuest ? "Sign In to Get Started" : "Create Your First Team"}
+                </Link>
+              </div>
+            )}
+
             {/* Panel grid */}
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-12">
               <div className="md:col-span-2 xl:col-span-7">
                 <StandingsPanel
                   title={`${data.league} Standings`}
                   rows={data.standings}
+                  sample={data.isDemo}
                 />
               </div>
               <div className="md:col-span-2 xl:col-span-5">
-                <MatchOfTheDayPanel match={data.featured} />
+                <MatchOfTheDayPanel match={data.featured} sample={data.isDemo} />
               </div>
               <div className="xl:col-span-4">
-                <LiveCourtsPanel courts={data.liveCourts} />
+                <LiveCourtsPanel courts={data.liveCourts} sample={data.isDemo} />
               </div>
               <div className="xl:col-span-4">
-                <SchedulePanel items={data.schedule} />
+                <SchedulePanel items={data.schedule} sample={data.isDemo} />
               </div>
               <div className="md:col-span-2 xl:col-span-4">
-                <BracketPanel bracket={data.bracket} />
+                <BracketPanel bracket={data.bracket} sample={data.isDemo} />
               </div>
               <div className="xl:col-span-4">
-                <RecentResultsPanel results={data.recentResults} />
+                <RecentResultsPanel results={data.recentResults} sample={data.isDemo} />
               </div>
               <div className="xl:col-span-4">
-                <ReadinessPanel rows={data.readiness} />
+                <ReadinessPanel rows={data.readiness} sample={data.isDemo} />
               </div>
               <div className="md:col-span-2 xl:col-span-4">
-                <LeadersPanel leaders={data.leaders} totals={data.seasonTotals} />
+                <LeadersPanel
+                  leaders={data.leaders}
+                  totals={data.seasonTotals}
+                  sample={data.isDemo}
+                />
               </div>
             </div>
           </main>

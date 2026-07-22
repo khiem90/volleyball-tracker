@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { MbIcon } from "./MbIcon";
-import { Crest, FormLetters, FormSquares, Panel, PanelEmpty, TeamMark } from "./Panel";
+import { Crest, FormLetters, FormSquares, Panel, PanelEmpty, SampleChip, TeamMark } from "./Panel";
 import type {
   MbBracket,
   MbFeaturedMatch,
@@ -34,11 +34,13 @@ const statusColor = (percent: number) =>
 export const StandingsPanel = ({
   title,
   rows,
+  sample = false,
 }: {
   title: string;
   rows: MbStandingRow[];
+  sample?: boolean;
 }) => (
-  <Panel title={title} action="View Full Table" href="/competitions">
+  <Panel title={title} action="View Full Table" href="/competitions" sample={sample}>
     {rows.length === 0 ? (
       <PanelEmpty
         message="No standings yet — create teams and play matches to build the table."
@@ -97,12 +99,19 @@ export const StandingsPanel = ({
 
 /* ---------------------------- Match of the day ---------------------------- */
 
-export const MatchOfTheDayPanel = ({ match }: { match: MbFeaturedMatch | null }) => (
+export const MatchOfTheDayPanel = ({
+  match,
+  sample = false,
+}: {
+  match: MbFeaturedMatch | null;
+  sample?: boolean;
+}) => (
   <section className="mb-panel">
     <header className="flex items-center gap-2 bg-mb-navy px-4 py-2.5 text-mb-paper-bright">
       <MbIcon id="star" size={16} className="text-mb-gold" />
-      <h2 className="matchbook-display text-[0.95rem] font-bold tracking-[0.05em]">
+      <h2 className="matchbook-display flex items-center gap-2 text-[0.95rem] font-bold tracking-[0.05em]">
         Match of the Day
+        {sample && <SampleChip onDark />}
       </h2>
     </header>
     {!match ? (
@@ -178,8 +187,8 @@ export const MatchOfTheDayPanel = ({ match }: { match: MbFeaturedMatch | null })
 
 /* ------------------------------- Live courts ------------------------------ */
 
-export const LiveCourtsPanel = ({ courts }: { courts: MbLiveCourt[] }) => (
-  <Panel title="Live Courts" action="View All Courts" href="/competitions">
+export const LiveCourtsPanel = ({ courts, sample = false }: { courts: MbLiveCourt[]; sample?: boolean }) => (
+  <Panel title="Live Courts" action="View All Courts" href="/competitions" sample={sample}>
     {courts.length === 0 ? (
       <PanelEmpty
         message="No matches in play right now."
@@ -222,8 +231,8 @@ export const LiveCourtsPanel = ({ courts }: { courts: MbLiveCourt[] }) => (
 
 /* -------------------------------- Schedule -------------------------------- */
 
-export const SchedulePanel = ({ items }: { items: MbScheduleItem[] }) => (
-  <Panel title="Upcoming Schedule" action="View Full Schedule" href="/competitions">
+export const SchedulePanel = ({ items, sample = false }: { items: MbScheduleItem[]; sample?: boolean }) => (
+  <Panel title="Upcoming Schedule" action="View Full Schedule" href="/competitions" sample={sample}>
     {items.length === 0 ? (
       <PanelEmpty
         message="Nothing on the slate. Schedule matches from a competition."
@@ -273,8 +282,8 @@ export const SchedulePanel = ({ items }: { items: MbScheduleItem[] }) => (
 
 /* --------------------------------- Bracket -------------------------------- */
 
-export const BracketPanel = ({ bracket }: { bracket: MbBracket | null }) => (
-  <Panel title="Championship Bracket" action="View Full Bracket" href="/competitions">
+export const BracketPanel = ({ bracket, sample = false }: { bracket: MbBracket | null; sample?: boolean }) => (
+  <Panel title="Championship Bracket" action="View Full Bracket" href="/competitions" sample={sample}>
     {!bracket ? (
       <PanelEmpty
         message="Bracket appears once four or more teams are ranked."
@@ -329,8 +338,8 @@ export const BracketPanel = ({ bracket }: { bracket: MbBracket | null }) => (
 
 /* ----------------------------- Recent results ----------------------------- */
 
-export const RecentResultsPanel = ({ results }: { results: MbRecentResult[] }) => (
-  <Panel title="Recent Results" action="View All Results" href="/summaries">
+export const RecentResultsPanel = ({ results, sample = false }: { results: MbRecentResult[]; sample?: boolean }) => (
+  <Panel title="Recent Results" action="View All Results" href="/summaries" sample={sample}>
     {results.length === 0 ? (
       <PanelEmpty
         message="Results will land here as soon as a match wraps up."
@@ -366,8 +375,8 @@ export const RecentResultsPanel = ({ results }: { results: MbRecentResult[] }) =
 
 /* ----------------------------- Team readiness ----------------------------- */
 
-export const ReadinessPanel = ({ rows }: { rows: MbReadinessRow[] }) => (
-  <Panel title="Team Readiness" action="View All Teams" href="/teams">
+export const ReadinessPanel = ({ rows, sample = false }: { rows: MbReadinessRow[]; sample?: boolean }) => (
+  <Panel title="Team Readiness" action="View All Teams" href="/teams" sample={sample}>
     {rows.length === 0 ? (
       <PanelEmpty
         message="Add teams to track their form and readiness."
@@ -431,11 +440,13 @@ export const ReadinessPanel = ({ rows }: { rows: MbReadinessRow[] }) => (
 export const LeadersPanel = ({
   leaders,
   totals,
+  sample = false,
 }: {
   leaders: MbLeader[];
   totals: MbSeasonTotal[];
+  sample?: boolean;
 }) => (
-  <Panel title="Team Leaders" action="" href="">
+  <Panel title="Team Leaders" sample={sample}>
     {leaders.length === 0 ? (
       <PanelEmpty
         message="Leaders are crowned once matches are recorded."
