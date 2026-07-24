@@ -29,7 +29,6 @@ const MOBILE_NAV = [
 export default function DashboardPage() {
   const { user, isGuest } = useAuth();
   const data = useMatchbookDashboard();
-  const year = data.season.split(" ")[0];
 
   return (
     <div className="matchbook-surface min-h-screen">
@@ -77,23 +76,19 @@ export default function DashboardPage() {
             {/* Masthead */}
             <header className="mb-5 flex flex-wrap items-center gap-x-6 gap-y-4">
               <div className="flex items-center gap-4">
-                <h1
-                  className="matchbook-display text-4xl font-bold leading-none tracking-[0.01em] sm:text-5xl"
-                  suppressHydrationWarning
-                >
-                  The <span className="text-mb-coral">{year}</span> Season
+                <h1 className="matchbook-display text-4xl font-bold leading-none tracking-[0.01em] sm:text-5xl">
+                  Tournament Overview
                 </h1>
-                <div className="flex flex-col items-center border-[2px] border-mb-coral px-2.5 py-1 text-mb-coral">
-                  <span className="matchbook-display text-[0.6rem] font-bold tracking-[0.28em]">
-                    Week
-                  </span>
-                  <span
-                    className="matchbook-display text-2xl font-bold leading-none tabular-nums"
-                    suppressHydrationWarning
-                  >
-                    {data.week}
-                  </span>
-                </div>
+                {data.liveCourts.length > 0 && (
+                  <div className="flex flex-col items-center border-[2px] border-mb-coral px-2.5 py-1 text-mb-coral">
+                    <span className="matchbook-display text-[0.8rem] font-bold leading-tight tracking-[0.1em]">
+                      Live
+                    </span>
+                    <span className="matchbook-display text-[0.8rem] font-bold leading-tight tracking-[0.1em]">
+                      Now
+                    </span>
+                  </div>
+                )}
                 <div className="hidden sm:block">
                   <p
                     className="matchbook-display text-[0.74rem] font-bold tracking-[0.1em]"
@@ -178,7 +173,7 @@ export default function DashboardPage() {
               <div className="md:col-span-2 xl:col-span-4">
                 <LeadersPanel
                   leaders={data.leaders}
-                  totals={data.seasonTotals}
+                  totals={data.allTimeTotals}
                 />
               </div>
             </div>

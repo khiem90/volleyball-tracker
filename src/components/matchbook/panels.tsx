@@ -9,7 +9,7 @@ import type {
   MbReadinessRow,
   MbRecentResult,
   MbScheduleItem,
-  MbSeasonTotal,
+  MbStatTotal,
   MbStandingRow,
 } from "./types";
 
@@ -433,7 +433,7 @@ export const LeadersPanel = ({
   totals,
 }: {
   leaders: MbLeader[];
-  totals: MbSeasonTotal[];
+  totals: MbStatTotal[];
 }) => (
   <Panel title="Team Leaders">
     {leaders.length === 0 ? (
@@ -461,7 +461,7 @@ export const LeadersPanel = ({
     {totals.length > 0 && (
       <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-1 border-t-[1.5px] border-mb-navy px-4 py-2">
         <span className="matchbook-display text-[0.68rem] font-bold tracking-[0.08em]">
-          Season Totals
+          All-Time Totals
         </span>
         {totals.map((total) => (
           <span key={total.label} className="flex items-baseline gap-1.5">

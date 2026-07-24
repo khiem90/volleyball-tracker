@@ -89,17 +89,15 @@ export interface MbLeader {
   value: string;
 }
 
-export interface MbSeasonTotal {
+export interface MbStatTotal {
   label: string;
   value: string;
 }
 
 export interface MbDashboardData {
-  week: string;
   dateLine: string;
   matchesCompleted: number;
   league: string;
-  season: string;
   standings: MbStandingRow[];
   featured: MbFeaturedMatch | null;
   liveCourts: MbLiveCourt[];
@@ -108,7 +106,7 @@ export interface MbDashboardData {
   recentResults: MbRecentResult[];
   readiness: MbReadinessRow[];
   leaders: MbLeader[];
-  seasonTotals: MbSeasonTotal[];
+  allTimeTotals: MbStatTotal[];
 }
 
 export const crestPath = (slug: string) => `/assets/matchbook/teams/${slug}.svg`;

@@ -31,16 +31,8 @@ const shortTime = (ts?: number) =>
     ? new Date(ts).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
     : "TBD";
 
-const weekOfYear = (date: Date) => {
-  const start = new Date(date.getFullYear(), 0, 1);
-  const day = Math.floor((date.getTime() - start.getTime()) / 86_400_000);
-  return Math.min(52, Math.floor(day / 7) + 1);
-};
-
 const buildDashboard = (state: AppState): MbDashboardData => {
-  const now = new Date();
-  const week = String(weekOfYear(now)).padStart(2, "0");
-  const dateLine = now.toLocaleDateString("en-US", {
+  const dateLine = new Date().toLocaleDateString("en-US", {
     weekday: "long",
     month: "long",
     day: "numeric",
@@ -206,11 +198,9 @@ const buildDashboard = (state: AppState): MbDashboardData => {
   const activeCompetitions = state.competitions.filter((c) => c.status === "in_progress");
 
   return {
-    week,
     dateLine,
     matchesCompleted: completed.length,
     league: activeCompetitions[0]?.name ?? "League",
-    season: `${now.getFullYear()} Season`,
     standings,
     featured,
     liveCourts,
@@ -219,7 +209,7 @@ const buildDashboard = (state: AppState): MbDashboardData => {
     recentResults,
     readiness,
     leaders,
-    seasonTotals: [
+    allTimeTotals: [
       { label: "Teams", value: String(state.teams.length) },
       { label: "Matches", value: String(state.matches.length) },
       { label: "Points", value: totalPoints.toLocaleString("en-US") },
