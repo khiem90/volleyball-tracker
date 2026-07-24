@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "emulators": "firebase emulators:start --only auth --project demo-tournament-tracker",
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
@@ -42,6 +43,7 @@
     "@vitejs/plugin-react": "^5.1.3",
     "eslint": "^9",
     "eslint-config-next": "16.1.1",
+    "firebase-tools": "^15.24.0",
     "jsdom": "^28.0.0",
     "sharp": "^0.33.5",
     "tailwindcss": "^4",
