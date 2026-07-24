@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { MbIcon } from "./MbIcon";
-import { Crest, FormLetters, FormSquares, Panel, PanelEmpty, SampleChip, TeamMark } from "./Panel";
+import { Crest, FormLetters, FormSquares, Panel, PanelEmpty, TeamMark } from "./Panel";
 import type {
   MbBracket,
   MbFeaturedMatch,
@@ -11,7 +11,7 @@ import type {
   MbScheduleItem,
   MbSeasonTotal,
   MbStandingRow,
-} from "./demo-data";
+} from "./types";
 
 const FooterLink = ({ href, label }: { href: string; label: string }) => (
   <div className="border-t border-mb-rule px-4 py-2 text-center mt-auto">
@@ -34,16 +34,14 @@ const statusColor = (percent: number) =>
 export const StandingsPanel = ({
   title,
   rows,
-  sample = false,
 }: {
   title: string;
   rows: MbStandingRow[];
-  sample?: boolean;
 }) => (
-  <Panel title={title} action="View Full Table" href="/competitions" sample={sample}>
+  <Panel title={title} action="View Full Table" href="/competitions">
     {rows.length === 0 ? (
       <PanelEmpty
-        message="No standings yet — create teams and play matches to build the table."
+        message="No standings exist yet — create teams and play matches to build the table."
         actionLabel="Create a team"
         href="/teams"
       />
@@ -99,24 +97,17 @@ export const StandingsPanel = ({
 
 /* ---------------------------- Match of the day ---------------------------- */
 
-export const MatchOfTheDayPanel = ({
-  match,
-  sample = false,
-}: {
-  match: MbFeaturedMatch | null;
-  sample?: boolean;
-}) => (
+export const MatchOfTheDayPanel = ({ match }: { match: MbFeaturedMatch | null }) => (
   <section className="mb-panel">
     <header className="flex items-center gap-2 bg-mb-navy px-4 py-2.5 text-mb-paper-bright">
       <MbIcon id="star" size={16} className="text-mb-gold" />
-      <h2 className="matchbook-display flex items-center gap-2 text-[0.95rem] font-bold tracking-[0.05em]">
+      <h2 className="matchbook-display text-[0.95rem] font-bold tracking-[0.05em]">
         Match of the Day
-        {sample && <SampleChip onDark />}
       </h2>
     </header>
     {!match ? (
       <PanelEmpty
-        message="No completed matches yet. Your latest result will be featured here."
+        message="No match of the day exists yet — your latest completed match will be featured here."
         actionLabel="Start a match"
         href="/quick-match"
       />
@@ -187,11 +178,11 @@ export const MatchOfTheDayPanel = ({
 
 /* ------------------------------- Live courts ------------------------------ */
 
-export const LiveCourtsPanel = ({ courts, sample = false }: { courts: MbLiveCourt[]; sample?: boolean }) => (
-  <Panel title="Live Courts" action="View All Courts" href="/competitions" sample={sample}>
+export const LiveCourtsPanel = ({ courts }: { courts: MbLiveCourt[] }) => (
+  <Panel title="Live Courts" action="View All Courts" href="/competitions">
     {courts.length === 0 ? (
       <PanelEmpty
-        message="No matches in play right now."
+        message="No live matches exist yet — matches in progress will appear here."
         actionLabel="Start a quick match"
         href="/quick-match"
       />
@@ -231,11 +222,11 @@ export const LiveCourtsPanel = ({ courts, sample = false }: { courts: MbLiveCour
 
 /* -------------------------------- Schedule -------------------------------- */
 
-export const SchedulePanel = ({ items, sample = false }: { items: MbScheduleItem[]; sample?: boolean }) => (
-  <Panel title="Upcoming Schedule" action="View Full Schedule" href="/competitions" sample={sample}>
+export const SchedulePanel = ({ items }: { items: MbScheduleItem[] }) => (
+  <Panel title="Upcoming Schedule" action="View Full Schedule" href="/competitions">
     {items.length === 0 ? (
       <PanelEmpty
-        message="Nothing on the slate. Schedule matches from a competition."
+        message="No upcoming matches exist yet — start a competition to fill the schedule."
         actionLabel="New competition"
         href="/competitions/new"
       />
@@ -282,11 +273,11 @@ export const SchedulePanel = ({ items, sample = false }: { items: MbScheduleItem
 
 /* --------------------------------- Bracket -------------------------------- */
 
-export const BracketPanel = ({ bracket, sample = false }: { bracket: MbBracket | null; sample?: boolean }) => (
-  <Panel title="Championship Bracket" action="View Full Bracket" href="/competitions" sample={sample}>
+export const BracketPanel = ({ bracket }: { bracket: MbBracket | null }) => (
+  <Panel title="Championship Bracket" action="View Full Bracket" href="/competitions">
     {!bracket ? (
       <PanelEmpty
-        message="Bracket appears once four or more teams are ranked."
+        message="No bracket exists yet — it appears once four or more teams are ranked."
         actionLabel="Create a bracket"
         href="/competitions/new"
       />
@@ -338,11 +329,11 @@ export const BracketPanel = ({ bracket, sample = false }: { bracket: MbBracket |
 
 /* ----------------------------- Recent results ----------------------------- */
 
-export const RecentResultsPanel = ({ results, sample = false }: { results: MbRecentResult[]; sample?: boolean }) => (
-  <Panel title="Recent Results" action="View All Results" href="/summaries" sample={sample}>
+export const RecentResultsPanel = ({ results }: { results: MbRecentResult[] }) => (
+  <Panel title="Recent Results" action="View All Results" href="/summaries">
     {results.length === 0 ? (
       <PanelEmpty
-        message="Results will land here as soon as a match wraps up."
+        message="No results exist yet — finished matches will land here."
         actionLabel="Play a match"
         href="/quick-match"
       />
@@ -375,11 +366,11 @@ export const RecentResultsPanel = ({ results, sample = false }: { results: MbRec
 
 /* ----------------------------- Team readiness ----------------------------- */
 
-export const ReadinessPanel = ({ rows, sample = false }: { rows: MbReadinessRow[]; sample?: boolean }) => (
-  <Panel title="Team Readiness" action="View All Teams" href="/teams" sample={sample}>
+export const ReadinessPanel = ({ rows }: { rows: MbReadinessRow[] }) => (
+  <Panel title="Team Readiness" action="View All Teams" href="/teams">
     {rows.length === 0 ? (
       <PanelEmpty
-        message="Add teams to track their form and readiness."
+        message="No teams exist yet — add teams to track their form and readiness."
         actionLabel="Create a team"
         href="/teams"
       />
@@ -440,16 +431,14 @@ export const ReadinessPanel = ({ rows, sample = false }: { rows: MbReadinessRow[
 export const LeadersPanel = ({
   leaders,
   totals,
-  sample = false,
 }: {
   leaders: MbLeader[];
   totals: MbSeasonTotal[];
-  sample?: boolean;
 }) => (
-  <Panel title="Team Leaders" sample={sample}>
+  <Panel title="Team Leaders">
     {leaders.length === 0 ? (
       <PanelEmpty
-        message="Leaders are crowned once matches are recorded."
+        message="No team leaders exist yet — leaders are crowned once matches are recorded."
         actionLabel="Play a match"
         href="/quick-match"
       />

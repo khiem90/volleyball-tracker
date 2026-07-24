@@ -102,9 +102,7 @@ export default function DashboardPage() {
                     {data.dateLine}
                   </p>
                   <p className="mb-kicker">
-                    {data.isDemo
-                      ? "Example season preview"
-                      : `${data.matchesCompleted} matches completed`}
+                    {data.matchesCompleted} matches completed
                   </p>
                 </div>
               </div>
@@ -151,66 +149,36 @@ export default function DashboardPage() {
               </div>
             </header>
 
-            {/* Example-data notice for accounts with no data yet */}
-            {data.isDemo && (
-              <div className="mb-demo-banner mb-5">
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-sm border-[1.5px] border-mb-gold text-mb-gold">
-                  <MbIcon id="volleyball" size={26} />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="matchbook-display text-[0.9rem] font-bold tracking-[0.06em]">
-                    <span className="text-mb-gold">Exhibition Preview</span> — this is
-                    example data
-                  </p>
-                  <p className="text-[0.8rem] text-mb-ink-muted">
-                    Every panel below is filled with sample teams and scores to show
-                    what your dashboard will look like.{" "}
-                    {isGuest
-                      ? "Sign in to start tracking your own teams and matches."
-                      : "Create a team and record a match to see your own numbers here."}
-                  </p>
-                </div>
-                <Link
-                  href={isGuest ? "/login" : "/teams"}
-                  className="mb-btn mb-btn-navy shrink-0"
-                >
-                  {isGuest ? "Sign In to Get Started" : "Create Your First Team"}
-                </Link>
-              </div>
-            )}
-
             {/* Panel grid */}
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-12">
               <div className="md:col-span-2 xl:col-span-7">
                 <StandingsPanel
                   title={`${data.league} Standings`}
                   rows={data.standings}
-                  sample={data.isDemo}
                 />
               </div>
               <div className="md:col-span-2 xl:col-span-5">
-                <MatchOfTheDayPanel match={data.featured} sample={data.isDemo} />
+                <MatchOfTheDayPanel match={data.featured} />
               </div>
               <div className="xl:col-span-4">
-                <LiveCourtsPanel courts={data.liveCourts} sample={data.isDemo} />
+                <LiveCourtsPanel courts={data.liveCourts} />
               </div>
               <div className="xl:col-span-4">
-                <SchedulePanel items={data.schedule} sample={data.isDemo} />
+                <SchedulePanel items={data.schedule} />
               </div>
               <div className="md:col-span-2 xl:col-span-4">
-                <BracketPanel bracket={data.bracket} sample={data.isDemo} />
+                <BracketPanel bracket={data.bracket} />
               </div>
               <div className="xl:col-span-4">
-                <RecentResultsPanel results={data.recentResults} sample={data.isDemo} />
+                <RecentResultsPanel results={data.recentResults} />
               </div>
               <div className="xl:col-span-4">
-                <ReadinessPanel rows={data.readiness} sample={data.isDemo} />
+                <ReadinessPanel rows={data.readiness} />
               </div>
               <div className="md:col-span-2 xl:col-span-4">
                 <LeadersPanel
                   leaders={data.leaders}
                   totals={data.seasonTotals}
-                  sample={data.isDemo}
                 />
               </div>
             </div>

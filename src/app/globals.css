@@ -282,36 +282,6 @@
   white-space: nowrap;
 }
 
-.mb-sample-chip {
-  font-family: var(--mb-display-font);
-  font-size: 0.56rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--mb-gold);
-  border: 1px solid var(--mb-gold);
-  border-radius: 2px;
-  padding: 1px 5px;
-  line-height: 1.3;
-  white-space: nowrap;
-}
-
-.mb-sample-chip-dark {
-  color: var(--mb-gold);
-  border-color: var(--mb-gold);
-}
-
-.mb-demo-banner {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.9rem;
-  border: 2px dashed var(--mb-gold);
-  border-radius: 4px;
-  background: var(--mb-paper-bright);
-  box-shadow: 0 8px 22px rgba(57, 41, 23, 0.08);
-  padding: 0.7rem 1rem;
-}
 
 /* Mobile landscape mode - when height is limited, optimize for score visibility */
 @media (max-height: 500px) {

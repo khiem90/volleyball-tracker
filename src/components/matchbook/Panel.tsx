@@ -1,34 +1,25 @@
 import Link from "next/link";
 import Image from "next/image";
 import { MbIcon } from "./MbIcon";
-import type { MbFormResult, MbTeam } from "./demo-data";
-
-export const SampleChip = ({ onDark = false }: { onDark?: boolean }) => (
-  <span className={`mb-sample-chip ${onDark ? "mb-sample-chip-dark" : ""}`}>
-    Example
-  </span>
-);
+import type { MbFormResult, MbTeam } from "./types";
 
 export const Panel = ({
   title,
   action,
   href,
-  sample = false,
   children,
   className = "",
 }: {
   title: string;
   action?: string;
   href?: string;
-  sample?: boolean;
   children: React.ReactNode;
   className?: string;
 }) => (
   <section className={`mb-panel ${className}`}>
     <header className="mb-panel-head">
-      <h2 className="matchbook-display flex items-center gap-2 text-[0.95rem] font-bold tracking-[0.05em]">
+      <h2 className="matchbook-display text-[0.95rem] font-bold tracking-[0.05em]">
         {title}
-        {sample && <SampleChip />}
       </h2>
       {href && action && (
         <Link href={href} className="mb-panel-link">

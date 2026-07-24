@@ -2,7 +2,6 @@ import { useMemo } from "react";
 import { useApp } from "@/context/AppContext";
 import type { AppState, Match } from "@/types/game";
 import {
-  DEMO_DASHBOARD,
   crestForTeam,
   type MbDashboardData,
   type MbFormResult,
@@ -10,7 +9,7 @@ import {
   type MbReadinessStatus,
   type MbStandingRow,
   type MbTeam,
-} from "./demo-data";
+} from "./types";
 
 const ACCENTS = [
   "var(--mb-teal)",
@@ -40,7 +39,6 @@ const weekOfYear = (date: Date) => {
 
 const buildDashboard = (state: AppState): MbDashboardData => {
   const now = new Date();
-  const seasonTitle = `The ${now.getFullYear()} Season`;
   const week = String(weekOfYear(now)).padStart(2, "0");
   const dateLine = now.toLocaleDateString("en-US", {
     weekday: "long",
@@ -48,10 +46,6 @@ const buildDashboard = (state: AppState): MbDashboardData => {
     day: "numeric",
     year: "numeric",
   });
-
-  if (state.teams.length === 0 && state.matches.length === 0) {
-    return { ...DEMO_DASHBOARD, seasonTitle, week, dateLine };
-  }
 
   const teamRefs = new Map<string, MbTeam>(
     state.teams.map((t) => [t.id, { name: t.name, crest: crestForTeam(t.id, t.name) }])
@@ -212,12 +206,10 @@ const buildDashboard = (state: AppState): MbDashboardData => {
   const activeCompetitions = state.competitions.filter((c) => c.status === "in_progress");
 
   return {
-    isDemo: false,
-    seasonTitle,
     week,
     dateLine,
     matchesCompleted: completed.length,
-    league: activeCompetitions[0]?.name ?? "All Competitions",
+    league: activeCompetitions[0]?.name ?? "League",
     season: `${now.getFullYear()} Season`,
     standings,
     featured,
