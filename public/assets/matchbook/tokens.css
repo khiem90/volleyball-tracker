@@ -1,0 +1,31 @@
+:root {
+  --mb-paper: #f7f0e4;
+  --mb-paper-bright: #fffaf1;
+  --mb-navy: #07324d;
+  --mb-coral: #ee4b34;
+  --mb-teal: #148f89;
+  --mb-gold: #e6a01f;
+  --mb-plum: #5a347d;
+  --mb-green: #16885f;
+  --mb-red: #cf3f32;
+  --mb-ink-muted: #5d6c70;
+  --mb-rule: rgba(7, 50, 77, 0.28);
+  --mb-rule-strong: #07324d;
+  --mb-display: "Arial Narrow", "Roboto Condensed", Impact, sans-serif;
+  --mb-body: Inter, "Helvetica Neue", Arial, sans-serif;
+  --mb-shadow: 0 8px 22px rgba(57, 41, 23, 0.08);
+  --mb-radius: 4px;
+}
+
+.matchbook-surface {
+  color: var(--mb-navy);
+  background: var(--mb-paper) url("./textures/paper-grain.svg");
+  font-family: var(--mb-body);
+}
+
+.matchbook-display {
+  font-family: var(--mb-display);
+  font-stretch: condensed;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}

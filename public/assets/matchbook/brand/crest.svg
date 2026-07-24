@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 112" role="img" aria-labelledby="title">
+  <title id="title">Tournament Tracker crest</title>
+  <path d="M48 4 88 18v34c0 26-15 44-40 56C23 96 8 78 8 52V18Z" fill="#fffaf1" stroke="#07324d" stroke-width="6"/>
+  <path d="M48 11 81 23v28c0 21-11 36-33 48-22-12-33-27-33-48V23Z" fill="#07324d"/>
+  <path d="M48 11v88c22-12 33-27 33-48V23Z" fill="#ee4b34" opacity=".92"/>
+  <path d="M29 29h38v8c0 11-6 19-15 22v9h10v7H34v-7h10v-9C35 56 29 48 29 37Zm-8 2h9v7h-3c0 7 3 11 9 13l-3 6C24 54 21 47 21 31Zm54 0h-9v7h3c0 7-3 11-9 13l3 6c9-3 12-10 12-26Z" fill="#f7f0e4"/>
+</svg>
