@@ -7,12 +7,13 @@ type AuthMode = "signin" | "signup";
 export const useLoginPage = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, isLoading, signInWithGoogle, signInWithEmail, signUpWithEmail } = useAuth();
+  const { user, isLoading, signInWithGoogle, signInWithEmail, signUpWithEmail, resetPassword } = useAuth();
 
   const [mode, setMode] = useState<AuthMode>("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const redirectPath = searchParams.get("redirect") || "/";
@@ -26,6 +27,7 @@ export const useLoginPage = () => {
 
   const handleGoogleSignIn = useCallback(async () => {
     setError(null);
+    setNotice(null);
     setIsSubmitting(true);
     try {
       await signInWithGoogle();
@@ -49,6 +51,7 @@ export const useLoginPage = () => {
     }
 
     setError(null);
+    setNotice(null);
     setIsSubmitting(true);
 
     try {
@@ -80,7 +83,33 @@ export const useLoginPage = () => {
   const toggleMode = useCallback(() => {
     setMode((prev) => (prev === "signin" ? "signup" : "signin"));
     setError(null);
+    setNotice(null);
   }, []);
+
+  const handleForgotPassword = useCallback(async () => {
+    if (!email) {
+      setError("Enter your email above first, then tap Forgot Password.");
+      return;
+    }
+    setError(null);
+    setNotice(null);
+    setIsSubmitting(true);
+    try {
+      await resetPassword(email);
+      setNotice(`Password reset email sent to ${email}.`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Could not send reset email";
+      if (message.includes("auth/user-not-found")) {
+        setError("No account found with this email");
+      } else if (message.includes("auth/invalid-email")) {
+        setError("That email address doesn't look valid");
+      } else {
+        setError(message);
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [email, resetPassword]);
 
   const handleContinueAsGuest = useCallback(() => {
     router.push("/quick-match");
@@ -91,6 +120,7 @@ export const useLoginPage = () => {
     email,
     password,
     error,
+    notice,
     isLoading,
     isSubmitting,
     isAuthenticated: !!user,
@@ -98,6 +128,7 @@ export const useLoginPage = () => {
     setPassword,
     handleGoogleSignIn,
     handleEmailSubmit,
+    handleForgotPassword,
     toggleMode,
     handleContinueAsGuest,
   };

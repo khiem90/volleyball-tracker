@@ -173,6 +173,17 @@
   filter: none;
 }
 
+.mb-btn-outline-navy {
+  border-color: var(--mb-navy);
+  color: var(--mb-navy);
+  background: var(--mb-paper-bright);
+}
+
+.mb-btn-outline-navy:hover {
+  background: rgba(7, 50, 77, 0.06);
+  filter: none;
+}
+
 .mb-nav-item {
   display: flex;
   align-items: center;
@@ -302,6 +313,35 @@
 }
 
 .mb-search input::placeholder {
+  color: var(--mb-ink-muted);
+}
+
+.mb-input {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  border: 1.5px solid var(--mb-rule);
+  border-radius: 4px;
+  background: var(--mb-paper-bright);
+  padding: 0.6rem 0.8rem;
+  transition: border-color 0.15s ease;
+}
+
+.mb-input:focus-within {
+  border-color: var(--mb-navy);
+}
+
+.mb-input input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 0.9rem;
+  color: var(--mb-navy);
+}
+
+.mb-input input::placeholder {
   color: var(--mb-ink-muted);
 }
 
