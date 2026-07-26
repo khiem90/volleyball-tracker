@@ -2,9 +2,13 @@
 
 Implementation assets for the Tournament Tracker Matchbook screens.
 
+The product hierarchy is league → competition/event. Time filters use explicit
+date ranges or all-time records.
+
 ## Contents
 
 - `brand/`: crest and horizontal lockup
+- `auth/`: authentication-provider marks
 - `teams/`: eight original volleyball team crests
 - `diagrams/`: reusable top-down volleyball court
 - `icons/sprite.svg`: team- and tournament-level current-color UI symbols
@@ -44,6 +48,7 @@ section titles, issue badges, and large scores.
 | Screen | Primary assets |
 | --- | --- |
 | All screens | `brand/lockup.svg`, `icons/sprite.svg`, `textures/paper-grain.svg`, `tokens.css` |
+| Login | `brand/lockup.svg`, `auth/google-g.svg`, `teams/*.svg`, icons `mail`, `lock`, `login`, `quick`, `cloud`, `teams` |
 | Home | `teams/*.svg`, icons `overview`, `star`, `live`, `bracket`, `chart` |
 | Teams | `teams/*.svg`, icons `teams`, `compete`, `chart`, `share`, `export` |
 | Quick | `teams/*.svg`, icons `swap`, `court`, `clock`, `share`, `live` |

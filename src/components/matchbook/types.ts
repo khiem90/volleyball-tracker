@@ -109,6 +109,50 @@ export interface MbDashboardData {
   allTimeTotals: MbStatTotal[];
 }
 
+/* ----------------------------- Team directory ----------------------------- */
+
+export type MbTeamStatus = "ACTIVE" | "IDLE";
+
+export interface MbNextMatch {
+  date: string;
+  time: string;
+  opponent: MbTeam;
+  isHome: boolean;
+  competition: string;
+}
+
+export interface MbTeamRow {
+  id: string;
+  team: MbTeam;
+  color?: string;
+  competitions: string[];
+  played: number;
+  won: number;
+  lost: number;
+  pointsFor: number;
+  pointsAgainst: number;
+  nextMatch: MbNextMatch | null;
+  status: MbTeamStatus;
+  form: MbFormResult[];
+}
+
+export interface MbFormRow {
+  team: MbTeam;
+  form: MbFormResult[];
+  record: string;
+}
+
+export interface MbTeamsData {
+  dateLine: string;
+  matchesCompleted: number;
+  teamCount: number;
+  rows: MbTeamRow[];
+  snapshot: MbStatTotal[];
+  readiness: MbReadinessRow[];
+  fixtures: MbScheduleItem[];
+  recentForm: MbFormRow[];
+}
+
 export const crestPath = (slug: string) => `/assets/matchbook/teams/${slug}.svg`;
 
 const CREST_SLUGS = [

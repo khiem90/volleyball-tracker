@@ -7,30 +7,50 @@ export const Panel = ({
   title,
   action,
   href,
+  icon,
+  meta,
+  tone = "paper",
   children,
   className = "",
 }: {
   title: string;
   action?: string;
   href?: string;
+  /** Sprite icon id shown before the title. */
+  icon?: string;
+  /** Right-aligned header content used when there is no link action. */
+  meta?: React.ReactNode;
+  tone?: "paper" | "navy";
   children: React.ReactNode;
   className?: string;
-}) => (
-  <section className={`mb-panel ${className}`}>
-    <header className="mb-panel-head">
-      <h2 className="matchbook-display text-[0.95rem] font-bold tracking-[0.05em]">
-        {title}
-      </h2>
-      {href && action && (
-        <Link href={href} className="mb-panel-link">
-          {action}
-          <MbIcon id="chevron-right" size={11} />
-        </Link>
-      )}
-    </header>
-    {children}
-  </section>
-);
+}) => {
+  const navy = tone === "navy";
+  return (
+    <section className={`mb-panel ${className}`}>
+      <header
+        className={
+          navy
+            ? "flex items-center justify-between gap-3 bg-mb-navy px-4 py-2.5 text-mb-paper-bright"
+            : "mb-panel-head"
+        }
+      >
+        <h2 className="matchbook-display flex items-center gap-2 text-[0.95rem] font-bold tracking-[0.05em]">
+          {icon && <MbIcon id={icon} size={16} className={navy ? "text-mb-gold" : ""} />}
+          {title}
+        </h2>
+        {href && action ? (
+          <Link href={href} className="mb-panel-link">
+            {action}
+            <MbIcon id="chevron-right" size={11} />
+          </Link>
+        ) : (
+          meta
+        )}
+      </header>
+      {children}
+    </section>
+  );
+};
 
 export const Crest = ({ team, size = 26 }: { team: MbTeam; size?: number }) => (
   <Image
