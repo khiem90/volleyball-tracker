@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useAuth } from "@/context/AuthContext";
 import { MatchbookSidebar } from "@/components/matchbook/Sidebar";
+import { MatchbookMobileBar } from "@/components/matchbook/MobileBar";
 import { MbIcon } from "@/components/matchbook/MbIcon";
 import { useMatchbookDashboard } from "@/components/matchbook/useMatchbookDashboard";
 import {
@@ -17,15 +18,6 @@ import {
   StandingsPanel,
 } from "@/components/matchbook/panels";
 
-const MOBILE_NAV = [
-  { href: "/", label: "Overview" },
-  { href: "/teams", label: "Teams" },
-  { href: "/quick-match", label: "Quick" },
-  { href: "/competitions", label: "Compete" },
-  { href: "/summaries", label: "History" },
-  { href: "/tools/volleyball-rotations", label: "Tools" },
-];
-
 export default function DashboardPage() {
   const { user, isGuest } = useAuth();
   const data = useMatchbookDashboard();
@@ -36,41 +28,14 @@ export default function DashboardPage() {
         <MatchbookSidebar />
 
         <div className="min-w-0 flex-1">
-          {/* Mobile brand bar + nav */}
-          <div className="lg:hidden border-b border-mb-rule">
-            <div className="flex items-center justify-between px-4 pt-4 pb-2">
-              <Link href="/" className="flex items-center gap-2.5">
-                <Image
-                  src="/assets/matchbook/brand/crest.svg"
-                  alt="Tournament Tracker crest"
-                  width={34}
-                  height={40}
-                  priority
-                />
-                <span className="matchbook-display text-[0.95rem] font-bold leading-none">
-                  <span className="text-mb-navy">Tournament </span>
-                  <span className="text-mb-coral">Tracker</span>
-                </span>
-              </Link>
-              <Link
-                href={isGuest ? "/login" : "/quick-match"}
-                className="mb-btn mb-btn-coral px-3 py-1.5 text-[0.7rem]"
-              >
-                {isGuest ? "Sign In" : "Quick Match"}
-              </Link>
-            </div>
-            <nav className="flex gap-1 overflow-x-auto px-2 pb-1 scrollbar-thin">
-              {MOBILE_NAV.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="matchbook-display shrink-0 px-3 py-1.5 text-[0.74rem] font-semibold tracking-[0.08em] text-mb-navy first:text-mb-coral"
-                >
-                  {item.label}
-                </Link>
-              ))}
-            </nav>
-          </div>
+          <MatchbookMobileBar
+            active="/"
+            cta={
+              isGuest
+                ? { href: "/login", label: "Sign In" }
+                : { href: "/quick-match", label: "Quick Match" }
+            }
+          />
 
           <main className="px-4 py-5 sm:px-6 lg:px-8">
             {/* Masthead */}

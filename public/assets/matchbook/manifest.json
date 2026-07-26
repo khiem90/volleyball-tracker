@@ -1,11 +1,14 @@
 {
   "name": "Tournament Tracker Matchbook Asset Pack",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "basePath": "/assets/matchbook",
   "tokens": "tokens.css",
   "brand": {
     "crest": "brand/crest.svg",
     "lockup": "brand/lockup.svg"
+  },
+  "auth": {
+    "google": "auth/google-g.svg"
   },
   "teams": {
     "surge": "teams/surge.svg",
@@ -29,6 +32,7 @@
     "settings", "help", "bell", "plus", "export", "import", "share",
     "print", "save", "search", "filter", "calendar", "clock", "location",
     "volleyball", "bracket", "chart", "swap", "court", "check",
-    "warning", "live", "menu", "chevron-right", "chevron-down", "clipboard", "star"
+    "warning", "live", "menu", "chevron-right", "chevron-down", "clipboard", "star",
+    "mail", "lock", "login", "cloud"
   ]
 }

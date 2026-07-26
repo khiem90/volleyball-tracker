@@ -1,25 +1,31 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
-import { Navigation } from "@/components/Navigation";
-import { TeamCard } from "@/components/TeamCard";
-import { TeamForm } from "@/components/dialogs/team-form";
-import { QuickAddTeams } from "@/components/QuickAddTeams";
-import { Button } from "@/components/ui/button";
-import {
-  PlusIcon,
-  SparklesIcon,
-  MagnifyingGlassIcon,
-} from "@heroicons/react/24/outline";
-import { Input } from "@/components/ui/input";
-import { MotionDiv, StaggerContainer, StaggerItem } from "@/components/motion";
-import { EmptyTeams } from "@/components/illustrations";
-import { PageLoadingSpinner, EmptyState, DecorativeBackground, PageHeader } from "@/components/shared";
+import { useMemo, useState } from "react";
+import Link from "next/link";
+import Image from "next/image";
+import { useAuth } from "@/context/AuthContext";
 import { useTeamsPage } from "@/hooks/useTeamsPage";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
+import { PageLoadingSpinner, DeleteConfirmDialog } from "@/components/shared";
+import { TeamForm } from "@/components/dialogs/team-form";
+import { QuickAddTeams } from "@/components/QuickAddTeams";
+import { MatchbookSidebar } from "@/components/matchbook/Sidebar";
+import { MatchbookMobileBar } from "@/components/matchbook/MobileBar";
+import { MbIcon } from "@/components/matchbook/MbIcon";
+import { useMatchbookTeams } from "@/components/matchbook/useMatchbookTeams";
+import {
+  ClubSnapshotPanel,
+  RecentFormPanel,
+  TeamDirectoryPanel,
+  TeamProfilePanel,
+  TeamReadinessPanel,
+  UpcomingFixturesPanel,
+} from "@/components/matchbook/teamPanels";
 
 export default function TeamsPage() {
   const { isLoading, isAuthenticated } = useRequireAuth();
+  const { user, isGuest } = useAuth();
+  const data = useMatchbookTeams();
   const {
     teams,
     formOpen,
@@ -27,9 +33,6 @@ export default function TeamsPage() {
     quickAddOpen,
     setQuickAddOpen,
     editingTeam,
-    searchQuery,
-    setSearchQuery,
-    filteredTeams,
     handleCreateClick,
     handleQuickAddClick,
     handleEditTeam,
@@ -38,109 +41,146 @@ export default function TeamsPage() {
     handleQuickAddTeams,
   } = useTeamsPage();
 
+  const [search, setSearch] = useState("");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+
+  const filteredRows = useMemo(
+    () =>
+      data.rows.filter((row) =>
+        row.team.name.toLowerCase().includes(search.toLowerCase())
+      ),
+    [data.rows, search]
+  );
+
+  // Selection is derived: the user's pick while it exists, else the top row.
+  const effectiveId =
+    selectedId && data.rows.some((row) => row.id === selectedId)
+      ? selectedId
+      : data.rows[0]?.id ?? null;
+  const selectedRow = data.rows.find((row) => row.id === effectiveId) ?? null;
+  const selectedTeam = teams.find((team) => team.id === effectiveId) ?? null;
+
   if (isLoading || !isAuthenticated) {
     return <PageLoadingSpinner />;
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <DecorativeBackground variant="mirrored" />
-      <Navigation />
+    <div className="matchbook-surface min-h-screen">
+      <div className="flex">
+        <MatchbookSidebar />
 
-      <main className="relative max-w-6xl mx-auto px-4 pt-8 pb-12">
-        <PageHeader
-          title="Teams"
-          count={teams.length}
-          description="Manage your teams for competitions and matches"
-          className="mb-8"
-          actions={
-            <div className="flex items-center gap-2">
-              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                <Button variant="outline" onClick={handleQuickAddClick} className="gap-2 rounded-xl">
-                  <SparklesIcon className="w-4 h-4" />
-                  <span className="hidden sm:inline">Quick Add</span>
-                </Button>
-              </motion.div>
-              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                <Button onClick={handleCreateClick} variant="teal-gradient" className="gap-2 rounded-xl">
-                  <PlusIcon className="w-4 h-4" />
-                  <span className="hidden sm:inline">Add Team</span>
-                </Button>
-              </motion.div>
-            </div>
-          }
-        />
-
-        {/* Search Bar */}
-        <AnimatePresence>
-          {teams.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="relative mb-6"
-            >
-              <MagnifyingGlassIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-              <Input
-                type="text"
-                placeholder="Search teams..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-12 h-12 rounded-xl border-border focus:border-primary/50"
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Teams Grid */}
-        {teams.length === 0 ? (
-          <EmptyState
-            illustration={<EmptyTeams className="w-48 h-48 mx-auto mb-6" />}
-            title="No teams yet"
-            description="Create your first team to start organizing competitions and tracking matches."
-            actions={
-              <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                <Button variant="outline" onClick={handleQuickAddClick} className="gap-2 rounded-xl h-12" size="lg">
-                  <SparklesIcon className="w-5 h-5" />
-                  Quick Add Multiple Teams
-                </Button>
-                <Button onClick={handleCreateClick} variant="teal-gradient" className="gap-2 rounded-xl h-12" size="lg">
-                  <PlusIcon className="w-5 h-5" />
-                  Create Single Team
-                </Button>
-              </div>
-            }
+        <div className="min-w-0 flex-1">
+          <MatchbookMobileBar
+            active="/teams"
+            cta={{ href: "/quick-match", label: "Quick Match" }}
           />
-        ) : filteredTeams.length === 0 ? (
-          <MotionDiv
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-center py-16"
-          >
-            <div className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-accent flex items-center justify-center">
-              <MagnifyingGlassIcon className="w-10 h-10 text-muted-foreground/40" />
-            </div>
-            <p className="text-muted-foreground">
-              No teams match &quot;{searchQuery}&quot;
-            </p>
-          </MotionDiv>
-        ) : (
-          <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredTeams.map((team, index) => (
-              <StaggerItem key={team.id}>
-                <TeamCard
-                  team={team}
-                  onEdit={handleEditTeam}
-                  onDelete={handleDeleteTeam}
-                  index={index}
-                />
-              </StaggerItem>
-            ))}
-          </StaggerContainer>
-        )}
-      </main>
 
-      {/* Team Form Modal */}
+          <main className="px-4 py-5 sm:px-6 lg:px-8">
+            {/* Masthead */}
+            <header className="mb-5 flex flex-wrap items-center gap-x-6 gap-y-4">
+              <div className="flex items-center gap-4">
+                <h1 className="matchbook-display text-4xl font-bold leading-none tracking-[0.01em] sm:text-5xl">
+                  Team <span className="text-mb-coral">Directory</span>
+                </h1>
+                <div className="flex flex-col items-center border-[2px] border-mb-coral px-2.5 py-1 text-mb-coral">
+                  <span className="matchbook-display text-2xl font-bold leading-none tabular-nums">
+                    {data.teamCount}
+                  </span>
+                  <span className="matchbook-display text-[0.6rem] font-bold tracking-[0.28em]">
+                    Teams
+                  </span>
+                </div>
+                <div className="hidden sm:block">
+                  <p
+                    className="matchbook-display text-[0.74rem] font-bold tracking-[0.1em]"
+                    suppressHydrationWarning
+                  >
+                    {data.dateLine}
+                  </p>
+                  <p className="mb-kicker">
+                    {data.matchesCompleted} matches completed
+                  </p>
+                </div>
+              </div>
+
+              <div className="ml-auto flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleCreateClick}
+                  className="mb-btn mb-btn-navy"
+                >
+                  <MbIcon id="plus" size={14} />
+                  Add Team
+                </button>
+                <button
+                  type="button"
+                  onClick={handleQuickAddClick}
+                  className="mb-btn mb-btn-outline"
+                >
+                  <MbIcon id="import" size={14} />
+                  Quick Add
+                </button>
+                <Link
+                  href="/login"
+                  className="hidden items-center gap-2.5 md:flex"
+                  title={isGuest ? "Sign in" : user?.email ?? "Account"}
+                >
+                  <span className="flex h-10 w-10 items-center justify-center rounded-full border-[1.5px] border-mb-navy bg-mb-paper-bright">
+                    <Image
+                      src="/assets/matchbook/brand/crest.svg"
+                      alt=""
+                      width={24}
+                      height={28}
+                    />
+                  </span>
+                  <span className="matchbook-display text-[0.72rem] font-bold leading-tight tracking-[0.08em]">
+                    My
+                    <br />
+                    Account
+                  </span>
+                  <MbIcon id="chevron-down" size={13} className="text-mb-ink-muted" />
+                </Link>
+              </div>
+            </header>
+
+            {/* Panel grid */}
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-12">
+              <div className="md:col-span-2 xl:col-span-7">
+                <TeamDirectoryPanel
+                  rows={filteredRows}
+                  totalTeams={data.teamCount}
+                  selectedId={effectiveId}
+                  onSelect={setSelectedId}
+                  search={search}
+                  onSearchChange={setSearch}
+                />
+              </div>
+              <div className="md:col-span-2 xl:col-span-5 flex flex-col gap-4">
+                <ClubSnapshotPanel stats={data.snapshot} />
+                <div className="flex-1">
+                  <TeamReadinessPanel rows={data.readiness} />
+                </div>
+              </div>
+              <div className="md:col-span-2 xl:col-span-5">
+                <TeamProfilePanel
+                  row={selectedRow}
+                  onEdit={() => selectedTeam && handleEditTeam(selectedTeam)}
+                  onDelete={() => selectedTeam && setDeleteOpen(true)}
+                />
+              </div>
+              <div className="xl:col-span-4">
+                <UpcomingFixturesPanel items={data.fixtures} />
+              </div>
+              <div className="xl:col-span-3">
+                <RecentFormPanel rows={data.recentForm} />
+              </div>
+            </div>
+          </main>
+        </div>
+      </div>
+
+      {/* Create / edit team modal */}
       <TeamForm
         open={formOpen}
         onOpenChange={setFormOpen}
@@ -148,12 +188,28 @@ export default function TeamsPage() {
         onSubmit={handleFormSubmit}
       />
 
-      {/* Quick Add Teams Modal */}
+      {/* Bulk add modal */}
       <QuickAddTeams
         open={quickAddOpen}
         onOpenChange={setQuickAddOpen}
         onAddTeams={handleQuickAddTeams}
         existingTeamCount={teams.length}
+      />
+
+      {/* Delete confirmation */}
+      <DeleteConfirmDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title="Delete Team?"
+        description={
+          selectedRow
+            ? `This permanently removes ${selectedRow.team.name} and cannot be undone.`
+            : "This permanently removes the team and cannot be undone."
+        }
+        onConfirm={() => {
+          if (effectiveId) handleDeleteTeam(effectiveId);
+          setDeleteOpen(false);
+        }}
       />
     </div>
   );

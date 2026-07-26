@@ -23,9 +23,10 @@
   <h2>Team crests</h2><div class="grid">
     <div class="card"><img src="./teams/surge.svg"/><span>Surge</span></div><div class="card"><img src="./teams/tide.svg"/><span>Tide</span></div><div class="card"><img src="./teams/storm.svg"/><span>Storm</span></div><div class="card"><img src="./teams/apex.svg"/><span>Apex</span></div><div class="card"><img src="./teams/flare.svg"/><span>Flare</span></div><div class="card"><img src="./teams/peak.svg"/><span>Peak</span></div><div class="card"><img src="./teams/nova.svg"/><span>Nova</span></div><div class="card"><img src="./teams/riptide.svg"/><span>Riptide</span></div>
   </div>
+  <h2>Authentication</h2><div class="grid"><div class="card"><img src="./auth/google-g.svg"/><span>Google</span></div><div class="card"><img src="./brand/crest.svg"/><span>Team-only account identity</span></div></div>
   <h2>Volleyball court</h2><img class="court" src="./diagrams/volleyball-court.svg" alt="Volleyball court"/>
   <h2>Icon sprite</h2><div class="icons" id="icons"></div>
 </main><script>
-const ids=['overview','teams','quick','compete','history','tools','settings','help','bell','plus','export','import','share','print','save','search','filter','calendar','clock','location','volleyball','bracket','chart','swap','court','check','warning','live','menu','chevron-right','chevron-down','clipboard','star'];
+const ids=['overview','teams','quick','compete','history','tools','settings','help','bell','plus','export','import','share','print','save','search','filter','calendar','clock','location','volleyball','bracket','chart','swap','court','check','warning','live','menu','chevron-right','chevron-down','clipboard','star','mail','lock','login','cloud'];
 document.querySelector('#icons').innerHTML=ids.map(id=>`<div class="icon"><svg aria-hidden="true"><use href="./icons/sprite.svg#${id}"></use></svg><code>${id}</code></div>`).join('');
 </script></body></html>

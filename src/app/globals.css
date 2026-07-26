@@ -282,6 +282,29 @@
   white-space: nowrap;
 }
 
+.mb-search {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 1px solid var(--mb-rule);
+  border-radius: 4px;
+  background: var(--mb-paper-bright);
+  padding: 0.25rem 0.55rem;
+}
+
+.mb-search input {
+  width: 9rem;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 0.78rem;
+  color: var(--mb-navy);
+}
+
+.mb-search input::placeholder {
+  color: var(--mb-ink-muted);
+}
+
 
 /* Mobile landscape mode - when height is limited, optimize for score visibility */
 @media (max-height: 500px) {

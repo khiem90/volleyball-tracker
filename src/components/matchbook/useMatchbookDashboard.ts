@@ -1,12 +1,17 @@
 import { useMemo } from "react";
 import { useApp } from "@/context/AppContext";
-import type { AppState, Match } from "@/types/game";
+import type { AppState } from "@/types/game";
+import {
+  buildTeamTallies,
+  emptyTally,
+  readinessPercent,
+  readinessStatus,
+  recentForm,
+} from "./teamStats";
 import {
   crestForTeam,
   type MbDashboardData,
-  type MbFormResult,
   type MbLeader,
-  type MbReadinessStatus,
   type MbStandingRow,
   type MbTeam,
 } from "./types";
@@ -56,53 +61,19 @@ const buildDashboard = (state: AppState): MbDashboardData => {
     .filter((m) => m.status === "pending")
     .sort((a, b) => a.createdAt - b.createdAt);
 
-  // Per-team aggregates from completed matches (newest first).
-  interface Tally {
-    played: number;
-    won: number;
-    lost: number;
-    scoreFor: number;
-    scoreAgainst: number;
-    results: MbFormResult[];
-    streak: number;
-  }
-  const tallies = new Map<string, Tally>();
-  const tallyFor = (teamId: string): Tally => {
-    let t = tallies.get(teamId);
-    if (!t) {
-      t = { played: 0, won: 0, lost: 0, scoreFor: 0, scoreAgainst: 0, results: [], streak: 0 };
-      tallies.set(teamId, t);
-    }
-    return t;
-  };
-  const record = (match: Match, teamId: string, scored: number, conceded: number) => {
-    const t = tallyFor(teamId);
-    t.played += 1;
-    t.scoreFor += scored;
-    t.scoreAgainst += conceded;
-    const won = match.winnerId === teamId;
-    if (won) t.won += 1;
-    else t.lost += 1;
-    t.results.push(won ? "W" : "L");
-    if (t.results.length === t.streak + 1 && won) t.streak += 1;
-  };
-  for (const match of completed) {
-    if (match.isBye) continue;
-    record(match, match.homeTeamId, match.homeScore, match.awayScore);
-    record(match, match.awayTeamId, match.awayScore, match.homeScore);
-  }
+  const tallies = buildTeamTallies(completed);
 
   const rankedTeams = state.teams
     .map((team) => {
-      const t = tallies.get(team.id) ?? tallyFor(team.id);
+      const t = tallies.get(team.id) ?? emptyTally();
       const row: MbStandingRow = {
         team: refFor(team.id),
         played: t.played,
         won: t.won,
         lost: t.lost,
-        sets: `${t.scoreFor}–${t.scoreAgainst}`,
+        sets: `${t.pointsFor}–${t.pointsAgainst}`,
         points: t.won * 3,
-        form: t.results.slice(0, 5).reverse(),
+        form: recentForm(t),
       };
       return { teamId: team.id, row };
     })
@@ -175,23 +146,16 @@ const buildDashboard = (state: AppState): MbDashboardData => {
   }));
 
   const readiness = rankedTeams.map(({ teamId, row }) => {
-    const t = tallies.get(teamId);
-    const winRate = t && t.played > 0 ? t.won / t.played : 0;
-    const recent = t?.results.slice(0, 5) ?? [];
-    const recentRate =
-      recent.length > 0 ? recent.filter((r) => r === "W").length / recent.length : 0;
-    const percent = Math.round((winRate * 0.5 + recentRate * 0.5) * 100);
-    const status: MbReadinessStatus =
-      percent >= 85 ? "READY" : percent >= 65 ? "GOOD" : "NEEDS ATTN";
-    return { team: row.team, percent, form: recent.slice().reverse(), status };
+    const percent = readinessPercent(tallies.get(teamId));
+    return { team: row.team, percent, form: row.form, status: readinessStatus(percent) };
   });
 
   const byWins = [...tallies.entries()].sort((a, b) => b[1].won - a[1].won);
-  const byPoints = [...tallies.entries()].sort((a, b) => b[1].scoreFor - a[1].scoreFor);
+  const byPoints = [...tallies.entries()].sort((a, b) => b[1].pointsFor - a[1].pointsFor);
   const byStreak = [...tallies.entries()].sort((a, b) => b[1].streak - a[1].streak);
   const leaders: MbLeader[] = [];
   if (byWins[0]) leaders.push({ team: refFor(byWins[0][0]), stat: "Wins", value: String(byWins[0][1].won) });
-  if (byPoints[0]) leaders.push({ team: refFor(byPoints[0][0]), stat: "Points", value: String(byPoints[0][1].scoreFor) });
+  if (byPoints[0]) leaders.push({ team: refFor(byPoints[0][0]), stat: "Points", value: String(byPoints[0][1].pointsFor) });
   if (byStreak[0]) leaders.push({ team: refFor(byStreak[0][0]), stat: "Streak", value: String(byStreak[0][1].streak) });
 
   const totalPoints = completed.reduce((sum, m) => sum + m.homeScore + m.awayScore, 0);
