@@ -12,6 +12,7 @@ import {
   signInWithPopup,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
   signOut as firebaseSignOut,
   onAuthStateChanged,
   GoogleAuthProvider,
@@ -38,6 +39,7 @@ interface AuthContextValue {
   signInWithGoogle: () => Promise<void>;
   signInWithEmail: (email: string, password: string) => Promise<void>;
   signUpWithEmail: (email: string, password: string) => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
   // Admin token management (for anonymous admin access)
   getAdminToken: (sessionId: string) => string | null;
@@ -123,6 +125,17 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     [isConfigured]
   );
 
+  // Send a password reset email
+  const resetPassword = useCallback(
+    async (email: string) => {
+      if (!isConfigured || !auth) {
+        throw new Error("Firebase is not configured");
+      }
+      await sendPasswordResetEmail(auth, email);
+    },
+    [isConfigured]
+  );
+
   // Sign out
   const signOut = useCallback(async () => {
     if (!isConfigured || !auth) {
@@ -203,6 +216,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     signInWithGoogle,
     signInWithEmail,
     signUpWithEmail,
+    resetPassword,
     signOut,
     getAdminToken,
     setAdminToken,
