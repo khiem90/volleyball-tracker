@@ -9,7 +9,7 @@ const MOBILE_NAV = [
   { href: "/quick-match", label: "Quick" },
   { href: "/competitions", label: "Compete" },
   { href: "/summaries", label: "History" },
-  { href: "/tools/volleyball-rotations", label: "Tools" },
+  { href: "/tools", label: "Tools" },
 ];
 
 // Compact brand bar + horizontal nav shown below the lg breakpoint, where the
