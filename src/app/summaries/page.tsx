@@ -1,225 +1,461 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { motion } from "framer-motion";
-import { Navigation } from "@/components/Navigation";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { GlassCard, GlassCardContent, GlassCardHeader, GlassCardTitle, GlassCardDescription } from "@/components/ui/glass-card";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  TrophyIcon,
-  ShareIcon,
-  TrashIcon,
-  EllipsisVerticalIcon,
-  ArrowTopRightOnSquareIcon,
-  ClipboardIcon,
-  CheckIcon,
-  ArrowPathIcon,
-} from "@heroicons/react/24/outline";
-import { StaggerContainer, StaggerItem } from "@/components/motion";
-import { EmptyHistory } from "@/components/illustrations";
-import { PageLoadingSpinner, EmptyState, DeleteConfirmDialog, DecorativeBackground, PageHeader } from "@/components/shared";
-import { useSummariesPage } from "@/hooks/useSummariesPage";
+import Image from "next/image";
+import { useAuth } from "@/context/AuthContext";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
+import { useSummariesPage } from "@/hooks/useSummariesPage";
+import { PageLoadingSpinner, DeleteConfirmDialog } from "@/components/shared";
+import { MatchbookSidebar } from "@/components/matchbook/Sidebar";
+import { MatchbookMobileBar } from "@/components/matchbook/MobileBar";
+import { MbIcon } from "@/components/matchbook/MbIcon";
+import { Crest, Panel, PanelEmpty, TeamMark } from "@/components/matchbook/Panel";
+import { useMatchbookHistory } from "@/components/matchbook/useMatchbookHistory";
 
-export default function SummariesPage() {
+const SummaryStat = ({
+  icon,
+  label,
+  value,
+}: {
+  icon: string;
+  label: string;
+  value: string;
+}) => (
+  <div className="flex items-center gap-3">
+    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-[1.5px] border-mb-navy text-mb-navy">
+      <MbIcon id={icon} size={16} />
+    </span>
+    <div>
+      <p className="mb-kicker">{label}</p>
+      <p className="matchbook-display text-[1.15rem] font-bold leading-tight tabular-nums">
+        {value}
+      </p>
+    </div>
+  </div>
+);
+
+export default function HistoryPage() {
   const { isLoading: authLoading, isAuthenticated } = useRequireAuth();
-  const {
-    copiedId,
-    deleteTarget,
-    formatDate,
-    formatDuration,
-    getCompetitionTypeLabel,
-    handleCopyLink,
-    handleDelete,
-    handleOpenSummary,
-    isDeleting,
-    isLoading,
-    setDeleteTarget,
-    summaries,
-  } = useSummariesPage();
+  const { user } = useAuth();
+  const [competitionId, setCompetitionId] = useState("");
+  const [teamId, setTeamId] = useState("");
+  const [query, setQuery] = useState("");
+  const data = useMatchbookHistory({ competitionId, teamId, query });
+  const shared = useSummariesPage();
 
   if (authLoading || !isAuthenticated) {
     return <PageLoadingSpinner />;
   }
 
-  // Loading state
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Navigation />
-        <main className="max-w-6xl mx-auto px-4 pb-12">
-          <div className="flex items-center justify-center min-h-[60vh]">
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-            >
-              <ArrowPathIcon className="w-8 h-8 text-primary" />
-            </motion.div>
-          </div>
-        </main>
-      </div>
-    );
-  }
+  const report = data.report;
 
   return (
-    <div className="min-h-screen bg-background">
-      <DecorativeBackground />
-      <Navigation />
+    <div className="matchbook-surface min-h-screen">
+      <div className="flex">
+        <MatchbookSidebar />
 
-      <main className="relative max-w-6xl mx-auto px-4 pt-8 pb-12">
-        <PageHeader
-          title="Session History"
-          count={summaries.length}
-          description="View and share your completed session summaries"
-        />
-
-        {summaries.length === 0 ? (
-          <EmptyState
-            illustration={<EmptyHistory className="w-48 h-48 mx-auto mb-6" />}
-            title="No Session History"
-            description="When you end a shared session, a summary will be saved here so you can view and share the results later."
-            actions={
-              <Link href="/competitions/new">
-                <Button className="gap-2 cursor-pointer btn-teal-gradient rounded-xl" size="lg">
-                  <TrophyIcon className="w-5 h-5" />
-                  Create Competition
-                </Button>
-              </Link>
-            }
+        <div className="min-w-0 flex-1">
+          <MatchbookMobileBar
+            active="/summaries"
+            cta={{ href: "/quick-match", label: "Quick Match" }}
           />
-        ) : (
-          <StaggerContainer className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {summaries.map((summary) => (
-              <StaggerItem key={summary.id}>
-                <GlassCard
-                  className="group cursor-pointer"
-                  onClick={() => handleOpenSummary(summary.shareCode)}
+
+          <main className="px-4 py-5 sm:px-6 lg:px-8">
+            {/* Masthead */}
+            <header className="mb-5 flex flex-wrap items-center gap-x-6 gap-y-4">
+              <div className="flex items-center gap-4">
+                <h1 className="matchbook-display whitespace-nowrap text-4xl font-bold leading-none tracking-[0.01em] sm:text-5xl">
+                  Match <span className="text-mb-coral">Archive</span>
+                </h1>
+                <div className="flex flex-col items-center border-[2px] border-mb-coral px-2.5 py-1 text-mb-coral">
+                  <span className="matchbook-display text-2xl font-bold leading-none tabular-nums">
+                    {data.totalResults}
+                  </span>
+                  <span className="matchbook-display text-[0.6rem] font-bold tracking-[0.22em]">
+                    Results
+                  </span>
+                </div>
+                <div className="hidden sm:block">
+                  <p className="matchbook-display text-[0.74rem] font-bold tracking-[0.1em]">
+                    All-Time Archive
+                  </p>
+                  <p className="mb-kicker" suppressHydrationWarning>
+                    {data.dateLine}
+                  </p>
+                </div>
+              </div>
+
+              <div className="ml-auto flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={data.downloadCsv}
+                  disabled={data.filteredCount === 0}
+                  className="mb-btn mb-btn-navy disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  <GlassCardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1 min-w-0">
-                        <GlassCardTitle className="text-lg truncate group-hover:text-primary transition-colors">
-                          {summary.name}
-                        </GlassCardTitle>
-                        <GlassCardDescription className="flex items-center gap-2 mt-1">
-                          <Badge variant="outline" className="text-xs bg-accent/30">
-                            {getCompetitionTypeLabel(summary.competition?.type)}
-                          </Badge>
-                        </GlassCardDescription>
-                      </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                          >
-                            <EllipsisVerticalIcon className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="glass-card border-glass-border">
-                          <DropdownMenuItem
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOpenSummary(summary.shareCode);
-                            }}
-                            className="cursor-pointer"
-                          >
-                            <ArrowTopRightOnSquareIcon className="w-4 h-4 mr-2" />
-                            View Summary
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleCopyLink(summary);
-                            }}
-                            className="cursor-pointer"
-                          >
-                            {copiedId === summary.id ? (
-                              <CheckIcon className="w-4 h-4 mr-2 text-emerald-500" />
-                            ) : (
-                              <ClipboardIcon className="w-4 h-4 mr-2" />
-                            )}
-                            Copy Link
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setDeleteTarget(summary);
-                            }}
-                            className="text-destructive cursor-pointer"
-                          >
-                            <TrashIcon className="w-4 h-4 mr-2" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </GlassCardHeader>
-                  <GlassCardContent className="space-y-3 pt-0">
-                    <div className="grid grid-cols-3 gap-2 text-center">
-                      <div className="p-2 rounded-xl bg-accent/20">
-                        <div className="text-lg font-bold text-primary">
-                          {summary.stats.completedMatches}
-                        </div>
-                        <div className="text-xs text-muted-foreground">Matches</div>
-                      </div>
-                      <div className="p-2 rounded-xl bg-accent/20">
-                        <div className="text-lg font-bold">
-                          {summary.stats.totalTeams}
-                        </div>
-                        <div className="text-xs text-muted-foreground">Teams</div>
-                      </div>
-                      <div className="p-2 rounded-xl bg-accent/20">
-                        <div className="text-lg font-bold text-amber-400">
-                          {formatDuration(summary.stats.duration)}
-                        </div>
-                        <div className="text-xs text-muted-foreground">Duration</div>
-                      </div>
-                    </div>
+                  <MbIcon id="export" size={14} />
+                  Export CSV
+                </button>
+                <Link
+                  href="/login"
+                  className="hidden items-center gap-2.5 md:flex"
+                  title={user?.email ?? "Account"}
+                >
+                  <span className="flex h-10 w-10 items-center justify-center rounded-full border-[1.5px] border-mb-navy bg-mb-paper-bright">
+                    <Image src="/assets/matchbook/brand/crest.svg" alt="" width={24} height={28} />
+                  </span>
+                  <span className="matchbook-display text-[0.72rem] font-bold leading-tight tracking-[0.08em]">
+                    My
+                    <br />
+                    Account
+                  </span>
+                  <MbIcon id="chevron-down" size={13} className="text-mb-ink-muted" />
+                </Link>
+              </div>
+            </header>
 
-                    {summary.stats.winner && (
-                      <div className="flex items-center gap-2 p-2 rounded-xl bg-amber-500/10 border border-amber-500/20">
-                        <TrophyIcon className="w-4 h-4 text-amber-500" />
-                        <span className="text-sm font-medium truncate">
-                          {summary.stats.winner.teamName}
-                        </span>
-                        <Badge variant="secondary" className="ml-auto text-xs bg-amber-500/20 text-amber-400">
-                          {summary.stats.winner.wins} wins
-                        </Badge>
-                      </div>
-                    )}
+            {/* Filter bar */}
+            <div className="mb-4 flex flex-wrap items-end gap-3 border-y-[1.5px] border-mb-navy py-3">
+              <div className="w-44">
+                <p className="mb-kicker mb-1">Competition</p>
+                <div className="relative">
+                  <select
+                    className="mb-select-native"
+                    value={competitionId}
+                    onChange={(e) => setCompetitionId(e.target.value)}
+                    aria-label="Filter by competition"
+                  >
+                    <option value="">All Competitions</option>
+                    {data.filterOptions.competitions.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                  <MbIcon
+                    id="chevron-down"
+                    size={13}
+                    className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-mb-ink-muted"
+                  />
+                </div>
+              </div>
+              <div className="w-40">
+                <p className="mb-kicker mb-1">Team</p>
+                <div className="relative">
+                  <select
+                    className="mb-select-native"
+                    value={teamId}
+                    onChange={(e) => setTeamId(e.target.value)}
+                    aria-label="Filter by team"
+                  >
+                    <option value="">All Teams</option>
+                    {data.filterOptions.teams.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name}
+                      </option>
+                    ))}
+                  </select>
+                  <MbIcon
+                    id="chevron-down"
+                    size={13}
+                    className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-mb-ink-muted"
+                  />
+                </div>
+              </div>
+              <div className="min-w-[200px] flex-1">
+                <p className="mb-kicker mb-1">Search</p>
+                <div className="mb-input py-[0.45rem]">
+                  <input
+                    type="text"
+                    placeholder="Search matches, teams, competitions..."
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                  />
+                  <MbIcon id="search" size={15} className="shrink-0 text-mb-navy" />
+                </div>
+              </div>
+            </div>
 
-                    <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t border-border/20">
-                      <span>{formatDate(summary.endedAt)}</span>
-                      <div className="flex items-center gap-1">
-                        <ShareIcon className="w-3 h-3" />
-                        <span>{summary.shareCode}</span>
+            {/* Panel grid */}
+            <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
+              {/* Left column */}
+              <div className="flex flex-col gap-4 xl:col-span-7">
+                <Panel
+                  title="Results Ledger"
+                  meta={<span className="mb-kicker">{data.filteredCount} Results</span>}
+                >
+                  {data.days.length === 0 ? (
+                    <PanelEmpty
+                      message="No results exist yet — finished matches will be recorded here."
+                      actionLabel="Play a match"
+                      href="/quick-match"
+                    />
+                  ) : (
+                    <div className="flex flex-col">
+                      {data.days.map((day) => (
+                        <div key={day.label}>
+                          <div className="flex items-center justify-between border-b border-mb-rule bg-[rgba(7,50,77,0.05)] px-4 py-1.5">
+                            <p className="matchbook-display text-[0.7rem] font-bold tracking-[0.08em]">
+                              {day.label}
+                            </p>
+                            <p className="mb-kicker">
+                              {day.entries.length}{" "}
+                              {day.entries.length === 1 ? "match" : "matches"}
+                            </p>
+                          </div>
+                          {day.entries.map((entry) => (
+                            <button
+                              key={entry.id}
+                              type="button"
+                              onClick={() => data.selectMatch(entry.id)}
+                              className="grid w-full cursor-pointer grid-cols-[52px_1fr_auto_1fr_auto] items-center gap-2 border-b border-mb-rule px-4 py-2 text-left transition-colors hover:bg-[rgba(7,50,77,0.04)]"
+                              style={
+                                entry.id === data.selectedId
+                                  ? { boxShadow: "inset 3px 0 0 var(--mb-coral)" }
+                                  : undefined
+                              }
+                            >
+                              <span className="text-[0.68rem] text-mb-ink-muted">
+                                {entry.time}
+                              </span>
+                              <TeamMark team={entry.home} size={18} className="justify-self-start" />
+                              <span className="matchbook-display whitespace-nowrap text-[0.9rem] font-bold tabular-nums">
+                                {entry.homeScore} – {entry.awayScore}
+                              </span>
+                              <TeamMark team={entry.away} size={18} reverse className="justify-self-end" />
+                              <span className="hidden w-24 truncate text-right text-[0.64rem] text-mb-ink-muted lg:block">
+                                {entry.competition}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      ))}
+                      {data.filteredCount > 25 && (
+                        <p className="px-4 py-2 text-center text-[0.7rem] text-mb-ink-muted">
+                          Showing 25 of {data.filteredCount} results — refine filters or
+                          export the full CSV.
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </Panel>
+
+                <Panel title="Match Report">
+                  {!report ? (
+                    <PanelEmpty message="No match report exists yet — pick a result from the ledger to see its report." />
+                  ) : (
+                    <div className="flex flex-1 flex-col gap-4 p-5 sm:flex-row sm:items-center">
+                      <div className="flex flex-1 items-center justify-center gap-4">
+                        <div className="flex flex-col items-center gap-1.5">
+                          <Crest team={report.entry.home} size={56} />
+                          <span className="matchbook-display text-[0.85rem] font-bold">
+                            {report.entry.home.name}
+                          </span>
+                          <span className="mb-kicker">({report.homeRecord})</span>
+                        </div>
+                        <div className="text-center">
+                          <p className="matchbook-display text-5xl font-bold tabular-nums">
+                            {report.entry.homeScore} – {report.entry.awayScore}
+                          </p>
+                          <p className="mb-kicker mt-1">Final</p>
+                        </div>
+                        <div className="flex flex-col items-center gap-1.5">
+                          <Crest team={report.entry.away} size={56} />
+                          <span className="matchbook-display text-[0.85rem] font-bold">
+                            {report.entry.away.name}
+                          </span>
+                          <span className="mb-kicker">({report.awayRecord})</span>
+                        </div>
+                      </div>
+                      <div className="flex flex-1 flex-col gap-2.5 border-t border-mb-rule pt-3 sm:border-l sm:border-t-0 sm:pl-5 sm:pt-0">
+                        <div className="flex items-center gap-2.5">
+                          <MbIcon id="calendar" size={15} className="shrink-0 text-mb-navy" />
+                          <span className="text-[0.78rem] font-semibold">{report.date}</span>
+                        </div>
+                        <div className="flex items-center gap-2.5">
+                          <MbIcon id="clock" size={15} className="shrink-0 text-mb-navy" />
+                          <span className="text-[0.78rem] font-semibold">
+                            {report.entry.time}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2.5">
+                          <MbIcon id="compete" size={15} className="shrink-0 text-mb-navy" />
+                          <span className="text-[0.78rem] font-semibold">
+                            {report.entry.competition}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2.5">
+                          <MbIcon id="check" size={15} className="shrink-0 text-mb-green" />
+                          <span className="text-[0.78rem] font-semibold">
+                            Winner: {report.entry.winner.name}
+                          </span>
+                        </div>
+                        <p className="mb-kicker pt-1">
+                          All-time points — {report.entry.home.name}: {report.homePoints} ·{" "}
+                          {report.entry.away.name}: {report.awayPoints}
+                        </p>
                       </div>
                     </div>
-                  </GlassCardContent>
-                </GlassCard>
-              </StaggerItem>
-            ))}
-          </StaggerContainer>
-        )}
-      </main>
+                  )}
+                </Panel>
+              </div>
+
+              {/* Right column */}
+              <div className="flex flex-col gap-4 xl:col-span-5">
+                <Panel title="Archive Summary" tone="navy" icon="chart">
+                  {data.summary.matches === 0 ? (
+                    <PanelEmpty message="No archive exists yet — stats appear once matches are recorded." />
+                  ) : (
+                    <div className="grid grid-cols-2 gap-4 p-5">
+                      <SummaryStat
+                        icon="calendar"
+                        label="Matches Played"
+                        value={String(data.summary.matches)}
+                      />
+                      <SummaryStat
+                        icon="volleyball"
+                        label="Total Points"
+                        value={data.summary.points.toLocaleString("en-US")}
+                      />
+                      <SummaryStat icon="teams" label="Teams" value={String(data.summary.teams)} />
+                      <SummaryStat
+                        icon="chart"
+                        label="Avg Points / Match"
+                        value={data.summary.avgPoints}
+                      />
+                    </div>
+                  )}
+                </Panel>
+
+                <Panel
+                  title="Top Matchups"
+                  meta={<span className="mb-kicker">By Games Played</span>}
+                >
+                  {data.matchups.length === 0 ? (
+                    <PanelEmpty message="No matchups exist yet — rivalries build as teams replay each other." />
+                  ) : (
+                    <div className="flex flex-col divide-y divide-mb-rule">
+                      {data.matchups.map((m, i) => (
+                        <div
+                          key={i}
+                          className="grid grid-cols-[18px_auto_1fr_auto] items-center gap-2 px-4 py-2"
+                        >
+                          <span className="matchbook-display text-[0.8rem] font-bold text-mb-ink-muted">
+                            {i + 1}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Crest team={m.a} size={20} />
+                            <Crest team={m.b} size={20} />
+                          </span>
+                          <span className="min-w-0">
+                            <span className="matchbook-display block truncate text-[0.78rem] font-bold">
+                              {m.a.name} vs {m.b.name}
+                            </span>
+                            <span className="block text-[0.66rem] text-mb-ink-muted">
+                              {m.leader}
+                            </span>
+                          </span>
+                          <span className="matchbook-display text-[0.9rem] font-bold tabular-nums">
+                            {m.pct}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </Panel>
+
+                <Panel title="Recent Competitions" action="View All" href="/competitions">
+                  {data.competitions.length === 0 ? (
+                    <PanelEmpty message="No competitions exist yet." />
+                  ) : (
+                    <div className="flex flex-col divide-y divide-mb-rule">
+                      {data.competitions.map((c) => (
+                        <Link
+                          key={c.id}
+                          href={`/competitions/${c.id}`}
+                          className="grid grid-cols-[auto_1fr_auto] items-center gap-2.5 px-4 py-2 transition-colors hover:bg-[rgba(7,50,77,0.04)]"
+                        >
+                          <MbIcon id="compete" size={16} className="text-mb-gold" />
+                          <span className="min-w-0">
+                            <span className="matchbook-display block truncate text-[0.78rem] font-bold">
+                              {c.name}
+                            </span>
+                            <span className="block text-[0.66rem] text-mb-ink-muted">
+                              {c.range}
+                            </span>
+                          </span>
+                          <span className="mb-kicker">{c.matches} Matches</span>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </Panel>
+
+                <Panel title="Shared Reports">
+                  {shared.isLoading ? (
+                    <p className="p-4 text-center text-[0.8rem] text-mb-ink-muted">
+                      Loading shared reports…
+                    </p>
+                  ) : shared.summaries.length === 0 ? (
+                    <PanelEmpty message="No shared reports exist yet — end a session with sharing to save one." />
+                  ) : (
+                    <div className="flex flex-col divide-y divide-mb-rule">
+                      {shared.summaries.map((s) => (
+                        <div
+                          key={s.id}
+                          className="grid grid-cols-[auto_1fr_auto_auto_auto] items-center gap-2 px-4 py-2"
+                        >
+                          <MbIcon id="clipboard" size={15} className="text-mb-navy" />
+                          <span className="min-w-0">
+                            <span className="matchbook-display block truncate text-[0.78rem] font-bold">
+                              {s.name}
+                            </span>
+                            <span className="block text-[0.66rem] text-mb-ink-muted">
+                              {shared.formatDate(s.endedAt)}
+                            </span>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => shared.handleOpenSummary(s.shareCode)}
+                            className="mb-panel-link"
+                          >
+                            Open
+                            <MbIcon id="chevron-right" size={11} />
+                          </button>
+                          <button
+                            type="button"
+                            title="Copy share link"
+                            onClick={() => shared.handleCopyLink(s)}
+                            className="text-mb-ink-muted transition-colors hover:text-mb-navy"
+                          >
+                            <MbIcon id={shared.copiedId === s.id ? "check" : "share"} size={14} />
+                          </button>
+                          <button
+                            type="button"
+                            title="Delete shared report"
+                            onClick={() => shared.setDeleteTarget(s)}
+                            className="text-mb-ink-muted transition-colors hover:text-mb-red"
+                          >
+                            <MbIcon id="warning" size={14} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </Panel>
+              </div>
+            </div>
+          </main>
+        </div>
+      </div>
 
       <DeleteConfirmDialog
-        open={!!deleteTarget}
-        onOpenChange={() => setDeleteTarget(null)}
-        title="Delete Summary?"
-        description={<>This will permanently delete &quot;{deleteTarget?.name}&quot; and cannot be undone.</>}
-        onConfirm={handleDelete}
-        isDeleting={isDeleting}
-        className="glass-card border-glass-border"
+        open={!!shared.deleteTarget}
+        onOpenChange={(open) => !open && shared.setDeleteTarget(null)}
+        title="Delete Shared Report?"
+        description={`This will permanently delete "${shared.deleteTarget?.name ?? ""}" and its share link.`}
+        onConfirm={shared.handleDelete}
+        isDeleting={shared.isDeleting}
       />
     </div>
   );
