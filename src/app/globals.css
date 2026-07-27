@@ -345,6 +345,27 @@
   color: var(--mb-ink-muted);
 }
 
+.mb-select-native {
+  width: 100%;
+  appearance: none;
+  border: 1.5px solid var(--mb-navy);
+  border-radius: 4px;
+  background: var(--mb-paper-bright);
+  padding: 0.55rem 2.2rem 0.55rem 0.8rem;
+  font-family: var(--mb-display-font);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--mb-navy);
+  cursor: pointer;
+}
+
+.mb-select-native:focus {
+  outline: 2px solid var(--mb-coral);
+  outline-offset: 1px;
+}
+
 
 /* Mobile landscape mode - when height is limited, optimize for score visibility */
 @media (max-height: 500px) {

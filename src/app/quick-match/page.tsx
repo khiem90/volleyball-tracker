@@ -1,32 +1,125 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
-import { Navigation } from "@/components/Navigation";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { GlassCard, GlassCardContent } from "@/components/ui/glass-card";
-import { MotionDiv, springSmooth } from "@/components/motion";
-import {
-  UserGroupIcon,
-  BoltIcon,
-  PlusIcon,
-  ArrowsRightLeftIcon,
-} from "@heroicons/react/24/outline";
-import { SwordsIcon } from "@/lib/icons";
-import { DecorativeBackground } from "@/components/shared";
-import { useQuickMatchPage } from "@/hooks/useQuickMatchPage";
+import Link from "next/link";
+import Image from "next/image";
 import { useAuth } from "@/context/AuthContext";
-import { GuestQuickMatchView } from "./GuestQuickMatchView";
-import { QuickMatchHeader } from "./QuickMatchHeader";
-import { TeamSelectionCard } from "./TeamSelectionCard";
+import { useQuickMatchPage } from "@/hooks/useQuickMatchPage";
+import { PageLoadingSpinner } from "@/components/shared";
+import { MatchbookSidebar } from "@/components/matchbook/Sidebar";
+import { MatchbookMobileBar } from "@/components/matchbook/MobileBar";
+import { MbIcon } from "@/components/matchbook/MbIcon";
+import { Crest, FormLetters, Panel, PanelEmpty, TeamMark } from "@/components/matchbook/Panel";
+import {
+  useMatchbookQuickMatch,
+  type MbTeamFormSummary,
+} from "@/components/matchbook/useMatchbookQuickMatch";
+import { crestForTeam } from "@/components/matchbook/types";
+
+/* ------------------------- Small building blocks ------------------------- */
+
+const TeamSelect = ({
+  label,
+  value,
+  disabledId,
+  teams,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  disabledId: string;
+  teams: { id: string; name: string }[];
+  onChange: (id: string) => void;
+}) => (
+  <div className="min-w-0 flex-1">
+    <p className="mb-kicker mb-1 text-center">{label}</p>
+    <div className="flex flex-col items-center gap-2">
+      <Image
+        src={value ? crestForTeam(value, teams.find((t) => t.id === value)?.name ?? "") : "/assets/matchbook/brand/crest.svg"}
+        alt=""
+        width={56}
+        height={65}
+        className={value ? "" : "opacity-25 grayscale"}
+      />
+      <div className="relative w-full">
+        <select
+          className="mb-select-native"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          aria-label={label}
+        >
+          <option value="">Select team…</option>
+          {teams.map((team) => (
+            <option key={team.id} value={team.id} disabled={team.id === disabledId}>
+              {team.name}
+            </option>
+          ))}
+        </select>
+        <MbIcon
+          id="chevron-down"
+          size={14}
+          className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-mb-ink-muted"
+        />
+      </div>
+    </div>
+  </div>
+);
+
+const ScorePreviewSide = ({
+  summary,
+  placeholder,
+}: {
+  summary: MbTeamFormSummary | null;
+  placeholder: string;
+}) => (
+  <div className="flex flex-1 flex-col items-center gap-1.5">
+    {summary ? (
+      <>
+        <Crest team={summary.team} size={64} />
+        <span className="matchbook-display text-[0.95rem] font-bold">
+          {summary.team.name}
+        </span>
+        <span className="mb-kicker">({summary.record})</span>
+      </>
+    ) : (
+      <>
+        <Image
+          src="/assets/matchbook/brand/crest.svg"
+          alt=""
+          width={64}
+          height={74}
+          className="opacity-25 grayscale"
+        />
+        <span className="text-[0.8rem] text-mb-ink-muted">{placeholder}</span>
+      </>
+    )}
+  </div>
+);
+
+const FormStatRow = ({
+  left,
+  label,
+  right,
+}: {
+  left: string | number;
+  label: string;
+  right: string | number;
+}) => (
+  <div className="grid grid-cols-[1fr_auto_1fr] items-center border-b border-mb-rule py-1.5 text-[0.9rem] tabular-nums last:border-b-0">
+    <span className="matchbook-display font-bold">{left}</span>
+    <span className="mb-kicker">{label}</span>
+    <span className="matchbook-display text-right font-bold">{right}</span>
+  </div>
+);
+
+/* --------------------------------- Page ---------------------------------- */
 
 export default function QuickMatchPage() {
   const router = useRouter();
-  const { isGuest, isLoading } = useAuth();
+  const { isGuest, isLoading, user } = useAuth();
+  const data = useMatchbookQuickMatch();
   const {
     availableTeams,
-    awayTeam,
     awayTeamId,
     canStart,
     error,
@@ -35,262 +128,334 @@ export default function QuickMatchPage() {
     handleQuickCreateTeam,
     handleRandomSelect,
     handleStartMatch,
-    homeTeam,
+    handleSwapTeams,
     homeTeamId,
   } = useQuickMatchPage();
 
-  const handleGuestStartMatch = () => {
-    router.push("/match/guest");
-  };
-
-  // Guest Mode View
-  if (!isLoading && isGuest) {
-    return <GuestQuickMatchView onStartMatch={handleGuestStartMatch} />;
+  if (isLoading) {
+    return <PageLoadingSpinner />;
   }
 
-  // Authenticated User View
+  const guestHome = { name: "Team A", crest: crestForTeam("guest-team-a", "Team A") };
+  const guestAway = { name: "Team B", crest: crestForTeam("guest-team-b", "Team B") };
+
+  const homeSummary = isGuest
+    ? { team: guestHome, form: [], record: "0–0", won: 0, lost: 0, pointsFor: 0, pointsAgainst: 0 }
+    : data.summaryFor(homeTeamId || null);
+  const awaySummary = isGuest
+    ? { team: guestAway, form: [], record: "0–0", won: 0, lost: 0, pointsFor: 0, pointsAgainst: 0 }
+    : data.summaryFor(awayTeamId || null);
+
+  const startScoring = isGuest ? () => router.push("/match/guest") : handleStartMatch;
+  const startEnabled = isGuest || canStart;
+
   return (
-    <div className="min-h-screen bg-background">
-      <DecorativeBackground />
-      <Navigation />
+    <div className="matchbook-surface min-h-screen">
+      <div className="flex">
+        <MatchbookSidebar />
 
-      <main className="relative max-w-5xl mx-auto px-4 pt-8 pb-12">
-        <QuickMatchHeader subtitle="Start a quick match between two teams without creating a competition" />
+        <div className="min-w-0 flex-1">
+          <MatchbookMobileBar
+            active="/quick-match"
+            cta={isGuest ? { href: "/login", label: "Sign In" } : { href: "/teams", label: "Teams" }}
+          />
 
-        {/* No Teams State */}
-        {availableTeams.length < 2 ? (
-          <MotionDiv
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-          >
-            <GlassCard hover={false} className="text-center max-w-md mx-auto">
-              <GlassCardContent className="py-12">
-                <div className="w-20 h-20 mx-auto mb-4 rounded-3xl bg-muted/30 flex items-center justify-center">
-                  <UserGroupIcon className="w-10 h-10 text-muted-foreground/40" />
-                </div>
-                <h3 className="text-xl font-semibold mb-2">
-                  {availableTeams.length === 0
-                    ? "No teams available"
-                    : "Need at least 2 teams"}
-                </h3>
-                <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
-                  Create some teams first to start a quick match.
-                </p>
-                <Button onClick={handleQuickCreateTeam} className="gap-2 btn-teal-gradient rounded-xl" size="lg">
-                  <PlusIcon className="w-5 h-5" />
-                  Create Team
-                </Button>
-              </GlassCardContent>
-            </GlassCard>
-          </MotionDiv>
-        ) : (
-          <>
-            {/* Match Preview - VS Display */}
-            <MotionDiv
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-              className="mb-8"
-            >
-              <GlassCard hover={false} className="overflow-hidden">
-                <div className="h-1.5 w-full bg-linear-to-r from-sky-500 via-primary to-amber-500" />
-
-                <GlassCardContent className="py-10">
-                  <div className="flex items-center justify-center gap-4 md:gap-10">
-                    {/* Home Team */}
-                    <motion.div
-                      className="text-center flex-1"
-                      initial={{ x: -30, opacity: 0 }}
-                      animate={{ x: 0, opacity: 1 }}
-                      transition={{ delay: 0.3, type: "spring" }}
-                    >
-                      <AnimatePresence mode="wait">
-                        {homeTeam ? (
-                          <motion.div
-                            key={homeTeam.id}
-                            initial={{ scale: 0.8, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.8, opacity: 0 }}
-                            transition={springSmooth}
-                          >
-                            <div
-                              className="w-24 h-24 md:w-28 md:h-28 mx-auto mb-3 rounded-2xl flex items-center justify-center shadow-xl relative overflow-hidden"
-                              style={{
-                                background: `linear-gradient(135deg, ${homeTeam.color || "#3b82f6"}, ${homeTeam.color || "#3b82f6"}99)`,
-                                boxShadow: `0 12px 40px ${homeTeam.color || "#3b82f6"}50`,
-                              }}
-                            >
-                              <div className="absolute inset-0 bg-white/10" />
-                              <span className="text-3xl md:text-4xl font-bold text-white relative z-10">
-                                {homeTeam.name.charAt(0).toUpperCase()}
-                              </span>
-                            </div>
-                            <p className="font-semibold text-lg md:text-xl">{homeTeam.name}</p>
-                            <Badge variant="secondary" className="mt-2 bg-sky-100 text-sky-600">Home</Badge>
-                          </motion.div>
-                        ) : (
-                          <motion.div
-                            key="home-placeholder"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                          >
-                            <div className="w-24 h-24 md:w-28 md:h-28 mx-auto mb-3 rounded-2xl bg-muted/30 border-2 border-dashed border-border/50 flex items-center justify-center">
-                              <UserGroupIcon className="w-10 h-10 text-muted-foreground/30" />
-                            </div>
-                            <p className="text-muted-foreground">Select team</p>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </motion.div>
-
-                    {/* VS Divider */}
-                    <motion.div
-                      className="flex flex-col items-center gap-2"
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      transition={{ delay: 0.4, type: "spring", stiffness: 300 }}
-                    >
-                      <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-linear-to-br from-primary/20 to-amber-500/20 flex items-center justify-center border border-primary/30 relative">
-                        <SwordsIcon className="w-8 h-8 md:w-10 md:h-10 text-primary" />
-                        {canStart && (
-                          <motion.div
-                            className="absolute inset-0 rounded-2xl border-2 border-primary"
-                            initial={{ scale: 1, opacity: 1 }}
-                            animate={{ scale: 1.3, opacity: 0 }}
-                            transition={{ duration: 1.5, repeat: Infinity }}
-                          />
-                        )}
-                      </div>
-                      <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">vs</span>
-                    </motion.div>
-
-                    {/* Away Team */}
-                    <motion.div
-                      className="text-center flex-1"
-                      initial={{ x: 30, opacity: 0 }}
-                      animate={{ x: 0, opacity: 1 }}
-                      transition={{ delay: 0.3, type: "spring" }}
-                    >
-                      <AnimatePresence mode="wait">
-                        {awayTeam ? (
-                          <motion.div
-                            key={awayTeam.id}
-                            initial={{ scale: 0.8, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.8, opacity: 0 }}
-                            transition={springSmooth}
-                          >
-                            <div
-                              className="w-24 h-24 md:w-28 md:h-28 mx-auto mb-3 rounded-2xl flex items-center justify-center shadow-xl relative overflow-hidden"
-                              style={{
-                                background: `linear-gradient(135deg, ${awayTeam.color || "#f97316"}, ${awayTeam.color || "#f97316"}99)`,
-                                boxShadow: `0 12px 40px ${awayTeam.color || "#f97316"}50`,
-                              }}
-                            >
-                              <div className="absolute inset-0 bg-white/10" />
-                              <span className="text-3xl md:text-4xl font-bold text-white relative z-10">
-                                {awayTeam.name.charAt(0).toUpperCase()}
-                              </span>
-                            </div>
-                            <p className="font-semibold text-lg md:text-xl">{awayTeam.name}</p>
-                            <Badge variant="secondary" className="mt-2 bg-amber-100 text-amber-600">Away</Badge>
-                          </motion.div>
-                        ) : (
-                          <motion.div
-                            key="away-placeholder"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                          >
-                            <div className="w-24 h-24 md:w-28 md:h-28 mx-auto mb-3 rounded-2xl bg-muted/30 border-2 border-dashed border-border/50 flex items-center justify-center">
-                              <UserGroupIcon className="w-10 h-10 text-muted-foreground/30" />
-                            </div>
-                            <p className="text-muted-foreground">Select team</p>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </motion.div>
+          <main className="px-4 py-5 sm:px-6 lg:px-8">
+            {/* Masthead */}
+            <header className="mb-5 flex flex-wrap items-center gap-x-6 gap-y-4">
+              <div className="flex items-center gap-4">
+                <h1 className="matchbook-display whitespace-nowrap text-4xl font-bold leading-none tracking-[0.01em] sm:text-5xl">
+                  Quick <span className="text-mb-coral">Match</span>
+                </h1>
+                {!isGuest && (
+                  <div className="flex flex-col items-center border-[2px] border-mb-coral px-2.5 py-1 text-mb-coral">
+                    <span className="matchbook-display text-[0.6rem] font-bold tracking-[0.28em]">
+                      Match
+                    </span>
+                    <span className="matchbook-display text-2xl font-bold leading-none tabular-nums">
+                      {data.nextMatchNumber}
+                    </span>
                   </div>
-                </GlassCardContent>
-              </GlassCard>
-            </MotionDiv>
+                )}
+                <div className="hidden sm:block">
+                  <p
+                    className="matchbook-display text-[0.74rem] font-bold tracking-[0.1em]"
+                    suppressHydrationWarning
+                  >
+                    {data.dateLine}
+                  </p>
+                  <p className="mb-kicker">{data.matchesCompleted} matches completed</p>
+                </div>
+              </div>
 
-            {/* Team Selection */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-              <TeamSelectionCard
-                title="Home Team"
-                description="Select the first team"
-                iconColorClass="bg-sky-500/20 text-sky-500"
-                selectedTeamId={homeTeamId}
-                disabledTeamId={awayTeamId}
-                teams={availableTeams}
-                defaultColor="#3b82f6"
-                onSelect={handleHomeTeamSelect}
-                animationDirection="left"
-                animationDelay={0.4}
-              />
-              <TeamSelectionCard
-                title="Away Team"
-                description="Select the opponent"
-                iconColorClass="bg-amber-500/20 text-amber-500"
-                selectedTeamId={awayTeamId}
-                disabledTeamId={homeTeamId}
-                teams={availableTeams}
-                defaultColor="#f97316"
-                onSelect={handleAwayTeamSelect}
-                animationDirection="right"
-                animationDelay={0.5}
-              />
-            </div>
-
-            {/* Error Message */}
-            <AnimatePresence>
-              {error && (
-                <motion.p
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="text-destructive text-center mb-4 font-medium"
+              <div className="ml-auto flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={startScoring}
+                  disabled={!startEnabled}
+                  className="mb-btn mb-btn-coral disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  {error}
-                </motion.p>
-              )}
-            </AnimatePresence>
-
-            {/* Actions */}
-            <MotionDiv
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6 }}
-              className="flex flex-col sm:flex-row gap-4 justify-center"
-            >
-              <Button
-                variant="outline"
-                onClick={handleRandomSelect}
-                className="gap-2 rounded-xl h-12 px-8 glass-input hover:bg-accent/30"
-                size="lg"
-              >
-                <ArrowsRightLeftIcon className="w-5 h-5" />
-                Random Teams
-              </Button>
-              <motion.div
-                whileHover={canStart ? { scale: 1.02 } : undefined}
-                whileTap={canStart ? { scale: 0.98 } : undefined}
-              >
-                <Button
-                  onClick={handleStartMatch}
-                  disabled={!canStart}
-                  className="gap-2 btn-teal-gradient text-primary-foreground rounded-xl h-12 px-10 font-semibold disabled:opacity-50"
-                  size="lg"
-                >
-                  <BoltIcon className="w-5 h-5" />
+                  <MbIcon id="quick" size={14} />
                   Start Match
-                </Button>
-              </motion.div>
-            </MotionDiv>
-          </>
-        )}
-      </main>
+                </button>
+                <Link
+                  href="/login"
+                  className="hidden items-center gap-2.5 md:flex"
+                  title={isGuest ? "Sign in" : user?.email ?? "Account"}
+                >
+                  <span className="flex h-10 w-10 items-center justify-center rounded-full border-[1.5px] border-mb-navy bg-mb-paper-bright">
+                    <Image src="/assets/matchbook/brand/crest.svg" alt="" width={24} height={28} />
+                  </span>
+                  <span className="matchbook-display text-[0.72rem] font-bold leading-tight tracking-[0.08em]">
+                    {isGuest ? (
+                      <>
+                        Sign In
+                        <br />
+                        <span className="text-mb-ink-muted">Account</span>
+                      </>
+                    ) : (
+                      <>
+                        My
+                        <br />
+                        Account
+                      </>
+                    )}
+                  </span>
+                  <MbIcon id="chevron-down" size={13} className="text-mb-ink-muted" />
+                </Link>
+              </div>
+            </header>
+
+            {/* Panel grid */}
+            <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
+              {/* Match setup */}
+              <div className="xl:col-span-7">
+                <Panel title="Match Setup">
+                  {isGuest ? (
+                    <div className="flex flex-1 flex-col gap-4 p-5">
+                      <div className="flex items-center justify-center gap-5">
+                        <div className="flex flex-col items-center gap-2">
+                          <Crest team={guestHome} size={56} />
+                          <span className="matchbook-display text-[0.9rem] font-bold">Team A</span>
+                        </div>
+                        <span className="mb-score-box px-2 text-[0.7rem] tracking-[0.1em]">VS</span>
+                        <div className="flex flex-col items-center gap-2">
+                          <Crest team={guestAway} size={56} />
+                          <span className="matchbook-display text-[0.9rem] font-bold">Team B</span>
+                        </div>
+                      </div>
+                      <p className="text-center text-[0.85rem] text-mb-ink-muted">
+                        You&apos;re playing as a guest with two default teams. Sign in to
+                        pick your own teams and keep the match in your history.
+                      </p>
+                      <Link href="/login?redirect=/quick-match" className="mb-btn mb-btn-navy mx-auto">
+                        <MbIcon id="login" size={14} />
+                        Sign In to Use Your Teams
+                      </Link>
+                    </div>
+                  ) : availableTeams.length < 2 ? (
+                    <div className="flex flex-1 flex-col items-center justify-center gap-3 px-4 py-8 text-center">
+                      <p className="text-[0.85rem] text-mb-ink-muted">
+                        {availableTeams.length === 0
+                          ? "No teams exist yet — a quick match needs two teams."
+                          : "Only one team exists — a quick match needs two."}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={handleQuickCreateTeam}
+                        className="mb-btn mb-btn-outline text-[0.72rem] px-3 py-1.5"
+                      >
+                        <MbIcon id="plus" size={12} />
+                        Create a team
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex flex-1 flex-col gap-4 p-5">
+                      <div className="flex items-start gap-3 sm:gap-5">
+                        <TeamSelect
+                          label="Home Team"
+                          value={homeTeamId}
+                          disabledId={awayTeamId}
+                          teams={availableTeams}
+                          onChange={handleHomeTeamSelect}
+                        />
+                        <button
+                          type="button"
+                          onClick={handleSwapTeams}
+                          title="Swap home and away"
+                          className="mt-9 flex h-11 w-11 shrink-0 flex-col items-center justify-center gap-0.5 border-[1.5px] border-mb-navy bg-mb-paper-bright text-mb-navy transition-colors hover:bg-[rgba(7,50,77,0.06)]"
+                        >
+                          <MbIcon id="swap" size={16} />
+                          <span className="matchbook-display text-[0.5rem] font-bold tracking-[0.12em]">
+                            Swap
+                          </span>
+                        </button>
+                        <TeamSelect
+                          label="Away Team"
+                          value={awayTeamId}
+                          disabledId={homeTeamId}
+                          teams={availableTeams}
+                          onChange={handleAwayTeamSelect}
+                        />
+                      </div>
+
+                      {error && (
+                        <p className="border-[1.5px] border-mb-red px-3 py-2 text-center text-[0.8rem] font-medium text-mb-red">
+                          {error}
+                        </p>
+                      )}
+
+                      <div className="mt-auto flex flex-wrap items-center justify-between gap-3 border-t border-mb-rule pt-3">
+                        <p className="text-[0.72rem] text-mb-ink-muted">
+                          Scores are tracked point by point once the match starts.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={handleRandomSelect}
+                          className="mb-btn mb-btn-outline-navy px-3 py-1.5 text-[0.72rem]"
+                        >
+                          <MbIcon id="swap" size={12} />
+                          Random Teams
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </Panel>
+              </div>
+
+              {/* Scoreboard preview */}
+              <div className="xl:col-span-5">
+                <Panel title="Scoreboard Preview" icon="live" tone="navy">
+                  <div className="flex flex-1 flex-col gap-4 p-5">
+                    <div className="flex items-center gap-3">
+                      <ScorePreviewSide summary={homeSummary} placeholder="Home team" />
+                      <div className="flex items-center gap-2.5">
+                        <span className="matchbook-display text-6xl font-bold tabular-nums">0</span>
+                        <span className="mb-score-box px-2 text-[0.7rem] tracking-[0.1em]">VS</span>
+                        <span className="matchbook-display text-6xl font-bold tabular-nums">0</span>
+                      </div>
+                      <ScorePreviewSide summary={awaySummary} placeholder="Away team" />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={startScoring}
+                      disabled={!startEnabled}
+                      className="mb-btn mb-btn-coral mt-auto w-full py-3 text-[0.9rem] disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      <MbIcon id="quick" size={16} />
+                      Start Scoring
+                    </button>
+                    {!startEnabled && !isGuest && (
+                      <p className="text-center text-[0.72rem] text-mb-ink-muted">
+                        Select both teams to start scoring.
+                      </p>
+                    )}
+                  </div>
+                </Panel>
+              </div>
+
+              {!isGuest && (
+                <>
+                  {/* Recent quick matches */}
+                  <div className="xl:col-span-7">
+                    <Panel title="Recent Quick Matches" action="View All" href="/summaries">
+                      {data.recentQuickMatches.length === 0 ? (
+                        <PanelEmpty message="No quick matches exist yet — your finished quick matches will be listed here." />
+                      ) : (
+                        <div className="flex flex-col divide-y divide-mb-rule">
+                          {data.recentQuickMatches.map((m, i) => (
+                            <div
+                              key={i}
+                              className="grid grid-cols-[44px_1fr_auto_1fr_14px] items-center gap-2 px-3 py-2.5"
+                            >
+                              <p className="matchbook-display text-[0.66rem] font-bold leading-tight text-mb-ink-muted">
+                                {m.date}
+                              </p>
+                              <TeamMark team={m.home} className="justify-self-start" />
+                              <span className="matchbook-display whitespace-nowrap text-[0.95rem] font-bold tabular-nums">
+                                {m.homeScore} – {m.awayScore}
+                              </span>
+                              <TeamMark team={m.away} reverse className="justify-self-end" />
+                              <span
+                                className="h-2.5 w-2.5 justify-self-end rounded-full"
+                                style={{
+                                  background: m.homeWon
+                                    ? "var(--mb-green)"
+                                    : "var(--mb-red)",
+                                }}
+                                title={m.homeWon ? "Home team won" : "Away team won"}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <div className="mt-auto border-t border-mb-rule px-4 py-2 text-center">
+                        <Link href="/summaries" className="mb-panel-link justify-center">
+                          View Full Match History
+                          <MbIcon id="chevron-right" size={11} />
+                        </Link>
+                      </div>
+                    </Panel>
+                  </div>
+
+                  {/* Team form comparison */}
+                  <div className="xl:col-span-5">
+                    <Panel
+                      title="Team Form"
+                      meta={<span className="mb-kicker">Last 5 Matches</span>}
+                    >
+                      {!homeSummary || !awaySummary ? (
+                        <PanelEmpty message="No comparison exists yet — select both teams to compare their form." />
+                      ) : (
+                        <div className="flex flex-1 flex-col p-4">
+                          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 border-b-[1.5px] border-mb-navy pb-3">
+                            <div className="flex flex-col items-center gap-1">
+                              <Crest team={homeSummary.team} size={40} />
+                              <FormLetters form={homeSummary.form} />
+                            </div>
+                            <div className="text-center">
+                              <p className="mb-kicker">Record</p>
+                              <p className="matchbook-display text-[1.05rem] font-bold tabular-nums">
+                                {homeSummary.record} · {awaySummary.record}
+                              </p>
+                            </div>
+                            <div className="flex flex-col items-center gap-1">
+                              <Crest team={awaySummary.team} size={40} />
+                              <FormLetters form={awaySummary.form} />
+                            </div>
+                          </div>
+                          <div className="pt-2">
+                            <FormStatRow
+                              left={homeSummary.won}
+                              label="Wins"
+                              right={awaySummary.won}
+                            />
+                            <FormStatRow
+                              left={homeSummary.lost}
+                              label="Losses"
+                              right={awaySummary.lost}
+                            />
+                            <FormStatRow
+                              left={homeSummary.pointsFor}
+                              label="Points For"
+                              right={awaySummary.pointsFor}
+                            />
+                            <FormStatRow
+                              left={homeSummary.pointsAgainst}
+                              label="Points Against"
+                              right={awaySummary.pointsAgainst}
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </Panel>
+                  </div>
+                </>
+              )}
+            </div>
+          </main>
+        </div>
+      </div>
     </div>
   );
 }

@@ -34,6 +34,12 @@ export const useQuickMatchPage = () => {
     [homeTeamId]
   );
 
+  const handleSwapTeams = useCallback(() => {
+    setHomeTeamId(awayTeamId);
+    setAwayTeamId(homeTeamId);
+    setError("");
+  }, [homeTeamId, awayTeamId]);
+
   const handleRandomSelect = useCallback(() => {
     if (availableTeams.length < 2) {
       setError("Need at least 2 teams for random selection");
@@ -57,7 +63,7 @@ export const useQuickMatchPage = () => {
       return;
     }
 
-    addMatch({
+    const matchId = addMatch({
       competitionId: null,
       homeTeamId,
       awayTeamId,
@@ -68,13 +74,10 @@ export const useQuickMatchPage = () => {
       position: 1,
     });
 
-    setTimeout(() => {
-      const latestMatch = state.matches[state.matches.length - 1];
-      if (latestMatch) {
-        router.push(`/match/${latestMatch.id}`);
-      }
-    }, 100);
-  }, [homeTeamId, awayTeamId, addMatch, state.matches, router]);
+    if (matchId) {
+      router.push(`/match/${matchId}`);
+    }
+  }, [homeTeamId, awayTeamId, addMatch, router]);
 
   const handleQuickCreateTeam = useCallback(() => {
     const teamNumber = state.teams.length + 1;
@@ -104,6 +107,7 @@ export const useQuickMatchPage = () => {
     handleQuickCreateTeam,
     handleRandomSelect,
     handleStartMatch,
+    handleSwapTeams,
     homeTeam,
     homeTeamId,
   };

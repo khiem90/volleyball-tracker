@@ -62,7 +62,7 @@ interface AppContextValue {
   removeCompetitionLocal: (id: string) => void;
   getCompetitionById: (id: string) => Competition | undefined;
   // Match actions
-  addMatch: (match: Omit<Match, "id" | "createdAt">) => void;
+  addMatch: (match: Omit<Match, "id" | "createdAt">) => string;
   addMatches: (matches: Omit<Match, "id" | "createdAt">[]) => void;
   updateMatchScore: (
     matchId: string,
@@ -398,8 +398,8 @@ export const AppProvider = ({ children }: AppProviderProps) => {
 
   // Match actions
   const addMatch = useCallback(
-    (match: Omit<Match, "id" | "createdAt">) => {
-      if (isSharedMode && !canEdit) return;
+    (match: Omit<Match, "id" | "createdAt">): string => {
+      if (isSharedMode && !canEdit) return "";
 
       const newMatch: Match = {
         ...match,
@@ -421,8 +421,9 @@ export const AppProvider = ({ children }: AppProviderProps) => {
 
         syncAllData({ matches: newMatches, competition: updatedCompetition });
       } else {
-        dispatch({ type: "ADD_MATCH", match });
+        dispatch({ type: "ADD_MATCH", match: newMatch });
       }
+      return newMatch.id;
     },
     [isSharedMode, canEdit, session, syncAllData]
   );
