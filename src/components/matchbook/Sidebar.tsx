@@ -11,7 +11,7 @@ const NAV_ITEMS = [
   { href: "/quick-match", label: "Quick", icon: "quick" },
   { href: "/competitions", label: "Compete", icon: "compete" },
   { href: "/summaries", label: "History", icon: "history" },
-  { href: "/tools/volleyball-rotations", label: "Tools", icon: "tools" },
+  { href: "/tools", label: "Tools", icon: "tools" },
 ];
 
 export const MatchbookSidebar = () => {
