@@ -3,7 +3,12 @@
 import { useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Navigation } from "@/components/Navigation";
+import Image from "next/image";
+import { useAuth } from "@/context/AuthContext";
+import { MatchbookSidebar } from "@/components/matchbook/Sidebar";
+import { MatchbookMobileBar } from "@/components/matchbook/MobileBar";
+import { MbIcon } from "@/components/matchbook/MbIcon";
+import { Panel } from "@/components/matchbook/Panel";
 import {
   VolleyballCourt,
   RotationControls,
@@ -15,11 +20,11 @@ import {
 } from "@/components/volleyball";
 import { useVolleyballRotation } from "@/hooks/useVolleyballRotation";
 import { useUserFormations } from "@/hooks/useUserFormations";
-import { MotionDiv, slideUp } from "@/components/motion";
 import type { FormationType, UserFormation, FormationData, FormationVisibility } from "@/lib/volleyball/types";
 
 export default function VolleyballRotationsPage() {
   const router = useRouter();
+  const { user, isGuest } = useAuth();
   const {
     formations: userFormations,
     isAuthenticated,
@@ -168,144 +173,192 @@ export default function VolleyballRotationsPage() {
   }, [router]);
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navigation />
+    <div className="matchbook-surface min-h-screen">
+      <div className="flex">
+        <MatchbookSidebar />
 
-      <main className="max-w-7xl mx-auto px-4 py-6 pb-12">
-        {/* Header */}
-        <MotionDiv
-          initial="hidden"
-          animate="visible"
-          variants={slideUp}
-          className="text-center mb-8"
-        >
-          <h1 className="text-3xl md:text-4xl font-black tracking-tight mb-2 uppercase">
-            5-1 Volleyball <span className="text-primary">Rotations</span>
-          </h1>
-          <p className="text-muted-foreground max-w-xl mx-auto text-sm md:text-base">
-            Interactive visualization of all 6 rotations with overlap rules,
-            formation variants, and movement transitions
-          </p>
-          {/* My Formations Link */}
-          {isAuthenticated && (
-            <Link
-              href="/tools/volleyball-rotations/my-formations"
-              className="inline-block mt-4 px-4 py-2 text-sm font-medium bg-accent hover:bg-accent/80 rounded-lg transition-colors"
-            >
-              Manage My Formations
-            </Link>
-          )}
-        </MotionDiv>
+        <div className="min-w-0 flex-1">
+          <MatchbookMobileBar
+            active="/tools"
+            cta={{ href: "/tools/volleyball-rotations/my-formations", label: "Formations" }}
+          />
 
-        {/* Custom Formation Indicator */}
-        {selectedCustomFormation && (
-          <MotionDiv
-            initial="hidden"
-            animate="visible"
-            variants={slideUp}
-            className="mb-6 p-4 rounded-xl bg-primary/10 border border-primary/20"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-xs font-medium text-primary uppercase tracking-wider">
-                  Custom Formation
-                </span>
-                <h2 className="text-lg font-bold">{selectedCustomFormation.name}</h2>
-                {selectedCustomFormation.description && (
-                  <p className="text-sm text-muted-foreground">{selectedCustomFormation.description}</p>
-                )}
+          <main className="px-4 py-5 sm:px-6 lg:px-8">
+            {/* Masthead */}
+            <header className="mb-5 flex flex-wrap items-center gap-x-6 gap-y-4">
+              <div className="flex items-center gap-4">
+                <h1 className="matchbook-display whitespace-nowrap text-4xl font-bold leading-none tracking-[0.01em] sm:text-5xl">
+                  5-1 <span className="text-mb-coral">Rotation Lab</span>
+                </h1>
+                <div className="flex flex-col items-center border-[2px] border-mb-coral px-2.5 py-1 text-mb-coral">
+                  <span className="matchbook-display text-2xl font-bold leading-none tabular-nums">
+                    R{rotation}
+                  </span>
+                  <span className="matchbook-display text-[0.6rem] font-bold tracking-[0.18em]">
+                    {mode === "serving" ? "Serve" : "Receive"}
+                  </span>
+                </div>
+                <p className="mb-kicker hidden max-w-[220px] sm:block">
+                  All six rotations with overlap rules, formations, and movement
+                  transitions.
+                </p>
               </div>
-              <button
-                type="button"
-                onClick={() => handleFormationChange("traditional")}
-                className="px-3 py-1 text-sm bg-background rounded-lg hover:bg-accent transition-colors"
-              >
-                Switch to Built-in
-              </button>
-            </div>
-          </MotionDiv>
-        )}
 
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
-          {/* Left Column: Court + Controls */}
-          <div className="space-y-6">
-            {/* Controls Card */}
-            <div className="rounded-2xl border border-border bg-card p-4 md:p-6 shadow-soft">
-              <RotationControls
-                rotation={rotation}
-                mode={mode}
-                liberoActive={liberoActive}
-                showOverlaps={showOverlaps}
-                showArrows={showArrows}
-                onRotationChange={setRotation}
-                onModeChange={setMode}
-                onLiberoToggle={setLiberoActive}
-                onShowOverlapsToggle={setShowOverlaps}
-                onShowArrowsToggle={setShowArrows}
-                onNext={nextRotation}
-                onPrev={prevRotation}
-              />
-            </div>
+              <div className="ml-auto flex items-center gap-3">
+                {isAuthenticated && (
+                  <Link
+                    href="/tools/volleyball-rotations/my-formations"
+                    className="mb-btn mb-btn-navy"
+                  >
+                    <MbIcon id="save" size={14} />
+                    My Formations
+                  </Link>
+                )}
+                <button
+                  type="button"
+                  onClick={isAuthenticated ? handleCreateFormation : handleSignInClick}
+                  className="mb-btn mb-btn-coral"
+                >
+                  <MbIcon id="plus" size={14} />
+                  Create Formation
+                </button>
+                <Link
+                  href="/login"
+                  className="hidden items-center gap-2.5 md:flex"
+                  title={isGuest ? "Sign in" : user?.email ?? "Account"}
+                >
+                  <span className="flex h-10 w-10 items-center justify-center rounded-full border-[1.5px] border-mb-navy bg-mb-paper-bright">
+                    <Image src="/assets/matchbook/brand/crest.svg" alt="" width={24} height={28} />
+                  </span>
+                  <span className="matchbook-display text-[0.72rem] font-bold leading-tight tracking-[0.08em]">
+                    {isGuest ? (
+                      <>
+                        Sign In
+                        <br />
+                        <span className="text-mb-ink-muted">Account</span>
+                      </>
+                    ) : (
+                      <>
+                        My
+                        <br />
+                        Account
+                      </>
+                    )}
+                  </span>
+                  <MbIcon id="chevron-down" size={13} className="text-mb-ink-muted" />
+                </Link>
+              </div>
+            </header>
 
-            {/* Court Visualization Card */}
-            <div className="rounded-2xl border border-border bg-card p-4 md:p-6 shadow-soft">
-              <VolleyballCourt
-                players={players}
-                overlaps={overlaps}
-                arrows={arrows}
-                selectedPlayer={selectedPlayer}
-                onPlayerSelect={setSelectedPlayer}
-                mode={mode}
-                showOverlaps={showOverlaps}
-                showArrows={showArrows}
-              />
-            </div>
-
-            {/* Formation Selector Card - Enhanced Mode */}
-            <div className="rounded-2xl border border-border bg-card p-4 md:p-6 shadow-soft">
-              <FormationSelector
-                enhanced={true}
-                formation={selectedFormationId}
-                rotation={rotation}
-                onFormationChange={handleFormationChange}
-                isAuthenticated={isAuthenticated}
-                userFormations={userFormations}
-                onCreateFormation={handleCreateFormation}
-                onEditFormation={handleEditFormation}
-                onDuplicateFormation={handleDuplicateFormation}
-                onShareFormation={handleShareFormation}
-                onDeleteFormation={handleDeleteFormation}
-                onSignInClick={handleSignInClick}
-              />
-            </div>
-
-            {/* Help Accordion (visible on mobile, hidden on lg) */}
-            <div className="lg:hidden">
-              <HelpAccordion />
-            </div>
-          </div>
-
-          {/* Right Sidebar: Legend */}
-          <div className="space-y-6 lg:sticky lg:top-20 lg:h-fit">
-            {/* Legend Panel */}
-            <div className="rounded-2xl border border-border bg-card p-4 shadow-soft">
-              <LegendPanel
-                players={players}
-                rotation={rotation}
-                mode={mode}
-                selectedPlayer={selectedPlayer}
-                onPlayerSelect={setSelectedPlayer}
-              />
+            {/* Rotation controls strip */}
+            <div className="mb-panel mb-4 h-auto!">
+              <div className="p-4">
+                <RotationControls
+                  rotation={rotation}
+                  mode={mode}
+                  liberoActive={liberoActive}
+                  showOverlaps={showOverlaps}
+                  showArrows={showArrows}
+                  onRotationChange={setRotation}
+                  onModeChange={setMode}
+                  onLiberoToggle={setLiberoActive}
+                  onShowOverlapsToggle={setShowOverlaps}
+                  onShowArrowsToggle={setShowArrows}
+                  onNext={nextRotation}
+                  onPrev={prevRotation}
+                />
+              </div>
             </div>
 
-            {/* Help Accordion (hidden on mobile, visible on lg) */}
-            <div className="hidden lg:block">
-              <HelpAccordion />
+            {/* Custom formation indicator */}
+            {selectedCustomFormation && (
+              <div className="mb-panel mb-4 h-auto!">
+                <div className="flex flex-wrap items-center justify-between gap-3 p-4">
+                  <div>
+                    <p className="mb-kicker">Custom Formation</p>
+                    <p className="matchbook-display text-[1rem] font-bold">
+                      {selectedCustomFormation.name}
+                    </p>
+                    {selectedCustomFormation.description && (
+                      <p className="text-[0.76rem] text-mb-ink-muted">
+                        {selectedCustomFormation.description}
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleFormationChange("traditional")}
+                    className="mb-btn mb-btn-outline-navy px-3 py-1.5 text-[0.72rem]"
+                  >
+                    Switch to Built-in
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Court + guide grid */}
+            <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
+              <div className="xl:col-span-7">
+                <Panel title="Court Diagram">
+                  <div className="p-4">
+                    <VolleyballCourt
+                      players={players}
+                      overlaps={overlaps}
+                      arrows={arrows}
+                      selectedPlayer={selectedPlayer}
+                      onPlayerSelect={setSelectedPlayer}
+                      mode={mode}
+                      showOverlaps={showOverlaps}
+                      showArrows={showArrows}
+                    />
+                  </div>
+                </Panel>
+              </div>
+
+              <div className="flex flex-col gap-4 xl:col-span-5">
+                <Panel title="Position Guide">
+                  <div className="p-4">
+                    <LegendPanel
+                      players={players}
+                      rotation={rotation}
+                      mode={mode}
+                      selectedPlayer={selectedPlayer}
+                      onPlayerSelect={setSelectedPlayer}
+                    />
+                  </div>
+                </Panel>
+
+                <Panel title="Rotation Notes">
+                  <div className="p-4">
+                    <HelpAccordion />
+                  </div>
+                </Panel>
+              </div>
+
+              <div className="xl:col-span-12">
+                <Panel title="Formations">
+                  <div className="p-4">
+                    <FormationSelector
+                      enhanced={true}
+                      formation={selectedFormationId}
+                      rotation={rotation}
+                      onFormationChange={handleFormationChange}
+                      isAuthenticated={isAuthenticated}
+                      userFormations={userFormations}
+                      onCreateFormation={handleCreateFormation}
+                      onEditFormation={handleEditFormation}
+                      onDuplicateFormation={handleDuplicateFormation}
+                      onShareFormation={handleShareFormation}
+                      onDeleteFormation={handleDeleteFormation}
+                      onSignInClick={handleSignInClick}
+                    />
+                  </div>
+                </Panel>
+              </div>
             </div>
-          </div>
+          </main>
         </div>
-      </main>
+      </div>
 
       {/* Editor Modal */}
       <FormationEditorModal
