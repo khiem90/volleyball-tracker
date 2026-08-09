@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { MbButton, type MbButtonSize } from "./Button";
+import { MbButton, type MbButtonSize, type MbButtonVariant } from "./Button";
 import { MbIconButton, type MbIconButtonTone } from "./IconButton";
 import { MbDialog, MbDialogBody } from "./Dialog";
 import { MbCopyField, copyToClipboard } from "./CopyField";
@@ -68,30 +68,14 @@ const ANNOUNCEMENT: Record<ShareStatus, string> = {
   shared: "Link shared.",
 };
 
-export const MbShareAction = ({
-  url,
-  title,
-  text,
-  variant,
-  label = "Share",
-  tone,
-  size = "md",
-  disabled = false,
-  onResult,
-  className = "",
-}: {
+interface ShareBase {
   url: string;
   /** Share-sheet heading. Also names the link in the manual fallback. */
   title: string;
   /** Share-sheet body. */
   text: string;
-  variant: "button" | "icon";
   /** Resting verb. Must contain the visible word when a caller restyles it. */
   label?: string;
-  /** `.mb-btn` variant. Defaults to `navy` for `button`, `plain` for `icon`. */
-  tone?: MbIconButtonTone;
-  /** Button variant only. */
-  size?: MbButtonSize;
   disabled?: boolean;
   /**
    * Fires on every attempt, including `dismissed`. W2 wires this to `toast()`
@@ -100,7 +84,43 @@ export const MbShareAction = ({
    */
   onResult?: (outcome: MbShareOutcome) => void;
   className?: string;
-}) => {
+}
+
+/**
+ * `tone` and `size` are declared per shape, not once for both.
+ *
+ * One `tone?: MbIconButtonTone` used to cover the pair, which let
+ * `variant="button" tone="plain"` typecheck and then quietly resolve to `navy`
+ * because `plain` is not an `.mb-btn` variant — a prop the compiler accepted
+ * and the component ignored. `size` had the mirror problem in the other
+ * direction: it was accepted on `variant="icon"`, where nothing reads it.
+ */
+export type MbShareActionProps = ShareBase &
+  (
+    | {
+        variant: "button";
+        /** `.mb-btn` variant. Defaults to `navy`. */
+        tone?: MbButtonVariant;
+        size?: MbButtonSize;
+      }
+    | {
+        variant: "icon";
+        /** `MbIconButton` tone. Defaults to `plain`. */
+        tone?: MbIconButtonTone;
+        size?: never;
+      }
+  );
+
+export const MbShareAction = (props: MbShareActionProps) => {
+  const {
+    url,
+    title,
+    text,
+    label = "Share",
+    disabled = false,
+    onResult,
+    className = "",
+  } = props;
   const [status, setStatus] = useState<ShareStatus>("idle");
   const [fallbackOpen, setFallbackOpen] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -139,21 +159,21 @@ export const MbShareAction = ({
 
   return (
     <span className={`inline-flex items-center ${className}`}>
-      {variant === "icon" ? (
+      {props.variant === "icon" ? (
         <MbIconButton
           icon={status === "idle" ? "share" : "check"}
           /* The name never changes: the icon carries the visual confirmation
              and the live region carries the spoken one, so the control keeps
              one stable accessible name (WCAG 2.5.3). */
           label={label}
-          tone={tone ?? "plain"}
+          tone={props.tone ?? "plain"}
           disabled={disabled}
           onClick={handleShare}
         />
       ) : (
         <MbButton
-          variant={tone && tone !== "plain" ? tone : "navy"}
-          size={size}
+          variant={props.tone ?? "navy"}
+          size={props.size ?? "md"}
           icon={status === "idle" ? "share" : "check"}
           disabled={disabled}
           onClick={handleShare}

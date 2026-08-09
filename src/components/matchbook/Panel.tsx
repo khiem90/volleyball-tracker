@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import { MbButton, MbButtonLink, type MbButtonVariant } from "./Button";
 import { MbIcon } from "./MbIcon";
 import type { MbFormResult, MbTeam } from "./types";
 
@@ -223,15 +224,28 @@ export type PanelEmptyTone =
   | "denied"
   | "unconfigured";
 
+export interface MbStateToneMeta {
+  /** Sprite id, or `null` when the state carries no mark. */
+  icon: string | null;
+  /** Eyebrow word, or `null` when the state stays unlabelled. */
+  word: string | null;
+  /**
+   * Ink for the **glyph only**. The word itself stays `.mb-kicker` muted, so a
+   * tone is never carried by small coloured letterforms (invariant 12).
+   */
+  ink: string;
+}
+
 /**
+ * One tone table for both scales. `MbEmptyState` imports this table rather than
+ * restating it, so the page-level and in-panel cuts of a state cannot drift into
+ * two different glyphs or two different words for one concept.
+ *
  * `empty` stays iconless and unlabelled — design language §5.7 keeps ordinary
  * empty states plain. The five failure tones name themselves in words and mark
  * themselves with a glyph, so the state never rests on colour alone.
  */
-const PANEL_EMPTY_TONES: Record<
-  PanelEmptyTone,
-  { icon: string | null; word: string | null; ink: string }
-> = {
+export const MB_STATE_TONES: Record<PanelEmptyTone, MbStateToneMeta> = {
   empty: { icon: null, word: null, ink: "text-mb-navy" },
   notfound: { icon: "search", word: "Not found", ink: "text-mb-navy" },
   error: { icon: "warning", word: "Error", ink: "text-mb-red" },
@@ -240,52 +254,112 @@ const PANEL_EMPTY_TONES: Record<
   unconfigured: { icon: "settings", word: "Not set up", ink: "text-mb-ink-muted" },
 };
 
+/**
+ * The shipped copy rule is `No <things> exist yet — <what makes them appear>.`
+ * (design language §5.7), so the em dash is already an editorial break: the
+ * clause before it names the state, the clause after it explains it. Splitting
+ * there turns every one of the ~35 shipped messages into a display headline and
+ * a deck **without one call site changing**.
+ *
+ * Past `HEADLINE_MAX_CHARS` the lead is prose, not a headline, and keeps the
+ * whole string as copy. 60 is measured, not guessed: the display step runs
+ * ~22 characters per line in a `xl:col-span-4` panel body (419px of inner
+ * width), so 60 is the last length that still sets in three lines. It clears
+ * the longest shipped lead (`Saved formations could not be loaded right now`,
+ * 45) and the filter miss (`No teams match “northside community volleyball”`,
+ * 47) while still refusing a 156-character error sentence with no break in it.
+ */
+const HEADLINE_MAX_CHARS = 60;
+
+const splitStateMessage = (
+  message: string
+): { headline: string | null; copy: string | null } => {
+  const dash = message.indexOf("—");
+  const lead = (dash === -1 ? message : message.slice(0, dash)).trim();
+  const deck = dash === -1 ? null : message.slice(dash + 1).trim() || null;
+  if (!lead || lead.length > HEADLINE_MAX_CHARS) {
+    return { headline: null, copy: message };
+  }
+  // A display line never carries a full stop; the deck below it keeps its own.
+  return { headline: lead.replace(/\.$/, ""), copy: deck };
+};
+
+/**
+ * The in-panel cut of the one state language. Anatomy, top to bottom: eyebrow
+ * (glyph + word), display line, hung rule, deck, one action — every part ranged
+ * **left**, exactly as `MbEmptyState` sets it at page scale. The only
+ * differences are step sizes: display line `1.2rem` vs `1.875rem`, rule 40px vs
+ * 64px, button `sm` vs `lg`.
+ *
+ * It is deliberately *not* a centred glyph-in-a-circle over centred text: that
+ * is the layout the rubric's §3 hard-fail 5 names outright, and it is what this
+ * component drew before.
+ */
 export const PanelEmpty = ({
   message,
   actionLabel,
   href,
   tone = "empty",
   icon,
+  actionTone = "outline-navy",
   onAction,
 }: {
   message: string;
   actionLabel?: string;
   href?: string;
-  /** Defaults to `empty`, which renders exactly as it always has. */
+  /** Defaults to `empty`: no glyph, no eyebrow — just the editorial block. */
   tone?: PanelEmptyTone;
   /** Sprite id overriding the tone's default mark. */
   icon?: string;
+  /**
+   * Ink of the single action. Defaults to the quiet neutral outline, because a
+   * panel-level state is never the screen's primary job — invariant 15 gives
+   * coral one appearance per screen, and three empty panels used to spend it
+   * three times over. Coral is opt-in: `actionTone="coral"`.
+   */
+  actionTone?: MbButtonVariant;
   /** Renders a real `<button>` instead of a link. Takes precedence over `href`. */
   onAction?: () => void;
 }) => {
-  const state = PANEL_EMPTY_TONES[tone];
+  const state = MB_STATE_TONES[tone];
   const mark = icon ?? state.icon;
-  const actionClass = "mb-btn mb-btn-outline mb-btn-touch text-[0.72rem] px-3 py-1.5";
+  const { headline, copy } = splitStateMessage(message);
+  /* The rule *hangs* — it closes a naming zone rather than opening the block, so
+     it only draws when there is something above it to close. The one input that
+     produces neither is a plain `empty` whose message is a single unbreakable
+     sentence over 60 characters. */
+  const named = Boolean(mark || state.word || headline);
 
   return (
-    <div className="flex flex-col items-center justify-center gap-3 px-4 py-8 text-center flex-1">
-      {mark && (
-        <span className={`mb-icon-disc h-9 w-9 ${state.ink}`}>
-          <MbIcon id={mark} size={16} />
+    <div className="flex flex-1 flex-col items-start justify-center gap-2.5 px-4 py-5 text-left">
+      {(mark || state.word) && (
+        <span className="mb-kicker flex min-w-0 items-center gap-1.5">
+          {mark && <MbIcon id={mark} size={13} className={`shrink-0 ${state.ink}`} />}
+          {state.word && <span className="truncate">{state.word}</span>}
         </span>
       )}
-      {state.word ? (
-        <div className="flex flex-col items-center gap-1.5">
-          <span className="mb-kicker">{state.word}</span>
-          <p className="text-[0.85rem] text-mb-ink-muted">{message}</p>
-        </div>
-      ) : (
-        <p className="text-[0.85rem] text-mb-ink-muted">{message}</p>
+      {headline && (
+        <p className="matchbook-display max-w-[26ch] text-[1.2rem] font-bold leading-tight tracking-[0.02em]">
+          {headline}
+        </p>
+      )}
+      {/* Hung rule — the mark the two scales share; it closes the naming zone. */}
+      {named && <span className="block h-px w-10 bg-mb-navy" />}
+      {copy && (
+        <p className="max-w-[42ch] text-[0.85rem] leading-[1.5] text-mb-ink-muted">{copy}</p>
       )}
       {actionLabel && onAction && (
-        <button type="button" onClick={onAction} className={actionClass}>
+        <MbButton variant={actionTone} size="sm" onClick={onAction}>
           {actionLabel}
-        </button>
+        </MbButton>
       )}
       {actionLabel && href && !onAction && (
-        <Link href={href} className={actionClass}>
+        /* A destination is a real anchor — it keeps middle-click, "open in new
+           tab" and the status bar — and `MbButtonLink` draws it from the same
+           three tables as the button above, so the two branches are one box. */
+        <MbButtonLink variant={actionTone} size="sm" href={href}>
           {actionLabel}
-        </Link>
+        </MbButtonLink>
       )}
     </div>
   );

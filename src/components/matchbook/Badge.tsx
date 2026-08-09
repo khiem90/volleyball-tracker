@@ -1,3 +1,5 @@
+import { MbIcon } from "./MbIcon";
+
 export type MbBadgeTone =
   | "live"
   | "draft"
@@ -10,6 +12,72 @@ export type MbBadgeTone =
   | "warn";
 export type MbBadgeVariant = "text" | "framed" | "solid";
 export type MbBadgeSize = "sm" | "md";
+
+/** Block marks: 10px at `sm`, 12px at `md`. Glyph marks run 2px larger. */
+const BLOCK = { sm: 10, md: 12 } as const;
+const GLYPH = { sm: 12, md: 14 } as const;
+
+/** Set by `.mb-badge[data-tone]`; inherited here, so no colour is written. */
+const INK = "var(--mb-badge-ink, var(--mb-navy))";
+
+/**
+ * One mark per tone, and every one a different *shape* — because a desaturated
+ * capture is the honest test of invariant 13, and before this the nine tones
+ * were nine copies of the same 11px square in nine hues. Under greyscale that
+ * is one badge repeated nine times, which is information carried by colour
+ * alone whatever the hex values are.
+ *
+ *   live     round dot, pulsing   the only round-and-moving mark in the system
+ *   final    circled tick         the result is in
+ *   win      filled square        the form-strip win square, same vocabulary
+ *   loss     hollow square        the form-strip square left unfilled
+ *   draft    pencil               still being written
+ *   warn     triangle             the system's warning glyph
+ *   guest    hollow disc          the account disc, unfilled — not a member
+ *   neutral  horizontal bar       a dash: there is no status here
+ *   teal     vertical bar         a rule: this counts something
+ *
+ * The mark rides every variant, not just `text`. `framed` used to carry its
+ * tone on the 1.5px rule and nothing else, which is the same defect one step
+ * quieter: nine frames of identical weight and geometry.
+ *
+ * Contrast: a mark is a UI graphic, so the floor is 3:1, and every
+ * `--mb-badge-ink` clears it on paper (`draft`/`warn` resolve to
+ * `--mb-gold-ink` precisely for this). On the one permitted solid — `live` —
+ * `globals.css` inverts the dot to paper-bright.
+ */
+const BadgeMark = ({ tone, size }: { tone: MbBadgeTone; size: MbBadgeSize }) => {
+  const px = BLOCK[size];
+  const glyph = (id: string) => (
+    <span className="inline-flex shrink-0" style={{ color: INK }}>
+      <MbIcon id={id} size={GLYPH[size]} />
+    </span>
+  );
+  const block = (style: React.CSSProperties) => (
+    <span aria-hidden="true" className="shrink-0" style={style} />
+  );
+
+  switch (tone) {
+    case "live":
+      return <span className="mb-live-dot shrink-0" />;
+    case "final":
+      return glyph("check");
+    case "draft":
+      return glyph("edit");
+    case "warn":
+      return glyph("warning");
+    case "win":
+      return block({ width: px, height: px, borderRadius: 2, background: INK });
+    case "loss":
+      return block({ width: px, height: px, borderRadius: 2, border: `1.5px solid ${INK}` });
+    case "guest":
+      return block({ width: px, height: px, borderRadius: 999, border: `1.5px solid ${INK}` });
+    case "neutral":
+      return block({ width: px, height: 3, background: INK });
+    case "teal":
+      return block({ width: 3, height: px, background: INK });
+  }
+};
 
 export const MbBadge = ({
   tone,
@@ -33,18 +101,6 @@ export const MbBadge = ({
   const resolved: MbBadgeVariant =
     variant === "solid" && tone !== "live" ? "framed" : variant;
 
-  /**
-   * The second channel, so status never rides on colour alone: `live` always
-   * carries the pulsing dot, every other tone carries a form square in the
-   * `text` variant, where there is no rule and no fill to carry it.
-   */
-  const mark =
-    tone === "live" ? (
-      <span className="mb-live-dot" />
-    ) : resolved === "text" ? (
-      <span className="mb-form-square" />
-    ) : null;
-
   return (
     <span
       className={`mb-badge ${className}`}
@@ -52,7 +108,7 @@ export const MbBadge = ({
       data-variant={resolved}
       data-size={size}
     >
-      {mark}
+      <BadgeMark tone={tone} size={size} />
       {children}
     </span>
   );

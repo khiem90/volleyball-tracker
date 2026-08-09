@@ -1,9 +1,41 @@
 "use client";
 
+import Link from "next/link";
+import {
+  forwardRef,
+  type ComponentPropsWithoutRef,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 import { MbIcon } from "./MbIcon";
 
 export type MbButtonVariant = "coral" | "navy" | "outline" | "outline-navy";
-export type MbButtonSize = "sm" | "md" | "lg" | "touch";
+
+/**
+ * Three steps, three measured boxes, and no member that resolves to another.
+ *
+ * Height cannot be the only axis: invariant 33 puts a hard 44px floor under
+ * every interactive target, so nothing may go below `sm`. The scale therefore
+ * runs *upward* from the floor, and each step moves four things at once —
+ * height, inline padding, type step and glyph — so two sizes never render the
+ * same box.
+ *
+ * - `sm` — 44px, `display/link` (0.72rem). The floor exactly: a control that
+ *   has to sit inside something else without dominating it (the retry in
+ *   `MbLiveStatus`, an in-panel CTA — design language §5.7 "at reduced size").
+ * - `md` — 48px, `display/button` (0.8rem). The default, one step clear of the
+ *   floor so `sm` has somewhere to be smaller.
+ * - `lg` — 56px, 0.9rem. The commit control: `MbActionBar`, dialog footers,
+ *   full-width phone primaries. 56 is the same step `MbIconButton size="lg"`
+ *   and `.mb-stepper[data-size="lg"]` already use, so the kit has one number
+ *   for "the big control" rather than three.
+ *
+ * The previous `touch` member is gone. It resolved to a byte-identical class
+ * list to `md` and measured the same 102.5 x 44 box, and the gallery said so
+ * out loud ("same as md"). Charter §2.3 names it, but §4.33 — a hard fail —
+ * already forces every size over 44px, which leaves `touch` nothing to mean.
+ */
+export type MbButtonSize = "sm" | "md" | "lg";
 
 const VARIANT_CLASS: Record<MbButtonVariant, string> = {
   coral: "mb-btn-coral",
@@ -12,59 +44,95 @@ const VARIANT_CLASS: Record<MbButtonVariant, string> = {
   "outline-navy": "mb-btn-outline-navy",
 };
 
-/**
- * Every size clears the 44px floor. `.mb-btn` on its own is 38.8px and the
- * blanket coarse-pointer floor in globals.css is armed by W2, not P1, so the
- * size class is what carries the guarantee here. `size` therefore sets the type
- * step and the box, never the hit area (charter §4.33 is a hard fail and
- * outranks the §2.3 size note). `touch` is kept as the explicit opt-in name the
- * charter gives dense consoles; after the floor it resolves the same as `md`.
- */
-const SIZE_CLASS: Record<MbButtonSize, string> = {
-  sm: "mb-btn-touch",
-  md: "mb-btn-touch",
-  lg: "mb-btn-lg",
-  touch: "mb-btn-touch",
+interface SizeSpec {
+  /** `min-height`, in CSS px. Also the resting height — content never exceeds it. */
+  box: number;
+  /** `padding-inline`. Set inline: `.mb-btn`'s `padding` shorthand is unlayered. */
+  padding: string;
+  /** Extra unlayered class, where one exists, purely for the type step. */
+  shell: string;
+  /**
+   * The type step lands on the label, not on the button. `.mb-btn` sets
+   * `font-size` and is *unlayered* CSS, while Tailwind utilities live in
+   * `@layer utilities` — an unlayered declaration wins over any layer
+   * regardless of specificity, so `text-[…]` on the button element is silently
+   * inert. The label span has no competing rule, so the step applies there
+   * cleanly and without an `!important`.
+   */
+  label: string;
+  /** Sprite glyph size, in px. */
+  glyph: number;
+}
+
+const SIZE: Record<MbButtonSize, SizeSpec> = {
+  sm: {
+    box: 44,
+    padding: "0.75rem",
+    shell: "",
+    label: "text-[0.72rem] tracking-[0.04em]",
+    glyph: 12,
+  },
+  md: { box: 48, padding: "1.1rem", shell: "", label: "", glyph: 14 },
+  /* `.mb-btn-lg` is kept for its 0.9rem `font-size` only — it is unlayered, so
+     it is the one way to move the step without an `!important`. Its padding and
+     `min-height` are both superseded by the inline geometry below. */
+  lg: { box: 56, padding: "1.5rem", shell: "mb-btn-lg", label: "", glyph: 16 },
 };
 
 /**
- * The type step lands on the label, not on the button. `.mb-btn` sets
- * `font-size` and is *unlayered* CSS, while Tailwind utilities live in
- * `@layer utilities` — an unlayered declaration wins over any layer regardless
- * of specificity, so `text-[…]` on the button element is silently inert. The
- * label span has no competing rule, so the step applies there cleanly and
- * without an `!important`. `sm` is `display/link` (0.72rem/600/0.04em), the
- * named step design language §2.1 already carries; `md`/`touch` inherit
- * `display/button` and `lg` inherits `.mb-btn-lg`'s 0.9rem.
+ * Inline, not a class, for two reasons: `.mb-btn`'s `padding` and
+ * `.mb-btn-touch`'s `min-height` are unlayered and would outrank any Tailwind
+ * utility, and the caller's own `style` still wins because it is spread last.
+ *
+ * `minWidth` carries the other half of invariant 33: a two-letter label at
+ * `sm` measures ~42px without it.
  */
-const LABEL_CLASS: Record<MbButtonSize, string> = {
-  sm: "text-[0.72rem] tracking-[0.04em]",
-  md: "",
-  lg: "",
-  touch: "",
-};
+const geometry = (size: MbButtonSize, style?: CSSProperties): CSSProperties => ({
+  minHeight: SIZE[size].box,
+  minWidth: 44,
+  paddingInline: SIZE[size].padding,
+  ...style,
+});
 
-const ICON_SIZE: Record<MbButtonSize, number> = { sm: 12, md: 14, lg: 16, touch: 14 };
+const shell = (
+  variant: MbButtonVariant,
+  size: MbButtonSize,
+  fullWidth: boolean
+): string =>
+  `mb-btn ${VARIANT_CLASS[variant]} ${SIZE[size].shell} ${fullWidth ? "w-full" : ""}`;
 
-export const MbButton = ({
-  variant,
-  size = "md",
+/** Icon · label · icon, identical in the button and the link. */
+const Content = ({
+  size,
   icon,
   iconRight,
-  loading = false,
-  fullWidth = false,
-  className = "",
   children,
-  type = "button",
-  onClick,
-  ...rest
 }: {
+  size: MbButtonSize;
+  icon?: string;
+  iconRight?: string;
+  children?: ReactNode;
+}) => (
+  <>
+    {icon && <MbIcon id={icon} size={SIZE[size].glyph} className="shrink-0" />}
+    {children !== undefined && children !== null && children !== false && (
+      <span className={`min-w-0 truncate tabular-nums ${SIZE[size].label}`}>{children}</span>
+    )}
+    {iconRight && <MbIcon id={iconRight} size={SIZE[size].glyph} className="shrink-0" />}
+  </>
+);
+
+interface MbButtonShared {
   variant: MbButtonVariant;
   size?: MbButtonSize;
   /** Sprite icon id rendered before the label. */
   icon?: string;
   /** Sprite icon id rendered after the label. */
   iconRight?: string;
+  fullWidth?: boolean;
+}
+
+export type MbButtonProps = MbButtonShared & {
   /**
    * Busy state. Keeps the button focusable and keeps its label, blocks
    * activation (including a `type="submit"` form post) and never animates —
@@ -72,16 +140,41 @@ export const MbButton = ({
    * live dot. The present-participle label is what carries "in progress".
    */
   loading?: boolean;
-  fullWidth?: boolean;
-} & React.ButtonHTMLAttributes<HTMLButtonElement>) => {
-  const glyph = ICON_SIZE[size];
-  const leading = loading ? "refresh" : icon;
-  return (
+} & React.ButtonHTMLAttributes<HTMLButtonElement>;
+
+/**
+ * The one button. `ref` is forwarded so Radix `asChild` (`MbMenu`'s trigger),
+ * `MbDialog`'s `initialFocus` and any manual focus restoration reach the real
+ * element instead of a `null` that fails silently.
+ *
+ * A control that *navigates* is `MbButtonLink`, below — never this with an
+ * `onClick` that pushes a route.
+ */
+export const MbButton = forwardRef<HTMLButtonElement, MbButtonProps>(
+  (
+    {
+      variant,
+      size = "md",
+      icon,
+      iconRight,
+      loading = false,
+      fullWidth = false,
+      className = "",
+      children,
+      type = "button",
+      onClick,
+      style,
+      ...rest
+    },
+    ref
+  ) => (
     <button
+      ref={ref}
       type={type}
-      className={`mb-btn ${VARIANT_CLASS[variant]} ${SIZE_CLASS[size]} ${
-        fullWidth ? "w-full" : ""
-      } ${loading ? "cursor-progress" : ""} disabled:cursor-not-allowed disabled:opacity-40 ${className}`}
+      className={`${shell(variant, size, fullWidth)} ${
+        loading ? "cursor-progress" : ""
+      } disabled:cursor-not-allowed disabled:opacity-40 ${className}`}
+      style={geometry(size, style)}
       data-loading={loading || undefined}
       aria-busy={loading || undefined}
       aria-disabled={loading || undefined}
@@ -95,13 +188,57 @@ export const MbButton = ({
       }
       {...rest}
     >
-      {leading && <MbIcon id={leading} size={glyph} className="shrink-0" />}
-      {children !== undefined && children !== null && children !== false && (
-        <span className={`min-w-0 truncate tabular-nums ${LABEL_CLASS[size]}`}>
-          {children}
-        </span>
-      )}
-      {iconRight && <MbIcon id={iconRight} size={glyph} className="shrink-0" />}
+      <Content size={size} icon={loading ? "refresh" : icon} iconRight={iconRight}>
+        {children}
+      </Content>
     </button>
-  );
-};
+  )
+);
+MbButton.displayName = "MbButton";
+
+export type MbButtonLinkProps = MbButtonShared &
+  Omit<ComponentPropsWithoutRef<typeof Link>, "children"> & { children?: ReactNode };
+
+/**
+ * The same button, rendered as a destination.
+ *
+ * A sibling component rather than an `as`/`href` prop on `MbButton`: the two
+ * differ in more than their tag. `loading`, `disabled` and `type` are
+ * meaningless on an anchor and a discriminated-union prop type that says so
+ * costs more than the second component does, while a permissive union would
+ * let `<MbButton href="…" loading />` typecheck and then silently drop the
+ * busy contract. Splitting also makes the call site state its intent —
+ * destination or action — which is the distinction that decides whether
+ * middle-click, "open in new tab" and the status bar work at all.
+ *
+ * Geometry, variants and the icon/label slots come from the same three tables
+ * above, so the two can never drift.
+ */
+export const MbButtonLink = forwardRef<HTMLAnchorElement, MbButtonLinkProps>(
+  (
+    {
+      variant,
+      size = "md",
+      icon,
+      iconRight,
+      fullWidth = false,
+      className = "",
+      children,
+      style,
+      ...rest
+    },
+    ref
+  ) => (
+    <Link
+      ref={ref}
+      className={`${shell(variant, size, fullWidth)} ${className}`}
+      style={geometry(size, style)}
+      {...rest}
+    >
+      <Content size={size} icon={icon} iconRight={iconRight}>
+        {children}
+      </Content>
+    </Link>
+  )
+);
+MbButtonLink.displayName = "MbButtonLink";

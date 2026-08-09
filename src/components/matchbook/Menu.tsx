@@ -1,7 +1,8 @@
 "use client";
 
 import * as MenuPrimitive from "@radix-ui/react-dropdown-menu";
-import type { ReactNode } from "react";
+import { MbButton, type MbButtonVariant } from "./Button";
+import { MbIconButton } from "./IconButton";
 import { MbIcon } from "./MbIcon";
 
 export type MbMenuItemTone = "default" | "danger";
@@ -15,6 +16,9 @@ export interface MbMenuItem {
   disabled?: boolean;
 }
 
+/** Shared by both trigger shapes: open reads the same as hover. */
+const OPEN_STATE = "data-[state=open]:bg-[var(--mb-tint-2)] data-[state=open]:text-mb-coral";
+
 /**
  * The overflow menu for a row or masthead carrying more than two actions
  * (charter §2.3). Wraps `@radix-ui/react-dropdown-menu` — the same dependency
@@ -27,16 +31,28 @@ export interface MbMenuItem {
  */
 export const MbMenu = ({
   trigger,
+  triggerVariant = "outline-navy",
   label = "More actions",
   items,
   align = "end",
   className = "",
 }: {
   /**
-   * Content of the menu's own `<button>` — never a button itself, so the
-   * trigger can never nest interactive elements. Defaults to the `more` glyph.
+   * The words of a *worded* trigger — text only; the disclosure chevron is
+   * supplied. Omit it and the trigger is the 44x44 `more` disc
+   * (`MbIconButton tone="plain"`, not a copy of it). Never a node, so the
+   * trigger can neither nest an interactive element nor smuggle in a block-level
+   * glyph that would push the label onto its own line.
    */
-  trigger?: ReactNode;
+  trigger?: string;
+  /**
+   * `.mb-btn` variant for the worded trigger. Defaults to `outline-navy`: a
+   * labelled control needs a rule at rest, or the only thing marking it as a
+   * control is hover — which invariant 36 forbids. The icon-only trigger keeps
+   * the plain treatment because a lone glyph in a row already reads as a
+   * control.
+   */
+  triggerVariant?: MbButtonVariant;
   /** Becomes `title` + `aria-label`. Must contain the trigger's visible words. */
   label?: string;
   items: MbMenuItem[];
@@ -49,17 +65,28 @@ export const MbMenu = ({
 
   return (
     <MenuPrimitive.Root>
+      {/* `asChild` composes Radix's ref and its `data-state` onto the real
+          control. Both components forward their ref, so neither has to be
+          re-implemented as a bare `<button>` here to make that work. */}
       <MenuPrimitive.Trigger asChild>
-        <button
-          type="button"
-          title={label}
-          aria-label={label}
-          className={`mb-btn mb-btn-touch border-transparent bg-transparent text-mb-navy transition-colors hover:bg-[var(--mb-tint-2)] hover:text-mb-coral data-[state=open]:bg-[var(--mb-tint-2)] data-[state=open]:text-mb-coral ${
-            trigger ? "" : "h-11 w-11 p-0"
-          } ${className}`}
-        >
-          {trigger ?? <MbIcon id="more" size={18} className="shrink-0" />}
-        </button>
+        {trigger === undefined ? (
+          <MbIconButton
+            icon="more"
+            label={label}
+            tone="plain"
+            className={`${OPEN_STATE} ${className}`}
+          />
+        ) : (
+          <MbButton
+            variant={triggerVariant}
+            iconRight="chevron-down"
+            title={label}
+            aria-label={label}
+            className={`${OPEN_STATE} ${className}`}
+          >
+            {trigger}
+          </MbButton>
+        )}
       </MenuPrimitive.Trigger>
 
       <MenuPrimitive.Portal>
@@ -110,7 +137,7 @@ export const MbMenu = ({
                   // rule's 0.08em the only way that outranks the class.
                   letterSpacing: "0.08em",
                 }}
-                className={`matchbook-display flex min-h-[44px] w-full cursor-pointer items-center gap-2.5 px-3.5 text-[0.78rem] font-semibold tracking-[0.08em] text-mb-navy transition-colors duration-[var(--mb-dur-fast)] select-none data-[highlighted]:bg-[var(--mb-tint-2)] data-[highlighted]:shadow-[inset_3px_0_0_var(--mb-coral)] data-[disabled]:cursor-not-allowed data-[disabled]:bg-transparent data-[disabled]:text-mb-ink-muted ${rule}`}
+                className={`matchbook-display flex min-h-[44px] w-full cursor-pointer items-center gap-2.5 px-3.5 py-2.5 text-[0.78rem] font-semibold tracking-[0.08em] text-mb-navy transition-colors duration-[var(--mb-dur-fast)] select-none data-[highlighted]:bg-[var(--mb-tint-2)] data-[highlighted]:shadow-[inset_3px_0_0_var(--mb-coral)] data-[disabled]:cursor-not-allowed data-[disabled]:bg-transparent data-[disabled]:text-mb-ink-muted ${rule}`}
               >
                 {item.icon && (
                   <MbIcon
@@ -121,7 +148,15 @@ export const MbMenu = ({
                     }`}
                   />
                 )}
-                <span className="min-w-0 truncate">{item.label}</span>
+                {/* No `truncate`. "Delete every match in this round" clipped to
+                    "Delete every match in this…" is a destructive action the
+                    user cannot read before choosing it, and the panel is
+                    already capped at 20rem, so the label wraps instead and the
+                    row grows. The rule is not "danger rows wrap" but "no menu
+                    row is ever clipped" — a truncation that only *sometimes*
+                    hides the object of a verb is the worse failure, because
+                    nothing on screen says it happened. */}
+                <span className="min-w-0 break-words">{item.label}</span>
               </MenuPrimitive.Item>
             );
           })}

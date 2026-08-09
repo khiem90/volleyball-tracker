@@ -83,8 +83,18 @@
   --mb-rule: rgba(7, 50, 77, 0.28);
   --mb-display-font: var(--font-oswald), "Arial Narrow", "Roboto Condensed", Impact, sans-serif;
 
-  /* --- contrast-safe variants (GAP-13/14) ------------------------------- */
-  /* Button fill only. 5.23:1 with #fff, replacing coral's 3.62:1 debt. */
+  /* --- contrast-safe variants (GAP-13/14, rubric §3.6) ------------------ */
+  /* THE CORAL RULE. --mb-coral is a MARK colour and never a letterform.
+     Measured against the two paper surfaces it is 3.55:1 on --mb-paper-bright
+     and 3.26:1 on --mb-paper: over the 3:1 floor for a border, rail, dot,
+     underline or focus ring, under the 4.5:1 floor for text below 18.66px —
+     and no coral text in this system is above 18.66px.
+     --mb-coral-deep is the INK twin: 5.03:1 on --mb-paper-bright, 4.62:1 on
+     --mb-paper, and 5.23:1 for #fff on the fill. Same hue family, so at label
+     size it reads as the same colour (MbFinalStamp already relies on this).
+     Any coral letterform — .mb-btn-outline, .mb-tab active, .mb-nav-item
+     active, .mb-panel-link hover, .mb-stamp-final — uses the deep twin. The
+     structural mark beside it keeps the bright coral. */
   --mb-coral-deep: #c9351f;
   /* Gold as ink on paper: 5.13:1 on --mb-paper. --mb-gold stays on-navy only. */
   --mb-gold-ink: #8a5c00;
@@ -93,10 +103,53 @@
   --mb-tint-1: rgba(7, 50, 77, 0.04); /* row hover                      */
   --mb-tint-2: rgba(7, 50, 77, 0.06); /* nav / outline-navy hover       */
   --mb-tint-3: rgba(7, 50, 77, 0.12); /* empty form square, meter track */
+  /* There is deliberately no coral tint. --mb-coral-deep clears 4.5:1 on bare
+     --mb-paper by 0.12, so any wash of any hue under it fails — measured:
+     coral 8% 4.12:1, navy 6% 4.15:1, navy 4% 4.30:1. Coral states are carried
+     by rules and lifts, never by fills under coral ink. */
   --mb-band: rgba(7, 50, 77, 0.05); /* table day-group header band    */
   --mb-rule-on-navy: rgba(255, 250, 241, 0.25);
   --mb-tint-on-navy: rgba(255, 250, 241, 0.06);
   --mb-panel-shadow: 0 8px 22px rgba(57, 41, 23, 0.08);
+
+  /* --- rule tiers -------------------------------------------------------
+     The system used to claim a 1.5px structural tier. It never rendered:
+     Blink floors a used border-width to whole CSS pixels, so `border: 1.5px`
+     computes to 1px at deviceScaleFactor 1, 2 AND 3 (measured across
+     /dev/kit — identical tally at all three). Meanwhile `gap` and `width`
+     are LayoutUnits and DO honour 1.5px, which left .mb-segmented's dividers
+     heavier than every "structural" edge in the system: the hierarchy was
+     inverted.
+
+     So the tiers are redefined in values that survive rasterisation. At the
+     thin end they are separated by INK, not thickness — a 1px full-navy line
+     against a 1px 28%-navy line is a 13.3:1 mark beside a 2.2:1 one, which is
+     the difference the eye actually reads. Thickness only starts doing work at
+     the accent and anchor tiers, where it is unambiguous at every DPR.
+
+       hairline  1px  --mb-rule   a divider INSIDE a thing (rows, panel head)
+       edge      1px  --mb-navy   the BOUNDARY of a thing (panel, input, box)
+       accent    3px  tone        active / selected marks (tab, nav, rail)
+       anchor    4px  tone        the identity mark (panel top, toast left)
+
+     `hairline` and `edge` are both 1px today and that is measured, not
+     accidental — they are kept as two names because they say what the line IS
+     (a divider inside a thing vs the boundary of a thing), and a future
+     density change moves one without the other. Pick the tier by role; the ink
+     may still be softened at rest, as .mb-input does with --mb-rule until it
+     takes focus.
+
+     2px is NOT a tier. It survives in exactly two named marks — the masthead
+     badge lockup and the coral spine on schedule/timeline lists (design
+     language §3.5) — plus glyph strokes (the check in .mb-check and
+     MbCheckMark), which are drawings, not rules. Nothing else may use it.
+
+     Nothing in this file may reintroduce a fractional rule: it is either
+     invisible (a border) or off-hierarchy (a gap or a width). */
+  --mb-rule-hairline: 1px;
+  --mb-rule-edge: 1px;
+  --mb-rule-accent: 3px;
+  --mb-rule-anchor: 4px;
 
   /* --- focus (GAP-12) --------------------------------------------------- */
   --mb-focus: var(--mb-coral);
@@ -126,6 +179,86 @@
   font-family: var(--font-sans), system-ui, sans-serif;
 }
 
+/* ---------------------------------------------------------------------------
+   Text overflow (rubric §3.1 — horizontal page scroll is a hard fail)
+
+   Every primitive renders caller-supplied strings, and callers pass share URLs,
+   file paths, competition names and machine ids. None of them can be trusted to
+   contain a break opportunity, and no primitive should have to remember to
+   defend itself. So the defence lives here, once, and is inherited:
+
+     `overflow-wrap` is an inherited property, so one declaration on the surface
+     (and on each portalled overlay root, which renders OUTSIDE the surface)
+     reaches every descendant.
+
+   `break-word` is the safe default — it only breaks a word that cannot fit on a
+   line by itself, and it leaves intrinsic sizing alone, so no existing layout
+   moves. It is not enough on its own for a shrink-to-fit box (a column flex
+   item, an inline-flex chip): those size to min-content, and `break-word` does
+   not reduce min-content. `anywhere` does, so the shrink-to-fit carriers below
+   opt into it individually rather than the whole surface paying for it.
+
+   `anywhere` on the surface itself was tried and REJECTED: it reduces
+   min-content everywhere, which reflowed a shipped screen — /competitions at
+   390x844 went 6693 -> 6759 device px tall with 26.90% of pixels changed. P0
+   ships no visual change to shipped screens, so the blunt form is out.
+
+   The third ingredient is `min-width: 0`. A flex or grid item defaults to
+   `min-width: auto` = min-content, which sizes the item to its longest word
+   BEFORE the text ever gets the chance to break — that is what makes
+   `break-word` look like it is doing nothing. Measured on /dev/kit at 320px,
+   injecting an unbreakable 36-character name into every one of 1256 leaf text
+   nodes: `break-word` alone left 203 nodes able to push the page; adding the
+   prose unlock below took it to 195, and every one of the remainder is a
+   `<span>` flex item inside component markup, which is a component-level fix
+   (`min-w-0` on the span), not a global one.
+   --------------------------------------------------------------------------- */
+
+.matchbook-surface,
+.mb-dialog,
+.mb-sheet,
+.mb-toast {
+  overflow-wrap: break-word;
+}
+
+/* Shrink-to-fit carriers of machine-generated strings: these size to
+   min-content, so they need the stronger form to be allowed to narrow.
+   .mb-badge is deliberately absent — it is `white-space: nowrap` by contract
+   (micro-caps tone words never wrap), which makes any overflow-wrap inert on
+   it. Its defence is the short-label API plus `min-width: 0` on its row. */
+.mb-code-chip,
+.mb-banner,
+.mb-panel[data-tone] p,
+.mb-day-head,
+.mb-field-hint,
+.mb-field-error {
+  overflow-wrap: anywhere;
+}
+
+/* Both min-width rules are DEFAULTS, not overrides, so they live in @layer base
+   where any Tailwind `min-w-*` utility outranks them. The rest of this file is
+   deliberately unlayered — an unlayered rule beats every layered one, which is
+   right for `.matchbook-display`'s letter-spacing but exactly wrong for a
+   defensive floor. `min-width: 0` is inert on a normal block, so neither rule
+   does anything except where an item is being sized to its longest word. */
+@layer base {
+  .mb-panel-head > *,
+  .mb-dialog-head > *,
+  .mb-banner > *,
+  .mb-toast > * {
+    min-width: 0;
+  }
+
+  /* The same unlock for prose blocks wherever they sit. `:where()` keeps the
+     specificity at zero so a component can override with a bare element rule. */
+  .matchbook-surface :where(h1, h2, h3, h4, h5, h6, p, li, dd, dt, figcaption),
+  .mb-dialog :where(h1, h2, h3, h4, h5, h6, p, li, dd, dt, figcaption),
+  .mb-sheet :where(h1, h2, h3, h4, h5, h6, p, li, dd, dt, figcaption),
+  .mb-toast :where(h1, h2, h3, h4, h5, h6, p, li, dd, dt, figcaption) {
+    min-width: 0;
+  }
+}
+
 .matchbook-display {
   font-family: var(--mb-display-font);
   text-transform: uppercase;
@@ -134,8 +267,8 @@
 
 .mb-panel {
   background: var(--mb-paper-bright);
-  border: 1.5px solid var(--mb-navy);
-  border-top-width: 4px;
+  border: var(--mb-rule-edge) solid var(--mb-navy);
+  border-top-width: var(--mb-rule-anchor);
   border-radius: 4px;
   box-shadow: var(--mb-panel-shadow);
   display: flex;
@@ -149,7 +282,7 @@
   justify-content: space-between;
   gap: 0.75rem;
   padding: 0.65rem 1rem 0.55rem;
-  border-bottom: 1px solid var(--mb-rule);
+  border-bottom: var(--mb-rule-hairline) solid var(--mb-rule);
 }
 
 .mb-panel-link {
@@ -165,8 +298,10 @@
   white-space: nowrap;
 }
 
+/* 11.5px/600 letterforms — the coral rule applies, so the hover ink is the
+   deep twin (3.55:1 -> 5.03:1 on paper-bright). */
 .mb-panel-link:hover {
-  color: var(--mb-coral);
+  color: var(--mb-coral-deep);
 }
 
 .mb-btn {
@@ -181,7 +316,7 @@
   gap: 0.45rem;
   padding: 0.55rem 1.1rem;
   border-radius: 4px;
-  border: 1.5px solid transparent;
+  border: var(--mb-rule-edge) solid transparent;
   transition: filter 0.15s ease, background-color 0.15s ease, color 0.15s ease;
   white-space: nowrap;
   touch-action: manipulation;
@@ -200,9 +335,14 @@
   color: #fff;
 }
 
+/* The label is 12.8px/600 — coral letterforms are 3.55:1 and fail AA, so both
+   ink and frame take --mb-coral-deep (5.03:1 on paper-bright, 4.62:1 on paper).
+   Frame follows ink rather than staying bright: the rule sits 3px from its own
+   label, so two corals inside one 44px box read as a mistake, not a hierarchy.
+   Same single-ink treatment MbFinalStamp already ships. */
 .mb-btn-outline {
-  border-color: var(--mb-coral);
-  color: var(--mb-coral);
+  border-color: var(--mb-coral-deep);
+  color: var(--mb-coral-deep);
   background: transparent;
 }
 
@@ -210,8 +350,15 @@
   filter: brightness(1.08);
 }
 
+/* Hover fills in rather than washing. A wash is the system's usual hover, but
+   coral-deep cannot afford one: it clears 4.5:1 on bare paper by 0.12, and ANY
+   tint — coral 8% (4.12:1 on paper) or navy 6% (4.15:1) — spends that margin.
+   Filling makes the state background-independent instead: the button brings its
+   own ground, so #fff on --mb-coral-deep is 5.23:1 whether the button sits on
+   paper, on paper-bright, or inside a panel. Same pair as .mb-btn-coral. */
 .mb-btn-outline:hover {
-  background: rgba(238, 75, 52, 0.08);
+  background: var(--mb-coral-deep);
+  color: #fff;
   filter: none;
 }
 
@@ -237,7 +384,7 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--mb-navy);
-  border-left: 3px solid transparent;
+  border-left: var(--mb-rule-accent) solid transparent;
   transition: background-color 0.15s ease, color 0.15s ease;
   touch-action: manipulation;
 }
@@ -246,10 +393,19 @@
   background: var(--mb-tint-2);
 }
 
+/* 13.6px/600 label -> deep ink. The 3px left rail is a mark, not a letterform,
+   so it keeps the bright coral: 3.55:1 clears the 3:1 UI floor and the rail is
+   what carries the accent at a distance.
+   The row LIFTS to paper-bright instead of taking a coral wash. The old
+   rgba(coral, 0.08) fill put the deep ink at 4.12:1 — still a fail; lifting
+   puts it at 5.03:1 and reads as a raised card on the paper sidebar. This rule
+   sits after `.mb-nav-item:hover` at equal specificity, so it also wins while
+   the active row is hovered — which is the point, since the navy hover wash
+   would drag the same ink to 4.15:1. */
 .mb-nav-item[data-active="true"] {
-  color: var(--mb-coral);
+  color: var(--mb-coral-deep);
   border-left-color: var(--mb-coral);
-  background: rgba(238, 75, 52, 0.08);
+  background: var(--mb-paper-bright);
 }
 
 .mb-kicker {
@@ -289,7 +445,7 @@
   min-width: 26px;
   height: 26px;
   padding: 0 4px;
-  border: 1.5px solid var(--mb-navy);
+  border: var(--mb-rule-edge) solid var(--mb-navy);
   border-radius: 3px;
   background: var(--mb-paper-bright);
   font-family: var(--mb-display-font);
@@ -301,7 +457,7 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  border: 1.5px solid var(--mb-navy);
+  border: var(--mb-rule-edge) solid var(--mb-navy);
   border-radius: 3px;
   background: var(--mb-paper-bright);
   padding: 0.3rem 0.55rem;
@@ -316,12 +472,12 @@
   color: var(--mb-ink-muted);
   text-align: left;
   padding: 0.45rem 0.5rem;
-  border-bottom: 1.5px solid var(--mb-navy);
+  border-bottom: var(--mb-rule-edge) solid var(--mb-navy);
 }
 
 .mb-table td {
   padding: 0.5rem 0.5rem;
-  border-bottom: 1px solid var(--mb-rule);
+  border-bottom: var(--mb-rule-hairline) solid var(--mb-rule);
   font-size: 0.85rem;
 }
 
@@ -340,7 +496,7 @@
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  border: 1px solid var(--mb-rule);
+  border: var(--mb-rule-hairline) solid var(--mb-rule);
   border-radius: 4px;
   background: var(--mb-paper-bright);
   padding: 0.25rem 0.55rem;
@@ -363,7 +519,7 @@
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  border: 1.5px solid var(--mb-rule);
+  border: var(--mb-rule-edge) solid var(--mb-rule);
   border-radius: 4px;
   background: var(--mb-paper-bright);
   padding: 0.6rem 0.8rem;
@@ -391,7 +547,7 @@
 .mb-select-native {
   width: 100%;
   appearance: none;
-  border: 1.5px solid var(--mb-navy);
+  border: var(--mb-rule-edge) solid var(--mb-navy);
   border-radius: 4px;
   background: var(--mb-paper-bright);
   padding: 0.55rem 2.2rem 0.55rem 0.8rem;
@@ -514,11 +670,11 @@
 
 /* Selection / rank rail. Set --mb-rail-color per row; coral is the default. */
 .mb-rail {
-  box-shadow: inset 3px 0 0 var(--mb-rail-color, var(--mb-coral));
+  box-shadow: inset var(--mb-rule-accent) 0 0 var(--mb-rail-color, var(--mb-coral));
 }
 
 .mb-tile {
-  border: 1.5px solid var(--mb-navy);
+  border: var(--mb-rule-edge) solid var(--mb-navy);
   background: var(--mb-paper-bright);
 }
 
@@ -528,7 +684,7 @@
   justify-content: center;
   flex-shrink: 0;
   border-radius: 999px;
-  border: 1.5px solid var(--mb-navy);
+  border: var(--mb-rule-edge) solid var(--mb-navy);
   color: var(--mb-navy);
 }
 
@@ -572,8 +728,8 @@
   min-width: 0;
   max-height: calc(100dvh - 2rem);
   background: var(--mb-paper-bright);
-  border: 1.5px solid var(--mb-navy);
-  border-top-width: 4px;
+  border: var(--mb-rule-edge) solid var(--mb-navy);
+  border-top-width: var(--mb-rule-anchor);
   border-radius: 4px;
   box-shadow: var(--mb-panel-shadow);
   animation: mb-enter var(--mb-dur-slow) var(--mb-ease-out) both;
@@ -585,7 +741,7 @@
   justify-content: space-between;
   gap: 0.75rem;
   padding: 0.65rem 1rem 0.55rem;
-  border-bottom: 1px solid var(--mb-rule);
+  border-bottom: var(--mb-rule-hairline) solid var(--mb-rule);
 }
 
 .mb-dialog[data-tone="navy"] .mb-dialog-head {
@@ -613,7 +769,7 @@
   gap: 0.5rem;
   padding: 0.75rem 1rem;
   padding-bottom: calc(0.75rem + var(--mb-safe-bottom));
-  border-top: 1.5px solid var(--mb-navy);
+  border-top: var(--mb-rule-edge) solid var(--mb-navy);
 }
 
 .mb-sheet {
@@ -622,8 +778,8 @@
   min-width: 0;
   max-height: calc(100dvh - 3rem);
   background: var(--mb-paper-bright);
-  border: 1.5px solid var(--mb-navy);
-  border-top-width: 4px;
+  border: var(--mb-rule-edge) solid var(--mb-navy);
+  border-top-width: var(--mb-rule-anchor);
   border-radius: 4px 4px 0 0;
   box-shadow: var(--mb-panel-shadow);
   padding-bottom: var(--mb-safe-bottom);
@@ -643,7 +799,8 @@
 
 /* ---------------------------------------------------------------------------
    Toast (GAP-2)
-   Paper-bright, 1.5px navy border, 4px left border in the tone colour — the
+   Paper-bright, an edge-tier navy border, an anchor-tier left border in the
+   tone colour — the
    horizontal mirror of the accent rail.
    --------------------------------------------------------------------------- */
 
@@ -653,8 +810,8 @@
   gap: 0.6rem;
   min-width: 0;
   background: var(--mb-paper-bright);
-  border: 1.5px solid var(--mb-navy);
-  border-left: 4px solid var(--mb-toast-tone, var(--mb-navy));
+  border: var(--mb-rule-edge) solid var(--mb-navy);
+  border-left: var(--mb-rule-anchor) solid var(--mb-toast-tone, var(--mb-navy));
   border-radius: 4px;
   box-shadow: var(--mb-panel-shadow);
   padding: 0.6rem 0.8rem;
@@ -676,7 +833,7 @@
    below 18.66px. So the tone rides a second channel instead —
      text    the paired mark (.mb-live-dot, or .mb-form-square, which picks up
              --mb-badge-fill automatically)
-     framed  a 1.5px rule in --mb-badge-ink (every tone clears the 3:1 UI floor;
+     framed  an edge-tier rule in --mb-badge-ink (every tone clears the 3:1 UI floor;
              draft and warn use --mb-gold-ink, since raw gold does not)
      solid   a tone fill with white ink. Only tone="live" clears 4.5:1 there
              (#fff on --mb-red is 4.76:1; on --mb-green it is 4.45:1), so
@@ -695,7 +852,7 @@
   font-size: 0.66rem;
   letter-spacing: 0.1em;
   line-height: 1;
-  border: 1.5px solid transparent;
+  border: var(--mb-rule-edge) solid transparent;
   border-radius: 2px;
   color: var(--mb-navy);
   font-variant-numeric: tabular-nums;
@@ -744,14 +901,15 @@
 
 /* ---------------------------------------------------------------------------
    Tabs (GAP-5)
-   The horizontal mirror of .mb-nav-item: coral text + coral 3px bottom border.
+   The horizontal mirror of .mb-nav-item: coral-deep label + a bright coral 3px
+   bottom border.
    --------------------------------------------------------------------------- */
 
 .mb-tabs {
   display: flex;
   align-items: stretch;
   overflow-x: auto;
-  border-bottom: 1.5px solid var(--mb-navy);
+  border-bottom: var(--mb-rule-edge) solid var(--mb-navy);
 }
 
 .mb-tab {
@@ -761,7 +919,7 @@
   gap: 0.4rem;
   min-height: 44px;
   padding: 0.5rem 1rem;
-  margin-bottom: -1.5px;
+  margin-bottom: calc(-1 * var(--mb-rule-edge));
   white-space: nowrap;
   font-family: var(--mb-display-font);
   text-transform: uppercase;
@@ -769,7 +927,7 @@
   font-weight: 600;
   letter-spacing: 0.08em;
   color: var(--mb-navy);
-  border-bottom: 3px solid transparent;
+  border-bottom: var(--mb-rule-accent) solid transparent;
   transition: color var(--mb-dur-base) var(--mb-ease-in-out),
     border-color var(--mb-dur-base) var(--mb-ease-in-out),
     background-color var(--mb-dur-base) var(--mb-ease-in-out);
@@ -780,8 +938,10 @@
   background: var(--mb-tint-2);
 }
 
+/* Same split as .mb-nav-item: 13.6px/600 label in the deep ink, 3px underline
+   in the bright mark. */
 .mb-tab[data-active="true"] {
-  color: var(--mb-coral);
+  color: var(--mb-coral-deep);
   border-bottom-color: var(--mb-coral);
 }
 
@@ -820,7 +980,7 @@
   width: 100%;
   min-height: 5rem;
   resize: vertical;
-  border: 1.5px solid var(--mb-rule);
+  border: var(--mb-rule-edge) solid var(--mb-rule);
   border-radius: 4px;
   background: var(--mb-paper-bright);
   padding: 0.6rem 0.8rem;
@@ -846,7 +1006,7 @@
   flex-shrink: 0;
   display: inline-grid;
   place-content: center;
-  border: 1.5px solid var(--mb-navy);
+  border: var(--mb-rule-edge) solid var(--mb-navy);
   border-radius: 2px;
   background: var(--mb-paper-bright);
   transition: background-color var(--mb-dur-fast) var(--mb-ease-out),
@@ -881,7 +1041,7 @@
   width: 28px;
   height: 16px;
   flex-shrink: 0;
-  border: 1.5px solid var(--mb-navy);
+  border: var(--mb-rule-edge) solid var(--mb-navy);
   border-radius: 2px;
   background: var(--mb-paper-bright);
   transition: background-color var(--mb-dur-base) var(--mb-ease-in-out),
@@ -915,7 +1075,7 @@
   display: inline-flex;
   align-items: stretch;
   overflow: hidden;
-  border: 1.5px solid var(--mb-navy);
+  border: var(--mb-rule-edge) solid var(--mb-navy);
   border-radius: 4px;
   background: var(--mb-paper-bright);
 }
@@ -947,8 +1107,8 @@
   justify-content: center;
   min-width: 3.5rem;
   padding: 0 0.5rem;
-  border-left: 1.5px solid var(--mb-navy);
-  border-right: 1.5px solid var(--mb-navy);
+  border-left: var(--mb-rule-edge) solid var(--mb-navy);
+  border-right: var(--mb-rule-edge) solid var(--mb-navy);
   font-family: var(--mb-display-font);
   font-weight: 700;
   font-size: 1.5rem;
@@ -971,7 +1131,7 @@
   height: 24px;
   flex-shrink: 0;
   padding: 0;
-  border: 1.5px solid var(--mb-navy);
+  border: var(--mb-rule-edge) solid var(--mb-navy);
   border-radius: 2px;
 }
 
@@ -985,13 +1145,16 @@
   box-shadow: inset 0 0 0 2px var(--mb-paper-bright), inset 0 0 0 4px var(--mb-navy);
 }
 
-/* Wraps instead of squeezing; the navy background shows through the 1.5px gaps
-   as the dividing rules, so a wrapped second row is still ruled correctly. */
+/* Wraps instead of squeezing; the navy background shows through the gaps as the
+   dividing rules, so a wrapped second row is still ruled correctly. The gap is
+   the edge tier — `gap` is a LayoutUnit and honoured fractional, so at 1.5px it
+   was painting HEAVIER than every border in the system it was meant to sit
+   under. Holding it to --mb-rule-edge puts the hierarchy back the right way up. */
 .mb-segmented {
   display: grid;
-  gap: 1.5px;
+  gap: var(--mb-rule-edge);
   overflow: hidden;
-  border: 1.5px solid var(--mb-navy);
+  border: var(--mb-rule-edge) solid var(--mb-navy);
   border-radius: 4px;
   background: var(--mb-navy);
 }
@@ -1067,7 +1230,7 @@
 
 .mb-console-column[data-leading="true"],
 .mb-notch-coral {
-  box-shadow: inset 0 3px 0 var(--mb-coral);
+  box-shadow: inset 0 var(--mb-rule-accent) 0 var(--mb-coral);
 }
 
 .mb-numeral {
@@ -1095,8 +1258,11 @@
   font-size: clamp(4rem, 18vw, 9rem);
 }
 
+/* A width, not a border, so this one really did paint at 1.5px while every
+   "1.5px" border beside it painted at 1. Held to the edge tier so the console
+   divider matches the panel edge it meets. */
 .mb-rule-vertical {
-  width: 1.5px;
+  width: var(--mb-rule-edge);
   align-self: stretch;
   flex-shrink: 0;
   background: var(--mb-navy);
@@ -1111,7 +1277,7 @@
   gap: 0.75rem;
   padding: 0.75rem 1rem;
   padding-bottom: calc(0.75rem + var(--mb-safe-bottom));
-  border-top: 1.5px solid var(--mb-navy);
+  border-top: var(--mb-rule-edge) solid var(--mb-navy);
   background: var(--mb-paper-bright);
 }
 
@@ -1130,14 +1296,17 @@
    Editorial set (public share §5.3)
    --------------------------------------------------------------------------- */
 
+/* 11.8px/700 letterforms — deep ink and a matching frame. MbFinalStamp used to
+   force this pair inline because the class was wrong; the class is now correct
+   on its own. */
 .mb-stamp-final {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   padding: 0.25rem 0.6rem;
-  border: 1.5px solid var(--mb-coral);
+  border: var(--mb-rule-edge) solid var(--mb-coral-deep);
   border-radius: 2px;
-  color: var(--mb-coral);
+  color: var(--mb-coral-deep);
   font-family: var(--mb-display-font);
   text-transform: uppercase;
   font-weight: 700;
@@ -1153,7 +1322,7 @@
   align-items: center;
   gap: 0.4rem;
   padding: 0.25rem 0.5rem;
-  border: 1.5px solid var(--mb-navy);
+  border: var(--mb-rule-edge) solid var(--mb-navy);
   border-radius: 3px;
   background: var(--mb-paper-bright);
   font-family: var(--mb-display-font);
@@ -1171,8 +1340,8 @@
   min-width: 0;
   padding: 0.55rem 0.8rem;
   background: var(--mb-paper-bright);
-  border: 1.5px solid var(--mb-banner-tone, var(--mb-navy));
-  border-left-width: 4px;
+  border: var(--mb-rule-edge) solid var(--mb-banner-tone, var(--mb-navy));
+  border-left-width: var(--mb-rule-anchor);
   border-radius: 4px;
   font-size: 0.8rem;
 }

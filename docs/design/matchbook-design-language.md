@@ -23,10 +23,13 @@ Reference implementations — read these before writing a new screen:
 | Compete console | `src/app/competitions/page.tsx` |
 | History archive | `src/app/summaries/page.tsx` |
 | Tools hub | `src/app/tools/page.tsx` |
+| **Primitive gallery** | **`src/app/dev/kit/page.tsx` → `/dev/kit`** — every component in §4.2, live, in every state |
 
-Shared kit: `src/components/matchbook/`.
+Shared kit: `src/components/matchbook/` (§4.2 is the real inventory).
 Tokens + utility classes: the **Matchbook block at the top of `src/app/globals.css`**
-(lines 54–367). Assets: `public/assets/matchbook/`.
+(from the `@theme inline` block down to the legacy divider — roughly lines
+54–1400 after P1; the legacy "playful warm" system starts below it).
+Assets: `public/assets/matchbook/`.
 
 ---
 
@@ -73,18 +76,28 @@ Declared in `globals.css` `:root` (lines 70–83) and exposed to Tailwind throug
 | `--mb-rule` | `rgba(7,50,77,0.28)` | `border-mb-rule` `divide-mb-rule` | Hairline dividers: panel head underline, table row rules, list `divide-y`, section separators. | Panel outer border and heavy section separators — those are solid `--mb-navy`. |
 | `--mb-display-font` | `var(--font-oswald), "Arial Narrow", "Roboto Condensed", Impact, sans-serif` | — | Display stack. Only ever consumed via `.matchbook-display` or an existing `mb-*` class. | Direct `font-family` declarations in components. |
 
-Fixed values that appear inline and are effectively tokens (see §11 GAP-13 —
-they should be promoted):
+**The literals above are now tokens** (GAP-13, closed in P0). Use the token, not
+the value — a bare `rgba(...)` in new code is a review failure.
 
-| Literal | Meaning |
-| --- | --- |
-| `rgba(7,50,77,0.04)` | Row hover tint (6 call sites) |
-| `rgba(7,50,77,0.05)` | Table day-group header band (History) |
-| `rgba(7,50,77,0.06)` | Nav-item / outline-navy button hover |
-| `rgba(7,50,77,0.12)` | Empty form square, progress-bar track |
-| `rgba(255,250,241,0.25)` | Hairline rule **on navy** (Login promo half) |
-| `rgba(255,250,241,0.06)` | Panel-bright tint on navy |
-| `0 8px 22px rgba(57,41,23,0.08)` | The only shadow in the system (`.mb-panel`) |
+| Token | Value | Meaning |
+| --- | --- | --- |
+| `--mb-coral-deep` | `#c9351f` | Coral as a **fill or as small ink**: 5.23:1 with white, 5.03:1 on paper-bright. `--mb-coral` stays the accent/rule colour. |
+| `--mb-gold-ink` | `#8a5c00` | Gold that is legible on paper (Draft/warn badge ink and rule). `--mb-gold` remains fill-and-on-navy only. |
+| `--mb-tint-1` | `rgba(7,50,77,0.04)` | Row hover |
+| `--mb-tint-2` | `rgba(7,50,77,0.06)` | Nav / outline-navy hover |
+| `--mb-tint-3` | `rgba(7,50,77,0.12)` | Empty form square, meter track |
+| `--mb-tint-coral` | `rgba(201,53,31,0.08)` | Coral wash: outline hover, active nav row |
+| `--mb-band` | `rgba(7,50,77,0.05)` | Table day-group header band |
+| `--mb-rule-on-navy` | `rgba(255,250,241,0.25)` | Hairline **on navy** |
+| `--mb-tint-on-navy` | `rgba(255,250,241,0.06)` | Panel-bright tint on navy |
+| `--mb-panel-shadow` | `0 8px 22px rgba(57,41,23,0.08)` | The only shadow in the system |
+| `--mb-rule-hairline` / `-edge` / `-accent` / `-anchor` | `1px` / `1px` / `3px` / `4px` | The four rule weights of §3.3, named. Note `-edge` resolves to 1px, not 1.5px: Tailwind's `border-[1.5px]` still writes the panel/box edge; the token is for CSS that cannot. |
+| `--mb-focus` | `var(--mb-coral)` | The Matchbook focus ring (GAP-12) |
+| `--mb-dur-fast` / `-base` / `-slow` | `120ms` / `180ms` / `280ms` | Motion durations (GAP-11) |
+| `--mb-ease-out` / `--mb-ease-in-out` | `cubic-bezier(.2,.8,.3,1)` / `(.4,0,.2,1)` | Motion easings |
+| `--mb-stagger` | `40ms` | Per-panel entrance delay |
+| `--mb-safe-top` / `--mb-safe-bottom` | `env(safe-area-inset-*, 0px)` | Notch and home-indicator padding (GAP-3, CSS half) |
+| `--mb-court-fill` / `-line` / `-line-strong` / `-accent` | token refs | The volleyball court diagram's palette |
 
 ### 1.2 Fixed colour semantics
 
@@ -133,11 +146,24 @@ Computed from the real hex values. **AA** = ≥4.5:1 (any size). **AA-large** =
 - Secondary small text on paper or bright → `text-mb-ink-muted` (AA).
 - Any text on `bg-mb-navy` → `text-mb-paper-bright` (AAA) or `text-white` (AAA).
 - Icons on `bg-mb-navy` → `text-mb-gold` (5.99 AA) or `text-mb-paper-bright`.
-- `.mb-btn-coral` sets `color:#fff` on coral → **3.62:1**. It is AA-large only, and
-  `.mb-btn` is `0.8rem/600` — **below** the large-text threshold. This is a known
-  shipped debt; do not copy it into new dense UI. Prefer `.mb-btn-navy`
-  (paper-bright on navy, 12.84 AAA) when the text is under 18.66px and the button
-  is not the hero CTA. See GAP-14.
+- `.mb-btn-coral` no longer fills with `--mb-coral`. **P0 moved the fill to
+  `--mb-coral-deep` (`#c9351f`), which is 5.23:1 with white** — AA at
+  `.mb-btn`'s `0.8rem/600`. `.mb-btn-outline` and `.mb-panel-link:hover` took
+  the same ink (5.03:1 on paper-bright, 4.62:1 on paper), as did
+  `.mb-stamp-final`. GAP-14's contrast half is closed.
+- The split to remember: **`--mb-coral` is the accent** (rules, frames, rails,
+  the masthead word, the active-tab border); **`--mb-coral-deep` is ink and
+  fill** (button backgrounds, coral letterforms under 18.66px). Never coral
+  letterforms at a small size.
+
+| Deep-coral pairs | ratio | verdict |
+| --- | --- | --- |
+| `#fff` on `--mb-coral-deep` | **5.23** | AA |
+| `--mb-coral-deep` on `#fffaf1` bright | **5.03** | AA |
+| `--mb-coral-deep` on `#f7f0e4` paper | **4.62** | AA |
+| `--mb-gold-ink` on `#f7f0e4` paper | **5.13** | AA |
+| `--mb-gold-ink` on `#fffaf1` bright | **5.59** | AA |
+| `--mb-coral-deep` on `#07324d` navy | 2.55 | **FAIL** — deep coral is a paper ink only |
 
 **Hard rules:**
 
@@ -158,10 +184,17 @@ Computed from the real hex values. **AA** = ≥4.5:1 (any size). **AA-large** =
 ### 1.4 Dark mode
 
 **Matchbook is light-only.** `.matchbook-surface` hard-codes the paper background
-and navy ink; the `.dark` block in `globals.css` (lines 537–613) belongs to the old
-theme and has no `--mb-*` overrides. Do not add `dark:` variants to Matchbook
-screens, and do not render `ThemeToggle` on a converted screen. (See GAP-15 if a
-dark almanac variant is ever wanted.)
+and navy ink; the `.dark` block in `globals.css` belongs to the old theme and has
+no `--mb-*` overrides. Do not add `dark:` variants to Matchbook screens, and do
+not render `ThemeToggle` on a converted screen. This is a **settled decision**,
+not an open question (charter Appendix A): `ThemeToggle` and `ThemeContext` are
+deleted in P4. Do not build a `--mb-*` dark set.
+
+**Print exists** (GAP-15.2, shipped in P1). `@media print` re-points the palette
+tokens — paper and bright to `#ffffff`, navy to `#000000`, tints off, shadow
+none — so the whole system turns black-on-white without a single component
+restating a colour. If you add a surface, give it a token background, not a
+literal, and it prints correctly for free.
 
 ---
 
@@ -405,14 +438,22 @@ Rules:
 | Form squares | `gap-[3px]` |
 
 **Radius vocabulary:** `4px` (`.mb-panel`, `.mb-btn`, `.mb-input`, `.mb-search`,
-`.mb-select-native`), `3px` (`.mb-score-box`, `.mb-seed-box`), `2px`
-(`.mb-form-square`, `FormLetters`), `999px` (`.mb-live-dot` and the account disc
-only). **Anything ≥ `rounded-lg` is an anti-pattern.**
+`.mb-select-native`, `.mb-dialog`, `.mb-stepper`, `.mb-segmented`,
+`.mb-swatch[data-size="touch"]`), `3px` (`.mb-score-box`, `.mb-seed-box`,
+`.mb-code-chip`), `2px` (`.mb-form-square`, `FormLetters`, `.mb-check`,
+`.mb-radio`, `.mb-switch`, `.mb-swatch`, `.mb-skeleton`, `.mb-stamp-final`).
+**`999px` is reserved** for exactly four things: `.mb-live-dot`, the account
+disc, an icon disc (`.mb-icon-disc`), and a colour swatch — plus the `live` and
+`guest` badge marks, which are dots by the same rule. `.mb-radio` is **not** a
+circle; it is a squared ballot box. **Anything ≥ `rounded-lg` is an
+anti-pattern.**
 
-**Border vocabulary:** `1px solid var(--mb-rule)` = hairline divider.
+**Border vocabulary** (now tokenised — `--mb-rule-hairline` / `-edge` /
+`-accent` / `-anchor`): `1px solid var(--mb-rule)` = hairline divider.
 `1.5px solid var(--mb-navy)` = a real edge (panel body, boxes, inputs, tiles).
-`4px` top border = `.mb-panel` only. `2px` = the masthead badge only.
-`3px` inset box-shadow = the selection/rank rail.
+`3px` = an accent rail (inset box-shadow, or the active tab's bottom border).
+`4px` = an anchor edge: `.mb-panel` top, `.mb-dialog` top, `.mb-banner` /
+`.mb-toast` left. `2px` = the masthead badge only.
 
 ### 3.4 Panel anatomy
 
@@ -473,7 +514,7 @@ modifier: `className="mb-panel h-auto!"` (`src/app/login/page.tsx:107`).
 
 ## 4. Component inventory
 
-### 4.1 CSS classes in `globals.css` (complete)
+### 4.1a CSS classes in `globals.css` — the P0 set
 
 | Class | Use this when | Snippet |
 | --- | --- | --- |
@@ -510,59 +551,168 @@ Select pattern (the chevron is not automatic):
 </div>
 ```
 
+### 4.1b CSS classes added in P1 (GAP-1/2/4/5/6/7/8/10/11/12/14/15)
+
+Almost all of these have a React component in front of them — **use the
+component**. The class is documented so a bespoke surface can borrow the
+geometry, and so nobody re-invents one under a new name.
+
+| Class | Use this when | Component |
+| --- | --- | --- |
+| `.mb-row-hover` | Any hoverable row. Replaces the copy-pasted `hover:bg-[rgba(7,50,77,0.04)]`. | — |
+| `.mb-rail` | The 3px inset accent rail. Colour via `--mb-rail-color` (default coral). | — |
+| `.mb-tile` | The boxed tile: 1.5px navy on paper-bright. | — |
+| `.mb-icon-disc` | The circular 1.5px navy icon disc in a stat block. | `MbStat` |
+| `.mb-meter` + `.mb-meter > span` | Readiness / progress track and fill. | `MbMeter` |
+| `.mb-btn-lg` | A hero CTA at ≈44px without touching the base button. | `MbButton size="lg"` |
+| `.mb-btn-touch` | One button that must clear 44px on a fine pointer too. | `MbButton`, `MbIconButton` |
+| `.mb-badge` + `[data-tone]` + `[data-variant]` + `[data-size]` | Any status word. Nine tones; the mark shape carries the tone, the letterforms stay navy. | `MbBadge` |
+| `.mb-banner` + `[data-tone]` | Inline notice inside a page or panel. 4px left rule in the tone. | `MbNotice` |
+| `.mb-toast` + `[data-tone]` | Transient notification. **CSS only — the component is not built.** | GAP-2 |
+| `.mb-dialog`, `.mb-dialog-overlay`, `.mb-dialog-head`, `.mb-dialog-body`, `.mb-dialog-foot` | Modal chrome. `[data-tone="navy"\|"danger"]` re-inks head and top rule. | `MbDialog` |
+| `.mb-sheet` | Bottom-sheet chrome (radius on the top corners only). | `MbSheet` |
+| `.mb-tabs`, `.mb-tab`, `.mb-tab[data-active]` | View switcher. Coral 3px **bottom** border when active — the horizontal mirror of `.mb-nav-item`. | `MbTabs` |
+| `.mb-segmented`, `.mb-segmented > *`, `[data-selected]` | Value picker. Grid with `gap: 1.5px` over a navy ground — the gaps **are** the rules. | `MbSegmented` |
+| `.mb-field`, `.mb-field-hint`, `.mb-field-error`, `[data-invalid]` | The label/hint/error triad around any control. | `MbField` |
+| `.mb-textarea` | Multi-line input at `.mb-input` geometry. | `MbTextArea` |
+| `.mb-check`, `.mb-radio` | Squared ballot boxes. `.mb-radio` is **not** a circle — §3.3 reserves 999px. | form controls |
+| `.mb-switch` | 28×16 track, radius 2px, coral-deep when on. | `MbToggle` |
+| `.mb-stepper`, `.mb-stepper button`, `.mb-stepper-value`, `[data-size="lg"]` | Bounded integer. Buttons are 44×44 (56 at `lg`). | `MbNumberStepper` |
+| `.mb-swatch`, `[data-size="touch"]`, `[data-selected]` | A colour chip. 24×24, or 44×44 as a real target. | `MbSwatchPicker` |
+| `.mb-console`, `.mb-console-column`, `.mb-notch-coral` | The full-bleed scoring surface: tap columns, press = tint not scale. | GAP-7 (W5) |
+| `.mb-numeral` + `--compact` / `--console` / `--court` | The four score size steps. | `MbScoreNumeral` |
+| `.mb-scoreline` | Grid `1fr auto 1fr` with `min-width:0` cells. Never flex. | `MbScoreboardHero` |
+| `.mb-action-bar` | The fixed bottom commit bar. | `MbActionBar` |
+| `.mb-skeleton` | Static placeholder block. No shimmer. | `MbSkeleton` |
+| `.mb-stamp-final` | The rotated "Final" stamp. Ink is `--mb-coral-deep` (5.03:1), not `--mb-coral`. | `MbFinalStamp` |
+| `.mb-code-chip` | A share code / token rendered as a boxed monospaced-feel chip. | `MbCopyField`, `MbSwatchPicker` |
+| `.mb-day-head` | The day-group band in a ledger table. | History |
+| `.mb-rule-vertical` | A 1.5px navy vertical hairline — the overflow-edge marker on a scroller. | `MbTabs` |
+| `.mb-skip-link` | The skip-to-content link. One per page, first in the DOM. | shell |
+| `.mb-enter`, `.mb-stagger-1…6` | Entrance: opacity + 6px rise. Stagger caps at 6. Replaces the legacy `.stagger-*`. | — |
+| `.mb-safe-top`, `.mb-safe-bottom` | Padding for the notch / home indicator. | — |
+| `@keyframes mb-enter`, `mb-fade`, `mb-sheet-up` | The three P1 animations, alongside `mb-pulse`. | — |
+
 ### 4.2 React exports in `src/components/matchbook/`
 
-**`MbIcon.tsx`**
+**Accurate as of commit `a4d6876` plus the Gate-1 fix round.** Every entry below
+was read from the file, not from a plan. There is **no barrel** — import from the
+file. All components are arrow functions with named exports; there are no default
+exports. Live gallery of every one of them: **`/dev/kit`**
+(`src/app/dev/kit/page.tsx`).
 
-| Export | Use this when |
-| --- | --- |
-| `MbIcon({ id, size, className })` | Any icon, anywhere. `currentColor`; `aria-hidden` is baked in. |
+Canonical props live in `IMPLEMENTATION-CHARTER.md` §2, which outranks this
+table when they disagree about a signature. This table is for *choosing*.
 
-```tsx
-<MbIcon id="chevron-right" size={11} />
-```
+**Chrome and layout**
 
-**`Panel.tsx`**
-
-| Export | Use this when | Snippet |
+| File | Export | Use this when |
 | --- | --- | --- |
-| `Panel` | Standard boxed region. Handles head, tone, action link, meta slot. | `<Panel title="Live Courts" action="View All" href="/competitions">…</Panel>` |
-| `Panel` (navy) | Summary/hero region. | `<Panel title="Archive Summary" tone="navy" icon="chart">…</Panel>` |
-| `Crest` | A team crest image at a given size (aspect 96:112 preserved). | `<Crest team={row.team} size={20} />` |
-| `TeamMark` | Crest + team name as one inline unit. `reverse` flips it for the away side. | `<TeamMark team={m.away} size={18} reverse className="justify-self-end" />` |
-| `FormSquares` | Compact W/L strip padded to `slots` (default 8). `warnTint` recolours a poor run gold/red. | `<FormSquares form={row.form} slots={5} warnTint />` |
-| `FormLetters` | W/L strip with letters, for when the result must be readable, not just scanned. | `<FormLetters form={summary.form} />` |
-| `PanelEmpty` | The empty state inside any panel. Optional single outline CTA. | `<PanelEmpty message="No results exist yet — finished matches will be recorded here." actionLabel="Play a match" href="/quick-match" />` |
+| `MbIcon.tsx` | `MbIcon` | Any icon, anywhere. `currentColor`, `aria-hidden` baked in — an icon-only control still needs its own name. |
+| `Sidebar.tsx` | `MatchbookSidebar` | Every authenticated screen. Owns `NAV_ITEMS`; a new top-level route means editing this array **and** `MOBILE_NAV`. |
+| `MobileBar.tsx` | `MatchbookMobileBar` | Every authenticated screen, directly under the sidebar. Interim — GAP-3 replaces it with `MatchbookTopStrip` + `MatchbookBottomBar`. |
+| `Panel.tsx` | `Panel` | Any boxed content region. Handles head, tone, action link, meta slot. `tone="navy"` for a summary/hero panel, max 1–2 per screen. |
+| `ActionBar.tsx` | `MbActionBar` | The bottom-anchored commit bar: one primary, ≤1 secondary, one short status line. The wizard footer and the scoring action rail are both this. |
+| `ActionBar.tsx` | `MB_ACTION_BAR_H`, `MB_ACTION_BAR_H_STACKED` | Reserving scroll padding under a fixed action bar. Never re-measure it in the page. |
 
-**`Sidebar.tsx` / `MobileBar.tsx`**
+**Identity and data marks**
+
+| File | Export | Use this when |
+| --- | --- | --- |
+| `Panel.tsx` | `Crest` | A team crest at a size (aspect 96:112 preserved). Never a raw `<Image>` in a square box. |
+| `Panel.tsx` | `TeamMark` | Crest + team name as one inline unit. `reverse` flips it for the away side. |
+| `Panel.tsx` | `FormSquares` | A W/L run to be **scanned**. Padded to `slots` (default 8) so the strip keeps constant width. |
+| `Panel.tsx` | `FormLetters` | A W/L run to be **read** — when the individual result matters, not the shape. |
+| `Badge.tsx` | `MbBadge` | Any status word (Live/Draft/Final/Win/Loss/Guest/…). Nine tones, each with its own **mark shape**, so status survives greyscale. Replaces every inline `style={{ color }}` status span. |
+| `Stat.tsx` | `MbStat` | A labelled figure in a tile or triptych. Replaces `StatusStat` / `SummaryStat` / `ProfileStat`. |
+| `Meter.tsx` | `MbMeter` | A proportion as a 4px rule track + fill (readiness, progress). Takes a token expression, which is what `readinessColor()` returns. |
+| `FinalStamp.tsx` | `MbFinalStamp` | The rotated hairline "Final" stamp closing out a finished match. |
+| `LiveStatus.tsx` | `MbLiveStatus` | "Updated 2 min ago"-style freshness, rounded to what a human would say. Sub-5s reads "just now" so a live feed does not flicker. |
+| `ScoreNumeral.tsx` | `MbScoreNumeral` | Any score the reader is meant to look at. Reserves its own digit width so a change cannot reflow neighbours, and cross-fades instead of moving. |
+| `ScoreboardHero.tsx` | `MbScoreboardHero` | The matchup block: two identities, one score, one status. Grid `1fr auto 1fr`, reflows to one row per team below `sm`. |
+
+**Controls**
+
+| File | Export | Use this when |
+| --- | --- | --- |
+| `Button.tsx` | `MbButton` | Every button that *does* something. One variant per call. |
+| `Button.tsx` | `MbButtonLink` | Every control that *navigates*. Never `MbButton` with an `onClick` that pushes a route. |
+| `IconButton.tsx` | `MbIconButton` | An icon-only control. Owns its ≥44px box; still needs `label`. |
+| `Tabs.tsx` | `MbTabs` | Switching which **view** is shown. Hand-rolled tablist, roving tabindex, horizontal scroller with hairline overflow edges. |
+| `Segmented.tsx` | `MbSegmented` | Picking a **value** from 2–6 options. `role="radiogroup"`; wraps to a second row rather than squeezing a cell under 44px. |
+| `Menu.tsx` | `MbMenu` | A row or masthead with more than two actions. Full-bleed ruled rows — a menu is a short ledger, not a card stack. |
+| `ChoiceCard.tsx` | `MbChoiceCard` | A "pick a thing" tile: format grid, tools hub, any chooser. Accent colour is a contained rail only. |
+| `StepRail.tsx` | `MbStepRail` | Wizard progress. Semantic `<ol>`; completed steps are buttons, current and future steps are inert. |
+| `SelectList.tsx` | `MbSelectList` | Multi-select over a list of rows, with optional search. Selection is a `Set` of keys; the caller owns filtering. |
+| `SelectList.tsx` | `MbSelectRow` | One row of the above. Memoised — feed it primitives and stable callbacks. |
+| `SelectList.tsx` | `MbCheckMark` | The system tick, drawn as a border pair. The sprite's `check` is a *circled* tick and reads as a ring below ~16px. |
+| `ReorderList.tsx` | `MbReorderList` | Re-ranking rows. Three equal input paths: pointer grip, visible 44px up/down buttons, `Alt+Arrow`. Nothing animates. |
+| `ReorderList.tsx` | `mbReorder` | The move as a pure function. Callers never re-write the splice. |
+
+**Forms** (`form.tsx` — one file, one context)
 
 | Export | Use this when |
 | --- | --- |
-| `MatchbookSidebar` | Every authenticated screen. Owns `NAV_ITEMS`; adding a top-level route means editing this array **and** `MOBILE_NAV`. |
-| `MatchbookMobileBar` | Every authenticated screen, directly under the sidebar in the tree. `active` is the pathname string; `cta` is the single mobile action. |
+| `MbField` | The wrapper around **every** control. Publishes `id` / `aria-describedby` / `aria-invalid` / `required` through context so the control below never restates them. |
+| `MbTextInput` | Single-line text. Optional leading `icon` and `trailing` slot. |
+| `MbTextArea` | Multi-line free text. |
+| `MbSelect` | A native `<select>` with the chevron already attached. |
+| `MbNumberStepper` | A bounded integer (points to win, courts, rotation). `wrap` for cycles like R1–R6. Each button is 44×44. |
+| `MbToggle` | A boolean setting with a label and optional hint. |
+| `MbToggleChip` | A boolean *filter* in a row of filters — pressed state, not a switch. |
+| `MbSwatchPicker` | Team / event colour. `allowCustom` yields a real hex; otherwise values are `var(--mb-*)` token references. |
+| `MB_SWATCH_PALETTE` | The house palette. Import it rather than restating eight colours. |
+| `MbTagInput` | A short list of free-text tokens (tags, player names, labels). |
 
-**`types.ts`**
+**Overlays and state**
 
-`MbTeam`, `MbFormResult`, `MbStandingRow`, `MbSetScore`, `MbFeaturedMatch`,
-`MbLiveCourt`, `MbScheduleItem`, `MbBracketSeed`, `MbBracket`, `MbRecentResult`,
-`MbReadinessStatus`, `MbReadinessRow`, `MbLeader`, `MbStatTotal`,
-`MbDashboardData`, `MbTeamStatus`, `MbNextMatch`, `MbTeamRow`, `MbFormRow`,
-`MbTeamsData`, plus:
+| File | Export | Use this when |
+| --- | --- | --- |
+| `Dialog.tsx` | `MbDialog` | Any modal. Owns focus restoration that Radix drops for a controlled (triggerless) dialog. |
+| `Dialog.tsx` | `MbDialogBody`, `MbDialogFooter` | The scroll region and the action row inside a dialog or sheet. The footer stretches its buttons below `sm`. |
+| `Dialog.tsx` | `useMbFocusRestore` | Any *other* controlled Radix overlay you build. Do not re-solve this. |
+| `Sheet.tsx` | `MbSheet` | A bottom sheet on mobile. Discrete snap heights cycled by a real 44px button — no drag gesture. |
+| `Confirm.tsx` | `MbConfirm` | **Every** confirmation. There is no `window.confirm` and no second dialog. `destructive={false}` for a plain "are you sure". |
+| `DangerZone.tsx` | `MbDangerZone` | The framed block that closes a page whose last option is destructive. Always rendered last, never inline with frequent actions. |
+| `Notice.tsx` | `MbNotice` | An inline message inside a page or panel. Tone rides the 4px left rule; letterforms stay navy. |
+| `EmptyState.tsx` | `MbEmptyState` | A **route** with nothing in it. Ranged left: eyebrow, display line, hung rule, deck, actions. |
+| `Panel.tsx` | `PanelEmpty` | A **panel** with nothing in it — the same anatomy one size down. |
+| `Panel.tsx` | `MB_STATE_TONES`, `splitStateMessage` | Building a bespoke empty/error surface that must use the same tone marks and the same "headline — deck" split. |
+| `Skeleton.tsx` | `MbSkeleton` | A loading placeholder sized to the geometry it replaces. No shimmer — a shimmer is a gradient. |
 
-- `crestPath(slug)` → `/assets/matchbook/teams/{slug}.svg`
-- `crestForTeam(teamId, teamName)` → deterministic crest for a real team. **Every**
-  team rendered on a Matchbook screen goes through this. Never hard-code a crest
-  path for user data.
+**Sharing and clipboard**
 
-**`teamStats.ts`** — `buildTeamTallies`, `emptyTally`, `recentForm` (last 5,
-oldest→newest), `readinessPercent`, `readinessStatus`, `readinessColor`. Use these
-so two screens never disagree about a team's record.
+| File | Export | Use this when |
+| --- | --- | --- |
+| `CopyField.tsx` | `MbCopyField` | Showing a value the user must copy (link, code, token). Handles reveal, confirmation, and the browser-refused manual fallback. |
+| `CopyField.tsx` | `copyToClipboard` | Copying from anywhere else. The one implementation: async clipboard → `execCommand` → `"manual"`. Never throws. |
+| `ShareAction.tsx` | `MbShareAction` | A share control. Native sheet → clipboard → fallback dialog, all handled. |
+| `ShareAction.tsx` | `shareLink` | Sharing from your own control. Callers **must** handle `"manual"` visibly. |
+
+**Logic, types and data**
+
+| File | Export | Use this when |
+| --- | --- | --- |
+| `types.ts` | `Mb*` interfaces | Any Matchbook view model. Listed below. |
+| `types.ts` | `crestPath`, `crestForTeam` | **Every** team rendered on a Matchbook screen. Never hard-code a crest path for user data. |
+| `teamStats.ts` | `buildTeamTallies`, `emptyTally`, `recentForm`, `readinessPercent`, `readinessStatus`, `readinessColor` | Any record, form run or readiness figure — so two screens never disagree about a team. |
+| `formatMeta.ts` | `FORMAT_META`, `FORMAT_ORDER`, `isEliminationFormat`, `hasAdvancedSettings` | Anything that branches on competition type: labels, blurbs, accents, capability flags. |
+| `useMbReducedMotion.ts` | `useMbReducedMotion`, `REDUCED_MOTION_QUERY` | Any JS-driven motion. Render the end state when it returns true. |
+
+**`types.ts` view models** — `MbTeam`, `MbFormResult`, `MbStandingRow`,
+`MbSetScore`, `MbFeaturedMatch`, `MbLiveCourt`, `MbScheduleItem`,
+`MbBracketSeed`, `MbBracket`, `MbRecentResult`, `MbReadinessStatus`,
+`MbReadinessRow`, `MbLeader`, `MbStatTotal`, `MbDashboardData`, `MbTeamStatus`,
+`MbNextMatch`, `MbTeamRow`, `MbFormRow`, `MbTeamsData`.
+`crestPath(slug)` → `/assets/matchbook/teams/{slug}.svg`;
+`crestForTeam(teamId, teamName)` → the deterministic crest for a real team.
 
 **Data hooks** — `useMatchbookDashboard`, `useMatchbookTeams`,
-`useMatchbookCompete`, `useMatchbookHistory`, `useMatchbookQuickMatch`. Pattern to
-copy for a new screen: a pure `build<Screen>(state)` function + a
-`useMemo(() => build(state), [state])` hook, so the page component contains **no**
-data shaping.
+`useMatchbookCompete`, `useMatchbookHistory`, `useMatchbookQuickMatch` (each also
+exports its own row/line interfaces; `useMatchbookCompete` additionally exports
+`COMPETITION_TYPE_LABELS`). Pattern to copy for a new screen: a pure
+`build<Screen>(state)` function + a `useMemo(() => build(state), [state])` hook,
+so the page component contains **no** data shaping.
 
 **Panel libraries** — `panels.tsx` (Overview: `StandingsPanel`,
 `MatchOfTheDayPanel`, `LiveCourtsPanel`, `SchedulePanel`, `BracketPanel`,
@@ -571,19 +721,31 @@ data shaping.
 `TeamProfilePanel`, `UpcomingFixturesPanel`, `RecentFormPanel`). Screen-specific;
 read them for idiom, import only if the panel is genuinely the same panel.
 
-### 4.3 Recurring inline recipes (no class yet — copy exactly)
+**Not built yet** — do not import these; see §11 for who owns them:
+`MatchbookMasthead`, `MbEventBar`, `MatchbookTopStrip`, `MatchbookBottomBar`,
+`MbAccountChip` (GAP-3/9, W2/P2a) · `MbToast` + `useToast` + `ToastHost`
+(GAP-2, W2/P2b) · `MbPageLoading` (GAP-8, W2/P2b) · `MbOfflineBanner` (W2/P2b) ·
+`MbScoreSide`, `MbSetStrip`, `useCourtView` (GAP-7, W5/P3a).
 
-| Recipe | Code | Sites |
-| --- | --- | --- |
-| Row hover | `className="transition-colors hover:bg-[rgba(7,50,77,0.04)]"` | 6 |
-| Selection / rank rail | `style={{ boxShadow: "inset 3px 0 0 var(--mb-coral)" }}` | 7 |
-| Boxed tile | `className="border-[1.5px] border-mb-navy bg-mb-paper-bright p-4"` | 14 |
-| Icon disc | `className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-[1.5px] border-mb-navy text-mb-navy"` | 4 |
-| Panel footer link | `<div className="border-t border-mb-rule px-4 py-2 text-center mt-auto"><Link className="mb-panel-link justify-center">…<MbIcon id="chevron-right" size={11} /></Link></div>` | 5 |
-| Progress bar | `<span className="h-[7px] w-24 overflow-hidden rounded-sm bg-[rgba(7,50,77,0.12)]"><span className="block h-full" style={{width:`${p}%`, background: readinessColor(p)}} /></span>` | 2 |
-| Inline error | `<p className="border-[1.5px] border-mb-red px-3 py-2 text-[0.8rem] font-medium text-mb-red" role="alert">` | 2 |
-| Inline success | `<p className="border-[1.5px] border-mb-green px-3 py-2 text-[0.8rem] font-medium text-mb-green" role="status">` | 1 |
-| Disabled button | `className="mb-btn mb-btn-coral disabled:cursor-not-allowed disabled:opacity-40"` | 3 |
+### 4.3 Legacy inline recipes — read these, don't write them
+
+Every recipe in this table now has a class or a component (GAP-10, closed). The
+literals are documented because they are still in the un-converted files you
+will read. **In new code, use the right-hand column.**
+
+| Recipe you will see | Write this instead |
+| --- | --- |
+| `className="transition-colors hover:bg-[rgba(7,50,77,0.04)]"` | `className="mb-row-hover"` |
+| `style={{ boxShadow: "inset 3px 0 0 var(--mb-coral)" }}` | `className="mb-rail"` (`--mb-rail-color` to change the tone) |
+| `className="border-[1.5px] border-mb-navy bg-mb-paper-bright p-4"` | `className="mb-tile p-4"` |
+| `className="flex h-10 w-10 … rounded-full border-[1.5px] border-mb-navy"` | `className="mb-icon-disc h-10 w-10"`, or `MbStat` |
+| the hand-rolled progress span with `rgba(7,50,77,0.12)` | `<MbMeter value={p} color={readinessColor(p)} />` |
+| `<p className="border-[1.5px] border-mb-red …" role="alert">` | `<MbNotice tone="danger">` |
+| `<p className="border-[1.5px] border-mb-green …" role="status">` | `<MbNotice tone="success">` |
+| `style={{ color: STATUS_STYLES[s].color }}` on a display span | `<MbBadge tone="…">` |
+| a bare `<button className="mb-btn mb-btn-coral disabled:…">` | `<MbButton variant="coral">` |
+| the copy-pasted panel footer link `<div className="border-t …">` | still hand-written — `MbPanelFoot` is GAP-9, unbuilt |
+| the copy-pasted masthead / account chip | still hand-written — GAP-9, unbuilt |
 
 ---
 
@@ -680,8 +842,27 @@ reading `Live / Now` stacked.
 
 ### 5.6 Status badges
 
-There is no badge class yet (GAP-4). The shipped pattern is display micro-caps with
-the colour applied inline from a lookup:
+**Use `MbBadge`** (`Badge.tsx` + `.mb-badge`). GAP-4 is closed; the inline
+`style={{ color }}` pattern below is **legacy** and is being migrated out of
+`competitions/page.tsx` and friends as each screen is converted.
+
+```tsx
+<MbBadge tone="live" variant="text">Live</MbBadge>
+<MbBadge tone="draft" variant="framed" size="md">Draft</MbBadge>
+<MbBadge tone="live" variant="solid">Live</MbBadge>   {/* solid is live-only */}
+```
+
+Nine tones — `live draft final win loss neutral teal guest warn` — and each one
+draws a **different mark shape** (round dot, circled tick, filled square, hollow
+square, pencil, triangle, hollow disc, horizontal bar, vertical bar). That is
+deliberate: nine badges in nine hues but one geometry is information carried by
+colour alone, and a desaturated screenshot is the honest test. The letterforms
+are always `--mb-navy`; the tone rides the mark and, for `framed`, the 1.5px
+rule in `--mb-badge-ink` (`draft`/`warn` resolve to `--mb-gold-ink`). `solid` is
+permitted for **`live` only** — 4.76:1 with white; solid green measures 4.45:1
+and is refused.
+
+The legacy pattern, for reading un-migrated screens:
 
 ```tsx
 const STATUS_STYLES = {
@@ -689,33 +870,48 @@ const STATUS_STYLES = {
   draft:       { label: "Draft", color: "var(--mb-gold)" },
   completed:   { label: "Final", color: "var(--mb-green)" },
 } as const;
-
-<span className="matchbook-display text-[0.66rem] font-bold tracking-[0.1em]"
-      style={{ color: STATUS_STYLES[status].color }}>
-  {STATUS_STYLES[status].label}
-</span>
 ```
 
-The framed variant (masthead) uses `border-[2px]` with `borderColor` and `color`
-both set from the same token.
+The masthead's framed count badge is a different object — `border-[2px]` coral
+around a stacked value/caption pair — and stays hand-written until
+`MatchbookMasthead` lands (GAP-9).
 
 ### 5.7 Empty states
 
-Every panel that can be empty renders `<PanelEmpty>`. Copy rules, from the shipped
-strings:
+One state language, two sizes. A **panel** with nothing in it renders
+`<PanelEmpty>`; a **route** with nothing in it renders `<MbEmptyState>`. Both
+draw the same anatomy, top to bottom, **ranged left**:
 
-- Format: **"No <things> exist yet — <what makes them appear>."** Em dash, lower
-  case after it, full stop. Examples: `"No standings exist yet — create teams and
-  play matches to build the table."`, `"No live matches exist yet — matches in
-  progress will appear here."`
-- Optional single CTA, sentence case, `.mb-btn .mb-btn-outline` at reduced size
-  (baked into `PanelEmpty`). One CTA maximum.
-- Filtered-to-nothing is a different message and gets **no** CTA:
+```
+eyebrow   glyph + one word              only on the five failure tones
+display   the headline, Oswald caps     1.2rem in a panel, 1.875rem on a route
+rule      a hung hairline               40px in a panel, 64px on a route
+deck      the sentence explaining it    body/sm, ink-muted
+action    at most one, ranged left      button sm in a panel, lg on a route
+```
+
+Six tones, one table (`MB_STATE_TONES`, imported by both cuts so they cannot
+drift): `empty` (no glyph, no word — an ordinary empty state stays plain),
+`notfound` (`search` / "Not found"), `error` (`warning` / "Error", red glyph),
+`offline` (`wifi-off` / "Offline", `--mb-gold-ink` glyph), `denied` (`lock` /
+"No access"), `unconfigured` (`settings` / "Not set up"). The **glyph** carries
+the ink; the word stays `.mb-kicker` muted, so a failure is never announced by
+small coloured letterforms.
+
+It is deliberately **not** a centred glyph-in-a-circle over centred text —
+that is the layout the rubric's §3 hard-fail 5 names outright, and it is what
+`PanelEmpty` drew before P1.
+
+- Copy format: **"No <things> exist yet — <what makes them appear>."** Em dash,
+  lower case after it, full stop. `splitStateMessage` splits that string into
+  headline and deck, so pass the whole sentence and let the component set it.
+- One action maximum, sentence case.
+- Filtered-to-nothing is a different tone and gets **no** action:
   `` `No teams match “${search}”.` `` (curly quotes).
-- Loading is plain text, not a spinner:
-  `<p className="p-4 text-center text-[0.8rem] text-mb-ink-muted">Loading saved formations…</p>`
-  (real ellipsis character).
-- No illustrations, no icons, no emoji in empty states.
+- Loading is `MbSkeleton` sized to the geometry it replaces, or plain text —
+  never a spinner, never a shimmer.
+- The eyebrow glyph comes from `MB_STATE_TONES` and nowhere else. No
+  illustrations, no emoji, no glyph-in-a-circle.
 
 ---
 
@@ -724,7 +920,8 @@ strings:
 One sprite: `public/assets/matchbook/icons/sprite.svg`, consumed only via `MbIcon`.
 Every symbol inherits `currentColor`.
 
-**The complete id list (62) — verified against the sprite and `manifest.json`:**
+**The complete id list (62) — counted from `sprite.svg` itself; there is no
+`manifest.json` any more:**
 
 ```
 Navigation:  overview  teams  quick  compete  history  tools
@@ -787,37 +984,47 @@ icon-only control with no label is invisible to screen readers.
 | Nav hover / active | `.mb-nav-item` | `transition: background-color .15s ease, color .15s ease` |
 | Row hover | inline | `transition-colors` (Tailwind, 150ms) |
 | Input focus | `.mb-input` | `transition: border-color .15s ease` |
-| Global press | `globals.css:1128` | `button:active:not(:disabled) { transform: scale(.98) }` — applies to Matchbook buttons too |
-| Reduced motion | `globals.css:1240` | Global `@media (prefers-reduced-motion: reduce)` clamps all animation/transition to 0.01ms |
+| Global press | `globals.css` | `button:active:not(:disabled) { transform: scale(.98) }` — applies to Matchbook buttons too |
+| Reduced motion | `globals.css` | Global `@media (prefers-reduced-motion: reduce)` clamps all animation/transition to 0.01ms |
 
-**That is the entire Matchbook motion system.** There are no framer-motion
-animations, no entrance animations, no stagger, and no page transitions on any
-converted screen. `framer-motion` appears in 21 files, all of them **unconverted**
-(match consoles, volleyball editor, old toasts, `PageLoadingSpinner`).
+### 7.2 The token system (SHIPPED — GAP-11 closed in P1)
 
-### 7.2 Intended system (ASPIRATIONAL — not implemented, do not assume it exists)
-
-Proposed so six engineers converge instead of each inventing. **Ship nothing from
-this section without adding the tokens to `globals.css` first** (GAP-11).
+The tokens below exist in `globals.css` `:root`. Every Matchbook transition
+written from P1 onward consumes them; a hard-coded `150ms ease` in new code is a
+review failure. (The P0 classes above still carry their original literal `.15s`
+values — they are unchanged on purpose, because rewriting them would move pixels
+on six shipped screens for no gain.)
 
 - **Durations:** `--mb-dur-fast: 120ms` (press, tint), `--mb-dur-base: 180ms`
   (hover, focus, colour), `--mb-dur-slow: 280ms` (panel/entry, dialog).
 - **Easings:** `--mb-ease-out: cubic-bezier(.2,.8,.3,1)` for anything entering;
   `--mb-ease-in-out: cubic-bezier(.4,0,.2,1)` for anything that moves both ways.
   **No springs, no bounce, no overshoot** — printed matter does not wobble.
-- **Entrance:** opacity 0→1 plus `translateY(6px)→0` at `--mb-dur-slow`. 6px, not
-  the legacy 10–15px. Never scale a panel in.
-- **Stagger:** 40ms per panel, capped at 6 panels (240ms). Grid order only.
+- **Entrance:** `.mb-enter` = `@keyframes mb-enter` (opacity 0→1 plus
+  `translateY(6px)→0`) at `--mb-dur-slow` / `--mb-ease-out`. 6px, not the legacy
+  10–15px. Never scale a panel in.
+- **Stagger:** `.mb-stagger-1` … `.mb-stagger-6`, each
+  `calc(var(--mb-stagger) * n)` = 40ms steps, capped at 6 (240ms). **Grid panels
+  only** — never table rows, never bracket cells.
+- **Overlays:** `@keyframes mb-fade` (dialog overlay) and `mb-sheet-up` (bottom
+  sheet). Those two plus `mb-enter` and `mb-pulse` are the complete keyframe set.
 - **Press:** keep the existing `scale(.98)`; do not add lift/translate.
 - **Page transitions:** cross-fade only, `--mb-dur-base`. No slide, no shared
   layout, no `layoutId`.
-- **Score changes:** the one place a value may animate. Opacity + 4px rise at
-  `--mb-dur-fast`, no scale, no flip. (The legacy `numberFlip` spring in
-  `src/components/motion/index.tsx` is explicitly **not** Matchbook.)
-- **Reduced motion:** the global clamp already handles transitions. Any new
-  JS-driven motion must additionally check `useReducedMotion()` and render the end
-  state; `.mb-live-dot` must fall back to a static dot (already handled by the
-  global rule setting `animation-iteration-count: 1`).
+- **Score changes:** the one place a value may animate — and it is already
+  built. `MbScoreNumeral` cross-fades two layers stacked in one grid cell: no
+  translate, no scale, no flip, and the box never reflows its neighbours. `flash`
+  adds a coral 3px edge on the side the score moved so direction survives
+  greyscale. The legacy `numberFlip` spring in `src/components/motion/index.tsx`
+  is explicitly **not** Matchbook.
+- **Reduced motion:** the global clamp handles CSS. Any JS-driven motion must
+  additionally call **`useMbReducedMotion()`** (`useMbReducedMotion.ts`) and
+  render the end state. `.mb-live-dot` falls back to a static dot via the global
+  `animation-iteration-count: 1`.
+
+There is still **no framer-motion on any converted screen**. `framer-motion`
+remains in the unconverted files (match consoles, volleyball editor, old toasts,
+`PageLoadingSpinner`) and is deleted with them in P4.
 
 ---
 
@@ -845,24 +1052,35 @@ gates the account chip; `sm` (640px) gates the masthead dateline.
 - Every flex/grid child that contains text needs `min-w-0`, and long strings need
   `truncate`. This is the #1 cause of mobile overflow in this codebase.
 
-**Touch targets (current state is non-compliant — read GAP-14):**
-- `.mb-btn` computes to ~37px tall. Below the 44×44 CSS-px minimum.
-- Mobile nav links are `px-3 py-1.5 text-[0.74rem]` ≈ 28px tall.
-- Icon-only buttons (delete, copy-link) are 14px icons with no padding box.
+**Touch targets — half closed, and the half that is open is deliberate:**
+- Every **P1 primitive** meets 44px on its own: `.mb-btn-lg` and `.mb-btn-touch`
+  are unconditional, `MbIconButton` owns its box, and `.mb-tab`,
+  `.mb-segmented > *`, `.mb-stepper button` and `MbSelectList` rows all set
+  `min-height: 44px` (48px for `MbSegmented size="md"`, 56px for the `lg`
+  stepper). Use the component and the floor is free.
+- The **base `.mb-btn` is still ≈38.8px** and `.mb-panel-link` ≈17.3px at
+  390×844. The blanket coarse-pointer floor exists —
+  `@media (pointer: coarse) { [data-mb-touch="on"] .mb-btn, .mb-nav-item,
+  .mb-tab, .mb-panel-link { min-height: 44px } }` — but is **not armed**. It
+  waits on `data-mb-touch="on"` on `<html>`, which W2 sets in the one P2 commit
+  that also drops `maximumScale`, sets `viewport-fit: cover` and pads every
+  fixed element (charter H6 requires those together). Arming it in P0 would have
+  reflowed all six shipped mobile routes.
+- So for **new** hand-written controls, keep padding to 44px:
+  `mb-btn mb-btn-lg`, or `MbIconButton`, or
+  `className="flex h-11 w-11 items-center justify-center"`.
 
-Until the gap is closed, **new** touch controls must pad to 44px:
-`className="mb-btn mb-btn-coral min-h-[44px] px-4"` and icon-only controls get
-`className="flex h-11 w-11 items-center justify-center"`.
+**Thumb reach:** `MbActionBar` is the answer and it is built — a bottom-anchored
+commit bar with one primary, at most one secondary and a short status line. Any
+screen whose main job is a single repeated action (scoring, wizard commit) puts
+that action in an `MbActionBar`, not in the masthead. The mobile *nav* is still
+top-anchored until `MatchbookBottomBar` lands (GAP-3).
 
-**Thumb reach:** the primary action currently lives in the masthead at the *top* of
-the page, and the mobile bar is also top-anchored — everything important is out of
-thumb reach on a tall phone. Until GAP-3 lands, a screen whose main job is a single
-repeated action (scoring) must place that action in a bottom-anchored region of its
-own.
-
-**Safe areas:** there is **no** `env(safe-area-inset-*)` handling anywhere in the
-codebase, and `viewport-fit` is not set. Any new bottom-anchored element must add
-`padding-bottom: env(safe-area-inset-bottom)` itself. See GAP-3.
+**Safe areas:** `--mb-safe-top` / `--mb-safe-bottom`
+(`env(safe-area-inset-*, 0px)`) and the `.mb-safe-top` / `.mb-safe-bottom`
+utilities exist. Use them on anything fixed. **`viewport-fit: cover` is still
+not set in `layout.tsx`**, so the insets resolve to 0 today — they arm together
+with `data-mb-touch` in W2's P2 commit. See GAP-3.
 
 **Viewport is locked:** `layout.tsx` sets `maximumScale: 1, userScalable: false`.
 That means users cannot pinch to rescue small text, so the 0.6–0.66rem display
@@ -912,8 +1130,10 @@ conversion is not done.
   `MatchbookMobileBar`.
 - `<ThemeToggle />` and any `.dark` handling (Matchbook is light-only).
 - `max-w-6xl mx-auto` page containers — Matchbook is full-bleed.
-- shadcn `<Button>`, `<Card>`, `<Badge>`, `<Input>` — replaced by `.mb-btn`,
-  `<Panel>`, status spans, `.mb-input`.
+- shadcn `<Button>`, `<Card>`, `<Badge>`, `<Input>`, `<Dialog>`, `<Sheet>` —
+  replaced by `MbButton`, `<Panel>`, `MbBadge`, `MbTextInput`, `MbDialog`,
+  `MbSheet`. `window.confirm` is replaced by `MbConfirm`. Migrate **your own**
+  call sites; `src/components/ui/*` itself is deleted by W2 in P4 (charter H7).
 - framer-motion entrance/stagger/spring wrappers (`PageTransition`,
   `StaggerContainer`, `StaggerItem`, `slideUp`, `springSmooth`, `MotionDiv`).
 - The word "Card" in component names for anything that is now a Panel.
@@ -960,10 +1180,19 @@ A screen is **done** when every box is ticked.
 
 **Components**
 - [ ] All icons are `<MbIcon>` with ids from the §6 list; no lucide/heroicons.
-- [ ] All buttons are `.mb-btn` + exactly one variant.
+- [ ] Nothing in §4.2 is re-invented. Before writing a control, open `/dev/kit`.
+- [ ] Buttons are `MbButton` / `MbButtonLink` / `MbIconButton` (or `.mb-btn` +
+      exactly one variant); status is `MbBadge`; inline messages are `MbNotice`;
+      confirmations are `MbConfirm`; modals are `MbDialog` / `MbSheet`.
+- [ ] Form controls are wrapped in `MbField` — no hand-wired `aria-describedby`.
+- [ ] Empty and error states are `PanelEmpty` / `MbEmptyState` with a tone from
+      `MB_STATE_TONES`; loading is `MbSkeleton`.
 - [ ] All team identities go through `crestForTeam()` / `Crest` / `TeamMark`.
 - [ ] All records/form/readiness numbers come from `teamStats.ts`, not local math.
+- [ ] Anything branching on competition type reads `formatMeta.ts`.
 - [ ] Data shaping lives in a `useMatchbook*`-style hook, not in the component.
+- [ ] Durations/easings are `--mb-dur-*` / `--mb-ease-*`; JS motion checks
+      `useMbReducedMotion()`.
 
 **Responsive**
 - [ ] Grid children ordered by **mobile** priority.
@@ -984,12 +1213,62 @@ A screen is **done** when every box is ticked.
 
 ---
 
-## 11. GAPS TO BUILD
+## 11. GAP REGISTER
 
-Real holes. Do **not** invent a token or class to fill one — build it here, in
-`globals.css` / `src/components/matchbook/`, and update this document.
+**Ten of the fifteen gaps are now closed.** Each entry below opens with a status
+line naming the file that closed it; the body underneath is the original
+proposal, kept because it records *why* the thing looks the way it does — where
+the built thing diverges from the proposal, the status line says so and the
+built thing wins.
 
-### GAP-1 — Dialogs and modals have no Matchbook skin (**highest priority**)
+Status key: **CLOSED** · **PARTIAL** (some of it shipped, the rest has a named
+owner) · **OPEN** (nothing built).
+
+| GAP | Status | Closed by |
+| --- | --- | --- |
+| 1 dialogs / modals | **CLOSED** | `Dialog.tsx`, `Sheet.tsx`, `Confirm.tsx` + `.mb-dialog*` |
+| 2 toast | **PARTIAL** | `.mb-toast` CSS only — component is W2/P2b |
+| 3 bottom nav + safe area | **PARTIAL** | safe-area tokens + `.mb-safe-*` — bar is W2/P2a |
+| 4 badge / chip | **CLOSED** | `Badge.tsx` + `.mb-badge` |
+| 5 tabs / segmented | **CLOSED** | `Tabs.tsx`, `Segmented.tsx` + `.mb-tabs`, `.mb-segmented` |
+| 6 form controls | **CLOSED** | `form.tsx`, `SelectList.tsx`, `ReorderList.tsx` + `.mb-field` family |
+| 7 live-scoring primitives | **PARTIAL** | `ScoreNumeral.tsx`, `ScoreboardHero.tsx`, `ActionBar.tsx`, `.mb-console*` — tap columns are W5/P3a |
+| 8 loading / skeleton | **PARTIAL** | `Skeleton.tsx` + `.mb-skeleton` — `MbPageLoading` is W2/P2b |
+| 9 masthead / stat / chip | **PARTIAL** | `Stat.tsx` — masthead, account chip, panel foot are W2/P2a |
+| 10 utility classes | **CLOSED** | `.mb-row-hover`, `.mb-rail`, `.mb-tile`, `.mb-icon-disc`, `.mb-meter` |
+| 11 motion tokens | **CLOSED** | `--mb-dur-*`, `--mb-ease-*`, `--mb-stagger`, `.mb-enter`, `.mb-stagger-*` |
+| 12 focus-visible | **CLOSED** | `--mb-focus` + `.matchbook-surface :focus-visible` |
+| 13 raw literals → tokens | **CLOSED** | the `--mb-tint-*` / `--mb-band` / `--mb-panel-shadow` / `--mb-gold-ink` set |
+| 14 touch + coral contrast | **PARTIAL** | contrast closed by `--mb-coral-deep`; the blanket touch floor is written but unarmed |
+| 15 dark / print / public | **PARTIAL** | print closed by `@media print`; dark is dropped, public shell is W6/P3b |
+
+Rules unchanged: do **not** invent a token or class to fill a remaining hole —
+build it in `globals.css` / `src/components/matchbook/`, and update this
+document in the same commit.
+
+### GAP-1 — Dialogs and modals have no Matchbook skin
+> **CLOSED — `src/components/matchbook/Dialog.tsx` (`MbDialog`, `MbDialogBody`,
+> `MbDialogFooter`, `useMbFocusRestore`), `Sheet.tsx` (`MbSheet`), `Confirm.tsx`
+> (`MbConfirm`), plus `.mb-dialog`, `.mb-dialog-overlay`, `.mb-dialog-head`,
+> `.mb-dialog-body`, `.mb-dialog-foot`, `.mb-sheet` in `globals.css`. The
+> `close` sprite id exists.**
+>
+> **Two claims in the body below are now false.**
+> `DeleteConfirmDialog` no longer renders a shadcn `<Button>` with `rounded-xl`
+> and a heroicon: `src/components/shared/DeleteConfirmDialog.tsx` is a ~20-line
+> adapter over `MbConfirm` that keeps its five call sites' props unchanged. And
+> the modal is no longer "the loudest visual regression in the app".
+>
+> Two things the proposal did not anticipate, both now load-bearing:
+> `useMbFocusRestore` exists because Radix silently drops focus restoration for
+> a *controlled* (triggerless) dialog and lands focus on `<body>` on every
+> close; and `MbDialogFooter` stretches its buttons to full width below `sm`, so
+> the primary action lands in the thumb zone.
+>
+> Still open: `src/components/ui/dialog.tsx` and `ui/sheet.tsx` themselves are
+> untouched by design (charter H7 — nobody restyles them; each workstream
+> migrates its own call sites, W2 deletes the originals in P4).
+
 `src/components/ui/dialog.tsx` is stock shadcn (`bg-background`, `rounded-lg`,
 `shadow-lg`, `zoom-in-95`, lucide `XIcon`), and `DeleteConfirmDialog` renders
 shadcn `<Button>` with `rounded-xl` and a heroicon. Converted screens (Teams,
@@ -1017,6 +1296,16 @@ Backing CSS: `.mb-dialog` (paper-bright, `border:1.5px solid navy`,
 `ui/sheet.tsx` needs the same treatment for mobile drawers.
 
 ### GAP-2 — No toast / transient notification
+> **PARTIAL — the CSS shipped, the component did not.** `.mb-toast` and its four
+> `[data-tone]` variants are in `globals.css` (and `.mb-toast :focus-visible`
+> is covered by the GAP-12 rule, because a toast portals outside
+> `.matchbook-surface`). There is **no `MbToast`, no `useToast`, no `ToastHost`**
+> — do not import them. Owner: **W2 / P2b** (charter §2, `Toast.tsx`).
+> `UndoToast.tsx` and `GlobalUndoToast.tsx` are still old-theme + framer-motion.
+>
+> For an inline, non-transient message today, use `MbNotice` (`.mb-banner`) —
+> same 4px-left-rule vocabulary, no host required.
+
 `UndoToast.tsx` and `GlobalUndoToast.tsx` are old-theme + framer-motion.
 
 ```tsx
@@ -1030,6 +1319,18 @@ body message. Bottom-centre, `bottom: calc(1rem + env(safe-area-inset-bottom))`,
 `role="status"` (`role="alert"` for danger).
 
 ### GAP-3 — No mobile bottom navigation, no safe-area handling
+> **PARTIAL.** The safe-area half is closed: `--mb-safe-top` / `--mb-safe-bottom`
+> (`env(safe-area-inset-*, 0px)`) and the `.mb-safe-top` / `.mb-safe-bottom`
+> utilities are in `globals.css`, and `MbActionBar` and `.mb-action-bar` already
+> consume them — so "nothing in the repo reads `env(safe-area-inset-*)`" is no
+> longer true.
+>
+> Still open: **`MatchbookBottomBar` and `MatchbookTopStrip` do not exist**, and
+> `layout.tsx` still omits `viewport-fit: cover`, so the insets resolve to 0 on
+> a notched phone today. Those two land together with `data-mb-touch="on"` in
+> W2's single P2a commit (charter H6). `MatchbookMobileBar` is still what ships.
+> Owner: **W2 / P2a**.
+
 `MatchbookMobileBar` is a top brand bar plus a horizontally scrolling nav strip:
 out of thumb reach, sub-44px targets, and it consumes vertical space on every
 screen. Nothing in the repo reads `env(safe-area-inset-*)`.
@@ -1044,6 +1345,14 @@ Also add `viewport-fit: cover` to the viewport in `layout.tsx` and a
 `.mb-safe-bottom` utility.
 
 ### GAP-4 — No badge / chip / pill primitive
+> **CLOSED — `src/components/matchbook/Badge.tsx` (`MbBadge`) + `.mb-badge` in
+> `globals.css`.** Two corrections to the proposal below, both from measurement:
+> the tone list grew to nine (`live draft final win loss neutral teal guest
+> warn`), and **each tone draws a different mark shape**, not the same square in
+> a different hue — nine identical squares is still information carried by
+> colour alone, whatever the hex values are. The letterforms stay navy. See §5.6
+> for the shipped API.
+
 Status is hand-rolled with inline `style={{ color }}` at 6+ sites.
 
 ```tsx
@@ -1064,6 +1373,20 @@ second channel:
 | `solid` | a tone fill with `#fff` ink | **`live` only** — 4.76:1. `final` is 4.45:1 with white and 4.28:1 with paper-bright, so solid green is not permitted |
 
 ### GAP-5 — No tabs / segmented control
+> **CLOSED — and it turned out to be two components, not one.**
+> `Tabs.tsx` (`MbTabs`, `.mb-tabs` / `.mb-tab`) switches which **view** is
+> shown; `Segmented.tsx` (`MbSegmented`, `.mb-segmented`) picks a **value**
+> (charter Appendix A, D-3). Both are hand-rolled with roving tabindex —
+> `@radix-ui/react-tabs` is deleted in P4.
+>
+> Two shipped details worth copying: `.mb-tabs` is a horizontal scroller whose
+> overflowing edges grow a 1.5px navy hairline (`.mb-rule-vertical`) rather than
+> a gradient fade, which invariant 24 forbids; and `MbTabs` keeps the active tab
+> in view by writing `rail.scrollLeft` and never `scrollIntoView`, because
+> `scrollIntoView` walks every scrollable ancestor and BODY is the document
+> scroller here — the old call opened `/dev/kit` 709px down on desktop and
+> 3300px down on mobile with no user action.
+
 Competition detail, match consoles, and the rotation designer all need one and will
 each invent a different thing.
 
@@ -1077,6 +1400,24 @@ each invent a different thing.
 horizontal mirror of `.mb-nav-item`).
 
 ### GAP-6 — Form controls stop at text input and native select
+> **CLOSED — `src/components/matchbook/form.tsx`** (`MbField`, `MbTextInput`,
+> `MbTextArea`, `MbSelect`, `MbNumberStepper`, `MbToggle`, `MbToggleChip`,
+> `MbSwatchPicker`, `MB_SWATCH_PALETTE`, `MbTagInput`), plus `SelectList.tsx`
+> and `ReorderList.tsx` for list-shaped input, backed by `.mb-field`,
+> `.mb-field-hint`, `.mb-field-error`, `.mb-textarea`, `.mb-check`, `.mb-radio`,
+> `.mb-switch`, `.mb-stepper`, `.mb-swatch`, `.mb-segmented`.
+>
+> **Correction to the sketch below: `.mb-radio` is not a circle.** It is a
+> squared ballot box carrying an inset coral mark, because §3.3 reserves 999px
+> for the live dot, the account disc, icon discs and colour swatches. Everything
+> else landed as written; `MbField` additionally publishes `id` /
+> `aria-describedby` / `aria-invalid` / `required` through context, so no call
+> site restates them. Two items the sketch missed and that now exist:
+> `MbToggleChip` (a pressed filter, not a switch) and `MbTagInput`.
+>
+> Date/time input and slider were **not** built and are not needed by any
+> converted screen. If a screen needs one, it is a new gap — raise it here first.
+
 Existing: `.mb-input`, `.mb-search`, `.mb-select-native`. Missing entirely:
 textarea, checkbox, radio, switch/toggle, number stepper, slider, colour picker,
 date/time input, and a label/hint/error triad. The create-competition wizard and
@@ -1095,6 +1436,18 @@ All controls `min-height: 44px` on coarse pointers. Error state = `border-color:
 var(--mb-red)` plus `.mb-field-error` text using the existing inline-error recipe.
 
 ### GAP-7 — No live-scoring primitives
+> **PARTIAL — the pieces exist, the tap columns do not.** Shipped:
+> `ScoreNumeral.tsx` (`MbScoreNumeral`, with the `display/score-2xl` step baked
+> as `.mb-numeral--court` and a `--console` step besides), `ScoreboardHero.tsx`
+> (`MbScoreboardHero` — the `1fr auto 1fr` grid), `ActionBar.tsx`
+> (`MbActionBar` — the undo/commit rail), `FinalStamp.tsx`, `LiveStatus.tsx`,
+> and the `.mb-console` / `.mb-console-column` / `.mb-notch-coral` CSS with
+> press-as-tint already in it.
+>
+> Still open: **`MbScoreSide`, `MbSetStrip` and `useCourtView`** — the full-bleed
+> team-side tap target and the set strip. Owner: **W5 / P3a** (`ScoreSide.tsx`).
+> Serve indicator and undo affordance ride with them.
+
 `/match/[id]`, `/match/guest`, `/session/[shareCode]` are the highest-traffic
 screens and the system has nothing for them: no full-bleed team-side tap target, no
 giant score numeral, no set-score strip, no serve indicator, no undo affordance.
@@ -1110,6 +1463,15 @@ giant score numeral, no set-score strip, no serve indicator, no undo affordance.
 scale. Landscape uses the existing `@media (max-height:500px)` helpers.
 
 ### GAP-8 — Loading and skeleton states are still old-theme
+> **PARTIAL.** `Skeleton.tsx` (`MbSkeleton`) + `.mb-skeleton` shipped —
+> `rgba(7,50,77,0.08)`, radius 2px, **no shimmer**, because a shimmer is a
+> gradient. Use it sized to the geometry it stands in for.
+>
+> Still open: **`MbPageLoading` does not exist**, so `PageLoadingSpinner` still
+> flashes the legacy `<Navigation />` on every gated Matchbook route before
+> content mounts. That is the visible half of this bug and it is unfixed.
+> Owner: **W2 / P2b** (`Loading.tsx`).
+
 `PageLoadingSpinner` renders the **old** `<Navigation />` on a `bg-background` page
 with a `border-primary` spinner — it flashes the legacy design on every gated
 Matchbook route before content mounts. This is a visible bug on 4 shipped screens.
@@ -1122,6 +1484,14 @@ Matchbook route before content mounts. This is a visible bug on 4 shipped screen
 gradient — banned). Inline panel loading stays the plain "Loading …" paragraph.
 
 ### GAP-9 — No masthead / stat-tile / footer-link / account-chip components
+> **PARTIAL — one of the four is built.** `Stat.tsx` (`MbStat`) shipped and is
+> the replacement for `StatusStat` / `SummaryStat` / `ProfileStat`.
+>
+> Still open and still copy-pasted: **`MatchbookMasthead`** (and its navy
+> sibling `MbEventBar` — charter Appendix A D-5 splits the editorial masthead
+> from the navy event strip rather than making one component with five
+> variants), **`MbAccountChip`**, **`MbPanelFoot`**. Owner: **W2 / P2a**.
+
 The masthead is copy-pasted across 6 files, the account chip across 5, the panel
 footer link across 5, and three near-identical stat tiles exist under three names
 (`StatusStat`, `SummaryStat`, `ProfileStat`).
@@ -1139,6 +1509,15 @@ footer link across 5, and three near-identical stat tiles exist under three name
 ```
 
 ### GAP-10 — No utility classes for the four most-copied inline recipes
+> **CLOSED — all five exist in `globals.css`**, exactly as sketched:
+> `.mb-row-hover`, `.mb-rail` (`--mb-rail-color`, default coral), `.mb-tile`,
+> `.mb-icon-disc`, `.mb-meter` (+ `.mb-meter > span` for the fill; `MbMeter`
+> wraps it).
+>
+> The classes exist; **the old call sites have not all been migrated.** §4.3
+> still documents the literal recipes because you will read them in
+> un-converted files. In new code, write the class.
+
 Promote the §4.3 literals so they stop drifting:
 ```css
 .mb-row-hover  { transition: background-color .15s ease; }
@@ -1151,6 +1530,12 @@ Promote the §4.3 literals so they stop drifting:
 ```
 
 ### GAP-11 — No motion tokens
+> **CLOSED — every token below is in `globals.css` `:root`**, plus `.mb-enter`
+> (`@keyframes mb-enter`, opacity + 6px rise at `--mb-dur-slow` /
+> `--mb-ease-out`) and `.mb-stagger-1` … `.mb-stagger-6`. §7.2 is now
+> enforceable and has been rewritten as shipped fact. `useMbReducedMotion.ts`
+> is the JS half.
+
 §7.2 is unenforceable until these exist:
 ```css
 --mb-dur-fast: 120ms; --mb-dur-base: 180ms; --mb-dur-slow: 280ms;
@@ -1161,7 +1546,14 @@ Plus `.mb-enter` (opacity + 6px rise at `--mb-dur-slow --mb-ease-out`) and
 `.mb-stagger-{1..6}` replacing the legacy `.stagger-*`.
 
 ### GAP-12 — Focus-visible is still the legacy red
-`globals.css:1120` sets a global `outline: 2px solid oklch(0.55 0.22 25)` — the old
+> **CLOSED — `--mb-focus: var(--mb-coral)` plus
+> `.matchbook-surface :focus-visible { outline: 2px solid var(--mb-focus);
+> outline-offset: 2px }`.** The proposal was extended: the same rule also covers
+> `.mb-dialog`, `.mb-sheet` and `.mb-toast`, because those portal **outside**
+> `.matchbook-surface` and would otherwise inherit the legacy red ring. The
+> legacy global rule is untouched and stays scoped to legacy screens.
+
+`globals.css` sets a global `outline: 2px solid oklch(0.55 0.22 25)` — the old
 primary red, which reads as an off-brand near-coral on paper. Only
 `.mb-select-native` opts into a Matchbook focus ring (`outline: 2px solid
 var(--mb-coral); outline-offset: 1px`).
@@ -1170,6 +1562,17 @@ Proposal: `--mb-focus: var(--mb-coral)` and a Matchbook-scoped
 so the legacy rule stays scoped to legacy screens.
 
 ### GAP-13 — Raw rgba/hex literals with no token
+> **CLOSED — every token below shipped, and the set grew.** See the table in
+> §1.1 for the complete list; the additions beyond this proposal are
+> `--mb-tint-coral`, the four rule-weight tokens (`--mb-rule-hairline`/`-edge`/
+> `-accent`/`-anchor`), `--mb-focus`, the motion set, the safe-area set and the
+> court set. `--mb-gold-ink` landed at `#8a5c00` and **measures 5.13:1 on paper
+> / 5.59:1 on paper-bright**, clearing the 4.5:1 target, so "Draft" is readable
+> text on paper rather than border-only.
+>
+> Same caveat as GAP-10: the tokens exist, the un-converted call sites still
+> carry literals. New code uses the token.
+
 `rgba(7,50,77,0.04|0.05|0.06|0.12)`, `rgba(255,250,241,0.25|0.06)`,
 `rgba(57,41,23,0.08)` and the bare `#fff` inside `.mb-btn-coral` all appear as
 literals. Propose:
@@ -1186,6 +1589,23 @@ Also add a darkened `--mb-gold-ink` (target ≥4.5:1 on paper, roughly `#8a5c00`
 "Draft" can be readable text on paper instead of border-only.
 
 ### GAP-14 — Touch targets and coral-button contrast
+> **The contrast half is CLOSED; the touch half is PARTIAL.**
+>
+> Contrast: the decision was **darken the fill**, not restrict the size.
+> `--mb-coral-deep: #c9351f` measures **5.23:1 with white** (it was 3.69:1, not
+> the 3.62:1 written below) and is now the fill of `.mb-btn-coral`, the ink and
+> frame of `.mb-btn-outline`, `.mb-panel-link:hover` and `.mb-stamp-final`.
+> `--mb-coral` keeps every accent, rule and rail. Applied everywhere, once.
+>
+> Touch: `.mb-btn-lg` and `.mb-btn-touch` shipped unconditionally, and every P1
+> primitive meets 44px on its own (tab, segment, stepper button, select row,
+> `MbIconButton`). The blanket
+> `@media (pointer: coarse) { [data-mb-touch="on"] … { min-height: 44px } }`
+> rule is **written but not armed** — it waits on `data-mb-touch="on"` on
+> `<html>`, which W2 sets in the same P2a commit that drops `maximumScale` and
+> adds `viewport-fit: cover` (charter H6). Until then the base `.mb-btn` is
+> 38.8px and `.mb-panel-link` 17.3px at 390×844. Owner: **W2 / P2a**.
+
 `.mb-btn` ≈ 37px tall; mobile nav links ≈ 28px; icon-only buttons have no hit box.
 `.mb-btn-coral` white-on-coral is 3.62:1 at 0.8rem — fails AA.
 Proposal: add `.mb-btn-lg` (`padding: .75rem 1.25rem; font-size: .9rem`, ≈44px) and
@@ -1197,6 +1617,20 @@ plus either darken the coral used as a *button fill* to a `--mb-coral-deep`
 restrict `.mb-btn-coral` to `.mb-btn-lg` sizes only. Decide once, apply everywhere.
 
 ### GAP-15 — Undecided: dark mode, print, and shared/public surfaces
+> **Two of the three are decided; one is still open.**
+>
+> 1. **Dark mode — DECIDED: dropped.** Matchbook is light-only; `ThemeToggle`
+>    and `ThemeContext` are deleted in P4 (charter Appendix A). Do not build a
+>    `--mb-*` dark set. Not a gap any more, a standing decision.
+> 2. **Print — CLOSED.** `@media print` in `globals.css` re-points the palette
+>    tokens (paper and bright → `#ffffff`, navy → `#000000`, tints off, shadow
+>    none), so the whole system prints black-on-white without any component
+>    restating a colour. Give a new surface a token background and it prints
+>    correctly for free.
+> 3. **Public surfaces — STILL OPEN.** `/session/[shareCode]` and
+>    `/summary/[shareCode]` still have no documented chrome-less shell. Owner:
+>    **W6 / P3b**, gated on W4. The proposal below stands.
+
 Three open questions that will otherwise be answered inconsistently by whoever hits
 them first:
 1. **Dark mode** — currently light-only. If a night almanac is wanted, it needs a

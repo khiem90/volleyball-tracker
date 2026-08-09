@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import type { CSSProperties, RefObject } from "react";
 import { MbIcon } from "./MbIcon";
+import { MB_FIELD_LABEL } from "./form";
 
 /**
  * How a copy attempt ended. `"manual"` means every programmatic path was
@@ -75,7 +76,7 @@ export const MbCopyField = ({
   onCopied,
   inputRef: externalRef,
 }: {
-  /** Kicker above the field. Also names the copy and reveal controls. */
+  /** Field label above the row. Also names the copy and reveal controls. */
   label: string;
   value: string;
   /** Render the value obscured until it is revealed (admin tokens, admin links). */
@@ -152,15 +153,33 @@ export const MbCopyField = ({
 
   return (
     <div className="mb-field" data-invalid={failed || undefined}>
-      <label htmlFor={inputId} className="mb-kicker">
+      <label
+        htmlFor={inputId}
+        className={MB_FIELD_LABEL.className}
+        style={MB_FIELD_LABEL.style}
+      >
         {label}
       </label>
 
-      <div
-        className={`flex items-stretch rounded-[4px] border-[1.5px] bg-mb-paper-bright ${
-          failed ? "border-mb-red" : "border-mb-navy"
-        }`}
-      >
+      {/*
+        Three separate keys, not one segmented shell.
+
+        Reveal-a-secret and copy-to-clipboard are different outcomes and one of
+        them is irreversible in the way that matters: an admin token put on
+        screen has been seen. When the eye and Copy shared an edge the measured
+        gap between them was 0px, so a thumb aimed at either could land on the
+        other (charter §4.33 wants ≥8px of clear water between targets, and the
+        §5.3 sweep counted this pair on every route that shares a link).
+
+        10px, not 8px — `gap-2.5`, the same choice and the same reason as
+        `MbSwatchPicker`: sub-pixel layout must not be able to round the
+        measured gap under the floor.
+
+        Height is 48px so the row matches the `.mb-input` fields it sits beside
+        in a form; each key is its own 4px-radius printed box on the 1.5px navy
+        edge the design language reserves for a real edge (§3.3).
+      */}
+      <div className="flex items-stretch gap-2.5">
         <input
           ref={inputRef}
           id={inputId}
@@ -171,7 +190,9 @@ export const MbCopyField = ({
           autoComplete="off"
           aria-describedby={msgId}
           onFocus={(e) => e.currentTarget.select()}
-          className="min-w-0 flex-1 rounded-l-[3px] bg-transparent px-3 py-2 text-[0.85rem] tabular-nums text-mb-navy outline-none"
+          className={`min-h-[48px] min-w-0 flex-1 rounded-[4px] border-[1.5px] bg-mb-paper-bright px-3 text-[0.85rem] tabular-nums text-mb-navy outline-none ${
+            failed ? "border-mb-red" : "border-mb-navy"
+          }`}
         />
 
         {revealable && (
@@ -181,7 +202,7 @@ export const MbCopyField = ({
             disabled={!hasValue}
             title={hidden ? `Show ${label}` : `Hide ${label}`}
             aria-label={hidden ? `Show ${label}` : `Hide ${label}`}
-            className="flex w-11 shrink-0 items-center justify-center border-l-[1.5px] border-mb-navy text-mb-navy transition-colors hover:bg-[var(--mb-tint-2)] disabled:text-mb-ink-muted"
+            className="flex min-h-[48px] w-11 shrink-0 items-center justify-center rounded-[4px] border-[1.5px] border-mb-navy bg-mb-paper-bright text-mb-navy transition-colors hover:bg-[var(--mb-tint-2)] disabled:text-mb-ink-muted"
           >
             <MbIcon id={hidden ? "eye" : "eye-off"} size={17} />
           </button>
@@ -193,7 +214,7 @@ export const MbCopyField = ({
           disabled={!hasValue}
           aria-label={`Copy ${label}`}
           style={CELL_TRACK}
-          className="matchbook-display flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-r-[3px] border-l-[1.5px] border-mb-navy bg-mb-navy px-3.5 text-[0.72rem] font-semibold text-mb-paper-bright transition-[filter] hover:brightness-125 disabled:bg-[var(--mb-tint-3)] disabled:text-mb-ink-muted"
+          className="matchbook-display flex min-h-[48px] shrink-0 items-center gap-1.5 rounded-[4px] border-[1.5px] border-mb-navy bg-mb-navy px-3.5 text-[0.72rem] font-semibold text-mb-paper-bright transition-[filter] hover:brightness-125 disabled:bg-[var(--mb-tint-3)] disabled:text-mb-ink-muted"
         >
           <MbIcon id={status === "copied" ? "check" : "copy"} size={14} />
           Copy

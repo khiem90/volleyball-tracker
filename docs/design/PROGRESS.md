@@ -64,14 +64,38 @@ Matchbook block at the top of `src/app/globals.css`.
 | --- | --- | --- |
 | Foundation research | — | **DONE** — 7 docs in `docs/design/` |
 | P0 tokens + CSS + sprite | W1 | **DONE** — verified zero regression on 6 shipped routes |
-| P1 primitive kit | W1 | **PARTIAL — interrupted by session limit** (see §4) |
-| P1 ranking + tests + audit.mjs | W8 | **PARTIAL** |
-| Gate 1 (regression + critique) | — | not started |
+| P1 primitive kit | W1 | **DONE** — ~30 components, gallery at `/dev/kit` |
+| P1 ranking + tests + audit.mjs | W8 | **DONE** — `audit.mjs` + `routes.mjs` + `shot.mjs` are the measurement harness |
+| **Gate 1 (regression + critique)** | — | **RUN — 64/100 FAIL.** PASS needs all ten rubric dimensions ≥8 and zero §3 hard fails |
+| Gate 1 fix round | W1–W8 (7 parallel agents) | **IN FLIGHT — this round.** Disjoint file slices; re-critique after |
 | P2a shell | W2 | not started |
 | P2b toast/loading/offline/layout, contexts | W2 + W8 | not started |
 | P3a create-flows, competition-detail, live-scoring, volleyball | W3 W4 W5 W7 | not started |
 | P3b public share | W6 | not started (gated on W4) |
 | P4 legacy deletion | W2 | not started |
+
+### Gate 1 verdict — 64/100, FAIL
+
+An independent critic scored the W1 kit against `benchmark-rubric.md`. The
+programme does **not** advance to P2 until the re-critique passes. The fix round
+in flight splits the verdict into eight disjoint slices, one agent each, so no
+two agents touch the same file. W8's slice is the one this file documents:
+`audit.mjs` composite-awareness + a11y checks (F18) and the design language
+un-staling (F19).
+
+### What P1 actually delivered
+
+~30 components in `src/components/matchbook/` — the real list, with a "use this
+when" line each, is **`docs/design/matchbook-design-language.md` §4.2**. That
+inventory now reflects **commit `a4d6876` plus this fix round**; it was written
+by reading every file in the directory, not from a plan. Ten of the fifteen §11
+GAPs are closed and each now names the file that closed it.
+
+Still unbuilt, with owners (also listed at the end of §4.2): `MatchbookMasthead`,
+`MbEventBar`, `MatchbookTopStrip`, `MatchbookBottomBar`, `MbAccountChip`,
+`MbPanelFoot` (W2/P2a) · `MbToast` + `useToast` + `ToastHost`, `MbPageLoading`,
+`MbOfflineBanner` (W2/P2b) · `MbScoreSide`, `MbSetStrip`, `useCourtView`
+(W5/P3a).
 
 ### P0 outcomes worth remembering
 - 22 new tokens, ~60 utility classes, 25 new sprite icons (62 total, manifest 1.3.0).
@@ -86,27 +110,47 @@ Matchbook block at the top of `src/app/globals.css`.
 
 ---
 
-## 4. Exactly what is half-finished right now
+## 4. State of the tree
 
-`npx tsc --noEmit` reports **7 errors**; `npx vitest run` reports **2 failing tests**. Both are the debris of
-agents killed mid-write, not design problems.
+`npx tsc --noEmit` clean · `npx eslint src` clean · `npx vitest run` green (205 tests). The seven tsc errors
+and two failing tests recorded here previously are fixed; the primitives listed as missing all landed.
 
-| File | Problem | Owner on resume |
-| --- | --- | --- |
-| `src/components/matchbook/Panel.tsx:107,141,144` | `TeamMark` gained a `size` string union but still forwards it to `Crest`, which takes `number` | W1 `kit-logic` |
-| `src/__tests__/lib/doubleElimination.test.ts:77,90,104,117` | fixture objects missing required `Match` fields | W8 `w8-data` |
-| `src/__tests__/lib/win2out.test.ts` + 1 other | 2 assertions failing | W8 `w8-data` |
+`src/app/dev/kit/page.tsx` is a **shared gallery** that up to 7 agents append to concurrently. Re-running an
+agent can duplicate its `<section>`, and a mid-write render serves HTTP 500 — if a screenshot or audit run
+returns `LOAD FAIL — HTTP 500` on `/dev/kit` while a fix round is in flight, wait and retry rather than
+debugging it. De-duplicating the gallery is the audit agent's job.
 
-**Primitives that exist:** Badge, Button, ChoiceCard, Confirm, CopyField, Dialog, EmptyState, FinalStamp,
-IconButton, Meter, Notice, ScoreNumeral, Segmented, SelectList, Sheet, Skeleton, Stat, StepRail, Tabs,
-form.tsx, formatMeta.ts, useMbReducedMotion.ts, lib/standings.ts, lib/text.ts, and `src/app/dev/kit/page.tsx`.
+### What the Gate-1 fix round changed in the harness (W8 slice)
 
-**Primitives still missing:** `ActionBar.tsx`, `Menu.tsx`, `ShareAction.tsx`, `ScoreboardHero.tsx`,
-`LiveStatus.tsx`, `DangerZone.tsx`, `ReorderList.tsx`, plus W8's `twoMatchRotation`/`standings` test suites
-and `<SCRATCH>/pw/audit.mjs`.
+`<SCRATCH>/pw/audit.mjs` gained **composite awareness** and **three a11y checks**, because its spacing
+section was about to hand six workstreams a wall of false positives.
 
-`src/app/dev/kit/page.tsx` is a **shared gallery** that 7 agents append to concurrently. Re-running an agent
-can duplicate its `<section>` — the Gate-1 audit agent is responsible for de-duplicating it.
+- A pair of interactive boxes under 8px apart is now split into `SPACING` (counted) and `GROUPED`
+  (informational, printed, never silently dropped). A pair is grouped only when both boxes are cells of one
+  composite — `[role=tablist]`, `[role=radiogroup]`, `[role=menu]`, `[role=listbox]`, `.mb-segmented`,
+  `.mb-stepper` — or are sibling ruled rows **with a measured rule in the gap band**. Unruled adjacent rows
+  stay violations. Grouped pairs print whether a rule was measured, so `tablist (no rule)` is still visible.
+- New `A11Y` section: **failures** (`no-accessible-name`, `not-native`, `name-mismatch`) count toward the
+  exit code; **notes** (`title-no-aria-label`, `name-from-title`, `icon-only-no-title`) print but do not.
+- New flag `--groups` lists grouped pairs individually. Summary table gained `[grp]` and `A11Y` columns.
+
+Measured effect (same runs, so the split is a pure partition of one pair set):
+
+| Sweep | spacing before | spacing after | grouped | a11y failures found |
+| --- | --- | --- | --- | --- |
+| `/dev/kit` desktop | 65 | **10** | 55 | 0 |
+| `--all` desktop (23 routes) | 67 | **41** | 26 | **82** |
+| `--all` mobile (23 routes) | 70 | **44** | 26 | **91** |
+
+The `/dev/kit` figure is the one that matters for W2–W7, because the kit is where the composites live: an
+84% cut, and the four survivors are all real (three list-header/first-row collisions and the two scoring tap
+columns at 1px). The app routes barely move because none of them use `MbTabs`/`MbSegmented` yet — they will,
+which is exactly why this had to land before P2.
+
+Also this round: `docs/design/matchbook-design-language.md` was brought into agreement with the tree —
+§4.2 rewritten as the real ~30-component inventory, §11 turned from "GAPS TO BUILD" into a status register
+where every closed gap names its file, and the false claims in §1.1, §1.3, §1.4, §3.3, §4.1, §4.3, §5.6,
+§5.7, §6, §7, §8, §9 and §10 corrected.
 
 ---
 
@@ -141,11 +185,34 @@ npx vitest run
 
 ```bash
 cd <SCRATCH>/pw
-node routes.mjs                          # 24 route ids
+node routes.mjs                          # 23 route ids (login is BLOCKED locally)
 node shoot-all.mjs <SCRATCH>/shots/<label>
 node shot.mjs /competitions/comp-se-city-cup out.png --desktop --full
-node audit.mjs <routeId> --mobile        # once W8 lands it: 44px sweep, overflow, tabular-nums, a11y
+node shot.mjs /dev/kit out.png --mobile  # the primitive gallery
+
+# the measurement sweep — read the docblock at the top of audit.mjs first
+node audit.mjs <routeId|/path> --mobile          # one route
+node audit.mjs --all --desktop --skip-motion     # every route, no reduced-motion pass
+node audit.mjs /dev/kit --desktop --groups       # list the grouped (waived) pairs
+node audit.mjs home --viewports --json           # machine-readable, all three sizes
 ```
+
+Reading the output:
+
+| Section | Counts toward the exit code? | Meaning |
+| --- | --- | --- |
+| `TOUCH` | yes | real hit area under 44×44, after probing all four corners with `elementFromPoint` |
+| `SPACING` | yes | adjacent interactive pairs under 8px that are **not** one composite's cells |
+| `GROUPED` | **no** | pairs waived as composite cells. Prints the kind and whether a rule was measured |
+| `OVERFLOW` | yes | `body.scrollWidth` vs `clientWidth`, with the widest unclipped culprits named |
+| `NUMERALS` | yes | standalone numerals with no `tabular-nums` (digits inside prose are counted separately and never fail) |
+| `A11Y` failures | yes | `no-accessible-name`, `not-native`, `name-mismatch` |
+| `A11Y` notes | **no** | `title-no-aria-label`, `name-from-title`, `icon-only-no-title` |
+| `CONSOLE` | yes | console + page errors, with the documented dev-env noise filtered |
+| `MOTION` | yes | inline-style drift across two frames under `prefers-reduced-motion: reduce` |
+
+A `GROUPED` count is not a licence to ignore it: a `tablist (no rule)` line means those tabs abut with
+nothing drawn between them, which may still be wrong. It means the 8px *separation* rule does not apply.
 
 Baseline to diff against: `<SCRATCH>/shots/baseline/` (60 PNGs).
 

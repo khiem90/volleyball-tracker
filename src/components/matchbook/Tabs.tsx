@@ -19,10 +19,19 @@ export interface MbTabItem {
  * is the WAI-ARIA pattern for tabs whose panels are already mounted.
  *
  * `.mb-tabs` is a horizontal scroller, so two things this component owns:
- * the active tab is scrolled into view whenever it changes (a value restored
- * from a URL can start off-screen), and each overflowing edge grows a 1.5px
- * navy hairline — the system's own rule vocabulary standing in for the
- * gradient fade invariant 24 forbids.
+ * the active tab is kept inside the rail (a value restored from a URL can start
+ * off-screen), and each overflowing edge grows a 1.5px navy hairline — the
+ * system's own rule vocabulary standing in for the gradient fade invariant 24
+ * forbids.
+ *
+ * That first job is done by writing `rail.scrollLeft`, never by
+ * `scrollIntoView`. `scrollIntoView` walks *every* scrollable ancestor, and
+ * `globals.css` makes BODY the document scroller, so the old call moved the
+ * page: on mount, with no user action, /dev/kit opened 709px down on desktop
+ * and 3300px down on mobile because the tab strip sits that far into the page.
+ * A control may scroll itself; it may not scroll the document out from under
+ * the reader. So: the rail only, one axis only, and only when the active tab
+ * is genuinely outside the rail's own viewport.
  *
  * `aria-controls` is not emitted: the panel is the caller's markup and this
  * component cannot know its id, and a dangling reference is worse than an
@@ -71,10 +80,36 @@ export const MbTabs = ({
     return () => observer.disconnect();
   }, [measure, items.length]);
 
-  useEffect(() => {
-    // `auto` behaviour, so this is instant under prefers-reduced-motion too.
-    refs.current[activeIndex]?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  /**
+   * Bring the active tab inside the rail by moving the rail, horizontally, and
+   * only when it is actually cut off. Returns without touching anything when
+   * the tab is already visible, which is the common case — that "already
+   * visible" test is what stops a mount from moving anything at all when the
+   * strip fits. `scrollLeft` is a direct assignment rather than `scrollTo`, so
+   * there is no smooth behaviour to clamp under `prefers-reduced-motion`.
+   */
+  const revealActive = useCallback(() => {
+    const rail = listRef.current;
+    const tab = refs.current[activeIndex];
+    if (!rail || !tab) return;
+    const railBox = rail.getBoundingClientRect();
+    const tabBox = tab.getBoundingClientRect();
+    // Leave a tab's worth of hairline visible so the cut edge still reads.
+    const pad = 12;
+    const start = tabBox.left - railBox.left + rail.scrollLeft;
+    const end = start + tabBox.width;
+    const view = rail.scrollLeft;
+    let next = view;
+    if (start < view + pad) next = start - pad;
+    else if (end > view + rail.clientWidth - pad) next = end - rail.clientWidth + pad;
+    else return;
+    const max = Math.max(0, rail.scrollWidth - rail.clientWidth);
+    rail.scrollLeft = Math.min(Math.max(next, 0), max);
   }, [activeIndex]);
+
+  useEffect(() => {
+    revealActive();
+  }, [revealActive]);
 
   if (items.length === 0) return null;
 

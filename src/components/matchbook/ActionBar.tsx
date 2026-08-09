@@ -1,17 +1,21 @@
 "use client";
 
-import Link from "next/link";
 import type { CSSProperties, ReactNode } from "react";
-import { MbIcon } from "./MbIcon";
+import { MbButton, MbButtonLink, type MbButtonVariant } from "./Button";
 
-export type MbActionTone = "coral" | "navy" | "outline" | "outline-navy";
+/**
+ * The bar's tones *are* the button's variants — one union, not a second
+ * four-value union that happens to have the same members. Aliasing rather than
+ * re-declaring is what stops the two drifting when a variant is added.
+ */
+export type MbActionTone = MbButtonVariant;
 
 export interface MbAction {
   label: string;
   /** Sprite icon id rendered before the label. */
   icon?: string;
   onClick?: () => void;
-  /** Renders a `<Link>` instead of a `<button>`. */
+  /** Renders `MbButtonLink` (an `<a>`) instead of `MbButton`. */
   href?: string;
   disabled?: boolean;
   /** Busy: blocks activation, swaps the glyph, never animates. */
@@ -29,27 +33,28 @@ export interface MbAction {
  * also carries the fixed `MatchbookBottomBar` underneath it.
  *
  * Not a guess at the rendered node — the component pins `min-height` to this
- * exact value and the natural height (a 1.5px rule, 0.75rem, a ~47.6px
- * `.mb-btn-lg` and 0.75rem) sits just under it, so the bar measures 73px on
- * the nose. Verified, not asserted.
+ * exact value and the natural height (a 1.5px rule, 0.75rem, a 56px
+ * `MbButton size="lg"` and 0.75rem = 81.5px) sits just under it, so the bar
+ * measures 82px on the nose. Verified, not asserted.
  */
-export const MB_ACTION_BAR_H = "calc(73px + var(--mb-safe-bottom))";
+export const MB_ACTION_BAR_H = "calc(82px + var(--mb-safe-bottom))";
 
 /**
  * The same bar below `sm` **with** a `status`, where the status takes its own
  * line — 390px cannot hold "Step 2 of 3 · 8 teams selected", a Back and a
- * Create competition on one 44px row without truncating the commit verb.
+ * Create competition on one 56px row without truncating the commit verb.
  *
- * Pinned the same way, over a 96.6px natural height. Pad by this one whenever
+ * Pinned the same way, over a 105.5px natural height. Pad by this one whenever
  * the bar carries a status.
  *
  * One case exceeds it: a `secondary` whose label cannot share a 390px row with
  * a long `primary`. The controls then wrap to a line each and the bar grows by
- * one 55.2px row — deliberately, because clipping the commit verb is worse.
- * Keep phone primaries short, or budget `calc(152.5px + var(--mb-safe-bottom))`
- * (`calc(128.5px + var(--mb-safe-bottom))` when there is no status).
+ * one 64px row (56px control + the 8px row gap) — deliberately, because
+ * clipping the commit verb is worse. Keep phone primaries short, or budget
+ * `calc(169px + var(--mb-safe-bottom))` (`calc(145px + var(--mb-safe-bottom))`
+ * when there is no status). Both measured at 390px, not derived.
  */
-export const MB_ACTION_BAR_H_STACKED = "calc(97px + var(--mb-safe-bottom))";
+export const MB_ACTION_BAR_H_STACKED = "calc(106px + var(--mb-safe-bottom))";
 
 /**
  * The two constants as Tailwind classes. Written out in full because the
@@ -57,62 +62,62 @@ export const MB_ACTION_BAR_H_STACKED = "calc(97px + var(--mb-safe-bottom))";
  * above. Inline `min-height` is deliberately not used: `max-sm:` has to be able
  * to win, and an inline declaration would outrank it.
  */
-const MIN_H = "min-h-[calc(73px_+_var(--mb-safe-bottom))]";
-const MIN_H_STACKED = "max-sm:min-h-[calc(97px_+_var(--mb-safe-bottom))]";
+const MIN_H = "min-h-[calc(82px_+_var(--mb-safe-bottom))]";
+const MIN_H_STACKED = "max-sm:min-h-[calc(106px_+_var(--mb-safe-bottom))]";
 
-const TONE_CLASS: Record<MbActionTone, string> = {
-  coral: "mb-btn-coral",
-  navy: "mb-btn-navy",
-  outline: "mb-btn-outline",
-  "outline-navy": "mb-btn-outline-navy",
-};
+/**
+ * `flex-auto` on a phone, `flex-initial` from `sm` up.
+ *
+ * The `auto` basis is load-bearing: a flex line breaks on *base* sizes, so two
+ * controls that cannot sit side by side at 390px each take a full-width line
+ * instead of shrinking. With `flex-1` (basis 0) they would never wrap and the
+ * commit verb would truncate to "Create compet…" — the one label in the bar
+ * that must never be clipped.
+ */
+const FLEX = "flex-auto sm:flex-initial";
 
+/**
+ * Both branches are the real control now. The bar used to re-implement
+ * `.mb-btn mb-btn-lg` plus the busy and disabled recipes by hand so that a
+ * `href` action could be an anchor; `MbButtonLink` is that anchor, so there is
+ * nothing left to copy — and the two can no longer disagree about a size, a
+ * glyph or what "busy" looks like.
+ *
+ * A destination stays an anchor rather than a button so it keeps middle-click,
+ * "open in new tab" and the status bar. It stops being one when it is refused:
+ * a disabled or busy `href` renders as a `<button>` because `<a>` has no
+ * disabled state and a pointer-events trick would still be reachable by
+ * keyboard.
+ */
 const BarAction = ({ action, primary }: { action: MbAction; primary: boolean }) => {
   const tone = action.tone ?? (primary ? "coral" : "outline-navy");
-  /**
-   * `flex-auto` on a phone, `flex-initial` from `sm` up.
-   *
-   * The `auto` basis is load-bearing: a flex line breaks on *base* sizes, so
-   * two controls that cannot sit side by side at 390px each take a full-width
-   * line instead of shrinking. With `flex-1` (basis 0) they would never wrap
-   * and the commit verb would truncate to "Create compet…" — the one label in
-   * the bar that must never be clipped.
-   */
-  /**
-   * Disabled and busy read differently, the same way `MbButton` reads them:
-   * disabled is dimmed and refused, busy keeps full contrast and its label
-   * because the present participle is what carries "in progress".
-   */
-  const className = `mb-btn mb-btn-lg ${TONE_CLASS[tone]} min-w-0 flex-auto sm:flex-initial ${
-    action.loading ? "cursor-progress" : ""
-  } ${action.disabled ? "cursor-not-allowed opacity-40" : ""}`;
-  const glyph = action.loading ? "refresh" : action.icon;
-  const inner = (
-    <>
-      {glyph && <MbIcon id={glyph} size={16} className="shrink-0" />}
-      <span className="min-w-0 truncate">{action.label}</span>
-    </>
-  );
 
   if (action.href && !action.disabled && !action.loading) {
     return (
-      <Link href={action.href} className={className}>
-        {inner}
-      </Link>
+      <MbButtonLink
+        href={action.href}
+        variant={tone}
+        size="lg"
+        icon={action.icon}
+        className={FLEX}
+      >
+        {action.label}
+      </MbButtonLink>
     );
   }
 
   return (
-    <button
-      type="button"
-      className={className}
+    <MbButton
+      variant={tone}
+      size="lg"
+      icon={action.icon}
+      loading={action.loading}
       disabled={action.disabled}
-      aria-busy={action.loading || undefined}
-      aria-disabled={action.loading || undefined}
-      onClick={action.loading ? undefined : action.onClick}
+      className={FLEX}
+      onClick={action.onClick}
     >
-      {inner}
-    </button>
+      {action.label}
+    </MbButton>
   );
 };
 

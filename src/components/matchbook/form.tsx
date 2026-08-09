@@ -6,6 +6,7 @@ import {
   useId,
   useRef,
   useState,
+  type CSSProperties,
   type InputHTMLAttributes,
   type KeyboardEvent,
   type ReactNode,
@@ -41,6 +42,42 @@ import { MbIcon } from "./MbIcon";
 
 const mergeIds = (...ids: Array<string | undefined | false>) =>
   ids.filter(Boolean).join(" ") || undefined;
+
+/* -------------------------------------------------------------- form label */
+
+/**
+ * The one form-label treatment, shared by `MbField` and `MbCopyField`.
+ *
+ * It used to be `.mb-kicker` — 0.62rem / 9.92px, 0.16em, `--mb-ink-muted`.
+ * Three measured problems with that on a phone:
+ *
+ * 1. It lost to its own helper text. `.mb-field-hint` is 0.72rem / 11.52px, so
+ *    the *name* of the field rendered 1.6px smaller than the sentence
+ *    explaining it — the hierarchy was upside down.
+ * 2. `layout.tsx` sets `maximumScale: 1, userScalable: false`, so a reader who
+ *    cannot make out 9.92px cannot pinch to rescue it. The design language's
+ *    own mobile rule (§8, last line) says the 0.6–0.66rem steps "must never
+ *    carry information that isn't repeated at a larger size" — a field label is
+ *    never repeated.
+ * 3. `.mb-kicker` is defined as an *eyebrow* (§2.2: "never a heading"), and it
+ *    is what the dev gallery uses for its own annotations. A field's name and a
+ *    caption about the field were the same type.
+ *
+ * The replacement is `display/nav` (§2.1: 0.85rem / 600 / 0.08em) in navy —
+ * the step `MbToggle` already uses for its own control label a few lines down,
+ * so the two labels in a form now agree. 13.6px navy on paper is 11.79:1 AAA.
+ *
+ * `letterSpacing` is inline, not `tracking-[0.08em]`: `.matchbook-display` sets
+ * `letter-spacing: 0.02em` from an *unlayered* rule and every Tailwind
+ * `tracking-*` utility ships inside `@layer utilities`, which loses to it
+ * regardless of specificity. (Measured: `MbToggle`'s `tracking-[0.08em]`
+ * computes to 0.272px = 0.02em, not 1.088px. Same trap as `CELL_TRACK` in
+ * `CopyField.tsx`.)
+ */
+export const MB_FIELD_LABEL: { className: string; style: CSSProperties } = {
+  className: "matchbook-display text-[0.85rem] font-semibold text-mb-navy",
+  style: { letterSpacing: "0.08em" },
+};
 
 /* ------------------------------------------------------------------ MbField */
 
@@ -81,7 +118,11 @@ export const MbField = ({
   const errorId = error ? `${htmlFor}-error` : undefined;
   return (
     <div className={`mb-field ${className}`} data-invalid={Boolean(error)}>
-      <label htmlFor={htmlFor} className="mb-kicker">
+      <label
+        htmlFor={htmlFor}
+        className={MB_FIELD_LABEL.className}
+        style={MB_FIELD_LABEL.style}
+      >
         {label}
         {required && (
           <>
@@ -693,6 +734,10 @@ export const MbSwatchPicker = ({
 
 /* --------------------------------------------------------------- MbTagInput */
 
+/** Same unlayered-`.matchbook-display` trap as `MB_FIELD_LABEL`: the tag face
+ *  wants 0.06em and a `tracking-*` utility cannot raise it above 0.02em. */
+const TAG_TRACK: CSSProperties = { letterSpacing: "0.06em" };
+
 export const MbTagInput = ({
   value,
   onChange,
@@ -740,32 +785,47 @@ export const MbTagInput = ({
   return (
     <div className={`flex flex-col gap-1.5 ${className}`}>
       {/* `py-[2px]!` keeps a 44px chip row inside a shell that still reads as a
-          48px field when empty, and gives wrapped rows a hairline of air. */}
+          48px field when empty, and gives wrapped rows a hairline of air.
+
+          The gaps are overridden because the chip is now two keys, not one
+          box (see below). `.mb-input` sets `gap: 0.6rem` (9.6px) unlayered, so
+          the override has to be important. Column 16px / row 10px against the
+          10px *inside* a chip: the tag and its own remove key are the closest
+          pair on the row by a factor of 1.6, so proximity still groups them
+          correctly and no two targets sit under the 8px floor. */}
       <div
-        className={`mb-input min-h-[48px] flex-wrap py-[2px]! ${
+        className={`mb-input min-h-[48px] flex-wrap gap-x-4! gap-y-2.5! py-[2px]! ${
           disabled ? "opacity-60" : ""
         }`}
       >
         {value.map((tag, index) => (
-          <span
-            key={tag}
-            className="inline-flex min-h-[44px] min-w-0 max-w-full items-stretch rounded-[3px] border-[1.5px] border-mb-navy bg-mb-paper-bright"
-          >
-            {/* Not `flex items-center`: `text-overflow` is ignored on a flex
-                container, so a long tag would clip with no ellipsis. As a plain
-                flex *item* the span is blockified and truncates properly. */}
-            <span className="matchbook-display min-w-0 self-center truncate px-2.5 text-[0.78rem] font-bold tracking-[0.06em]">
-              {tag}
+          /* Wrapper, not a border: it exists so flex-wrap can never break a tag
+             away from its own remove key. */
+          <span key={tag} className="inline-flex min-w-0 max-w-full items-stretch gap-2.5">
+            <span
+              className="matchbook-display flex min-h-[44px] min-w-0 items-center rounded-[3px] border-[1.5px] border-mb-navy bg-mb-paper-bright px-2.5 text-[0.78rem] font-bold"
+              style={TAG_TRACK}
+            >
+              {/* Not the flex container itself: `text-overflow` is ignored on
+                  one, so a long tag would clip with no ellipsis. As a flex
+                  *item* this span is blockified and truncates properly. */}
+              <span className="min-w-0 truncate">{tag}</span>
             </span>
+            {/* Its own key with 10px of paper in front of it, and drawn in the
+                shell's own rule weight so the eye reads TAG first, control
+                second. Sharing the tag's box put an unconfirmed, un-undoable
+                delete 0px from the word and inside the same border, so the
+                whole 100–130px chip read as one pressable object of which 44px
+                destroyed it. */}
             <button
               type="button"
               title={`Remove ${tag}`}
               aria-label={`Remove ${tag}`}
               disabled={disabled}
               onClick={() => removeAt(index)}
-              className="flex min-h-[44px] w-[44px] shrink-0 items-center justify-center border-l-[1.5px] border-mb-rule text-mb-navy transition-colors hover:text-mb-coral disabled:cursor-not-allowed"
+              className="flex min-h-[44px] w-[44px] shrink-0 items-center justify-center rounded-[3px] border-[1.5px] border-mb-rule bg-mb-paper-bright text-mb-navy transition-colors hover:border-mb-navy hover:bg-[var(--mb-tint-2)] hover:text-mb-coral-deep disabled:cursor-not-allowed"
             >
-              <MbIcon id="close" size={13} />
+              <MbIcon id="close" size={14} />
             </button>
           </span>
         ))}

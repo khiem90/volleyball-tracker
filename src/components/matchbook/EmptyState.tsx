@@ -1,9 +1,8 @@
-import Link from "next/link";
 import type { ReactNode } from "react";
 import type { MbActionTone } from "./ActionBar";
-import { MbButton } from "./Button";
+import { MbButton, MbButtonLink } from "./Button";
 import { MbIcon } from "./MbIcon";
-import type { PanelEmptyTone } from "./Panel";
+import { MB_STATE_TONES, type PanelEmptyTone } from "./Panel";
 
 /**
  * The same six tones `PanelEmpty` carries — page level here, in-panel there
@@ -29,38 +28,32 @@ export interface MbEmptyStateAction {
 }
 
 /**
- * Icon + eyebrow per tone. The word is what carries the state — the glyph and
- * the ink are the second and third channels, never the only one (invariant 13).
+ * Glyph + eyebrow per tone come from `MB_STATE_TONES` — the single table
+ * `PanelEmpty` reads too, so one concept can never end up with two glyphs or
+ * two words depending on the scale it is drawn at. The word carries the state;
+ * the glyph and the ink are the second and third channels, never the only one
+ * (invariant 13).
+ *
+ * These are the two page-only fallbacks, and the only place the scales differ:
+ * the shared table leaves `empty` unmarked and unlabelled because in-panel
+ * emptiness stays plain (design language §5.7), whereas a page-level state *is*
+ * the whole panel, so its head must still be titled and marked.
  */
-const TONE_META: Record<MbEmptyStateTone, { icon: string; kicker: string }> = {
-  empty: { icon: "clipboard", kicker: "Nothing here yet" },
-  notfound: { icon: "search", kicker: "Not found" },
-  error: { icon: "warning", kicker: "Something went wrong" },
-  offline: { icon: "wifi-off", kicker: "Offline" },
-  denied: { icon: "lock", kicker: "No access" },
-  /* `settings`, matching `PanelEmpty`'s mark for the same tone: one concept,
-     one glyph, whichever level it is drawn at. */
-  unconfigured: { icon: "settings", kicker: "Not configured" },
-};
-
-const LINK_CLASS: Record<MbEmptyStateActionTone, string> = {
-  coral: "mb-btn-coral",
-  navy: "mb-btn-navy",
-  outline: "mb-btn-outline",
-  "outline-navy": "mb-btn-outline-navy",
-};
+const PAGE_EMPTY_ICON = "clipboard";
+const PAGE_EMPTY_WORD = "Nothing here yet";
 
 const ActionControl = ({ action, primary }: { action: MbEmptyStateAction; primary: boolean }) => {
   const tone = action.tone ?? (primary ? "coral" : "outline-navy");
 
   /* A destination is an anchor, not a button — so it keeps middle-click, "open
-     in new tab" and the status bar. It emits the same `.mb-btn` classes. */
+     in new tab" and the status bar. `MbButtonLink` is the kit's escape hatch for
+     exactly that, and it shares `MbButton`'s variant/geometry/content tables, so
+     the two branches below render one box in two tags. */
   if (action.href) {
     return (
-      <Link href={action.href} className={`mb-btn mb-btn-lg ${LINK_CLASS[tone]}`}>
-        {action.icon && <MbIcon id={action.icon} size={16} className="shrink-0" />}
-        <span className="min-w-0 truncate">{action.label}</span>
-      </Link>
+      <MbButtonLink variant={tone} size="lg" icon={action.icon} href={action.href}>
+        {action.label}
+      </MbButtonLink>
     );
   }
 
@@ -72,8 +65,11 @@ const ActionControl = ({ action, primary }: { action: MbEmptyStateAction; primar
 };
 
 /**
- * Page-level state object: eyebrow, display line, hung rule, one paragraph and
- * at most a couple of actions. In-panel emptiness stays `PanelEmpty`
+ * The page-level cut of the one state language: eyebrow, display line, hung
+ * rule, deck, real actions — ranged left. `PanelEmpty` draws the same anatomy at
+ * the in-panel scale (display line `1.2rem` vs `1.875rem`, rule 40px vs 64px,
+ * button `sm` vs `lg`), so a route-level empty and a panel-level empty read as
+ * the same object at two sizes rather than as two design systems
  * (charter Appendix A, D-7).
  */
 export const MbEmptyState = ({
@@ -92,24 +88,24 @@ export const MbEmptyState = ({
   actions?: MbEmptyStateAction[];
   className?: string;
 }) => {
-  const meta = TONE_META[tone];
+  const meta = MB_STATE_TONES[tone];
   return (
     <section className={`mb-panel ${className}`} data-tone={tone}>
       <header className="mb-panel-head">
         <h2 className="matchbook-display flex min-w-0 items-center gap-2 text-[0.95rem] font-bold tracking-[0.05em]">
           <MbIcon
-            id={icon ?? meta.icon}
+            id={icon ?? meta.icon ?? PAGE_EMPTY_ICON}
             size={16}
-            className={`shrink-0 ${tone === "error" ? "text-mb-red" : ""}`}
+            className={`shrink-0 ${meta.ink}`}
           />
-          <span className="truncate">{meta.kicker}</span>
+          <span className="truncate">{meta.word ?? PAGE_EMPTY_WORD}</span>
         </h2>
       </header>
       <div className="flex flex-col items-start gap-3 px-5 py-7 sm:px-7 sm:py-9">
         <p className="matchbook-display max-w-[22ch] text-3xl font-bold leading-none tracking-[0.02em] sm:text-4xl">
           {title}
         </p>
-        {/* Hung rule — the editorial break between the display line and the copy. */}
+        {/* Hung rule — the mark the two scales share; it closes the naming zone. */}
         <span className="block h-px w-16 bg-mb-navy" />
         {body && (
           <div className="max-w-[46ch] text-[0.9rem] leading-[1.55] text-mb-ink-muted">{body}</div>

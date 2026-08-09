@@ -10,9 +10,9 @@
  *   3. Never rewrite, reorder or touch a section you did not create.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Panel } from "@/components/matchbook/Panel";
-import { MbButton } from "@/components/matchbook/Button";
+import { MbButton, MbButtonLink } from "@/components/matchbook/Button";
 import { MbIconButton } from "@/components/matchbook/IconButton";
 import { MbBadge, type MbBadgeTone } from "@/components/matchbook/Badge";
 import { MbTabs } from "@/components/matchbook/Tabs";
@@ -99,14 +99,13 @@ import {
 /* ===================================================================== */
 
 const BUTTON_VARIANTS: MbButtonVariant[] = ["coral", "navy", "outline", "outline-navy"];
-const BUTTON_SIZES: MbButtonSize[] = ["sm", "md", "lg", "touch"];
+const BUTTON_SIZES: MbButtonSize[] = ["sm", "md", "lg"];
 
 /** What each size actually resolves to, so the row is checkable by eye. */
 const BUTTON_SIZE_NOTE: Record<MbButtonSize, string> = {
-  sm: "44px box, display/link label (0.72rem)",
-  md: "44px box, display/button label (0.8rem)",
-  lg: "47.6px box, 0.9rem label",
-  touch: "44px box — the explicit opt-in name; same as md",
+  sm: "44px · 12px pad · display/link (0.72rem) · 12px glyph — the floor",
+  md: "48px · 17.6px pad · display/button (0.8rem) · 14px glyph — default",
+  lg: "56px · 24px pad · 0.9rem · 16px glyph — the commit control",
 };
 const ICON_TONES: MbIconButtonTone[] = ["plain", "navy", "coral", "outline", "outline-navy"];
 const BADGE_TONES: MbBadgeTone[] = [
@@ -171,6 +170,30 @@ const CoreControlsSection = () => {
                 </div>
               </KitBlock>
             ))}
+
+            <KitBlock label="MbButtonLink — the same control, as a destination">
+              <div className="flex flex-wrap items-center gap-3">
+                <MbButtonLink href="/teams" variant="coral" icon="quick">
+                  Quick match
+                </MbButtonLink>
+                <MbButtonLink
+                  href="/competitions"
+                  variant="navy"
+                  size="sm"
+                  iconRight="chevron-right"
+                >
+                  All competitions
+                </MbButtonLink>
+                <MbButtonLink href="/tools" variant="outline-navy" size="lg" icon="export">
+                  Export
+                </MbButtonLink>
+              </div>
+              <p className="mt-3 text-[0.72rem] text-mb-ink-muted tabular-nums">
+                A real &lt;a&gt; through next/link, so middle-click, open-in-new-tab and the
+                status bar work. Same variants, same three sizes, one geometry table — and no
+                loading or disabled, because a destination is never busy.
+              </p>
+            </KitBlock>
 
             <KitBlock label="Icon slots">
               <div className="flex flex-wrap items-center gap-3">
@@ -2236,16 +2259,16 @@ const OverlaysAndFeedbackSection = () => {
           <MbButton variant="outline-navy" size="lg" onClick={() => setOpenId(null)}>
             First
           </MbButton>
-          {/* Raw button: MbButton does not declare a `ref` prop, so it cannot be
-              the target of `initialFocus`. */}
-          <button
+          {/* MbButton forwards its ref, so `initialFocus` can point straight at
+              it — no raw `<button>` copy of `.mb-btn mb-btn-lg` required. */}
+          <MbButton
             ref={focusTargetRef}
-            type="button"
-            className="mb-btn mb-btn-navy mb-btn-lg"
+            variant="navy"
+            size="lg"
             onClick={() => setOpenId(null)}
           >
             Second — focused
-          </button>
+          </MbButton>
         </MbDialogFooter>
       </MbDialog>
 
@@ -3019,6 +3042,14 @@ const ActionAndSharingSection = () => {
       onSelect: log("Reschedule"),
     },
     { label: "Print the schedule", icon: "print", onSelect: log("Print") },
+    {
+      /* The row that must never be clipped: a destructive verb whose object is
+         the whole point of the sentence. */
+      label: "Delete every pending match on the north court",
+      icon: "trash",
+      tone: "danger",
+      onSelect: log("Delete pending"),
+    },
   ];
 
   const primary: MbAction = { label: "Create competition", icon: "check" };
@@ -3098,7 +3129,7 @@ const ActionAndSharingSection = () => {
             icon="save"
             meta={
               <span className="mb-kicker tabular-nums" title={`${MB_ACTION_BAR_H} · ${MB_ACTION_BAR_H_STACKED}`}>
-                73 · 97 · 152 px
+                82 · 106 · 169 px
               </span>
             }
           >
@@ -3275,15 +3306,10 @@ const ActionAndSharingSection = () => {
               </div>
             </ActionBlock>
 
-            <ActionBlock label="Text trigger — label must contain the visible words">
+            <ActionBlock label="Worded trigger — MbButton, chevron supplied by the menu">
               <MbMenu
                 label="Round actions"
-                trigger={
-                  <>
-                    Round actions
-                    <MbIcon id="chevron-down" size={12} className="shrink-0" />
-                  </>
-                }
+                trigger="Round actions"
                 items={longMenu}
                 align="start"
               />
@@ -3936,6 +3962,313 @@ const SelectionListsSection = () => {
 };
 
 /* ===================================================================== */
+/* P0 CSS with no consumer — working examples so later workstreams do    */
+/* not debug unrendered CSS on their critical path.                      */
+/* ===================================================================== */
+
+const STAGGER_TILES = [
+  { label: "Panel 1", delay: "mb-stagger-1" },
+  { label: "Panel 2", delay: "mb-stagger-2" },
+  { label: "Panel 3", delay: "mb-stagger-3" },
+  { label: "Panel 4", delay: "mb-stagger-4" },
+  { label: "Panel 5", delay: "mb-stagger-5" },
+  { label: "Panel 6", delay: "mb-stagger-6" },
+] as const;
+
+const TOAST_TONES = [
+  { tone: "info", icon: "bell", text: "Draft saved. It stays on this device until you publish." },
+  { tone: "success", icon: "check", text: "Score recorded — Rockets 21, Comets 18." },
+  { tone: "warning", icon: "warning", text: "Two teams still have no players assigned." },
+  { tone: "danger", icon: "wifi-off", text: "Offline. The last two points are queued." },
+] as const;
+
+/** `.mb-enter` + `.mb-stagger-N`. Remount to replay. */
+const KitEntranceBlock = () => {
+  const [run, setRun] = useState(0);
+  const reduced = useMbReducedMotion();
+
+  return (
+    <>
+      <div className="mb-3 flex flex-wrap items-center gap-3">
+        <MbButton variant="outline-navy" icon="refresh" onClick={() => setRun((n) => n + 1)}>
+          Replay
+        </MbButton>
+        <span className="mb-kicker tabular-nums">
+          run {run} · 280ms rise, 40ms apart, capped at 6
+        </span>
+      </div>
+
+      <div key={run} className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        {STAGGER_TILES.map((tile, i) => (
+          <div key={tile.label} className={`mb-tile mb-enter ${tile.delay} rounded-[4px] px-3 py-4`}>
+            <p className="mb-kicker tabular-nums">delay {(i + 1) * 40}ms</p>
+            <p className="matchbook-display mt-1 text-[0.9rem] font-bold">{tile.label}</p>
+          </div>
+        ))}
+      </div>
+
+      <p className="mt-3 text-[0.72rem] text-mb-ink-muted">
+        {reduced
+          ? "prefers-reduced-motion is ON — the global clamp is holding every tile at its end state."
+          : "Grid panels only. Never table rows, never bracket cells."}
+      </p>
+    </>
+  );
+};
+
+/** `.mb-console`, `.mb-console-column`, `.mb-rule-vertical`. */
+const KitConsoleBlock = () => {
+  const [score, setScore] = useState<[number, number]>([18, 21]);
+  const leading = score[0] === score[1] ? -1 : score[0] > score[1] ? 0 : 1;
+
+  return (
+    <>
+      {/* `.mb-console` is 100dvh by design; the gallery caps it so the page
+          stays readable. Everything else is the shipping geometry. */}
+      <div
+        className="mb-console rounded-[4px] border-[1px] border-mb-navy"
+        style={{ height: 240 }}
+      >
+        <div className="flex min-h-0 flex-1">
+          {(["Rockets", "Comets"] as const).map((team, side) => (
+            <Fragment key={team}>
+              {side === 1 && <span className="mb-rule-vertical" aria-hidden="true" />}
+              <button
+                type="button"
+                className="mb-console-column"
+                data-leading={leading === side ? "true" : undefined}
+                aria-label={`Add a point for ${team}`}
+                onClick={() =>
+                  setScore((s) => {
+                    const next: [number, number] = [s[0], s[1]];
+                    next[side] += 1;
+                    return next;
+                  })
+                }
+              >
+                <span className="mb-kicker">{team}</span>
+                <MbScoreNumeral value={score[side]} size="console" />
+                <span className="mb-kicker">Tap to score</span>
+              </button>
+            </Fragment>
+          ))}
+        </div>
+        <div className="mb-action-bar">
+          <span className="mb-kicker tabular-nums">Set 3 · to 25</span>
+          <span className="ml-auto flex gap-2">
+            <MbButton variant="outline-navy" icon="undo" onClick={() => setScore([18, 21])}>
+              Reset
+            </MbButton>
+          </span>
+        </div>
+      </div>
+      <p className="mt-3 text-[0.72rem] text-mb-ink-muted">
+        The leading column carries a 3px coral notch on its top edge
+        (<span className="tabular-nums">--mb-rule-accent</span>), so the lead survives
+        greyscale. Press feedback is a tint, never a scale.
+      </p>
+    </>
+  );
+};
+
+/** `.mb-safe-top` — resolves to 0 unless the viewport actually has an inset. */
+const KitSafeTopBlock = () => {
+  const ref = useRef<HTMLDivElement>(null);
+  const [pad, setPad] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (ref.current) setPad(getComputedStyle(ref.current).paddingTop);
+  }, []);
+
+  return (
+    <>
+      <div ref={ref} className="mb-safe-top mb-tile rounded-[4px] px-3 pb-3">
+        <p className="mb-kicker">Masthead</p>
+        <p className="matchbook-display text-[0.9rem] font-bold">
+          Padded by env(safe-area-inset-top)
+        </p>
+      </div>
+      <p className="mt-3 text-[0.72rem] tabular-nums text-mb-ink-muted">
+        measured padding-top: {pad ?? "—"} · 0px is correct on a device with no notch;
+        it only grows once <span className="tabular-nums">viewport-fit=cover</span> lands
+        in P2. Its twin <span className="tabular-nums">.mb-safe-bottom</span> is already
+        baked into .mb-action-bar, .mb-dialog-foot and .mb-sheet.
+      </p>
+    </>
+  );
+};
+
+const P0UnclaimedSection = () => (
+  <section id="p0-unclaimed" className="mt-10">
+    {/* Real skip link: fixed, off-screen until it takes focus. Tab from the
+        address bar to see it land. */}
+    <a href="#p0-unclaimed" className="mb-skip-link">
+      Skip to content
+    </a>
+
+    <header className="mb-5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b-[1px] border-mb-navy pb-2">
+      <h2 className="matchbook-display text-2xl font-bold leading-none tracking-[0.05em]">
+        P0 <span className="text-mb-coral">Unclaimed</span>
+      </h2>
+      <p className="mb-kicker tabular-nums">
+        Zero consumers in src — mb-enter · mb-stagger-1..6 · mb-safe-top · mb-toast ·
+        mb-console · mb-console-column · mb-day-head · mb-skip-link · mb-print-hide
+      </p>
+    </header>
+
+    <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
+      {/* ------------------------------------------------ entrance motion */}
+      <div className="xl:col-span-6">
+        <Panel
+          title=".mb-enter / .mb-stagger-N"
+          icon="expand"
+          meta={<span className="mb-kicker tabular-nums">opacity + 6px rise</span>}
+        >
+          <KitBlock label="Grid entrance — six panels, 40ms apart">
+            <KitEntranceBlock />
+          </KitBlock>
+        </Panel>
+      </div>
+
+      {/* --------------------------------------------------------- toast */}
+      <div className="xl:col-span-6">
+        <Panel
+          title=".mb-toast"
+          icon="bell"
+          meta={<span className="mb-kicker tabular-nums">4px left border = tone</span>}
+        >
+          <KitBlock label="Four tones — the horizontal mirror of the accent rail">
+            <div className="flex flex-col gap-2">
+              {TOAST_TONES.map((t) => (
+                <div
+                  key={t.tone}
+                  className="mb-toast"
+                  data-tone={t.tone}
+                  role={t.tone === "danger" ? "alert" : "status"}
+                >
+                  <MbIcon id={t.icon} size={16} className="mt-[2px] shrink-0" />
+                  <span className="min-w-0 flex-1 text-[0.8rem] leading-[1.45]">{t.text}</span>
+                  <MbIconButton icon="close" label={`Dismiss ${t.tone} toast`} />
+                </div>
+              ))}
+            </div>
+            <p className="mt-3 text-[0.72rem] text-mb-ink-muted">
+              Tone rides the left border and the icon, never the letterforms — the same
+              two-channel rule .mb-badge uses.
+            </p>
+          </KitBlock>
+        </Panel>
+      </div>
+
+      {/* ------------------------------------------------------- console */}
+      <div className="xl:col-span-7">
+        <Panel
+          title=".mb-console / .mb-console-column"
+          icon="volleyball"
+          meta={<span className="mb-kicker tabular-nums">100dvh, capped here to 240px</span>}
+        >
+          <KitBlock label="Two-column scoring surface — tap either side">
+            <KitConsoleBlock />
+          </KitBlock>
+        </Panel>
+      </div>
+
+      {/* ------------------------------------------------------ day head */}
+      <div className="xl:col-span-5">
+        <Panel
+          title=".mb-day-head"
+          icon="calendar"
+          meta={<span className="mb-kicker tabular-nums">table day-group band</span>}
+        >
+          <KitBlock label="Grouped ledger — one band per day">
+            <table className="mb-table w-full border-collapse">
+              <tbody>
+                <tr>
+                  <td className="mb-day-head" colSpan={3}>
+                    Saturday 14 June
+                  </td>
+                </tr>
+                <tr>
+                  <td>Rockets v Comets</td>
+                  <td className="tabular-nums">21 — 18</td>
+                  <td className="text-right">
+                    <MbBadge tone="final">Final</MbBadge>
+                  </td>
+                </tr>
+                <tr>
+                  <td>Vipers v Aces</td>
+                  <td className="tabular-nums">25 — 23</td>
+                  <td className="text-right">
+                    <MbBadge tone="final">Final</MbBadge>
+                  </td>
+                </tr>
+                <tr>
+                  <td className="mb-day-head" colSpan={3}>
+                    Sunday 15 June
+                  </td>
+                </tr>
+                <tr>
+                  <td>Comets v Vipers</td>
+                  <td className="tabular-nums">— — —</td>
+                  <td className="text-right">
+                    <MbBadge tone="draft">Draft</MbBadge>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </KitBlock>
+        </Panel>
+      </div>
+
+      {/* ------------------------------- skip link, safe area, print hide */}
+      <div className="xl:col-span-12">
+        <Panel
+          title=".mb-skip-link / .mb-safe-top / .mb-print-hide"
+          icon="clipboard"
+          meta={<span className="mb-kicker tabular-nums">shell + print plumbing</span>}
+        >
+          <div className="grid grid-cols-1 md:grid-cols-3">
+            <KitBlock label="Skip link — focus it to reveal">
+              {/* A visible twin: the same class with its fixed positioning
+                  neutralised, so the resting look is inspectable on the page. */}
+              <span
+                className="mb-skip-link"
+                style={{ position: "static", transform: "none" }}
+              >
+                Skip to content
+              </span>
+              <p className="mt-3 text-[0.72rem] text-mb-ink-muted">
+                A real one is the first node of this section. It parks at
+                translateY(-300%) and drops in on :focus, above every fixed layer
+                (z-index 100), offset by the top safe area.
+              </p>
+            </KitBlock>
+
+            <KitBlock label="Safe area — top inset">
+              <KitSafeTopBlock />
+            </KitBlock>
+
+            <KitBlock label="Print — hidden on paper">
+              <div className="mb-print-hide mb-tile flex items-center gap-2 rounded-[4px] px-3 py-3">
+                <MbIcon id="print" size={16} className="shrink-0" />
+                <span className="text-[0.8rem]">
+                  Chrome, actions and nav carry .mb-print-hide.
+                </span>
+              </div>
+              <p className="mt-3 text-[0.72rem] text-mb-ink-muted">
+                The print sheet overrides the palette tokens rather than restating
+                colours, so the whole system turns black on white in one block. Verify
+                with the browser print preview, not a screenshot.
+              </p>
+            </KitBlock>
+          </div>
+        </Panel>
+      </div>
+    </div>
+  </section>
+);
+
+/* ===================================================================== */
 
 export default function DevKitPage() {
   return (
@@ -3952,6 +4285,7 @@ export default function DevKitPage() {
       <ScoreAndStatusSection />
       <ActionAndSharingSection />
       <SelectionListsSection />
+      <P0UnclaimedSection />
       {/* APPEND YOUR SECTION COMPONENT ABOVE THIS LINE */}
     </div>
   );

@@ -2,6 +2,7 @@
 
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useState, type ReactNode } from "react";
+import { useMbFocusRestore } from "./Dialog";
 import { MbIcon } from "./MbIcon";
 
 /** Heights as a fraction of the viewport; anything outside 0..1 is discarded. */
@@ -14,10 +15,14 @@ const usableSnaps = (points?: number[]) => (points ?? []).filter((p) => p > 0 &&
 const SheetFrame = ({
   title,
   points,
+  onOpenAutoFocus,
+  onCloseAutoFocus,
   children,
 }: {
   title: string;
   points: number[];
+  onOpenAutoFocus: (event: Event) => void;
+  onCloseAutoFocus: (event: Event) => void;
   children: ReactNode;
 }) => {
   const [snap, setSnap] = useState(0);
@@ -30,16 +35,20 @@ const SheetFrame = ({
   return (
     <DialogPrimitive.Content
       aria-describedby={undefined}
+      onOpenAutoFocus={onOpenAutoFocus}
+      onCloseAutoFocus={onCloseAutoFocus}
       style={height ? { height } : undefined}
       /* `.mb-sheet` already pads for the home indicator, so a footer inside it
          must not add the inset a second time. */
       className="mb-sheet pointer-events-auto w-full outline-none [&>.mb-dialog-foot]:pb-3 sm:mx-auto sm:w-[34rem] sm:max-w-[calc(100vw-2rem)]"
     >
       <header className="mb-dialog-head">
-        <DialogPrimitive.Title className="matchbook-display min-w-0 truncate text-[0.95rem] font-bold tracking-[0.05em]">
+        {/* Wraps, never clips — same contract as `MbDialog`'s title (HF-14). */}
+        <DialogPrimitive.Title className="matchbook-display min-w-0 break-words text-[0.95rem] font-bold tracking-[0.05em]">
           {title}
         </DialogPrimitive.Title>
-        <div className="-my-2 -mr-2 flex shrink-0 items-center">
+        {/* `self-start` keeps the controls in the corner once the title wraps. */}
+        <div className="-my-2 -mr-2 flex shrink-0 items-center self-start">
           {stepped && (
             <button
               type="button"
@@ -93,18 +102,29 @@ export const MbSheet = ({
   /** Discrete heights, 0..1 of the viewport. Opens at the first one. */
   snapPoints?: number[];
   children: ReactNode;
-}) => (
-  <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
-    <DialogPrimitive.Portal>
-      <DialogPrimitive.Overlay className="mb-dialog-overlay z-50" />
-      <div
-        className="pointer-events-none fixed inset-0 z-50 flex flex-col justify-end"
-        data-side={side}
-      >
-        <SheetFrame title={title} points={usableSnaps(snapPoints)}>
-          {children}
-        </SheetFrame>
-      </div>
-    </DialogPrimitive.Portal>
-  </DialogPrimitive.Root>
-);
+}) => {
+  /* Lives here, not in `SheetFrame`: `MbSheet` stays mounted across open and
+     close, so the recorded opener survives the frame's unmount. */
+  const focus = useMbFocusRestore();
+
+  return (
+    <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
+      <DialogPrimitive.Portal>
+        <DialogPrimitive.Overlay className="mb-dialog-overlay z-50" />
+        <div
+          className="pointer-events-none fixed inset-0 z-50 flex flex-col justify-end"
+          data-side={side}
+        >
+          <SheetFrame
+            title={title}
+            points={usableSnaps(snapPoints)}
+            onOpenAutoFocus={focus.capture}
+            onCloseAutoFocus={focus.restore}
+          >
+            {children}
+          </SheetFrame>
+        </div>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
+  );
+};

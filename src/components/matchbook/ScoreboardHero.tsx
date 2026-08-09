@@ -43,6 +43,12 @@ const SeriesPips = ({ wins, of }: { wins: number; of: number }) => (
 /**
  * Both numerals carry the top padding whether or not they carry the lead rule,
  * so a lead change repaints a shadow and moves nothing (invariant 43).
+ *
+ * The width is fixed too: `MbScoreNumeral` reserves three digits at every step,
+ * so the `auto` middle track of `.mb-scoreline` measures the same at 0–0 and at
+ * 108–99 and the two `1fr` name columns never resize mid-match. Before that
+ * reserve existed the console step jumped 69.02px → 103.55px on the point that
+ * crossed 99, and both names lost 17px of their column to it.
  */
 const ScoreCell = ({
   value,

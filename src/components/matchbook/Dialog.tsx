@@ -1,7 +1,7 @@
 "use client";
 
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import type { ReactNode, RefObject } from "react";
+import { useRef, type ReactNode, type RefObject } from "react";
 import { MbIcon } from "./MbIcon";
 
 export type MbDialogTone = "paper" | "navy" | "danger";
@@ -32,6 +32,63 @@ const HEAD_ICON_TONE: Record<MbDialogTone, string> = {
   paper: "",
   navy: "text-mb-gold",
   danger: "text-mb-red",
+};
+
+/**
+ * Gives a controlled Radix overlay the focus restoration it silently loses
+ * (rubric HF-15, charter invariant 46).
+ *
+ * `DialogContentModal` composes its own close handler *after* whatever the
+ * caller passes:
+ *
+ * ```js
+ * onCloseAutoFocus: composeEventHandlers(props.onCloseAutoFocus, (event) => {
+ *   event.preventDefault();
+ *   context.triggerRef.current?.focus();
+ * })
+ * ```
+ *
+ * `triggerRef` is populated by `<Dialog.Trigger>` and by nothing else.
+ * `MbDialog` and `MbSheet` are driven by an `open` prop and render no Trigger,
+ * so `triggerRef.current` is `null`: the `?.focus()` is a no-op **and** the
+ * `preventDefault()` also cancels `FocusScope`'s own
+ * `focus(previouslyFocusedElement ?? document.body)` fallback. Focus therefore
+ * landed on `<body>` on every close — Escape, outside-click and the close
+ * button alike.
+ *
+ * So own both halves. `capture` runs from `onOpenAutoFocus`, which `FocusScope`
+ * dispatches *after* reading `document.activeElement` and *before* moving
+ * focus, so the opener is still the active element. `onCloseAutoFocus` calls
+ * `preventDefault` first — which is what skips Radix's null-trigger handler —
+ * and then restores the opener itself.
+ */
+export const useMbFocusRestore = () => {
+  const openerRef = useRef<HTMLElement | null>(null);
+
+  const capture = () => {
+    const active = document.activeElement;
+    openerRef.current =
+      active instanceof HTMLElement && active !== document.body ? active : null;
+  };
+
+  const restore = (event: Event) => {
+    event.preventDefault();
+    const opener = openerRef.current;
+    openerRef.current = null;
+    if (opener?.isConnected) {
+      opener.focus({ preventScroll: true });
+      return;
+    }
+    /* The opener can be gone — a delete confirm usually unmounts the very row
+       that opened it. Land on the main landmark rather than the document root,
+       which is where a route change puts focus too (charter §5.5). */
+    const main = document.getElementById("mb-main");
+    if (!main) return;
+    if (!main.hasAttribute("tabindex")) main.setAttribute("tabindex", "-1");
+    main.focus({ preventScroll: true });
+  };
+
+  return { capture, restore };
 };
 
 export const MbDialogBody = ({
@@ -108,6 +165,9 @@ export const MbDialog = ({
   initialFocus?: RefObject<HTMLElement | null>;
   children: ReactNode;
 }) => {
+  /* Ahead of the null-content bail-out: a hook may not sit behind a return. */
+  const focus = useMbFocusRestore();
+
   if (!hasContent(children)) return null;
 
   const sheet = mobile === "sheet";
@@ -134,10 +194,12 @@ export const MbDialog = ({
                case — passing the key at all would unwire a real description. */
             {...(description ? null : { "aria-describedby": undefined })}
             onOpenAutoFocus={(event) => {
+              focus.capture();
               if (!initialFocus?.current) return;
               event.preventDefault();
               initialFocus.current.focus();
             }}
+            onCloseAutoFocus={focus.restore}
             onEscapeKeyDown={(event) => {
               if (!dismissible) event.preventDefault();
             }}
@@ -164,16 +226,33 @@ export const MbDialog = ({
                     {kicker}
                   </span>
                 )}
-                <DialogPrimitive.Title className="matchbook-display flex min-w-0 items-center gap-2 text-[0.95rem] font-bold tracking-[0.05em]">
+                {/* The title wraps and is never clipped. A truncated title is
+                    a rubric hard fail (HF-14) on any dialog and an outright
+                    trap on a destructive one — "Reset the Saturday evening
+                    double-elimination consolation br…" does not tell you what
+                    you are about to destroy. `break-words` also catches a
+                    single unbroken token wider than the frame. */}
+                <DialogPrimitive.Title className="matchbook-display flex min-w-0 items-start gap-2 text-[0.95rem] font-bold tracking-[0.05em]">
                   {icon && (
-                    <MbIcon id={icon} size={16} className={`shrink-0 ${HEAD_ICON_TONE[tone]}`} />
+                    <MbIcon
+                      id={icon}
+                      size={16}
+                      /* Optically centres a 16px glyph on the 23px first line;
+                         with `items-start` it must not ride the whole block. */
+                      className={`mt-[3px] shrink-0 ${HEAD_ICON_TONE[tone]}`}
+                    />
                   )}
-                  <span className="truncate">{title}</span>
+                  <span className="min-w-0 break-words">{title}</span>
                 </DialogPrimitive.Title>
               </div>
               {dismissible && (
                 <DialogPrimitive.Close
-                  className={`mb-btn-touch -my-2 -mr-2 inline-flex shrink-0 items-center justify-center rounded-[3px] transition-colors ${
+                  /* `self-start` pins the 44px target to the corner. Without it
+                     `.mb-dialog-head`'s `align-items: center` walks it down the
+                     block as soon as the title takes a second or third line —
+                     and the 12px header gap is what keeps it clear of the text
+                     (invariant 33's 8px separation floor). */
+                  className={`mb-btn-touch -my-2 -mr-2 inline-flex shrink-0 items-center justify-center self-start rounded-[3px] transition-colors ${
                     navy ? "hover:bg-[var(--mb-tint-on-navy)]" : "hover:bg-[var(--mb-tint-2)]"
                   }`}
                   title="Close"

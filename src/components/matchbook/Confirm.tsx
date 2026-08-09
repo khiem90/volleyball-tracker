@@ -2,15 +2,31 @@
 
 import type { ReactNode } from "react";
 import { MbButton } from "./Button";
+import { MbDestructiveButton } from "./DangerZone";
 import { MbDialog, MbDialogBody, MbDialogFooter } from "./Dialog";
 
 /**
  * The only confirmation surface in the app (charter Appendix B — no
- * `window.confirm`). Destructive by default; `destructive={false}` turns it into
- * a plain navy "are you sure".
+ * `window.confirm`). Destructive by default; `destructive={false}` turns it
+ * into a plain navy "are you sure".
  *
- * The danger reading is carried by three channels, never colour alone: the red
- * 4px dialog rule, the warning glyph, and the verb spelled out on the button.
+ * The two branches are deliberately *not* the same object:
+ *
+ * | | destructive | benign |
+ * | --- | --- | --- |
+ * | frame | 4px `--mb-red` top edge | 4px `--mb-navy` top edge |
+ * | header glyph | `warning` in `--mb-red` | `help` |
+ * | subject rail | `--mb-red` | `--mb-navy` |
+ * | commit | `MbDestructiveButton` — red-inked **outline** + `warning` glyph | `.mb-btn-navy` **fill** |
+ *
+ * Fill versus outline is the channel that survives desaturation, so the
+ * destructive commit is never mistakable for a benign primary and never leans
+ * on hue (invariant 13). It is deliberately the quieter control of the two in
+ * the footer: the cheap action is Cancel, and the expensive one should have to
+ * be read. It also removes the collision the earlier build shipped — a
+ * `--mb-coral-deep` fill sitting ΔE76 7.45 from the `--mb-red` rule directly
+ * above it in the same 416px frame, which design language §2.2 forbids
+ * outright ("coral and red ... must never sit adjacent").
  */
 export const MbConfirm = ({
   open,
@@ -74,14 +90,18 @@ export const MbConfirm = ({
       >
         Cancel
       </MbButton>
-      <MbButton
-        variant={destructive ? "coral" : "navy"}
-        size="lg"
-        loading={loading}
-        onClick={onConfirm}
-      >
-        {confirmLabel ?? verb}
-      </MbButton>
+      {destructive ? (
+        <MbDestructiveButton
+          size="lg"
+          label={confirmLabel ?? verb}
+          loading={loading}
+          onClick={onConfirm}
+        />
+      ) : (
+        <MbButton variant="navy" size="lg" loading={loading} onClick={onConfirm}>
+          {confirmLabel ?? verb}
+        </MbButton>
+      )}
     </MbDialogFooter>
   </MbDialog>
 );
