@@ -4,7 +4,11 @@ import Link from "next/link";
 import { TeamMark } from "./Panel";
 import { MbBadge } from "./Badge";
 import { MbFinalStamp } from "./FinalStamp";
-import { MbScoreNumeral, type MbScoreNumeralSize } from "./ScoreNumeral";
+import {
+  MbScoreNumeral,
+  type MbScoreNumeralAlign,
+  type MbScoreNumeralSize,
+} from "./ScoreNumeral";
 import type { MbTeam } from "./types";
 
 export type MbScoreboardStatus = "live" | "final" | "pending";
@@ -18,10 +22,14 @@ export interface MbScoreboardSeries {
   awayWins: number;
 }
 
-interface Notch {
-  className: string;
-  style: React.CSSProperties | undefined;
-}
+/** The ink of the lead rule, or `null` for the side that is not leading. */
+type Lead = string | null;
+
+const CELL_ALIGN: Record<MbScoreNumeralAlign, string> = {
+  center: "items-center",
+  start: "items-start",
+  end: "items-end",
+};
 
 /**
  * Series games won, as filled squares. Reuses `.mb-form-square`, so the wins
@@ -41,83 +49,121 @@ const SeriesPips = ({ wins, of }: { wins: number; of: number }) => (
 );
 
 /**
- * Both numerals carry the top padding whether or not they carry the lead rule,
- * so a lead change repaints a shadow and moves nothing (invariant 43).
+ * Both numerals carry the 3px rule slot whether or not they are leading — the
+ * losing side draws it in `transparent` — so a lead change repaints one colour
+ * and moves nothing (invariant 43).
  *
- * The width is fixed too: `MbScoreNumeral` reserves three digits at every step,
- * so the `auto` middle track of `.mb-scoreline` measures the same at 0–0 and at
- * 108–99 and the two `1fr` name columns never resize mid-match. Before that
- * reserve existed the console step jumped 69.02px → 103.55px on the point that
- * crossed 99, and both names lost 17px of their column to it.
+ * The rule is as wide as the figures, not as wide as the box. The box is a
+ * three-figure reserve at every step, so it measures the same at 0 and at 108
+ * and nothing beside it moves when the score changes; but the figures hug the
+ * divider, which leaves that reserve open on the outside, and a rule cut to the
+ * box would hang over blank paper — 49.5px of navy over a 16.5px "9" at the
+ * compact step. `.mb-score-rule` reads the figure count off `--mb-figures`.
  */
 const ScoreCell = ({
   value,
   size,
-  notch,
+  align,
+  lead,
 }: {
   value: number;
   size: MbScoreNumeralSize;
-  notch: Notch;
+  align: MbScoreNumeralAlign;
+  lead: Lead;
 }) => (
-  <span className={`flex items-center pt-2 ${notch.className}`} style={notch.style}>
-    <MbScoreNumeral value={value} size={size} />
+  <span className={`flex flex-col gap-[5px] ${CELL_ALIGN[align]}`}>
+    <span
+      aria-hidden="true"
+      className={`mb-score-rule mb-numeral--${size}`}
+      style={
+        {
+          "--mb-figures": String(value).length,
+          "--mb-score-ink": lead ?? "transparent",
+        } as React.CSSProperties
+      }
+    />
+    <MbScoreNumeral value={value} size={size} align={align} />
   </span>
 );
 
-/** One team row of the stacked mobile scoreline: identity left, score right. */
-const HeroRow = ({
+/**
+ * One team block of the narrow cut: identity above or beside its own score.
+ *
+ * `.mb-sb-row` is `1fr auto` while the container can afford it and `1fr` below
+ * that, where the score simply falls to a second line and the name takes the
+ * whole width. Both scores are `end`-aligned, so the two sit in one right-hand
+ * column and read as a pair down the card.
+ */
+const ScoreboardRow = ({
   team,
   accent,
+  markSize,
+  numeral,
   wins,
   of,
   score,
-  notch,
+  lead,
   divided,
 }: {
   team: MbTeam;
   accent?: string;
+  markSize: "sm" | "md";
+  numeral: MbScoreNumeralSize;
   wins: number;
   of: number;
   score: number | null;
-  notch: Notch;
+  lead: Lead;
   divided: boolean;
 }) => (
-  <div
-    className={`grid items-center gap-3 ${
-      score === null ? "grid-cols-1" : "grid-cols-[1fr_auto]"
-    } ${divided ? "mt-3 border-t border-mb-rule pt-3" : ""}`}
-  >
+  <div className={`mb-sb-row ${divided ? "mt-3 border-t border-mb-rule pt-3" : ""}`}>
     <div className="flex min-w-0 flex-col items-start gap-1.5">
-      <TeamMark team={team} size="md" accent={accent} className="w-full" />
+      <TeamMark team={team} size={markSize} accent={accent} wrap className="w-full" />
       {of > 0 && <SeriesPips wins={wins} of={of} />}
     </div>
-    {score !== null && <ScoreCell value={score} size="console" notch={notch} />}
+    {score !== null && (
+      <span className="justify-self-end">
+        <ScoreCell value={score} size={numeral} align="end" lead={lead} />
+      </span>
+    )}
   </div>
 );
 
 /**
  * The matchup block: two identities, one score, one status.
  *
- * At `sm` and above the layout is `.mb-scoreline` — CSS grid `1fr auto 1fr`
- * with `min-width: 0` on every cell — and never flex. That is the point of the
- * component: a 40-character team name truncates inside its own column instead
- * of pushing the score off centre, and only a grid whose middle track is `auto`
- * keeps the numerals optically centred however the two names differ in length.
+ * **Why there are two cuts, and why the container picks between them.** The
+ * score box is a fixed three-figure reserve — that is what stops the layout
+ * reflowing when a point lands — and in a `1fr auto 1fr` scoreline the two name
+ * columns pay for the whole of it, twice over. At the hero step the reserve is
+ * 223.5px of track; every pixel of it comes out of the names. Measured before
+ * this component chose its own cut: at 1440px the compact card's name column
+ * was 155.33px and dropped 16 characters of a 40-character name, and at 320px
+ * it was 1.00px — every name rendered as a bare ellipsis and the scoreline read
+ * "… 7 | 9 …". A viewport media query could not have caught the 1440px case,
+ * because the same card is 771px wide in one panel and 537px in the next on
+ * that screen. `.mb-scoreboard` is therefore an inline-size container and the
+ * cut is chosen from the card, in `globals.css`, with the arithmetic written
+ * out beside the thresholds.
  *
- * Below `sm` the same three cells cannot hold a 60px numeral *and* a readable
- * name — at 390px each 1fr column is about 60px, which turns "Harbor Surge"
- * into "Har…" and destroys the identity the block exists to show. So the hero
- * reflows to one row per team, identity left and score right, which is the
- * shape every phone scoreboard uses and keeps the numeral at its full step
- * (public-share R5 wants ≥40px on mobile). `compact` needs no reflow: its
- * numeral is 30px and the three cells fit.
+ * Above the threshold: `.mb-scoreline`, grid `1fr auto 1fr` with `min-width: 0`
+ * on every cell — never flex — so the numerals hold the centre however the two
+ * names differ in length. Below it: one block per team, identity left and score
+ * right, which is the shape every phone scoreboard uses and which charges the
+ * reserve once instead of twice.
+ *
+ * **Names wrap, they do not truncate.** The rubric's own reference anchor is
+ * Apple Sports surviving Dynamic Type by wrapping rather than truncating, and
+ * an ellipsis is a worse failure than a second line: "Northwest Kalamazoo
+ * Thunderhawks Academy" and "Northside Community Volleyball Association" are
+ * the same three characters once truncated. Every threshold above is set at the
+ * width where a 40-character name still sets in two lines.
  *
  * A `pending` match reads "vs" rather than `0–0`. The API carries scores for
  * every status, but printing 0–0 on a fixture that has not started asserts a
  * result that does not exist — the numbers are accepted and simply not shown.
  *
- * The leading side takes a 3px rule above its numeral: coral while `live` (the
- * console's `.mb-notch-coral` vocabulary) and navy once `final`. It is a second
+ * The leading side takes a 3px rule above its figures: coral while `live` — the
+ * console's `.mb-notch-coral` ink — and navy once `final`. It is a second
  * channel for a fact the scores already state, so nothing depends on it.
  */
 export const MbScoreboardHero = ({
@@ -156,13 +202,10 @@ export const MbScoreboardHero = ({
   const homeWins = series?.homeWins ?? 0;
   const awayWins = series?.awayWins ?? 0;
 
-  const notchFor = (leads: boolean): Notch => {
-    if (!leads) return { className: "", style: undefined };
-    if (status === "live") return { className: "mb-notch-coral", style: undefined };
-    return { className: "", style: { boxShadow: "inset 0 3px 0 var(--mb-navy)" } };
-  };
-  const homeNotch = notchFor(scored && homeScore > awayScore);
-  const awayNotch = notchFor(scored && awayScore > homeScore);
+  const leadFor = (leads: boolean): Lead =>
+    !leads ? null : status === "live" ? "var(--mb-coral)" : "var(--mb-navy)";
+  const homeLead = leadFor(scored && homeScore > awayScore);
+  const awayLead = leadFor(scored && awayScore > homeScore);
   const numeral: MbScoreNumeralSize = hero ? "console" : "compact";
 
   const statusWord = status === "live" ? "Live" : status === "final" ? "Final" : "Upcoming";
@@ -179,9 +222,9 @@ export const MbScoreboardHero = ({
     </span>
   );
 
-  /** The `1fr auto 1fr` scoreline: hero at ≥sm, and compact at every width. */
+  /** The `1fr auto 1fr` cut, taken once the card is wide enough to afford it. */
   const scoreline = (
-    <div className={`mb-scoreline ${hero ? "px-4 pb-5 pt-3 sm:px-6" : "px-3 py-3"}`}>
+    <div className={`mb-scoreline ${hero ? "px-6 pb-5 pt-3" : "px-3 py-3"}`}>
       <div className="flex min-w-0 flex-col items-center gap-2">
         {hero ? (
           <TeamMark
@@ -189,19 +232,22 @@ export const MbScoreboardHero = ({
             size="lg"
             orientation="vertical"
             accent={homeAccent}
+            wrap
             className="w-full"
           />
         ) : (
-          <TeamMark team={home} size="sm" accent={homeAccent} className="w-full" />
+          <TeamMark team={home} size="sm" accent={homeAccent} wrap className="w-full" />
         )}
         {hero && of > 0 && <SeriesPips wins={homeWins} of={of} />}
       </div>
 
       {scored ? (
-        <div className="flex items-stretch justify-center gap-2 sm:gap-3">
-          <ScoreCell value={homeScore} size={numeral} notch={homeNotch} />
+        /* `end` then `start`: the reserve opens away from the rule, so both
+           scores hug the divider and the pair stays a pair at 7–108. */
+        <div className={`flex items-stretch justify-center ${hero ? "gap-3" : "gap-2"}`}>
+          <ScoreCell value={homeScore} size={numeral} align="end" lead={homeLead} />
           <span className="mb-rule-vertical" />
-          <ScoreCell value={awayScore} size={numeral} notch={awayNotch} />
+          <ScoreCell value={awayScore} size={numeral} align="start" lead={awayLead} />
         </div>
       ) : (
         versus
@@ -216,25 +262,29 @@ export const MbScoreboardHero = ({
             size="lg"
             orientation="vertical"
             accent={awayAccent}
+            wrap
             className="w-full"
           />
         ) : (
-          <TeamMark team={away} size="sm" accent={awayAccent} reverse className="w-full" />
+          <TeamMark team={away} size="sm" accent={awayAccent} reverse wrap className="w-full" />
         )}
         {hero && of > 0 && <SeriesPips wins={awayWins} of={of} />}
       </div>
     </div>
   );
 
+  /** The narrow cut: one block per team, at the same numeral step. */
   const stacked = (
-    <div className="px-4 pb-4 pt-3">
-      <HeroRow
+    <div className={hero ? "px-4 pb-4 pt-3" : "px-3 py-3"}>
+      <ScoreboardRow
         team={home}
         accent={homeAccent}
+        markSize={hero ? "md" : "sm"}
+        numeral={numeral}
         wins={homeWins}
         of={of}
         score={scored ? homeScore : null}
-        notch={homeNotch}
+        lead={homeLead}
         divided={false}
       />
       {!scored && (
@@ -244,13 +294,15 @@ export const MbScoreboardHero = ({
           <span className="h-px flex-1 bg-mb-rule" />
         </div>
       )}
-      <HeroRow
+      <ScoreboardRow
         team={away}
         accent={awayAccent}
+        markSize={hero ? "md" : "sm"}
+        numeral={numeral}
         wins={awayWins}
         of={of}
         score={scored ? awayScore : null}
-        notch={awayNotch}
+        lead={awayLead}
         divided={scored}
       />
     </div>
@@ -282,16 +334,15 @@ export const MbScoreboardHero = ({
         )}
       </div>
 
-      {/* `.mb-scoreline` sets `display:grid` from an unlayered rule, so the
-          breakpoint switch lives on a wrapper rather than on the grid itself. */}
-      <div aria-hidden="true" className={hero ? "hidden sm:block" : "block"}>
+      {/* Both cuts are always in the DOM; `globals.css` shows exactly one from
+          the container query. `.mb-scoreline` sets `display:grid` from an
+          unlayered rule, so the switch lives on the wrapper, not on the grid. */}
+      <div aria-hidden="true" className="mb-sb-wide">
         {scoreline}
       </div>
-      {hero && (
-        <div aria-hidden="true" className="sm:hidden">
-          {stacked}
-        </div>
-      )}
+      <div aria-hidden="true" className="mb-sb-narrow">
+        {stacked}
+      </div>
 
       {/* One readout for the whole block: the visual half is aria-hidden, so
           nothing above is announced twice and the scores are never silent. */}
@@ -299,7 +350,7 @@ export const MbScoreboardHero = ({
     </>
   );
 
-  const shell = `mb-tile block w-full overflow-hidden rounded-[4px] text-left ${
+  const shell = `mb-scoreboard mb-tile block w-full overflow-hidden rounded-[4px] text-left ${
     hero ? "shadow-[var(--mb-panel-shadow)]" : ""
   } ${onSelect || href ? "mb-row-hover" : ""} ${className}`;
   /* Inline, not `border-t-4`: `.mb-tile` sets the `border` shorthand from an
@@ -308,20 +359,26 @@ export const MbScoreboardHero = ({
 
   if (onSelect) {
     return (
-      <button type="button" onClick={onSelect} className={shell} style={shellStyle}>
+      <button
+        type="button"
+        onClick={onSelect}
+        data-size={size}
+        className={shell}
+        style={shellStyle}
+      >
         {body}
       </button>
     );
   }
   if (href) {
     return (
-      <Link href={href} className={shell} style={shellStyle}>
+      <Link href={href} data-size={size} className={shell} style={shellStyle}>
         {body}
       </Link>
     );
   }
   return (
-    <div className={shell} style={shellStyle}>
+    <div data-size={size} className={shell} style={shellStyle}>
       {body}
     </div>
   );

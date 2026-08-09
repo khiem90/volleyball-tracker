@@ -1,11 +1,8 @@
 "use client";
 
-import Link from "next/link";
-import Image from "next/image";
 import { useAuth } from "@/context/AuthContext";
-import { MatchbookSidebar } from "@/components/matchbook/Sidebar";
-import { MatchbookMobileBar } from "@/components/matchbook/MobileBar";
-import { MbIcon } from "@/components/matchbook/MbIcon";
+import { MatchbookShell, MB_DEFAULT_CTA } from "@/components/matchbook/AppShell";
+import { MbPageLoading } from "@/components/matchbook/Loading";
 import { useMatchbookDashboard } from "@/components/matchbook/useMatchbookDashboard";
 import {
   BracketPanel,
@@ -18,133 +15,99 @@ import {
   StandingsPanel,
 } from "@/components/matchbook/panels";
 
+/* ===========================================================================
+   OVERVIEW — the first screen converted onto `MatchbookShell`.
+
+   What left this file: a 70-line hand-rolled masthead, `MatchbookSidebar`,
+   `MatchbookMobileBar`, the `<main>` element and its padding, and a bespoke
+   account control that was a `<Link href="/login">` — which, for a signed-in
+   user, navigated to a page that redirects straight back here. All five now
+   come from the shell, so the six screens can no longer disagree about them.
+
+   ------------------------------------------------------ the coral budget
+
+   Invariant 15 allows ONE coral fill per screen plus coral's declared
+   structural jobs. On this route the primary action is Quick Match, which is
+   also the app-level rail key, so the masthead does NOT repeat it in coral —
+   "Record Result" takes navy and the rail keeps the single coral fill. The
+   other two corals on screen are both declared jobs: the `<h1>` word (job 3,
+   48px, where the 3:1 large-text floor applies and coral's 3.26:1 clears) and
+   the schedule spine (job 4).
+   =========================================================================== */
+
 export default function DashboardPage() {
-  const { user, isGuest } = useAuth();
+  const { isGuest, isLoading } = useAuth();
   const data = useMatchbookDashboard();
 
+  /* The dashboard reads local data and renders for guests too, so this gate is
+     short — but it is not absent. Painting a populated overview and then
+     swapping it for a guest one is the layout shift HF-3 names. */
+  if (isLoading) return <MbPageLoading active="/" />;
+
   return (
-    <div className="matchbook-surface min-h-screen">
-      <div className="flex">
-        <MatchbookSidebar />
-
-        <div className="min-w-0 flex-1">
-          <MatchbookMobileBar
-            active="/"
-            cta={
-              isGuest
-                ? { href: "/login", label: "Sign In" }
-                : { href: "/quick-match", label: "Quick Match" }
-            }
+    <MatchbookShell
+      active="/"
+      cta={
+        isGuest
+          ? { href: "/login", label: "Sign In", icon: "login" }
+          : MB_DEFAULT_CTA
+      }
+      masthead={{
+        title: (
+          <>
+            Tournament <span className="text-mb-coral">Overview</span>
+          </>
+        ),
+        shortTitle: "Overview",
+        /* The lockup only appears when there is something live to announce, so
+           it is a fact about the tournament rather than permanent furniture. */
+        badge: data.liveCourts.length > 0 ? { lines: ["Live", "Now"] } : undefined,
+        dateLine: data.dateLine,
+        subLine: `${data.matchesCompleted} matches completed`,
+        actions: [
+          {
+            label: "Record Result",
+            href: "/competitions",
+            icon: "plus",
+            tone: "navy",
+          },
+        ],
+      }}
+    >
+      {/* `.mb-enter-grid` staggers the eight PANELS — the grid's direct
+          children — not the rows inside them (invariant 42). The CSS caps the
+          sequence at six steps, so eight panels still resolve in
+          --mb-dur-slow + 5 x --mb-stagger = 480ms, and the whole thing is
+          removed outright under prefers-reduced-motion. */}
+      <div className="mb-enter-grid grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-12">
+        <div className="md:col-span-2 xl:col-span-7">
+          <StandingsPanel
+            title={`${data.league} Standings`}
+            rows={data.standings}
           />
-
-          <main className="px-4 py-5 sm:px-6 lg:px-8">
-            {/* Masthead */}
-            <header className="mb-5 flex flex-wrap items-center gap-x-6 gap-y-4">
-              <div className="flex items-center gap-4">
-                <h1 className="matchbook-display text-4xl font-bold leading-none tracking-[0.01em] sm:text-5xl">
-                  Tournament Overview
-                </h1>
-                {data.liveCourts.length > 0 && (
-                  <div className="flex flex-col items-center border-[2px] border-mb-coral px-2.5 py-1 text-mb-coral">
-                    <span className="matchbook-display text-[0.8rem] font-bold leading-tight tracking-[0.1em]">
-                      Live
-                    </span>
-                    <span className="matchbook-display text-[0.8rem] font-bold leading-tight tracking-[0.1em]">
-                      Now
-                    </span>
-                  </div>
-                )}
-                <div className="hidden sm:block">
-                  <p
-                    className="matchbook-display text-[0.74rem] font-bold tracking-[0.1em]"
-                    suppressHydrationWarning
-                  >
-                    {data.dateLine}
-                  </p>
-                  <p className="mb-kicker">
-                    {data.matchesCompleted} matches completed
-                  </p>
-                </div>
-              </div>
-
-              <div className="ml-auto flex items-center gap-3">
-                <Link href="/competitions" className="mb-btn mb-btn-navy">
-                  <MbIcon id="plus" size={14} />
-                  Record Result
-                </Link>
-                <Link href="/quick-match" className="mb-btn mb-btn-coral">
-                  <MbIcon id="quick" size={14} />
-                  Quick Match
-                </Link>
-                <Link
-                  href="/login"
-                  className="hidden items-center gap-2.5 md:flex"
-                  title={isGuest ? "Sign in" : user?.email ?? "Account"}
-                >
-                  <span className="flex h-10 w-10 items-center justify-center rounded-full border-[1.5px] border-mb-navy bg-mb-paper-bright">
-                    <Image
-                      src="/assets/matchbook/brand/crest.svg"
-                      alt=""
-                      width={24}
-                      height={28}
-                    />
-                  </span>
-                  <span className="matchbook-display text-[0.72rem] font-bold leading-tight tracking-[0.08em]">
-                    {isGuest ? (
-                      <>
-                        Sign In
-                        <br />
-                        <span className="text-mb-ink-muted">Account</span>
-                      </>
-                    ) : (
-                      <>
-                        My
-                        <br />
-                        Account
-                      </>
-                    )}
-                  </span>
-                  <MbIcon id="chevron-down" size={13} className="text-mb-ink-muted" />
-                </Link>
-              </div>
-            </header>
-
-            {/* Panel grid */}
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-12">
-              <div className="md:col-span-2 xl:col-span-7">
-                <StandingsPanel
-                  title={`${data.league} Standings`}
-                  rows={data.standings}
-                />
-              </div>
-              <div className="md:col-span-2 xl:col-span-5">
-                <MatchOfTheDayPanel match={data.featured} />
-              </div>
-              <div className="xl:col-span-4">
-                <LiveCourtsPanel courts={data.liveCourts} />
-              </div>
-              <div className="xl:col-span-4">
-                <SchedulePanel items={data.schedule} />
-              </div>
-              <div className="md:col-span-2 xl:col-span-4">
-                <BracketPanel bracket={data.bracket} />
-              </div>
-              <div className="xl:col-span-4">
-                <RecentResultsPanel results={data.recentResults} />
-              </div>
-              <div className="xl:col-span-4">
-                <ReadinessPanel rows={data.readiness} />
-              </div>
-              <div className="md:col-span-2 xl:col-span-4">
-                <LeadersPanel
-                  leaders={data.leaders}
-                  totals={data.allTimeTotals}
-                />
-              </div>
-            </div>
-          </main>
+        </div>
+        <div className="md:col-span-2 xl:col-span-5">
+          <MatchOfTheDayPanel match={data.featured} />
+        </div>
+        <div className="xl:col-span-4">
+          <LiveCourtsPanel courts={data.liveCourts} />
+        </div>
+        <div className="xl:col-span-4">
+          <SchedulePanel items={data.schedule} />
+        </div>
+        <div className="md:col-span-2 xl:col-span-4">
+          <BracketPanel bracket={data.bracket} />
+        </div>
+        <div className="xl:col-span-4">
+          <RecentResultsPanel results={data.recentResults} />
+        </div>
+        <div className="xl:col-span-4">
+          <ReadinessPanel rows={data.readiness} />
+        </div>
+        <div className="md:col-span-2 xl:col-span-4">
+          <LeadersPanel leaders={data.leaders} totals={data.allTimeTotals} />
         </div>
       </div>
-    </div>
+    </MatchbookShell>
   );
 }

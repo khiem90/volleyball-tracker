@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { MbIcon } from "./MbIcon";
+import { MbButton, MbButtonLink } from "./Button";
+import { MbPanelHeadLink } from "./panels";
 import { Crest, FormLetters, FormSquares, Panel, PanelEmpty, TeamMark } from "./Panel";
-import { readinessColor } from "./teamStats";
+import { readinessColor, readinessInk } from "./teamStats";
 import type {
   MbFormRow,
   MbReadinessRow,
@@ -16,8 +18,18 @@ const SNAPSHOT_ICONS: Record<string, string> = {
   Matches: "volleyball",
 };
 
-const statusColor = (status: MbTeamRow["status"]) =>
-  status === "ACTIVE" ? "var(--mb-green)" : "var(--mb-ink-muted)";
+/**
+ * `--mb-green` measured 4.28:1 as a 10.56px/700 letterform on
+ * `--mb-paper-bright` — under the 4.5:1 floor. `--mb-green-ink` is the twin
+ * `globals.css` declares for precisely this and measures 5.13:1. The word
+ * ACTIVE/INACTIVE is itself the second channel, so nothing is carried by hue
+ * alone either way.
+ */
+const statusInk = (status: MbTeamRow["status"]) =>
+  status === "ACTIVE" ? "var(--mb-green-ink)" : "var(--mb-ink-muted)";
+
+/** See `panels.tsx` — the rank column's figures must not reflow (HF-13). */
+const RANK_CELL = "matchbook-display text-center font-bold tabular-nums";
 
 /* ----------------------------- Team directory ----------------------------- */
 
@@ -40,7 +52,22 @@ export const TeamDirectoryPanel = ({
     title="Team Directory"
     meta={
       totalTeams > 0 ? (
-        <label className="mb-search">
+        /* The `<input>` measured 144 x 18.7 at 390px — the shell's 0.25rem
+           padding was the whole of its height and the target was the wrapper,
+           not the field. `py-0!` hands the interior to the input and
+           `self-stretch` makes it take all of it, which is the same fix
+           `MbTextInput` applies to `.mb-input`; `min-h-11` on the shell sets
+           the 44px floor. Written here rather than in `.mb-search` because the
+           class is W1's. `text-base!` below `md` is the iOS zoom floor: Safari
+           zooms the viewport on focus for anything under 16px, which is a
+           layout shift the reader did not ask for.
+
+           `min-h-12`, not `min-h-11`, and that is the composite corollary
+           `Button.tsx` states: `.mb-search` is a FRAME around the target and
+           spends `--mb-rule-edge` twice, so a 44px shell leaves the `<input>`
+           itself at 42 — which is exactly what the sweep measured after the
+           first pass. At the `md` rung the field is 46px. */
+        <label className="mb-search min-h-12 py-0!">
           <MbIcon id="search" size={13} className="shrink-0 text-mb-ink-muted" />
           <input
             type="search"
@@ -48,6 +75,7 @@ export const TeamDirectoryPanel = ({
             onChange={(event) => onSearchChange(event.target.value)}
             placeholder="Filter teams"
             aria-label="Filter teams by name"
+            className="self-stretch text-base! md:text-[0.78rem]!"
           />
         </label>
       ) : undefined
@@ -76,14 +104,22 @@ export const TeamDirectoryPanel = ({
             {rows.map((row, i) => {
               const selected = row.id === selectedId;
               return (
+                /* `onClick` on the `<tr>` is a MOUSE CONVENIENCE, not the
+                   control. It used to be the only way to select a team, which
+                   is HF-15 — a control unreachable by tab — and it is why the
+                   real control is now the `<button>` in the Team cell: the
+                   table keeps its table semantics (a `role="button"` row would
+                   have cost every screen-reader user the column headers) and
+                   the keyboard gets a named, focusable, 44px target that does
+                   the same thing. `aria-current` still marks the chosen row. */
                 <tr
                   key={row.id}
                   onClick={() => onSelect(row.id)}
-                  className="cursor-pointer transition-colors hover:bg-[rgba(7,50,77,0.04)]"
+                  className="mb-row-hover cursor-pointer"
                   aria-current={selected}
                 >
                   <td
-                    className="matchbook-display text-center font-bold"
+                    className={RANK_CELL}
                     style={
                       selected
                         ? { boxShadow: "inset 3px 0 0 var(--mb-coral)" }
@@ -95,13 +131,20 @@ export const TeamDirectoryPanel = ({
                     {i + 1}
                   </td>
                   <td>
-                    <TeamMark team={row.team} />
+                    <button
+                      type="button"
+                      onClick={() => onSelect(row.id)}
+                      aria-pressed={selected}
+                      className="mb-btn-touch flex w-full items-center rounded-[3px] text-left"
+                    >
+                      <TeamMark team={row.team} />
+                    </button>
                   </td>
                   <td className="text-[0.76rem] text-mb-ink-muted">
                     {row.competitions.length === 0 ? (
                       <span className="text-mb-ink-muted/70">No competition</span>
                     ) : (
-                      <span className="whitespace-nowrap">
+                      <span className="whitespace-nowrap tabular-nums">
                         {row.competitions[0]}
                         {row.competitions.length > 1 && ` +${row.competitions.length - 1}`}
                       </span>
@@ -135,7 +178,7 @@ export const TeamDirectoryPanel = ({
                   <td className="text-right">
                     <span
                       className="matchbook-display text-[0.66rem] font-bold whitespace-nowrap"
-                      style={{ color: statusColor(row.status) }}
+                      style={{ color: statusInk(row.status) }}
                     >
                       {row.status}
                     </span>
@@ -205,7 +248,7 @@ export const TeamReadinessPanel = ({ rows }: { rows: MbReadinessRow[] }) => (
                     <span className="w-8 text-[0.76rem] font-semibold tabular-nums">
                       {row.percent}%
                     </span>
-                    <span className="h-[7px] w-24 overflow-hidden rounded-sm bg-[rgba(7,50,77,0.12)]">
+                    <span className="h-[7px] w-24 overflow-hidden rounded-sm bg-[var(--mb-tint-3)]">
                       <span
                         className="block h-full"
                         style={{
@@ -216,9 +259,10 @@ export const TeamReadinessPanel = ({ rows }: { rows: MbReadinessRow[] }) => (
                     </span>
                   </span>
                 </td>
+                {/* Bar takes the mark colour, word takes the ink twin. */}
                 <td
                   className="matchbook-display pr-3! text-right text-[0.66rem] font-bold"
-                  style={{ color: readinessColor(row.percent) }}
+                  style={{ color: readinessInk(row.percent) }}
                 >
                   {row.status}
                 </td>
@@ -293,7 +337,10 @@ export const TeamProfilePanel = ({
 
           {/* Record */}
           <div className="grid min-w-[210px] flex-1 grid-cols-2 gap-2">
-            <div className="col-span-2 flex flex-col items-center justify-center gap-0.5 border-[1.5px] border-mb-navy px-2 py-2">
+            {/* Edge tier. `[1.5px]` was never rendering — Blink floors a used
+                border-width to whole CSS px at every DPR — so this is the same
+                pixel with the tier it actually paints. */}
+            <div className="col-span-2 flex flex-col items-center justify-center gap-0.5 border border-mb-navy px-2 py-2">
               <span className="mb-kicker">Overall Record</span>
               <span className="matchbook-display text-3xl font-bold leading-none tabular-nums">
                 {row.won} - {row.lost}
@@ -343,24 +390,31 @@ export const TeamProfilePanel = ({
           </div>
         </div>
 
-        {/* Actions */}
-        <div className="mt-auto flex flex-wrap gap-2 border-t border-mb-rule pt-3">
-          <button type="button" onClick={onEdit} className="mb-btn mb-btn-navy flex-1">
-            <MbIcon id="settings" size={14} />
-            Edit Team
-          </button>
-          <Link href="/quick-match" className="mb-btn mb-btn-coral flex-1">
-            <MbIcon id="quick" size={14} />
-            Quick Match
-          </Link>
-          <button
-            type="button"
-            onClick={onDelete}
-            className="mb-btn mb-btn-outline flex-1"
-          >
-            <MbIcon id="warning" size={14} />
-            Delete
-          </button>
+        {/* Two changes here, both rule-driven.
+
+            1. "Quick Match" was `mb-btn-coral`. On `/teams` the rail already
+               spends the screen's one coral fill on the same action, so this
+               was invariant 15's failure mode twice over: two coral fills, and
+               both of them the *same* destination.
+            2. Delete sat flush against Quick Match — a destructive control
+               abutting the highest-frequency one, which HF-14 names. It now
+               takes its own line under a rule, which is the same separation the
+               kit's `MbDangerZone` uses and reads as a deliberate boundary
+               rather than a third button in a row of three. */}
+        <div className="mt-auto flex flex-col gap-3 border-t border-mb-rule pt-3">
+          <div className="flex flex-wrap gap-2">
+            <MbButton variant="navy" icon="settings" onClick={onEdit} className="flex-1">
+              Edit Team
+            </MbButton>
+            <MbButtonLink href="/quick-match" variant="outline-navy" icon="quick" className="flex-1">
+              Quick Match
+            </MbButtonLink>
+          </div>
+          <div className="flex justify-end border-t border-mb-rule pt-3">
+            <MbButton variant="outline" icon="warning" onClick={onDelete}>
+              Delete Team
+            </MbButton>
+          </div>
         </div>
       </div>
     )}
@@ -370,7 +424,10 @@ export const TeamProfilePanel = ({
 /* ---------------------------- Upcoming fixtures --------------------------- */
 
 export const UpcomingFixturesPanel = ({ items }: { items: MbScheduleItem[] }) => (
-  <Panel title="Upcoming Fixtures" action="View Full Schedule" href="/competitions">
+  <Panel
+    title="Upcoming Fixtures"
+    meta={<MbPanelHeadLink href="/competitions" label="View Full Schedule" />}
+  >
     {items.length === 0 ? (
       <PanelEmpty
         message="No fixtures exist yet — start a competition to schedule matches."
@@ -378,17 +435,23 @@ export const UpcomingFixturesPanel = ({ items }: { items: MbScheduleItem[] }) =>
         href="/competitions/new"
       />
     ) : (
-      <div className="flex flex-col divide-y divide-mb-rule">
+      /* Coral moves from the DATE to the SPINE, which is the swap in both
+         directions: the date was a 10.24px/700 letterform at 3.55:1 (HF-6),
+         and the 2px left rule is coral job 4 — "the schedule spine" — where a
+         mark's 3:1 floor applies and 3.26:1 clears. `SchedulePanel` on `/`
+         already drew this list that way; this one did not, so the same object
+         had two vocabularies across two routes. */
+      <div className="ml-3 flex flex-col divide-y divide-mb-rule border-l-2 border-mb-coral">
         {items.map((item, i) => (
           <div
             key={i}
-            className="grid grid-cols-[42px_56px_1fr] items-center gap-2 px-3 py-2"
+            className="grid grid-cols-[42px_56px_1fr] items-center gap-2 py-2 pl-3 pr-3"
           >
             <div>
               <p className="matchbook-display text-[0.64rem] font-bold leading-tight">
                 {item.day}
               </p>
-              <p className="matchbook-display text-[0.64rem] font-bold leading-tight text-mb-coral">
+              <p className="matchbook-display text-[0.64rem] font-bold leading-tight tabular-nums">
                 {item.date}
               </p>
             </div>
@@ -413,8 +476,8 @@ export const UpcomingFixturesPanel = ({ items }: { items: MbScheduleItem[] }) =>
         ))}
       </div>
     )}
-    <div className="mt-auto border-t border-mb-rule px-4 py-2 text-center">
-      <Link href="/competitions" className="mb-panel-link justify-center">
+    <div className="mt-auto border-t border-mb-rule px-4 text-center">
+      <Link href="/competitions" className="mb-panel-link min-h-11 w-full justify-center">
         View Full Fixture List
         <MbIcon id="chevron-right" size={11} />
       </Link>
@@ -451,8 +514,8 @@ export const RecentFormPanel = ({ rows }: { rows: MbFormRow[] }) => (
         ))}
       </div>
     )}
-    <div className="mt-auto border-t border-mb-rule px-4 py-2 text-center">
-      <Link href="/summaries" className="mb-panel-link justify-center">
+    <div className="mt-auto border-t border-mb-rule px-4 text-center">
+      <Link href="/summaries" className="mb-panel-link min-h-11 w-full justify-center">
         View Full Match History
         <MbIcon id="chevron-right" size={11} />
       </Link>

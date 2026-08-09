@@ -18,7 +18,7 @@ import { MbBadge, type MbBadgeTone } from "@/components/matchbook/Badge";
 import { MbTabs } from "@/components/matchbook/Tabs";
 import { MbSegmented } from "@/components/matchbook/Segmented";
 import type { MbButtonSize, MbButtonVariant } from "@/components/matchbook/Button";
-import type { MbIconButtonTone } from "@/components/matchbook/IconButton";
+import type { MbIconButtonSize, MbIconButtonTone } from "@/components/matchbook/IconButton";
 // W1 / P1 — shared logic modules & Panel extensions
 import { MbIcon } from "@/components/matchbook/MbIcon";
 import { PanelEmpty, TeamMark } from "@/components/matchbook/Panel";
@@ -94,6 +94,20 @@ import {
   type MbAction,
 } from "@/components/matchbook/ActionBar";
 
+// W2 / P2b — feedback layer
+import {
+  MbToast,
+  toast,
+  dismissAllToasts,
+  MB_TOAST_OFFSET_VAR,
+  type MbToastTone,
+} from "@/components/matchbook/Toast";
+import { MbSkeletonPanel, MbRouteState } from "@/components/matchbook/Loading";
+import { MbOfflineBanner } from "@/components/matchbook/Offline";
+import { UndoToast } from "@/components/UndoToast";
+import { Crest } from "@/components/matchbook/Panel";
+import type { UndoEntry } from "@/types/undo";
+
 /* ===================================================================== */
 /* W1 / P1 — Core controls                                               */
 /* ===================================================================== */
@@ -108,6 +122,14 @@ const BUTTON_SIZE_NOTE: Record<MbButtonSize, string> = {
   lg: "56px · 24px pad · 0.9rem · 16px glyph — the commit control",
 };
 const ICON_TONES: MbIconButtonTone[] = ["plain", "navy", "coral", "outline", "outline-navy"];
+const ICON_SIZES: MbIconButtonSize[] = ["sm", "md", "lg"];
+
+/** The same three rungs as MbButton, and now the same three numbers. */
+const ICON_SIZE_NOTE: Record<MbIconButtonSize, string> = {
+  sm: "44 x 44 · 18px glyph — the floor, for a disc inside a dense row",
+  md: "48 x 48 · 20px glyph — default, lines up with MbButton size=\"md\"",
+  lg: "56 x 56 · 22px glyph — the commit control",
+};
 const BADGE_TONES: MbBadgeTone[] = [
   "live",
   "draft",
@@ -250,27 +272,39 @@ const CoreControlsSection = () => {
 
         {/* ------------------------------------------------ MbIconButton */}
         <div className="xl:col-span-5">
-          <Panel title="MbIconButton" icon="more" meta={<span className="mb-kicker tabular-nums">44 / 56</span>}>
-            <KitBlock label='size="md" — 44 x 44'>
-              <div className="flex flex-wrap items-center gap-3">
-                {ICON_TONES.map((tone) => (
-                  <MbIconButton key={tone} tone={tone} icon="close" label={`Close (${tone})`} />
-                ))}
-              </div>
-            </KitBlock>
+          <Panel
+            title="MbIconButton"
+            icon="more"
+            meta={<span className="mb-kicker tabular-nums">44 / 48 / 56</span>}
+          >
+            {ICON_SIZES.map((size) => (
+              <KitBlock key={size} label={`size="${size}" — ${ICON_SIZE_NOTE[size]}`}>
+                <div className="flex flex-wrap items-center gap-3">
+                  {ICON_TONES.map((tone) => (
+                    <MbIconButton
+                      key={tone}
+                      tone={tone}
+                      size={size}
+                      icon="close"
+                      label={`Close ${size} (${tone})`}
+                    />
+                  ))}
+                </div>
+              </KitBlock>
+            ))}
 
-            <KitBlock label='size="lg" — 56 x 56'>
+            <KitBlock label="One ladder — the disc and the labelled button at the same rung">
               <div className="flex flex-wrap items-center gap-3">
-                {ICON_TONES.map((tone) => (
-                  <MbIconButton
-                    key={tone}
-                    tone={tone}
-                    size="lg"
-                    icon="undo"
-                    label={`Undo (${tone})`}
-                  />
-                ))}
+                <MbButton variant="navy" icon="export">
+                  Export CSV
+                </MbButton>
+                <MbIconButton icon="more" label="More export options" tone="outline-navy" />
+                <MbIconButton icon="print" label="Print" tone="outline-navy" />
               </div>
+              <p className="mt-3 text-[0.72rem] text-mb-ink-muted tabular-nums">
+                Both default to size=&quot;md&quot;, and size=&quot;md&quot; is 48px on both.
+                This row used to sit 4px out of line with no prop that could fix it.
+              </p>
             </KitBlock>
 
             <KitBlock label="Vocabulary">
@@ -525,7 +559,9 @@ const CoreControlsSection = () => {
           >
             <div className="grid grid-cols-1 gap-4 p-4 xl:grid-cols-12">
               <div className="xl:col-span-4">
-                <p className="mb-kicker mb-3 tabular-nums">size=&quot;md&quot; — 48px, icons</p>
+                <p className="mb-kicker mb-3 tabular-nums">
+                  size=&quot;md&quot; — 48px group box, icons
+                </p>
                 <MbSegmented
                   name="kit-mode"
                   value={mode}
@@ -545,12 +581,14 @@ const CoreControlsSection = () => {
               </div>
 
               <div className="xl:col-span-4">
-                <p className="mb-kicker mb-3 tabular-nums">size=&quot;sm&quot; — 44px, fullWidth={"{false}"}</p>
+                <p className="mb-kicker mb-3 tabular-nums">
+                  size=&quot;lg&quot; — 56px group box, fullWidth={"{false}"}
+                </p>
                 <MbSegmented
                   name="kit-serve"
                   value={serve}
                   onChange={setServe}
-                  size="sm"
+                  size="lg"
                   fullWidth={false}
                   aria-label="Rotation phase"
                   options={[
@@ -559,13 +597,16 @@ const CoreControlsSection = () => {
                   ]}
                 />
                 <p className="mt-3 text-[0.72rem] text-mb-ink-muted tabular-nums">
-                  Shrinks to its content instead of stretching; the 1.5px navy gaps are the
-                  dividing rules.
+                  Shrinks to its content instead of stretching; the navy edge-rule gaps are the
+                  dividing rules. No size=&quot;sm&quot;: the group spends an edge rule top and
+                  bottom, so a 44px group would leave 42px segments — under the floor.
                 </p>
               </div>
 
               <div className="xl:col-span-4">
-                <p className="mb-kicker mb-3 tabular-nums">Long labels — wraps, never truncates</p>
+                <p className="mb-kicker mb-3 tabular-nums">
+                  Long labels — wraps, never truncates, cells stay equal
+                </p>
                 <div className="max-w-[260px]">
                   <MbSegmented
                     name="kit-venue"
@@ -769,43 +810,28 @@ const LogicAndPanelSection = () => {
           <Panel title="pluralise()" icon="edit">
             <div className="flex flex-col gap-4 p-4">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {/* Both of these were hand-rolled `.mb-input` / `.mb-stepper`
+                    markup rather than the components, and both measured 46px —
+                    off the ladder, in the gallery whose job is to show the
+                    ladder. They are the components now. */}
                 <LogicRow label="Venue word">
-                  {/* min-h on the INPUT, not the wrapper: the wrapper's padding
-                      is not a hit area, so the field itself has to carry 44px. */}
-                  <div className="mb-input py-0!">
-                    <input
-                      type="text"
-                      className="min-h-[44px]"
-                      value={venue}
-                      onChange={(event) => setVenue(event.target.value)}
-                      aria-label="Venue word"
-                      placeholder="court"
-                    />
-                  </div>
+                  <MbTextInput
+                    type="text"
+                    value={venue}
+                    onChange={(event) => setVenue(event.target.value)}
+                    aria-label="Venue word"
+                    placeholder="court"
+                  />
                 </LogicRow>
 
                 <LogicRow label="Count">
-                  <div className="mb-stepper self-start">
-                    <button
-                      type="button"
-                      onClick={() => setCount((n) => Math.max(0, n - 1))}
-                      title="Decrease count"
-                      aria-label="Decrease count"
-                      disabled={count === 0}
-                    >
-                      <MbIcon id="minus" size={14} />
-                    </button>
-                    <span className="mb-stepper-value">{count}</span>
-                    <button
-                      type="button"
-                      onClick={() => setCount((n) => Math.min(24, n + 1))}
-                      title="Increase count"
-                      aria-label="Increase count"
-                      disabled={count === 24}
-                    >
-                      <MbIcon id="plus" size={14} />
-                    </button>
-                  </div>
+                  <MbNumberStepper
+                    label="Count"
+                    value={count}
+                    onChange={setCount}
+                    min={0}
+                    max={24}
+                  />
                 </LogicRow>
               </div>
 
@@ -1323,9 +1349,12 @@ const FormKitSection = () => {
           <Panel
             title="MbNumberStepper"
             icon="plus"
-            meta={<span className="mb-kicker tabular-nums">44 / 56px</span>}
+            meta={<span className="mb-kicker tabular-nums">48 / 56px</span>}
           >
-            <FormBlock label='size="sm"' note="clamps on change and on blur">
+            <FormBlock
+              label='size="md" — 48px shell, 46px keys'
+              note="clamps on change and on blur"
+            >
               <MbField
                 label="Points to win"
                 htmlFor="fk-points"
@@ -1342,7 +1371,10 @@ const FormKitSection = () => {
               </MbField>
             </FormBlock>
 
-            <FormBlock label='size="lg" + suffix' note="console-scale figure">
+            <FormBlock
+              label='size="lg" + suffix — 56px shell, 54px keys'
+              note="console-scale figure, unit at display/link"
+            >
               <MbField label="Series length" htmlFor="fk-games">
                 <MbNumberStepper
                   id="fk-games"
@@ -2573,8 +2605,13 @@ const ScoreAndStatusSection = () => {
                 />
               </div>
               <p className="mt-3 text-[0.72rem] text-mb-ink-muted">
-                Both names truncate inside their own 1fr column; the numerals stay
-                optically centred and the score never moves.
+                Neither name truncates: the card measures itself and drops to one
+                block per team before the columns starve. The score box is three
+                figures wide at every value, so nothing beside it moves. The two
+                scores hug the divider rather than centring in that box, which
+                holds rule-to-ink at 14–20px for every score instead of letting
+                it swing to 53px — not optically centred, which tabular figures
+                cannot be, but within one side bearing of it.
               </p>
             </ScoreKitBlock>
 
@@ -4269,6 +4306,786 @@ const P0UnclaimedSection = () => (
 );
 
 /* ===================================================================== */
+/* W2 / P2a — the app shell                                              */
+/* ===================================================================== */
+
+import { MatchbookShell } from "@/components/matchbook/AppShell";
+import { MatchbookMasthead } from "@/components/matchbook/Masthead";
+import { MbEventBar, MB_ON_NAVY_CONTROL } from "@/components/matchbook/EventBar";
+import { MbAccountChip } from "@/components/matchbook/AccountChip";
+import type { MbSegmentedOption } from "@/components/matchbook/Segmented";
+
+const SHELL_VARIANTS: MbSegmentedOption[] = [
+  { value: "console", label: "Console", icon: "grid" },
+  { value: "public", label: "Public", icon: "share" },
+  { value: "focus", label: "Focus", icon: "volleyball" },
+];
+
+const SHELL_PANELS = ["Standings", "Match of the day", "Live courts", "Schedule"];
+
+/**
+ * A demo frame for a component that positions itself against the viewport.
+ *
+ * `contain: layout paint` is what makes this work: paint containment makes the
+ * element a containing block for `position: fixed` descendants, so the shell's
+ * bottom bar and skip link land against this box instead of the gallery page.
+ * Without it a single demo would pin a nav bar across the bottom of a 20,000px
+ * page.
+ *
+ * `overflow-clip`, not `overflow-hidden`: hidden is still a scroll container,
+ * and this one arrived at `scrollTop: 36` on its own after a variant switch,
+ * which silently cropped the top 36px of the public brand lockup. Clip cannot
+ * be scrolled at all, so the demo always shows the shell from its first pixel.
+ */
+const ShellFrame = ({ children }: { children: React.ReactNode }) => (
+  <div
+    /* `mt-24` is not spacing for its own sake. The shell's skip link is
+       `position: fixed` and this frame is its containing block, so it parks at
+       `frame top + 8px - 300%` — 124px ABOVE the frame. Without the margin that
+       lands on the variant switcher and `audit.mjs` correctly reports a 2.7px
+       gap between two interactive boxes at 1440px. With it the gap is 34.7px.
+       In the app the link parks over the browser chrome, which is the idea. */
+    className="relative mt-24 h-[460px] overflow-clip border-t border-mb-rule"
+    style={{ contain: "layout paint" }}
+  >
+    {children}
+  </div>
+);
+
+const ShellDemoBody = () => (
+  <div className="mb-enter-grid grid grid-cols-1 gap-4 sm:grid-cols-2">
+    {SHELL_PANELS.map((name) => (
+      <Panel key={name} title={name}>
+        <div className="flex flex-col gap-2 p-4">
+          <MbSkeleton w="70%" h={12} />
+          <MbSkeleton w="100%" h={10} lines={3} />
+        </div>
+      </Panel>
+    ))}
+  </div>
+);
+
+const ShellSection = () => {
+  const [variant, setVariant] = useState("console");
+
+  return (
+    <section id="shell" className="mt-10">
+      <header className="mb-5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b-[1.5px] border-mb-navy pb-2">
+        <h2 className="matchbook-display text-2xl font-bold leading-none tracking-[0.05em]">
+          App <span className="text-mb-coral">Shell</span>
+        </h2>
+        <p className="mb-kicker tabular-nums">W2 / P2a — 6 components</p>
+      </header>
+
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
+        {/* ------------------------------------------------ the three shells */}
+        <div className="xl:col-span-12">
+          <Panel
+            title="MatchbookShell"
+            icon="grid"
+            meta={<span className="mb-kicker tabular-nums">console · public · focus</span>}
+          >
+            <KitBlock label="Variant — one shell, three declarations">
+              <MbSegmented
+                name="kit-shell-variant"
+                value={variant}
+                onChange={setVariant}
+                options={SHELL_VARIANTS}
+              />
+              <p className="mt-3 text-[0.72rem] leading-snug text-mb-ink-muted">
+                Only ONE shell is mounted at a time, on purpose: the shell owns{" "}
+                <code>#mb-main</code> and the skip link, and three of them side by
+                side would put three of each in one document. At 1440px the console
+                variant shows the 218px rail; the top strip and the bottom bar are{" "}
+                <code>lg:hidden</code> and appear in the 390px shot, which is the
+                width they exist for.
+              </p>
+            </KitBlock>
+
+            <ShellFrame>
+              {variant === "console" && (
+                <MatchbookShell
+                  variant="console"
+                  active="/competitions"
+                  masthead={{
+                    title: (
+                      <>
+                        Compete<span className="text-mb-coral">.</span>
+                      </>
+                    ),
+                    shortTitle: "Compete",
+                    badge: { value: 6, label: "Events" },
+                    dateLine: "Sat 8 Aug",
+                    subLine: "48 matches completed",
+                    actions: [
+                      { label: "Manage Event", icon: "settings", href: "#" },
+                      { label: "New Competition", icon: "plus", href: "#", tone: "coral" },
+                    ],
+                  }}
+                >
+                  <ShellDemoBody />
+                </MatchbookShell>
+              )}
+
+              {variant === "public" && (
+                <MatchbookShell
+                  variant="public"
+                  masthead={{
+                    title: (
+                      <>
+                        Harbor <span className="text-mb-coral">Classic</span>
+                      </>
+                    ),
+                    shortTitle: "Harbor Classic",
+                    badge: { lines: ["Live", "Now"] },
+                    dateLine: "Sat 8 Aug",
+                  }}
+                >
+                  <ShellDemoBody />
+                </MatchbookShell>
+              )}
+
+              {variant === "focus" && (
+                <MatchbookShell
+                  variant="focus"
+                  back={{ href: "#", label: "Exit" }}
+                  masthead={{
+                    title: "Surge v Riptide",
+                    shortTitle: "Surge v Riptide",
+                    account: false,
+                  }}
+                >
+                  {/* A stand-in, not the scoring console: `.mb-console` is
+                      100dvh by design and W5 owns what goes inside it. What
+                      this demonstrates is the shell's contract — the event bar
+                      is the only chrome, and `children` reaches `<main>` with
+                      nothing wrapped around it. */}
+                  <div className="flex h-full items-stretch bg-mb-paper-bright">
+                    <div className="flex flex-1 flex-col items-center justify-center gap-3">
+                      <span className="mb-kicker">Surge</span>
+                      <MbScoreNumeral value={21} size="console" />
+                    </div>
+                    <div className="mb-rule-vertical" />
+                    <div className="flex flex-1 flex-col items-center justify-center gap-3">
+                      <span className="mb-kicker">Riptide</span>
+                      <MbScoreNumeral value={18} size="console" />
+                    </div>
+                  </div>
+                </MatchbookShell>
+              )}
+            </ShellFrame>
+          </Panel>
+        </div>
+
+        {/* ------------------------------------------------------- masthead */}
+        <div className="xl:col-span-7">
+          <Panel
+            title="MatchbookMasthead"
+            icon="clipboard"
+            meta={<span className="mb-kicker tabular-nums">6 hand-rolled copies → 1</span>}
+          >
+            <KitBlock label="Count badge + two actions + account">
+              <MatchbookMasthead
+                title={
+                  <>
+                    Team <span className="text-mb-coral">Directory</span>
+                  </>
+                }
+                badge={{ value: 8, label: "Teams" }}
+                dateLine="Sat 8 Aug"
+                subLine="48 matches completed"
+                actions={[
+                  { label: "Add Team", icon: "plus", onClick: () => {} },
+                  { label: "Quick Add", icon: "import", onClick: () => {}, tone: "outline" },
+                ]}
+              />
+            </KitBlock>
+
+            <KitBlock label="Lines badge + a status node, no actions">
+              <MatchbookMasthead
+                title={
+                  <>
+                    Tournament <span className="text-mb-coral">Overview</span>
+                  </>
+                }
+                badge={{ lines: ["Live", "Now"] }}
+                status={<MbBadge tone="live">Live</MbBadge>}
+                account={false}
+              />
+            </KitBlock>
+
+            <KitBlock label="A 62-character event name, no badge — wraps, never clips">
+              <MatchbookMasthead
+                title="Riverside Winter Invitational Presented By The Harbor Club"
+                actions={[{ label: "Share Live", icon: "share", onClick: () => {}, tone: "coral" }]}
+                account={false}
+              />
+            </KitBlock>
+          </Panel>
+        </div>
+
+        {/* ------------------------------------------------------ event bar */}
+        <div className="xl:col-span-5">
+          <Panel
+            title="MbEventBar"
+            icon="live"
+            meta={<span className="mb-kicker tabular-nums">navy strip, 56px</span>}
+          >
+            <KitBlock label="Focus — back, title, live status">
+              <MbEventBar
+                sticky={false}
+                back={{ href: "#", label: "Exit" }}
+                kicker="Harbor Classic · Semifinal"
+                title="Surge v Riptide"
+                status={<MbLiveStatus status="live" tone="navy" />}
+              />
+            </KitBlock>
+
+            <KitBlock label="Public — no back, one trailing action">
+              <MbEventBar
+                sticky={false}
+                kicker="Round robin · Court 2"
+                title="Summer League"
+                actions={
+                  <MbIconButton
+                    icon="share"
+                    label="Share this event"
+                    tone="outline"
+                    style={MB_ON_NAVY_CONTROL}
+                  />
+                }
+              />
+            </KitBlock>
+
+            <p className="border-t border-mb-rule px-4 py-4 text-[0.72rem] leading-snug text-mb-ink-muted">
+              The bar re-points <code>--mb-focus</code> to paper-bright, because the
+              inherited navy ring measures 1.00:1 on its own ground. Tab into the
+              exit control to see it.
+            </p>
+          </Panel>
+        </div>
+
+        {/* ---------------------------------------------------- account chip */}
+        <div className="xl:col-span-5">
+          <Panel
+            title="MbAccountChip"
+            icon="settings"
+            meta={<span className="mb-kicker tabular-nums">3 variants</span>}
+          >
+            <KitBlock label="rail — the sidebar footer">
+              <div className="w-[178px] border border-mb-rule p-3">
+                <MbAccountChip variant="rail" />
+              </div>
+            </KitBlock>
+
+            <KitBlock label="masthead / compact">
+              <div className="flex flex-wrap items-center gap-3">
+                <MbAccountChip variant="masthead" />
+                <MbAccountChip variant="compact" />
+              </div>
+              <p className="mt-3 text-[0.72rem] leading-snug text-mb-ink-muted">
+                Both open the same menu: the signed-in address, then Sign out on a
+                danger rail. <code>signOut()</code> is reachable from a Matchbook
+                route here for the first time — the shipped chip is a{" "}
+                <code>Link</code> to <code>/login</code>, which redirects a
+                signed-in user straight back to <code>/</code>.
+              </p>
+            </KitBlock>
+          </Panel>
+        </div>
+
+        {/* ------------------------------------------------- nav + touch floor */}
+        <div className="xl:col-span-7">
+          <Panel
+            title="MatchbookBottomBar / MatchbookTopStrip"
+            icon="menu"
+            meta={<span className="mb-kicker tabular-nums">below lg only</span>}
+          >
+            <KitBlock label="Where they are">
+              <p className="text-[0.78rem] leading-snug">
+                Both are <code>lg:hidden</code>, so this panel is deliberately empty
+                at 1440px — read them in the 390px shot of the shell frame above.
+                The bar is five destinations plus More, six cells at 65px, each 56px
+                tall with a 3px coral top rule, a paper-bright lift and a bolder
+                caption on the active one. It replaces a horizontally scrolling row
+                of 30px text links whose sixth item sat at x=450 in a 390px
+                viewport.
+              </p>
+            </KitBlock>
+
+            <KitBlock label="The 44px floor, now armed">
+              <p className="text-[0.78rem] leading-snug">
+                <code>layout.tsx</code> sets <code>data-mb-touch=&quot;on&quot;</code>{" "}
+                on <code>&lt;html&gt;</code>, which is the writer the coarse-pointer
+                rule in <code>globals.css</code> has been waiting for since P0. In
+                the same commit <code>maximumScale</code> and{" "}
+                <code>userScalable</code> are removed and{" "}
+                <code>viewport-fit: cover</code> is set — charter H6 requires the
+                three together, because the first two are what made the floor safe
+                to skip and the third is what makes the safe-area insets non-zero.
+              </p>
+            </KitBlock>
+          </Panel>
+        </div>
+      </div>
+    </section>
+  );
+};
+
+/* ===================================================================== */
+/* W2 / P2b — Feedback layer                                             */
+/* ===================================================================== */
+
+const FEEDBACK_TONES: MbToastTone[] = ["info", "success", "warning", "danger"];
+
+/** Copy per tone, so the four strips are four real messages, not lorem. */
+const FEEDBACK_TOAST_COPY: Record<MbToastTone, string> = {
+  info: "Round 4 fixtures were regenerated.",
+  success: "Share link copied.",
+  warning: "Two teams are still unassigned to a court.",
+  danger: "The result could not be saved. It is still on this device.",
+};
+
+const FEEDBACK_TWIN_ROWS: { team: MbTeam; value: string }[] = [
+  { team: { name: "Harbor Surge", crest: crestPath("surge") }, value: "18" },
+  { team: { name: "Riptide", crest: crestPath("riptide") }, value: "15" },
+  { team: { name: "Granite Storm", crest: crestPath("storm") }, value: "12" },
+  { team: { name: "Apex Athletic", crest: crestPath("apex") }, value: "9" },
+];
+
+/**
+ * The loaded twin of `MbSkeletonPanel`, built to the SAME geometry — one
+ * `.mb-panel-head`, then `px-4 py-2.5` ruled rows of `gap-3` carrying a 24px
+ * crest, a name and a right-ranged measure. The two sit side by side below so
+ * the claim "the skeleton is at the final geometry" is checkable with a ruler
+ * rather than taken on trust.
+ */
+const FeedbackLoadedTwin = () => (
+  <section className="mb-panel">
+    <header className="mb-panel-head">
+      <h3 className="matchbook-display flex items-center gap-2 text-[0.95rem] font-bold tracking-[0.05em]">
+        Standings
+      </h3>
+      <span className="mb-kicker tabular-nums">4 Teams</span>
+    </header>
+    <div className="flex flex-col">
+      {FEEDBACK_TWIN_ROWS.map((row) => (
+        <div
+          key={row.team.name}
+          className="flex items-center gap-3 border-b border-mb-rule px-4 py-2.5 last:border-b-0"
+        >
+          <Crest team={row.team} size={24} />
+          <span className="matchbook-display min-w-0 flex-1 truncate text-[0.82rem] font-semibold">
+            {row.team.name}
+          </span>
+          <span className="matchbook-display shrink-0 text-[0.9rem] font-bold tabular-nums">
+            {row.value}
+          </span>
+        </div>
+      ))}
+    </div>
+  </section>
+);
+
+const FEEDBACK_UNDO_ENTRY: UndoEntry = {
+  id: "kit-undo",
+  actionType: "match_complete",
+  description: "Riptide won 21 – 18",
+  snapshot: { match: null, competition: null, newMatchId: null },
+  timestamp: 0,
+};
+
+const FeedbackSection = () => {
+  const [undoing, setUndoing] = useState(false);
+  const [extraUndos, setExtraUndos] = useState(0);
+
+  return (
+    <section id="feedback" className="mt-10">
+      <header className="mb-5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b-[1.5px] border-mb-navy pb-2">
+        <h2 className="matchbook-display text-2xl font-bold leading-none tracking-[0.05em]">
+          Feedback <span className="text-mb-coral">Layer</span>
+        </h2>
+        <p className="mb-kicker">
+          W2 / P2b — MbToast · useToast · ToastHost · MbPageLoading ·
+          MbOfflineBanner · useOnlineStatus
+        </p>
+      </header>
+
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
+        {/* ------------------------------------------------ MbToast tones */}
+        <div className="xl:col-span-7">
+          <Panel
+            title="MbToast"
+            icon="bell"
+            meta={<span className="mb-kicker tabular-nums">4 tones</span>}
+          >
+            <KitBlock label="Every tone — glyph, 4px left rule, navy letterforms">
+              <div className="flex flex-col gap-3">
+                {FEEDBACK_TONES.map((tone) => (
+                  <MbToast
+                    key={tone}
+                    tone={tone}
+                    message={FEEDBACK_TOAST_COPY[tone]}
+                    onDismiss={() => {}}
+                  />
+                ))}
+              </div>
+              <p className="mt-3 max-w-[68ch] text-[0.72rem] text-mb-ink-muted">
+                The tone rides three channels and never the copy: the left rule,
+                the glyph, and the glyph&rsquo;s ink. <code>warning</code> and{" "}
+                <code>danger</code> carry DIFFERENT glyphs — a bell and the
+                triangle — because a shared one would be the colour-alone defect
+                registered against <code>MbNotice</code> (D-21), doubled.
+              </p>
+            </KitBlock>
+
+            <KitBlock label="With an action — the action takes its own row">
+              <div className="flex flex-col gap-3">
+                <MbToast
+                  tone="danger"
+                  message="The result could not be saved. It is still on this device."
+                  action={{ label: "Retry", icon: "refresh", onClick: () => {} }}
+                  onDismiss={() => {}}
+                />
+                <MbToast
+                  tone="info"
+                  message="A very long message, because a toast has to survive a competition name a user typed: Northwest Kalamazoo Thunderhawks Academy Invitational was archived."
+                  action={{ label: "View archive", icon: "history", onClick: () => {} }}
+                  onDismiss={() => {}}
+                />
+                <MbToast tone="success" message="Saved." />
+              </div>
+              <p className="mt-3 max-w-[68ch] text-[0.72rem] text-mb-ink-muted">
+                Both keys are 44px. Side by side inside a 26rem strip they would
+                leave ~9rem for the sentence at 390px and collide with the 8px
+                separation floor, so the action sits under the message and the
+                dismiss key keeps the corner. The last strip has no dismiss key
+                at all — that is the auto-dismissing form.
+              </p>
+            </KitBlock>
+          </Panel>
+        </div>
+
+        {/* ------------------------------------------- useToast + ToastHost */}
+        <div className="xl:col-span-5">
+          <Panel
+            title="useToast() + ToastHost"
+            icon="live"
+            meta={<span className="mb-kicker">live</span>}
+          >
+            <KitBlock label="Fire one — the host is the real app-wide mount">
+              <div className="flex flex-wrap gap-3">
+                {FEEDBACK_TONES.map((tone) => (
+                  <MbButton
+                    key={tone}
+                    variant="outline-navy"
+                    size="sm"
+                    onClick={() =>
+                      toast({ tone, message: FEEDBACK_TOAST_COPY[tone] })
+                    }
+                  >
+                    {tone}
+                  </MbButton>
+                ))}
+              </div>
+              <div className="mt-3 flex flex-wrap gap-3">
+                <MbButton
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    toast({
+                      tone: "warning",
+                      slot: "rail",
+                      message: "Live sync fell behind. Retrying.",
+                      duration: 0,
+                    })
+                  }
+                >
+                  rail slot
+                </MbButton>
+                <MbButton
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    toast({ tone: "info", message: "First." });
+                    toast({ tone: "info", message: "Second." });
+                    toast({ tone: "info", message: "Third." });
+                    toast({ tone: "info", message: "Fourth — evicts the first." });
+                  }}
+                >
+                  stack cap
+                </MbButton>
+                <MbButton variant="outline" size="sm" onClick={() => dismissAllToasts()}>
+                  clear
+                </MbButton>
+              </div>
+              <p className="mt-3 max-w-[68ch] text-[0.72rem] text-mb-ink-muted">
+                <code>float</code> lands bottom centre, where the thumb already
+                is, and lifts itself clear of a bottom bar through{" "}
+                <code>{MB_TOAST_OFFSET_VAR}</code>. <code>rail</code> lands top
+                right, out of the thumb zone, for events the user did not cause.
+                The queue is a module store, so <code>toast()</code> is callable
+                from a catch block in <code>src/lib/*</code> with no provider.
+              </p>
+            </KitBlock>
+          </Panel>
+        </div>
+
+        {/* ------------------------------------------------- the undo strip */}
+        <div className="xl:col-span-7">
+          <Panel
+            title="UndoToast — skin only"
+            icon="undo"
+            meta={<span className="mb-kicker">charter H9</span>}
+          >
+            <KitBlock label="The shipped strip, rendered with a fixture entry">
+              <UndoToast
+                entry={FEEDBACK_UNDO_ENTRY}
+                additionalUndos={extraUndos}
+                onUndo={() => setExtraUndos((n) => Math.max(0, n - 1))}
+                onDismiss={() => setExtraUndos(0)}
+                isUndoing={undoing}
+              />
+              <div className="mt-3 flex flex-wrap gap-3">
+                <MbButton
+                  variant="outline-navy"
+                  size="sm"
+                  onClick={() => setExtraUndos((n) => Math.min(4, n + 1))}
+                >
+                  deepen stack
+                </MbButton>
+                <MbButton
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setUndoing((u) => !u)}
+                >
+                  toggle busy
+                </MbButton>
+              </div>
+              <p className="mt-3 max-w-[68ch] text-[0.72rem] text-mb-ink-muted">
+                framer-motion&rsquo;s spring, four lucide glyphs, two shadcn
+                buttons (32px and 32&times;32, both under the floor),{" "}
+                <code>rounded-xl</code>, <code>backdrop-blur-md</code> and four
+                pre-Matchbook tokens are gone. <code>pushUndo</code>,{" "}
+                <code>performUndo</code>, <code>clearUndo</code>,{" "}
+                <code>MAX_UNDO_STACK_SIZE</code>, the Ctrl+Z listener and the
+                three-step restore order are byte-identical.
+              </p>
+            </KitBlock>
+          </Panel>
+        </div>
+
+        {/* --------------------------------------------- MbOfflineBanner */}
+        <div className="xl:col-span-5">
+          <Panel
+            title="MbOfflineBanner"
+            icon="wifi-off"
+            meta={<span className="mb-kicker">+ useOnlineStatus()</span>}
+          >
+            <KitBlock label="Forced on, in flow — the shipped form is fixed">
+              <MbOfflineBanner offline variant="inline" />
+              <p className="mt-3 max-w-[68ch] text-[0.72rem] text-mb-ink-muted">
+                The shipped banner is <code>position: fixed</code>, which is how
+                it satisfies both halves of the charter at once: it enters once,
+                on the state change, and it occupies no flow space at any time,
+                so the masthead never moves under the reader. The tone rule is{" "}
+                <code>--mb-gold-ink</code>, not <code>--mb-gold</code> — raw
+                gold measures 2.15:1 on paper and would fail the 3:1 non-text
+                floor even as an accent. The WORD carries the state; the hue
+                only agrees with it.
+              </p>
+              <p className="mb-kicker mt-3">Full-page capture</p>
+              <div className="mt-2 flex flex-wrap gap-3">
+                <MbButtonLink
+                  variant="outline-navy"
+                  size="sm"
+                  iconRight="chevron-right"
+                  href="/dev/states/offline"
+                >
+                  offline
+                </MbButtonLink>
+              </div>
+            </KitBlock>
+          </Panel>
+        </div>
+
+        {/* ------------------- MbPageLoading — skeleton beside loaded twin */}
+        <div className="xl:col-span-12">
+          <Panel
+            title="MbPageLoading"
+            icon="clipboard"
+            meta={<span className="mb-kicker">skeleton at the final geometry</span>}
+          >
+            <KitBlock label="Loading, and loaded — same rhythm, same box">
+              {/* `items-start`, so each cell is its NATURAL height. Stretching
+                  them would (a) hide the very thing being demonstrated — that
+                  the two boxes come out the same size on their own — and (b)
+                  overflow, because `.mb-panel` is `height: 100%` and each cell
+                  also holds a label above the panel. */}
+              <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
+                <div>
+                  <p className="mb-kicker mb-2">MbSkeletonPanel</p>
+                  <MbSkeletonPanel rows={4} />
+                </div>
+                <div>
+                  <p className="mb-kicker mb-2">The loaded twin</p>
+                  <FeedbackLoadedTwin />
+                </div>
+              </div>
+              <p className="mt-3 max-w-[68ch] text-[0.72rem] text-mb-ink-muted">
+                Both are one <code>.mb-panel-head</code> over{" "}
+                <code>px-4 py-2.5</code> ruled rows of <code>gap-3</code>, and
+                the crest slot is 24&times;28 — <code>Crest</code>&rsquo;s own
+                96:112 aspect at the <code>md</code> step. Nothing moves when
+                the data lands, which is the entire point of invariant 27. The
+                bars are <code>.mb-skeleton</code>: static, because a shimmer is
+                a gradient and gradients are banned.
+              </p>
+              <p className="mb-kicker mt-3">
+                Full-page captures — all three variants
+              </p>
+              <div className="mt-2 flex flex-wrap gap-3">
+                <MbButtonLink
+                  variant="outline-navy"
+                  size="sm"
+                  iconRight="chevron-right"
+                  href="/dev/states/loading"
+                >
+                  console
+                </MbButtonLink>
+                <MbButtonLink
+                  variant="outline-navy"
+                  size="sm"
+                  iconRight="chevron-right"
+                  href="/dev/states/loading-focus"
+                >
+                  focus
+                </MbButtonLink>
+                <MbButtonLink
+                  variant="outline-navy"
+                  size="sm"
+                  iconRight="chevron-right"
+                  href="/dev/states/loading-public"
+                >
+                  public
+                </MbButtonLink>
+              </div>
+            </KitBlock>
+          </Panel>
+        </div>
+
+        {/* ---------------------------------------------- the error routes */}
+        <div className="xl:col-span-12">
+          <Panel
+            title="Route states"
+            icon="warning"
+            meta={
+              <span className="mb-kicker">
+                app/error · app/not-found · app/global-error
+              </span>
+            }
+          >
+            <KitBlock label="The exact bodies the three routes render">
+              <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
+                <div className="xl:col-span-4">
+                  <MbRouteState
+                    state="error"
+                    digest="1f3a9c04b7"
+                    actions={[
+                      { label: "Try again", icon: "refresh", onClick: () => {} },
+                      {
+                        label: "Back to overview",
+                        icon: "overview",
+                        href: "/",
+                        tone: "outline-navy",
+                      },
+                    ]}
+                  />
+                </div>
+                <div className="xl:col-span-4">
+                  <MbRouteState
+                    state="notFound"
+                    actions={[
+                      { label: "Back to overview", icon: "overview", href: "/" },
+                      {
+                        label: "Browse competitions",
+                        icon: "compete",
+                        href: "/competitions",
+                        tone: "outline-navy",
+                      },
+                    ]}
+                  />
+                </div>
+                <div className="xl:col-span-4">
+                  <MbRouteState
+                    state="globalError"
+                    digest="1f3a9c04b7"
+                    actions={[
+                      { label: "Try again", icon: "refresh", onClick: () => {} },
+                      {
+                        label: "Reload the app",
+                        icon: "overview",
+                        tone: "outline-navy",
+                        onClick: () => {},
+                      },
+                    ]}
+                  />
+                </div>
+              </div>
+              <p className="mt-3 max-w-[68ch] text-[0.72rem] text-mb-ink-muted">
+                Not a demo of the states — the states. All three routes and this
+                gallery render one <code>MbRouteState</code> over one{" "}
+                <code>MB_ROUTE_STATE</code> copy table, so a screenshot here is
+                evidence about what ships. None of them prints{" "}
+                <code>error.message</code>; the reference chip is Next&rsquo;s
+                own <code>digest</code>, the one token that is both safe and
+                useful. Every one of them keeps the live nav around it, so no
+                failure state is a dead end.
+              </p>
+              <p className="mb-kicker mt-3">Full-page captures</p>
+              <div className="mt-2 flex flex-wrap gap-3">
+                <MbButtonLink
+                  variant="outline-navy"
+                  size="sm"
+                  iconRight="chevron-right"
+                  href="/dev/states/error"
+                >
+                  error
+                </MbButtonLink>
+                <MbButtonLink
+                  variant="outline-navy"
+                  size="sm"
+                  iconRight="chevron-right"
+                  href="/dev/states/notfound"
+                >
+                  not-found
+                </MbButtonLink>
+                <MbButtonLink
+                  variant="outline-navy"
+                  size="sm"
+                  iconRight="chevron-right"
+                  href="/dev/states/global"
+                >
+                  global-error
+                </MbButtonLink>
+                <MbButtonLink
+                  variant="outline-navy"
+                  size="sm"
+                  iconRight="chevron-right"
+                  href="/dev/states/toast"
+                >
+                  toast stack
+                </MbButtonLink>
+              </div>
+            </KitBlock>
+          </Panel>
+        </div>
+      </div>
+    </section>
+  );
+};
+
+/* ===================================================================== */
 
 export default function DevKitPage() {
   return (
@@ -4286,6 +5103,8 @@ export default function DevKitPage() {
       <ActionAndSharingSection />
       <SelectionListsSection />
       <P0UnclaimedSection />
+      <ShellSection />
+      <FeedbackSection />
       {/* APPEND YOUR SECTION COMPONENT ABOVE THIS LINE */}
     </div>
   );

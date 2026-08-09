@@ -1,7 +1,9 @@
 import { useMemo, useState } from "react";
 import { useApp } from "@/context/AppContext";
+import { exportMatchesCsv } from "@/lib/exportCsv";
 import type { Match } from "@/types/game";
 import { buildTeamTallies } from "./teamStats";
+import { toast } from "./Toast";
 import { crestForTeam, type MbTeam } from "./types";
 
 export interface MbLedgerEntry {
@@ -215,28 +217,36 @@ export const useMatchbookHistory = (filters: {
         return { id: c.id, name: c.name, range, matches: ms.length };
       });
 
+    /* The serialisation and the download both moved to `src/lib/exportCsv.ts`
+       (charter H10) so W6's public summary can reuse them without importing a
+       screen hook. This side keeps only the shaping — which rows, and what the
+       ids resolve to — which is the part that is specific to the archive.
+
+       The result is now surfaced. The old version returned `void`, so a
+       browser that refused the blob URL produced a button that did nothing at
+       all; invariant 28 wants failures visible and recoverable. */
     const downloadCsv = () => {
-      const rows = [
-        ["Date", "Home", "Away", "Home Score", "Away Score", "Winner", "Competition"],
-        ...filtered.map((m) => [
-          m.completedAt ? new Date(m.completedAt).toISOString() : "",
-          teamName(m.homeTeamId),
-          teamName(m.awayTeamId),
-          String(m.homeScore),
-          String(m.awayScore),
-          teamName(m.winnerId ?? ""),
-          compName(m.competitionId),
-        ]),
-      ];
-      const csv = rows
-        .map((r) => r.map((cell) => `"${cell.replaceAll('"', '""')}"`).join(","))
-        .join("\n");
-      const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "match-archive.csv";
-      link.click();
-      URL.revokeObjectURL(url);
+      const result = exportMatchesCsv(
+        filtered.map((m) => ({
+          completedAt: m.completedAt ?? null,
+          home: teamName(m.homeTeamId),
+          away: teamName(m.awayTeamId),
+          homeScore: m.homeScore,
+          awayScore: m.awayScore,
+          winner: teamName(m.winnerId ?? ""),
+          competition: compName(m.competitionId),
+        }))
+      );
+      if (result.ok) {
+        toast({
+          tone: "success",
+          message: `${filtered.length} ${
+            filtered.length === 1 ? "result" : "results"
+          } exported to match-archive.csv`,
+        });
+      } else {
+        toast({ tone: "danger", message: result.reason, duration: 0 });
+      }
     };
 
     return {

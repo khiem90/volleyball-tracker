@@ -87,6 +87,7 @@
   --color-mb-teal: var(--mb-teal);
   --color-mb-gold: var(--mb-gold);
   --color-mb-gold-ink: var(--mb-gold-ink);
+  --color-mb-green-ink: var(--mb-green-ink);
   --color-mb-plum: var(--mb-plum);
   --color-mb-green: var(--mb-green);
   --color-mb-red: var(--mb-red);
@@ -114,20 +115,60 @@
   --mb-display-font: var(--font-oswald, "Oswald"), "Arial Narrow", "Roboto Condensed", Impact, sans-serif;
 
   /* --- contrast-safe variants (GAP-13/14, rubric §3.6) ------------------ */
-  /* THE CORAL RULE. --mb-coral is a MARK colour and never a letterform.
-     Measured against the two paper surfaces it is 3.55:1 on --mb-paper-bright
-     and 3.26:1 on --mb-paper: over the 3:1 floor for a border, rail, dot,
-     underline or focus ring, under the 4.5:1 floor for text below 18.66px —
-     and no coral text in this system is above 18.66px.
+  /* ===================== THE CORAL JOB LIST =====================
+     Charter invariant 15: coral appears ONCE per screen as the primary job,
+     plus its DECLARED structural jobs. It was measured doing 15+ of them, and
+     two pairs of those jobs meant opposite things in the same hue. The list is
+     now closed. Coral has FOUR jobs and nothing may add a fifth without
+     editing this comment:
+
+       1. THE PRIMARY ACTION      .mb-btn-coral            fill, one per screen
+       2. THE SELECTION RAIL      .mb-rail (default),      3px mark, one
+                                  .mb-nav-item[data-active] left,   axis each
+                                  .mb-tab[data-active] bottom
+       3. THE MASTHEAD LOCKUP     the emphasised title word + the 2px badge
+                                  frame (design language §2.3 / §3.2, JSX)
+       4. THE SCHEDULE SPINE      the 2px left rule on a schedule/timeline list
+
+     Jobs 2, 3 and 4 are exactly the three invariant 15 declares as structural.
+     Job 2 is ONE job in three orientations: nav rail, tab underline and row
+     rail are the same statement — "this is the selected one" — so they share
+     one colour legitimately.
+
+     What was taken OFF coral, and where each went:
+       focus ring          -> --mb-navy + inherited halo   (collided with job 2)
+       .mb-btn-outline     -> navy ink and rule            (collided with job 1)
+       .mb-panel-link:hover-> navy + underline             (letterform)
+       active nav/tab INK  -> --mb-navy / --mb-ink-muted   (2nd coral in one box)
+       checkbox/radio/switch on -> --mb-navy               (multiplied per form)
+       .mb-stamp-final     -> --mb-green-ink               (Final is green, §1.2)
+       leading notch       -> --mb-teal                    (leader is teal, §1.2)
+       --mb-court-accent   -> --mb-teal                    (a diagram, not a CTA)
+
+     THE CORAL RULE (unchanged). --mb-coral is a MARK colour and never a
+     letterform. Measured against the two paper surfaces it is 3.55:1 on
+     --mb-paper-bright and 3.26:1 on --mb-paper: over the 3:1 floor for a
+     border, rail, dot or underline, under the 4.5:1 floor for text below
+     18.66px — and no coral text in this system is above 18.66px.
      --mb-coral-deep is the INK twin: 5.03:1 on --mb-paper-bright, 4.62:1 on
      --mb-paper, and 5.23:1 for #fff on the fill. Same hue family, so at label
-     size it reads as the same colour (MbFinalStamp already relies on this).
-     Any coral letterform — .mb-btn-outline, .mb-tab active, .mb-nav-item
-     active, .mb-panel-link hover, .mb-stamp-final — uses the deep twin. The
-     structural mark beside it keeps the bright coral. */
+     size it reads as the same colour. After this pass the ONLY coral
+     letterform left in the stylesheet is the masthead word (job 3, ≥36px, in
+     JSX); --mb-coral-deep survives as the .mb-btn-coral FILL, where white on it
+     is 5.23:1. */
   --mb-coral-deep: #c9351f;
   /* Gold as ink on paper: 5.13:1 on --mb-paper. --mb-gold stays on-navy only. */
   --mb-gold-ink: #8a5c00;
+  /* Green as ink, built by the same method as --mb-coral-deep: the SMALLEST
+     darkening of --mb-green that clears 4.5:1 on both paper tones, so at label
+     size it still reads as the same green. Measured: 4.71:1 on --mb-paper,
+     5.13:1 on --mb-paper-bright, 5.33:1 for #fff on the fill (--mb-green itself
+     is 3.93 / 4.28 / 4.45 and fails all three). This exists so "Final" can be
+     GREEN everywhere — design language §1.2 maps Final/complete to --mb-green,
+     but .mb-stamp-final was coral-deep, which made one status two colours.
+     --mb-green stays the mark colour (badge rule, form square, meter fill);
+     --mb-green-ink is the letterform. */
+  --mb-green-ink: #137a54;
 
   /* --- tints, bands and the one shadow (GAP-13) ------------------------- */
   --mb-tint-1: rgba(7, 50, 77, 0.04); /* row hover                      */
@@ -181,8 +222,25 @@
   --mb-rule-accent: 3px;
   --mb-rule-anchor: 4px;
 
-  /* --- focus (GAP-12) --------------------------------------------------- */
-  --mb-focus: var(--mb-coral);
+  /* --- focus (GAP-12) ---------------------------------------------------
+     FOCUS IS NOT CORAL. It used to be, and that put the focus ring and the
+     active-tab underline in the same hue with opposite meanings: a focused
+     INACTIVE tab grew a coral mark and read as the active one. Focus is a
+     transient "you are here on the keyboard"; coral is a persistent "this is
+     the selected thing". Two meanings cannot share a channel.
+
+     Focus is now the INK, which no other state uses as a ring. Measured:
+       --mb-navy on --mb-paper          11.79:1   (coral was 3.26:1)
+       --mb-navy on --mb-paper-bright   12.84:1   (coral was 3.55:1)
+     Both are the highest-contrast pairs in the system and clear the 3:1 UI
+     floor by ~4x, where coral cleared it by 0.26.
+
+     The one place a navy ring fails is a navy ground — inside .mb-segmented,
+     a navy dialog head, a `bg-mb-navy` panel head — where it measures 1.00:1.
+     So --mb-focus is INHERITED, and every navy surface in the system re-points
+     it to paper-bright (12.84:1 the other way). A new navy surface sets one
+     custom property; it does not restate a ring. */
+  --mb-focus: var(--mb-navy);
 
   /* --- motion (GAP-11) -------------------------------------------------- */
   --mb-dur-fast: 120ms;
@@ -192,15 +250,48 @@
   --mb-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
   --mb-stagger: 40ms;
 
+  /* --- press (the click feel) -------------------------------------------
+     The ink a flush surface takes while it is held down. One tier past
+     --mb-tint-2 (the hover wash), so hover -> press is a visible step rather
+     than a guess. Measured on --mb-paper-bright: the composited ground is
+     #e6e6e1 and --mb-navy on it is 10.67:1, so no label loses contrast while
+     pressed. See "THE PRESS" further down for why this exists. */
+  --mb-tint-press: rgba(7, 50, 77, 0.1);
+  --mb-press-shift: 1px;
+
   /* --- safe area (GAP-3) ------------------------------------------------ */
   --mb-safe-top: env(safe-area-inset-top, 0px);
   --mb-safe-bottom: env(safe-area-inset-bottom, 0px);
 
-  /* --- court diagram surface (tools) ------------------------------------ */
+  /* --- court diagram surface (tools) ------------------------------------
+     The accent is TEAL, not coral. The court diagram is a reference drawing,
+     not a call to action, and a coral mark on it would spend the screen's one
+     coral on a diagram. Teal is the system's "a measure worth reading" tone
+     (§1.2 rank-leader rail) and is 3.80:1 on --mb-paper-bright, over the 3:1
+     floor a diagram line needs. Zero consumers today (W7 builds the court), so
+     this is a free re-point rather than a visual change. */
   --mb-court-fill: var(--mb-paper-bright);
   --mb-court-line: var(--mb-rule);
   --mb-court-line-strong: var(--mb-navy);
-  --mb-court-accent: var(--mb-coral);
+  --mb-court-accent: var(--mb-teal);
+}
+
+/* ---------------------------------------------------------------------------
+   Navy grounds re-point the focus ring (see --mb-focus above).
+
+   A custom property inherits, so setting it on the surface reaches every
+   focusable descendant without any of them knowing they are on navy. Listed
+   here rather than in each component so there is ONE place to add the next
+   navy surface. `.bg-mb-navy` is the generated Tailwind utility that
+   `Panel tone="navy"` and the Login promo half both apply.
+   --------------------------------------------------------------------------- */
+
+.mb-segmented > [data-selected="true"],
+.mb-dialog[data-tone="navy"] .mb-dialog-head,
+.matchbook-surface .bg-mb-navy,
+.mb-dialog .bg-mb-navy,
+.mb-sheet .bg-mb-navy {
+  --mb-focus: var(--mb-paper-bright);
 }
 
 .matchbook-surface {
@@ -428,10 +519,16 @@
   white-space: nowrap;
 }
 
-/* 11.5px/600 letterforms — the coral rule applies, so the hover ink is the
-   deep twin (3.55:1 -> 5.03:1 on paper-bright). */
+/* A link hover does not need a hue. Coral-deep here was a coral letterform
+   spent on a transient state, and it put a fifth coral on screens that already
+   carry six panel links. The print answer is the one every almanac uses: the
+   rule under the word. Ink stays navy at 12.84:1 (the deep-coral hover was
+   5.03:1), and the underline is a second channel, so the state survives
+   greyscale — which a colour-only hover never did. */
 .mb-panel-link:hover {
-  color: var(--mb-coral-deep);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: var(--mb-rule-edge);
 }
 
 .mb-btn {
@@ -445,7 +542,13 @@
   padding: 0.55rem 1.1rem;
   border-radius: 4px;
   border: var(--mb-rule-edge) solid transparent;
-  transition: filter 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+  /* `transform` is here so the press RELEASE eases back (see "THE PRESS"); the
+     press itself zeroes the duration so it lands on the next frame. The literal
+     150ms this used to carry is now the --mb-dur-fast token. */
+  transition: filter var(--mb-dur-fast) var(--mb-ease-out),
+    background-color var(--mb-dur-fast) var(--mb-ease-out),
+    color var(--mb-dur-fast) var(--mb-ease-out),
+    transform var(--mb-dur-fast) var(--mb-ease-out);
   white-space: nowrap;
   touch-action: manipulation;
 }
@@ -463,14 +566,27 @@
   color: #fff;
 }
 
-/* The label is 12.8px/600 — coral letterforms are 3.55:1 and fail AA, so both
-   ink and frame take --mb-coral-deep (5.03:1 on paper-bright, 4.62:1 on paper).
-   Frame follows ink rather than staying bright: the rule sits 3px from its own
-   label, so two corals inside one 44px box read as a mistake, not a hierarchy.
-   Same single-ink treatment MbFinalStamp already ships. */
+/* THE SECONDARY IS NOT IN THE PRIMARY'S HUE.
+   This class was coral-deep ink in a coral-deep frame, sitting 8px from
+   .mb-btn-coral in the same masthead (measured on /teams: "Quick Add" beside
+   the coral CTA). Two controls in one hue, one filled and one outlined, read as
+   ONE control in two states — so the screen appeared to offer a single action
+   that was somehow both on and off, and invariant 15's "coral once per screen"
+   was broken by the pair.
+
+   It is now navy, which is what its two shipped call sites always meant:
+   "Quick Add" (/teams) and "Create a team" (/quick-match) are constructive
+   secondaries, not destructive. The §4.1a doc example calling this the Delete
+   treatment is stale — destructive has its own component, MbDestructiveButton,
+   and destructive is RED there, never coral.
+
+   It differs from .mb-btn-outline-navy by its GROUND, which is the real
+   distinction between the two: this one is transparent and lets the paper (or
+   a panel, or a navy head) show through; that one brings its own paper-bright
+   card. Ink measures 11.79:1 on paper and 12.84:1 on bright either way. */
 .mb-btn-outline {
-  border-color: var(--mb-coral-deep);
-  color: var(--mb-coral-deep);
+  border-color: var(--mb-navy);
+  color: var(--mb-navy);
   background: transparent;
 }
 
@@ -478,15 +594,8 @@
   filter: brightness(1.08);
 }
 
-/* Hover fills in rather than washing. A wash is the system's usual hover, but
-   coral-deep cannot afford one: it clears 4.5:1 on bare paper by 0.12, and ANY
-   tint — coral 8% (4.12:1 on paper) or navy 6% (4.15:1) — spends that margin.
-   Filling makes the state background-independent instead: the button brings its
-   own ground, so #fff on --mb-coral-deep is 5.23:1 whether the button sits on
-   paper, on paper-bright, or inside a panel. Same pair as .mb-btn-coral. */
 .mb-btn-outline:hover {
-  background: var(--mb-coral-deep);
-  color: #fff;
+  background: var(--mb-tint-2);
   filter: none;
 }
 
@@ -519,17 +628,19 @@
   background: var(--mb-tint-2);
 }
 
-/* 13.6px/600 label -> deep ink. The 3px left rail is a mark, not a letterform,
-   so it keeps the bright coral: 3.55:1 clears the 3:1 UI floor and the rail is
-   what carries the accent at a distance.
-   The row LIFTS to paper-bright instead of taking a coral wash. The old
-   rgba(coral, 0.08) fill put the deep ink at 4.12:1 — still a fail; lifting
-   puts it at 5.03:1 and reads as a raised card on the paper sidebar. This rule
-   sits after `.mb-nav-item:hover` at equal specificity, so it also wins while
-   the active row is hovered — which is the point, since the navy hover wash
-   would drag the same ink to 4.15:1. */
+/* The active row keeps the coral RAIL — that is coral job 2, the selection mark
+   — and gives back the coral INK. A coral-deep label 3px from a coral rail put
+   two corals inside one 44px box, which is the collision invariant 15 exists to
+   stop; and the rail alone already says "selected" at a distance, which is what
+   a rail is for.
+   Ink goes to navy: 12.84:1 on the lifted ground against the deep coral's
+   5.03:1. The row still LIFTS to paper-bright, and now the lift is a real
+   second channel rather than a contrast workaround — rail + lift + ink weight
+   are three readings of "current", so the state survives greyscale.
+   This rule sits after `.mb-nav-item:hover` at equal specificity, so it also
+   wins while the active row is hovered. */
 .mb-nav-item[data-active="true"] {
-  color: var(--mb-coral-deep);
+  color: var(--mb-navy);
   border-left-color: var(--mb-coral);
   background: var(--mb-paper-bright);
 }
@@ -614,11 +725,33 @@
   white-space: nowrap;
 }
 
+/* ---------------------------------------------------------------------------
+   FORM CONTROL BOUNDARIES (C3)
+
+   .mb-input, .mb-search and .mb-textarea drew their frame in --mb-rule. That is
+   the HAIRLINE tier — a divider INSIDE a thing — and these are the BOUNDARY of
+   a thing, which §3.3 maps to the edge tier in solid navy. Composited over
+   --mb-paper-bright, rgba(7,50,77,0.28) resolves to #bac2c3 and measures
+   1.74:1 against the field it encloses; the same frame on --mb-paper is
+   #b4bbba at 1.72:1. Both are far under the 3:1 a UI boundary needs, and the
+   frame is the only thing telling the user where the field is.
+
+   It also made the form incoherent with itself: .mb-select-native was already
+   correct at solid navy, 12.84:1, so a select and a text input standing 8px
+   apart in one MbField drew visibly different frames. Measured before this
+   change on /dev/kit: 14 controls at 1.74:1 (.mb-input x9, .mb-textarea x3,
+   .mb-search x2) against 4 at 12.84:1 (.mb-select-native).
+
+   All four now take the edge tier. --mb-rule keeps every job it was actually
+   built for — row rules, the panel-head underline, list dividers — where it is
+   a line drawn ON a surface rather than the surface's own edge.
+   --------------------------------------------------------------------------- */
+
 .mb-search {
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  border: var(--mb-rule-hairline) solid var(--mb-rule);
+  border: var(--mb-rule-edge) solid var(--mb-navy);
   border-radius: 4px;
   background: var(--mb-paper-bright);
   padding: 0.25rem 0.55rem;
@@ -641,15 +774,26 @@
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  border: var(--mb-rule-edge) solid var(--mb-rule);
+  border: var(--mb-rule-edge) solid var(--mb-navy);
   border-radius: 4px;
   background: var(--mb-paper-bright);
   padding: 0.6rem 0.8rem;
-  transition: border-color 0.15s ease;
 }
 
-.mb-input:focus-within {
-  border-color: var(--mb-navy);
+/* The frame is navy at rest now, so it can no longer darken to signal focus.
+   The ring does that instead, and it is drawn on the WRAPPER rather than on the
+   bare <input> inside it: an outline around the input alone lands inside the
+   field's own padding and reads as a box within a box. .mb-search gets the same
+   treatment for the same reason. */
+.mb-input:focus-within,
+.mb-search:focus-within {
+  outline: 2px solid var(--mb-focus);
+  outline-offset: 2px;
+}
+
+.mb-input input:focus-visible,
+.mb-search input:focus-visible {
+  outline: none;
 }
 
 .mb-input input {
@@ -680,16 +824,23 @@
   cursor: pointer;
 }
 
-.mb-select-native:focus {
-  outline: 2px solid var(--mb-coral);
-  outline-offset: 1px;
-}
+/* No bespoke :focus rule here any more. It was a second, hard-coded coral ring
+   that (a) duplicated --mb-focus, (b) fired on mouse click as well as keyboard
+   because it used :focus rather than :focus-visible, and (c) drifted from the
+   shared ring at 1px offset against 2px. The shared .matchbook-surface
+   :focus-visible rule below covers it. */
 
 /* ---------------------------------------------------------------------------
    Focus (GAP-12)
    The legacy global `:focus-visible` red outline (further down this file) stays
    scoped to legacy screens; this pair outranks it on specificity inside a
    Matchbook surface and inside the portalled overlays, which render outside it.
+
+   The ring is navy — see --mb-focus for the measurements and for why it stopped
+   being coral. 2px is deliberate and is the third exception to "2px is not a
+   tier" listed in the rule-tier note above: an outline is a transient state
+   mark drawn OUTSIDE the box, not a rule in the layout, so it does not compete
+   with the hairline/edge/accent/anchor hierarchy.
    --------------------------------------------------------------------------- */
 
 .matchbook-surface :focus-visible,
@@ -700,17 +851,155 @@
   outline-offset: 2px;
 }
 
+/* THE RING GOES INSIDE A CLIPPING CONTAINER.
+   .mb-tabs is `overflow-x: auto` and .mb-segmented / .mb-stepper are
+   `overflow: hidden`, so a ring drawn 2px OUTSIDE a cell loses its top and
+   bottom strokes to the clip and survives as two vertical bars — which, in a
+   tab strip, read as the dividers between tabs rather than as focus. Measured
+   on the tab strip: only the left and right strokes reached the raster.
+   Inset by the same 2px it is drawn entirely within the cell's own ground, so
+   it is never clipped and never lands on a neighbouring cell's colour. Every
+   cell in all three is at least 44px tall, so the ring clears the label.
+   These come after the base rule at equal specificity, so order carries them. */
+.mb-tabs :focus-visible,
+.mb-segmented :focus-visible,
+.mb-stepper :focus-visible {
+  outline-offset: -2px;
+}
+
 /* ---------------------------------------------------------------------------
-   Motion (GAP-11)
-   Entrance is opacity + a 6px rise. Grid panels only, capped at 6 — never table
-   rows, never bracket cells. The global prefers-reduced-motion clamp further
-   down this file collapses both to the end state.
+   THE PRESS (C5) — what a Matchbook control does while it is held
+
+   Before this block the entire stylesheet contained exactly one pressed state,
+   `.mb-console-column:active`, and `.mb-btn` transitioned `filter,
+   background-color, color` with no `:active` rule at all — so the primary
+   control of the whole system had no response to being pressed. On touch, where
+   there is no hover, that meant a button gave NO feedback between the tap and
+   the navigation.
+
+   The system is printed card stock on paper, and that dictates two recipes, not
+   one. `scale(0.98)` on everything is rejected: scaling a printed rectangle
+   makes its rules and type shrink, which is the one thing ink on paper cannot
+   do.
+
+     RAISED things — a button, a tile, a swatch, a segmented cell, a stepper
+     key. They sit ON the stock, so they go INTO it: --mb-press-shift (1px) of
+     translateY. 1px is chosen because it is the smallest movement that is
+     unambiguous at DPR 1, and because it is the thickness of the edge rule the
+     control is drawn with, so the control appears to sink by exactly one line.
+
+     FLUSH things — a nav row, a tab, a table/list row, a scoring column. They
+     ARE the page plane and cannot sink. They ink instead: the wash steps from
+     --mb-tint-2 (hover) to --mb-tint-press, which is a press you can feel on a
+     surface that cannot move.
+
+   The detail that makes it feel physical rather than mushy is the asymmetry:
+   the press lands in ZERO time and the release eases back over --mb-dur-fast.
+   `transition-duration: 0s` inside `:active` is what buys that — the state is
+   painted on the next frame with no interpolation, then the base rule's
+   transition runs on the way out. Transitioning both directions is what makes
+   most CSS presses feel like syrup.
+
+   Only transform and background-color animate (invariant 40). No shadow, no
+   scale, no filter — `filter: brightness()` cannot express "pressed" on a
+   transparent control, which is most of them.
+
+   Specificity note: the legacy theme further down this file carries a global
+   `button:active:not(:disabled) { transform: scale(0.98) }` at (0,2,1). Every
+   rule below is written with `:not(:disabled)` so it lands at (0,3,0) or higher
+   and outranks it deliberately rather than by accident. That legacy rule is
+   zone C and is W2/P4's to delete; until then it only reaches bare <button>
+   elements carrying no mb-* class.
+   --------------------------------------------------------------------------- */
+
+/* `.mb-tile` and `.mb-swatch` carry no transition of their own; the other three
+   members of the raised family declare theirs beside their geometry further
+   down, each including `transform` so the release eases. */
+.mb-tile,
+.mb-swatch {
+  transition: background-color var(--mb-dur-fast) var(--mb-ease-out),
+    transform var(--mb-dur-fast) var(--mb-ease-out);
+}
+
+/* RAISED — sink by one rule-width, instantly. */
+.mb-btn:active:not(:disabled),
+.mb-tile:active:not(:disabled),
+.mb-swatch:active:not(:disabled),
+.mb-segmented > *:active:not(:disabled),
+.mb-stepper button:active:not(:disabled) {
+  transform: translateY(var(--mb-press-shift));
+  transition-duration: 0s;
+}
+
+/* FLUSH — ink one tier past hover, instantly, and do NOT move.
+   `transform: none` is the deliberate answer to the legacy theme's global
+   `button:active { transform: scale(0.98) }`. Measured before this line: a
+   `.mb-tab` is a <button>, so it inherited that scale and shrank its own
+   letterforms and its 3px underline on every tap — the one thing printed ink
+   cannot do — and it kept doing it under prefers-reduced-motion, because the
+   legacy clamp only shortens durations and never cancels a transform. A flush
+   surface is the page plane; the page plane does not scale. */
+.mb-nav-item:active:not(:disabled),
+.mb-tab:active:not(:disabled),
+.mb-row-hover:active:not(:disabled),
+.mb-panel-link:active:not(:disabled),
+.mb-console-column:active:not(:disabled) {
+  background: var(--mb-tint-press);
+  transform: none;
+  transition-duration: 0s;
+}
+
+/* A filled button has no room for a wash, so the sink is its whole press. The
+   outlined and ghost variants take BOTH — they sink and they ink — because a
+   1px shift on a transparent control is easy to miss at arm's length. */
+.mb-btn-outline:active:not(:disabled),
+.mb-btn-outline-navy:active:not(:disabled) {
+  background: var(--mb-tint-press);
+}
+
+/* ---------------------------------------------------------------------------
+   ENTRANCE (C6, GAP-11) — how a screen arrives
+
+   opacity 0 -> 1 with a 10px rise over --mb-dur-slow on --mb-ease-out. The rise
+   was 6px and read as a flicker rather than an arrival at panel scale; 10px is
+   roughly a third of a panel head's height, which is enough to see the card
+   settle onto the stock without anything visibly sliding. Only opacity and
+   transform animate (invariant 40), there is no scale, no overshoot and no
+   spring (invariant 41), and the whole grid is resolved in
+   --mb-dur-slow + 5 x --mb-stagger = 480ms.
+
+   HOW TO APPLY IT — one of two ways, never a third:
+
+     1. `.mb-enter-grid` on the GRID CONTAINER. Every direct child animates and
+        the stagger is derived from :nth-child, so the page writes one class:
+
+          <div className="mb-enter-grid grid grid-cols-1 gap-4 xl:grid-cols-12">
+            <div className="xl:col-span-7"><StandingsPanel … /></div>
+            …
+          </div>
+
+        This is the form to reach for. Invariant 42 caps the stagger at 6, and
+        here the cap is structural: children 7+ inherit child 6's delay instead
+        of extending the sequence, so a 12-panel grid still finishes in 480ms.
+
+     2. `.mb-enter` + `.mb-stagger-N` by hand, for the rare case where the
+        animating elements are not siblings of one container.
+
+   WHERE IT MUST NOT GO (invariant 42, and the reason the cap exists): table
+   rows, list rows, bracket cells, standings lines, schedule items. Those are
+   DATA. Staggering data implies the rows arrived in that order, which is a
+   claim about the data that is not true, and it delays the reader's access to
+   the last row for no information gained. `.mb-enter-grid` is a grid-container
+   class specifically so it is awkward to misuse this way.
+
+   Under prefers-reduced-motion the entrance is removed outright — see the
+   reduced-motion block at the end of the Matchbook zone.
    --------------------------------------------------------------------------- */
 
 @keyframes mb-enter {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(10px);
   }
   to {
     opacity: 1;
@@ -718,7 +1007,8 @@
   }
 }
 
-.mb-enter {
+.mb-enter,
+.mb-enter-grid > * {
   animation: mb-enter var(--mb-dur-slow) var(--mb-ease-out) both;
 }
 
@@ -728,6 +1018,18 @@
 .mb-stagger-4 { animation-delay: calc(var(--mb-stagger) * 4); }
 .mb-stagger-5 { animation-delay: calc(var(--mb-stagger) * 5); }
 .mb-stagger-6 { animation-delay: calc(var(--mb-stagger) * 6); }
+
+/* The first panel leads with no delay — a page that hesitates before its first
+   card feels slow, and the stagger only has to separate the cards from each
+   other, not from the navigation. */
+.mb-enter-grid > *:nth-child(1) { animation-delay: 0ms; }
+.mb-enter-grid > *:nth-child(2) { animation-delay: calc(var(--mb-stagger) * 1); }
+.mb-enter-grid > *:nth-child(3) { animation-delay: calc(var(--mb-stagger) * 2); }
+.mb-enter-grid > *:nth-child(4) { animation-delay: calc(var(--mb-stagger) * 3); }
+.mb-enter-grid > *:nth-child(5) { animation-delay: calc(var(--mb-stagger) * 4); }
+/* The cap. Child 6 and everything after it share one delay, so the sequence is
+   six steps long however many panels the grid holds (invariant 42). */
+.mb-enter-grid > *:nth-child(n + 6) { animation-delay: calc(var(--mb-stagger) * 5); }
 
 /* ---------------------------------------------------------------------------
    Safe area (GAP-3)
@@ -798,6 +1100,39 @@
   background: var(--mb-paper-bright);
 }
 
+/* ---------------------------------------------------------------------------
+   THE ICON MARK (C4) — geometry here, SHAPE as a named channel
+
+   Measured on /dev/kit: 23 elements carry `.mb-icon-disc` and 4 of them render
+   at `border-radius: 3px`. A class called "disc" was drawing a square roughly
+   one time in six.
+
+   The squares are not a bug. `MbStat` binds its six tones to a two-axis mark —
+   shape (circle = a steady measure, square = wants attention) crossed with
+   weight (hairline / 3px / solid) — precisely so six tones are six readings in
+   a desaturated capture instead of six identical discs, which is charter
+   invariant 13. Removing the squares would break that; the greyscale channel
+   has to stay.
+
+   What was wrong is that the shape lived in an inline `style` in Stat.tsx,
+   fighting an unlayered `border-radius: 999px` it happened to outrank, under a
+   class name that asserted the opposite. So the shape is now a first-class,
+   named property of the mark:
+
+     .mb-icon-mark                    geometry, default disc
+     .mb-icon-mark[data-shape="disc"] 999px — a steady measure
+     .mb-icon-mark[data-shape="box"]  3px   — wants attention
+
+   `.mb-icon-disc` is kept as an exact alias of the disc shape, which is what
+   its five call sites mean; §3.3 reserves 999px for the live dot, the account
+   disc, an icon disc and a swatch, and every genuine disc here is one of those.
+   HANDOFF: `Stat.tsx` should drop `borderRadius` from `markStyle()` and render
+   `className="mb-icon-mark" data-shape={shape === "circle" ? "disc" : "box"}`.
+   Until it does, its inline radius still wins and the rendering is unchanged —
+   this block is additive and breaks nothing.
+   --------------------------------------------------------------------------- */
+
+.mb-icon-mark,
 .mb-icon-disc {
   display: inline-flex;
   align-items: center;
@@ -806,6 +1141,10 @@
   border-radius: 999px;
   border: var(--mb-rule-edge) solid var(--mb-navy);
   color: var(--mb-navy);
+}
+
+.mb-icon-mark[data-shape="box"] {
+  border-radius: 3px;
 }
 
 /* Rule-thin progress track. Not a rounded <Progress>. */
@@ -1041,7 +1380,13 @@
   font-family: var(--mb-display-font);
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--mb-navy);
+  /* Inactive tabs are MUTED, not navy. With the coral ink gone from the active
+     tab (see below), ink weight is what separates the two states at a glance
+     and the 3px rail is what confirms it. Muting the inactive side rather than
+     bolding the active one keeps both labels at 600, so switching tabs cannot
+     reflow the strip. --mb-ink-muted is 4.82:1 on paper and 5.25:1 on bright:
+     AA at any size, so a resting tab is never hard to read. */
+  color: var(--mb-ink-muted);
   border-bottom: var(--mb-rule-accent) solid transparent;
   transition: color var(--mb-dur-base) var(--mb-ease-in-out),
     border-color var(--mb-dur-base) var(--mb-ease-in-out),
@@ -1051,12 +1396,17 @@
 
 .mb-tab:hover {
   background: var(--mb-tint-2);
+  color: var(--mb-navy);
 }
 
-/* Same split as .mb-nav-item: 13.6px/600 label in the deep ink, 3px underline
-   in the bright mark. */
+/* Same split as .mb-nav-item: the 3px underline is the coral (job 2, the
+   selection rail in its horizontal orientation); the label is the ink.
+   The coral-deep label this used to carry is what made a FOCUSED INACTIVE tab
+   indistinguishable from the active one — focus was also coral, so tabbing
+   along the strip appeared to change the selection. Focus is navy now and the
+   active mark is coral, so the two states can no longer be confused. */
 .mb-tab[data-active="true"] {
-  color: var(--mb-coral-deep);
+  color: var(--mb-navy);
   border-bottom-color: var(--mb-coral);
 }
 
@@ -1095,22 +1445,16 @@
   width: 100%;
   min-height: 5rem;
   resize: vertical;
-  border: var(--mb-rule-edge) solid var(--mb-rule);
+  border: var(--mb-rule-edge) solid var(--mb-navy);
   border-radius: 4px;
   background: var(--mb-paper-bright);
   padding: 0.6rem 0.8rem;
   font-size: 0.9rem;
   color: var(--mb-navy);
-  transition: border-color var(--mb-dur-base) var(--mb-ease-in-out);
 }
 
 .mb-textarea::placeholder {
   color: var(--mb-ink-muted);
-}
-
-.mb-textarea:focus-within,
-.mb-textarea:focus {
-  border-color: var(--mb-navy);
 }
 
 .mb-check,
@@ -1128,9 +1472,18 @@
     border-color var(--mb-dur-fast) var(--mb-ease-out);
 }
 
+/* THE "ON" STATE IS INK, NOT ACCENT.
+   Checked boxes, selected radios and live switches were coral-deep. A settings
+   panel or a filter sheet renders a dozen of them at once, which made "on" the
+   single biggest multiplier of coral on any screen — invariant 15 allows coral
+   once, and a form could put fourteen of it on the page.
+   Navy is also the truer metaphor: a filled-in ballot box on printed stock is
+   inked, not highlighted. The mark inside stays paper-bright at 12.84:1 (it was
+   4.7:1 on coral-deep), so the tick and the knob are now the highest-contrast
+   marks in the form rather than the lowest. */
 .mb-check:checked {
-  background: var(--mb-coral-deep);
-  border-color: var(--mb-coral-deep);
+  background: var(--mb-navy);
+  border-color: var(--mb-navy);
 }
 
 .mb-check:checked::after {
@@ -1147,7 +1500,7 @@
   width: 6px;
   height: 6px;
   border-radius: 2px;
-  background: var(--mb-coral-deep);
+  background: var(--mb-navy);
 }
 
 .mb-switch {
@@ -1177,8 +1530,8 @@
 }
 
 .mb-switch:checked {
-  background: var(--mb-coral-deep);
-  border-color: var(--mb-coral-deep);
+  background: var(--mb-navy);
+  border-color: var(--mb-navy);
 }
 
 .mb-switch:checked::after {
@@ -1204,7 +1557,8 @@
   background: transparent;
   color: var(--mb-navy);
   touch-action: manipulation;
-  transition: background-color var(--mb-dur-fast) var(--mb-ease-out);
+  transition: background-color var(--mb-dur-fast) var(--mb-ease-out),
+    transform var(--mb-dur-fast) var(--mb-ease-out);
 }
 
 .mb-stepper button:hover:not(:disabled) {
@@ -1290,7 +1644,8 @@
   text-align: center;
   touch-action: manipulation;
   transition: background-color var(--mb-dur-base) var(--mb-ease-in-out),
-    color var(--mb-dur-base) var(--mb-ease-in-out);
+    color var(--mb-dur-base) var(--mb-ease-in-out),
+    transform var(--mb-dur-fast) var(--mb-ease-out);
 }
 
 .mb-segmented[data-size="md"] > * {
@@ -1336,14 +1691,25 @@
   transition: background-color var(--mb-dur-fast) var(--mb-ease-out);
 }
 
-/* Press feedback is a tint, never a scale. */
-.mb-console-column:active {
-  background: var(--mb-tint-1);
-}
+/* The press lives in "THE PRESS" above, with the rest of the family. This class
+   was the only pressed state in the entire stylesheet; it is now one of eight,
+   and it moved up so the tap column inks at --mb-tint-press like every other
+   flush surface instead of at --mb-tint-1, which is the row-HOVER wash and was
+   a weaker press than a hover elsewhere in the system. */
 
+/* THE LEADER NOTCH IS TEAL, AND THE CLASS SAYS SO.
+   Design language §1.2 already maps "rank #1" to --mb-teal, and a standings
+   table draws exactly that: a teal rail on row one. The scoring console drew
+   the same fact — who is ahead — in coral, so "leading" was teal in a table and
+   coral on a scoreboard, and coral simultaneously meant "the primary action".
+   Teal now carries leading in both places.
+   The class was also named for its colour, which is why it could drift: renamed
+   to .mb-notch-lead, after the job. Measured zero consumers in src/ at the time
+   of the rename (the console is W5/P3a and unbuilt), so nothing breaks.
+   --mb-teal is 3.80:1 on --mb-paper-bright, over the 3:1 floor for a 3px mark. */
 .mb-console-column[data-leading="true"],
-.mb-notch-coral {
-  box-shadow: inset 0 var(--mb-rule-accent) 0 var(--mb-coral);
+.mb-notch-lead {
+  box-shadow: inset 0 var(--mb-rule-accent) 0 var(--mb-teal);
 }
 
 .mb-numeral {
@@ -1354,6 +1720,44 @@
   line-height: 0.9;
   font-variant-numeric: tabular-nums;
   min-width: 2ch;
+}
+
+/* One cell per figure, each exactly `1ch` — the advance of "0", which is the
+   widest figure in Oswald 700 (measured at the console step: 0 → 33.000px,
+   4 → 31.453, 9 → 32.281, 7 → 26.344, 1 → 23.109).
+   `font-variant-numeric: tabular-nums` above is a **no-op on this face**: Oswald
+   ships no `tnum` table, so `.mb-numeral` alone measured 54.375px for "18" and
+   55.391px for "19" — the whole numeral jittered 1.02px sideways on a single
+   point, and any value holding a "1" sat visibly off the divider it flanks.
+   Boxing each figure restores real tabular metrics without changing the face:
+   an N-figure value is exactly N × 1ch wide whatever the figures are, so the
+   reserve below is exact and no glyph moves when a digit changes. */
+.mb-numeral-digit {
+  display: inline-block;
+  width: 1ch;
+  text-align: center;
+}
+
+/* A rule that marks a score — the lead notch, the increment flash — sized to
+   the figures actually rendered rather than to the reserve standing behind
+   them. Once the two scores hug their divider the reserve opens outward, and a
+   rule cut to the box floats over blank paper: at the compact step it ran 49.5px
+   over a 16.5px "9". Carry a `.mb-numeral--*` step class alongside this one and
+   nothing else — those rules set only `font-size`; family and weight below
+   supply the rest of what `1ch` needs to land on the same figure advance the
+   numeral uses. Both were measured the hard way: inheriting Outfit made `3ch`
+   118.08px instead of 99.00px (a 19.08px reflow on any 3-figure score — the
+   exact thing this component exists to prevent), and inheriting weight 400 made
+   `1ch` 31.01px instead of 33.00px, so the rule sat 2px per figure narrower
+   than the figures it marks. `ch` is the advance of "0" in the *computed* font,
+   not in the family. */
+.mb-score-rule {
+  display: block;
+  height: 3px;
+  width: calc(var(--mb-figures, 3) * 1ch + 2 * var(--mb-score-bleed, 0px));
+  font-family: var(--mb-display-font);
+  font-weight: 700;
+  background: var(--mb-score-ink, var(--mb-navy));
 }
 
 /* display/stat-lg */
@@ -1409,17 +1813,23 @@
    Editorial set (public share §5.3)
    --------------------------------------------------------------------------- */
 
-/* 11.8px/700 letterforms — deep ink and a matching frame. MbFinalStamp used to
-   force this pair inline because the class was wrong; the class is now correct
-   on its own. */
+/* FINAL IS GREEN. Design language §1.2 maps Final/complete to --mb-green and
+   MbBadge[data-tone="final"] already obeys it, but this stamp was coral-deep —
+   so a finished match said "Final" in green on the badge and in coral six
+   pixels away on the stamp, and the reader had to learn that one status owns
+   two colours. Worse, coral is the accent, so a screen full of completed
+   matches was a screen full of accents.
+   11.8px/700 letterforms, so it takes the ink twin rather than --mb-green
+   itself: --mb-green-ink is 5.13:1 on paper-bright and 4.71:1 on paper, where
+   --mb-green measures 4.28:1 and 3.93:1 and fails AA at this size. */
 .mb-stamp-final {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   padding: 0.25rem 0.6rem;
-  border: var(--mb-rule-edge) solid var(--mb-coral-deep);
+  border: var(--mb-rule-edge) solid var(--mb-green-ink);
   border-radius: 2px;
-  color: var(--mb-coral-deep);
+  color: var(--mb-green-ink);
   font-family: var(--mb-display-font);
   font-weight: 700;
   font-size: 0.74rem;
@@ -1460,7 +1870,7 @@
 .mb-banner[data-tone="warn"] { --mb-banner-tone: var(--mb-gold); }
 .mb-banner[data-tone="danger"] { --mb-banner-tone: var(--mb-red); }
 
-/* Grid, never flex — the name cells must be able to shrink and truncate. */
+/* Grid, never flex — the name cells must be able to shrink. */
 .mb-scoreline {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
@@ -1470,6 +1880,70 @@
 
 .mb-scoreline > * {
   min-width: 0;
+}
+
+/* ---------------------------------------------------------------------------
+   Scoreboard cuts (MbScoreboardHero)
+
+   The score box is a fixed reserve, so in a `1fr auto 1fr` scoreline it is the
+   two *name* columns that pay for it — and they pay twice, once per side. The
+   cut is therefore chosen from the card's own inline size, never the viewport:
+   the same card is 771px wide in a `xl:col-span-7` panel and 537px in a
+   `col-span-5` one on the same 1440px screen, and the viewport cannot tell
+   them apart. Measured at 1440 before this existed: the compact card's name
+   column was 155.33px and dropped 16 of a 40-character name; at 320 it was
+   1.00px and dropped all 40.
+
+   Thresholds are the container width at which each name column still sets the
+   longest shipped name (40 characters) in two lines at that step:
+
+     hero    name column = (C − 48 px padding − 24 px gaps − 223.5 px score)/2
+             40 chars at display 0.9rem = 317.6px → two lines need 158.8px
+             → C ≥ 617  → 620
+     compact name column = (C − 24 − 24 − 124.5)/2, less 35px of crest + accent
+             40 chars at display 0.72rem = 254px → two lines need 127px
+             → C ≥ 497  → 500
+   --------------------------------------------------------------------------- */
+
+.mb-scoreboard {
+  container-type: inline-size;
+}
+
+.mb-sb-wide {
+  display: none;
+}
+
+@container (min-width: 620px) {
+  .mb-scoreboard[data-size="hero"] > .mb-sb-wide { display: block; }
+  .mb-scoreboard[data-size="hero"] > .mb-sb-narrow { display: none; }
+}
+
+@container (min-width: 500px) {
+  .mb-scoreboard[data-size="compact"] > .mb-sb-wide { display: block; }
+  .mb-scoreboard[data-size="compact"] > .mb-sb-narrow { display: none; }
+}
+
+/* Below those, one block per team. The score keeps its full step and its full
+   reserve; it simply stops standing between the two names.
+
+   Narrower still, the reserve alone would starve the name beside it, so the
+   score drops to a second line and the name takes the whole width. That
+   threshold is again the two-line floor: hero row name = C − 175px, so a
+   40-character name needs C ≥ 320; compact row name = C − 120.5px against a
+   49.5px reserve, which only starves under C ≈ 210. */
+.mb-sb-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+@container (min-width: 320px) {
+  .mb-scoreboard[data-size="hero"] .mb-sb-row { grid-template-columns: 1fr auto; }
+}
+
+@container (min-width: 210px) {
+  .mb-scoreboard[data-size="compact"] .mb-sb-row { grid-template-columns: 1fr auto; }
 }
 
 .mb-day-head {
@@ -1502,6 +1976,67 @@
 
 .mb-skip-link:focus {
   transform: none;
+}
+
+/* ---------------------------------------------------------------------------
+   REDUCED MOTION — the Matchbook zone's own clamp (charter invariant 44)
+
+   Until now there was NO prefers-reduced-motion rule anywhere in the Matchbook
+   zone. Every converted screen was relying on the legacy theme's global clamp,
+   which lives in zone C and is scheduled for deletion in W2/P4 — so the moment
+   that block goes, every Matchbook animation would have started running at full
+   length for users who asked for none. This closes one of the three
+   out-of-zone-A dependencies recorded in design language §7.3.
+
+   It is also stronger than what it replaces. The legacy clamp only shortens
+   durations to 0.01ms, which is not the same as removing motion: a 10px rise
+   compressed to 0.01ms is still a 10px jump, and a translateY press compressed
+   to 0.01ms still teleports the control. Motion is REMOVED here, not hurried.
+
+   What deliberately survives: the press INK and the hover wash. A background
+   change is not motion — it does not move, scale or fade anything across the
+   screen — and reduced-motion users still need to know a control responded to
+   their tap. Removing the tint as well would leave them with a button that does
+   nothing at all until the page changes, which is the exact defect this whole
+   block was written to fix. `.mb-live-dot` loses its pulse and holds at full
+   opacity, so "Live" is still marked, by the dot and the word beside it.
+   --------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  /* Entrance, dialog, sheet and toast arrive at their end state. */
+  .mb-enter,
+  .mb-enter-grid > *,
+  .mb-dialog,
+  .mb-dialog-overlay,
+  .mb-sheet,
+  .mb-toast {
+    animation: none;
+  }
+
+  .mb-live-dot {
+    animation: none;
+    opacity: 1;
+  }
+
+  /* The press keeps its ink and loses its movement. */
+  .mb-btn:active:not(:disabled),
+  .mb-tile:active:not(:disabled),
+  .mb-swatch:active:not(:disabled),
+  .mb-segmented > *:active:not(:disabled),
+  .mb-stepper button:active:not(:disabled) {
+    transform: none;
+  }
+
+  /* Nothing in the zone transitions a transform. */
+  .mb-btn,
+  .mb-tile,
+  .mb-swatch,
+  .mb-segmented > *,
+  .mb-stepper button,
+  .mb-switch::after,
+  .mb-meter > span {
+    transition-property: background-color, color, border-color;
+  }
 }
 
 /* ---------------------------------------------------------------------------
@@ -1591,8 +2126,50 @@
   box-sizing: border-box;
 }
 
-html,
-body {
+/* ---------------------------------------------------------------------------
+   THE SCROLLPORT — read this before touching html/body (zone B)
+
+   This block used to read `html, body { height: 100%; …; overflow-x: hidden }`
+   and it made BODY a second scrollport stacked on top of the document's. The
+   mechanism, measured on /dev/kit at 1440x900:
+
+     - `overflow-x: hidden` on the ROOT propagates to the viewport, and the root
+       then uses `overflow: visible` itself. That is the horizontal guard and it
+       is the half that was doing real work.
+     - `overflow-x: hidden` on BODY does NOT propagate — body keeps it. Per CSS
+       Overflow 3, one axis `hidden` forces the other from `visible` to `auto`,
+       so body computed `overflow-y: auto`.
+     - `height: 100%` then clamped body to the viewport's 900px while its content
+       measured 20868px. An `auto` overflow on a clamped box is a scroll
+       container, so body scrolled internally.
+
+   The result was two independent scrollports over the same content:
+
+     wheel over the page   ->  body.scrollTop 0..19968, window.scrollY STAYS 0
+     PageDown / End / Home ->  window.scrollY 0..17223, body.scrollTop unchanged
+
+   So the pointer and the keyboard scrolled two different boxes, and neither
+   could reach where the other was — End could still add 17223px of travel to a
+   page the wheel had already bottomed out. `window.scrollY` pinned at 0 also
+   silently disables scroll restoration, every scroll-linked measurement, and
+   any future scroll-progress affordance, app-wide.
+
+   The fix is to stop clamping body. `min-height` gives the same "fill the
+   viewport" guarantee without capping the box, so body grows to its content and
+   the DOCUMENT is the scrollport again. Measured after:
+
+     wheel +600 -> window.scrollY 600 · PageDown -> 787 · End -> 19968 · Home -> 0
+     document.scrollHeight 18123 -> 20868 (it now reports the real content height)
+
+   `overflow-x: hidden` stays on html ONLY. It is the rubric §3.1 horizontal
+   guard and it is strictly stronger there, because a propagated root overflow
+   clips the whole viewport rather than one box inside it.
+
+   Do not put `height: 100%` or any `overflow` back on `body`. Pages fill the
+   viewport with `min-h-screen` (a vh unit), which needs nothing from body.
+   --------------------------------------------------------------------------- */
+
+html {
   height: 100%;
   margin: 0;
   padding: 0;
@@ -1600,6 +2177,9 @@ body {
 }
 
 body {
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
   font-family: var(--font-sans), system-ui, sans-serif;
 }
 

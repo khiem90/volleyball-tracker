@@ -78,12 +78,32 @@ const TEAM_MARK_STEPS: Record<TeamMarkSize, { crest: number; name: string }> = {
   lg: { crest: 34, name: "text-[0.9rem]" },
 };
 
+/**
+ * How the name behaves when the column is narrower than the name.
+ *
+ * `truncate` is the default because most marks live in a table row or a list,
+ * where a second line would break the row rhythm. `wrap` is for the places that
+ * are *about* the identity — the scoreboard — where an ellipsis is a worse
+ * failure than a taller block: "Northwest Kalamazoo Thunderhawks Academy" and
+ * "Northside Community Volleyball Association" both truncate to "North…", and
+ * the rubric's own reference anchor (Apple Sports under Dynamic Type) wraps
+ * rather than truncates for exactly that reason.
+ *
+ * `anywhere`, not `break-word`: only `anywhere` also shrinks min-content, and
+ * these names sit in `1fr` grid cells that are sized by their longest word.
+ */
+const NAME_OVERFLOW = {
+  truncate: "truncate",
+  wrap: "[overflow-wrap:anywhere]",
+} as const;
+
 export const TeamMark = ({
   team,
   size = 24,
   reverse = false,
   orientation = "horizontal",
   accent,
+  wrap = false,
   className = "",
 }: {
   team: MbTeam;
@@ -98,6 +118,8 @@ export const TeamMark = ({
    * the crest, never a panel background (charter D-9).
    */
   accent?: string;
+  /** Wrap the name over as many lines as it needs instead of truncating it. */
+  wrap?: boolean;
   className?: string;
 }) => {
   // Narrow on `size` itself, not on a derived variable — TypeScript only carries
@@ -105,6 +127,7 @@ export const TeamMark = ({
   const crestSize = typeof size === "number" ? size : TEAM_MARK_STEPS[size].crest;
   const nameClass =
     typeof size === "number" ? "text-[0.82rem]" : TEAM_MARK_STEPS[size].name;
+  const overflow = NAME_OVERFLOW[wrap ? "wrap" : "truncate"];
 
   if (orientation === "vertical") {
     return (
@@ -116,7 +139,9 @@ export const TeamMark = ({
         <Crest team={team} size={crestSize} />
         <span className="flex flex-col items-center gap-1 min-w-0 max-w-full">
           <span
-            className={`matchbook-display font-semibold ${nameClass} truncate max-w-full`}
+            className={`matchbook-display font-semibold ${nameClass} ${overflow} max-w-full ${
+              wrap ? "w-full text-center" : ""
+            }`}
           >
             {team.name}
           </span>
@@ -152,7 +177,7 @@ export const TeamMark = ({
       ) : (
         <Crest team={team} size={crestSize} />
       )}
-      <span className={`matchbook-display font-semibold ${nameClass} truncate`}>
+      <span className={`matchbook-display font-semibold ${nameClass} ${overflow}`}>
         {team.name}
       </span>
     </span>
@@ -277,12 +302,39 @@ export const MB_STATE_TONES: Record<PanelEmptyTone, MbStateToneMeta> = {
  */
 const HEADLINE_MAX_CHARS = 60;
 
+/**
+ * Opens the deck as a sentence.
+ *
+ * The split promotes a *subordinate clause* to a standalone paragraph, and the
+ * shipped copy was written to follow an em dash, so every one of the ~35
+ * messages arrives lower-case: the deck read "add your first team to start the
+ * directory." under its own headline, six times on /teams and six on
+ * /competitions. Once it is set as its own block it is its own sentence and
+ * takes a capital.
+ *
+ * It walks to the first *cased* character rather than touching index 0, so a
+ * deck that opens on a quote (`No teams match “northside…” — try a different
+ * search.`) or a bracket still capitalises the word and not the punctuation,
+ * and a deck that already opens on a capital — a product name — is returned
+ * untouched.
+ */
+const openSentence = (deck: string): string => {
+  for (let i = 0; i < deck.length; i += 1) {
+    const char = deck[i];
+    const upper = char.toUpperCase();
+    if (upper !== char) return deck.slice(0, i) + upper + deck.slice(i + 1);
+    if (char.toLowerCase() !== char) return deck;
+  }
+  return deck;
+};
+
 export const splitStateMessage = (
   message: string
 ): { headline: string | null; copy: string | null } => {
   const dash = message.indexOf("—");
   const lead = (dash === -1 ? message : message.slice(0, dash)).trim();
-  const deck = dash === -1 ? null : message.slice(dash + 1).trim() || null;
+  const tail = dash === -1 ? "" : message.slice(dash + 1).trim();
+  const deck = tail ? openSentence(tail) : null;
   if (!lead || lead.length > HEADLINE_MAX_CHARS) {
     return { headline: null, copy: message };
   }
@@ -401,9 +453,17 @@ export const MbStateBlock = ({
           {state.word && <span className="truncate">{state.word}</span>}
         </span>
       )}
+      {/* `text-balance`, because the hung rule below is what makes an orphan
+          expensive here: the rule closes the naming zone, so when the display
+          line drops its last word alone the 40px rule sits under a single word
+          instead of under a block. Measured at 1440: "No upcoming matches exist
+          yet" set 4 words + 1 and "No match of the day exists yet" set 6 + 1.
+          Balance is the right tool rather than a `<wbr>` or a nbsp because the
+          copy is passed in by ~35 call sites and none of them can be edited
+          from here. */}
       {headline && (
         <p
-          className={`matchbook-display font-bold leading-tight tracking-[0.02em] ${step.display}`}
+          className={`matchbook-display text-balance font-bold leading-tight tracking-[0.02em] ${step.display}`}
         >
           {headline}
         </p>

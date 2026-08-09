@@ -8,8 +8,9 @@ import {
   useEffect,
   type ReactNode,
 } from "react";
-import { AnimatePresence } from "framer-motion";
 import { UndoToast } from "@/components/UndoToast";
+import { MbOfflineBanner } from "@/components/matchbook/Offline";
+import { ToastHost } from "@/components/matchbook/Toast";
 import { useApp } from "@/context/AppContext";
 import { generateUndoId } from "@/lib/undo";
 import type { UndoEntry, UndoContextValue } from "@/types/undo";
@@ -117,20 +118,43 @@ export const GlobalUndoToast = ({ children }: GlobalUndoToastProps) => {
     stackSize,
   };
 
+  /* ---------------------------------------------------------------------
+     THE GLOBAL FEEDBACK MOUNT (charter §2.3, W2 / P2b)
+
+     `AnimatePresence` is gone: framer-motion is banned on converted screens
+     (design language §9), and it was only ever wrapping an exit animation that
+     `.mb-toast` does not have. Nothing about the undo contract touches it —
+     `pushUndo`, `performUndo`, `clearUndo`, MAX_UNDO_STACK_SIZE, the Ctrl+Z
+     listener and the three-step restore order above are byte-identical (H9).
+
+     WHY THE OTHER TWO LAYERS MOUNT HERE. `ToastHost` and `MbOfflineBanner`
+     each need exactly one app-wide mount, and this component is already it:
+     it is the single node `Providers` wraps every route in, and it is already
+     named for the job it does — rendering a toast at the root. The alternative
+     was editing `Providers.tsx`, which a sibling workstream holds this phase.
+
+     When `MatchbookShell` lands (W2/P2a) both lines move into it and this file
+     goes back to owning the undo stack alone. Until then, moving them is a
+     one-line change and leaving them out would mean shipping a toast system
+     with no host and an offline banner nothing renders.
+     --------------------------------------------------------------------- */
   return (
     <UndoContext.Provider value={contextValue}>
       {children}
-      <AnimatePresence>
-        {currentEntry && (
-          <UndoToast
-            entry={currentEntry}
-            additionalUndos={stackSize - 1}
-            onUndo={performUndo}
-            onDismiss={handleDismiss}
-            isUndoing={isUndoing}
-          />
-        )}
-      </AnimatePresence>
+      <MbOfflineBanner />
+      <ToastHost
+        pinned={
+          currentEntry && (
+            <UndoToast
+              entry={currentEntry}
+              additionalUndos={stackSize - 1}
+              onUndo={performUndo}
+              onDismiss={handleDismiss}
+              isUndoing={isUndoing}
+            />
+          )
+        }
+      />
     </UndoContext.Provider>
   );
 };

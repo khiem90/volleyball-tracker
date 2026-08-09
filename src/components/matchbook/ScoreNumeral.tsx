@@ -4,43 +4,81 @@ import { useState } from "react";
 
 export type MbScoreNumeralSize = "compact" | "console" | "court";
 
+/**
+ * Where the figures sit inside the reserved box. `center` is the default and
+ * the only sane choice for a numeral standing on its own (a console column, a
+ * stat). A *pair* flanking a divider uses `end` / `start` instead, so both
+ * scores hug the rule between them — see the note on `align` below.
+ */
+export type MbScoreNumeralAlign = "center" | "start" | "end";
+
 const FADE_IN = "mb-fade var(--mb-dur-fast) var(--mb-ease-out) both";
 const FADE_OUT = "mb-fade var(--mb-dur-fast) var(--mb-ease-out) reverse both";
 const EDGE = "mb-fade var(--mb-dur-slow) var(--mb-ease-out) reverse both";
 
+const ALIGN: Record<MbScoreNumeralAlign, "center" | "left" | "right"> = {
+  center: "center",
+  start: "left",
+  end: "right",
+};
+
+/** Where a marking rule hangs, so it tracks the figures rather than the box. */
+const EDGE_ANCHOR: Record<MbScoreNumeralAlign, React.CSSProperties> = {
+  center: { left: "50%", transform: "translateX(-50%)" },
+  start: { left: -8 },
+  end: { right: -8 },
+};
+
 /**
- * How many digits the box reserves at every size step.
+ * How many figures the box reserves at every size step.
  *
  * Three, not two. `.mb-numeral`'s `min-width: 2ch` floor only held the box
- * still from 0 to 99: 100 widened console from 69.02px to 103.55px, court from
- * 165.66px to 248.48px and compact from 34.51px to 51.78px, and in a
- * `1fr auto 1fr` scoreline every one of those pixels came out of the two name
- * columns — mid-match, on the point that crosses 99. Three digits is the real
- * ceiling for everything this app scores: a volleyball match aggregates to
- * ~125 points over five sets, table tennis to ~100 over seven games, and
- * charter §5.13 already requires the 3-digit case to be verified at every
- * breakpoint. Four is reachable only by a season total, which is a stat, not a
- * score — those callers pass `digits` explicitly.
+ * still from 0 to 99; the point that crosses 99 widened it from 33.00px to
+ * 44.56px at compact, 66.00px to 89.11px at console and 158.39px to 213.84px at
+ * court — mid-match, and in a scoreline every one of those pixels comes out of
+ * the two name columns. Three is the real ceiling for everything this app
+ * scores: a volleyball match aggregates to ~125 points over five sets, table
+ * tennis to ~100 over seven games, and charter §5.13 already requires the
+ * 3-digit case at every breakpoint. Four is reachable only by a season total,
+ * which is a stat, not a score — those callers pass `digits` explicitly.
  *
- * The reserve is a hidden sibling of `digits` zeros in the same grid cell, not
- * a `Nch` min-width: `ch` is the advance of "0" as the font reports it, which
- * sits 0.008px per digit under what the tabular figures actually render, so a
- * `3ch` floor still let 99 → 100 move the box by a hundredth of a pixel. A
- * rendered string of zeros is by construction exactly as wide as any 3-digit
- * value in the same font at the same size, so the box measures identically for
- * 0, 9, 25, 99, 100 and 187.
+ * The reserve is `digits`ch on the face itself. That is exact rather than
+ * approximate *because* every figure is boxed to `1ch` by `.mb-numeral-digit`:
+ * an N-figure value measures N × 1ch and the floor measures `digits` × 1ch, so
+ * the two are the same arithmetic on the same unit. (Before the figures were
+ * boxed a `3ch` floor was not enough — Oswald carries no `tnum`, its figures
+ * are proportional, and a rendered "100" is 89.11px against a 99.00px `3ch`.)
+ *
+ * What the reserve does **not** do is make the box the size of the value. The
+ * reserve is the whole point: it costs the same at 0 as at 108, which is why
+ * `MbScoreboardHero` chooses its layout from how much room is left over rather
+ * than shrinking the reserve.
  */
 const RESERVED_DIGITS = 3;
 
+/** One boxed figure per character, so the string is exactly N × 1ch wide. */
+const Figures = ({ value }: { value: string }) => (
+  <>
+    {value.split("").map((figure, i) => (
+      <span key={i} className="mb-numeral-digit">
+        {figure}
+      </span>
+    ))}
+  </>
+);
+
 /**
- * The loudest object in the app. Three rules it may never break:
+ * The loudest object in the app. Four rules it may never break:
  *
  * 1. It never moves. A changing value cross-fades between two layers stacked in
  *    one grid cell — no translate, no scale, no flip (global invariant 43).
- * 2. It never reflows its neighbours. The box is the width of `RESERVED_DIGITS`
- *    figures at that size step, whatever the value, so 7 occupies exactly the
- *    footprint of 21 and of 187.
- * 3. It is silent to assistive tech unless the caller opts in. A live value is
+ * 2. It never reflows its neighbours. The box is `digits` figures wide at that
+ *    size step, whatever the value, so 7 occupies exactly the footprint of 21
+ *    and of 187.
+ * 3. No figure moves when another figure changes. Each one is boxed to `1ch`,
+ *    so 18 → 19 repaints one glyph and shifts none; the unboxed face measured
+ *    54.375px against 55.391px for that pair and slid the whole number sideways.
+ * 4. It is silent to assistive tech unless the caller opts in. A live value is
  *    announced once, by the screen's own `aria-live` region (invariant 49); pass
  *    `ariaLabel` only where there is no such region — a static final score.
  *
@@ -60,6 +98,7 @@ export const MbScoreNumeral = ({
   tone,
   flash = null,
   digits = RESERVED_DIGITS,
+  align = "center",
   ariaLabel,
   className = "",
 }: {
@@ -69,11 +108,25 @@ export const MbScoreNumeral = ({
   tone?: "ink" | "paper";
   flash?: "up" | "down" | null;
   /**
-   * Digits the box reserves. A floor, never a clamp — a wider value still
+   * Figures the box reserves. A floor, never a clamp — a wider value still
    * renders in full, it just costs the layout the difference. Raise it only
    * where the ceiling is genuinely higher than a score (a season total).
    */
   digits?: number;
+  /**
+   * Which edge of the reserve the figures sit against.
+   *
+   * Two numerals flanking a divider should pass `end` and `start`: the reserve
+   * then opens *away* from the rule and the figure nearest it is anchored.
+   * Measured at the hero step, rule centre to first ink, over 7–9 / 21–18 /
+   * 108–99 / 1–1 / 4–4 / 10–108: **14.0–20.0px** hugging, against
+   * **15.0–53.0px** centred in the same reserve, and the two sides of one pair
+   * differ by at most 5.0px rather than 16.5px. The residual 6px band is the
+   * side bearing of whichever figure lands against the rule (1.5px for "4",
+   * 7.5px for "1") and cannot be closed without per-glyph kerning — which is
+   * why nothing here claims the pair is *optically* centred.
+   */
+  align?: MbScoreNumeralAlign;
   ariaLabel?: string;
   className?: string;
 }) => {
@@ -91,8 +144,15 @@ export const MbScoreNumeral = ({
 
   const ink = tone === "paper" ? "text-mb-paper-bright" : tone === "ink" ? "text-mb-navy" : "";
   const face = `mb-numeral mb-numeral--${size}`;
-  const cell = { gridArea: "1 / 1" } as const;
   const reserve = Math.max(1, Math.min(6, Math.round(digits)));
+  /* `gridArea` stacks the layers; `minWidth` is the reserve; `textAlign` picks
+     the edge the figures rest against. Inline because `.mb-numeral` is an
+     unlayered rule and would otherwise outrank a utility. */
+  const cell = {
+    gridArea: "1 / 1",
+    minWidth: `${reserve}ch`,
+    textAlign: ALIGN[align],
+  } as const;
 
   return (
     <span
@@ -101,12 +161,6 @@ export const MbScoreNumeral = ({
       aria-label={ariaLabel}
       aria-hidden={ariaLabel ? undefined : true}
     >
-      {/* The reserve. `visibility: hidden` keeps the box and drops the ink, the
-          selection and the a11y tree, so this sets the column width and does
-          nothing else. It shares the cell, so the column is max(value, zeros). */}
-      <span className={face} aria-hidden="true" style={{ ...cell, visibility: "hidden" }}>
-        {"0".repeat(reserve)}
-      </span>
       {outgoing !== null && (
         <span
           key={`out-${generation}`}
@@ -114,7 +168,7 @@ export const MbScoreNumeral = ({
           style={{ ...cell, animation: FADE_OUT }}
           onAnimationEnd={() => setOutgoing(null)}
         >
-          {outgoing}
+          <Figures value={String(outgoing)} />
         </span>
       )}
       <span
@@ -122,16 +176,27 @@ export const MbScoreNumeral = ({
         className={face}
         style={{ ...cell, animation: generation > 0 ? FADE_IN : undefined }}
       >
-        {value}
+        <Figures value={String(value)} />
       </span>
+      {/* The edge marks the figures, not the reserve behind them: it is as wide
+          as the value plus an 8px bleed either side, anchored to whichever edge
+          the figures are resting against. */}
       {flash && generation > 0 && (
         <span
           key={`edge-${generation}`}
           aria-hidden="true"
-          className={`pointer-events-none absolute -left-2 -right-2 h-[3px] bg-mb-coral ${
+          className={`mb-score-rule mb-numeral--${size} pointer-events-none absolute ${
             flash === "up" ? "top-0" : "bottom-0"
           }`}
-          style={{ animation: EDGE }}
+          style={
+            {
+              ...EDGE_ANCHOR[align],
+              "--mb-figures": String(value).length,
+              "--mb-score-bleed": "8px",
+              "--mb-score-ink": "var(--mb-coral)",
+              animation: EDGE,
+            } as React.CSSProperties
+          }
         />
       )}
     </span>

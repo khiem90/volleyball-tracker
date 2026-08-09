@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import { MB_CONTROL_CELL, type MbCompositeSize } from "./Button";
 import { MbIcon } from "./MbIcon";
 
 export interface MbSegmentedOption {
@@ -10,7 +11,18 @@ export interface MbSegmentedOption {
   icon?: string;
 }
 
-export type MbSegmentedSize = "sm" | "md";
+/**
+ * A framed composite, so `md` and `lg` only — `Button.tsx` has the derivation.
+ * The short version: the group spends `--mb-rule-edge` top and bottom, so its
+ * segments measure `rung − 2`. At `md` that is 46px and at `lg` 54px, both
+ * clear of the 44px floor; at `sm` it would be 42px and the segments — which
+ * are the actual targets — would be a rubric HF-2 hard fail.
+ *
+ * This used to be `"sm" | "md"` measured on the *cell* (44 / 48), which meant
+ * the group a caller lines up against a text field rendered 46 / 50 and never
+ * matched anything.
+ */
+export type MbSegmentedSize = MbCompositeSize;
 
 /**
  * Written out rather than interpolated: Tailwind generates a class only if the
@@ -55,6 +67,7 @@ export const MbSegmented = ({
   size = "md",
   fullWidth = true,
   className = "",
+  style,
   ...rest
 }: {
   value: string;
@@ -64,7 +77,7 @@ export const MbSegmented = ({
   options: MbSegmentedOption[];
   /** Column count below and above `sm`. Defaults keep every cell ≥44px wide. */
   columns?: { base: number; sm: number };
-  /** `sm` = 44px rows, `md` = 48px, matching the form-control family. */
+  /** Ladder rung of the **group box**: `md` = 48px, `lg` = 56px. */
   size?: MbSegmentedSize;
   fullWidth?: boolean;
 } & Omit<React.HTMLAttributes<HTMLDivElement>, "onChange">) => {
@@ -92,6 +105,8 @@ export const MbSegmented = ({
     onChange(options[next].value);
   };
 
+  const cell = MB_CONTROL_CELL[size];
+
   return (
     <div
       id={name}
@@ -100,6 +115,31 @@ export const MbSegmented = ({
       className={`mb-segmented ${COLS_BASE[base]} ${COLS_SM[sm]} ${
         fullWidth ? "w-full" : "w-fit"
       } ${className}`}
+      style={{
+        /**
+         * The wrap fix, and the reason a group can no longer render two cell
+         * heights at once.
+         *
+         * Measured before: `MbSegmented[data-size="md"]` with the options
+         * "North Pavilion Court" / "South Hall" laid out 54.38px and 48px
+         * segments in one control. Grid stretches items *within* a row, so
+         * the wrapping label grew its own row and the short label kept the
+         * `min-height`. Two heights, one control.
+         *
+         * `1fr` rows in an auto-height grid all resolve to the tallest row's
+         * base size (CSS Grid §12.7), so every row of one group is now the
+         * same height by construction, however many rows there are and
+         * whatever wraps. `minmax` keeps the ladder rung as the floor.
+         *
+         * NOTE for whoever owns globals.css: `.mb-segmented > *` and
+         * `.mb-segmented[data-size="md"] > *` still declare `min-height`
+         * 44px/48px. Both are superseded by the inline `minHeight` on each
+         * cell below and can be deleted — this component is `.mb-segmented`'s
+         * only consumer.
+         */
+        gridAutoRows: `minmax(${cell}px, 1fr)`,
+        ...style,
+      }}
       {...rest}
     >
       {options.map((option, index) => {
@@ -118,9 +158,22 @@ export const MbSegmented = ({
             tabIndex={index === rovingIndex ? 0 : -1}
             onClick={() => onChange(option.value)}
             onKeyDown={(event) => handleKeyDown(event, index)}
+            /* `py-1!` halves the unlayered `padding: 0.5rem 0.75rem`'s vertical
+               half — important because that rule is unlayered and outranks any
+               Tailwind utility that is not. It buys the second line of a
+               wrapped label the room to sit inside the rung instead of pushing
+               past it: 2 lines x 16px + 8px padding = 40px, inside 46. Single
+               line cells do not move, because `minHeight` still governs and the
+               flex centring is unchanged. */
+            className="py-1!"
+            style={{ minHeight: cell }}
           >
             {option.icon && <MbIcon id={option.icon} size={14} className="shrink-0" />}
-            <span className="min-w-0 break-words tabular-nums">{option.label}</span>
+            {/* `leading-tight` (1.25), not the inherited 1.5: a wrapped label
+                measured 2 x 19.19px and blew the box open. Nothing is
+                truncated — the design language's promise for this control is
+                that it wraps rather than clips. */}
+            <span className="min-w-0 break-words leading-tight tabular-nums">{option.label}</span>
           </button>
         );
       })}

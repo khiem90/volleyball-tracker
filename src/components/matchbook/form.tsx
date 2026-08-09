@@ -13,6 +13,12 @@ import {
   type SelectHTMLAttributes,
   type TextareaHTMLAttributes,
 } from "react";
+import {
+  MB_CONTROL_CELL,
+  MB_CONTROL_HEIGHT,
+  type MbCompositeSize,
+  type MbControlSize,
+} from "./Button";
 import { MbIcon } from "./MbIcon";
 
 /* ---------------------------------------------------------------------------
@@ -22,23 +28,41 @@ import { MbIcon } from "./MbIcon";
    globals.css — .mb-field, .mb-input, .mb-textarea, .mb-select-native,
    .mb-stepper, .mb-switch, .mb-swatch. Nothing here invents styling.
 
-   Two implementation notes that repeat below:
+   Four implementation notes that repeat below:
 
-   1. `text-base! md:text-sm!` — the 16px-on-mobile idiom that stops iOS from
-      zooming on focus. The `!` is load-bearing: `.mb-input input`,
-      `.mb-textarea` and `.mb-select-native` live outside any cascade layer,
-      and unlayered rules outrank every Tailwind utility (which ship inside
-      `@layer utilities`) no matter the specificity or source order.
-   2. `min-h-[48px]` gives the 48px control height the charter asks for; none
-      of the .mb-* classes set a height, so a plain utility wins there.
+   1. `text-base! md:text-[0.9rem]!` — the 16px-on-mobile idiom that stops iOS
+      from zooming on focus, dropping to `body/md` above `md`. The `!` is
+      load-bearing: `.mb-input input`, `.mb-textarea` and `.mb-select-native`
+      live outside any cascade layer, and unlayered rules outrank every
+      Tailwind utility (which ship inside `@layer utilities`) no matter the
+      specificity or source order.
+
+      It was `md:text-sm!` = 14px, against the 14.4px `body/md` that
+      `.mb-input input` itself declares and that every field NOT wrapped by
+      this file therefore rendered. Two field text sizes coexisted 0.4px
+      apart, which is too close to read as a distinction and too far to be
+      one size. `0.9rem` is the named step; `text-sm` is a Tailwind default
+      that happens to be nearby.
+   2. Heights come from the one ladder in `Button.tsx` — `MB_CONTROL_HEIGHT`
+      for a plain control, `MB_CONTROL_CELL` for the interior of a framed
+      composite. None of the .mb-* classes set a height, so the component is
+      the only place a rung can live.
    3. Charter §4.33 is a hard fail measured by a scripted `getBoundingClientRect`
       sweep over `button,a,input,select,textarea,[role=button],[tabindex]`. That
       sweep reads the *control's own* box, not the box of the label wrapping it,
-      so every `<input>` here is stretched to fill its 44/48px shell rather than
-      left at its ~19px line box. Where that is impossible without repainting a
-      .mb-* recipe (the switch), the real input becomes the full-row hit target
-      and the visual track moves to an `aria-hidden` sibling.
+      so every `<input>` here is stretched to fill its shell rather than left at
+      its ~19px line box. Where that is impossible without repainting a .mb-*
+      recipe (the switch), the real input becomes the full-row hit target and
+      the visual track moves to an `aria-hidden` sibling.
+   4. Border widths are `--mb-rule-edge`, never a `1.5px` literal. The literal
+      renders 1px anyway (design language §3.3 measured it), so writing the
+      token loses nothing and stops the kit carrying a number that does not
+      exist. Set through `style` rather than `border-[…]` so there is no
+      arbitrary-value type ambiguity between a width and a colour.
    --------------------------------------------------------------------------- */
+
+/** Every framed edge in this file. One object, so they cannot drift apart. */
+const EDGE_RULE: CSSProperties = { borderWidth: "var(--mb-rule-edge)" };
 
 const mergeIds = (...ids: Array<string | undefined | false>) =>
   ids.filter(Boolean).join(" ") || undefined;
@@ -166,6 +190,7 @@ export const MbTextInput = ({
   id,
   icon,
   trailing,
+  size = "md",
   disabled = false,
   className = "",
   "aria-describedby": ariaDescribedBy,
@@ -175,21 +200,34 @@ export const MbTextInput = ({
   icon?: string;
   /** Adornment rendered after the field — a unit, a counter, a small button. */
   trailing?: ReactNode;
+  /**
+   * Ladder rung of the field box: `md` (48px, the default and what every
+   * shipped field already was) or `lg` (56px) beside a commit control.
+   *
+   * `sm` is absent for the same reason it is absent from `MbSegmented` and
+   * `MbNumberStepper`: `.mb-input` is a frame around a target, the frame
+   * spends `--mb-rule-edge` twice, and a 44px shell would leave the `<input>`
+   * itself at 42px — under the floor the §4.33 sweep measures. The field had
+   * no size axis at all before, which is half of why a wizard row could not be
+   * made to line up.
+   */
+  size?: MbCompositeSize;
   className?: string;
-} & Omit<InputHTMLAttributes<HTMLInputElement>, "className">) => {
+} & Omit<InputHTMLAttributes<HTMLInputElement>, "className" | "size">) => {
   const field = useContext(MbFieldContext);
   return (
     <div
-      className={`mb-input min-h-[48px] py-0! ${
-        disabled ? "opacity-60" : ""
-      } ${className}`}
+      data-size={size}
+      style={{ minHeight: MB_CONTROL_HEIGHT[size] }}
+      className={`mb-input py-0! ${disabled ? "opacity-60" : ""} ${className}`}
     >
       {icon && (
         <MbIcon id={icon} size={16} className="shrink-0 text-mb-ink-muted" />
       )}
-      {/* `py-0!` on the shell + `self-stretch` here hands the whole 48px to the
-          input, so its own hit box clears 44px. The shell keeps its 0.8rem
-          horizontal padding, so nothing moves optically. */}
+      {/* `py-0!` on the shell + `self-stretch` here hands the whole interior to
+          the input, so its own hit box is `MB_CONTROL_CELL[size]` — 46px at
+          `md`, 54px at `lg`, both clear of the 44px floor. The shell keeps its
+          0.8rem horizontal padding, so nothing moves optically. */}
       <input
         {...input}
         id={id ?? field?.id}
@@ -197,7 +235,7 @@ export const MbTextInput = ({
         required={input.required ?? field?.required}
         aria-describedby={mergeIds(field?.describedBy, ariaDescribedBy)}
         aria-invalid={field?.invalid || undefined}
-        className="self-stretch text-base! md:text-sm! disabled:cursor-not-allowed"
+        className="self-stretch text-base! md:text-[0.9rem]! disabled:cursor-not-allowed"
       />
       {trailing}
     </div>
@@ -224,7 +262,12 @@ export const MbTextArea = ({
       required={textarea.required ?? field?.required}
       aria-describedby={mergeIds(field?.describedBy, ariaDescribedBy)}
       aria-invalid={field?.invalid || undefined}
-      className={`mb-textarea text-base! md:text-sm! disabled:cursor-not-allowed disabled:opacity-60 ${className}`}
+      /* No size axis, and deliberately so: a textarea is measured in rows, not
+         in rungs. Its `min-height: 5rem` is two lines plus the frame, which is
+         a different unit of meaning to "the height a control has to be so a
+         thumb can hit it". It is the one control in the kit that is honestly
+         off the ladder. */
+      className={`mb-textarea text-base! md:text-[0.9rem]! disabled:cursor-not-allowed disabled:opacity-60 ${className}`}
     />
   );
 };
@@ -241,6 +284,7 @@ export const MbSelect = ({
   id,
   options,
   placeholder,
+  size = "md",
   disabled = false,
   className = "",
   "aria-describedby": ariaDescribedBy,
@@ -249,8 +293,15 @@ export const MbSelect = ({
   options: MbSelectOption[];
   /** Rendered as a leading empty-valued option. */
   placeholder?: string;
+  /**
+   * Ladder rung, and here it is the **full** ladder including `sm`: unlike
+   * `.mb-input`, `.mb-select-native` is not a frame around a target — the
+   * bordered element *is* the `<select>`, so its box and its hit box are the
+   * same 44/48/56.
+   */
+  size?: MbControlSize;
   className?: string;
-} & Omit<SelectHTMLAttributes<HTMLSelectElement>, "className">) => {
+} & Omit<SelectHTMLAttributes<HTMLSelectElement>, "className" | "size">) => {
   const field = useContext(MbFieldContext);
   return (
     <div className={`relative min-w-0 ${disabled ? "opacity-60" : ""} ${className}`}>
@@ -261,10 +312,16 @@ export const MbSelect = ({
         required={select.required ?? field?.required}
         aria-describedby={mergeIds(field?.describedBy, ariaDescribedBy)}
         aria-invalid={field?.invalid || undefined}
+        data-size={size}
+        style={{ minHeight: MB_CONTROL_HEIGHT[size] }}
         /* `tabular-nums` because select labels routinely carry a measure —
            "Court 2", "Round 11", "21 points" — and §4.9 wants those figures on
-           the same rhythm as every other numeral. */
-        className="mb-select-native min-h-[48px] truncate text-base! tabular-nums disabled:cursor-not-allowed md:text-[0.95rem]!"
+           the same rhythm as every other numeral.
+
+           `0.95rem` is `display/panel-title`, which is also what
+           `.mb-select-native` itself declares — this restates the step at the
+           `md` breakpoint rather than introducing one. */
+        className="mb-select-native truncate text-base! tabular-nums disabled:cursor-not-allowed md:text-[0.95rem]!"
       >
         {placeholder && <option value="">{placeholder}</option>}
         {options.map((option) => (
@@ -294,6 +351,28 @@ const wrapValue = (n: number, min: number, max: number) => {
   return (((n - min) % span) + span) % span + min;
 };
 
+/**
+ * The ± keys, sized off the ladder rather than off `.mb-stepper button`'s own
+ * 44/56px.
+ *
+ * This is the whole 46/58 fix. `.mb-stepper` is `align-items: stretch`, so the
+ * shell used to be "whatever the keys are, plus my two edge rules" — 44+2 = 46
+ * and 56+2 = 58, two numbers on nobody's ladder. Now the shell states the rung
+ * and the keys take the interior, so the outer box is 48/56 and the keys are
+ * 46/54 — still comfortably over the floor.
+ *
+ * `style`, not a class: `.mb-stepper button` and
+ * `.mb-stepper[data-size="lg"] button` both set `width`/`min-height` from
+ * outside every cascade layer, so a Tailwind utility would need an
+ * `!important` and a pair of hand-written literals to beat them. An inline
+ * declaration outranks any author rule that is not `!important`, which lets
+ * the number come from `MB_CONTROL_CELL` and stay there.
+ */
+const stepperKey = (size: MbCompositeSize): CSSProperties => ({
+  width: MB_CONTROL_CELL[size],
+  minHeight: MB_CONTROL_CELL[size],
+});
+
 export const MbNumberStepper = ({
   value,
   onChange,
@@ -304,7 +383,7 @@ export const MbNumberStepper = ({
   prefix,
   suffix,
   label,
-  size = "sm",
+  size = "md",
   id,
   disabled = false,
   className = "",
@@ -318,10 +397,19 @@ export const MbNumberStepper = ({
   wrap?: boolean;
   /** Sits before the figure, e.g. "R" for rotation R1–R6. */
   prefix?: string;
+  /** Unit word after the figure, e.g. "games". Set at its own type step. */
   suffix?: string;
   /** Accessible name; also builds the −/+ button labels. */
   label: string;
-  size?: "sm" | "lg";
+  /**
+   * Ladder rung of the **shell**: `md` = 48px, `lg` = 56px. It was `"sm" |
+   * "lg"` and measured 46 / 58, because the rung was being applied to the ±
+   * keys and the shell then added its own two edge rules on top.
+   *
+   * No `sm`: see `MbCompositeSize` in `Button.tsx`. A 44px shell leaves 42px
+   * keys, and the keys are the targets.
+   */
+  size?: MbCompositeSize;
   id?: string;
   disabled?: boolean;
   className?: string;
@@ -338,18 +426,30 @@ export const MbNumberStepper = ({
    */
   const [draft, setDraft] = useState<string | null>(null);
   /**
-   * `prefix`/`suffix` live inside the editable face rather than beside it. As
-   * separate spans the figure is centred inside its own 44px box, which opens a
-   * visible gap ("R  1"); folded in, `R1` reads as the single display token the
-   * charter's rotation case wants. Typed input is stripped back to digits, so
-   * the affordance is unchanged.
+   * `prefix` stays folded into the editable face; `suffix` no longer is.
+   *
+   * They looked like a pair and are not. A prefix is part of the token — `R1`
+   * is one display word, and split into spans the figure centres in its own
+   * box and opens a visible gap ("R  1"). A suffix is a **unit**: "3 games" is
+   * a figure plus a lowercase word about the figure. Folded into the face it
+   * was set in the numeral face — 24px Oswald at `md`, 30px at `lg` — which is
+   * a `display/stat` step being asked to carry a lowercase unit word. The type
+   * scale has no such step, so the control was inventing one.
+   *
+   * Split out, the figure keeps the numeral step and the unit takes
+   * `display/link` (0.72rem / 600 / 0.04em, muted) — an existing step, ~2.1x
+   * smaller than the figure it annotates, and well clear of the 0.6–0.66rem
+   * band the design language forbids for information that is not repeated
+   * elsewhere.
+   *
+   * `aria-valuetext` still says "3 games", so the split is visual only.
    */
-  const face = `${prefix ?? ""}${value}${suffix ?? ""}`;
+  const unit = suffix?.trim();
+  const face = `${prefix ?? ""}${value}`;
+  const spoken = `${face}${suffix ?? ""}`;
   const shown = draft ?? face;
   const chars =
-    Math.max(2, String(min).length, String(max).length) +
-    (prefix?.length ?? 0) +
-    (suffix?.length ?? 0);
+    Math.max(2, String(min).length, String(max).length) + (prefix?.length ?? 0);
 
   const commit = (next: number) => {
     if (next !== value) onChange(next);
@@ -390,6 +490,11 @@ export const MbNumberStepper = ({
     <div
       className={`mb-stepper self-start ${disabled ? "opacity-60" : ""} ${className}`}
       data-size={size}
+      /* The rung lands on the shell — the box a caller lines a text field up
+         against — and the keys take the interior via STEPPER_KEY. `data-size`
+         is kept because `.mb-stepper[data-size="lg"] .mb-stepper-value` is
+         what steps the numeral's own font size. */
+      style={{ minHeight: MB_CONTROL_HEIGHT[size] }}
     >
       <button
         type="button"
@@ -397,10 +502,11 @@ export const MbNumberStepper = ({
         aria-label={`Decrease ${label}`}
         disabled={disabled || atMin}
         onClick={() => stepBy(-step)}
+        style={stepperKey(size)}
       >
         <MbIcon id="minus" size={16} />
       </button>
-      <span className="mb-stepper-value">
+      <span className="mb-stepper-value gap-2">
         <input
           id={inputId}
           type="text"
@@ -411,7 +517,7 @@ export const MbNumberStepper = ({
           aria-valuenow={value}
           aria-valuemin={min}
           aria-valuemax={max}
-          aria-valuetext={prefix || suffix ? face : undefined}
+          aria-valuetext={prefix || suffix ? spoken : undefined}
           aria-describedby={field?.describedBy}
           disabled={disabled}
           value={shown}
@@ -430,7 +536,7 @@ export const MbNumberStepper = ({
             commit(clampValue(value, min, max));
           }}
           onKeyDown={handleKeyDown}
-          /* `self-stretch` takes the full 44/56px height of the shell and
+          /* `self-stretch` takes the full interior height of the shell and
              `min-w-[44px]` the width, so the editable figure is itself a legal
              target — `${chars}ch` only ever widens it for 3+ digit bounds. */
           className="min-w-[44px] self-stretch border-0 bg-transparent p-0 text-center disabled:cursor-not-allowed"
@@ -440,6 +546,22 @@ export const MbNumberStepper = ({
             fontVariantNumeric: "tabular-nums",
           }}
         />
+        {unit && (
+          <span
+            /* `display/link`. `letterSpacing` is inline for the reason
+               `MB_FIELD_LABEL` documents: `.matchbook-display` declares
+               `letter-spacing: 0.02em` unlayered and every Tailwind
+               `tracking-*` utility loses to it.
+
+               `leading-none` so a one-word unit cannot add a half-line to the
+               shell and take it back off the rung, and `self-center` so it
+               sits on the figure's optical centre rather than stretching. */
+            className="matchbook-display shrink-0 self-center text-[0.72rem] font-semibold leading-none text-mb-ink-muted"
+            style={{ letterSpacing: "0.04em" }}
+          >
+            {unit}
+          </span>
+        )}
       </span>
       <button
         type="button"
@@ -447,6 +569,7 @@ export const MbNumberStepper = ({
         aria-label={`Increase ${label}`}
         disabled={disabled || atMax}
         onClick={() => stepBy(step)}
+        style={stepperKey(size)}
       >
         <MbIcon id="plus" size={16} />
       </button>
@@ -461,6 +584,7 @@ export const MbToggle = ({
   onChange,
   label,
   hint,
+  size = "md",
   id,
   disabled = false,
   className = "",
@@ -469,6 +593,8 @@ export const MbToggle = ({
   onChange: (checked: boolean) => void;
   label: string;
   hint?: string;
+  /** Ladder rung of the row. Full ladder — the row is unframed. */
+  size?: MbControlSize;
   id?: string;
   disabled?: boolean;
   className?: string;
@@ -480,8 +606,8 @@ export const MbToggle = ({
   const hintId = hint ? `${inputId}-toggle-hint` : undefined;
 
   /**
-   * The charter asks for the whole 44px row to be the hit target, and the
-   * §4.33 sweep measures the input itself — a 28x16 `.mb-switch` input fails it
+   * The charter asks for the whole row to be the hit target, and the §4.33
+   * sweep measures the input itself — a 28x16 `.mb-switch` input fails it
    * even when a label makes the row clickable. So the real control is stretched
    * over the row and made invisible, and the track becomes an `aria-hidden`
    * sibling carrying `.mb-switch` for its geometry. Only the three `:checked`
@@ -489,10 +615,23 @@ export const MbToggle = ({
    * cannot read the input's `:checked`; the `!` is the same unlayered-vs-layered
    * problem noted at the top of the file. Focus-visible now outlines the entire
    * row, which is an honest picture of what is clickable.
+   *
+   * The row takes the full ladder — it is unframed, so the stretched input's
+   * box and the row's box are the same number — and defaults to `md` like
+   * every other standalone control. It was pinned at 44px, which put a boolean
+   * field 4px shorter than the text field above it in the same column.
    */
   return (
     <label
-      className={`mb-row-hover relative flex min-h-[44px] items-center justify-between gap-3 rounded-[4px] px-1 py-2 ${
+      style={{ minHeight: MB_CONTROL_HEIGHT[size] }}
+      data-size={size}
+      /* `py-1.5` with the `leading-tight` below, not `py-2` at the inherited
+         1.5: a toggle carrying a hint measured 55.66px — two lines of text at
+         1.5 leading plus 16px of padding — so a hinted toggle and a plain one
+         were different controls, and 55.66 sits 0.34px off the `lg` rung,
+         which reads as a mistake rather than a size. Both variants now resolve
+         inside the rung (45.4px of content at most) and `minHeight` governs. */
+      className={`mb-row-hover relative flex items-center justify-between gap-3 rounded-[4px] px-1 py-1.5 ${
         disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"
       } ${className}`}
     >
@@ -507,7 +646,11 @@ export const MbToggle = ({
         onChange={(event) => onChange(event.target.checked)}
         className="peer absolute inset-0 m-0 h-full w-full cursor-[inherit] appearance-none rounded-[4px] opacity-0"
       />
-      <span className="pointer-events-none min-w-0">
+      {/* `leading-tight` here rather than on either child, so the label and the
+          hint cannot drift apart. It is a leading, not a type step —
+          `MB_FIELD_LABEL` declares no line-height, so this adds to the shared
+          treatment instead of overriding part of it. */}
+      <span className="pointer-events-none min-w-0 leading-tight">
         {/* The same `MB_FIELD_LABEL` as `MbField` and `MbCopyField`, not a
             hand-rolled copy of it. Written out it *looked* identical, but
             `tracking-[0.08em]` is a layered utility and `.matchbook-display`
@@ -543,6 +686,7 @@ export const MbToggleChip = ({
   pressed,
   onPressedChange,
   children,
+  size = "md",
   disabled = false,
   className = "",
 }: {
@@ -551,6 +695,13 @@ export const MbToggleChip = ({
   pressed: boolean;
   onPressedChange: (pressed: boolean) => void;
   children: ReactNode;
+  /**
+   * Full ladder — this is a `.mb-btn`, so it takes the same rungs as
+   * `MbButton` and its `md` is the same 48px. `sm` is the rung for a filter
+   * chip packed into a dense toolbar, which is the case this control was
+   * silently pinned to before it had a size axis at all.
+   */
+  size?: MbControlSize;
   disabled?: boolean;
   className?: string;
 }) => (
@@ -559,6 +710,8 @@ export const MbToggleChip = ({
     aria-pressed={pressed}
     disabled={disabled}
     onClick={() => onPressedChange(!pressed)}
+    data-size={size}
+    style={{ minHeight: MB_CONTROL_HEIGHT[size] }}
     /* `opacity-40`, not 60: this is a `.mb-btn`, and the whole button family
        shares one disabled reading (design language §4.3, `MbButton`). */
     className={`mb-btn mb-btn-touch max-w-full ${
@@ -570,7 +723,8 @@ export const MbToggleChip = ({
         greyscale without nesting a circled glyph inside a 14px box. */}
     <span
       aria-hidden="true"
-      className="inline-flex h-[14px] w-[14px] shrink-0 items-center justify-center rounded-[2px] border-[1.5px] border-current"
+      style={EDGE_RULE}
+      className="inline-flex h-[14px] w-[14px] shrink-0 items-center justify-center rounded-[2px] border-solid border-current"
     >
       {pressed && <span className="block h-[6px] w-[6px] rounded-[1px] bg-current" />}
     </span>
@@ -669,8 +823,14 @@ export const MbSwatchPicker = ({
 
   return (
     <div className={`flex flex-col gap-2.5 ${className}`}>
-      {/* 10px, not 8px: the custom-colour input reaches 1.5px back over its own
-          border, and §4.33 wants ≥8px of clear water between targets. */}
+      {/* 10px, not 8px: the custom-colour input reaches one edge rule back over
+          its own border, and §4.33 wants ≥8px of clear water between targets.
+
+          The swatches themselves are `.mb-swatch[data-size="touch"]` = 44px =
+          the ladder's `sm` rung, which is the right rung for a target that
+          only ever appears inside a group of its own kind. `data-size="touch"`
+          is the CSS class's own selector, not a ladder name — it stays as it
+          is until globals.css renames it. */}
       <div
         className="flex flex-wrap items-center gap-2.5"
         role="radiogroup"
@@ -722,9 +882,15 @@ export const MbSwatchPicker = ({
               onChange={(event) => onChange(event.target.value)}
               /* A colour input is a replaced element: `inset-0` leaves it at its
                  intrinsic 50x27 and `h-full` measures the 41px padding box. An
-                 explicit 44x44 offset back over the 1.5px border is the only
-                 way its own hit box equals the swatch you can see. */
-              className="absolute -left-[1.5px] -top-[1.5px] h-[44px] w-[44px] cursor-pointer opacity-0"
+                 explicit `sm`-rung square offset back over the edge rule is the
+                 only way its own hit box equals the swatch you can see. */
+              className="absolute cursor-pointer opacity-0"
+              style={{
+                left: "calc(var(--mb-rule-edge) * -1)",
+                top: "calc(var(--mb-rule-edge) * -1)",
+                height: MB_CONTROL_HEIGHT.sm,
+                width: MB_CONTROL_HEIGHT.sm,
+              }}
             />
           </label>
         )}
@@ -751,6 +917,7 @@ export const MbTagInput = ({
   onChange,
   max,
   placeholder,
+  size = "md",
   id,
   disabled = false,
   className = "",
@@ -759,6 +926,8 @@ export const MbTagInput = ({
   onChange: (value: string[]) => void;
   max?: number;
   placeholder?: string;
+  /** Ladder rung of the shell at rest. Framed composite, so `md` or `lg`. */
+  size?: MbCompositeSize;
   id?: string;
   disabled?: boolean;
   className?: string;
@@ -792,8 +961,16 @@ export const MbTagInput = ({
 
   return (
     <div className={`flex flex-col gap-1.5 ${className}`}>
-      {/* `py-[2px]!` keeps a 44px chip row inside a shell that still reads as a
-          48px field when empty, and gives wrapped rows a hairline of air.
+      {/* `py-0!` hands the shell's whole interior to the chip row.
+
+          It was `py-[2px]!`, which measured 50px with one row of chips —
+          44px chip + 4px padding + 2 edge rules — so a tag field sat 2px
+          proud of every other field on the page the moment it held a tag, and
+          landed on no rung at all. At `py-0!` the shell's `minHeight` governs
+          when it is empty or holds one row (48px, with the 44px chips centred
+          in the 46px interior), and only genuinely wrapped rows grow it. A
+          multi-row field is off the ladder for the same honest reason a
+          textarea is.
 
           The gaps are overridden because the chip is now two keys, not one
           box (see below). `.mb-input` sets `gap: 0.6rem` (9.6px) unlayered, so
@@ -805,7 +982,9 @@ export const MbTagInput = ({
           from 60px to 114px. Grouping is carried by weight instead of by
           distance — see the remove key below — which costs no height. */}
       <div
-        className={`mb-input min-h-[48px] flex-wrap gap-x-4! gap-y-2.5! py-[2px]! ${
+        data-size={size}
+        style={{ minHeight: MB_CONTROL_HEIGHT[size] }}
+        className={`mb-input flex-wrap gap-x-4! gap-y-2.5! py-0! ${
           disabled ? "opacity-60" : ""
         }`}
       >
@@ -814,8 +993,8 @@ export const MbTagInput = ({
              away from its own remove key. */
           <span key={tag} className="inline-flex min-w-0 max-w-full items-stretch gap-2.5">
             <span
-              className="matchbook-display flex min-h-[44px] min-w-0 items-center rounded-[3px] border-[1.5px] border-mb-navy bg-mb-paper-bright px-2.5 text-[0.78rem] font-bold"
-              style={TAG_TRACK}
+              className="matchbook-display flex min-w-0 items-center rounded-[3px] border-solid border-mb-navy bg-mb-paper-bright px-2.5 text-[0.78rem] font-bold"
+              style={{ ...EDGE_RULE, ...TAG_TRACK, minHeight: MB_CONTROL_HEIGHT.sm }}
             >
               {/* Not the flex container itself: `text-overflow` is ignored on
                   one, so a long tag would clip with no ellipsis. As a flex
@@ -847,7 +1026,13 @@ export const MbTagInput = ({
               aria-label={`Remove ${tag}`}
               disabled={disabled}
               onClick={() => removeAt(index)}
-              className="flex min-h-[44px] w-[44px] shrink-0 items-center justify-center rounded-[3px] border-[1.5px] border-transparent text-mb-ink-muted transition-colors hover:border-mb-navy hover:bg-[var(--mb-tint-2)] hover:text-mb-coral-deep disabled:cursor-not-allowed"
+              data-size="sm"
+              style={{
+                ...EDGE_RULE,
+                minHeight: MB_CONTROL_HEIGHT.sm,
+                width: MB_CONTROL_HEIGHT.sm,
+              }}
+              className="flex shrink-0 items-center justify-center rounded-[3px] border-solid border-transparent text-mb-ink-muted transition-colors hover:border-mb-navy hover:bg-[var(--mb-tint-2)] hover:text-mb-coral-deep disabled:cursor-not-allowed"
             >
               <MbIcon id="close" size={16} />
             </button>
@@ -874,8 +1059,10 @@ export const MbTagInput = ({
             onKeyDown={handleKeyDown}
             onBlur={() => add(draft)}
             /* `.mb-input input` sets an unlayered `min-width:0`, so the floor
-               that keeps the entry field a legal target has to be important. */
-            className="min-h-[44px] min-w-[4.5rem]! text-base! md:text-sm! disabled:cursor-not-allowed"
+               that keeps the entry field a legal target has to be important.
+               `sm` rung, like the chips it shares a row with. */
+            style={{ minHeight: MB_CONTROL_HEIGHT.sm }}
+            className="min-w-[4.5rem]! text-base! md:text-[0.9rem]! disabled:cursor-not-allowed"
           />
         )}
       </div>

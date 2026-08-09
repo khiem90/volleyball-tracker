@@ -11,31 +11,91 @@ import { MbIcon } from "./MbIcon";
 
 export type MbButtonVariant = "coral" | "navy" | "outline" | "outline-navy";
 
+/* ===========================================================================
+   THE CONTROL SIZE LADDER — one ladder, three rungs, for the whole kit.
+
+   Before this, four ladders shipped side by side and disagreed about what
+   `size="md"` meant. Measured on `/dev/kit`:
+
+     .mb-btn        44 / 48 / 56
+     MbIconButton   44 /      56     `md` was 44 — a different number to
+                                     `MbButton size="md"`, documented as a
+                                     trap and left in place
+     .mb-segmented  44 / 48          cells, so the *group* was 46 / 50
+     .mb-stepper    46 /      58     shell, neither value on any ladder
+     .mb-input      48               no size axis at all
+
+   So a wizard row holding a text field and a number stepper was permanently
+   48 against 46 with no prop that could fix it.
+
+   ---------------------------------------------------------------- the rule
+
+   A rung is the **outer box of the control** — the border box a neighbour has
+   to line up with. Not the label, not an interior cell. Every control in the
+   kit reports its rung as `data-size`, so the ladder is measurable rather
+   than asserted.
+
+   | rung | box  | purpose                                                    |
+   | ---- | ---- | ---------------------------------------------------------- |
+   | `sm` | 44px | THE FLOOR. A target that sits *inside* something else and  |
+   |      |      | must not dominate it: a tag's remove key, a colour swatch, |
+   |      |      | a filter chip in a toolbar, the retry inside              |
+   |      |      | `MbLiveStatus`. Invariant 33 / rubric HF-2 forbid less.    |
+   | `md` | 48px | THE DEFAULT. Every standalone control: buttons, icon       |
+   |      |      | buttons, text fields, selects, segmented groups, steppers, |
+   |      |      | toggles. One number, so any two of them on one row align.  |
+   | `lg` | 56px | THE COMMIT RUNG. `MbActionBar`, dialog footers, full-width |
+   |      |      | phone primaries, the scoring console — one-handed,         |
+   |      |      | thumb-reach targets that end a task.                       |
+
+   ------------------------------------------------- the composite corollary
+
+   A control drawn as a *frame around cells* — `.mb-segmented`, `.mb-stepper` —
+   spends its own edge rule twice, once top and once bottom. Its interior cells
+   are therefore `rung − 2 × --mb-rule-edge`, which `MB_CONTROL_CELL` states
+   once so no component re-derives it.
+
+   That single fact is why those two controls start at `md` and not at `sm`:
+   at `sm` their cells would measure 42px and break the 44px floor, and the
+   cells — the ± keys, the segments — are the real targets. `MbCompositeSize`
+   makes that unrepresentable rather than a comment nobody reads.
+   =========================================================================== */
+
+export type MbControlSize = "sm" | "md" | "lg";
+
+/** Outer border box of a control at each rung, in CSS px. */
+export const MB_CONTROL_HEIGHT: Record<MbControlSize, number> = {
+  sm: 44,
+  md: 48,
+  lg: 56,
+};
+
+/** The rungs a framed composite may offer. `sm` is absent by construction. */
+export type MbCompositeSize = Exclude<MbControlSize, "sm">;
+
 /**
- * Three steps, three measured boxes, and no member that resolves to another.
+ * Interior cell height for a framed composite: the rung less the frame's own
+ * two edge rules (`--mb-rule-edge`, which renders 1px — design language §3.3).
+ * Both values clear the 44px floor; 42px, which `sm` would give, does not.
+ */
+export const MB_CONTROL_CELL: Record<MbCompositeSize, number> = {
+  md: MB_CONTROL_HEIGHT.md - 2,
+  lg: MB_CONTROL_HEIGHT.lg - 2,
+};
+
+/**
+ * `MbButton` takes the full ladder: its box *is* its target, so the floor rung
+ * is available to it.
  *
- * Height cannot be the only axis: invariant 33 puts a hard 44px floor under
- * every interactive target, so nothing may go below `sm`. The scale therefore
- * runs *upward* from the floor, and each step moves four things at once —
- * height, inline padding, type step and glyph — so two sizes never render the
- * same box.
- *
- * - `sm` — 44px, `display/link` (0.72rem). The floor exactly: a control that
- *   has to sit inside something else without dominating it (the retry in
- *   `MbLiveStatus`, an in-panel CTA — design language §5.7 "at reduced size").
- * - `md` — 48px, `display/button` (0.8rem). The default, one step clear of the
- *   floor so `sm` has somewhere to be smaller.
- * - `lg` — 56px, 0.9rem. The commit control: `MbActionBar`, dialog footers,
- *   full-width phone primaries. 56 is the same step `MbIconButton size="lg"`
- *   and `.mb-stepper[data-size="lg"]` already use, so the kit has one number
- *   for "the big control" rather than three.
+ * Each rung still moves four things at once — height, inline padding, type
+ * step and glyph — so two sizes never render the same box.
  *
  * The previous `touch` member is gone. It resolved to a byte-identical class
  * list to `md` and measured the same 102.5 x 44 box, and the gallery said so
  * out loud ("same as md"). Charter §2.3 names it, but §4.33 — a hard fail —
  * already forces every size over 44px, which leaves `touch` nothing to mean.
  */
-export type MbButtonSize = "sm" | "md" | "lg";
+export type MbButtonSize = MbControlSize;
 
 const VARIANT_CLASS: Record<MbButtonVariant, string> = {
   coral: "mb-btn-coral",
@@ -45,8 +105,6 @@ const VARIANT_CLASS: Record<MbButtonVariant, string> = {
 };
 
 interface SizeSpec {
-  /** `min-height`, in CSS px. Also the resting height — content never exceeds it. */
-  box: number;
   /** `padding-inline`. Set inline: `.mb-btn`'s `padding` shorthand is unlayered. */
   padding: string;
   /** Extra unlayered class, where one exists, purely for the type step. */
@@ -66,17 +124,16 @@ interface SizeSpec {
 
 const SIZE: Record<MbButtonSize, SizeSpec> = {
   sm: {
-    box: 44,
     padding: "0.75rem",
     shell: "",
     label: "text-[0.72rem] tracking-[0.04em]",
     glyph: 12,
   },
-  md: { box: 48, padding: "1.1rem", shell: "", label: "", glyph: 14 },
+  md: { padding: "1.1rem", shell: "", label: "", glyph: 14 },
   /* `.mb-btn-lg` is kept for its 0.9rem `font-size` only — it is unlayered, so
      it is the one way to move the step without an `!important`. Its padding and
      `min-height` are both superseded by the inline geometry below. */
-  lg: { box: 56, padding: "1.5rem", shell: "mb-btn-lg", label: "", glyph: 16 },
+  lg: { padding: "1.5rem", shell: "mb-btn-lg", label: "", glyph: 16 },
 };
 
 /**
@@ -88,8 +145,8 @@ const SIZE: Record<MbButtonSize, SizeSpec> = {
  * `sm` measures ~42px without it.
  */
 const geometry = (size: MbButtonSize, style?: CSSProperties): CSSProperties => ({
-  minHeight: SIZE[size].box,
-  minWidth: 44,
+  minHeight: MB_CONTROL_HEIGHT[size],
+  minWidth: MB_CONTROL_HEIGHT.sm,
   paddingInline: SIZE[size].padding,
   ...style,
 });
@@ -175,6 +232,10 @@ export const MbButton = forwardRef<HTMLButtonElement, MbButtonProps>(
         loading ? "cursor-progress" : ""
       } disabled:cursor-not-allowed disabled:opacity-40 ${className}`}
       style={geometry(size, style)}
+      /* The ladder's audit hook. Every control in the kit publishes the rung it
+         thinks it is on, so a sweep can prove `md` is one number rather than
+         infer it from a class name. No CSS reads it. */
+      data-size={size}
       data-loading={loading || undefined}
       aria-busy={loading || undefined}
       aria-disabled={loading || undefined}
@@ -233,6 +294,7 @@ export const MbButtonLink = forwardRef<HTMLAnchorElement, MbButtonLinkProps>(
       ref={ref}
       className={`${shell(variant, size, fullWidth)} ${className}`}
       style={geometry(size, style)}
+      data-size={size}
       {...rest}
     >
       <Content size={size} icon={icon} iconRight={iconRight}>

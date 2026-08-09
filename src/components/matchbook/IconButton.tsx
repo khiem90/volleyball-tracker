@@ -1,10 +1,17 @@
 "use client";
 
 import { forwardRef } from "react";
+import { MB_CONTROL_HEIGHT, type MbControlSize } from "./Button";
 import { MbIcon } from "./MbIcon";
 
 export type MbIconButtonTone = "plain" | "navy" | "coral" | "outline" | "outline-navy";
-export type MbIconButtonSize = "md" | "lg";
+
+/**
+ * The full ladder from `Button.tsx` — the same three rungs, meaning the same
+ * three numbers. This control's box is its own target, so the floor rung is
+ * available to it.
+ */
+export type MbIconButtonSize = MbControlSize;
 
 /**
  * `plain` is the unadorned control the close affordance and masthead overflow
@@ -21,35 +28,32 @@ const TONE_CLASS: Record<MbIconButtonTone, string> = {
 };
 
 /**
- * 44 and 56 — the same two steps `.mb-stepper` uses for its ± buttons and the
- * two ends of `MbButton`'s scale. Fixing both axes makes `.mb-btn`'s horizontal
- * padding inert (the flex centring keeps the glyph on the border-box centre
- * because the padding is symmetric), so the square is exact without fighting
- * the unlayered rule.
+ * Both axes fixed, so `.mb-btn`'s horizontal padding is inert (the flex
+ * centring keeps the glyph on the border-box centre because the padding is
+ * symmetric) and the square is exact without fighting the unlayered rule.
  *
- * **These two steps are not `MbButton`'s two middle steps.** A labelled button
- * has a type axis this control does not, so its scale needs a step between the
- * floor and the commit size; a lone glyph has nothing to put there. The map is:
+ * **`md` used to be 44px here and 48px on `MbButton`.** That disagreement was
+ * written down in this file as a known trap — with a table of which sizes to
+ * pair with which — and then left in place, so a masthead putting the default
+ * disc beside a default `MbButton` sat 4px out of line and no prop could fix
+ * it. The trap is now deleted rather than documented: `md` is 48px here
+ * because `md` is 48px everywhere.
  *
- * | this control    | box  | pairs with              |
- * | --------------- | ---- | ----------------------- |
- * | `size="md"`     | 44px | `MbButton size="sm"`    |
- * | `size="lg"`     | 56px | `MbButton size="lg"`    |
- * |  —              | 48px | `MbButton size="md"`    |
- *
- * So a row that puts the default disc next to a default `MbButton` sits 4px out
- * of line. Pair the disc with `sm`, or take both to `lg`. Measured across
- * `/dev/kit` and all six shipped routes: zero such rows exist today, which is
- * why the enum is left alone rather than renamed out from under its call sites
- * — but it is the first thing a masthead will get wrong, so it is written down
- * here rather than discovered.
+ * The three literals are written out because Tailwind only generates a class
+ * whose text appears in source. `h-11` = 44, `h-12` = 48, `h-14` = 56.
  */
 const SIZE_CLASS: Record<MbIconButtonSize, string> = {
-  md: "h-11 w-11",
+  sm: "h-11 w-11",
+  md: "h-12 w-12",
   lg: "h-14 w-14",
 };
 
-const ICON_SIZE: Record<MbIconButtonSize, number> = { md: 18, lg: 22 };
+/**
+ * The glyph rides the box: a lone icon has no type axis to carry the step, so
+ * the only way `sm` and `md` read as different controls is the mark inside
+ * them. 18 / 20 / 22 keeps the icon at ~40% of the box at every rung.
+ */
+const ICON_SIZE: Record<MbIconButtonSize, number> = { sm: 18, md: 20, lg: 22 };
 
 export type MbIconButtonProps = {
   /** Sprite icon id. */
@@ -69,13 +73,32 @@ export type MbIconButtonProps = {
  * focus can be restored to the control that opened a dialog.
  */
 export const MbIconButton = forwardRef<HTMLButtonElement, MbIconButtonProps>(
-  ({ icon, label, size = "md", tone = "plain", className = "", type = "button", ...rest }, ref) => (
+  (
+    {
+      icon,
+      label,
+      size = "md",
+      tone = "plain",
+      className = "",
+      type = "button",
+      style,
+      ...rest
+    },
+    ref
+  ) => (
     <button
       ref={ref}
       type={type}
       title={label}
       aria-label={label}
       className={`mb-btn mb-btn-touch ${TONE_CLASS[tone]} ${SIZE_CLASS[size]} disabled:cursor-not-allowed disabled:opacity-40 ${className}`}
+      data-size={size}
+      /* `.mb-btn-touch`'s unlayered `min-height:44px` is a floor, not the box:
+         it loses to the definite `height` below at every rung, and matches it
+         at `sm`. Stated inline so the rung is auditable on the element itself
+         and not only inferable from a Tailwind class; the caller's own `style`
+         still wins because it is spread last. */
+      style={{ height: MB_CONTROL_HEIGHT[size], width: MB_CONTROL_HEIGHT[size], ...style }}
       {...rest}
     >
       <MbIcon id={icon} size={ICON_SIZE[size]} className="shrink-0" />

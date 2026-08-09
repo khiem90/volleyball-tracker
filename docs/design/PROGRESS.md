@@ -66,43 +66,77 @@ Matchbook block at the top of `src/app/globals.css`.
 | P0 tokens + CSS + sprite | W1 | **DONE** — verified zero regression on 6 shipped routes |
 | P1 primitive kit | W1 | **DONE** — ~30 components, gallery at `/dev/kit` |
 | P1 ranking + tests + audit.mjs | W8 | **DONE** — `audit.mjs` + `routes.mjs` + `shot.mjs` are the measurement harness |
-| **Gate 1 (regression + critique)** | — | **RUN — 64/100 FAIL.** PASS needs all ten rubric dimensions ≥8 and zero §3 hard fails |
-| Gate 1 fix round | W1–W8 (7 parallel agents) | **IN FLIGHT — this round.** Disjoint file slices; re-critique after. W8's slice (`audit.mjs`, design language, this file) is **done** |
-| **Re-critique against `benchmark-rubric.md`** | — | **NOT RUN.** The gate is still 64/100 FAIL until it is. Nothing here claims a dimension moved |
+| **Gate 1 (regression + critique)** | — | **RUN — 64/100 FAIL** (one critic). PASS needs all ten rubric dimensions ≥8 and zero §3 hard fails |
+| Gate 1 fix round | W1–W8 (7 parallel agents) | **DONE** — 8 disjoint slices, all reported |
+| **Gate 1r re-critique** | — | **RUN — 57 / 65 / 66 out of 100. Three critics, three FAILs.** No dimension reached 8 on all three cards. Verdicts in §8 |
+| Gate 1r fix round | W1–W8 (parallel agents) | **IN FLIGHT — this round.** W8's slice (`audit.mjs` scrollport + fonts checks, `benchmark-rubric.md` §2, this file) is **done** |
+| **Gate 2 re-critique** | — | **NOT RUN.** The programme's verdict is 57/65/66 FAIL until it is. Nothing below claims a dimension moved |
 | P2a shell | W2 | not started |
 | P2b toast/loading/offline/layout, contexts | W2 + W8 | not started |
 | P3a create-flows, competition-detail, live-scoring, volleyball | W3 W4 W5 W7 | not started |
 | P3b public share | W6 | not started (gated on W4) |
 | P4 legacy deletion | W2 | not started |
 
-### Gate 1 verdict — 64/100, FAIL
+### Gate 1r verdict — 57 / 65 / 66, three FAILs
 
-An independent critic scored the W1 kit against `benchmark-rubric.md`. The
-programme does **not** advance to P2 until the re-critique passes. The fix round
-in flight splits the verdict into eight disjoint slices, one agent each, so no
-two agents touch the same file. W8's slice is the one this file documents:
-`audit.mjs` composite-awareness + a11y checks (F18) and the design language
-un-staling (F19).
+Three critics scored the same `/dev/kit` build against `benchmark-rubric.md` in
+the same hour. Every card was a FAIL; no dimension scored ≥8 on all three.
+
+| Dim | A | B | C | Spread |
+| --- | --- | --- | --- | --- |
+| D1 Typographic craft | 6 | 8 | 6 | 2 |
+| D2 Spatial rhythm | 5 | 7 | 7 | 2 |
+| D3 Colour discipline | 6 | 6 | 6 | 0 |
+| D4 Data legibility | 6 | 5 | 7 | 2 |
+| D5 Motion | 7 | 7 | 5 | 2 |
+| D6 Touch ergonomics | 3 | 4 | 6* | 3 |
+| D7 State coverage | 6 | 8 | 8 | 2 |
+| D8 Hierarchy | 7 | 8 | 7 | 1 |
+| D9 Brand consistency | 6 | 7 | 7 | 1 |
+| D10 Perceived performance | 5 | 5 | 7 | 2 |
+| **TOTAL** | **57** | **65** | **66** | |
+
+\* C's own evidence column reads "hit-area sweep not re-run independently
+(sibling-owned)" — the 6 is an unmeasured score against two measured 3s and 4s.
+
+Hard fails raised, union of the three: HF-1 (content clipped off-viewport at
+375/320 with no affordance), HF-2 (targets under 44×44 and pairs under 8px, five
+distinct sources), HF-4 (two design systems — the legacy stylesheet, consumed by
+two Matchbook components), HF-6 (non-text contrast under 3:1 on enabled fields;
+gold rail at 2.15:1), HF-10 (colour-alone: `MbNotice` warn vs danger share a
+glyph), HF-13 (16 numerals without `tabular-nums` on `/teams@390`), HF-15
+(keyboard cannot page the screen — the double scrollport).
+
+**Why the spread, and what was done about it.** Part of it is lens difference and
+is intended. The rest was the rubric's fault, and `benchmark-rubric.md` §2 was
+rewritten this round to remove it: every dimension now carries a **Measure**
+block (the quantity, and the command that produces it), §2.2 adds the **phase
+rule** (a component a later workstream owns is *noted*, not scored — one critic
+took D4 to 6 largely because `MbStandingsTable` does not exist, which is
+charter-scheduled for W4/W5 P3a), §2.3 caps an **unmeasured** dimension at 5 and
+forces the label, and §4's verdict format gained mandatory `IN-SCOPE INVENTORY`,
+`SCHEDULED ABSENCES` and `MEASUREMENTS NOT TAKEN` blocks. The bar did not move —
+8 is still the pass line and all ten still have to clear it.
 
 **What still remains before P2 can start:**
 
-1. The **re-critique has not been run.** Until it scores all ten dimensions ≥8
-   with zero §3 hard fails, the programme's verdict is still 64/100 FAIL.
-2. `--all` still reports **295 sub-44px targets (desktop) / 225 (mobile)**,
-   **263 / 258 numerals without `tabular-nums`**, and **82 / 91 a11y failures**
-   across the 23 routes. Almost all of that is un-converted legacy screens, which
-   is expected and is P3's work — but it is the baseline P3 has to clear, and
-   nobody has looked at it yet. `/dev/kit` itself is at 1 TOUCH (the skip link,
-   correctly off-screen), 4 SPACING, 0 everything else.
-3. Two mobile routes were overflowing horizontally when this round started; one
-   still is. The app is being edited concurrently, so re-measure rather than
-   trusting that count.
+1. **Gate 2 has not been run.** Until it scores all ten dimensions ≥8 with zero
+   §3 hard fails on all cards, the verdict stands at FAIL.
+2. Everything in **§8, the deferred-defects register** — the findings this round
+   is deliberately *not* fixing, each with an owner and the check that catches it.
+3. `--all` currently reports **295 sub-44px targets (desktop) / 222 (mobile)**,
+   **263 / 256 numerals without `tabular-nums`**, **82 / 79 a11y failures**, and
+   **1 horizontally overflowing route** across the 23 routes. Almost all of it is
+   un-converted legacy screens, which is expected and is P3's work — but it is
+   the baseline P3 has to clear. `/dev/kit` itself is at 1 TOUCH (the skip link),
+   4 SPACING, 0 SCROLLPORT, 0 FONTS failures, 0 everything else.
 4. The three out-of-zone-A dependencies in §7.3 of the design language must be
    re-declared inside the Matchbook block **before** P4 deletes zone C, and zone
-   B needs an owner.
+   B needs an owner. One of the three — the double scrollport — was closed this
+   round; see §8 D-1.
 5. `MbStateBlock` / `MB_STATE_SCALE` landed in `Panel.tsx` from a sibling while
-   this round was running and are in §4.2. Anything that lands **after** this
-   round is not — re-read the directory before treating §4.2 as exhaustive.
+   the previous round was running and are in §4.2. Anything that lands **after**
+   a round is not — re-read the directory before treating §4.2 as exhaustive.
 
 ### What P1 actually delivered
 
@@ -142,15 +176,64 @@ Still unbuilt, with owners (also listed at the end of §4.2): `MatchbookMasthead
 
 ## 4. State of the tree
 
-`npx tsc --noEmit` clean · `npx eslint src` clean · `npx vitest run` green (205 tests). The seven tsc errors
-and two failing tests recorded here previously are fixed; the primitives listed as missing all landed.
+`npx tsc --noEmit` clean · `npx eslint src` 0 errors / 27 pre-existing warnings · `npx vitest run` green
+(205 tests) — all three re-run at the end of the Gate-1r round.
+
+**Do not trust a red build during a fix round without re-running it.** Mid-round, tsc reported 3 errors, all
+in `src/app/dev/kit/page.tsx` (`MbIconButtonSize` not exported, `size="sm"` not assignable to
+`MbCompositeSize`) — siblings had landed `IconButton.tsx` / `Segmented.tsx` API changes while the shared
+gallery still called the old shape. They were gone twenty minutes later. Same for `--all` sweeps: two
+different routes returned `LOAD FAIL — HTTP 404` on two consecutive passes and loaded on the other.
 
 `src/app/dev/kit/page.tsx` is a **shared gallery** that up to 7 agents append to concurrently. Re-running an
 agent can duplicate its `<section>`, and a mid-write render serves HTTP 500 — if a screenshot or audit run
 returns `LOAD FAIL — HTTP 500` on `/dev/kit` while a fix round is in flight, wait and retry rather than
-debugging it. De-duplicating the gallery is the audit agent's job.
+debugging it. De-duplicating the gallery is the audit agent's job. The same applies to `--all` sweeps: a
+route can return `LOAD FAIL — HTTP 404` on one pass and load on the next while the dev server recompiles.
 
-### What the Gate-1 fix round changed in the harness (W8 slice)
+### What the Gate-1r fix round changed in the harness (W8 slice)
+
+`<SCRATCH>/pw/audit.mjs` gained two sections, both of which exist because a real defect hid from the harness
+for the whole programme:
+
+- **`SCROLLPORT`** — five assertions that the document is the scroller: `document.scrollingElement` is
+  `<html>`; BODY is not itself a scrollport; a programmatic `window.scrollTo` moves `window.scrollY`; the
+  viewport still shows content after that scroll (9 hit-test sample points, not 1); and a **trusted wheel**
+  moves the window rather than an inner scroller. The last two are the ones that matter. On the tree as
+  found, the brief's two assertions both *passed* on `/dev/kit@1440` — `scrollingElement` was still `<html>`
+  and `scrollTo(0,600)` did move `scrollY` to 600 — while the page was thoroughly broken: 600px into an
+  18,124px-tall HTML box whose only painted child was an 844px BODY, so `elementFromPoint` at the viewport
+  centre returned `HTML`, and `page.mouse.wheel(0,800)` moved `body.scrollTop` to 800 with `window.scrollY`
+  at 0. Synthetic wheel events are untrusted and do not scroll, so this half is driven from the harness
+  (`scrollportCheck(page)`), not from inside the page.
+- **`FONTS`** — the computed first font-family of every text-painting node. Two tiers, on the A11Y
+  precedent: **failures** are elements that fell through to Tailwind preflight's text stack (the F20 bug —
+  both faces were dead for weeks because the next/font variable classes sat on `<body>` while every token
+  resolving them sat at `:root`, and nothing failed; it just looked like a slightly wider sans);
+  **notes** are the preflight *mono* stack (`ui-monospace` on `<code>`), a real but lesser defect — a third
+  family the system has never declared. The resolved first-family census always prints, so
+  `Oswald 987 · Outfit 364 · ui-monospace 17` is evidence rather than an assumption.
+
+`--selftest` grew from 15 cases to **22**, all passing. Four cover FONTS (an Oswald node and an Outfit node
+must produce nothing; a `ui-sans-serif` node must be a failure; a `ui-monospace` `<code>` must be a note and
+not a failure). Three cover SCROLLPORT **on both arms of the same synthetic page** — as authored it reports
+0 findings and `wheel → scrollY 800`; then the exact production rule
+(`html, body { height:100%; overflow-x:hidden }`) is injected and the same code reports
+`body-is-second-scrollport`, `window-scroll-does-not-move` and `wheel-bypasses-window-scroll` with
+`wheel → scrollY 0 / body.scrollTop 800`. A check that has only ever seen a broken tree cannot prove it will
+go green on a fixed one, which is why both arms are asserted.
+
+Readings on the current tree — `node audit.mjs --all` at both viewports, 23 routes:
+
+| Section | desktop | mobile | note |
+| --- | --- | --- | --- |
+| `SCROLLPORT` | **0 findings** | **0 findings** | was 3 findings on 12 of 22 mobile routes before the `globals.css` zone-B fix landed mid-sweep; the check caught it live |
+| `FONTS` failures | **0** | **0** | census is Oswald + Outfit only on every route |
+| `FONTS` notes | 1 (`/dev/kit`, 17 `ui-monospace` `<code>` nodes) | 1 | register D-12 territory: printed, not counted |
+
+The summary table gained `SCRL` and `FONT` columns (`FONT` prints `failures/notes`).
+
+### What the earlier Gate-1 fix round changed in the harness (W8 slice)
 
 `<SCRATCH>/pw/audit.mjs` gained **composite awareness**, **three a11y checks** and a **self-test**, because
 its spacing section was about to hand six workstreams a wall of false positives.
@@ -266,7 +349,7 @@ node shot.mjs /competitions/comp-se-city-cup out.png --desktop --full
 node shot.mjs /dev/kit out.png --mobile  # the primitive gallery
 
 # the measurement sweep — read the docblock at the top of audit.mjs first
-node audit.mjs --selftest                        # 15 cases, no dev server needed. Run after editing it
+node audit.mjs --selftest                        # 22 cases, no dev server needed. Run after editing it
 node audit.mjs <routeId|/path> --mobile          # one route
 node audit.mjs --all --desktop --skip-motion     # every route, no reduced-motion pass
 node audit.mjs /dev/kit --desktop --groups       # list the grouped (waived) pairs
@@ -282,11 +365,18 @@ Reading the output:
 | `SPACING` | yes | adjacent interactive pairs under 8px that are **not** one composite's cells |
 | `GROUPED` | **no** | pairs waived as composite cells. Prints the kind and whether a rule was measured |
 | `OVERFLOW` | yes | `body.scrollWidth` vs `clientWidth`, with the widest unclipped culprits named |
+| `SCROLLPORT` | yes | the document must be the scroller: `scrollingElement` is `<html>`, BODY is not a second scrollport, `window.scrollTo` moves `scrollY`, the viewport is not blank afterwards, and a **trusted wheel** moves the window |
 | `NUMERALS` | yes | standalone numerals with no `tabular-nums` (digits inside prose are counted separately and never fail) |
+| `FONTS` failures | yes | computed first font-family fell through to Tailwind preflight's text stack — the Oswald/Outfit chain is broken |
+| `FONTS` notes | **no** | first family is the preflight *mono* stack (`ui-monospace` on `<code>`) — an undeclared third family |
 | `A11Y` failures | yes | `no-accessible-name`, `not-native`, `name-mismatch` |
 | `A11Y` notes | **no** | `title-no-aria-label`, `name-from-title`, `icon-only-no-title` |
 | `CONSOLE` | yes | console + page errors, with the documented dev-env noise filtered |
 | `MOTION` | yes | inline-style drift across two frames under `prefers-reduced-motion: reduce` |
+
+`SCROLLPORT` reports `0 findings` on a page that fits the viewport and says so — a short page cannot
+demonstrate a scroller defect, and that is printed rather than passed silently. `FONTS` always prints the
+resolved first-family census, so a clean run carries its own evidence.
 
 A `GROUPED` count is not a licence to ignore it: a `tablist (no rule)` line means those tabs abut with
 nothing drawn between them, which may still be wrong. It means the 8px *separation* rule does not apply.
@@ -313,3 +403,114 @@ reach ~8700px and need `--scroll` to read.
 - Team colour only ever appears as a contained 3px accent bar beside a crest — never a fill or gradient.
 - Known app bug to fix during W5: `src/app/match/[id]/page.tsx:112` shows a `Live` badge and tappable
   scoring controls on a **completed** match.
+
+---
+
+## 8. Deferred-defects register
+
+**Every Gate-1r critic finding we are deliberately NOT fixing in this round, with the reason and the check
+that will catch it.** This section exists because "later" is where real defects go to die quietly. Nothing
+leaves this register except by being fixed *and re-measured*, or by an explicit decision recorded here.
+
+Sources — three verdicts, full text at `<SCRATCH>/verdict-A.md`, `verdict-B.md`, `verdict-C.md` (extracted
+from `~/.claude/projects/…/subagents/workflows/wf_544d35ce-d57/journal.jsonl`, result rows 30/31/32). Cited
+below as **A**, **B**, **C**. Every number in this section was **re-measured against the working tree during
+the Gate-1r round**, not copied from the verdicts — several had already moved.
+
+Dispositions: **SCHEDULED** (a named workstream/phase owns it) · **OUT OF SCOPE** (a standing decision or
+charter rule puts it elsewhere) · **DISPUTED** (the finding is wrong, or the critics disagree and the tree
+settles it).
+
+### 8.1 Closed during Gate 1r — do not re-file
+
+| Finding | Raised by | Verified closed by |
+| --- | --- | --- |
+| **Double scrollport.** `html, body { height:100%; overflow-x:hidden }` made BODY a second viewport-height scroller; a wheel moved `body.scrollTop` while `window.scrollY` stayed 0, and `End` scrolled the app off-screen into blank paper | A-D10, B-HF-15 | `globals.css` zone B is now `html { height:100%; overflow-x:hidden }` / `body { min-height:100% }`. `audit.mjs --all` reports **0 SCROLLPORT findings on 23 routes, desktop and mobile**. `/dev/kit@1440`: `scrollTo(600) → scrollY 600`, `wheel(800) → scrollY 800, body.scrollTop 0` |
+| **No distinct pressed state on any button.** `.mb-console-column:active` was the only `:active` recipe against 60+ controls | A-D5, C-D5 | `globals.css` now carries **25 `:active` rules** covering `.mb-btn`, `.mb-tile`, `.mb-swatch`, `.mb-segmented > *`, `.mb-stepper button`, `.mb-nav-item`, `.mb-tab`, `.mb-row-hover`, `.mb-panel-link`, `.mb-console-column`, the outline variants, and a `prefers-reduced-motion` arm |
+| **Enabled field boundaries at 1.74:1.** `.mb-input`/`.mb-search`/`.mb-textarea` painted their only edge in `--mb-rule` | C-HF-6a | `.mb-input` now reads `border: var(--mb-rule-edge) solid var(--mb-navy)` |
+| **Both type faces were dead** (the pre-Gate-1r F20 bug) | F20 | New permanent check: `audit.mjs` **FONTS**. `--all` reports **0 preflight fall-throughs on 23 routes** at both viewports; `/dev/kit@1440` census `Oswald 987 · Outfit 364` |
+
+### 8.2 SCHEDULED — a named workstream owns it
+
+#### Legacy stylesheet and leakage
+
+| ID | Finding, as measured now | Raised by | Why not now | Owner | Caught by |
+| --- | --- | --- | --- | --- | --- |
+| D-1 | **231 `oklch(...)` declarations** in `globals.css`, the second `:root` shadcn token block (`--primary` → the old red, `--card`, `--popover`, `--secondary`, `--muted`, `--red-light/dark`, `--card-shadow`, `--color-team-*`), and the **`.dark` block at `globals.css:2271`** | A-HF-4, B-D3 | Charter W2 **P4** deletes zone C only after the last consumer is gone. Deleting it now takes `ThemeToggle`, `ThemeContext` and every unconverted screen with it. Both B and C independently verified **0 legacy classes render** today — the risk is silent, not visible: `bg-primary` would ship the old red and pass tsc, eslint and all 205 tests | W2 / P4 | rubric **9.1** (zero pre-Matchbook classes in the live DOM) and §3 **HF-4**, at Gate 2 and at every P3 screen gate |
+| D-2 | **`.scrollbar-thin` consumed by two Matchbook components** — `Sidebar.tsx:21`, `MobileBar.tsx:43` — whose thumb is `oklch(0.7 0.08 25 / 0.3)`, the pre-Matchbook warm red. (`QuickAddTeams.tsx:261` also consumes it; that file is legacy) | A-HF-4 | This is **not** a zone-C deletion, and the scope rule is explicit: fix the *consumption*, not the class. It is deferred only because both files are W2's shell, and W2 replaces both in P2a — patching them now would be thrown away | W2 / P2a | **9.1**. If P2a lands with either consumer surviving, that is an HF-4 on the shell gate, not a deferral |
+| D-3 | **`.mb-skeleton` paints `rgba(7,50,77,0.08)`** rather than an alpha of `--mb-navy` | B-fix6 | Cosmetically identical today; it is a token-hygiene item that belongs with the zone-C sweep | W2 / P4 | rubric **3.1** |
+| D-4 | **`.hide-landscape` and the `@media (max-height: 500px)` helpers live in zone B**, owned by nobody, and Matchbook screens depend on them | design-language §7.3 | Zone B has no owner assigned. Assigning one is a charter decision, not a fix | **UNOWNED — assign before P4** | nothing automated. This is the one item in this register with no check behind it |
+
+#### Touch, spacing and overflow
+
+| ID | Finding, as measured now | Raised by | Why not now | Owner | Caught by |
+| --- | --- | --- | --- | --- | --- |
+| D-5 | **The 44px coarse-pointer floor is written but never armed.** `[data-mb-touch="on"]` appears at `globals.css:1048–1051` and **nowhere else in `src/`** — 4 selector lines, 0 writers | A-HF-2, A-D6 | Charter **H6** requires the attribute, the `maximumScale` removal and `viewport-fit: cover` to land in one commit. That commit is W2's | W2 / P2a | `audit.mjs` **TOUCH** (rubric 6.1). Note the floor being dead is *not* itself what TOUCH measures — TOUCH measures the consequence, which is D-6 |
+| D-6 | **295 sub-44px targets desktop / 222 mobile across 23 routes.** Kit-level survivors, re-measured: `a.mb-nav-item` **217×38 at 0px separation ×6** on `/`; `a.mb-btn.mb-btn-outline` **177×38.8**; `a.mb-skip-link` **135.8×36.8** (the only TOUCH finding on `/dev/kit`); `a.mb-panel-link` was **98.3×17.3** on `/` | A-HF-2, B-HF-2 | The great majority are un-converted legacy screens and are P3's baseline. The kit-level ones are gated on D-5: arming the floor fixes the whole class in one place, and patching call sites first would have to be undone | W2 / P2a (floor) · W3–W7 / P3 (screens) | `audit.mjs` **TOUCH**, per route. Target is 0 on every converted screen |
+| D-7 | **`/tools` overflows +35px horizontally at 390px** — `body.scrollWidth 425 vs clientWidth 390`, culprit `div.flex.items-center.gap-4` in the masthead stat row (`right 425, w 409`) | not raised by any critic — found by this round's sweep | The tools hub shipped in `abd874b`; it is a converted screen, so this is a live **HF-1**, not a deferral. Recorded here so it is not lost between rounds | **owner of `/tools` (W7)** — next round, not later | `audit.mjs` **OVERFLOW** (rubric 6.3). Currently the only overflowing route of 23 |
+| D-8 | **`.mb-badge` 342.9px wide at x=41 in a 375px viewport**, severed mid-word ("…BEFORE THE B") and unreachable because the root `overflow-x: hidden` suppresses the scroll | C-HF-1 | Disputed in part — see **D-22**. The demo label on `/dev/kit` is a gallery string, but `MbBadge` clamping is a real kit gap | W1 (kit) — next round | rubric **6.3** + the D4 `clipped` expression at 320/375 |
+| D-9 | **320px hard clipping with no ellipsis**: `(required)` loses 74px, StepRail legend loses 77/88/80px | B-D1 | Same class as D-8 and the same fix (wrap-or-ellipsis strategy), so it moves with it | W1 (kit) — next round | D4 `clipped` at 320 |
+
+#### Type, colour and copy on the six shipped screens
+
+The critics all scored `/dev/kit`. These are on the **shipped** screens and were measured this round.
+
+| ID | Finding, as measured now | Raised by | Why not now | Owner | Caught by |
+| --- | --- | --- | --- | --- | --- |
+| D-10 | **Coral-as-text below AA on five of the six shipped screens — 19 failing text nodes.** Sidebar wordmark "Tracker" `span.block.text-mb-coral` 16.8px/700 at **3.26:1** (all six screens); `/competitions` status badge "Draft" 10.56px/700 at **2.15:1**; `/competitions` "Live" chip 14.4px/700 at **4.20:1**; kickers and datelines ("Jul 31", "Round 4", "5:48 AM") at **3.26–3.55:1**; `/competitions` scoreline "15 – 13" 15.2px/700 at 3.55:1. Floors: 4.5:1 under 24px (or under 18.66px/700). Per screen: `/` 5 fails, `/teams` 3, `/competitions` 7, `/history` 0, `/tools` 2, `/quick-match` 2 | not raised — the critics scored `/dev/kit`, which is clean (A and C both measured 0 real failures there) | This is a live **HF-6** on shipped screens, deferred only because the fix is one decision — coral letterforms under 24px go to `--mb-coral-deep`, exactly as `.mb-badge` already resolved for its own tone words at 0.66rem (recorded in §3 of this file) — and that decision belongs with whoever owns the shipped-screen sweep, not with a kit agent | **W1/W2 shipped-screen sweep — next round** | rubric **3.2** (`text` list must be empty on every screen coral appears on) and §3 **HF-6** |
+| D-11 | **16 standalone numerals without `tabular-nums` on `/teams@390`**, from `teamPanels.tsx`, including a 13.6px `td.matchbook-display` "1". App-wide: **263 desktop / 256 mobile** across 23 routes | A-HF-13 | The `/teams` 16 are a converted screen and are a live **HF-13**; the rest are un-converted P3 screens | W1 (teamPanels) — next round · W3–W7 / P3 (rest) | `audit.mjs` **NUMERALS** (rubric 1.6 / 4.6) |
+| D-12 | **28 `border-[1.5px]` call sites in 15 files** (`competitions/page.tsx` 3, `dev/kit/page.tsx` 3, `login/page.tsx` 3, `quick-match/page.tsx` 3, `tools/page.tsx` 3, `CopyField.tsx` 3, `summaries/page.tsx` 2, plus 8 files at 1) against **10** call sites using the `--mb-rule-edge/accent/anchor` tier. Was 50 in 16 files when this round opened | A-D2 | **This is not a defect.** The design language records that Chrome floors `border-width: 1.5px` to a used value of 1px at DPR 1/2/3 — a sweep of `/dev/kit` found 2783 rendered borders, **zero at 1.5px**. `border-[1.5px]` is the shipped idiom and produces the correct line. Converting the remainder to the token tier is *consistency*, not correctness, and going to 2px is forbidden (spoken for) | W1 — opportunistic, no deadline | nothing automated, by design. Do **not** add an audit check for it; a check that fires on correct code is how a tool gets ignored |
+| D-13 | **`splitStateMessage` (`Panel.tsx`) prints the post-em-dash clause verbatim as a deck**, so shipped empty states open lowercase mid-sentence: "add your first team to start the directory.", "its status will appear here." — 6 on `/teams`, 6 on `/competitions`, ~35 messages app-wide | A-D1 | Copy pass across ~35 strings; belongs with the shipped-screen sweep, not with a kit agent mid-round | W1/W2 shipped-screen sweep | rubric **7.5** and D1 evidence; no automated check |
+| D-14 | **`/competitions` renders seven equal-weight "NO … EXIST YET" display headlines**, two textually identical, five with no action — `PanelEmpty` promotes every empty state to a 1.2rem bold display line and `MB_STATE_SCALE` has no quieter row | A-D7, A-D8 | Needs a third `MB_STATE_SCALE` row (`quiet`) and a `scale` prop — a kit API change, then a screen pass. Two owners, so it is sequenced rather than raced | W1 (kit scale) → W1/W2 (screen) | rubric **7.3** (≤1 equal-weight state headline per screen) and **8.1** |
+
+#### Kit API, size ladder and type scale
+
+| ID | Finding, as measured now | Raised by | Why not now | Owner | Caught by |
+| --- | --- | --- | --- | --- | --- |
+| D-15 | **Four incompatible control ladders**: `.mb-btn` 44/48/56, `MbIconButton` 44/56, `.mb-segmented` 44/48, `.mb-stepper` 46/58 — and `size="md"` means 48px on one and 44px on another. One `MbSegmented[data-size="md"]` rendered cells at 48 **and** 54.38 simultaneously when a label wrapped | A-D2, A-D9 | `Button.tsx`, `IconButton.tsx`, `Segmented.tsx` and `form.tsx` are all being edited by siblings **in this round** — this is in flight, not deferred, and this row exists so it is re-measured rather than assumed | W1 — this round | rubric **2.1** and **2.5** (`heights` must be a subset of {44,48,56}; `sizeSplit` must be empty) |
+| D-16 | **Button appearance has four prop names** (`variant` / `tone` / `actionTone` / `triggerVariant`); **`tone` names seven unrelated unions**, and `tone="navy"` means *ink* on `MbLiveStatus`/`MbScoreNumeral` but *ground* on `Panel`/`MbDialog`/`MbIconButton`; `MbTabs` takes `onValueChange`+`items` while `MbSegmented` takes `onChange`+`options`; `MbAction` and `MbEmptyStateAction` are two near-identical action interfaces | A-D9 | A rename touching every kit file and every call site. Doing it mid-round, while six agents hold those files, guarantees conflicts. It must be one commit, alone | W1 — dedicated round **before W2 forks a third action type for `MatchbookMasthead`** | rubric **9.4**. This is the highest-leverage item in the register: every hour it waits, more call sites copy the wrong name |
+| D-17 | **Five hand-rolled controls inside the kit re-derive `.mb-btn`** rather than composing it — `Dialog.tsx`, `Sheet.tsx`, `CopyField.tsx`, `form.tsx` (tag remove). `CopyField`'s Copy key is a second navy-fill treatment at 0.72rem with a `brightness-125` hover, sitting inches from a real `.mb-btn-navy` at 0.8rem in the gallery | A-D9 | Blocked on D-15: `CopyField` exists in that shape **only because `MbIconButton` has no 48px step**. Fixing it before the ladder just moves the seam | W1 — after D-15 | rubric **9.5** |
+| D-18 | **54 distinct type steps at 1440px / 53 at 390px against a named scale of 23**; 8 size/weight pairs carrying two or more trackings at once; 179 elements riding `.matchbook-display`'s default `0.02em`, which §2.2 says is only correct for the masthead — and the masthead measures `0.01em`, so `0.02em` is correct for nothing; off-scale sizes 12px (`ActionBar.tsx`), 11.2px (`MbStat` delta), 14px (`form.tsx` `md:text-sm!`) | C-D1 | A scale-closure pass across the whole kit. Partly in flight (`form.tsx` is held by a sibling this round); the rest is a dedicated pass | W1 — next round | rubric **1.1 / 1.2 / 1.3**, which is exactly why those three quantities were added to the rubric this round |
+| D-19 | **25 of 50 prose blocks fall outside 45–75 characters per line** (worst 134/116/116/113); `MbNotice` has no measure cap and sets **127 characters on one line** at 1440px | C-D1, C-D7 | Needs a `max-width` decision on the state/notice blocks — a design-language change, then a kit change | W1 — with D-18 | rubric **1.4** and **7.5** |
+| D-20 | **13 elements truncate at desktop 1440px**, including a `.mb-kicker truncate` clipping 278px of label into 134px and `MbStat`'s "POINTS SCORED ACROS…" inside a 1300px panel | C-D4, C-D6 | Removing `truncate` risks reflow in panels a sibling is editing; it needs one pass with fresh shots | W1 — next round | rubric **4.4** / **8.4** (`clipped` must be 0 at 1440) |
+| D-21 | **`MbNotice` warn and danger share one glyph** (`DEFAULT_ICON.warn = DEFAULT_ICON.danger = "warning"`), identical navy letterforms, identical geometry — the only difference is hue, and the warn hue (`--mb-gold` at **2.15:1**) fails 3:1 | C-HF-10, C-HF-6b | Confirmed still present in `Notice.tsx`. This is a live **HF-10 + HF-6** and is deferred by one round only because `Notice.tsx` was not in any agent's slice this round — an oversight, not a decision | W1 — **next round, first item** | §3 **HF-10** and rubric **3.3**. No automated check exists for colour-alone; it is a read of the greyscale shot (rubric 3.5) |
+| D-22 | **Coral does ~15 jobs**, including the focus ring on all 60 tab stops — on `MbTabs` the focus ring and the active-tab underline are the same hue with opposite meanings. Two semantic collisions against the design language's own §1.2 table: "leader" is `--mb-teal` as a table rail but `--mb-coral` as the scoreboard notch; "Final" is `--mb-green` as a badge but `--mb-coral-deep` as `.mb-stamp-final` | C-D3 | The focus-ring hue is a system-wide decision (it appears on every screen, converted or not) and the two collisions are design-language edits before they are code edits | W1 + design-language owner — dedicated decision | rubric **3.4** (coral job count ≤2). The count is the point: it is the one quantity that makes "coral is reserved" falsifiable |
+| D-23 | **`.mb-icon-disc` is 999px for navy/teal/green but 3px for coral/gold/red** — a class named "disc" renders rectangular 4 times in 23, so the shape channel maps two tones to one mark in greyscale where `MbBadge` gets 9 distinct marks. Plus **6 elements at a 1px radius**, outside the 4/3/2/999 vocabulary | C-D2, C-D9 | Small, real, and not held by anyone this round | W1 — next round | rubric **2.2** (`radii` must be a subset of the vocabulary) and **3.5** |
+| D-24 | **`MbToggle` hard-codes coral for every "on" switch** with no prop to quiet it, and its "on" state reads **lighter** than its "off" in greyscale — inverted weight | A-D3, A (greyscale note) | `form.tsx` is held by a sibling this round | W1 — next round | rubric **3.4** and **3.5** |
+| D-25 | **Motion property census**: 0 of 358 transitioning elements animate `transform`; 27 animate `opacity`; **324 animate paint properties and 7 animate `width`** (`.mb-meter > span`, layout-triggering). The dominant duration is **150ms**, which is not one of `--mb-dur-fast/base/slow` (120/180/280) — 7 hand-written `0.15s` in `globals.css` plus Tailwind's `transition-colors` default | C-D5 | Partly closed: the `:active` recipes landed this round (§8.1). The `width`→`transform: scaleX()` change and the duration sweep did not | W1 — next round | rubric **5.1** (`props.layout` must be 0) and **5.2** (every duration resolves to a token) |
+| D-26 | **`.mb-enter` / `.mb-stagger-1..6` have zero consumers outside the `/dev/kit` demo tile** — the documented entrance vocabulary is applied to 6 demo elements on a 20,900px page and to nothing shipped. The brief calls "alive" a first-class requirement | A-D5, C-D5 | Applying entrance choreography to shipped screens is a per-screen authoring decision (which elements, in what order), not a kit change — it belongs to each screen's conversion | W2 / P2a (shell) then W3–W7 / P3 (screens) | rubric **5.4** (`entrance.count > 0 and ordered`). Until a screen conversion applies it, D5 cannot reach 8 on that screen |
+| D-27 | **Type does not escalate on mobile** — `/dev/kit` renders 9.92px labels and 11.52px body at 390px, byte-identical to 1440px except the `h1` | C-D6 | A responsive type-scale decision for the design language, then a kit pass | design-language owner → W1 | rubric **6.6** |
+
+#### Not-yet-built components — SCHEDULED ABSENCES, noted not scored (rubric §2.2)
+
+| ID | Absent | Owner | Note |
+| --- | --- | --- | --- |
+| D-28 | `MbStandingsTable`, `MbMatchRow`, `BracketRail` / `MbBracketCell` / `BracketConnectors`, `MbCourtCard`, `MbScoreSide`, `MbSetStrip` | **W4 + W5 / P3a** | A took D4 to 6 largely on this absence. Under the phase rule this is now a SCHEDULED ABSENCE and does not move a score. It also means **D4 cannot be meaningfully scored on `/dev/kit`** — one numeral and one matchup block is fewer than three in-scope specimens, so `n/a` is the correct entry at P1 |
+| D-29 | `MbToast` + `useToast` + `ToastHost`, `MbPageLoading`, `MbOfflineBanner` | **W2 / P2b** | A deducted D7 for their absence; same treatment |
+| D-30 | `MatchbookMasthead`, `MbEventBar`, `MatchbookTopStrip`, `MatchbookBottomBar`, `MbAccountChip`, `MbPanelFoot`, `useCourtView` | **W2 / P2a**, `useCourtView` **W5 / P3a** | Same treatment. Note D-16: `MatchbookMasthead` must not fork a third action interface |
+
+### 8.3 OUT OF SCOPE — a standing decision or charter rule puts it elsewhere
+
+| ID | Finding | Why |
+| --- | --- | --- |
+| D-31 | The `.dark` block, `ThemeToggle`, `ThemeContext` | Dark mode is dropped for Matchbook (§7). Deletion is W2/P4, not a defect to fix |
+| D-32 | `.soft-card`, `.playful-card`, `.glass-*` in `globals.css` | Zone C, W2/P4 deletion. No Matchbook component consumes them (verified: the only Matchbook consumers of any zone-B/C class are the two `.scrollbar-thin` call sites in D-2) |
+| D-33 | No view-transition / shared-element continuity between list and detail | B-D5, C-D5 raise it as the D5 **10-anchor**, not the 8-anchor. It is a P3 screen-pair concern (list→detail), and no screen pair is converted yet |
+| D-34 | No INP / CLS figures produced | B-D10, C-D10. Real, and now operational rather than deferred: rubric **10.1/10.2** name the measurement and §2.3 caps D10 at 5 without it. The next critic must produce the numbers |
+
+### 8.4 DISPUTED — recorded so it is not re-litigated from memory
+
+| ID | Claim | Ruling |
+| --- | --- | --- |
+| D-35 | A-D2: "35 literal `1.5px` borders … in a system whose own CSS records that the 1.5px tier never rendered" — framed as a defect | **Rejected as a defect, kept as a consistency item (D-12).** `border-[1.5px]` is the shipped idiom and renders the correct 1px line at every DPR. The count also moved from 50/16 files to **28/15** during this round, so any verdict quoting the old number is stale |
+| D-36 | C-HF-1: the clipped `.mb-badge` at 375px is a hard fail | **Upheld as a kit gap (D-8), disputed as a screen defect.** The offending string is a `/dev/kit` demo label chosen to stress the component; the real finding is that `MbBadge` has no `max-width`/ellipsis degradation, which is D-8. Shortening the demo label alone would hide it |
+| D-37 | C-D6 scored touch ergonomics **6** while stating the hit-area sweep was not re-run; A and B measured **3** and **4** | **C's number is void under rubric §2.3** (unmeasured ⇒ capped at 5, labelled `UNMEASURED`). The tree's own measurement stands: `/dev/kit` 1 TOUCH, `/` 22 of 23 sub-44, `/teams@390` 17 of 17 |
+| D-38 | B-D1 scored typographic craft **8**; A and C scored **6** | **Unresolved by measurement at the time** — B did not produce the step census (1.1), the tracking-collision list (1.3) or the cpl list (1.4) that C did. Under the rewritten §2 the three quantities are mandatory, so this specific disagreement cannot recur: 54 steps against a named 23 is not an 8 |
+| D-39 | A-D10 scored perceived performance **5** citing the double scrollport; C scored **7** without checking it | **A was right and the defect is now closed** (§8.1). C's D10 did not run 10.3; under §2.3 it would now be capped |
+
+### 8.5 How this register is discharged
+
+At Gate 2, every row in §8.2 is either (a) closed and re-measured, with the number in §8.1, or (b) still here
+with a fresh measurement and an unchanged owner. A row that has been in this register for two consecutive
+gates without moving is escalated to the phase table in §3 as a blocking item — that is the whole mechanism
+that stops "later" from being permanent.

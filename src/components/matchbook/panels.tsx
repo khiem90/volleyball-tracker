@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { MbIcon } from "./MbIcon";
 import { Crest, FormLetters, FormSquares, Panel, PanelEmpty, TeamMark } from "./Panel";
+import { readinessColor, readinessInk } from "./teamStats";
 import type {
   MbBracket,
   MbFeaturedMatch,
@@ -13,21 +14,56 @@ import type {
   MbStandingRow,
 } from "./types";
 
+/* ---------------------------------------------------------------------------
+   THE 44px FLOOR ON A PANEL LINK
+
+   `.mb-panel-link` renders 17.3px tall. `globals.css` gives it a 44px floor,
+   but only inside `@media (pointer: coarse)` — so every panel link in the app
+   is a 17.3px target for a mouse, and invariant 33 / HF-2 are not scoped to
+   pointer type. Measured on the converted routes at 1440: 11 such links on
+   `/`, 3 on `/teams`, 2 on `/quick-match`.
+
+   Two shapes, because a header link and a footer link are different objects:
+
+   `MB_PANEL_LINK_HIT` — a `::before` overlay that reaches 44px without
+   changing the box. A pseudo-element is hit-tested as its originating element,
+   so the tap area grows and the panel head does not: the alternative,
+   `min-h-11` on the link, adds ~22px to every panel head on the screen for a
+   control that is already legible. `inset-x-0` keeps the expander inside the
+   link's own column, so it cannot reach across the head and swallow a click
+   meant for the title.
+
+   `MbPanelFooterLink` — the footer CTA is the full width of the panel and is
+   the row a thumb actually goes for, so it takes a real 44px box rather than an
+   invisible one.
+   --------------------------------------------------------------------------- */
+export const MB_PANEL_LINK_HIT =
+  "relative before:absolute before:inset-x-0 before:-inset-y-[14px] before:content-['']";
+
+/** A panel-head action. Passed through `Panel`'s `meta` slot, not `action`. */
+export const MbPanelHeadLink = ({ href, label }: { href: string; label: string }) => (
+  <Link href={href} className={`mb-panel-link ${MB_PANEL_LINK_HIT}`}>
+    {label}
+    <MbIcon id="chevron-right" size={11} />
+  </Link>
+);
+
 const FooterLink = ({ href, label }: { href: string; label: string }) => (
-  <div className="border-t border-mb-rule px-4 py-2 text-center mt-auto">
-    <Link href={href} className="mb-panel-link justify-center">
+  <div className="mt-auto border-t border-mb-rule px-4 text-center">
+    <Link href={href} className="mb-panel-link min-h-11 w-full justify-center">
       {label}
       <MbIcon id="chevron-right" size={11} />
     </Link>
   </div>
 );
 
-const statusColor = (percent: number) =>
-  percent >= 85
-    ? "var(--mb-green)"
-    : percent >= 65
-      ? "var(--mb-gold)"
-      : "var(--mb-red)";
+/**
+ * The rank column's numerals. `.matchbook-display` sets the display face but
+ * not the figure set, so an ordinal column was reflowing between "9" and "10"
+ * — HF-13, and measured by `audit.mjs` as 6 standalone numerals on `/` and 8
+ * on `/teams`. Declared once here rather than re-typed per `<td>`.
+ */
+const RANK_CELL = "matchbook-display text-center font-bold tabular-nums";
 
 /* ------------------------------- Standings ------------------------------- */
 
@@ -38,7 +74,7 @@ export const StandingsPanel = ({
   title: string;
   rows: MbStandingRow[];
 }) => (
-  <Panel title={title} action="View Full Table" href="/competitions">
+  <Panel title={title} meta={<MbPanelHeadLink href="/competitions" label="View Full Table" />}>
     {rows.length === 0 ? (
       <PanelEmpty
         message="No standings exist yet — create teams and play matches to build the table."
@@ -64,7 +100,7 @@ export const StandingsPanel = ({
             {rows.map((row, i) => (
               <tr key={row.team.name + i}>
                 <td
-                  className="matchbook-display text-center font-bold"
+                  className={RANK_CELL}
                   style={
                     i === 0
                       ? { boxShadow: "inset 3px 0 0 var(--mb-teal)" }
@@ -117,7 +153,10 @@ export const MatchOfTheDayPanel = ({ match }: { match: MbFeaturedMatch | null })
           <p className="matchbook-display text-[0.72rem] font-semibold tracking-[0.08em]">
             {match.division}
           </p>
-          <p className="matchbook-display text-[0.8rem] font-bold text-mb-coral">
+          {/* Navy, not coral. 12.8px/700 coral on `--mb-paper-bright` measured
+              3.55:1 against a 4.5:1 floor, and a kick-off time is data, not a
+              call to action — coral's job list has no entry for it. */}
+          <p className="matchbook-display text-[0.8rem] font-bold tabular-nums">
             {match.time}
           </p>
         </div>
@@ -162,9 +201,9 @@ export const MatchOfTheDayPanel = ({ match }: { match: MbFeaturedMatch | null })
             ))}
           </div>
         )}
-        <div className="mt-auto flex items-center justify-between border-t-[1.5px] border-mb-navy px-4 py-2">
+        <div className="mt-auto flex items-center justify-between border-t border-mb-navy px-4 py-2">
           <span className="flex items-center gap-1.5 text-[0.72rem] font-medium">
-            <MbIcon id="location" size={13} className="text-mb-coral" />
+            <MbIcon id="location" size={13} className="text-mb-navy" />
             <span className="matchbook-display tracking-[0.06em]">{match.venue}</span>
           </span>
           {match.attendance && (
@@ -179,7 +218,7 @@ export const MatchOfTheDayPanel = ({ match }: { match: MbFeaturedMatch | null })
 /* ------------------------------- Live courts ------------------------------ */
 
 export const LiveCourtsPanel = ({ courts }: { courts: MbLiveCourt[] }) => (
-  <Panel title="Live Courts" action="View All Courts" href="/competitions">
+  <Panel title="Live Courts" meta={<MbPanelHeadLink href="/competitions" label="View All Courts" />}>
     {courts.length === 0 ? (
       <PanelEmpty
         message="No live matches exist yet — matches in progress will appear here."
@@ -198,10 +237,14 @@ export const LiveCourtsPanel = ({ courts }: { courts: MbLiveCourt[] }) => (
             </div>
             <TeamMark team={court.home} className="justify-self-start" />
             <div className="flex flex-col items-center gap-0.5">
+              {/* `.mb-score-box` sets the display face and a 26px min-width but
+                  no figure set, so a live score stepping 9 -> 10 re-cut its own
+                  box. These are the highest-frequency numerals on the screen;
+                  HF-13 names them first. */}
               <span className="flex items-center gap-1.5">
-                <span className="mb-score-box">{court.homeScore}</span>
+                <span className="mb-score-box tabular-nums">{court.homeScore}</span>
                 <span className="text-mb-ink-muted text-xs">–</span>
-                <span className="mb-score-box">{court.awayScore}</span>
+                <span className="mb-score-box tabular-nums">{court.awayScore}</span>
               </span>
               <span className="mb-kicker">{court.setLabel}</span>
             </div>
@@ -223,7 +266,7 @@ export const LiveCourtsPanel = ({ courts }: { courts: MbLiveCourt[] }) => (
 /* -------------------------------- Schedule -------------------------------- */
 
 export const SchedulePanel = ({ items }: { items: MbScheduleItem[] }) => (
-  <Panel title="Upcoming Schedule" action="View Full Schedule" href="/competitions">
+  <Panel title="Upcoming Schedule" meta={<MbPanelHeadLink href="/competitions" label="View Full Schedule" />}>
     {items.length === 0 ? (
       <PanelEmpty
         message="No upcoming matches exist yet — start a competition to fill the schedule."
@@ -237,11 +280,15 @@ export const SchedulePanel = ({ items }: { items: MbScheduleItem[] }) => (
             key={i}
             className="grid grid-cols-[42px_50px_1fr] items-center gap-1 py-2 pl-2.5 pr-2.5"
           >
+            {/* The coral on this list is the 2px SPINE (coral job 4), which is
+                a mark. The date beside it was a second coral doing the same job
+                as a letterform: 10.24px/700 at 3.55:1 on `--mb-paper-bright`.
+                Navy, and the spine keeps the accent. */}
             <div>
               <p className="matchbook-display text-[0.64rem] font-bold leading-tight">
                 {item.day}
               </p>
-              <p className="matchbook-display text-[0.64rem] font-bold leading-tight text-mb-coral">
+              <p className="matchbook-display text-[0.64rem] font-bold leading-tight tabular-nums">
                 {item.date}
               </p>
             </div>
@@ -274,7 +321,7 @@ export const SchedulePanel = ({ items }: { items: MbScheduleItem[] }) => (
 /* --------------------------------- Bracket -------------------------------- */
 
 export const BracketPanel = ({ bracket }: { bracket: MbBracket | null }) => (
-  <Panel title="Championship Bracket" action="View Full Bracket" href="/competitions">
+  <Panel title="Championship Bracket" meta={<MbPanelHeadLink href="/competitions" label="View Full Bracket" />}>
     {!bracket ? (
       <PanelEmpty
         message="No bracket exists yet — it appears once four or more teams are ranked."
@@ -290,7 +337,7 @@ export const BracketPanel = ({ bracket }: { bracket: MbBracket | null }) => (
               <div className="flex flex-col gap-1.5 flex-1 min-w-0">
                 {pair.map((seed) => (
                   <div key={seed.seed} className="mb-seed-box">
-                    <span className="matchbook-display w-4 text-center text-[0.72rem] font-bold text-mb-ink-muted">
+                    <span className="matchbook-display w-4 text-center text-[0.72rem] font-bold tabular-nums text-mb-ink-muted">
                       {seed.seed}
                     </span>
                     <Crest team={seed.team} size={20} />
@@ -300,14 +347,18 @@ export const BracketPanel = ({ bracket }: { bracket: MbBracket | null }) => (
                   </div>
                 ))}
               </div>
-              <div className="w-3 shrink-0 self-stretch my-3 border-y-[1.5px] border-r-[1.5px] border-mb-navy" />
+              {/* Edge tier, 1px. The `[1.5px]` these four rules used to carry
+                  never rendered — Blink floors a used border-width to whole CSS
+                  pixels, so it painted 1px at DPR 1, 2 and 3 while claiming a
+                  tier the system does not have. Same pixels, honest source. */}
+              <div className="w-3 shrink-0 self-stretch my-3 border-y border-r border-mb-navy" />
             </div>
           ))}
         </div>
-        <div className="w-4 shrink-0 border-t-[1.5px] border-mb-navy" />
+        <div className="w-4 shrink-0 border-t border-mb-navy" />
         <div className="flex w-[118px] shrink-0 flex-col items-center gap-1.5">
           <p className="mb-kicker self-start">Final</p>
-          <div className="flex w-full items-center gap-2 border-[1.5px] border-mb-navy bg-mb-paper-bright px-2.5 py-2">
+          <div className="flex w-full items-center gap-2 border border-mb-navy bg-mb-paper-bright px-2.5 py-2">
             <MbIcon id="compete" size={20} className="text-mb-navy" />
             <span className="matchbook-display text-[0.76rem] font-semibold leading-tight text-mb-ink-muted">
               TBD
@@ -330,7 +381,7 @@ export const BracketPanel = ({ bracket }: { bracket: MbBracket | null }) => (
 /* ----------------------------- Recent results ----------------------------- */
 
 export const RecentResultsPanel = ({ results }: { results: MbRecentResult[] }) => (
-  <Panel title="Recent Results" action="View All Results" href="/summaries">
+  <Panel title="Recent Results" meta={<MbPanelHeadLink href="/summaries" label="View All Results" />}>
     {results.length === 0 ? (
       <PanelEmpty
         message="No results exist yet — finished matches will land here."
@@ -367,7 +418,7 @@ export const RecentResultsPanel = ({ results }: { results: MbRecentResult[] }) =
 /* ----------------------------- Team readiness ----------------------------- */
 
 export const ReadinessPanel = ({ rows }: { rows: MbReadinessRow[] }) => (
-  <Panel title="Team Readiness" action="View All Teams" href="/teams">
+  <Panel title="Team Readiness" meta={<MbPanelHeadLink href="/teams" label="View All Teams" />}>
     {rows.length === 0 ? (
       <PanelEmpty
         message="No teams exist yet — add teams to track their form and readiness."
@@ -396,12 +447,12 @@ export const ReadinessPanel = ({ rows }: { rows: MbReadinessRow[] }) => (
                     <span className="w-7 text-[0.74rem] font-semibold tabular-nums">
                       {row.percent}%
                     </span>
-                    <span className="h-[7px] w-12 overflow-hidden rounded-sm bg-[rgba(7,50,77,0.12)]">
+                    <span className="h-[7px] w-12 overflow-hidden rounded-sm bg-[var(--mb-tint-3)]">
                       <span
                         className="block h-full"
                         style={{
                           width: `${row.percent}%`,
-                          background: statusColor(row.percent),
+                          background: readinessColor(row.percent),
                         }}
                       />
                     </span>
@@ -410,9 +461,11 @@ export const ReadinessPanel = ({ rows }: { rows: MbReadinessRow[] }) => (
                 <td>
                   <FormLetters form={row.form} />
                 </td>
+                {/* Ink, not mark: see `readinessInk`. The bar above keeps the
+                    bright tone; the word takes the twin that clears 4.5:1. */}
                 <td
                   className="matchbook-display pr-3! text-right text-[0.64rem] font-bold"
-                  style={{ color: statusColor(row.percent) }}
+                  style={{ color: readinessInk(row.percent) }}
                 >
                   {row.status}
                 </td>
@@ -459,7 +512,7 @@ export const LeadersPanel = ({
       </div>
     )}
     {totals.length > 0 && (
-      <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-1 border-t-[1.5px] border-mb-navy px-4 py-2">
+      <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-mb-navy px-4 py-2">
         <span className="matchbook-display text-[0.68rem] font-bold tracking-[0.08em]">
           All-Time Totals
         </span>

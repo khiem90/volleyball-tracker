@@ -37,7 +37,13 @@ export const Navigation = memo(() => {
 
   return (
     <>
-      <nav className="sticky top-0 z-50 w-full bg-background border-b border-border">
+      {/* `.mb-safe-top` is the one Matchbook class this legacy nav carries, and
+          it is not decoration: `layout.tsx` now sets `viewport-fit: cover`, so
+          without the inset this bar slides under the status bar on a notched
+          phone. Charter H6 requires every fixed/sticky edge element to be
+          padded in the same commit that flips the viewport — including the five
+          unconverted routes this component still owns. */}
+      <nav className="mb-safe-top sticky top-0 z-50 w-full bg-background border-b border-border">
         <div className="max-w-6xl mx-auto px-4">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
