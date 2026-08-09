@@ -93,9 +93,11 @@ export const TeamMark = ({
   accent?: string;
   className?: string;
 }) => {
-  const step = typeof size === "string" ? TEAM_MARK_STEPS[size] : null;
-  const crestSize = step ? step.crest : size;
-  const nameClass = step ? step.name : "text-[0.82rem]";
+  // Narrow on `size` itself, not on a derived variable — TypeScript only carries
+  // the narrowing through the expression that tested it.
+  const crestSize = typeof size === "number" ? size : TEAM_MARK_STEPS[size].crest;
+  const nameClass =
+    typeof size === "number" ? "text-[0.82rem]" : TEAM_MARK_STEPS[size].name;
 
   if (orientation === "vertical") {
     return (
@@ -182,7 +184,7 @@ export const FormSquares = ({
             style={{
               background: result
                 ? tint ?? FORM_COLORS[result]
-                : "rgba(7, 50, 77, 0.12)",
+                : "var(--mb-tint-3)",
             }}
           />
         );
@@ -264,7 +266,7 @@ export const PanelEmpty = ({
     <div className="flex flex-col items-center justify-center gap-3 px-4 py-8 text-center flex-1">
       {mark && (
         <span className={`mb-icon-disc h-9 w-9 ${state.ink}`}>
-          <MbIcon id={mark} size={16} className={state.ink} />
+          <MbIcon id={mark} size={16} />
         </span>
       )}
       {state.word ? (

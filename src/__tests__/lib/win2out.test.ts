@@ -158,10 +158,26 @@ describe('processMatchResult', () => {
   });
 
   it('BUG: winStreak resets on crowning, so it never exceeds 1', () => {
+    // t0 wins twice and is crowned, which empties the court; t3/t4 are drawn in
+    // and t3 then wins twice and is crowned too. Two crownings, and not one
+    // status ever holds a streak of 2 — `winStreak` is a 0/1 flag in practice,
+    // so any UI promising "3 in a row" cannot be built on it.
     const state = initializeWin2OutState('c', teamIds(6), 1);
     const first = generateInitialMatches('c', teamIds(6), 1)[0];
-    const { state: after } = play(state, asMatch(first, { id: 'm1' }), ['t0', 't0', 't2', 't2']);
+    const { state: after, steps } = play(state, asMatch(first, { id: 'm1' }), [
+      't0',
+      't0',
+      't3',
+      't3',
+    ]);
+
+    expect(steps[1].next).toMatchObject({ homeTeamId: 't3', awayTeamId: 't4' });
     expect(after.teamStatuses.every((status) => status.winStreak <= 1)).toBe(true);
+    expect(getChampionCount(after, 't0')).toBe(1);
+    expect(getChampionCount(after, 't3')).toBe(1);
+    expect(
+      after.teamStatuses.filter((status) => status.winStreak === 1).map((s) => s.teamId)
+    ).toEqual([]);
   });
 
   it('reports the streak of the champion currently holding a court', () => {

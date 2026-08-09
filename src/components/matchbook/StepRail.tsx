@@ -1,6 +1,6 @@
 "use client";
 
-import { MbIcon } from "./MbIcon";
+import { MbCheckMark } from "./SelectList";
 
 export interface MbStep {
   id: string;
@@ -17,28 +17,39 @@ const STATE_WORD: Record<StepState, string> = {
   todo: "Not started",
 };
 
+/**
+ * Coral is a rule here, never a letterform: `--mb-coral` on paper measures
+ * 3.55:1, which clears the 3:1 floor for a border but not the 4.5:1 floor for
+ * 11.8px text. So the current step is marked by a coral ring and a coral
+ * underline while its number and label stay navy.
+ */
 const MARKER_CLASS: Record<StepState, string> = {
   done: "border-mb-navy bg-mb-navy text-mb-paper-bright",
-  current: "border-mb-coral bg-mb-paper-bright text-mb-coral",
+  current: "border-mb-coral bg-mb-paper-bright text-mb-navy",
   todo: "border-mb-rule bg-mb-paper-bright text-mb-ink-muted",
 };
 
 const LABEL_CLASS: Record<StepState, string> = {
-  done: "text-mb-navy",
-  current: "text-mb-navy",
-  todo: "text-mb-ink-muted",
+  done: "border-transparent text-mb-navy",
+  current: "border-mb-coral text-mb-navy",
+  todo: "border-transparent text-mb-ink-muted",
 };
 
 /**
  * Wizard progress rail. Semantic `<ol>`; the step being edited carries
  * `aria-current="step"`; completed steps are real buttons, while the current
  * and future steps are inert text so nobody can skip ahead.
+ *
+ * State rides three channels — the marker's fill, its ring, and the underline
+ * beneath the label — so the rail survives a greyscale squint as well as it
+ * survives a screen reader.
  */
 export const MbStepRail = ({
   steps,
   current,
   onNavigate,
   orientation = "horizontal",
+  label = "Progress",
   className = "",
 }: {
   steps: MbStep[];
@@ -47,13 +58,18 @@ export const MbStepRail = ({
   /** Called with the `id` of a completed step the user clicked. */
   onNavigate: (id: string) => void;
   orientation?: "horizontal" | "vertical";
+  /** Accessible name of the `<ol>`. */
+  label?: string;
   className?: string;
 }) => {
   const currentIndex = steps.findIndex((step) => step.id === current);
   const vertical = orientation === "vertical";
 
   return (
-    <ol className={`flex min-w-0 ${vertical ? "flex-col" : "items-start"} ${className}`}>
+    <ol
+      aria-label={label}
+      className={`flex min-w-0 ${vertical ? "flex-col" : "items-start"} ${className}`}
+    >
       {steps.map((step, index) => {
         const state: StepState =
           currentIndex >= 0 && index < currentIndex
@@ -71,23 +87,32 @@ export const MbStepRail = ({
               className={`inline-grid h-7 w-7 shrink-0 place-content-center rounded-[2px] border-[1.5px] ${MARKER_CLASS[state]}`}
             >
               {state === "done" ? (
-                <MbIcon id="check" size={14} />
+                <MbCheckMark size={11} />
               ) : (
                 <span className="matchbook-display text-[0.8rem] font-bold leading-none tracking-[0.02em] tabular-nums">
                   {index + 1}
                 </span>
               )}
             </span>
-            <span className="flex min-w-0 flex-col gap-0.5 pt-[3px]">
+            {/*
+              Horizontal steps stack, so the wrapper has to be told to fill the
+              column: under `items-start` its cross size is content-derived, and
+              `max-w-full` on the label would then resolve to the label's own
+              width and never truncate. `max-w-full` on the children keeps the
+              underline hugging a short label.
+            */}
+            <span
+              className={`flex min-w-0 flex-col items-start gap-0.5 pt-[3px] ${
+                vertical ? "flex-1" : "w-full"
+              }`}
+            >
               <span
-                className={`matchbook-display truncate text-[0.74rem] font-bold tracking-[0.1em] ${LABEL_CLASS[state]} ${
-                  clickable ? "group-hover:text-mb-coral" : ""
-                }`}
+                className={`matchbook-display max-w-full truncate border-b-[3px] pb-1 text-[0.74rem] font-bold tracking-[0.1em] tabular-nums ${LABEL_CLASS[state]}`}
               >
                 {step.label}
               </span>
               {step.value && (
-                <span className="truncate text-[0.72rem] leading-snug text-mb-ink-muted">
+                <span className="max-w-full truncate text-[0.72rem] leading-snug text-mb-ink-muted tabular-nums">
                   {step.value}
                 </span>
               )}
@@ -96,9 +121,22 @@ export const MbStepRail = ({
           </>
         );
 
+        /**
+         * The trailing space is padding on an inert step and **margin** on a
+         * clickable one. Same geometry either way, but as margin it sits
+         * outside the hit box, so two adjacent completed steps keep the 8px of
+         * clear water invariant 33 requires instead of abutting at 0px.
+         */
         const bodyClass = vertical
-          ? "flex min-h-[44px] w-full min-w-0 items-start gap-3 pb-4 pr-2 text-left"
-          : "flex min-h-[44px] min-w-0 flex-col items-start gap-1.5 pr-3 text-left";
+          ? "flex min-h-[44px] w-full min-w-0 items-start gap-3 pr-2 text-left"
+          : "flex min-h-[44px] w-full min-w-[44px] flex-col items-start gap-1.5 text-left";
+        const trailing = vertical
+          ? clickable
+            ? "mb-4"
+            : "pb-4"
+          : clickable
+            ? "mr-3"
+            : "pr-3";
 
         return (
           <li
@@ -125,12 +163,12 @@ export const MbStepRail = ({
                 type="button"
                 onClick={() => onNavigate(step.id)}
                 title={`Back to ${step.label}`}
-                className={`group relative rounded-[3px] ${bodyClass}`}
+                className={`mb-row-hover relative rounded-[3px] ${bodyClass} ${trailing}`}
               >
                 {body}
               </button>
             ) : (
-              <span className={`relative ${bodyClass}`}>{body}</span>
+              <span className={`relative ${bodyClass} ${trailing}`}>{body}</span>
             )}
           </li>
         );

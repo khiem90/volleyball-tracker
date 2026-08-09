@@ -19,10 +19,15 @@ const TONE_CLASS: Record<MbIconButtonTone, string> = {
   "outline-navy": "mb-btn-outline-navy",
 };
 
-/** 44 and 56 — the same two steps `.mb-stepper` uses for its ± buttons. */
+/**
+ * 44 and 56 — the same two steps `.mb-stepper` uses for its ± buttons. Fixing
+ * both axes makes `.mb-btn`'s horizontal padding inert (the flex centring keeps
+ * the glyph on the border-box centre because the padding is symmetric), so the
+ * square is exact without fighting the unlayered rule.
+ */
 const SIZE_CLASS: Record<MbIconButtonSize, string> = {
-  md: "h-11 w-11 p-0",
-  lg: "h-14 w-14 p-0",
+  md: "h-11 w-11",
+  lg: "h-14 w-14",
 };
 
 const ICON_SIZE: Record<MbIconButtonSize, number> = { md: 18, lg: 22 };

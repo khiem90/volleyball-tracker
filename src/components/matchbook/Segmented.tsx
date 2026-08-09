@@ -42,6 +42,9 @@ const clampColumns = (n: number) => Math.min(6, Math.max(1, Math.round(n)));
  * view, this picks a value. `role="radiogroup"` with real radio semantics,
  * arrow-key roving tabindex, and a grid that wraps to another row rather than
  * squeezing a cell below the touch floor.
+ *
+ * A radiogroup needs an accessible name: pass `aria-label`, or `aria-labelledby`
+ * pointing at the `MbField` label. Both reach the group through `...rest`.
  */
 export const MbSegmented = ({
   value,
@@ -117,7 +120,7 @@ export const MbSegmented = ({
             onKeyDown={(event) => handleKeyDown(event, index)}
           >
             {option.icon && <MbIcon id={option.icon} size={14} className="shrink-0" />}
-            <span className="min-w-0">{option.label}</span>
+            <span className="min-w-0 break-words tabular-nums">{option.label}</span>
           </button>
         );
       })}

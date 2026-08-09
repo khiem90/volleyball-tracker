@@ -5,6 +5,7 @@ import {
   getDoubleElimRoundName,
   getTotalWinnersRounds,
 } from '@/lib/doubleElimination';
+import type { Match } from '@/types/game';
 import { asMatch, bracketShape, teamIds } from './fixtures';
 
 /**
@@ -17,10 +18,16 @@ import { asMatch, bracketShape, teamIds } from './fixtures';
  * therefore rendering a permanently empty half.
  */
 
-const winners = (matches: readonly { bracket?: string }[]) =>
-  matches.filter((m) => m.bracket === 'winners');
-const losers = (matches: readonly { bracket?: string }[]) =>
-  matches.filter((m) => m.bracket === 'losers');
+/** Generic so the Match fields survive the filter and `bracketShape` accepts it. */
+const inBracket = <T extends Pick<Match, 'bracket'>>(
+  matches: readonly T[],
+  bracket: Match['bracket']
+): T[] => matches.filter((m) => m.bracket === bracket);
+
+const winners = <T extends Pick<Match, 'bracket'>>(matches: readonly T[]): T[] =>
+  inBracket(matches, 'winners');
+const losers = <T extends Pick<Match, 'bracket'>>(matches: readonly T[]): T[] =>
+  inBracket(matches, 'losers');
 
 describe('getTotalWinnersRounds', () => {
   it('rounds the field up to the next power of two', () => {

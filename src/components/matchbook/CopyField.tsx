@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import type { CSSProperties } from "react";
+import type { CSSProperties, RefObject } from "react";
 import { MbIcon } from "./MbIcon";
 
 /**
@@ -73,6 +73,7 @@ export const MbCopyField = ({
   revealable = secret,
   help,
   onCopied,
+  inputRef: externalRef,
 }: {
   /** Kicker above the field. Also names the copy and reveal controls. */
   label: string;
@@ -85,6 +86,14 @@ export const MbCopyField = ({
   /** Resting hint under the field. */
   help?: string;
   onCopied?: () => void;
+  /**
+   * Optional handle on the value input. An overlay that opens *because* the
+   * clipboard was refused needs to hand focus — and therefore the selection —
+   * straight to the value; `MbShareAction` passes this to `MbDialog`'s
+   * `initialFocus`. Not a charter prop; added because the D-8 fallback is only
+   * real if the text is selected without a second failed press.
+   */
+  inputRef?: RefObject<HTMLInputElement | null>;
 }) => {
   const uid = useId();
   const inputId = `mb-copy-${uid}`;
@@ -92,7 +101,8 @@ export const MbCopyField = ({
 
   const [revealed, setRevealed] = useState(false);
   const [status, setStatus] = useState<CopyStatus>("idle");
-  const inputRef = useRef<HTMLInputElement>(null);
+  const localRef = useRef<HTMLInputElement>(null);
+  const inputRef = externalRef ?? localRef;
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const hasValue = value.length > 0;
@@ -112,7 +122,7 @@ export const MbCopyField = ({
     if (!el) return;
     el.focus();
     el.select();
-  }, [status]);
+  }, [status, inputRef]);
 
   const handleCopy = async () => {
     if (timerRef.current) clearTimeout(timerRef.current);

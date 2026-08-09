@@ -30,6 +30,13 @@ import { MbIcon } from "./MbIcon";
       `@layer utilities`) no matter the specificity or source order.
    2. `min-h-[48px]` gives the 48px control height the charter asks for; none
       of the .mb-* classes set a height, so a plain utility wins there.
+   3. Charter §4.33 is a hard fail measured by a scripted `getBoundingClientRect`
+      sweep over `button,a,input,select,textarea,[role=button],[tabindex]`. That
+      sweep reads the *control's own* box, not the box of the label wrapping it,
+      so every `<input>` here is stretched to fill its 44/48px shell rather than
+      left at its ~19px line box. Where that is impossible without repainting a
+      .mb-* recipe (the switch), the real input becomes the full-row hit target
+      and the visual track moves to an `aria-hidden` sibling.
    --------------------------------------------------------------------------- */
 
 const mergeIds = (...ids: Array<string | undefined | false>) =>
@@ -132,13 +139,16 @@ export const MbTextInput = ({
   const field = useContext(MbFieldContext);
   return (
     <div
-      className={`mb-input min-h-[48px] ${
+      className={`mb-input min-h-[48px] py-0! ${
         disabled ? "opacity-60" : ""
       } ${className}`}
     >
       {icon && (
         <MbIcon id={icon} size={16} className="shrink-0 text-mb-ink-muted" />
       )}
+      {/* `py-0!` on the shell + `self-stretch` here hands the whole 48px to the
+          input, so its own hit box clears 44px. The shell keeps its 0.8rem
+          horizontal padding, so nothing moves optically. */}
       <input
         {...input}
         id={id ?? field?.id}
@@ -146,7 +156,7 @@ export const MbTextInput = ({
         required={input.required ?? field?.required}
         aria-describedby={mergeIds(field?.describedBy, ariaDescribedBy)}
         aria-invalid={field?.invalid || undefined}
-        className="text-base! md:text-sm! disabled:cursor-not-allowed"
+        className="self-stretch text-base! md:text-sm! disabled:cursor-not-allowed"
       />
       {trailing}
     </div>
@@ -210,7 +220,10 @@ export const MbSelect = ({
         required={select.required ?? field?.required}
         aria-describedby={mergeIds(field?.describedBy, ariaDescribedBy)}
         aria-invalid={field?.invalid || undefined}
-        className="mb-select-native min-h-[48px] truncate text-base! disabled:cursor-not-allowed md:text-[0.95rem]!"
+        /* `tabular-nums` because select labels routinely carry a measure —
+           "Court 2", "Round 11", "21 points" — and §4.9 wants those figures on
+           the same rhythm as every other numeral. */
+        className="mb-select-native min-h-[48px] truncate text-base! tabular-nums disabled:cursor-not-allowed md:text-[0.95rem]!"
       >
         {placeholder && <option value="">{placeholder}</option>}
         {options.map((option) => (
@@ -283,8 +296,19 @@ export const MbNumberStepper = ({
    * blur snaps the face back to the last clamped value.
    */
   const [draft, setDraft] = useState<string | null>(null);
-  const shown = draft ?? String(value);
-  const chars = Math.max(2, String(min).length, String(max).length);
+  /**
+   * `prefix`/`suffix` live inside the editable face rather than beside it. As
+   * separate spans the figure is centred inside its own 44px box, which opens a
+   * visible gap ("R  1"); folded in, `R1` reads as the single display token the
+   * charter's rotation case wants. Typed input is stripped back to digits, so
+   * the affordance is unchanged.
+   */
+  const face = `${prefix ?? ""}${value}${suffix ?? ""}`;
+  const shown = draft ?? face;
+  const chars =
+    Math.max(2, String(min).length, String(max).length) +
+    (prefix?.length ?? 0) +
+    (suffix?.length ?? 0);
 
   const commit = (next: number) => {
     if (next !== value) onChange(next);
@@ -323,7 +347,7 @@ export const MbNumberStepper = ({
 
   return (
     <div
-      className={`mb-stepper ${disabled ? "opacity-60" : ""} ${className}`}
+      className={`mb-stepper self-start ${disabled ? "opacity-60" : ""} ${className}`}
       data-size={size}
     >
       <button
@@ -336,7 +360,6 @@ export const MbNumberStepper = ({
         <MbIcon id="minus" size={16} />
       </button>
       <span className="mb-stepper-value">
-        {prefix && <span aria-hidden="true">{prefix}</span>}
         <input
           id={inputId}
           type="text"
@@ -347,17 +370,17 @@ export const MbNumberStepper = ({
           aria-valuenow={value}
           aria-valuemin={min}
           aria-valuemax={max}
-          aria-valuetext={
-            prefix || suffix ? `${prefix ?? ""}${value}${suffix ?? ""}` : undefined
-          }
+          aria-valuetext={prefix || suffix ? face : undefined}
           aria-describedby={field?.describedBy}
           disabled={disabled}
           value={shown}
+          onFocus={(event) => event.currentTarget.select()}
           onChange={(event) => {
             const raw = event.target.value;
             setDraft(raw);
-            if (raw.trim() === "") return;
-            const parsed = Number(raw);
+            const digits = raw.replace(/[^\d-]/g, "");
+            if (digits.trim() === "") return;
+            const parsed = Number(digits);
             if (!Number.isFinite(parsed)) return;
             commit(clampValue(parsed, min, max));
           }}
@@ -366,14 +389,16 @@ export const MbNumberStepper = ({
             commit(clampValue(value, min, max));
           }}
           onKeyDown={handleKeyDown}
-          className="self-stretch border-0 bg-transparent p-0 text-center disabled:cursor-not-allowed"
+          /* `self-stretch` takes the full 44/56px height of the shell and
+             `min-w-[44px]` the width, so the editable figure is itself a legal
+             target — `${chars}ch` only ever widens it for 3+ digit bounds. */
+          className="min-w-[44px] self-stretch border-0 bg-transparent p-0 text-center disabled:cursor-not-allowed"
           style={{
             width: `${chars}ch`,
             font: "inherit",
             fontVariantNumeric: "tabular-nums",
           }}
         />
-        {suffix && <span aria-hidden="true">{suffix}</span>}
       </span>
       <button
         type="button"
@@ -410,16 +435,42 @@ export const MbToggle = ({
   const autoId = useId();
   const field = useContext(MbFieldContext);
   const inputId = id ?? field?.id ?? autoId;
+  const labelId = `${inputId}-toggle-label`;
   const hintId = hint ? `${inputId}-toggle-hint` : undefined;
+
+  /**
+   * The charter asks for the whole 44px row to be the hit target, and the
+   * §4.33 sweep measures the input itself — a 28x16 `.mb-switch` input fails it
+   * even when a label makes the row clickable. So the real control is stretched
+   * over the row and made invisible, and the track becomes an `aria-hidden`
+   * sibling carrying `.mb-switch` for its geometry. Only the three `:checked`
+   * declarations are restated here (via `peer-checked`), because a sibling
+   * cannot read the input's `:checked`; the `!` is the same unlayered-vs-layered
+   * problem noted at the top of the file. Focus-visible now outlines the entire
+   * row, which is an honest picture of what is clickable.
+   */
   return (
     <label
-      htmlFor={inputId}
-      className={`mb-row-hover flex min-h-[44px] items-center justify-between gap-3 rounded-[4px] px-1 py-2 ${
+      className={`mb-row-hover relative flex min-h-[44px] items-center justify-between gap-3 rounded-[4px] px-1 py-2 ${
         disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"
       } ${className}`}
     >
-      <span className="min-w-0">
-        <span className="matchbook-display block text-[0.85rem] font-semibold tracking-[0.08em]">
+      <input
+        id={inputId}
+        type="checkbox"
+        role="switch"
+        checked={checked}
+        disabled={disabled}
+        aria-labelledby={labelId}
+        aria-describedby={mergeIds(hintId, field?.describedBy)}
+        onChange={(event) => onChange(event.target.checked)}
+        className="peer absolute inset-0 m-0 h-full w-full cursor-[inherit] appearance-none rounded-[4px] opacity-0"
+      />
+      <span className="pointer-events-none min-w-0">
+        <span
+          id={labelId}
+          className="matchbook-display block text-[0.85rem] font-semibold tracking-[0.08em]"
+        >
           {label}
         </span>
         {hint && (
@@ -428,15 +479,9 @@ export const MbToggle = ({
           </span>
         )}
       </span>
-      <input
-        id={inputId}
-        type="checkbox"
-        role="switch"
-        className="mb-switch shrink-0"
-        checked={checked}
-        disabled={disabled}
-        aria-describedby={mergeIds(hintId, field?.describedBy)}
-        onChange={(event) => onChange(event.target.checked)}
+      <span
+        aria-hidden="true"
+        className="mb-switch pointer-events-none block peer-checked:border-mb-coral-deep! peer-checked:bg-mb-coral-deep! peer-checked:after:bg-mb-paper-bright! peer-checked:after:[transform:translateX(11px)]"
       />
     </label>
   );
@@ -465,17 +510,20 @@ export const MbToggleChip = ({
     aria-pressed={pressed}
     disabled={disabled}
     onClick={() => onPressedChange(!pressed)}
+    /* `opacity-40`, not 60: this is a `.mb-btn`, and the whole button family
+       shares one disabled reading (design language §4.3, `MbButton`). */
     className={`mb-btn mb-btn-touch max-w-full ${
       pressed ? "mb-btn-navy" : "mb-btn-outline-navy"
-    } ${disabled ? "cursor-not-allowed opacity-60" : ""} ${className}`}
+    } ${disabled ? "cursor-not-allowed opacity-40" : ""} ${className}`}
   >
-    {/* Second channel: the state is a filled ballot box vs an empty one, so
-        the chip still reads on/off in greyscale. */}
+    {/* Second channel: a ballot box carrying an inset square when pressed —
+        the same mark `.mb-radio:checked` draws, so the chip reads on/off in
+        greyscale without nesting a circled glyph inside a 14px box. */}
     <span
       aria-hidden="true"
       className="inline-flex h-[14px] w-[14px] shrink-0 items-center justify-center rounded-[2px] border-[1.5px] border-current"
     >
-      {pressed && <MbIcon id="check" size={10} />}
+      {pressed && <span className="block h-[6px] w-[6px] rounded-[1px] bg-current" />}
     </span>
     {icon && <MbIcon id={icon} size={14} className="shrink-0" />}
     <span className="min-w-0 truncate">{children}</span>
@@ -572,7 +620,13 @@ export const MbSwatchPicker = ({
 
   return (
     <div className={`flex flex-col gap-2.5 ${className}`}>
-      <div className="flex flex-wrap items-center gap-2" role="radiogroup" aria-label={label}>
+      {/* 10px, not 8px: the custom-colour input reaches 1.5px back over its own
+          border, and §4.33 wants ≥8px of clear water between targets. */}
+      <div
+        className="flex flex-wrap items-center gap-2.5"
+        role="radiogroup"
+        aria-label={label}
+      >
         {swatches.map((swatch, index) => {
           const isSelected = index === selectedIndex;
           return (
@@ -617,7 +671,11 @@ export const MbSwatchPicker = ({
               key={customHex ?? "unset"}
               defaultValue={customHex}
               onChange={(event) => onChange(event.target.value)}
-              className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+              /* A colour input is a replaced element: `inset-0` leaves it at its
+                 intrinsic 50x27 and `h-full` measures the 41px padding box. An
+                 explicit 44x44 offset back over the 1.5px border is the only
+                 way its own hit box equals the swatch you can see. */
+              className="absolute -left-[1.5px] -top-[1.5px] h-[44px] w-[44px] cursor-pointer opacity-0"
             />
           </label>
         )}
@@ -681,15 +739,22 @@ export const MbTagInput = ({
 
   return (
     <div className={`flex flex-col gap-1.5 ${className}`}>
+      {/* `py-[2px]!` keeps a 44px chip row inside a shell that still reads as a
+          48px field when empty, and gives wrapped rows a hairline of air. */}
       <div
-        className={`mb-input min-h-[48px] flex-wrap ${disabled ? "opacity-60" : ""}`}
+        className={`mb-input min-h-[48px] flex-wrap py-[2px]! ${
+          disabled ? "opacity-60" : ""
+        }`}
       >
         {value.map((tag, index) => (
           <span
             key={tag}
-            className="inline-flex min-h-[44px] min-w-0 items-stretch rounded-[3px] border-[1.5px] border-mb-navy bg-mb-paper-bright"
+            className="inline-flex min-h-[44px] min-w-0 max-w-full items-stretch rounded-[3px] border-[1.5px] border-mb-navy bg-mb-paper-bright"
           >
-            <span className="matchbook-display flex min-w-0 items-center truncate px-2.5 text-[0.78rem] font-bold tracking-[0.06em]">
+            {/* Not `flex items-center`: `text-overflow` is ignored on a flex
+                container, so a long tag would clip with no ellipsis. As a plain
+                flex *item* the span is blockified and truncates properly. */}
+            <span className="matchbook-display min-w-0 self-center truncate px-2.5 text-[0.78rem] font-bold tracking-[0.06em]">
               {tag}
             </span>
             <button
@@ -710,7 +775,10 @@ export const MbTagInput = ({
             type="text"
             autoComplete="off"
             disabled={disabled}
-            placeholder={value.length === 0 ? placeholder : undefined}
+            /* Kept visible even with chips present: once the entry field wraps
+               onto its own row it is an unbordered strip of paper, and without
+               the prompt that row reads as a rendering fault. */
+            placeholder={placeholder}
             aria-describedby={mergeIds(field?.describedBy, `${inputId}-tag-hint`)}
             aria-invalid={field?.invalid || undefined}
             value={draft}
@@ -721,7 +789,9 @@ export const MbTagInput = ({
             }}
             onKeyDown={handleKeyDown}
             onBlur={() => add(draft)}
-            className="min-h-[44px] text-base! md:text-sm! disabled:cursor-not-allowed"
+            /* `.mb-input input` sets an unlayered `min-width:0`, so the floor
+               that keeps the entry field a legal target has to be important. */
+            className="min-h-[44px] min-w-[4.5rem]! text-base! md:text-sm! disabled:cursor-not-allowed"
           />
         )}
       </div>

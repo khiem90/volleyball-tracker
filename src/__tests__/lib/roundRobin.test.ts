@@ -294,7 +294,9 @@ describe('calculateStandings', () => {
     const standings = calculateStandings(teamIds(4), matches);
     expect(standings.map((s) => s.teamId)).toEqual(['t0', 't1', 't2', 't3']);
     expect(standings.map((s) => s.competitionPoints)).toEqual([6, 3, 3, 0]);
-    expect(standings.map((s) => s.pointsDiff)).toEqual([17, 10, -4, -18]);
+    // t1: -11 (lost 10-21) +16 (won 21-5) = +5, which outranks t2's -4 on the
+    // second key even though both sit on 3 points.
+    expect(standings.map((s) => s.pointsDiff)).toEqual([17, 5, -4, -18]);
   });
 
   it('breaks a points+difference tie on points for, then keeps input order', () => {

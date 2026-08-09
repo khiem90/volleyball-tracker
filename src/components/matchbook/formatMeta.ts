@@ -35,9 +35,21 @@ export interface FormatMetaEntry {
   /** Sprite id — render with `<MbIcon id={...} />`. Never a second icon library. */
   icon: string;
   /**
-   * Contained accent for this format: a rule, a bar or a rail.
-   * Always a `--mb-*` token, never a fill, a tint or a gradient (charter D-9).
-   * Coral is deliberately absent — it is reserved for the selection rail.
+   * Contained accent for this format: a rule, a bar or a rail — never a fill,
+   * a tint or a gradient (charter D-9).
+   *
+   * Every value below is lifted verbatim from the shipped four-accent rail cycle
+   * (`useMatchbookDashboard.ts:19-24` — teal / gold / ink-muted / plum), so no
+   * new colour mapping is invented (design language §1.2). Three tokens are
+   * deliberately unavailable: `--mb-coral` is the selection rail and would
+   * collide with the wizard's own selected-card mark; `--mb-green` and
+   * `--mb-red` carry fixed win / live status meanings; `--mb-navy` is the
+   * structural border colour, so a navy rail is invisible against the 1.5px
+   * navy edge of the panel or choice card it sits inside.
+   *
+   * That leaves four values for five formats, so the two bracket formats share
+   * one. They are a family — `isEliminationFormat()` already treats them as one
+   * — and they are told apart by icon and label, never by colour alone.
    */
   accent: string;
   /** Fewest teams the generator accepts. */
@@ -76,7 +88,7 @@ export const FORMAT_META: Record<CompetitionType, FormatMetaEntry> = {
     label: "Double Elimination",
     blurb: "Two losses eliminate a team. A first defeat drops into the second bracket.",
     icon: "grid",
-    accent: "var(--mb-navy)",
+    accent: "var(--mb-plum)",
     minTeams: 4,
     supports: {
       series: true,

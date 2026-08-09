@@ -36,19 +36,45 @@ const HEAD_ICON_TONE: Record<MbDialogTone, string> = {
 
 export const MbDialogBody = ({
   children,
+  flush = false,
   className = "",
 }: {
   children: ReactNode;
+  /**
+   * Drops the 1rem inset so rows can run edge to edge — ledgers, rosters and
+   * any list whose hover tint or rules must reach the frame. Applied inline
+   * because `.mb-dialog-body` is unlayered CSS and a `p-0` utility loses to it.
+   */
+  flush?: boolean;
   className?: string;
-}) => <div className={`mb-dialog-body ${className}`}>{children}</div>;
+}) => (
+  <div
+    className={`mb-dialog-body ${className}`}
+    style={flush ? { padding: 0 } : undefined}
+  >
+    {children}
+  </div>
+);
 
+/**
+ * Below `sm` a dialog is a bottom sheet, so its buttons stretch to fill the row:
+ * the primary action lands in the thumb zone at full width (invariant 35).
+ * From `sm` up they shrink back to their labels and sit right-aligned.
+ * Only direct `<button>` children are affected — a status label keeps its size.
+ */
 export const MbDialogFooter = ({
   children,
   className = "",
 }: {
   children: ReactNode;
   className?: string;
-}) => <div className={`mb-dialog-foot ${className}`}>{children}</div>;
+}) => (
+  <div
+    className={`mb-dialog-foot [&>button]:flex-1 sm:[&>button]:flex-none ${className}`}
+  >
+    {children}
+  </div>
+);
 
 export const MbDialog = ({
   open,

@@ -19,6 +19,13 @@ const HIDE_CLASS = {
   lg: "hidden lg:block",
 } as const;
 
+/**
+ * One frozen array for every caller that omits `columns`. A `= []` default
+ * would mint a new reference on every render and silently defeat the row memo
+ * — the exact cost this component exists to avoid.
+ */
+const NO_COLUMNS: readonly never[] = [];
+
 export interface MbSelectColumn<T> {
   key: string;
   /** Uppercase abbreviated header, e.g. "Entered in". */
@@ -31,6 +38,26 @@ export interface MbSelectColumn<T> {
   width?: string;
 }
 
+/**
+ * The system tick, drawn the way `.mb-check:checked::after` draws it, so a
+ * ballot box, a choice card and a completed wizard step all carry one mark.
+ * The sprite's `check` is a *circled* tick and reads as a ring below ~16px,
+ * which is why this is a border pair and not an `<MbIcon>`.
+ *
+ * Inherits `currentColor`; the caller owns the ink.
+ */
+export const MbCheckMark = ({ size = 7 }: { size?: number }) => (
+  <span
+    aria-hidden="true"
+    className="block border-b-2 border-l-2 border-current"
+    style={{
+      width: size,
+      height: Math.round(size * 0.58),
+      transform: "rotate(-45deg) translate(0.5px, -1px)",
+    }}
+  />
+);
+
 const CheckFace = ({ state }: { state: "on" | "off" | "mixed" }) => (
   <span
     aria-hidden="true"
@@ -40,7 +67,7 @@ const CheckFace = ({ state }: { state: "on" | "off" | "mixed" }) => (
         : "border-mb-coral-deep bg-mb-coral-deep text-mb-paper-bright"
     }`}
   >
-    {state === "on" && <MbIcon id="check" size={12} />}
+    {state === "on" && <MbCheckMark />}
     {state === "mixed" && (
       <span className="block h-[2px] w-[8px] bg-mb-paper-bright" />
     )}
@@ -102,7 +129,15 @@ const MbSelectRowInner = <T,>({
       }`}
     >
       <CheckFace state={selected ? "on" : "off"} />
-      <span className="min-w-0 flex-1 truncate">{renderPrimary(item)}</span>
+      {/*
+        A flex box, not a `truncate` block: `renderPrimary` usually returns an
+        inline-flex mark (`TeamMark`), and an inline-flex child of a truncating
+        block is clipped without ever showing an ellipsis. As a flex item with
+        `min-w-0` it shrinks, and its own `truncate` fires.
+      */}
+      <span className="flex min-w-0 flex-1 items-center overflow-hidden">
+        {renderPrimary(item)}
+      </span>
       {columns.map((column) => (
         <Cell key={column.key} column={column} item={item} />
       ))}
@@ -136,10 +171,11 @@ export const MbSelectList = <T,>({
   onSelectAll,
   search,
   onSearchChange,
-  columns = [],
+  columns = NO_COLUMNS as unknown as MbSelectColumn<T>[],
   renderPrimary,
   emptyMessage,
   windowed = true,
+  label = "Selectable list",
   className = "",
 }: {
   items: T[];
@@ -155,6 +191,8 @@ export const MbSelectList = <T,>({
   emptyMessage: string;
   /** Window the rows past ~60 items. Default true. */
   windowed?: boolean;
+  /** Accessible name for the row list and its search field. */
+  label?: string;
   className?: string;
 }) => {
   const [scrollTop, setScrollTop] = useState(0);
@@ -186,7 +224,7 @@ export const MbSelectList = <T,>({
               value={search ?? ""}
               onChange={(event) => onSearchChange(event.target.value)}
               placeholder="Search"
-              aria-label="Search list"
+              aria-label={`Search ${label}`}
               className="h-11 min-w-0 flex-1"
             />
           </label>
@@ -228,6 +266,7 @@ export const MbSelectList = <T,>({
         <PanelEmpty message={emptyMessage} />
       ) : (
         <ul
+          aria-label={label}
           className="min-h-0 flex-1 overflow-y-auto overscroll-contain"
           style={{ maxHeight: VIEWPORT_ROWS * ROW_H }}
           onScroll={

@@ -1,12 +1,16 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { MbButton } from "./Button";
 import { MbDialog, MbDialogBody, MbDialogFooter } from "./Dialog";
 
 /**
  * The only confirmation surface in the app (charter Appendix B — no
  * `window.confirm`). Destructive by default; `destructive={false}` turns it into
  * a plain navy "are you sure".
+ *
+ * The danger reading is carried by three channels, never colour alone: the red
+ * 4px dialog rule, the warning glyph, and the verb spelled out on the button.
  */
 export const MbConfirm = ({
   open,
@@ -25,12 +29,13 @@ export const MbConfirm = ({
   title: string;
   /** The action, e.g. "Delete". Doubles as the confirm label when none is given. */
   verb: string;
-  /** What the verb acts on, e.g. a team name. Rendered as the quoted subject. */
+  /** What the verb acts on, e.g. a team name. Rendered as the named subject. */
   subject?: string;
   /** Consequence copy. Defaults to the plain irreversibility sentence. */
   body?: ReactNode;
   destructive?: boolean;
   confirmLabel?: string;
+  /** Keeps the dialog open and un-dismissable while the action is in flight. */
   loading?: boolean;
   onConfirm: () => void;
 }) => (
@@ -51,7 +56,7 @@ export const MbConfirm = ({
           }`}
         >
           <span className="mb-kicker">{verb}</span>
-          <span className="matchbook-display min-w-0 text-[1.15rem] font-bold leading-[1.1] break-words">
+          <span className="matchbook-display min-w-0 text-[1.2rem] font-bold leading-tight break-words">
             {subject}
           </span>
         </div>
@@ -61,30 +66,22 @@ export const MbConfirm = ({
       </div>
     </MbDialogBody>
     <MbDialogFooter>
-      {loading && (
-        <span className="mb-kicker mr-auto" role="status">
-          Working…
-        </span>
-      )}
-      <button
-        type="button"
-        className="mb-btn mb-btn-outline-navy mb-btn-lg flex-1 disabled:cursor-not-allowed disabled:opacity-60 sm:flex-none"
+      <MbButton
+        variant="outline-navy"
+        size="lg"
         onClick={() => onOpenChange(false)}
         disabled={loading}
       >
         Cancel
-      </button>
-      <button
-        type="button"
-        className={`mb-btn mb-btn-lg flex-1 disabled:cursor-not-allowed disabled:opacity-60 sm:flex-none ${
-          destructive ? "mb-btn-coral" : "mb-btn-navy"
-        }`}
+      </MbButton>
+      <MbButton
+        variant={destructive ? "coral" : "navy"}
+        size="lg"
+        loading={loading}
         onClick={onConfirm}
-        disabled={loading}
-        aria-busy={loading || undefined}
       >
         {confirmLabel ?? verb}
-      </button>
+      </MbButton>
     </MbDialogFooter>
   </MbDialog>
 );
