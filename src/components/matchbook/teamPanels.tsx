@@ -2,6 +2,7 @@ import Link from "next/link";
 import { MbIcon } from "./MbIcon";
 import { MbButton, MbButtonLink } from "./Button";
 import { MbPanelHeadLink } from "./panels";
+import { MbTableScroll } from "./TableScroll";
 import { Crest, FormLetters, FormSquares, Panel, PanelEmpty, TeamMark } from "./Panel";
 import { readinessColor, readinessInk } from "./teamStats";
 import type {
@@ -86,7 +87,7 @@ export const TeamDirectoryPanel = ({
     ) : rows.length === 0 ? (
       <PanelEmpty message={`No teams match “${search}”.`} />
     ) : (
-      <div className="overflow-x-auto">
+      <MbTableScroll>
         <table className="mb-table w-full border-collapse">
           <thead>
             <tr>
@@ -95,7 +96,11 @@ export const TeamDirectoryPanel = ({
               <th>Entered In</th>
               <th className="text-center">W</th>
               <th className="text-center">L</th>
-              <th className="text-center">Pts</th>
+              {/* Was "Pts" over `${pointsFor}–${pointsAgainst}`. On `/` the
+                  same header means the ranking total, so one word meant two
+                  quantities across two screens. See the note in
+                  `panels.tsx`. */}
+              <th className="text-center">PF–PA</th>
               <th>Next Match</th>
               <th className="text-right">Status</th>
             </tr>
@@ -191,7 +196,7 @@ export const TeamDirectoryPanel = ({
             })}
           </tbody>
         </table>
-      </div>
+      </MbTableScroll>
     )}
   </Panel>
 );
@@ -228,7 +233,7 @@ export const TeamReadinessPanel = ({ rows }: { rows: MbReadinessRow[] }) => (
     {rows.length === 0 ? (
       <PanelEmpty message="No readiness data exists yet — add teams and play matches." />
     ) : (
-      <div className="overflow-x-auto">
+      <MbTableScroll>
         <table className="mb-table mb-table-compact w-full border-collapse">
           <thead>
             <tr>
@@ -270,7 +275,7 @@ export const TeamReadinessPanel = ({ rows }: { rows: MbReadinessRow[] }) => (
             ))}
           </tbody>
         </table>
-      </div>
+      </MbTableScroll>
     )}
   </Panel>
 );

@@ -184,8 +184,25 @@ export const TeamMark = ({
   );
 };
 
+/** The MARK fills — `FormSquares`, which paints no letterform over them. */
 const FORM_COLORS: Record<MbFormResult, string> = {
   W: "var(--mb-green)",
+  L: "var(--mb-red)",
+};
+
+/**
+ * The LETTERFORM fills. `FormLetters` sets white type on the same swatch, and
+ * `globals.css` already states the arithmetic that forces the split: "#fff on
+ * --mb-red is 4.76:1; on --mb-green it is 4.45:1", which is why `MbBadge`
+ * restricts `variant="solid"` to `tone="live"`. The W pip was that same
+ * 4.45:1 pairing at 9.28px/700 against a 4.5:1 floor — measured on `/` (14
+ * instances) and `/teams` (16) and the only contrast failure left on the six
+ * converted routes. `--mb-green-ink` is the twin declared for exactly this and
+ * carries white at 5.33:1; L keeps `--mb-red` at 4.76:1. The square beside it
+ * keeps the bright mark tone, so the two greens never appear in one row.
+ */
+const FORM_LETTER_COLORS: Record<MbFormResult, string> = {
+  W: "var(--mb-green-ink)",
   L: "var(--mb-red)",
 };
 
@@ -234,7 +251,7 @@ export const FormLetters = ({ form }: { form: MbFormResult[] }) => (
       <span
         key={i}
         className="matchbook-display inline-flex h-[14px] w-[14px] items-center justify-center rounded-[2px] text-[0.58rem] font-bold text-white"
-        style={{ background: FORM_COLORS[r] }}
+        style={{ background: FORM_LETTER_COLORS[r] }}
       >
         {r}
       </span>

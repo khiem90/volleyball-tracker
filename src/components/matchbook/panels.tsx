@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { MbIcon } from "./MbIcon";
+import { MbTableScroll } from "./TableScroll";
 import { Crest, FormLetters, FormSquares, Panel, PanelEmpty, TeamMark } from "./Panel";
 import { readinessColor, readinessInk } from "./teamStats";
 import type {
@@ -82,7 +83,7 @@ export const StandingsPanel = ({
         href="/teams"
       />
     ) : (
-      <div className="overflow-x-auto">
+      <MbTableScroll>
         <table className="mb-table w-full border-collapse">
           <thead>
             <tr>
@@ -91,7 +92,14 @@ export const StandingsPanel = ({
               <th className="text-center">P</th>
               <th className="text-center">W</th>
               <th className="text-center">L</th>
-              <th className="text-center">Sets</th>
+              {/* "Sets" was a mislabel, not a shorthand. `MbStandingRow.sets`
+                  is built as `${pointsFor}–${pointsAgainst}` in
+                  `useMatchbookDashboard`, so a column headed Sets was showing
+                  points — and `/teams` headed the SAME quantity "Pts", which is
+                  the ranking number one column to the right of it here. Both
+                  screens now use the glossary's own PF / PA. (The hook's field
+                  is still named `sets`; that rename belongs to the hook.) */}
+              <th className="text-center">PF–PA</th>
               <th className="text-center">Pts</th>
               <th>Form</th>
             </tr>
@@ -126,7 +134,7 @@ export const StandingsPanel = ({
             ))}
           </tbody>
         </table>
-      </div>
+      </MbTableScroll>
     )}
   </Panel>
 );
@@ -426,7 +434,7 @@ export const ReadinessPanel = ({ rows }: { rows: MbReadinessRow[] }) => (
         href="/teams"
       />
     ) : (
-      <div className="overflow-x-auto">
+      <MbTableScroll>
         <table className="mb-table mb-table-compact w-full border-collapse">
           <thead>
             <tr>
@@ -473,7 +481,7 @@ export const ReadinessPanel = ({ rows }: { rows: MbReadinessRow[] }) => (
             ))}
           </tbody>
         </table>
-      </div>
+      </MbTableScroll>
     )}
     <FooterLink href="/teams" label="View Team Directory" />
   </Panel>

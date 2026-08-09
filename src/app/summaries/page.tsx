@@ -91,7 +91,13 @@ export default function HistoryPage() {
           three labels on one baseline; below `sm` each takes a full line rather
           than shrinking a select to the width of its chevron. */}
       <div className="mb-4 flex flex-wrap items-end gap-3 border-y border-mb-navy py-3">
-        <div className="min-w-[11rem] flex-1 sm:max-w-[14rem]">
+        {/* `basis-full` below `sm`. Sharing the 358px content line with the
+            Team select left this control 173px wide and its own value clipped
+            to "ALL COMPETITIO…" — and a real selection clips harder ("FRIDAY
+            NIGHT WI…"), so the reader could not read the filter they had set.
+            A filter's current value is not redundant context, so it takes the
+            line rather than the ellipsis. */}
+        <div className="basis-full sm:basis-auto min-w-[11rem] flex-1 sm:max-w-[14rem]">
           <p className="mb-kicker mb-1">Competition</p>
           <MbSelect
             aria-label="Filter by competition"
@@ -189,7 +195,14 @@ export default function HistoryPage() {
                           reverse
                           className="justify-self-end"
                         />
-                        <span className="hidden w-24 truncate text-right text-[0.64rem] text-mb-ink-muted lg:block">
+                        {/* `w-24` was under-provisioned at desktop: the D4
+                            truncation census measured 16px lost on "Friday
+                            Night Win 2 & Out" at 1440, in a column that had a
+                            whole empty track beside it. `xl:w-40` clears it.
+                            `truncate` stays — invariant 37 — because a long
+                            enough event name must still cut rather than reflow
+                            the ledger. */}
+                        <span className="hidden w-24 truncate text-right text-[0.64rem] text-mb-ink-muted lg:block xl:w-40">
                           {entry.competition}
                         </span>
                       </button>

@@ -12,6 +12,7 @@ import { MbButtonLink } from "@/components/matchbook/Button";
 import { MbMenu } from "@/components/matchbook/Menu";
 import { Crest, Panel, PanelEmpty, TeamMark } from "@/components/matchbook/Panel";
 import { MbPanelHeadLink } from "@/components/matchbook/panels";
+import { MbTableScroll } from "@/components/matchbook/TableScroll";
 import {
   useMatchbookCompete,
   type MbBracketCell,
@@ -173,7 +174,7 @@ const MainPanel = ({ selected }: { selected: MbCompeteSelected }) => {
       {selected.standings.length === 0 ? (
         <PanelEmpty message="No standings exist yet — play matches to build the table." />
       ) : (
-        <div className="overflow-x-auto">
+        <MbTableScroll>
           <table className="mb-table mb-table-compact w-full border-collapse">
             <thead>
               <tr>
@@ -215,7 +216,7 @@ const MainPanel = ({ selected }: { selected: MbCompeteSelected }) => {
               ))}
             </tbody>
           </table>
-        </div>
+        </MbTableScroll>
       )}
     </Panel>
   );

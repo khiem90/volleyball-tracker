@@ -95,19 +95,46 @@ const useRouteChange = (pathname: string, name: string) => {
   const mainRef = useRef<HTMLElement | null>(null);
   const liveRef = useRef<HTMLParagraphElement | null>(null);
   const settled = useRef(false);
+  const nameRef = useRef(name);
+
+  /* Declared FIRST so it commits before the announcement effect below reads it:
+     on a navigation both change in the same commit and effects run in
+     declaration order, so the announcement gets the new route's name. */
+  useEffect(() => {
+    nameRef.current = name;
+  }, [name]);
 
   useEffect(() => {
     if (!settled.current) {
       settled.current = true;
       return;
     }
-    mainRef.current?.focus();
+    /**
+     * `preventScroll`, and `[pathname]` alone.
+     *
+     * The effect used to depend on `[pathname, name]`, and `name` is
+     * `masthead.shortTitle` — which on `/competitions` is the SELECTED EVENT'S
+     * NAME and therefore changes once, after the data resolves, with no
+     * navigation at all. That second run cleared the first-paint guard and
+     * focused `<main>`; `<main tabIndex={-1}>` sits directly under the sticky
+     * mobile top strip, so the browser scrolled it into view and the route
+     * arrived at **scrollY 57 with its own `<h1>` hidden behind the strip** —
+     * measured at 390x844, and invariant 27's "no visible layout shift on
+     * load" exactly. `/` and `/teams` were at scrollY 0 because their titles
+     * are literals.
+     *
+     * Keying on the pathname makes the effect mean what its name says. The
+     * `preventScroll` is the belt: a route change already leaves Next at the
+     * top of the document, so moving focus there must never move the viewport
+     * again — same rule `Tabs.tsx` states for its own rail.
+     */
+    mainRef.current?.focus({ preventScroll: true });
     /* Written imperatively, not through state. The live region is an external
        system — the announcement IS the DOM mutation, and routing it through a
        render would be a cascading setState inside an effect for no gain. React
        renders the node with no children, so it never contends for the text. */
-    if (liveRef.current) liveRef.current.textContent = name;
-  }, [pathname, name]);
+    if (liveRef.current) liveRef.current.textContent = nameRef.current;
+  }, [pathname]);
 
   return { mainRef, liveRef };
 };
