@@ -62,28 +62,93 @@ export const Crest = ({ team, size = 26 }: { team: MbTeam; size?: number }) => (
   />
 );
 
+/** Named crest steps. Numeric sizes stay supported — `md` is the historic default. */
+export type TeamMarkSize = "sm" | "md" | "lg";
+
+const TEAM_MARK_STEPS: Record<TeamMarkSize, { crest: number; name: string }> = {
+  sm: { crest: 18, name: "text-[0.72rem]" },
+  md: { crest: 24, name: "text-[0.82rem]" },
+  lg: { crest: 34, name: "text-[0.9rem]" },
+};
+
 export const TeamMark = ({
   team,
   size = 24,
   reverse = false,
+  orientation = "horizontal",
+  accent,
   className = "",
 }: {
   team: MbTeam;
-  size?: number;
+  /** Crest height in px, or a named step: `sm` 18 / `md` 24 / `lg` 34. */
+  size?: number | TeamMarkSize;
+  /** Mirrors the mark for the away side of a scoreline. */
   reverse?: boolean;
+  orientation?: "horizontal" | "vertical";
+  /**
+   * The team colour, rendered as a 3px bar only — beside the crest when
+   * horizontal, under the name when vertical. Never a fill, never a tint on
+   * the crest, never a panel background (charter D-9).
+   */
+  accent?: string;
   className?: string;
-}) => (
-  <span
-    className={`inline-flex items-center gap-2 min-w-0 ${
-      reverse ? "flex-row-reverse" : ""
-    } ${className}`}
-  >
-    <Crest team={team} size={size} />
-    <span className="matchbook-display font-semibold text-[0.82rem] truncate">
-      {team.name}
+}) => {
+  const step = typeof size === "string" ? TEAM_MARK_STEPS[size] : null;
+  const crestSize = step ? step.crest : size;
+  const nameClass = step ? step.name : "text-[0.82rem]";
+
+  if (orientation === "vertical") {
+    return (
+      <span
+        className={`inline-flex flex-col items-center gap-1.5 min-w-0 ${
+          reverse ? "flex-col-reverse" : ""
+        } ${className}`}
+      >
+        <Crest team={team} size={crestSize} />
+        <span className="flex flex-col items-center gap-1 min-w-0 max-w-full">
+          <span
+            className={`matchbook-display font-semibold ${nameClass} truncate max-w-full`}
+          >
+            {team.name}
+          </span>
+          {accent && (
+            <span
+              className="block h-[3px] w-full"
+              style={{ background: accent }}
+            />
+          )}
+        </span>
+      </span>
+    );
+  }
+
+  return (
+    <span
+      className={`inline-flex items-center gap-2 min-w-0 ${
+        reverse ? "flex-row-reverse" : ""
+      } ${className}`}
+    >
+      {accent ? (
+        <span
+          className={`inline-flex items-center gap-1.5 shrink-0 ${
+            reverse ? "flex-row-reverse" : ""
+          }`}
+        >
+          <span
+            className="block w-[3px] self-stretch"
+            style={{ background: accent }}
+          />
+          <Crest team={team} size={crestSize} />
+        </span>
+      ) : (
+        <Crest team={team} size={crestSize} />
+      )}
+      <span className={`matchbook-display font-semibold ${nameClass} truncate`}>
+        {team.name}
+      </span>
     </span>
-  </span>
-);
+  );
+};
 
 const FORM_COLORS: Record<MbFormResult, string> = {
   W: "var(--mb-green)",
@@ -143,21 +208,83 @@ export const FormLetters = ({ form }: { form: MbFormResult[] }) => (
   </span>
 );
 
+/**
+ * In-panel state tones. `MbEmptyState` covers the page-level equivalent;
+ * `PanelError` / `PanelOffline` / `PanelDenied` are retired in favour of these
+ * (charter D-7, Appendix B).
+ */
+export type PanelEmptyTone =
+  | "empty"
+  | "notfound"
+  | "error"
+  | "offline"
+  | "denied"
+  | "unconfigured";
+
+/**
+ * `empty` stays iconless and unlabelled — design language §5.7 keeps ordinary
+ * empty states plain. The five failure tones name themselves in words and mark
+ * themselves with a glyph, so the state never rests on colour alone.
+ */
+const PANEL_EMPTY_TONES: Record<
+  PanelEmptyTone,
+  { icon: string | null; word: string | null; ink: string }
+> = {
+  empty: { icon: null, word: null, ink: "text-mb-navy" },
+  notfound: { icon: "search", word: "Not found", ink: "text-mb-navy" },
+  error: { icon: "warning", word: "Error", ink: "text-mb-red" },
+  offline: { icon: "wifi-off", word: "Offline", ink: "text-mb-gold-ink" },
+  denied: { icon: "lock", word: "No access", ink: "text-mb-navy" },
+  unconfigured: { icon: "settings", word: "Not set up", ink: "text-mb-ink-muted" },
+};
+
 export const PanelEmpty = ({
   message,
   actionLabel,
   href,
+  tone = "empty",
+  icon,
+  onAction,
 }: {
   message: string;
   actionLabel?: string;
   href?: string;
-}) => (
-  <div className="flex flex-col items-center justify-center gap-3 px-4 py-8 text-center flex-1">
-    <p className="text-[0.85rem] text-mb-ink-muted">{message}</p>
-    {href && actionLabel && (
-      <Link href={href} className="mb-btn mb-btn-outline text-[0.72rem] px-3 py-1.5">
-        {actionLabel}
-      </Link>
-    )}
-  </div>
-);
+  /** Defaults to `empty`, which renders exactly as it always has. */
+  tone?: PanelEmptyTone;
+  /** Sprite id overriding the tone's default mark. */
+  icon?: string;
+  /** Renders a real `<button>` instead of a link. Takes precedence over `href`. */
+  onAction?: () => void;
+}) => {
+  const state = PANEL_EMPTY_TONES[tone];
+  const mark = icon ?? state.icon;
+  const actionClass = "mb-btn mb-btn-outline mb-btn-touch text-[0.72rem] px-3 py-1.5";
+
+  return (
+    <div className="flex flex-col items-center justify-center gap-3 px-4 py-8 text-center flex-1">
+      {mark && (
+        <span className={`mb-icon-disc h-9 w-9 ${state.ink}`}>
+          <MbIcon id={mark} size={16} className={state.ink} />
+        </span>
+      )}
+      {state.word ? (
+        <div className="flex flex-col items-center gap-1.5">
+          <span className="mb-kicker">{state.word}</span>
+          <p className="text-[0.85rem] text-mb-ink-muted">{message}</p>
+        </div>
+      ) : (
+        <p className="text-[0.85rem] text-mb-ink-muted">{message}</p>
+      )}
+      {actionLabel && onAction && (
+        <button type="button" onClick={onAction} className={actionClass}>
+          {actionLabel}
+        </button>
+      )}
+      {actionLabel && href && !onAction && (
+        <Link href={href} className={actionClass}>
+          {actionLabel}
+        </Link>
+      )}
+    </div>
+  );
+};

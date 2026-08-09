@@ -56,8 +56,10 @@
   --color-mb-paper-bright: var(--mb-paper-bright);
   --color-mb-navy: var(--mb-navy);
   --color-mb-coral: var(--mb-coral);
+  --color-mb-coral-deep: var(--mb-coral-deep);
   --color-mb-teal: var(--mb-teal);
   --color-mb-gold: var(--mb-gold);
+  --color-mb-gold-ink: var(--mb-gold-ink);
   --color-mb-plum: var(--mb-plum);
   --color-mb-green: var(--mb-green);
   --color-mb-red: var(--mb-red);
@@ -80,6 +82,42 @@
   --mb-ink-muted: #5d6c70;
   --mb-rule: rgba(7, 50, 77, 0.28);
   --mb-display-font: var(--font-oswald), "Arial Narrow", "Roboto Condensed", Impact, sans-serif;
+
+  /* --- contrast-safe variants (GAP-13/14) ------------------------------- */
+  /* Button fill only. 5.23:1 with #fff, replacing coral's 3.62:1 debt. */
+  --mb-coral-deep: #c9351f;
+  /* Gold as ink on paper: 5.13:1 on --mb-paper. --mb-gold stays on-navy only. */
+  --mb-gold-ink: #8a5c00;
+
+  /* --- tints, bands and the one shadow (GAP-13) ------------------------- */
+  --mb-tint-1: rgba(7, 50, 77, 0.04); /* row hover                      */
+  --mb-tint-2: rgba(7, 50, 77, 0.06); /* nav / outline-navy hover       */
+  --mb-tint-3: rgba(7, 50, 77, 0.12); /* empty form square, meter track */
+  --mb-band: rgba(7, 50, 77, 0.05); /* table day-group header band    */
+  --mb-rule-on-navy: rgba(255, 250, 241, 0.25);
+  --mb-tint-on-navy: rgba(255, 250, 241, 0.06);
+  --mb-panel-shadow: 0 8px 22px rgba(57, 41, 23, 0.08);
+
+  /* --- focus (GAP-12) --------------------------------------------------- */
+  --mb-focus: var(--mb-coral);
+
+  /* --- motion (GAP-11) -------------------------------------------------- */
+  --mb-dur-fast: 120ms;
+  --mb-dur-base: 180ms;
+  --mb-dur-slow: 280ms;
+  --mb-ease-out: cubic-bezier(0.2, 0.8, 0.3, 1);
+  --mb-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --mb-stagger: 40ms;
+
+  /* --- safe area (GAP-3) ------------------------------------------------ */
+  --mb-safe-top: env(safe-area-inset-top, 0px);
+  --mb-safe-bottom: env(safe-area-inset-bottom, 0px);
+
+  /* --- court diagram surface (tools) ------------------------------------ */
+  --mb-court-fill: var(--mb-paper-bright);
+  --mb-court-line: var(--mb-rule);
+  --mb-court-line-strong: var(--mb-navy);
+  --mb-court-accent: var(--mb-coral);
 }
 
 .matchbook-surface {
@@ -99,7 +137,7 @@
   border: 1.5px solid var(--mb-navy);
   border-top-width: 4px;
   border-radius: 4px;
-  box-shadow: 0 8px 22px rgba(57, 41, 23, 0.08);
+  box-shadow: var(--mb-panel-shadow);
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -146,6 +184,7 @@
   border: 1.5px solid transparent;
   transition: filter 0.15s ease, background-color 0.15s ease, color 0.15s ease;
   white-space: nowrap;
+  touch-action: manipulation;
 }
 
 .mb-btn-navy {
@@ -153,8 +192,11 @@
   color: var(--mb-paper-bright);
 }
 
+/* Fill is --mb-coral-deep, not --mb-coral: white on coral is 3.62:1 and .mb-btn
+   is 0.8rem/600, below the large-text threshold. Deep coral measures 5.23:1
+   (GAP-14, charter Appendix A D-20). Borders and accents keep --mb-coral. */
 .mb-btn-coral {
-  background: var(--mb-coral);
+  background: var(--mb-coral-deep);
   color: #fff;
 }
 
@@ -180,7 +222,7 @@
 }
 
 .mb-btn-outline-navy:hover {
-  background: rgba(7, 50, 77, 0.06);
+  background: var(--mb-tint-2);
   filter: none;
 }
 
@@ -197,10 +239,11 @@
   color: var(--mb-navy);
   border-left: 3px solid transparent;
   transition: background-color 0.15s ease, color 0.15s ease;
+  touch-action: manipulation;
 }
 
 .mb-nav-item:hover {
-  background: rgba(7, 50, 77, 0.06);
+  background: var(--mb-tint-2);
 }
 
 .mb-nav-item[data-active="true"] {
@@ -366,6 +409,890 @@
   outline-offset: 1px;
 }
 
+/* ---------------------------------------------------------------------------
+   Focus (GAP-12)
+   The legacy global `:focus-visible` red outline (further down this file) stays
+   scoped to legacy screens; this pair outranks it on specificity inside a
+   Matchbook surface and inside the portalled overlays, which render outside it.
+   --------------------------------------------------------------------------- */
+
+.matchbook-surface :focus-visible,
+.mb-dialog :focus-visible,
+.mb-sheet :focus-visible,
+.mb-toast :focus-visible {
+  outline: 2px solid var(--mb-focus);
+  outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------------------------
+   Motion (GAP-11)
+   Entrance is opacity + a 6px rise. Grid panels only, capped at 6 — never table
+   rows, never bracket cells. The global prefers-reduced-motion clamp further
+   down this file collapses both to the end state.
+   --------------------------------------------------------------------------- */
+
+@keyframes mb-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.mb-enter {
+  animation: mb-enter var(--mb-dur-slow) var(--mb-ease-out) both;
+}
+
+.mb-stagger-1 { animation-delay: calc(var(--mb-stagger) * 1); }
+.mb-stagger-2 { animation-delay: calc(var(--mb-stagger) * 2); }
+.mb-stagger-3 { animation-delay: calc(var(--mb-stagger) * 3); }
+.mb-stagger-4 { animation-delay: calc(var(--mb-stagger) * 4); }
+.mb-stagger-5 { animation-delay: calc(var(--mb-stagger) * 5); }
+.mb-stagger-6 { animation-delay: calc(var(--mb-stagger) * 6); }
+
+/* ---------------------------------------------------------------------------
+   Safe area (GAP-3)
+   --------------------------------------------------------------------------- */
+
+.mb-safe-top {
+  padding-top: var(--mb-safe-top);
+}
+
+.mb-safe-bottom {
+  padding-bottom: var(--mb-safe-bottom);
+}
+
+/* ---------------------------------------------------------------------------
+   Touch targets (GAP-14)
+
+   `.mb-btn-lg` and `.mb-btn-touch` are unconditional, so `MbButton size="lg"` /
+   `size="touch"` and `MbIconButton` meet the 44px floor from P1 onward.
+
+   The blanket coarse-pointer floor below is armed by `data-mb-touch="on"` on
+   `<html>`. W2 sets it in the one P2 commit that also drops `maximumScale`,
+   sets `viewport-fit: cover` and pads every fixed/sticky element — charter H6
+   requires those to land together. It is not armed in P0 because the shipped
+   `.mb-btn` is 38.8px and `.mb-panel-link` 17.3px at 390x844, so arming it here
+   would reflow all six shipped mobile routes and break the P0 contract
+   ("no visual change to shipped screens", charter §1.2 / W1 acceptance 1).
+   --------------------------------------------------------------------------- */
+
+.mb-btn-lg {
+  padding: 0.75rem 1.25rem;
+  font-size: 0.9rem;
+  min-height: 44px;
+}
+
+.mb-btn-touch {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+@media (pointer: coarse) {
+  [data-mb-touch="on"] .mb-btn,
+  [data-mb-touch="on"] .mb-nav-item,
+  [data-mb-touch="on"] .mb-tab,
+  [data-mb-touch="on"] .mb-panel-link {
+    min-height: 44px;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Promoted inline recipes (GAP-10)
+   --------------------------------------------------------------------------- */
+
+.mb-row-hover {
+  transition: background-color var(--mb-dur-base) var(--mb-ease-in-out);
+}
+
+.mb-row-hover:hover {
+  background: var(--mb-tint-1);
+}
+
+/* Selection / rank rail. Set --mb-rail-color per row; coral is the default. */
+.mb-rail {
+  box-shadow: inset 3px 0 0 var(--mb-rail-color, var(--mb-coral));
+}
+
+.mb-tile {
+  border: 1.5px solid var(--mb-navy);
+  background: var(--mb-paper-bright);
+}
+
+.mb-icon-disc {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 999px;
+  border: 1.5px solid var(--mb-navy);
+  color: var(--mb-navy);
+}
+
+/* Rule-thin progress track. Not a rounded <Progress>. */
+.mb-meter {
+  display: block;
+  width: 100%;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--mb-tint-3);
+}
+
+.mb-meter > span {
+  display: block;
+  height: 100%;
+  background: var(--mb-meter-color, var(--mb-navy));
+  transition: width var(--mb-dur-base) var(--mb-ease-out);
+}
+
+/* ---------------------------------------------------------------------------
+   Dialogs and sheets (GAP-1)
+   Navy wash, never a blur. Radius 4px, 4px navy top border, one panel shadow.
+   --------------------------------------------------------------------------- */
+
+.mb-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(7, 50, 77, 0.55);
+  animation: mb-fade var(--mb-dur-base) var(--mb-ease-out) both;
+}
+
+@keyframes mb-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.mb-dialog {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  max-height: calc(100dvh - 2rem);
+  background: var(--mb-paper-bright);
+  border: 1.5px solid var(--mb-navy);
+  border-top-width: 4px;
+  border-radius: 4px;
+  box-shadow: var(--mb-panel-shadow);
+  animation: mb-enter var(--mb-dur-slow) var(--mb-ease-out) both;
+}
+
+.mb-dialog-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.65rem 1rem 0.55rem;
+  border-bottom: 1px solid var(--mb-rule);
+}
+
+.mb-dialog[data-tone="navy"] .mb-dialog-head {
+  background: var(--mb-navy);
+  color: var(--mb-paper-bright);
+  border-bottom-color: var(--mb-rule-on-navy);
+}
+
+.mb-dialog[data-tone="danger"] {
+  border-top-color: var(--mb-red);
+}
+
+.mb-dialog-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 1rem;
+}
+
+.mb-dialog-foot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  padding-bottom: calc(0.75rem + var(--mb-safe-bottom));
+  border-top: 1.5px solid var(--mb-navy);
+}
+
+.mb-sheet {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  max-height: calc(100dvh - 3rem);
+  background: var(--mb-paper-bright);
+  border: 1.5px solid var(--mb-navy);
+  border-top-width: 4px;
+  border-radius: 4px 4px 0 0;
+  box-shadow: var(--mb-panel-shadow);
+  padding-bottom: var(--mb-safe-bottom);
+  animation: mb-sheet-up var(--mb-dur-slow) var(--mb-ease-out) both;
+}
+
+@keyframes mb-sheet-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Toast (GAP-2)
+   Paper-bright, 1.5px navy border, 4px left border in the tone colour — the
+   horizontal mirror of the accent rail.
+   --------------------------------------------------------------------------- */
+
+.mb-toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  min-width: 0;
+  background: var(--mb-paper-bright);
+  border: 1.5px solid var(--mb-navy);
+  border-left: 4px solid var(--mb-toast-tone, var(--mb-navy));
+  border-radius: 4px;
+  box-shadow: var(--mb-panel-shadow);
+  padding: 0.6rem 0.8rem;
+  animation: mb-enter var(--mb-dur-slow) var(--mb-ease-out) both;
+}
+
+.mb-toast[data-tone="info"] { --mb-toast-tone: var(--mb-navy); }
+.mb-toast[data-tone="success"] { --mb-toast-tone: var(--mb-green); }
+.mb-toast[data-tone="warning"] { --mb-toast-tone: var(--mb-gold); }
+.mb-toast[data-tone="danger"] { --mb-toast-tone: var(--mb-red); }
+
+/* ---------------------------------------------------------------------------
+   Badge (GAP-4)
+
+   The letterforms are always navy. GAP-4 says this class exists partly to fix
+   the §1.3 rule-1 debt, and colouring 0.66rem/700 text with the tone would
+   re-create it: measured on paper, --mb-green is 3.93:1, --mb-red 4.20:1,
+   --mb-coral 3.26:1 and --mb-gold 1.97:1, all under the 4.5:1 floor for text
+   below 18.66px. So the tone rides a second channel instead —
+     text    the paired mark (.mb-live-dot, or .mb-form-square, which picks up
+             --mb-badge-fill automatically)
+     framed  a 1.5px rule in --mb-badge-ink (every tone clears the 3:1 UI floor;
+             draft and warn use --mb-gold-ink, since raw gold does not)
+     solid   a tone fill with white ink. Only tone="live" clears 4.5:1 there
+             (#fff on --mb-red is 4.76:1; on --mb-green it is 4.45:1), so
+             MbBadge restricts `solid` to live and the design language §5.6
+             claim that final also passes solid is corrected.
+   --------------------------------------------------------------------------- */
+
+.mb-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  white-space: nowrap;
+  font-family: var(--mb-display-font);
+  text-transform: uppercase;
+  font-weight: 700;
+  font-size: 0.66rem;
+  letter-spacing: 0.1em;
+  line-height: 1;
+  border: 1.5px solid transparent;
+  border-radius: 2px;
+  color: var(--mb-navy);
+  font-variant-numeric: tabular-nums;
+}
+
+.mb-badge[data-size="md"] {
+  font-size: 0.74rem;
+  letter-spacing: 0.08em;
+}
+
+/* The paired mark takes the tone so the caller never sets a colour inline. */
+.mb-badge .mb-form-square {
+  background: var(--mb-badge-fill, var(--mb-navy));
+}
+
+.mb-badge[data-tone="live"] { --mb-badge-ink: var(--mb-red); --mb-badge-fill: var(--mb-red); }
+.mb-badge[data-tone="draft"] { --mb-badge-ink: var(--mb-gold-ink); --mb-badge-fill: var(--mb-gold); }
+.mb-badge[data-tone="final"] { --mb-badge-ink: var(--mb-green); --mb-badge-fill: var(--mb-green); }
+.mb-badge[data-tone="win"] { --mb-badge-ink: var(--mb-green); --mb-badge-fill: var(--mb-green); }
+.mb-badge[data-tone="loss"] { --mb-badge-ink: var(--mb-red); --mb-badge-fill: var(--mb-red); }
+.mb-badge[data-tone="neutral"] { --mb-badge-ink: var(--mb-ink-muted); --mb-badge-fill: var(--mb-ink-muted); }
+.mb-badge[data-tone="teal"] { --mb-badge-ink: var(--mb-teal); --mb-badge-fill: var(--mb-teal); }
+.mb-badge[data-tone="guest"] { --mb-badge-ink: var(--mb-plum); --mb-badge-fill: var(--mb-plum); }
+.mb-badge[data-tone="warn"] { --mb-badge-ink: var(--mb-gold-ink); --mb-badge-fill: var(--mb-gold); }
+
+.mb-badge[data-variant="framed"] {
+  border-color: var(--mb-badge-ink);
+  padding: 0.2rem 0.4rem;
+}
+
+/* White, not --mb-paper-bright: on --mb-red white is 4.76:1 and paper-bright
+   4.58:1; the extra margin is what keeps the one permitted solid tone above
+   4.5:1 at 0.66rem/700. Same #fff-on-fill pairing as .mb-btn-coral. */
+.mb-badge[data-variant="solid"] {
+  background: var(--mb-badge-fill);
+  border-color: var(--mb-badge-fill);
+  color: #fff;
+  padding: 0.2rem 0.4rem;
+}
+
+/* A solid badge must still read in greyscale, so the live dot rides along; on a
+   tone fill it inverts to paper-bright. */
+.mb-badge[data-variant="solid"] .mb-live-dot {
+  background: var(--mb-paper-bright);
+}
+
+/* ---------------------------------------------------------------------------
+   Tabs (GAP-5)
+   The horizontal mirror of .mb-nav-item: coral text + coral 3px bottom border.
+   --------------------------------------------------------------------------- */
+
+.mb-tabs {
+  display: flex;
+  align-items: stretch;
+  overflow-x: auto;
+  border-bottom: 1.5px solid var(--mb-navy);
+}
+
+.mb-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 44px;
+  padding: 0.5rem 1rem;
+  margin-bottom: -1.5px;
+  white-space: nowrap;
+  font-family: var(--mb-display-font);
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--mb-navy);
+  border-bottom: 3px solid transparent;
+  transition: color var(--mb-dur-base) var(--mb-ease-in-out),
+    border-color var(--mb-dur-base) var(--mb-ease-in-out),
+    background-color var(--mb-dur-base) var(--mb-ease-in-out);
+  touch-action: manipulation;
+}
+
+.mb-tab:hover {
+  background: var(--mb-tint-2);
+}
+
+.mb-tab[data-active="true"] {
+  color: var(--mb-coral);
+  border-bottom-color: var(--mb-coral);
+}
+
+/* ---------------------------------------------------------------------------
+   Form controls (GAP-6)
+   Radii stay 4/3/2px — the radio is a squared ballot box carrying an inset
+   coral mark, because §3.3 reserves 999px for the live dot, account disc,
+   icon discs and colour swatches.
+   --------------------------------------------------------------------------- */
+
+.mb-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.mb-field-hint {
+  font-size: 0.72rem;
+  color: var(--mb-ink-muted);
+}
+
+.mb-field-error {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--mb-red);
+}
+
+.mb-field[data-invalid="true"] .mb-input,
+.mb-field[data-invalid="true"] .mb-textarea,
+.mb-field[data-invalid="true"] .mb-select-native {
+  border-color: var(--mb-red);
+}
+
+.mb-textarea {
+  width: 100%;
+  min-height: 5rem;
+  resize: vertical;
+  border: 1.5px solid var(--mb-rule);
+  border-radius: 4px;
+  background: var(--mb-paper-bright);
+  padding: 0.6rem 0.8rem;
+  font-size: 0.9rem;
+  color: var(--mb-navy);
+  transition: border-color var(--mb-dur-base) var(--mb-ease-in-out);
+}
+
+.mb-textarea::placeholder {
+  color: var(--mb-ink-muted);
+}
+
+.mb-textarea:focus-within,
+.mb-textarea:focus {
+  border-color: var(--mb-navy);
+}
+
+.mb-check,
+.mb-radio {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  display: inline-grid;
+  place-content: center;
+  border: 1.5px solid var(--mb-navy);
+  border-radius: 2px;
+  background: var(--mb-paper-bright);
+  transition: background-color var(--mb-dur-fast) var(--mb-ease-out),
+    border-color var(--mb-dur-fast) var(--mb-ease-out);
+}
+
+.mb-check:checked {
+  background: var(--mb-coral-deep);
+  border-color: var(--mb-coral-deep);
+}
+
+.mb-check:checked::after {
+  content: "";
+  width: 7px;
+  height: 4px;
+  border-left: 2px solid var(--mb-paper-bright);
+  border-bottom: 2px solid var(--mb-paper-bright);
+  transform: rotate(-45deg) translate(0.5px, -1px);
+}
+
+.mb-radio:checked::after {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 2px;
+  background: var(--mb-coral-deep);
+}
+
+.mb-switch {
+  appearance: none;
+  position: relative;
+  width: 28px;
+  height: 16px;
+  flex-shrink: 0;
+  border: 1.5px solid var(--mb-navy);
+  border-radius: 2px;
+  background: var(--mb-paper-bright);
+  transition: background-color var(--mb-dur-base) var(--mb-ease-in-out),
+    border-color var(--mb-dur-base) var(--mb-ease-in-out);
+}
+
+.mb-switch::after {
+  content: "";
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  width: 11px;
+  height: 11px;
+  border-radius: 2px;
+  background: var(--mb-navy);
+  transition: transform var(--mb-dur-base) var(--mb-ease-out),
+    background-color var(--mb-dur-base) var(--mb-ease-in-out);
+}
+
+.mb-switch:checked {
+  background: var(--mb-coral-deep);
+  border-color: var(--mb-coral-deep);
+}
+
+.mb-switch:checked::after {
+  transform: translateX(11px);
+  background: var(--mb-paper-bright);
+}
+
+.mb-stepper {
+  display: inline-flex;
+  align-items: stretch;
+  overflow: hidden;
+  border: 1.5px solid var(--mb-navy);
+  border-radius: 4px;
+  background: var(--mb-paper-bright);
+}
+
+.mb-stepper button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  min-height: 44px;
+  background: transparent;
+  color: var(--mb-navy);
+  touch-action: manipulation;
+  transition: background-color var(--mb-dur-fast) var(--mb-ease-out);
+}
+
+.mb-stepper button:hover:not(:disabled) {
+  background: var(--mb-tint-2);
+}
+
+.mb-stepper button:disabled {
+  color: var(--mb-ink-muted);
+  cursor: not-allowed;
+}
+
+.mb-stepper-value {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 3.5rem;
+  padding: 0 0.5rem;
+  border-left: 1.5px solid var(--mb-navy);
+  border-right: 1.5px solid var(--mb-navy);
+  font-family: var(--mb-display-font);
+  font-weight: 700;
+  font-size: 1.5rem;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.mb-stepper[data-size="lg"] button {
+  width: 56px;
+  min-height: 56px;
+}
+
+.mb-stepper[data-size="lg"] .mb-stepper-value {
+  min-width: 4.5rem;
+  font-size: 1.875rem;
+}
+
+.mb-swatch {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  padding: 0;
+  border: 1.5px solid var(--mb-navy);
+  border-radius: 2px;
+}
+
+.mb-swatch[data-size="touch"] {
+  width: 44px;
+  height: 44px;
+  border-radius: 4px;
+}
+
+.mb-swatch[data-selected="true"] {
+  box-shadow: inset 0 0 0 2px var(--mb-paper-bright), inset 0 0 0 4px var(--mb-navy);
+}
+
+/* Wraps instead of squeezing; the navy background shows through the 1.5px gaps
+   as the dividing rules, so a wrapped second row is still ruled correctly. */
+.mb-segmented {
+  display: grid;
+  gap: 1.5px;
+  overflow: hidden;
+  border: 1.5px solid var(--mb-navy);
+  border-radius: 4px;
+  background: var(--mb-navy);
+}
+
+.mb-segmented > * {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0.5rem 0.75rem;
+  background: var(--mb-paper-bright);
+  color: var(--mb-navy);
+  font-family: var(--mb-display-font);
+  text-transform: uppercase;
+  font-weight: 600;
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  text-align: center;
+  touch-action: manipulation;
+  transition: background-color var(--mb-dur-base) var(--mb-ease-in-out),
+    color var(--mb-dur-base) var(--mb-ease-in-out);
+}
+
+.mb-segmented[data-size="md"] > * {
+  min-height: 48px;
+}
+
+.mb-segmented > [data-selected="true"] {
+  background: var(--mb-navy);
+  color: var(--mb-paper-bright);
+}
+
+/* ---------------------------------------------------------------------------
+   Scoring console (GAP-7)
+   --------------------------------------------------------------------------- */
+
+.mb-console {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overscroll-behavior: none;
+  background: var(--mb-paper-bright);
+}
+
+@supports (height: 100dvh) {
+  .mb-console {
+    height: 100dvh;
+  }
+}
+
+.mb-console-column {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  background: var(--mb-paper-bright);
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
+  transition: background-color var(--mb-dur-fast) var(--mb-ease-out);
+}
+
+/* Press feedback is a tint, never a scale. */
+.mb-console-column:active {
+  background: var(--mb-tint-1);
+}
+
+.mb-console-column[data-leading="true"],
+.mb-notch-coral {
+  box-shadow: inset 0 3px 0 var(--mb-coral);
+}
+
+.mb-numeral {
+  display: block;
+  text-align: center;
+  font-family: var(--mb-display-font);
+  font-weight: 700;
+  line-height: 0.9;
+  font-variant-numeric: tabular-nums;
+  min-width: 2ch;
+}
+
+/* display/stat-lg */
+.mb-numeral--compact {
+  font-size: 1.875rem;
+}
+
+/* display/score-xl */
+.mb-numeral--console {
+  font-size: 3.75rem;
+}
+
+/* display/score-2xl — MbScoreNumeral size="court" only */
+.mb-numeral--court {
+  font-size: clamp(4rem, 18vw, 9rem);
+}
+
+.mb-rule-vertical {
+  width: 1.5px;
+  align-self: stretch;
+  flex-shrink: 0;
+  background: var(--mb-navy);
+}
+
+.mb-action-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  padding-bottom: calc(0.75rem + var(--mb-safe-bottom));
+  border-top: 1.5px solid var(--mb-navy);
+  background: var(--mb-paper-bright);
+}
+
+/* ---------------------------------------------------------------------------
+   Skeleton (GAP-8) — static block at the final geometry. No shimmer: a shimmer
+   is a gradient, and gradients are banned.
+   --------------------------------------------------------------------------- */
+
+.mb-skeleton {
+  display: block;
+  background: rgba(7, 50, 77, 0.08);
+  border-radius: 2px;
+}
+
+/* ---------------------------------------------------------------------------
+   Editorial set (public share §5.3)
+   --------------------------------------------------------------------------- */
+
+.mb-stamp-final {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem 0.6rem;
+  border: 1.5px solid var(--mb-coral);
+  border-radius: 2px;
+  color: var(--mb-coral);
+  font-family: var(--mb-display-font);
+  text-transform: uppercase;
+  font-weight: 700;
+  font-size: 0.74rem;
+  letter-spacing: 0.22em;
+  line-height: 1;
+  transform: rotate(var(--mb-stamp-rotate, -6deg));
+  transform-origin: center;
+}
+
+.mb-code-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.5rem;
+  border: 1.5px solid var(--mb-navy);
+  border-radius: 3px;
+  background: var(--mb-paper-bright);
+  font-family: var(--mb-display-font);
+  text-transform: uppercase;
+  font-weight: 700;
+  font-size: 0.85rem;
+  letter-spacing: 0.18em;
+  font-variant-numeric: tabular-nums;
+}
+
+.mb-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 0;
+  padding: 0.55rem 0.8rem;
+  background: var(--mb-paper-bright);
+  border: 1.5px solid var(--mb-banner-tone, var(--mb-navy));
+  border-left-width: 4px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+}
+
+.mb-banner[data-tone="info"] { --mb-banner-tone: var(--mb-navy); }
+.mb-banner[data-tone="success"] { --mb-banner-tone: var(--mb-green); }
+.mb-banner[data-tone="warn"] { --mb-banner-tone: var(--mb-gold); }
+.mb-banner[data-tone="danger"] { --mb-banner-tone: var(--mb-red); }
+
+/* Grid, never flex — the name cells must be able to shrink and truncate. */
+.mb-scoreline {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.mb-scoreline > * {
+  min-width: 0;
+}
+
+.mb-day-head {
+  padding: 0.35rem 0.5rem;
+  background: var(--mb-band);
+  font-family: var(--mb-display-font);
+  text-transform: uppercase;
+  font-weight: 700;
+  font-size: 0.66rem;
+  letter-spacing: 0.12em;
+  color: var(--mb-ink-muted);
+}
+
+/* ---------------------------------------------------------------------------
+   Skip link (shell §5.16) — first focusable node, targets #mb-main.
+   --------------------------------------------------------------------------- */
+
+.mb-skip-link {
+  position: fixed;
+  top: calc(0.5rem + var(--mb-safe-top));
+  left: 0.5rem;
+  z-index: 100;
+  transform: translateY(-300%);
+  padding: 0.55rem 1.1rem;
+  border-radius: 4px;
+  background: var(--mb-navy);
+  color: var(--mb-paper-bright);
+  font-family: var(--mb-display-font);
+  text-transform: uppercase;
+  font-weight: 600;
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+}
+
+.mb-skip-link:focus {
+  transform: none;
+}
+
+/* ---------------------------------------------------------------------------
+   Print (GAP-15.2)
+   Overriding the palette tokens is what turns the whole system black on white;
+   nothing below needs to restate a colour.
+   --------------------------------------------------------------------------- */
+
+@media print {
+  :root {
+    --mb-paper: #ffffff;
+    --mb-paper-bright: #ffffff;
+    --mb-navy: #000000;
+    --mb-ink-muted: #333333;
+    --mb-rule: rgba(0, 0, 0, 0.35);
+    --mb-tint-1: transparent;
+    --mb-tint-2: transparent;
+    --mb-tint-3: rgba(0, 0, 0, 0.12);
+    --mb-band: rgba(0, 0, 0, 0.06);
+    --mb-panel-shadow: none;
+  }
+
+  @page {
+    margin: 12mm;
+  }
+
+  .matchbook-surface {
+    background-image: none;
+  }
+
+  /* Chrome and actions */
+  .mb-print-hide,
+  .mb-skip-link,
+  .mb-action-bar,
+  .mb-toast,
+  .mb-dialog-overlay,
+  .mb-btn,
+  .mb-panel-link,
+  .mb-tabs,
+  .matchbook-surface nav,
+  .matchbook-surface aside {
+    display: none !important;
+  }
+
+  /* One column */
+  .matchbook-surface [class*="grid-cols-"] {
+    display: block !important;
+  }
+
+  .mb-panel {
+    height: auto;
+    margin-bottom: 1rem;
+    box-shadow: none;
+    break-inside: avoid;
+  }
+
+  /* Expand capped ledgers */
+  .matchbook-surface [class*="max-h-"] {
+    max-height: none !important;
+  }
+
+  .matchbook-surface [class*="overflow-"] {
+    overflow: visible !important;
+  }
+}
 
 /* Mobile landscape mode - when height is limited, optimize for score visibility */
 @media (max-height: 500px) {

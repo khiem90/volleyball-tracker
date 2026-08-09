@@ -50,6 +50,22 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+// Local design-preview escape hatch. Set NEXT_PUBLIC_DEV_PREVIEW_AUTH=1 in a
+// gitignored .env.local to browse authenticated screens without Firebase or the
+// auth emulator. Next inlines both checks at build time, so a production build
+// (NODE_ENV=production, flag absent) compiles this branch away entirely.
+const DEV_PREVIEW_AUTH =
+  process.env.NODE_ENV !== "production" &&
+  process.env.NEXT_PUBLIC_DEV_PREVIEW_AUTH === "1";
+
+const PREVIEW_USER: AuthUser = {
+  uid: "dev-preview-user",
+  email: "preview@localhost",
+  displayName: "Preview User",
+  photoURL: null,
+  isAnonymous: false,
+};
+
 // ============================================
 // Helper Functions
 // ============================================
@@ -69,13 +85,16 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider = ({ children }: AuthProviderProps) => {
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState<AuthUser | null>(
+    DEV_PREVIEW_AUTH ? PREVIEW_USER : null
+  );
+  const [isLoading, setIsLoading] = useState(!DEV_PREVIEW_AUTH);
   const [isConfigured] = useState(() => isFirebaseConfigured());
 
   // Listen to auth state changes
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
+    if (DEV_PREVIEW_AUTH) return;
     if (!isConfigured || !auth) {
       setIsLoading(false);
       return;

@@ -11,11 +11,20 @@ date ranges or all-time records.
 - `auth/`: authentication-provider marks
 - `teams/`: eight original volleyball team crests
 - `diagrams/`: reusable top-down volleyball court
-- `icons/sprite.svg`: team- and tournament-level current-color UI symbols
+- `icons/sprite.svg`: 62 team- and tournament-level current-color UI symbols
 - `textures/`: seamless paper grain
-- `tokens.css`: palette, typography stacks, rules, shadow, and surface helpers
-- `manifest.json`: machine-readable asset index
+- `tokens.css`: palette, typography stacks, rule, shadow, and surface helpers
+- `manifest.json`: machine-readable asset index, including the full icon id list
 - `preview.html`: visual catalog of the complete pack
+
+## `tokens.css` is preview-only
+
+The application does **not** load `tokens.css`. The runtime source of truth is
+the Matchbook block at the top of `src/app/globals.css`; `tokens.css` is a
+standalone copy so `preview.html` opens straight off disk. Every property it
+declares also exists at runtime under the same name — keep it that way, and add
+new runtime-only utility tokens (tints, motion, safe-area, court) to
+`globals.css` only.
 
 ## Use an image
 
@@ -55,6 +64,10 @@ section titles, issue badges, and large scores.
 | Compete | `teams/*.svg`, icons `bracket`, `compete`, `live`, `calendar`, `location` |
 | History | `teams/*.svg`, icons `history`, `search`, `filter`, `export`, `share` |
 | Tools | `teams/*.svg`, icons `clipboard`, `court`, `print`, `save`, `check`, `bracket` |
+| Overlays and feedback | icons `close`, `chevron-left`, `more`, `undo`, `refresh`, `wifi-off`, `trash`, `warning` |
+| Live scoring | icons `minus`, `plus`, `undo`, `expand`, `collapse`, `streak`, `arrow-move` |
+| Share and access | icons `copy`, `link`, `key`, `eye`, `eye-off`, `logout`, `shield` |
+| Standings and results | icons `crown`, `trophy`, `queue`, `grid`, `edit`, `drag` |
 
 The generated mockups remain in `design-directions/matchbook-screens/` and are
 visual references, not runtime assets.
