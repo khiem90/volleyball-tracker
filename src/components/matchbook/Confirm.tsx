@@ -14,19 +14,26 @@ import { MbDialog, MbDialogBody, MbDialogFooter } from "./Dialog";
  *
  * | | destructive | benign |
  * | --- | --- | --- |
- * | frame | 4px `--mb-red` top edge | 4px `--mb-navy` top edge |
+ * | frame | 4px `--mb-red` anchor top edge | 4px `--mb-navy` anchor top edge |
  * | header glyph | `warning` in `--mb-red` | `help` |
- * | subject rail | `--mb-red` | `--mb-navy` |
+ * | subject rail | 3px `--mb-red` accent | 3px `--mb-navy` accent |
  * | commit | `MbDestructiveButton` — red-inked **outline** + `warning` glyph | `.mb-btn-navy` **fill** |
  *
- * Fill versus outline is the channel that survives desaturation, so the
+ * The commit is `MbDestructiveButton` and nothing else — that component owns
+ * the whole destructive language and carries the measurements; `MbDangerZone`
+ * renders the identical control, so the two surfaces cannot drift. Fill versus
+ * outline is the channel that survives desaturation (greyscale ground 0.960
+ * against `.mb-btn-navy`'s 0.029 and `.mb-btn-coral`'s 0.151), so the
  * destructive commit is never mistakable for a benign primary and never leans
- * on hue (invariant 13). It is deliberately the quieter control of the two in
- * the footer: the cheap action is Cancel, and the expensive one should have to
- * be read. It also removes the collision the earlier build shipped — a
- * `--mb-coral-deep` fill sitting ΔE76 7.45 from the `--mb-red` rule directly
- * above it in the same 416px frame, which design language §2.2 forbids
- * outright ("coral and red ... must never sit adjacent").
+ * on hue (invariant 13); the `warning` glyph is what separates it from
+ * `Cancel`, the other outline in the footer.
+ *
+ * It is deliberately the quieter control of the two: the cheap action is
+ * Cancel, and the expensive one should have to be read. That also removes the
+ * collision the earlier build shipped — a `--mb-coral-deep` fill sitting ΔE76
+ * 7.45 from the `--mb-red` rule directly above it in the same 416px frame,
+ * which design language §2.2 forbids outright ("coral and red ... must never
+ * sit adjacent").
  */
 export const MbConfirm = ({
   open,

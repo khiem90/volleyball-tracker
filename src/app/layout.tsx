@@ -40,14 +40,19 @@ export const viewport: Viewport = {
   themeColor: "#0f172a",
 };
 
+/**
+ * The next/font variable classes belong on <html>, NOT <body>: globals.css
+ * resolves --font-outfit / --font-oswald inside `:root`. See the "Typeface
+ * plumbing" note at the top of globals.css before moving them.
+ */
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`${outfit.variable} ${oswald.variable} font-sans antialiased`}>
+    <html lang="en" className={`${outfit.variable} ${oswald.variable}`}>
+      <body className="font-sans antialiased">
         <Providers>{children}</Providers>
       </body>
     </html>

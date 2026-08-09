@@ -67,7 +67,8 @@ Matchbook block at the top of `src/app/globals.css`.
 | P1 primitive kit | W1 | **DONE** — ~30 components, gallery at `/dev/kit` |
 | P1 ranking + tests + audit.mjs | W8 | **DONE** — `audit.mjs` + `routes.mjs` + `shot.mjs` are the measurement harness |
 | **Gate 1 (regression + critique)** | — | **RUN — 64/100 FAIL.** PASS needs all ten rubric dimensions ≥8 and zero §3 hard fails |
-| Gate 1 fix round | W1–W8 (7 parallel agents) | **IN FLIGHT — this round.** Disjoint file slices; re-critique after |
+| Gate 1 fix round | W1–W8 (7 parallel agents) | **IN FLIGHT — this round.** Disjoint file slices; re-critique after. W8's slice (`audit.mjs`, design language, this file) is **done** |
+| **Re-critique against `benchmark-rubric.md`** | — | **NOT RUN.** The gate is still 64/100 FAIL until it is. Nothing here claims a dimension moved |
 | P2a shell | W2 | not started |
 | P2b toast/loading/offline/layout, contexts | W2 + W8 | not started |
 | P3a create-flows, competition-detail, live-scoring, volleyball | W3 W4 W5 W7 | not started |
@@ -83,13 +84,42 @@ two agents touch the same file. W8's slice is the one this file documents:
 `audit.mjs` composite-awareness + a11y checks (F18) and the design language
 un-staling (F19).
 
+**What still remains before P2 can start:**
+
+1. The **re-critique has not been run.** Until it scores all ten dimensions ≥8
+   with zero §3 hard fails, the programme's verdict is still 64/100 FAIL.
+2. `--all` still reports **295 sub-44px targets (desktop) / 225 (mobile)**,
+   **263 / 258 numerals without `tabular-nums`**, and **82 / 91 a11y failures**
+   across the 23 routes. Almost all of that is un-converted legacy screens, which
+   is expected and is P3's work — but it is the baseline P3 has to clear, and
+   nobody has looked at it yet. `/dev/kit` itself is at 1 TOUCH (the skip link,
+   correctly off-screen), 4 SPACING, 0 everything else.
+3. Two mobile routes were overflowing horizontally when this round started; one
+   still is. The app is being edited concurrently, so re-measure rather than
+   trusting that count.
+4. The three out-of-zone-A dependencies in §7.3 of the design language must be
+   re-declared inside the Matchbook block **before** P4 deletes zone C, and zone
+   B needs an owner.
+5. `MbStateBlock` / `MB_STATE_SCALE` landed in `Panel.tsx` from a sibling while
+   this round was running and are in §4.2. Anything that lands **after** this
+   round is not — re-read the directory before treating §4.2 as exhaustive.
+
 ### What P1 actually delivered
 
-~30 components in `src/components/matchbook/` — the real list, with a "use this
-when" line each, is **`docs/design/matchbook-design-language.md` §4.2**. That
-inventory now reflects **commit `a4d6876` plus this fix round**; it was written
-by reading every file in the directory, not from a plan. Ten of the fifteen §11
-GAPs are closed and each now names the file that closed it.
+**43 files in `src/components/matchbook/`** — 30 primitives plus types, hooks and
+the two screen panel libraries. The real list, with a "use this when" line each,
+is **`docs/design/matchbook-design-language.md` §4.2**. That inventory reflects
+**commit `a4d6876` plus this fix round, re-read from the files at the end of the
+round** — not from a plan, and not from `a4d6876` alone. Six agents were editing
+those files while it was written, so anything landing after this round is not in
+it; re-read the directory before trusting it as exhaustive. Ten of the fifteen
+§11 GAPs are closed and each names the file that closed it; every "still open"
+claim in §11 was re-verified against the tree at the end of this round
+(`MbToast`, `MatchbookBottomBar`, `MbScoreSide`, `MbPageLoading`,
+`MatchbookMasthead`, `MbAccountChip`, `MbPanelFoot` are genuinely absent from
+`src/`; `data-mb-touch="on"` is genuinely unset; `DeleteConfirmDialog` is
+genuinely a ~20-line `MbConfirm` adapter; `PageLoadingSpinner` genuinely still
+renders `<Navigation />`).
 
 Still unbuilt, with owners (also listed at the end of §4.2): `MatchbookMasthead`,
 `MbEventBar`, `MatchbookTopStrip`, `MatchbookBottomBar`, `MbAccountChip`,
@@ -122,35 +152,80 @@ debugging it. De-duplicating the gallery is the audit agent's job.
 
 ### What the Gate-1 fix round changed in the harness (W8 slice)
 
-`<SCRATCH>/pw/audit.mjs` gained **composite awareness** and **three a11y checks**, because its spacing
-section was about to hand six workstreams a wall of false positives.
+`<SCRATCH>/pw/audit.mjs` gained **composite awareness**, **three a11y checks** and a **self-test**, because
+its spacing section was about to hand six workstreams a wall of false positives.
 
 - A pair of interactive boxes under 8px apart is now split into `SPACING` (counted) and `GROUPED`
   (informational, printed, never silently dropped). A pair is grouped only when both boxes are cells of one
-  composite — `[role=tablist]`, `[role=radiogroup]`, `[role=menu]`, `[role=listbox]`, `.mb-segmented`,
-  `.mb-stepper` — or are sibling ruled rows **with a measured rule in the gap band**. Unruled adjacent rows
-  stay violations. Grouped pairs print whether a rule was measured, so `tablist (no rule)` is still visible.
+  composite — `[role=tablist]`, `[role=radiogroup]`, `[role=menu]`, `[role=menubar]`, `[role=listbox]`,
+  `.mb-segmented`, `.mb-stepper` — or are sibling ruled rows **with a rule measured in the gap band**.
+  Unruled adjacent rows stay violations. Grouped pairs print whether a rule was measured, so
+  `tablist (no rule)` is still visible.
+- A "measured rule" is capped at **2px**, on both paths. Uncapped, `edgeRule` starts at the element itself,
+  so any framed control — `.mb-tile`, `.mb-input`, a default `<button>` — supplies its own divider, and any
+  gap under 8px between two transparent controls inside a painted panel reads as a rule because the panel's
+  ground differs from `rgba(0,0,0,0)`. A rule is a hairline; anything wider is a gap, and a gap under 8px is
+  the violation being hunted. A/B on the same tree (`--all` desktop): uncapped **41 spacing / 26 grouped**,
+  capped **44 / 23** — the cap recovers three real violations the first cut waived, all on
+  `/tools/volleyball/rotations`, where four framed accordion buttons stack **5px** apart and each button's
+  own frame was being read as the divider. `/dev/kit` is unaffected (55 grouped either way): its composites
+  all abut at ≤1.5px.
 - New `A11Y` section: **failures** (`no-accessible-name`, `not-native`, `name-mismatch`) count toward the
   exit code; **notes** (`title-no-aria-label`, `name-from-title`, `icon-only-no-title`) print but do not.
-- New flag `--groups` lists grouped pairs individually. Summary table gained `[grp]` and `A11Y` columns.
+- New flags: `--groups` lists grouped pairs individually; `--no-composites` turns the reclassification off so
+  the "before" of any signal/noise claim is measurable on the same tree; `--selftest` runs the composite and
+  a11y rules against a synthetic page (no dev server, no fixture) with one known-good and one known-bad case
+  each — **15 cases, all passing**. Run it after editing the file. Summary table gained `[grp]` and `A11Y`.
 
-Measured effect (same runs, so the split is a pure partition of one pair set):
+Measured with `--no-composites` vs default on the **same tree**, so the split is a pure partition of one
+pair set:
 
-| Sweep | spacing before | spacing after | grouped | a11y failures found |
-| --- | --- | --- | --- | --- |
-| `/dev/kit` desktop | 65 | **10** | 55 | 0 |
-| `--all` desktop (23 routes) | 67 | **41** | 26 | **82** |
-| `--all` mobile (23 routes) | 70 | **44** | 26 | **91** |
+| Sweep | spacing before | spacing after | grouped | cut | a11y failures | a11y notes |
+| --- | --- | --- | --- | --- | --- | --- |
+| `/dev/kit` desktop | 59 | **4** | 55 | 93% | 0 | 12 |
+| `/dev/kit` mobile | 61 | **4** | 57 | 93% | 0 | 12 |
+| `--all` desktop (23 routes) | 67 | **44** | 23 | 34% | **82** | 65 |
+| `--all` mobile (23 routes) | 70 | **44** | 23 | 37% | **91** | 84 |
 
-The `/dev/kit` figure is the one that matters for W2–W7, because the kit is where the composites live: an
-84% cut, and the four survivors are all real (three list-header/first-row collisions and the two scoring tap
-columns at 1px). The app routes barely move because none of them use `MbTabs`/`MbSegmented` yet — they will,
-which is exactly why this had to land before P2.
+`/dev/kit` is the figure that matters for W2–W7, because the kit is where the composites live. The four
+survivors there are all real: three list-header-on-first-row collisions (`Select all` / `Clear selection`
+abutting the first ruled row at 1px) and the two scoring tap columns at 1px. The app routes barely move
+because none of them use `MbTabs`/`MbSegmented` yet — they will, which is exactly why this had to land
+before P2. The 55 waived pairs break down `list-row 32 · tablist (no rule) 14 · radiogroup 9`; the
+`(no rule)` on all 14 tablist pairs is real signal — those tabs abut with nothing drawn between them.
+
+The critic's named example, the **0px reveal-eye/copy pair, was already fixed by the sibling that owns
+`CopyField.tsx`** when this slice ran: measured 10px (`gap-2.5`) between the 44×48 reveal button and the
+82×48 copy button. `--selftest` case 6 is that exact shape and asserts it would still be reported.
 
 Also this round: `docs/design/matchbook-design-language.md` was brought into agreement with the tree —
-§4.2 rewritten as the real ~30-component inventory, §11 turned from "GAPS TO BUILD" into a status register
-where every closed gap names its file, and the false claims in §1.1, §1.3, §1.4, §3.3, §4.1, §4.3, §5.6,
-§5.7, §6, §7, §8, §9 and §10 corrected.
+§4.2 rewritten as the real component inventory, §11 turned from "GAPS TO BUILD" into a status register
+where every closed gap names its file, and false claims corrected throughout. Three findings from that pass
+are new and matter beyond the document:
+
+1. **There is no 1.5px border in the system and there never was.** Chrome floors `border-width: 1.5px` to a
+   used value of 1px at DPR 1, 2 and 3. A sweep of `/dev/kit` found 2783 rendered borders — 2616 at 1px, 81
+   at 4px, 52 at 3px, 34 at 2px, **zero at 1.5px** — including all 109 elements carrying `border-[1.5px]`.
+   The rule hierarchy still reads, because it is carried by colour (translucent `--mb-rule` vs solid
+   `--mb-navy`) plus the real 3px/4px steps. §3.3 now says so. **Keep writing `border-[1.5px]`** — it is the
+   shipped idiom and produces the correct line; do not "fix" it, and do not go to 2px (spoken for).
+2. **`globals.css` has three zones, not two**, and the design language now says so (Trap 2): **A** Matchbook
+   (`@theme inline` + first `:root` + every `.mb-*`), **B** a shared middle owned by nobody (the
+   `@media (max-height: 500px)` landscape helpers, then `* { box-sizing }`,
+   `html, body { …; overflow-x: hidden }`, `body { font-family }`, `.scrollbar-thin`), **C** legacy from the
+   second `:root` down. **Three guarantees Matchbook screens rely on live outside zone A** — the global
+   `button:active` press scale (C), the global `prefers-reduced-motion` clamp (C), and
+   `html, body { overflow-x: hidden }` (B). There is **no** `prefers-reduced-motion` rule anywhere in zone A.
+   W2's P4 deletion removes the first two from every converted screen unless they are re-declared first, in
+   the same commit. New §7.3 records this. `audit.mjs` will not catch the reduced-motion one — its `MOTION`
+   pass detects JS-driven motion, not an unclamped CSS keyframe.
+3. **`.hide-landscape` and friends are in zone B**, and §8 previously told W5 to reuse them as
+   "legacy-named but system-neutral". Corrected: re-declare them as `.mb-*` in zone A or write the media
+   query locally.
+
+Line numbers were removed from the design language throughout. Seven agents edit `globals.css` and
+`src/components/matchbook/` in parallel, and every line number in it was already wrong; anchors are now
+grep targets (a selector, a token, an export name).
 
 ---
 
@@ -191,9 +266,11 @@ node shot.mjs /competitions/comp-se-city-cup out.png --desktop --full
 node shot.mjs /dev/kit out.png --mobile  # the primitive gallery
 
 # the measurement sweep — read the docblock at the top of audit.mjs first
+node audit.mjs --selftest                        # 15 cases, no dev server needed. Run after editing it
 node audit.mjs <routeId|/path> --mobile          # one route
 node audit.mjs --all --desktop --skip-motion     # every route, no reduced-motion pass
 node audit.mjs /dev/kit --desktop --groups       # list the grouped (waived) pairs
+node audit.mjs /dev/kit --desktop --no-composites # the same run with grouping OFF — the honest "before"
 node audit.mjs home --viewports --json           # machine-readable, all three sizes
 ```
 
@@ -213,6 +290,11 @@ Reading the output:
 
 A `GROUPED` count is not a licence to ignore it: a `tablist (no rule)` line means those tabs abut with
 nothing drawn between them, which may still be wrong. It means the 8px *separation* rule does not apply.
+
+Two limits to know before trusting a clean run. `MOTION` samples inline styles and computed
+transform/opacity across two frames, so it detects **JS-driven** motion — a CSS keyframe that was never
+clamped under `prefers-reduced-motion` passes. And React attaches click handlers by delegation, so a `<div>`
+with an `onClick` and no `role`/`tabindex` is invisible to `A11Y` and to `TOUCH` alike.
 
 Baseline to diff against: `<SCRATCH>/shots/baseline/` (60 PNGs).
 

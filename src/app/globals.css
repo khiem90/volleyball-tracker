@@ -1,10 +1,37 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* ---------------------------------------------------------------------------
+   TYPEFACE PLUMBING — read this before touching layout.tsx
+
+   Both webfonts are next/font/google, which emits a CSS-module class carrying
+   `--font-outfit` / `--font-oswald`. That class MUST be on <html>.
+
+   Three tokens below resolve those variables inside `:root`, i.e. on <html>:
+     --font-sans           (@theme inline, just below)
+     --default-font-family (Tailwind derives it from --font-sans)
+     --mb-display-font     (the Matchbook block)
+
+   A custom property whose var() cannot resolve AT ITS DECLARATION SITE is
+   "guaranteed-invalid": it computes to nothing and every descendant inherits
+   that nothing, no matter how many elements further down define the missing
+   variable. So while the font classes sat on <body>, all three tokens were
+   dead at :root, `font-family: var(--mb-display-font)` was invalid at
+   computed-value time, and BOTH faces fell through to the ui-sans-serif
+   preflight stack — measured on every route: Oswald and Outfit had never once
+   rendered anywhere in the app.
+
+   The `var(--x, "Name")` fallbacks below are deliberate belt-and-braces: if the
+   variables ever go out of scope again the tokens stay VALID and degrade to the
+   plain family name (next/font registers the @font-face under exactly that
+   name), so the failure is a slightly different fallback rather than a silent
+   total loss of the display voice.
+   --------------------------------------------------------------------------- */
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-outfit);
+  --font-sans: var(--font-outfit, "Outfit");
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -81,7 +108,10 @@
   --mb-red: #cf3f32;
   --mb-ink-muted: #5d6c70;
   --mb-rule: rgba(7, 50, 77, 0.28);
-  --mb-display-font: var(--font-oswald), "Arial Narrow", "Roboto Condensed", Impact, sans-serif;
+  /* Resolves only because the next/font classes are on <html> — see "Typeface
+     plumbing" at the top of this file. The "Oswald" fallback keeps this token
+     valid if they ever move again. */
+  --mb-display-font: var(--font-oswald, "Oswald"), "Arial Narrow", "Roboto Condensed", Impact, sans-serif;
 
   /* --- contrast-safe variants (GAP-13/14, rubric §3.6) ------------------ */
   /* THE CORAL RULE. --mb-coral is a MARK colour and never a letterform.
@@ -236,11 +266,12 @@
 }
 
 /* Both min-width rules are DEFAULTS, not overrides, so they live in @layer base
-   where any Tailwind `min-w-*` utility outranks them. The rest of this file is
-   deliberately unlayered — an unlayered rule beats every layered one, which is
-   right for `.matchbook-display`'s letter-spacing but exactly wrong for a
-   defensive floor. `min-width: 0` is inert on a normal block, so neither rule
-   does anything except where an item is being sized to its longest word. */
+   where any Tailwind `min-w-*` utility outranks them — an unlayered rule beats
+   every layered one regardless of specificity, which is exactly wrong for a
+   defensive floor. The same reasoning puts the type-voice defaults in
+   @layer components further down; the STRUCTURAL rules in this file stay
+   unlayered on purpose. `min-width: 0` is inert on a normal block, so neither
+   rule does anything except where an item is being sized to its longest word. */
 @layer base {
   .mb-panel-head > *,
   .mb-dialog-head > *,
@@ -261,8 +292,109 @@
 
 .matchbook-display {
   font-family: var(--mb-display-font);
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
+}
+
+/* ---------------------------------------------------------------------------
+   THE TYPE-VOICE LAYER (charter invariant 8)
+
+   Tailwind utilities live in `@layer utilities`. An UNLAYERED rule beats every
+   layered one regardless of specificity, so while these declarations sat
+   unlayered beside the rest of each class they silently ate every
+   `tracking-*` utility written against them. Measured before this block
+   existed: 163 of 195 tracking utilities on /dev/kit were dead, and on the six
+   shipped routes EVERY one was — a `.matchbook-display` asking for
+   `tracking-[0.08em]` at 11.84px rendered 0.237px instead of 0.947px, i.e. the
+   class default, not the requested value. Invariant 8 requires every display
+   element to carry a tracking class, so the named type scale was unapplied
+   essentially everywhere it was written.
+
+   The values here are DEFAULTS — the voice a Matchbook class has when the
+   author says nothing. Holding them in `@layer components` restores the normal
+   Tailwind contract (utility beats component class), so `tracking-[…]`,
+   `uppercase` and `normal-case` all work on any mb-* element and authors can
+   keep writing them.
+
+   Only `letter-spacing` and `text-transform` are relayered. The rest of each
+   class stays unlayered on purpose: those are structure (borders, padding,
+   colour), where a stray utility winning would be a bug, not a feature.
+   `font-family` likewise stays unlayered — the display face is identity, not a
+   default. Keep new type-voice declarations in THIS block, not in the class.
+   --------------------------------------------------------------------------- */
+
+@layer components {
+  .matchbook-display {
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+
+  .mb-panel-link {
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .mb-btn {
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .mb-nav-item {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .mb-kicker {
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+  }
+
+  .mb-table th {
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+  }
+
+  .mb-select-native {
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .mb-badge {
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  .mb-badge[data-size="md"] {
+    letter-spacing: 0.08em;
+  }
+
+  .mb-tab {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .mb-segmented > * {
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .mb-stamp-final {
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+  }
+
+  .mb-code-chip {
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+  }
+
+  .mb-day-head {
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+  }
+
+  .mb-skip-link {
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
 }
 
 .mb-panel {
@@ -289,8 +421,6 @@
   font-family: var(--mb-display-font);
   font-size: 0.72rem;
   font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
   color: var(--mb-navy);
   display: inline-flex;
   align-items: center;
@@ -306,8 +436,6 @@
 
 .mb-btn {
   font-family: var(--mb-display-font);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
   font-weight: 600;
   font-size: 0.8rem;
   display: inline-flex;
@@ -381,8 +509,6 @@
   font-family: var(--mb-display-font);
   font-size: 0.85rem;
   font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
   color: var(--mb-navy);
   border-left: var(--mb-rule-accent) solid transparent;
   transition: background-color 0.15s ease, color 0.15s ease;
@@ -412,8 +538,6 @@
   font-family: var(--mb-display-font);
   font-size: 0.62rem;
   font-weight: 600;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
   color: var(--mb-ink-muted);
 }
 
@@ -467,8 +591,6 @@
   font-family: var(--mb-display-font);
   font-size: 0.66rem;
   font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
   color: var(--mb-ink-muted);
   text-align: left;
   padding: 0.45rem 0.5rem;
@@ -552,8 +674,6 @@
   background: var(--mb-paper-bright);
   padding: 0.55rem 2.2rem 0.55rem 0.8rem;
   font-family: var(--mb-display-font);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
   font-weight: 600;
   font-size: 0.95rem;
   color: var(--mb-navy);
@@ -847,10 +967,8 @@
   gap: 0.3rem;
   white-space: nowrap;
   font-family: var(--mb-display-font);
-  text-transform: uppercase;
   font-weight: 700;
   font-size: 0.66rem;
-  letter-spacing: 0.1em;
   line-height: 1;
   border: var(--mb-rule-edge) solid transparent;
   border-radius: 2px;
@@ -860,7 +978,6 @@
 
 .mb-badge[data-size="md"] {
   font-size: 0.74rem;
-  letter-spacing: 0.08em;
 }
 
 /* The paired mark takes the tone so the caller never sets a colour inline. */
@@ -922,10 +1039,8 @@
   margin-bottom: calc(-1 * var(--mb-rule-edge));
   white-space: nowrap;
   font-family: var(--mb-display-font);
-  text-transform: uppercase;
   font-size: 0.85rem;
   font-weight: 600;
-  letter-spacing: 0.08em;
   color: var(--mb-navy);
   border-bottom: var(--mb-rule-accent) solid transparent;
   transition: color var(--mb-dur-base) var(--mb-ease-in-out),
@@ -1170,10 +1285,8 @@
   background: var(--mb-paper-bright);
   color: var(--mb-navy);
   font-family: var(--mb-display-font);
-  text-transform: uppercase;
   font-weight: 600;
   font-size: 0.8rem;
-  letter-spacing: 0.06em;
   text-align: center;
   touch-action: manipulation;
   transition: background-color var(--mb-dur-base) var(--mb-ease-in-out),
@@ -1308,10 +1421,8 @@
   border-radius: 2px;
   color: var(--mb-coral-deep);
   font-family: var(--mb-display-font);
-  text-transform: uppercase;
   font-weight: 700;
   font-size: 0.74rem;
-  letter-spacing: 0.22em;
   line-height: 1;
   transform: rotate(var(--mb-stamp-rotate, -6deg));
   transform-origin: center;
@@ -1326,10 +1437,8 @@
   border-radius: 3px;
   background: var(--mb-paper-bright);
   font-family: var(--mb-display-font);
-  text-transform: uppercase;
   font-weight: 700;
   font-size: 0.85rem;
-  letter-spacing: 0.18em;
   font-variant-numeric: tabular-nums;
 }
 
@@ -1367,10 +1476,8 @@
   padding: 0.35rem 0.5rem;
   background: var(--mb-band);
   font-family: var(--mb-display-font);
-  text-transform: uppercase;
   font-weight: 700;
   font-size: 0.66rem;
-  letter-spacing: 0.12em;
   color: var(--mb-ink-muted);
 }
 
@@ -1389,10 +1496,8 @@
   background: var(--mb-navy);
   color: var(--mb-paper-bright);
   font-family: var(--mb-display-font);
-  text-transform: uppercase;
   font-weight: 600;
   font-size: 0.8rem;
-  letter-spacing: 0.06em;
 }
 
 .mb-skip-link:focus {

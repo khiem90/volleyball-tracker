@@ -26,6 +26,23 @@ const TONE_CLASS: Record<MbIconButtonTone, string> = {
  * padding inert (the flex centring keeps the glyph on the border-box centre
  * because the padding is symmetric), so the square is exact without fighting
  * the unlayered rule.
+ *
+ * **These two steps are not `MbButton`'s two middle steps.** A labelled button
+ * has a type axis this control does not, so its scale needs a step between the
+ * floor and the commit size; a lone glyph has nothing to put there. The map is:
+ *
+ * | this control    | box  | pairs with              |
+ * | --------------- | ---- | ----------------------- |
+ * | `size="md"`     | 44px | `MbButton size="sm"`    |
+ * | `size="lg"`     | 56px | `MbButton size="lg"`    |
+ * |  —              | 48px | `MbButton size="md"`    |
+ *
+ * So a row that puts the default disc next to a default `MbButton` sits 4px out
+ * of line. Pair the disc with `sm`, or take both to `lg`. Measured across
+ * `/dev/kit` and all six shipped routes: zero such rows exist today, which is
+ * why the enum is left alone rather than renamed out from under its call sites
+ * — but it is the first thing a masthead will get wrong, so it is written down
+ * here rather than discovered.
  */
 const SIZE_CLASS: Record<MbIconButtonSize, string> = {
   md: "h-11 w-11",

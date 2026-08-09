@@ -508,9 +508,17 @@ export const MbToggle = ({
         className="peer absolute inset-0 m-0 h-full w-full cursor-[inherit] appearance-none rounded-[4px] opacity-0"
       />
       <span className="pointer-events-none min-w-0">
+        {/* The same `MB_FIELD_LABEL` as `MbField` and `MbCopyField`, not a
+            hand-rolled copy of it. Written out it *looked* identical, but
+            `tracking-[0.08em]` is a layered utility and `.matchbook-display`
+            sets `letter-spacing: 0.02em` unlayered — so it measured 0.272px
+            here against 1.088px on a text field's label. A switch's label and
+            a text field's label sit in the same column of the same form; they
+            now resolve to one treatment because they share one constant. */}
         <span
           id={labelId}
-          className="matchbook-display block text-[0.85rem] font-semibold tracking-[0.08em]"
+          className={`${MB_FIELD_LABEL.className} block`}
+          style={MB_FIELD_LABEL.style}
         >
           {label}
         </span>
@@ -789,10 +797,13 @@ export const MbTagInput = ({
 
           The gaps are overridden because the chip is now two keys, not one
           box (see below). `.mb-input` sets `gap: 0.6rem` (9.6px) unlayered, so
-          the override has to be important. Column 16px / row 10px against the
-          10px *inside* a chip: the tag and its own remove key are the closest
-          pair on the row by a factor of 1.6, so proximity still groups them
-          correctly and no two targets sit under the 8px floor. */}
+          the override has to be important.
+
+          Column 16px / row 10px against the 10px *inside* a chip. 24px was
+          tried, to buy a 2.4x proximity ratio, and rejected on measurement: at
+          390px it stops two chips fitting on one row, so a 2-tag field grew
+          from 60px to 114px. Grouping is carried by weight instead of by
+          distance — see the remove key below — which costs no height. */}
       <div
         className={`mb-input min-h-[48px] flex-wrap gap-x-4! gap-y-2.5! py-[2px]! ${
           disabled ? "opacity-60" : ""
@@ -811,21 +822,34 @@ export const MbTagInput = ({
                   *item* this span is blockified and truncates properly. */}
               <span className="min-w-0 truncate">{tag}</span>
             </span>
-            {/* Its own key with 10px of paper in front of it, and drawn in the
-                shell's own rule weight so the eye reads TAG first, control
-                second. Sharing the tag's box put an unconfirmed, un-undoable
-                delete 0px from the word and inside the same border, so the
-                whole 100–130px chip read as one pressable object of which 44px
-                destroyed it. */}
+            {/* Its own 44px key, 10px of paper in front of it, but drawn as a
+                bare mark rather than a second box.
+
+                Sharing the tag's box put an unconfirmed, un-undoable delete
+                0px from the word and inside the same border, so the whole
+                100–130px chip read as one pressable object of which 44px
+                destroyed it. Splitting it out fixed that but, given a border,
+                introduced a second problem: a two-tag row became four outlined
+                boxes at 10/16/10px, and 1.6x is not enough distance for
+                proximity alone to say which × belongs to which tag.
+
+                So the pair is grouped by weight, not distance. Exactly one box
+                per tag — the navy-edged face — and the remove key is an
+                unboxed mark at rest, which reads as an appendage of the box it
+                trails rather than a peer of it. The 44px target and the 8px
+                floor are untouched; only the paint changed. The border and
+                tint arrive on hover/focus, so the target is confirmed the
+                moment a pointer is on it, and `:focus-visible` still puts the
+                house ring around the real 44px box for keyboard users. */}
             <button
               type="button"
               title={`Remove ${tag}`}
               aria-label={`Remove ${tag}`}
               disabled={disabled}
               onClick={() => removeAt(index)}
-              className="flex min-h-[44px] w-[44px] shrink-0 items-center justify-center rounded-[3px] border-[1.5px] border-mb-rule bg-mb-paper-bright text-mb-navy transition-colors hover:border-mb-navy hover:bg-[var(--mb-tint-2)] hover:text-mb-coral-deep disabled:cursor-not-allowed"
+              className="flex min-h-[44px] w-[44px] shrink-0 items-center justify-center rounded-[3px] border-[1.5px] border-transparent text-mb-ink-muted transition-colors hover:border-mb-navy hover:bg-[var(--mb-tint-2)] hover:text-mb-coral-deep disabled:cursor-not-allowed"
             >
-              <MbIcon id="close" size={14} />
+              <MbIcon id="close" size={16} />
             </button>
           </span>
         ))}

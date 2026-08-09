@@ -1,6 +1,12 @@
 import Link from "next/link";
 import Image from "next/image";
-import { MbButton, MbButtonLink, type MbButtonVariant } from "./Button";
+import type { ReactNode } from "react";
+import {
+  MbButton,
+  MbButtonLink,
+  type MbButtonSize,
+  type MbButtonVariant,
+} from "./Button";
 import { MbIcon } from "./MbIcon";
 import type { MbFormResult, MbTeam } from "./types";
 
@@ -271,7 +277,7 @@ export const MB_STATE_TONES: Record<PanelEmptyTone, MbStateToneMeta> = {
  */
 const HEADLINE_MAX_CHARS = 60;
 
-const splitStateMessage = (
+export const splitStateMessage = (
   message: string
 ): { headline: string | null; copy: string | null } => {
   const dash = message.indexOf("—");
@@ -285,15 +291,138 @@ const splitStateMessage = (
 };
 
 /**
- * The in-panel cut of the one state language. Anatomy, top to bottom: eyebrow
- * (glyph + word), display line, hung rule, deck, one action — every part ranged
- * **left**, exactly as `MbEmptyState` sets it at page scale. The only
- * differences are step sizes: display line `1.2rem` vs `1.875rem`, rule 40px vs
- * 64px, button `sm` vs `lg`.
+ * The two sizes the one state language is drawn at: `panel` for a panel with
+ * nothing in it, `route` for a whole route with nothing in it.
+ */
+export type MbStateScale = "panel" | "route";
+
+interface MbStateScaleSpec {
+  /** Padding and row gap of the block itself. */
+  block: string;
+  /** Display-line step and measure. */
+  display: string;
+  /** Hung-rule width. */
+  rule: string;
+  /** Deck step and measure. */
+  deck: string;
+  /**
+   * Eyebrow glyph, in px. The same number at both scales **on purpose** —
+   * design language §5.7 gives the two cuts two numbers on the display line,
+   * the rule and the action, and on nothing else, so the eyebrow is one object
+   * drawn once.
+   */
+  glyph: number;
+  /** Step of the single action. */
+  button: MbButtonSize;
+}
+
+/**
+ * §5.7's size table, as code. This is the *entire* difference between a
+ * route-level state and a panel-level one — everything else is `MbStateBlock`
+ * below, rendered from the same JSX for both. If the two cuts are ever to drift
+ * again, they have to drift here, in eight lines, in view of each other.
+ */
+export const MB_STATE_SCALE: Record<MbStateScale, MbStateScaleSpec> = {
+  panel: {
+    block: "gap-2.5 px-4 py-5",
+    display: "max-w-[26ch] text-[1.2rem]",
+    rule: "w-10",
+    deck: "max-w-[42ch] text-[0.85rem] leading-[1.5]",
+    glyph: 13,
+    button: "sm",
+  },
+  route: {
+    block: "gap-3 px-5 py-7 sm:px-7 sm:py-9",
+    display: "max-w-[22ch] text-[1.875rem]",
+    rule: "w-16",
+    deck: "max-w-[46ch] text-[0.9rem] leading-[1.55]",
+    glyph: 13,
+    button: "lg",
+  },
+};
+
+/**
+ * The one state language, drawn once. `PanelEmpty` and `MbEmptyState` are both
+ * thin wrappers over this: they differ in the props they accept (a message
+ * string and one action vs a title, a deck and an action list) and in which row
+ * of `MB_STATE_SCALE` they pass, and in nothing that is visible.
+ *
+ * Anatomy, top to bottom, every part ranged **left**:
+ * eyebrow (glyph + word) · display line · hung rule · deck · action.
  *
  * It is deliberately *not* a centred glyph-in-a-circle over centred text: that
- * is the layout the rubric's §3 hard-fail 5 names outright, and it is what this
- * component drew before.
+ * is the layout the rubric's §3 hard-fail 5 names outright ("would look
+ * identical for a CRM"), and it is what `PanelEmpty` drew before P1.
+ */
+export const MbStateBlock = ({
+  scale,
+  tone,
+  icon,
+  headline,
+  deck,
+  action,
+}: {
+  scale: MbStateScale;
+  tone: PanelEmptyTone;
+  /** Sprite id overriding the tone's default mark. */
+  icon?: string;
+  headline?: ReactNode;
+  deck?: ReactNode;
+  /** The action row, built by the caller at `MB_STATE_SCALE[scale].button`. */
+  action?: ReactNode;
+}) => {
+  const step = MB_STATE_SCALE[scale];
+  const state = MB_STATE_TONES[tone];
+  const mark = icon ?? state.icon;
+  /* The rule *hangs* — it closes a naming zone rather than opening the block, so
+     it only draws when there is something above it to close. The one input that
+     produces neither is a plain `empty` whose message is a single unbreakable
+     sentence over 60 characters. */
+  const named = Boolean(mark || state.word || headline);
+
+  /* `overflow-wrap: anywhere`, inherited by the headline and the deck.
+     `globals.css` already grants exactly this through `.mb-panel[data-tone] p`,
+     but that selector needs the `data-tone` to sit on the `.mb-panel` itself,
+     which only happens at route scale — `MbEmptyState` owns its sheet, whereas
+     `PanelEmpty` is nested inside somebody else's plain `Panel`. Measured at
+     390px with one 52-character unbroken token in both cuts: the route block
+     stayed at its 340px container, the panel block scrolled to 391px. Declaring
+     it here fixes the panel cut and makes the two behave identically, which is
+     the point of there being one block. `anywhere` rather than `break-word`
+     because only `anywhere` also shrinks min-content, and this block is a flex
+     item that is sized by its longest word. */
+  return (
+    <div
+      className={`flex flex-1 flex-col items-start justify-center text-left [overflow-wrap:anywhere] ${step.block}`}
+    >
+      {(mark || state.word) && (
+        <span className="mb-kicker flex min-w-0 items-center gap-1.5">
+          {mark && <MbIcon id={mark} size={step.glyph} className={`shrink-0 ${state.ink}`} />}
+          {state.word && <span className="truncate">{state.word}</span>}
+        </span>
+      )}
+      {headline && (
+        <p
+          className={`matchbook-display font-bold leading-tight tracking-[0.02em] ${step.display}`}
+        >
+          {headline}
+        </p>
+      )}
+      {named && <span className={`block h-px bg-mb-navy ${step.rule}`} />}
+      {/* A `<p>`, not a `<div>`, even though `deck` is a `ReactNode`: it is the
+          element `globals.css` targets for the same wrap defence, and callers
+          pass phrasing content (a sentence, sometimes with a `<span>` around a
+          count). Block-level children would be invalid nesting here. */}
+      {deck && <p className={`text-mb-ink-muted ${step.deck}`}>{deck}</p>}
+      {action}
+    </div>
+  );
+};
+
+/**
+ * The in-panel cut. Everything visible comes from `MbStateBlock`; this wrapper
+ * only turns the shipped one-sentence message into a headline and a deck, and
+ * builds the single action.
  */
 export const PanelEmpty = ({
   message,
@@ -321,46 +450,31 @@ export const PanelEmpty = ({
   /** Renders a real `<button>` instead of a link. Takes precedence over `href`. */
   onAction?: () => void;
 }) => {
-  const state = MB_STATE_TONES[tone];
-  const mark = icon ?? state.icon;
   const { headline, copy } = splitStateMessage(message);
-  /* The rule *hangs* — it closes a naming zone rather than opening the block, so
-     it only draws when there is something above it to close. The one input that
-     produces neither is a plain `empty` whose message is a single unbreakable
-     sentence over 60 characters. */
-  const named = Boolean(mark || state.word || headline);
+  const size = MB_STATE_SCALE.panel.button;
 
   return (
-    <div className="flex flex-1 flex-col items-start justify-center gap-2.5 px-4 py-5 text-left">
-      {(mark || state.word) && (
-        <span className="mb-kicker flex min-w-0 items-center gap-1.5">
-          {mark && <MbIcon id={mark} size={13} className={`shrink-0 ${state.ink}`} />}
-          {state.word && <span className="truncate">{state.word}</span>}
-        </span>
-      )}
-      {headline && (
-        <p className="matchbook-display max-w-[26ch] text-[1.2rem] font-bold leading-tight tracking-[0.02em]">
-          {headline}
-        </p>
-      )}
-      {/* Hung rule — the mark the two scales share; it closes the naming zone. */}
-      {named && <span className="block h-px w-10 bg-mb-navy" />}
-      {copy && (
-        <p className="max-w-[42ch] text-[0.85rem] leading-[1.5] text-mb-ink-muted">{copy}</p>
-      )}
-      {actionLabel && onAction && (
-        <MbButton variant={actionTone} size="sm" onClick={onAction}>
-          {actionLabel}
-        </MbButton>
-      )}
-      {actionLabel && href && !onAction && (
-        /* A destination is a real anchor — it keeps middle-click, "open in new
-           tab" and the status bar — and `MbButtonLink` draws it from the same
-           three tables as the button above, so the two branches are one box. */
-        <MbButtonLink variant={actionTone} size="sm" href={href}>
-          {actionLabel}
-        </MbButtonLink>
-      )}
-    </div>
+    <MbStateBlock
+      scale="panel"
+      tone={tone}
+      icon={icon}
+      headline={headline}
+      deck={copy}
+      action={
+        actionLabel &&
+        (onAction ? (
+          <MbButton variant={actionTone} size={size} onClick={onAction}>
+            {actionLabel}
+          </MbButton>
+        ) : href ? (
+          /* A destination is a real anchor — it keeps middle-click, "open in new
+             tab" and the status bar — and `MbButtonLink` draws it from the same
+             three tables as the button above, so the two branches are one box. */
+          <MbButtonLink variant={actionTone} size={size} href={href}>
+            {actionLabel}
+          </MbButtonLink>
+        ) : null)
+      }
+    />
   );
 };

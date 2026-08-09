@@ -26,10 +26,15 @@ Reference implementations — read these before writing a new screen:
 | **Primitive gallery** | **`src/app/dev/kit/page.tsx` → `/dev/kit`** — every component in §4.2, live, in every state |
 
 Shared kit: `src/components/matchbook/` (§4.2 is the real inventory).
-Tokens + utility classes: the **Matchbook block at the top of `src/app/globals.css`**
-(from the `@theme inline` block down to the legacy divider — roughly lines
-54–1400 after P1; the legacy "playful warm" system starts below it).
+Tokens + utility classes: the **Matchbook block at the top of `src/app/globals.css`** —
+it runs from the opening `@theme inline` down to the last `.mb-*` rule, and the
+legacy "playful warm" system starts immediately below it at the second `:root`.
 Assets: `public/assets/matchbook/`.
+
+> **Line numbers in this document are deliberately absent.** Seven agents edit
+> `globals.css` and `src/components/matchbook/` in parallel; a line number is
+> wrong within the hour. Anchors here are grep targets — a selector, a token
+> name, an export name — which survive an edit above them.
 
 ---
 
@@ -45,11 +50,20 @@ are the literals in §3.3, and the display stack is `--mb-display-font`. The
 runtime-only utility tokens added in P0 (tints, motion, safe-area, court) are
 deliberately **not** duplicated into the preview copy.
 
-**Trap 2 — the old "playful warm" theme still lives in the same stylesheet.**
-`globals.css` lines 451–1511 are the legacy system (`--primary` red, `.soft-card`,
-`.playful-card`, `.btn-playful`, `.glass-*`, `.dark` block). Matchbook screens must
-not touch any of it. The two systems share one file only because the migration is
-in flight.
+**Trap 2 — the old "playful warm" theme still lives in the same stylesheet, and
+there are THREE zones in it, not two.** Measured, top to bottom:
+
+| Zone | Runs from | Contains |
+| --- | --- | --- |
+| **A — Matchbook** | the opening `@theme inline` and the **first** `:root` | every `--mb-*` token and every `.mb-*` / `.matchbook-*` rule, ending at the last of them |
+| **B — shared middle** | the `@media (max-height: 500px)` landscape block | `.hide-landscape`, `.hide-landscape-divider`, `.show-landscape`, `.landscape-row`, then the base reset: `* { box-sizing }`, `html, body { height/margin/padding/overflow-x: hidden }`, `body { font-family }`, `.scrollbar-thin`. **Not `.mb-*`, not legacy-themed, owned by nobody.** |
+| **C — legacy** | the **second** `:root` — the one commented "warm, playful, inviting", setting `--primary: oklch(0.55 0.22 25)` | `.soft-card`, `.playful-card`, `.btn-playful`, `.glass-*`, the `.dark` block, the global `button:active` press, the global `prefers-reduced-motion` clamp |
+
+Matchbook screens must not use anything from **C**. But **B is not safe to delete
+either** — it is where the box-sizing reset and the horizontal-overflow guard
+live, and both zones B and C contain things converted screens silently depend on.
+See §7.3. W2 deletes zone C in P4 and must consciously decide what to do with
+zone B rather than sweeping it along.
 
 ---
 
@@ -57,8 +71,8 @@ in flight.
 
 ### 1.1 Tokens
 
-Declared in `globals.css` `:root` (lines 70–83) and exposed to Tailwind through
-`@theme inline` (lines 54–65), which generates `bg-mb-*`, `text-mb-*`,
+Declared in the **first** `:root` in `globals.css` and exposed to Tailwind through
+the `@theme inline` block above it, which generates `bg-mb-*`, `text-mb-*`,
 `border-mb-*`, `divide-mb-*`, `fill-mb-*` utilities.
 
 | Token | Hex | Tailwind | Role | Never use it for |
@@ -91,7 +105,7 @@ the value — a bare `rgba(...)` in new code is a review failure.
 | `--mb-rule-on-navy` | `rgba(255,250,241,0.25)` | Hairline **on navy** |
 | `--mb-tint-on-navy` | `rgba(255,250,241,0.06)` | Panel-bright tint on navy |
 | `--mb-panel-shadow` | `0 8px 22px rgba(57,41,23,0.08)` | The only shadow in the system |
-| `--mb-rule-hairline` / `-edge` / `-accent` / `-anchor` | `1px` / `1px` / `3px` / `4px` | The four rule weights of §3.3, named. Note `-edge` resolves to 1px, not 1.5px: Tailwind's `border-[1.5px]` still writes the panel/box edge; the token is for CSS that cannot. |
+| `--mb-rule-hairline` / `-edge` / `-accent` / `-anchor` | `1px` / `1px` / `3px` / `4px` | The rule weights of §3.3, named. `-hairline` and `-edge` are **both 1px on purpose** — see §3.3, the 1 vs 1.5 step does not exist at render time. What separates a hairline from an edge is the *colour*: `--mb-rule` (translucent) against `--mb-navy` (solid). |
 | `--mb-focus` | `var(--mb-coral)` | The Matchbook focus ring (GAP-12) |
 | `--mb-dur-fast` / `-base` / `-slow` | `120ms` / `180ms` / `280ms` | Motion durations (GAP-11) |
 | `--mb-ease-out` / `--mb-ease-in-out` | `cubic-bezier(.2,.8,.3,1)` / `(.4,0,.2,1)` | Motion easings |
@@ -118,9 +132,10 @@ Rank #1 rail         → --mb-teal
 Selected row rail    → --mb-coral
 ```
 
-Canonical implementations: `STATUS_STYLES` in `src/app/competitions/page.tsx:19`,
-`readinessColor()` in `src/components/matchbook/teamStats.ts:91`, `FORM_COLORS` in
-`src/components/matchbook/Panel.tsx:88`.
+Canonical implementations (grep the name, not a line): `STATUS_STYLES` in
+`src/app/competitions/page.tsx`, `readinessColor()` in
+`src/components/matchbook/teamStats.ts`, `FORM_COLORS` in
+`src/components/matchbook/Panel.tsx`.
 
 ### 1.3 Contrast — measured, WCAG 2.1
 
@@ -391,14 +406,14 @@ Rules:
 - Badge frame is `border-[2px] border-mb-coral` — the **only** 2px border in the
   system, and the only place coral is used as a frame.
 - Any date/time string rendered from `new Date()` on the client must carry
-  `suppressHydrationWarning` (see `src/app/page.tsx:60`, `teams/page.tsx:97`).
+  `suppressHydrationWarning` (the `data.dateLine` paragraph in `src/app/page.tsx` and `src/app/teams/page.tsx`).
 - The account chip's disc is `h-10 w-10 rounded-full` — the **only** circle in the
   system besides `.mb-live-dot`, icon discs in stat blocks, and colour swatches.
 - At most 2 action buttons: at most one coral, at most one navy.
 - A screen with a filter bar puts it **between** masthead and grid, as a full-width
   strip framed top and bottom by the heavy rule:
   `mb-4 flex flex-wrap items-end gap-3 border-y-[1.5px] border-mb-navy py-3`
-  (`src/app/summaries/page.tsx:118`).
+  (the filter bar in `src/app/summaries/page.tsx`).
 
 ### 3.3 The panel grid
 
@@ -448,12 +463,33 @@ disc, an icon disc (`.mb-icon-disc`), and a colour swatch — plus the `live` an
 circle; it is a squared ballot box. **Anything ≥ `rounded-lg` is an
 anti-pattern.**
 
-**Border vocabulary** (now tokenised — `--mb-rule-hairline` / `-edge` /
-`-accent` / `-anchor`): `1px solid var(--mb-rule)` = hairline divider.
-`1.5px solid var(--mb-navy)` = a real edge (panel body, boxes, inputs, tiles).
-`3px` = an accent rail (inset box-shadow, or the active tab's bottom border).
-`4px` = an anchor edge: `.mb-panel` top, `.mb-dialog` top, `.mb-banner` /
-`.mb-toast` left. `2px` = the masthead badge only.
+**Border vocabulary** (tokenised — `--mb-rule-hairline` / `-edge` / `-accent` /
+`-anchor`):
+
+| Role | Write | Renders |
+| --- | --- | --- |
+| Hairline divider | `1px solid var(--mb-rule)` / `border-mb-rule` | 1px, translucent navy |
+| Real edge — panel body, boxes, inputs, tiles | `var(--mb-rule-edge) solid var(--mb-navy)` / `border-[1.5px] border-mb-navy` | **1px**, solid navy |
+| Accent rail — inset rail, active tab underline | `3px` | 3px |
+| Anchor edge — `.mb-panel` top, `.mb-dialog` top, `.mb-banner` / `.mb-toast` left | `4px` | 4px |
+| Masthead count badge — the one 2px border | `border-[2px] border-mb-coral` | 2px |
+
+> **Measured, and it corrects this document's own long-standing claim: there is
+> no 1.5px line in Matchbook, and there never was.** Chrome floors
+> `border-width: 1.5px` to a used value of 1px — verified at devicePixelRatio 1,
+> 2 and 3 (a 40px box with a 1.5px border lays out at 42px, not 43px). A sweep of
+> `/dev/kit` found **2783 rendered borders: 2616 at 1px, 81 at 4px, 52 at 3px, 34
+> at 2px, and zero at 1.5px** — including all 109 elements carrying
+> `border-[1.5px]`, and `.mb-panel`, `.mb-tile` and `.mb-input` themselves.
+>
+> The rule *hierarchy* is real and reads correctly; it is carried by **colour**,
+> not weight — translucent `--mb-rule` for a divider against solid `--mb-navy`
+> for an edge — plus the genuine 3px and 4px steps. Only the 1 → 1.5 step is a
+> fiction. Keep writing `border-[1.5px] border-mb-navy` in JSX: it is the
+> established idiom, it is what every shipped screen uses, and it produces the
+> correct 1px solid-navy line. Do not "fix" it to `border`, and do not chase a
+> visible 1.5px by going to 2px — 2px is spoken for by the masthead badge, the
+> one place in the system where a border *weight* carries meaning.
 
 ### 3.4 Panel anatomy
 
@@ -465,16 +501,20 @@ anti-pattern.**
 │ BODY  table / list / grid / prose / PanelEmpty      │  flex-1
 ├────────────────────────────────────────────────────┤
 │ FOOT  centred .mb-panel-link, mt-auto (optional)    │
-└──── 1.5px navy border, radius 4px, one soft shadow ─┘
+└──── solid navy edge, radius 4px, one soft shadow ───┘
 ```
 
+Throughout this document "1.5px navy" names the **solid-navy edge** — the idiom
+you write, not the weight you get. It renders at 1px; §3.3 has the measurement.
+
 ```css
+/* as shipped — every value is a token */
 .mb-panel {
   background: var(--mb-paper-bright);
-  border: 1.5px solid var(--mb-navy);
-  border-top-width: 4px;
+  border: var(--mb-rule-edge) solid var(--mb-navy);   /* renders 1px — see §3.3 */
+  border-top-width: var(--mb-rule-anchor);            /* 4px */
   border-radius: 4px;
-  box-shadow: 0 8px 22px rgba(57, 41, 23, 0.08);
+  box-shadow: var(--mb-panel-shadow);
   display: flex; flex-direction: column; height: 100%;
 }
 ```
@@ -494,7 +534,7 @@ both — the component picks `href && action` first.
 
 Panel-height escape hatch: `.mb-panel` forces `height:100%`. On a page where the
 panel is not a grid child (Login), override with the Tailwind v4 important
-modifier: `className="mb-panel h-auto!"` (`src/app/login/page.tsx:107`).
+modifier: `className="mb-panel h-auto!"` (the form panel in `src/app/login/page.tsx`).
 
 ### 3.5 Rules and dividers
 
@@ -591,6 +631,7 @@ geometry, and so nobody re-invents one under a new name.
 | `.mb-skip-link` | The skip-to-content link. One per page, first in the DOM. | shell |
 | `.mb-enter`, `.mb-stagger-1…6` | Entrance: opacity + 6px rise. Stagger caps at 6. Replaces the legacy `.stagger-*`. | — |
 | `.mb-safe-top`, `.mb-safe-bottom` | Padding for the notch / home indicator. | — |
+| `.mb-print-hide` | Marking a region that must not print. Defined **only inside `@media print`**, alongside the chrome the print rules already drop (`.mb-skip-link`, `.mb-action-bar`, `.mb-toast`, `.mb-dialog-overlay`, `.mb-btn`, `.mb-panel-link`, `.mb-tabs`) — so it costs nothing on screen. Use it for anything screen-only the print block cannot know about. | — |
 | `@keyframes mb-enter`, `mb-fade`, `mb-sheet-up` | The three P1 animations, alongside `mb-pulse`. | — |
 
 ### 4.2 React exports in `src/components/matchbook/`
@@ -645,6 +686,7 @@ table when they disagree about a signature. This table is for *choosing*.
 | `StepRail.tsx` | `MbStepRail` | Wizard progress. Semantic `<ol>`; completed steps are buttons, current and future steps are inert. |
 | `SelectList.tsx` | `MbSelectList` | Multi-select over a list of rows, with optional search. Selection is a `Set` of keys; the caller owns filtering. |
 | `SelectList.tsx` | `MbSelectRow` | One row of the above. Memoised — feed it primitives and stable callbacks. |
+| `SelectList.tsx` | `MbSelectColumn<T>` | The column descriptor `MbSelectList` takes. A row's shape is declared once, here, not re-rendered per call site. |
 | `SelectList.tsx` | `MbCheckMark` | The system tick, drawn as a border pair. The sprite's `check` is a *circled* tick and reads as a ring below ~16px. |
 | `ReorderList.tsx` | `MbReorderList` | Re-ranking rows. Three equal input paths: pointer grip, visible 44px up/down buttons, `Alt+Arrow`. Nothing animates. |
 | `ReorderList.tsx` | `mbReorder` | The move as a pure function. Callers never re-write the splice. |
@@ -654,6 +696,7 @@ table when they disagree about a signature. This table is for *choosing*.
 | Export | Use this when |
 | --- | --- |
 | `MbField` | The wrapper around **every** control. Publishes `id` / `aria-describedby` / `aria-invalid` / `required` through context so the control below never restates them. |
+| `MB_FIELD_LABEL` | Labelling a control that cannot sit inside `MbField` (a bespoke composite, a fieldset legend). The one field-label type step — `display/nav`, navy, `letterSpacing` inline because `.matchbook-display` is unlayered and beats every Tailwind `tracking-*` utility. Spread it; never restate the classes. |
 | `MbTextInput` | Single-line text. Optional leading `icon` and `trailing` slot. |
 | `MbTextArea` | Multi-line free text. |
 | `MbSelect` | A native `<select>` with the chevron already attached. |
@@ -673,11 +716,14 @@ table when they disagree about a signature. This table is for *choosing*.
 | `Dialog.tsx` | `useMbFocusRestore` | Any *other* controlled Radix overlay you build. Do not re-solve this. |
 | `Sheet.tsx` | `MbSheet` | A bottom sheet on mobile. Discrete snap heights cycled by a real 44px button — no drag gesture. |
 | `Confirm.tsx` | `MbConfirm` | **Every** confirmation. There is no `window.confirm` and no second dialog. `destructive={false}` for a plain "are you sure". |
+| `DangerZone.tsx` | `MbDestructiveButton` | **Every** control that destroys, resets, purges or ends something — including the confirm button inside a dialog. Red ink + red rule on a paper-bright fill with the `warning` glyph; never a red fill (a red-filled button beside a coral CTA is two near-identical reds). Carries `data-mb-destructive` as the audit hook. |
 | `DangerZone.tsx` | `MbDangerZone` | The framed block that closes a page whose last option is destructive. Always rendered last, never inline with frequent actions. |
 | `Notice.tsx` | `MbNotice` | An inline message inside a page or panel. Tone rides the 4px left rule; letterforms stay navy. |
 | `EmptyState.tsx` | `MbEmptyState` | A **route** with nothing in it. Ranged left: eyebrow, display line, hung rule, deck, actions. |
 | `Panel.tsx` | `PanelEmpty` | A **panel** with nothing in it — the same anatomy one size down. |
-| `Panel.tsx` | `MB_STATE_TONES`, `splitStateMessage` | Building a bespoke empty/error surface that must use the same tone marks and the same "headline — deck" split. |
+| `Panel.tsx` | `MbStateBlock` | The state language drawn **once**. `PanelEmpty` and `MbEmptyState` are both thin wrappers over it and differ in nothing visible. Reach for it only if you need the anatomy at a scale neither wrapper offers; otherwise use a wrapper. |
+| `Panel.tsx` | `MB_STATE_SCALE` | The size rows `MbStateBlock` selects (`panel` / `route`). Pass a row; never restate a size. |
+| `Panel.tsx` | `MB_STATE_TONES` | Building a bespoke empty/error surface that must use the same tone marks as `PanelEmpty` and `MbEmptyState`. (The "headline — deck" splitter beside it, `splitStateMessage`, is **module-private** — it is not exported. Pass a pre-split message, or use one of the two components.) |
 | `Skeleton.tsx` | `MbSkeleton` | A loading placeholder sized to the geometry it replaces. No shimmer — a shimmer is a gradient. |
 
 **Sharing and clipboard**
@@ -708,11 +754,19 @@ table when they disagree about a signature. This table is for *choosing*.
 `crestForTeam(teamId, teamName)` → the deterministic crest for a real team.
 
 **Data hooks** — `useMatchbookDashboard`, `useMatchbookTeams`,
-`useMatchbookCompete`, `useMatchbookHistory`, `useMatchbookQuickMatch` (each also
-exports its own row/line interfaces; `useMatchbookCompete` additionally exports
-`COMPETITION_TYPE_LABELS`). Pattern to copy for a new screen: a pure
-`build<Screen>(state)` function + a `useMemo(() => build(state), [state])` hook,
-so the page component contains **no** data shaping.
+`useMatchbookCompete`, `useMatchbookHistory`, `useMatchbookQuickMatch`. Where the
+screen's view model is shared, it lives in `types.ts` and the hook file exports
+the hook alone (`useMatchbookDashboard`, `useMatchbookTeams`); where it is
+screen-local, the hook file also exports its own interfaces
+(`useMatchbookCompete` → `MbCompetitionRow`, `MbBracketCell`, `MbBracketRound`,
+`MbStandingLine`, `MbCourtLine`, `MbMatchLine`, `MbCompeteSelected`,
+`MbCompeteData`, plus `COMPETITION_TYPE_LABELS`; `useMatchbookHistory` →
+`MbLedgerEntry`, `MbLedgerDay`, `MbMatchReport`, `MbMatchup`,
+`MbRecentCompetition`, `MbHistoryData`; `useMatchbookQuickMatch` →
+`MbQuickMatchRow`, `MbTeamFormSummary`, `MbQuickMatchData`). Pattern to copy for
+a new screen: a pure `build<Screen>(state)` function + a
+`useMemo(() => build(state), [state])` hook, so the page component contains **no**
+data shaping.
 
 **Panel libraries** — `panels.tsx` (Overview: `StandingsPanel`,
 `MatchOfTheDayPanel`, `LiveCourtsPanel`, `SchedulePanel`, `BracketPanel`,
@@ -810,7 +864,8 @@ Three registers. Pick by importance, never mix within one panel.
 The separator is an **en dash** `–` (U+2013) with spaces, everywhere. Not a hyphen,
 not an em dash. Set scores use the `1fr auto 1fr` three-column grid with a
 `.mb-kicker` label in the middle, winner side in `font-bold`, loser side in
-`text-mb-ink-muted` (`panels.tsx:148`).
+`text-mb-ink-muted` (the set-score grid inside `MatchOfTheDayPanel`,
+`panels.tsx`).
 
 ### 5.3 Form strips
 
@@ -879,8 +934,10 @@ around a stacked value/caption pair — and stays hand-written until
 ### 5.7 Empty states
 
 One state language, two sizes. A **panel** with nothing in it renders
-`<PanelEmpty>`; a **route** with nothing in it renders `<MbEmptyState>`. Both
-draw the same anatomy, top to bottom, **ranged left**:
+`<PanelEmpty>`; a **route** with nothing in it renders `<MbEmptyState>`. They are
+both thin wrappers over one renderer, `MbStateBlock`, and differ only in the
+props they accept and in which row of `MB_STATE_SCALE` they pass — in nothing
+visible. Both draw the same anatomy, top to bottom, **ranged left**:
 
 ```
 eyebrow   glyph + one word              only on the five failure tones
@@ -1026,6 +1083,26 @@ There is still **no framer-motion on any converted screen**. `framer-motion`
 remains in the unconverted files (match consoles, volleyball editor, old toasts,
 `PageLoadingSpinner`) and is deleted with them in P4.
 
+### 7.3 Three system guarantees that are not in the Matchbook block
+
+Measured against `globals.css` as it stands. Each is described elsewhere in this
+document as something Matchbook screens get for free, and **none of them is
+declared in zone A** (Trap 2). Two are in the legacy zone C, one in the shared
+zone B. Deleting zone C as §9 describes removes the first two from every
+converted screen.
+
+| Guarantee | Zone | What breaks if it goes |
+| --- | --- | --- |
+| `button:active:not(:disabled) { transform: scale(0.98) }` (§7.1 "global press") | **C — legacy**, under `BUTTON STATES` | every Matchbook button loses its press feedback |
+| `@media (prefers-reduced-motion: reduce) { *, *::before, *::after { … } }` (§7.2 "the global clamp handles CSS") | **C — legacy** | `.mb-live-dot` pulses under reduced motion, and `.mb-enter` / `mb-fade` / `mb-sheet-up` all animate. There is **no** `prefers-reduced-motion` rule anywhere in zone A |
+| `html, body { overflow-x: hidden }` (§8 "set globally") | **B — shared middle**, in the base reset | the horizontal-overflow symptom stops being hidden on every screen at once |
+
+**W2 owns this in P4:** re-declare all three inside zone A *before* deleting zone
+C, in the same commit, and treat zone B as a decision rather than collateral.
+`audit.mjs` will not catch the reduced-motion one — its `MOTION` pass samples
+inline styles and computed transform/opacity across two frames, which detects
+JS-driven motion, not a CSS keyframe that was never clamped.
+
 ---
 
 ## 8. Mobile rules
@@ -1086,9 +1163,15 @@ with `data-mb-touch` in W2's P2 commit. See GAP-3.
 That means users cannot pinch to rescue small text, so the 0.6–0.66rem display
 steps must never carry information that isn't repeated at a larger size.
 
-**Landscape:** `globals.css:371` provides `@media (max-height: 500px)` helpers
-(`.hide-landscape`, `.show-landscape`, `.landscape-row`) built for the scoring
-console. They are legacy-named but system-neutral; reuse rather than reinvent.
+**Landscape:** an `@media (max-height: 500px)` block provides `.hide-landscape`,
+`.hide-landscape-divider`, `.show-landscape` and `.landscape-row`, built for the
+scoring console. **Verified location: they sit outside the Matchbook block — the
+first thing in zone B (Trap 2), after the last `.mb-*` rule and before the legacy
+`:root`.** So they are neither Matchbook nor cleanly legacy: nobody owns them,
+and nothing guarantees they survive P4. W5 owns the landscape console (GAP-7):
+re-declare the four helpers as `.mb-*` inside zone A, or write the media query
+locally. Do not build the scoring console on a class from zone B without moving
+it first.
 
 ---
 
@@ -1097,7 +1180,7 @@ console. They are legacy-named but system-neutral; reuse rather than reinvent.
 The old "playful warm" system. If any of these survive in a converted file, the
 conversion is not done.
 
-**Classes to remove (all defined in `globals.css` lines 451–1511):**
+**Classes to remove (all defined in zone C of `globals.css` — see Trap 2):**
 
 ```
 .soft-card  .soft-card-hover  .glass-card  .glass-card-hover  .glass-nav
@@ -1209,6 +1292,16 @@ A screen is **done** when every box is ticked.
 - [ ] `npx tsc --noEmit` clean.
 - [ ] `npx eslint <changed paths>` clean.
 - [ ] `npx vitest run` green.
+- [ ] `node audit.mjs <route> --desktop` **and** `--mobile` report zero in
+      `TOUCH`, `SPACING`, `OVERFLOW`, `NUMERALS`, `A11Y failures`, `CONSOLE` and
+      `MOTION` (charter §5.3; the harness lives in the scratchpad `pw/`
+      directory — read the docblock at the top of the file first).
+- [ ] `GROUPED` read, not skipped. It is informational and does not fail the run,
+      but a `tablist (no rule)` or `list-row (no rule)` line means those cells
+      abut with nothing drawn between them, which is usually still a defect. What
+      the grouping waives is the 8px *separation* floor, nothing else.
+- [ ] `A11Y notes` read. `icon-only-no-title` is the §6 tooltip rule; the other
+      two are naming smells, not failures.
 - [ ] Visually diffed against `src/app/page.tsx` and `src/app/summaries/page.tsx`.
 
 ---

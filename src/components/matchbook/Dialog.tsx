@@ -61,31 +61,65 @@ const HEAD_ICON_TONE: Record<MbDialogTone, string> = {
  * focus, so the opener is still the active element. `onCloseAutoFocus` calls
  * `preventDefault` first — which is what skips Radix's null-trigger handler —
  * and then restores the opener itself.
+ *
+ * ### Why the opener's parent is recorded too
+ *
+ * The commonest destructive confirm destroys the very row that opened it, so
+ * "focus the opener" has no opener to focus — and `<body>` is precisely the
+ * failure HF-15 names. The parent is captured while the opener is still
+ * attached (after `remove()` its own `parentElement` is already `null`), which
+ * gives the ladder below a rung that keeps the user *in the region they were
+ * working in*: the list that used to hold the row, not the top of the
+ * document.
+ *
+ * The ladder, first rung that actually takes focus wins:
+ * opener → nearest surviving ancestor of the opener → `#mb-main` (invariant 3)
+ * or a `<main>` → `<body>`. Each rung is verified against
+ * `document.activeElement` rather than assumed, because `focus()` on a hidden
+ * or `inert` node silently does nothing.
  */
 export const useMbFocusRestore = () => {
-  const openerRef = useRef<HTMLElement | null>(null);
+  const openerRef = useRef<{ el: HTMLElement; parent: HTMLElement | null } | null>(null);
 
   const capture = () => {
     const active = document.activeElement;
     openerRef.current =
-      active instanceof HTMLElement && active !== document.body ? active : null;
+      active instanceof HTMLElement && active !== document.body
+        ? { el: active, parent: active.parentElement }
+        : null;
   };
 
   const restore = (event: Event) => {
     event.preventDefault();
     const opener = openerRef.current;
     openerRef.current = null;
-    if (opener?.isConnected) {
-      opener.focus({ preventScroll: true });
-      return;
-    }
-    /* The opener can be gone — a delete confirm usually unmounts the very row
-       that opened it. Land on the main landmark rather than the document root,
-       which is where a route change puts focus too (charter §5.5). */
-    const main = document.getElementById("mb-main");
-    if (!main) return;
-    if (!main.hasAttribute("tabindex")) main.setAttribute("tabindex", "-1");
-    main.focus({ preventScroll: true });
+
+    /** Focuses `node`, making it programmatically focusable first if it is not
+     *  already, and reports whether focus actually moved there.
+     *
+     *  A borrowed `tabindex` is handed back on blur. It never joins the tab
+     *  order at -1, but leaving it behind would put a permanent phantom in
+     *  every "interactive elements" sweep — `audit.mjs`'s included — on a node
+     *  this hook does not own. */
+    const land = (node: HTMLElement | null | undefined): boolean => {
+      if (!node?.isConnected) return false;
+      if (!node.hasAttribute("tabindex") && node.tabIndex < 0) {
+        node.setAttribute("tabindex", "-1");
+        node.addEventListener("blur", () => node.removeAttribute("tabindex"), { once: true });
+      }
+      node.focus({ preventScroll: true });
+      return document.activeElement === node;
+    };
+
+    if (land(opener?.el)) return;
+
+    let ancestor = opener?.parent ?? null;
+    while (ancestor && !ancestor.isConnected) ancestor = ancestor.parentElement;
+    if (land(ancestor)) return;
+
+    if (land(document.getElementById("mb-main"))) return;
+    if (land(document.querySelector<HTMLElement>("main"))) return;
+    land(document.body);
   };
 
   return { capture, restore };
