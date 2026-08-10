@@ -272,45 +272,6 @@ export const advanceWinner = (
 };
 
 /**
- * Get bracket structure for visualization.
- */
-export interface BracketMatch {
-  match: Match | null;
-  round: number;
-  position: number;
-  homeTeamId?: string;
-  awayTeamId?: string;
-}
-
-const getBracketStructure = (
-  matches: Match[],
-  totalTeams: number
-): BracketMatch[][] => {
-  // Calculate bracket size as next power of 2 for proper round calculation
-  const bracketSize = nextPowerOf2(totalTeams);
-  const totalRounds = Math.log2(bracketSize);
-  const bracket: BracketMatch[][] = [];
-
-  for (let round = 1; round <= totalRounds; round++) {
-    const roundMatches = matches
-      .filter((m) => m.round === round)
-      .sort((a, b) => a.position - b.position);
-
-    bracket.push(
-      roundMatches.map((match) => ({
-        match,
-        round: match.round,
-        position: match.position,
-        homeTeamId: match.homeTeamId,
-        awayTeamId: match.awayTeamId,
-      }))
-    );
-  }
-
-  return bracket;
-};
-
-/**
  * Get round name based on total rounds and current round.
  */
 export const getRoundName = (round: number, totalRounds: number): string => {

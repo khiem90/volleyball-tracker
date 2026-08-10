@@ -91,16 +91,6 @@ export const generateInitialMatches = (
 };
 
 /**
- * Legacy function for single court - generates first match only.
- */
-const generateFirstMatch = (
-  competitionId: string,
-  teamIds: string[]
-): Omit<Match, "id" | "createdAt"> => {
-  return generateInitialMatches(competitionId, teamIds, 1)[0];
-};
-
-/**
  * Process a completed match and update Two Match Rotation state.
  * Handles multi-court rotation independently per court.
  * 
@@ -348,14 +338,4 @@ export const getSessionMatchCount = (
 ): number => {
   const status = state.teamStatuses.find((s) => s.teamId === teamId);
   return status?.sessionMatches || 0;
-};
-
-/**
- * Get court info for a specific team.
- */
-const getTeamCourt = (
-  state: TwoMatchRotationState,
-  teamId: string
-): TwoMatchRotationCourt | null => {
-  return state.courts.find((c) => c.teamIds.includes(teamId)) || null;
 };

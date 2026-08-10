@@ -1,7 +1,6 @@
 import {
   collection,
   doc,
-  getDoc,
   getDocs,
   setDoc,
   updateDoc,
@@ -446,24 +445,6 @@ export const createSession = async (
 };
 
 /**
- * Get a session by ID
- */
-const getSessionById = async (sessionId: string): Promise<Session | null> => {
-  if (DEV_PREVIEW_SESSION) {
-    return previewData().sessions.get(sessionId) ?? null;
-  }
-  if (!db) return null;
-
-  const docRef = doc(db, SESSIONS_COLLECTION, sessionId);
-  const docSnap = await getDoc(docRef);
-
-  if (docSnap.exists()) {
-    return docSnap.data() as Session;
-  }
-  return null;
-};
-
-/**
  * Get a session by share code
  */
 export const getSessionByShareCode = async (shareCode: string): Promise<Session | null> => {
@@ -520,36 +501,6 @@ const updateSession = async (
 };
 
 /**
- * Update session competition
- */
-const updateSessionCompetition = async (
-  sessionId: string,
-  competition: Competition
-): Promise<void> => {
-  await updateSession(sessionId, { competition });
-};
-
-/**
- * Update session teams
- */
-const updateSessionTeams = async (
-  sessionId: string,
-  teams: PersistentTeam[]
-): Promise<void> => {
-  await updateSession(sessionId, { teams });
-};
-
-/**
- * Update session matches
- */
-const updateSessionMatches = async (
-  sessionId: string,
-  matches: Match[]
-): Promise<void> => {
-  await updateSession(sessionId, { matches });
-};
-
-/**
  * Update all session data at once (for batch updates)
  */
 export const updateSessionData = async (
@@ -579,53 +530,6 @@ export const deleteSession = async (sessionId: string): Promise<void> => {
 
   const docRef = doc(db, SESSIONS_COLLECTION, sessionId);
   await deleteDoc(docRef);
-};
-
-/**
- * Grant admin access to a user
- */
-const grantAdminAccess = async (
-  sessionId: string,
-  userId: string
-): Promise<void> => {
-  if (!DEV_PREVIEW_SESSION && !db) {
-    throw new Error("Firebase is not configured");
-  }
-
-  const session = await getSessionById(sessionId);
-  if (!session) {
-    throw new Error("Session not found");
-  }
-
-  if (!session.adminIds.includes(userId)) {
-    await updateSession(sessionId, { adminIds: [...session.adminIds, userId] });
-  }
-};
-
-/**
- * Revoke admin access from a user
- */
-const revokeAdminAccess = async (
-  sessionId: string,
-  userId: string
-): Promise<void> => {
-  if (!DEV_PREVIEW_SESSION && !db) {
-    throw new Error("Firebase is not configured");
-  }
-
-  const session = await getSessionById(sessionId);
-  if (!session) {
-    throw new Error("Session not found");
-  }
-
-  // Can't revoke creator's access
-  if (session.creatorId === userId) {
-    throw new Error("Cannot revoke creator's admin access");
-  }
-
-  await updateSession(sessionId, {
-    adminIds: session.adminIds.filter((id) => id !== userId),
-  });
 };
 
 // ============================================
@@ -663,54 +567,6 @@ export const subscribeToSession = (
     },
     (error) => {
       console.error("Error subscribing to session:", error);
-      if (onError) {
-        onError(error);
-      }
-    }
-  );
-};
-
-/**
- * Subscribe to session by share code
- */
-const subscribeToSessionByShareCode = (
-  shareCode: string,
-  callback: (session: Session | null) => void,
-  onError?: (error: Error) => void
-): Unsubscribe => {
-  if (DEV_PREVIEW_SESSION) {
-    const wanted = shareCode.toUpperCase();
-    for (const session of previewData().sessions.values()) {
-      if (session.shareCode.toUpperCase() === wanted) {
-        return previewSubscribe(session.id, callback);
-      }
-    }
-    callback(null);
-    return () => {};
-  }
-
-  if (!db) {
-    // Return a no-op unsubscribe function
-    callback(null);
-    return () => {};
-  }
-
-  const q = query(
-    collection(db, SESSIONS_COLLECTION),
-    where("shareCode", "==", shareCode.toUpperCase())
-  );
-
-  return onSnapshot(
-    q,
-    (querySnapshot) => {
-      if (!querySnapshot.empty) {
-        callback(querySnapshot.docs[0].data() as Session);
-      } else {
-        callback(null);
-      }
-    },
-    (error) => {
-      console.error("Error subscribing to session by share code:", error);
       if (onError) {
         onError(error);
       }
@@ -883,26 +739,6 @@ export const createSessionSummary = async (
   await setDoc(doc(db, SUMMARIES_COLLECTION, summaryId), sanitizedSummary);
 
   return summary;
-};
-
-/**
- * Get a summary by ID
- */
-const getSummaryById = async (
-  summaryId: string
-): Promise<SessionSummary | null> => {
-  if (DEV_PREVIEW_SESSION) {
-    return previewData().summaries.get(summaryId) ?? null;
-  }
-  if (!db) return null;
-
-  const docRef = doc(db, SUMMARIES_COLLECTION, summaryId);
-  const docSnap = await getDoc(docRef);
-
-  if (docSnap.exists()) {
-    return docSnap.data() as SessionSummary;
-  }
-  return null;
 };
 
 /**

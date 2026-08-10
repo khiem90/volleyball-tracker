@@ -1,19 +1,14 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Mail, Lock, LogIn, User } from "lucide-react";
+import { MbButton } from "@/components/matchbook/Button";
+import { MbField, MbTextInput } from "@/components/matchbook/form";
 
-interface EmailAuthFormProps {
-  email: string;
-  password: string;
-  onEmailChange: (value: string) => void;
-  onPasswordChange: (value: string) => void;
-  onSubmit: () => void;
-  isLoading: boolean;
-  mode: "signin" | "signup";
-}
-
+/**
+ * `<form onSubmit>` rather than a click handler on the button, so Enter in
+ * either field commits — the shipped version was two loose inputs and a
+ * `<Button onClick>`, which meant pressing Enter in the password box did
+ * nothing at all and the reader had to reach for the mouse to sign in.
+ */
 export const EmailAuthForm = ({
   email,
   password,
@@ -22,42 +17,64 @@ export const EmailAuthForm = ({
   onSubmit,
   isLoading,
   mode,
-}: EmailAuthFormProps) => {
-  const isSignUp = mode === "signup";
-  const Icon = isSignUp ? User : LogIn;
-  const buttonText = isSignUp ? "Create Account" : "Sign In";
-  const passwordPlaceholder = isSignUp ? "Password (min 6 characters)" : "Password";
+}: {
+  email: string;
+  password: string;
+  onEmailChange: (value: string) => void;
+  onPasswordChange: (value: string) => void;
+  onSubmit: () => void;
+  isLoading: boolean;
+  mode: "signin" | "signup";
+}) => {
+  const signUp = mode === "signup";
+  const idBase = signUp ? "session-signup" : "session-signin";
 
   return (
-    <div className="space-y-3">
-      <div className="relative">
-        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input
+    <form
+      className="flex flex-col gap-4"
+      onSubmit={(event) => {
+        event.preventDefault();
+        onSubmit();
+      }}
+    >
+      <MbField label="Email" htmlFor={`${idBase}-email`}>
+        <MbTextInput
+          id={`${idBase}-email`}
           type="email"
-          placeholder="Email"
+          icon="mail"
           value={email}
-          onChange={(e) => onEmailChange(e.target.value)}
-          className="pl-10"
+          onChange={(event) => onEmailChange(event.target.value)}
+          placeholder="you@example.com"
+          autoComplete="email"
+          inputMode="email"
         />
-      </div>
-      <div className="relative">
-        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input
-          type="password"
-          placeholder={passwordPlaceholder}
-          value={password}
-          onChange={(e) => onPasswordChange(e.target.value)}
-          className="pl-10"
-        />
-      </div>
-      <Button
-        className="w-full gap-2 cursor-pointer"
-        onClick={onSubmit}
-        disabled={isLoading}
+      </MbField>
+
+      <MbField
+        label="Password"
+        htmlFor={`${idBase}-password`}
+        hint={signUp ? "At least six characters." : undefined}
       >
-        <Icon className="w-4 h-4" />
-        {buttonText}
-      </Button>
-    </div>
+        <MbTextInput
+          id={`${idBase}-password`}
+          type="password"
+          icon="lock"
+          value={password}
+          onChange={(event) => onPasswordChange(event.target.value)}
+          autoComplete={signUp ? "new-password" : "current-password"}
+        />
+      </MbField>
+
+      <MbButton
+        type="submit"
+        variant="navy"
+        size="lg"
+        fullWidth
+        icon={signUp ? "plus" : "login"}
+        loading={isLoading}
+      >
+        {signUp ? "Create account" : "Sign in"}
+      </MbButton>
+    </form>
   );
 };

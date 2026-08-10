@@ -1,5 +1,9 @@
 @import "tailwindcss";
-@import "tw-animate-css";
+/* `tw-animate-css` is gone with P4. Its `animate-in` / `fade-in-0` /
+   `zoom-in-95` / `slide-in-from-*` utilities had exactly four consumers —
+   `ui/dialog`, `ui/sheet`, `ui/dropdown-menu` and `ui/tooltip` — and all four
+   were deleted. Matchbook's overlays animate from named `@keyframes` on
+   `.mb-dialog` / `.mb-sheet` / `.mb-toast` against the `--mb-dur-*` tokens. */
 
 /* ---------------------------------------------------------------------------
    TYPEFACE PLUMBING — read this before touching layout.tsx
@@ -28,55 +32,40 @@
    total loss of the display voice.
    --------------------------------------------------------------------------- */
 
+/* ---------------------------------------------------------------------------
+   THE UTILITY SURFACE (W2 / P4)
+
+   This block used to carry the whole shadcn token bridge as well —
+   `--color-background`, `--color-primary`, `--color-card`, `--color-border`,
+   `--color-muted`, `--color-destructive`, `--color-popover`, the five
+   `--color-chart-*`, the eight `--color-sidebar-*`, the four
+   `--color-team-*`, `--color-card-shadow`, and the seven `--radius-*` steps
+   derived from `--radius: 0.75rem`. Every one of them resolved into the
+   pre-Matchbook `:root` at the bottom of this file, which P4 deleted.
+
+   Removing the bridge is not cosmetic. In Tailwind v4 a utility EXISTS only
+   because a `--color-*` / `--radius-*` key is declared here, so `bg-primary`,
+   `bg-card`, `text-muted-foreground` and friends are now unresolvable class
+   names that generate no CSS at all. Before, a stray `bg-primary` — a
+   copy-paste from an old file, an autocomplete, a half-converted screen —
+   compiled cleanly, passed tsc, passed eslint, passed all 328 tests, and
+   shipped the old warm red to a user. That was the standing HF-4 risk in the
+   register (D-1): silent, not visible. It is now a no-op instead.
+
+   `--font-sans` stays: it is Matchbook plumbing, read by `body` and by
+   `.matchbook-surface` (see "Typeface plumbing" above). The `--color-mb-*`
+   keys stay because they are what generate `bg-mb-navy`, `text-mb-coral` and
+   the rest of the palette utilities.
+
+   The `--radius-*` steps are simply gone rather than restated: Tailwind's own
+   defaults (`rounded-sm` 4px, `rounded-md` 6px, `rounded-lg` 8px …) apply
+   again, and the Matchbook vocabulary is 4/3/2/999 written literally
+   (`rounded-[2px]`, `rounded-[4px]`) so a radius never depends on a scale that
+   can be redefined out from under it.
+   --------------------------------------------------------------------------- */
+
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
   --font-sans: var(--font-outfit, "Outfit");
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary: var(--primary);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
-  --color-card: var(--card);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --radius-2xl: calc(var(--radius) + 8px);
-  --radius-3xl: calc(var(--radius) + 12px);
-  --radius-4xl: calc(var(--radius) + 16px);
-
-  /* Custom team colors */
-  --color-team-blue: oklch(0.55 0.18 220);
-  --color-team-blue-light: oklch(0.92 0.04 220);
-  --color-team-orange: oklch(0.65 0.18 45);
-  --color-team-orange-light: oklch(0.95 0.04 45);
-
-  /* Card shadow colors */
-  --color-card-shadow: var(--card-shadow);
 
   /* Matchbook palette (home redesign) */
   --color-mb-paper: var(--mb-paper);
@@ -2037,6 +2026,52 @@
   .mb-meter > span {
     transition-property: background-color, color, border-color;
   }
+
+  /* ------------------------------------------------------- the backstop
+
+     The named rules above cover every recipe the system OWNS. This one
+     covers everything it does not: a Tailwind `transition-*`/`duration-*`
+     written inline on a screen, a `<video>`/`<details>` UA animation, and —
+     the reason it is not optional — `scroll-behavior`, which no `.mb-*`
+     selector can reach.
+
+     It is the rule the legacy theme used to provide from zone C, restated
+     here because design language §7.3 lists it as one of three guarantees
+     Matchbook screens rely on from outside zone A, and P4 deletes zone C.
+     Restated VERBATIM in effect, so this deletion changes nothing for a
+     reduced-motion user; the strictly stronger `animation: none` /
+     `transform: none` rules above still win on specificity (0,1,0 beats
+     0,0,0), which is why "hurry the motion" here does not weaken "remove the
+     motion" there.
+
+     `!important` is inherited from the rule this replaces and is load-bearing:
+     an inline `style="transition: …"` is the common way a component sets a
+     duration, and nothing short of `!important` outranks it.
+     ------------------------------------------------------------------- */
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   SELECTION
+
+   Also re-declared from zone C rather than dropped. The legacy rule painted a
+   20%-alpha warm red behind selected text with a near-black ink; deleting it
+   without a replacement hands every screen back to the UA's default blue,
+   which is the one colour in the app that belongs to no palette. Navy at the
+   same alpha is the Matchbook equivalent and keeps selected text at full
+   contrast against paper.
+   --------------------------------------------------------------------------- */
+
+::selection {
+  background: rgba(7, 50, 77, 0.2);
+  color: var(--mb-navy);
 }
 
 /* ---------------------------------------------------------------------------
@@ -2103,24 +2138,17 @@
   }
 }
 
-/* Mobile landscape mode - when height is limited, optimize for score visibility */
-@media (max-height: 500px) {
-  .hide-landscape {
-    display: none !important;
-  }
+/* The `@media (max-height: 500px)` landscape helpers — `.hide-landscape`,
+   `.hide-landscape-divider`, `.show-landscape`, `.landscape-row` — were here.
+   They are gone with P4 and they close register item D-4, the one row that had
+   no owner and no automated check behind it.
 
-  .hide-landscape-divider {
-    display: none !important;
-  }
-
-  .show-landscape {
-    display: block !important;
-  }
-
-  .landscape-row {
-    flex-direction: row !important;
-  }
-}
+   They are safe to delete because they have no consumers: they were the legacy
+   scoring screen's landscape contract, and W5 rebuilt that screen on its own
+   `@media` query rather than reusing them, exactly as design language §7.3
+   instructs ("re-declare them as `.mb-*` in zone A or write the media query
+   locally"). `ScoreSide.tsx` carries the note. Zero references in `src/` at
+   deletion time, verified by grep across .tsx/.ts. */
 
 * {
   box-sizing: border-box;
@@ -2176,46 +2204,38 @@ html {
   overflow-x: hidden;
 }
 
+/* The canvas.
+   `background` and `color` moved here from the shadcn
+   `@layer base { body { @apply bg-background text-foreground } }` that P4
+   deleted along with the tokens it read. Two reasons it is not simply dropped:
+   the browser propagates BODY's background to the canvas, so this is what
+   paints an iOS rubber-band overscroll and any area a short route leaves
+   uncovered; and `color` is the inherited default for anything that renders
+   outside `.matchbook-surface` (a portalled overlay root, a `<noscript>`).
+   Measured before the swap on all 31 routes at 1440x900 and 390x844: zero
+   sample points anywhere resolved to the body paint — every route covers its
+   own viewport — so this is a correctness change with no pixel behind it. */
 body {
   min-height: 100%;
   margin: 0;
   padding: 0;
+  background: var(--mb-paper);
+  color: var(--mb-navy);
   font-family: var(--font-sans), system-ui, sans-serif;
 }
 
-/* Custom scrollbar - light theme */
-.scrollbar-thin {
-  scrollbar-width: thin;
-}
+/* `.scrollbar-thin` was here, with an `oklch(0.7 0.08 25 / 0.3)` thumb — the
+   pre-Matchbook warm red — plus a `.dark` arm. It is deleted (register D-2).
+   Its two logged Matchbook consumers, `Sidebar.tsx` and `MobileBar.tsx`, had
+   already dropped it during P2a, and the two legacy ones named in the register,
+   `QuickAddTeams.tsx:261` and `volleyball/FormationEditorModal.tsx:244`, went
+   with W3's and W7's rewrites (the modal is now a route). Zero references in
+   `src/` at deletion time. */
 
-.scrollbar-thin::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-.scrollbar-thin::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.scrollbar-thin::-webkit-scrollbar-thumb {
-  background-color: oklch(0.7 0.08 25 / 0.3);
-  border-radius: 999px;
-}
-
-.scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background-color: oklch(0.5 0.15 25 / 0.5);
-}
-
-/* Dark mode scrollbar */
-.dark .scrollbar-thin::-webkit-scrollbar-thumb {
-  background-color: oklch(0.4 0.08 25 / 0.4);
-}
-
-.dark .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background-color: oklch(0.5 0.12 25 / 0.6);
-}
-
-/* Prevent text selection on score panels */
+/* Prevent text selection on score panels. NOT legacy: Tailwind's own
+   `select-none` sets `user-select` alone, and the scoring columns additionally
+   need `-webkit-touch-callout: none` or an iOS long-press on a tap column
+   raises the copy/share callout mid-game. */
 .select-none {
   -webkit-user-select: none;
   -moz-user-select: none;
@@ -2229,1063 +2249,63 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* ============================================
-   PLAYFUL WARM THEME - Cream + Bold Red
-   Inspired by Don't Board Me - warm, playful, inviting
-   ============================================ */
-:root {
-  --radius: 0.75rem;
-
-  /* Warm cream background */
-  --background: oklch(0.96 0.025 70);
-  --foreground: oklch(0.18 0.02 60);
-
-  /* Warm white cards */
-  --card: oklch(0.98 0.015 70);
-  --card-foreground: oklch(0.18 0.02 60);
-  --card-shadow: oklch(0.55 0.1 25 / 0.08);
-
-  --popover: oklch(0.98 0.015 70);
-  --popover-foreground: oklch(0.18 0.02 60);
-
-  /* Bold red primary - energetic and playful */
-  --primary: oklch(0.55 0.22 25);
-  --primary-foreground: oklch(0.99 0 0);
-
-  /* Red accent variations */
-  --red-light: oklch(0.92 0.06 25);
-  --red-dark: oklch(0.45 0.2 25);
-
-  /* Warm beige secondary */
-  --secondary: oklch(0.94 0.02 70);
-  --secondary-foreground: oklch(0.25 0.02 60);
-
-  --muted: oklch(0.94 0.015 70);
-  --muted-foreground: oklch(0.45 0.02 60);
-
-  /* Cream accent for hover states */
-  --accent: oklch(0.93 0.025 70);
-  --accent-foreground: oklch(0.2 0.02 60);
-
-  /* Destructive - stays red */
-  --destructive: oklch(0.55 0.22 25);
-  --destructive-light: oklch(0.95 0.04 25);
-
-  /* Borders and inputs - warm grey */
-  --border: oklch(0.88 0.015 70);
-  --input: oklch(0.96 0.015 70);
-  --ring: oklch(0.55 0.22 25);
-
-  /* Status colors - warm theme friendly */
-  --status-draft: oklch(0.55 0.12 250);
-  --status-draft-bg: oklch(0.94 0.03 250);
-  --status-active: oklch(0.55 0.22 25);
-  --status-active-bg: oklch(0.95 0.04 25);
-  --status-complete: oklch(0.55 0.12 145);
-  --status-complete-bg: oklch(0.94 0.03 145);
-  --status-live: oklch(0.55 0.22 25);
-  --status-live-bg: oklch(0.95 0.05 25);
-
-  /* Chart colors - warm gradient palette */
-  --chart-1: oklch(0.55 0.22 25);
-  --chart-2: oklch(0.6 0.15 45);
-  --chart-3: oklch(0.55 0.12 145);
-  --chart-4: oklch(0.55 0.12 250);
-  --chart-5: oklch(0.6 0.12 180);
-
-  /* Decorative colors */
-  --wave-light: oklch(0.94 0.04 55);
-  --wave-medium: oklch(0.9 0.06 45);
-  --cloud: oklch(1 0 0 / 0.8);
-
-  /* Playful card colors - Warm & Cozy palette */
-  --card-mint: oklch(0.94 0.045 165);
-  --card-mint-border: oklch(0.88 0.06 165 / 0.4);
-  --card-lavender: oklch(0.94 0.04 290);
-  --card-lavender-border: oklch(0.85 0.06 290 / 0.4);
-  --card-sky: oklch(0.95 0.04 235);
-  --card-sky-border: oklch(0.88 0.06 235 / 0.4);
-  --card-peach: oklch(0.95 0.05 55);
-  --card-peach-border: oklch(0.88 0.07 55 / 0.4);
-  --card-sage: oklch(0.94 0.035 145);
-  --card-sage-border: oklch(0.88 0.05 145 / 0.4);
-}
-
-/* ============================================
-   DARK THEME - Cozy Night Atmosphere
-   Deep warm charcoal with red glowing accents
-   ============================================ */
-.dark {
-  --radius: 0.75rem;
-
-  /* Deep warm charcoal backgrounds */
-  --background: oklch(0.14 0.01 50);
-  --foreground: oklch(0.93 0.01 70);
-
-  /* Elevated card surfaces */
-  --card: oklch(0.19 0.01 50);
-  --card-foreground: oklch(0.93 0.01 70);
-  --card-shadow: oklch(0 0 0 / 0.4);
-
-  --popover: oklch(0.17 0.01 50);
-  --popover-foreground: oklch(0.93 0.01 70);
-
-  /* Red primary - enhanced glow for dark */
-  --primary: oklch(0.62 0.2 25);
-  --primary-foreground: oklch(0.98 0.01 25);
-
-  /* Red accent variations */
-  --red-light: oklch(0.35 0.1 25);
-  --red-dark: oklch(0.55 0.18 25);
-
-  /* Muted secondary */
-  --secondary: oklch(0.22 0.01 50);
-  --secondary-foreground: oklch(0.85 0.01 70);
-
-  --muted: oklch(0.2 0.008 50);
-  --muted-foreground: oklch(0.6 0.015 70);
-
-  /* Accent for hover states */
-  --accent: oklch(0.24 0.015 25);
-  --accent-foreground: oklch(0.93 0.01 70);
-
-  /* Destructive - vivid red on dark */
-  --destructive: oklch(0.62 0.22 25);
-  --destructive-light: oklch(0.25 0.08 25);
-
-  /* Borders and inputs */
-  --border: oklch(0.28 0.01 50);
-  --input: oklch(0.2 0.008 50);
-  --ring: oklch(0.62 0.2 25);
-
-  /* Status colors - boosted for dark contrast */
-  --status-draft: oklch(0.65 0.14 250);
-  --status-draft-bg: oklch(0.22 0.04 250);
-  --status-active: oklch(0.65 0.2 25);
-  --status-active-bg: oklch(0.25 0.06 25);
-  --status-complete: oklch(0.65 0.14 145);
-  --status-complete-bg: oklch(0.22 0.04 145);
-  --status-live: oklch(0.65 0.2 25);
-  --status-live-bg: oklch(0.25 0.06 25);
-
-  /* Chart colors - luminous on dark */
-  --chart-1: oklch(0.65 0.2 25);
-  --chart-2: oklch(0.7 0.15 45);
-  --chart-3: oklch(0.65 0.14 145);
-  --chart-4: oklch(0.65 0.14 250);
-  --chart-5: oklch(0.7 0.12 180);
-
-  /* Decorative colors */
-  --wave-light: oklch(0.22 0.03 45);
-  --wave-medium: oklch(0.27 0.05 40);
-  --cloud: oklch(0.2 0.015 50 / 0.5);
-
-  /* Playful card colors - Dark mode (muted versions) */
-  --card-mint: oklch(0.22 0.03 165);
-  --card-mint-border: oklch(0.32 0.04 165 / 0.5);
-  --card-lavender: oklch(0.22 0.025 290);
-  --card-lavender-border: oklch(0.32 0.04 290 / 0.5);
-  --card-sky: oklch(0.22 0.025 235);
-  --card-sky-border: oklch(0.32 0.04 235 / 0.5);
-  --card-peach: oklch(0.24 0.03 55);
-  --card-peach-border: oklch(0.34 0.05 55 / 0.5);
-  --card-sage: oklch(0.22 0.02 145);
-  --card-sage-border: oklch(0.32 0.035 145 / 0.5);
-}
-
-@layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
-}
-
-/* ============================================
-   DECORATIVE BACKGROUND
-   ============================================ */
-.bg-tournament {
-  position: relative;
-  background: linear-gradient(
-    180deg,
-    oklch(0.96 0.025 70) 0%,
-    oklch(0.95 0.03 65) 50%,
-    oklch(0.94 0.035 60) 100%
-  );
-  min-height: 100vh;
-}
-
-.dark .bg-tournament {
-  background: linear-gradient(
-    180deg,
-    oklch(0.14 0.01 50) 0%,
-    oklch(0.13 0.012 50) 50%,
-    oklch(0.12 0.015 50) 100%
-  );
-}
-
-/* Decorative wave pattern */
-.bg-waves {
-  position: relative;
-  overflow: hidden;
-}
-
-.bg-waves::before {
-  content: "";
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 200px;
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 320'%3E%3Cpath fill='%2399d6e5' fill-opacity='0.15' d='M0,192L48,197.3C96,203,192,213,288,229.3C384,245,480,267,576,250.7C672,235,768,181,864,181.3C960,181,1056,235,1152,234.7C1248,235,1344,181,1392,154.7L1440,128L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z'%3E%3C/path%3E%3C/svg%3E") no-repeat bottom;
-  background-size: cover;
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* ============================================
-   SOFT CARD STYLES (replaces glassmorphism)
-   ============================================ */
-.soft-card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-2xl);
-  box-shadow:
-    0 1px 3px oklch(0 0 0 / 0.04),
-    0 4px 12px oklch(0.55 0.1 25 / 0.06);
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-}
-
-.dark .soft-card {
-  box-shadow:
-    0 1px 3px oklch(0 0 0 / 0.3),
-    0 4px 12px oklch(0 0 0 / 0.4);
-}
-
-.soft-card-hover:hover {
-  border-color: oklch(0.55 0.22 25 / 0.3);
-  box-shadow:
-    0 2px 8px oklch(0 0 0 / 0.06),
-    0 8px 24px oklch(0.55 0.15 25 / 0.1);
-  transform: translateY(-2px);
-}
-
-.dark .soft-card-hover:hover {
-  border-color: oklch(0.62 0.2 25 / 0.4);
-  box-shadow:
-    0 2px 8px oklch(0 0 0 / 0.4),
-    0 8px 24px oklch(0.62 0.2 25 / 0.15);
-}
-
-/* Legacy glass-card class for compatibility - now soft card */
-.glass-card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-2xl);
-  box-shadow:
-    0 1px 3px oklch(0 0 0 / 0.04),
-    0 4px 12px oklch(0.55 0.1 25 / 0.06);
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-}
-
-.dark .glass-card {
-  box-shadow:
-    0 1px 3px oklch(0 0 0 / 0.3),
-    0 4px 12px oklch(0 0 0 / 0.4);
-}
-
-.glass-card-hover:hover {
-  border-color: oklch(0.55 0.22 25 / 0.3);
-  box-shadow:
-    0 2px 8px oklch(0 0 0 / 0.06),
-    0 8px 24px oklch(0.55 0.15 25 / 0.1);
-  transform: translateY(-2px);
-}
-
-.dark .glass-card-hover:hover {
-  border-color: oklch(0.62 0.2 25 / 0.4);
-  box-shadow:
-    0 2px 8px oklch(0 0 0 / 0.4),
-    0 8px 24px oklch(0.62 0.2 25 / 0.15);
-}
-
-/* ============================================
-   PLAYFUL CARD VARIANTS - Warm & Cozy
-   ============================================ */
-.playful-card {
-  background: var(--card);
-  border: 2px solid var(--border);
-  border-radius: var(--radius-3xl);
-  box-shadow:
-    0 2px 8px oklch(0 0 0 / 0.04),
-    0 6px 20px oklch(0.55 0.1 25 / 0.06);
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-}
-
-.playful-card:hover {
-  transform: translateY(-3px) scale(1.01);
-  box-shadow:
-    0 4px 12px oklch(0 0 0 / 0.06),
-    0 12px 32px oklch(0.55 0.15 25 / 0.1);
-}
-
-.dark .playful-card {
-  box-shadow:
-    0 2px 8px oklch(0 0 0 / 0.3),
-    0 6px 20px oklch(0 0 0 / 0.4);
-}
-
-.dark .playful-card:hover {
-  box-shadow:
-    0 4px 12px oklch(0 0 0 / 0.4),
-    0 12px 32px oklch(0.62 0.2 25 / 0.15);
-}
-
-/* Mint card variant */
-.playful-card-mint {
-  background: var(--card-mint);
-  border-color: var(--card-mint-border);
-}
-
-.playful-card-mint:hover {
-  border-color: oklch(0.75 0.1 165 / 0.6);
-}
-
-/* Lavender card variant */
-.playful-card-lavender {
-  background: var(--card-lavender);
-  border-color: var(--card-lavender-border);
-}
-
-.playful-card-lavender:hover {
-  border-color: oklch(0.75 0.08 290 / 0.6);
-}
-
-/* Sky card variant */
-.playful-card-sky {
-  background: var(--card-sky);
-  border-color: var(--card-sky-border);
-}
-
-.playful-card-sky:hover {
-  border-color: oklch(0.75 0.1 235 / 0.6);
-}
-
-/* Peach card variant */
-.playful-card-peach {
-  background: var(--card-peach);
-  border-color: var(--card-peach-border);
-}
-
-.playful-card-peach:hover {
-  border-color: oklch(0.75 0.1 55 / 0.6);
-}
-
-/* Sage card variant */
-.playful-card-sage {
-  background: var(--card-sage);
-  border-color: var(--card-sage-border);
-}
-
-.playful-card-sage:hover {
-  border-color: oklch(0.75 0.08 145 / 0.6);
-}
-
-/* ============================================
-   PLAYFUL BUTTON STYLES
-   ============================================ */
-.btn-playful {
-  border-radius: 9999px;
-  font-weight: 600;
-  padding: 0.75rem 1.5rem;
-  transition: all 0.2s ease;
-}
-
-.btn-playful-primary {
-  background: linear-gradient(135deg, oklch(0.55 0.22 25) 0%, oklch(0.5 0.24 20) 100%);
-  color: white;
-  box-shadow: 0 4px 14px oklch(0.55 0.22 25 / 0.3);
-}
-
-.btn-playful-primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px oklch(0.55 0.22 25 / 0.4);
-}
-
-.btn-playful-primary:active {
-  transform: translateY(0) scale(0.98);
-}
-
-/* Text highlight effect - subtle underline style */
-.text-highlight {
-  position: relative;
-  display: inline;
-  background: linear-gradient(to top, oklch(0.55 0.22 25 / 0.15) 0%, oklch(0.55 0.22 25 / 0.15) 40%, transparent 40%);
-  padding: 0 0.15em;
-}
-
-.text-highlight-mint {
-  background: linear-gradient(to top, oklch(0.8 0.08 165 / 0.3) 0%, oklch(0.8 0.08 165 / 0.3) 40%, transparent 40%);
-}
-
-.text-highlight-lavender {
-  background: linear-gradient(to top, oklch(0.8 0.06 290 / 0.3) 0%, oklch(0.8 0.06 290 / 0.3) 40%, transparent 40%);
-}
-
-.text-highlight-sky {
-  background: linear-gradient(to top, oklch(0.8 0.08 235 / 0.3) 0%, oklch(0.8 0.08 235 / 0.3) 40%, transparent 40%);
-}
-
-/* Navigation bar - flat, warm background */
-.glass-nav {
-  background: var(--background);
-  border-bottom: 1px solid var(--border);
-  box-shadow: none;
-}
-
-.dark .glass-nav {
-  background: var(--background);
-  border-bottom: 1px solid var(--border);
-  box-shadow: none;
-}
-
-/* Flat nav style for redesigned navbar */
-.flat-nav {
-  background: var(--background);
-  border-bottom: 1px solid var(--border);
-}
-
-.dark .flat-nav {
-  background: var(--background);
-  border-bottom: 1px solid var(--border);
-}
-
-/* Input fields - warm theme */
-.glass-input {
-  background: var(--input);
-  border: 1px solid var(--border);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-
-.glass-input:focus {
-  border-color: oklch(0.55 0.22 25 / 0.5);
-  box-shadow: 0 0 0 3px oklch(0.55 0.22 25 / 0.12);
-}
-
-/* ============================================
-   SCORE PANEL GRADIENTS - Light Theme
-   ============================================ */
-.team-blue-gradient {
-  background: linear-gradient(
-    135deg,
-    oklch(0.55 0.16 220) 0%,
-    oklch(0.5 0.14 225) 50%,
-    oklch(0.45 0.12 230) 100%
-  );
-}
-
-.team-orange-gradient {
-  background: linear-gradient(
-    135deg,
-    oklch(0.65 0.18 45) 0%,
-    oklch(0.6 0.16 48) 50%,
-    oklch(0.55 0.14 52) 100%
-  );
-}
-
-.team-red-gradient {
-  background: linear-gradient(
-    135deg,
-    oklch(0.55 0.22 25) 0%,
-    oklch(0.5 0.2 22) 50%,
-    oklch(0.45 0.18 20) 100%
-  );
-}
-
-/* ============================================
-   SOFT SHADOW UTILITIES
-   ============================================ */
-.shadow-soft-sm {
-  box-shadow: 0 1px 2px oklch(0 0 0 / 0.03), 0 2px 6px oklch(0.55 0.1 25 / 0.04);
-}
-
-.shadow-soft {
-  box-shadow: 0 1px 3px oklch(0 0 0 / 0.04), 0 4px 12px oklch(0.55 0.1 25 / 0.06);
-}
-
-.shadow-soft-md {
-  box-shadow: 0 2px 8px oklch(0 0 0 / 0.05), 0 8px 20px oklch(0.55 0.1 25 / 0.08);
-}
-
-.shadow-soft-lg {
-  box-shadow: 0 4px 16px oklch(0 0 0 / 0.06), 0 12px 32px oklch(0.55 0.15 25 / 0.1);
-}
-
-/* Red glow for primary elements */
-.glow-red {
-  box-shadow: 0 0 20px -5px oklch(0.55 0.22 25 / 0.35);
-}
-
-.glow-primary {
-  box-shadow: 0 0 20px -5px oklch(0.55 0.22 25 / 0.35);
-}
-
-.glow-amber {
-  box-shadow: 0 0 20px -5px oklch(0.65 0.15 55 / 0.35);
-}
-
-.glow-success {
-  box-shadow: 0 0 15px -5px oklch(0.55 0.12 145 / 0.35);
-}
-
-.glow-live {
-  box-shadow: 0 0 15px oklch(0.55 0.22 25 / 0.4);
-}
-
-/* ============================================
-   ANIMATED GRADIENTS - Subtle for warm theme
-   ============================================ */
-.animated-gradient {
-  background: linear-gradient(
-    -45deg,
-    oklch(0.95 0.03 55 / 0.5),
-    oklch(0.96 0.025 65 / 0.3),
-    oklch(0.96 0.02 70 / 0.2),
-    oklch(0.96 0.025 70)
-  );
-  background-size: 400% 400%;
-  animation: gradientShift 15s ease infinite;
-}
-
-.animated-gradient-subtle {
-  background: linear-gradient(
-    135deg,
-    oklch(0.55 0.22 25 / 0.05) 0%,
-    transparent 50%,
-    oklch(0.6 0.15 45 / 0.03) 100%
-  );
-  background-size: 200% 200%;
-  animation: gradientShift 20s ease infinite;
-}
-
-@keyframes gradientShift {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
-  }
-}
-
-/* ============================================
-   SHINE/SHIMMER EFFECTS - Light theme
-   ============================================ */
-.shine-hover {
-  position: relative;
-  overflow: hidden;
-}
-
-.shine-hover::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    115deg,
-    transparent 0%,
-    transparent 40%,
-    oklch(1 0 0 / 0.6) 50%,
-    transparent 60%,
-    transparent 100%
-  );
-  transform: translateX(-100%);
-  transition: transform 0.6s ease;
-}
-
-.shine-hover:hover::after {
-  transform: translateX(100%);
-}
-
-/* ============================================
-   CARD INTERACTIONS
-   ============================================ */
-.card-lift {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.card-lift:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 30px -10px oklch(0.55 0.15 25 / 0.2);
-}
-
-/* ============================================
-   COLOR TRANSITIONS
-   ============================================ */
-.color-transition {
-  transition: color 0.15s ease, background-color 0.15s ease,
-    border-color 0.15s ease;
-}
-
-/* ============================================
-   STATUS BADGES - Light Theme
-   ============================================ */
-.status-draft {
-  background: var(--status-draft-bg);
-  color: var(--status-draft);
-}
-
-.status-active {
-  background: var(--status-active-bg);
-  color: var(--status-active);
-}
-
-.status-complete {
-  background: var(--status-complete-bg);
-  color: var(--status-complete);
-}
-
-.status-live {
-  background: var(--status-live-bg);
-  color: var(--status-live);
-  animation: livePulse 2s ease-in-out infinite;
-}
-
-@keyframes livePulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.7;
-  }
-}
-
-/* ============================================
-   LIVE INDICATOR DOT
-   ============================================ */
-.live-dot {
-  position: relative;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--status-live);
-}
-
-.live-dot::before {
-  content: "";
-  position: absolute;
-  inset: -3px;
-  border-radius: 50%;
-  background: oklch(0.55 0.18 30 / 0.3);
-  animation: liveDotPulse 1.5s ease-in-out infinite;
-}
-
-@keyframes liveDotPulse {
-  0%,
-  100% {
-    transform: scale(1);
-    opacity: 0.3;
-  }
-  50% {
-    transform: scale(1.5);
-    opacity: 0;
-  }
-}
-
-/* ============================================
-   FOCUS STATES - Red ring
-   ============================================ */
-:focus-visible {
-  outline: 2px solid oklch(0.55 0.22 25);
-  outline-offset: 2px;
-}
-
-/* ============================================
-   BUTTON STATES
-   ============================================ */
-button:active:not(:disabled) {
-  transform: scale(0.98);
-}
-
-/* ============================================
-   ICON CONTAINER
-   ============================================ */
-.icon-container {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--radius-lg);
-}
-
-/* ============================================
-   RED GRADIENT BUTTONS
-   ============================================ */
-.btn-red-gradient {
-  background: linear-gradient(
-    135deg,
-    oklch(0.55 0.22 25) 0%,
-    oklch(0.5 0.24 20) 100%
-  );
-  color: white;
-  box-shadow: 0 2px 8px oklch(0.55 0.22 25 / 0.25),
-    inset 0 1px 0 oklch(1 0 0 / 0.15);
-  transition: all 0.2s ease;
-}
-
-.btn-red-gradient:hover {
-  box-shadow: 0 4px 16px oklch(0.55 0.22 25 / 0.35),
-    inset 0 1px 0 oklch(1 0 0 / 0.2);
-  transform: translateY(-1px);
-}
-
-.btn-red-gradient:active {
-  transform: translateY(0) scale(0.98);
-}
-
-/* Legacy btn-teal-gradient for compatibility - now red */
-.btn-teal-gradient {
-  background: linear-gradient(
-    135deg,
-    oklch(0.55 0.22 25) 0%,
-    oklch(0.5 0.24 20) 100%
-  );
-  color: white;
-  box-shadow: 0 2px 8px oklch(0.55 0.22 25 / 0.25),
-    inset 0 1px 0 oklch(1 0 0 / 0.15);
-  transition: all 0.2s ease;
-}
-
-.btn-teal-gradient:hover {
-  box-shadow: 0 4px 16px oklch(0.55 0.22 25 / 0.35),
-    inset 0 1px 0 oklch(1 0 0 / 0.2);
-  transform: translateY(-1px);
-}
-
-.btn-teal-gradient:active {
-  transform: translateY(0) scale(0.98);
-}
-
-/* Soft button variant */
-.btn-soft {
-  background: var(--accent);
-  color: var(--accent-foreground);
-  border: 1px solid var(--border);
-  transition: all 0.2s ease;
-}
-
-.btn-soft:hover {
-  background: oklch(0.92 0.035 70);
-  border-color: oklch(0.55 0.22 25 / 0.3);
-}
-
-/* ============================================
-   VS DIVIDER STYLING - Warm theme
-   ============================================ */
-.vs-divider {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.vs-divider::before,
-.vs-divider::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: linear-gradient(
-    to right,
-    transparent,
-    oklch(0.55 0.22 25 / 0.3),
-    transparent
-  );
-}
-
-/* ============================================
-   SCORE DISPLAY - Warm theme
-   ============================================ */
-.score-text {
-  text-shadow: 0 2px 10px oklch(0 0 0 / 0.1);
-}
-
-.score-glow {
-  filter: drop-shadow(0 0 10px oklch(0.55 0.22 25 / 0.2));
-}
-
-/* ============================================
-   REDUCED MOTION SUPPORT
-   ============================================ */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
-
-  .glass-card-hover:hover,
-  .soft-card-hover:hover {
-    transform: none;
-  }
-
-  .card-lift:hover {
-    transform: none;
-  }
-
-  .btn-teal-gradient:hover,
-  .btn-orange-gradient:hover {
-    transform: none;
-  }
-
-  .shine-hover::after {
-    display: none;
-  }
-
-  .animated-gradient,
-  .animated-gradient-subtle {
-    animation: none;
-    background-size: 100% 100%;
-  }
-}
-
-/* ============================================
-   GPU ACCELERATION HINTS
-   ============================================ */
-.soft-card,
-.glass-card,
-.glass-nav,
-.glass-input {
-  will-change: auto;
-  transform: translateZ(0);
-}
-
-/* ============================================
-   SIMPLE CSS ANIMATIONS
-   ============================================ */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.animate-fade-in {
-  animation: fadeIn 0.4s ease-out forwards;
-}
-
-.animate-fade-in-delay-1 {
-  animation: fadeIn 0.4s ease-out 0.1s forwards;
-  opacity: 0;
-}
-
-.animate-fade-in-delay-2 {
-  animation: fadeIn 0.4s ease-out 0.2s forwards;
-  opacity: 0;
-}
-
-.animate-fade-in-delay-3 {
-  animation: fadeIn 0.4s ease-out 0.3s forwards;
-  opacity: 0;
-}
-
-/* Stagger animation classes */
-.stagger-1 { animation-delay: 0.05s; }
-.stagger-2 { animation-delay: 0.1s; }
-.stagger-3 { animation-delay: 0.15s; }
-.stagger-4 { animation-delay: 0.2s; }
-.stagger-5 { animation-delay: 0.25s; }
-.stagger-6 { animation-delay: 0.3s; }
-
-/* ============================================
-   DECORATIVE ELEMENTS
-   ============================================ */
-.decorative-circle {
-  position: absolute;
-  border-radius: 50%;
-  background: linear-gradient(
-    135deg,
-    oklch(0.55 0.22 25 / 0.08),
-    oklch(0.6 0.15 45 / 0.04)
-  );
-  pointer-events: none;
-}
-
-.decorative-blob {
-  position: absolute;
-  border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
-  background: linear-gradient(
-    135deg,
-    oklch(0.92 0.05 55 / 0.4),
-    oklch(0.94 0.04 70 / 0.25)
-  );
-  pointer-events: none;
-  filter: blur(50px);
-}
-
-/* Playful blob variants - warm colors */
-.decorative-blob:nth-child(1) {
-  background: linear-gradient(135deg, oklch(0.92 0.06 55 / 0.35), oklch(0.94 0.05 70 / 0.2));
-}
-
-.decorative-blob:nth-child(2) {
-  background: linear-gradient(135deg, oklch(0.92 0.05 45 / 0.3), oklch(0.94 0.04 60 / 0.2));
-}
-
-.decorative-blob:nth-child(3) {
-  background: linear-gradient(135deg, oklch(0.94 0.04 65 / 0.25), oklch(0.95 0.03 75 / 0.15));
-}
-
-/* ============================================
-   ILLUSTRATION COLORS
-   ============================================ */
-.illustration-primary {
-  fill: oklch(0.55 0.22 25);
-}
-
-.illustration-secondary {
-  fill: oklch(0.85 0.08 25);
-}
-
-.illustration-accent {
-  fill: oklch(0.65 0.15 45);
-}
-
-.illustration-light {
-  fill: oklch(0.95 0.03 70);
-}
-
-/* ============================================
-   RANK BADGE COLORS
-   ============================================ */
-.rank-gold {
-  background: linear-gradient(135deg, oklch(0.8 0.12 85), oklch(0.7 0.14 75));
-  color: oklch(0.3 0.08 70);
-}
-
-.rank-silver {
-  background: linear-gradient(135deg, oklch(0.85 0.01 250), oklch(0.75 0.02 250));
-  color: oklch(0.35 0.02 250);
-}
-
-.rank-bronze {
-  background: linear-gradient(135deg, oklch(0.65 0.1 55), oklch(0.55 0.12 50));
-  color: oklch(0.95 0.02 55);
-}
-
-/* ============================================
-   INPUT PLACEHOLDER
-   ============================================ */
-::placeholder {
-  color: oklch(0.6 0.015 60);
-  opacity: 1;
-}
-
-/* ============================================
-   SELECTION HIGHLIGHT
-   ============================================ */
-::selection {
-  background: oklch(0.55 0.22 25 / 0.2);
-  color: oklch(0.18 0.02 60);
-}
-
-.dark ::selection {
-  background: oklch(0.62 0.2 25 / 0.3);
-  color: oklch(0.95 0.01 70);
-}
-
-/* ============================================
-   THEME TOGGLE - Stadium Lighting Control
-   ============================================ */
-.theme-toggle-track {
-  position: relative;
-  width: 44px;
-  height: 24px;
-  border-radius: 12px;
-  background: oklch(0.92 0.04 55);
-  border: 1px solid oklch(0.85 0.06 55 / 0.5);
-  cursor: pointer;
-  overflow: hidden;
-  transition: background 0.3s ease, border-color 0.3s ease;
-  flex-shrink: 0;
-}
-
-.theme-toggle-track:hover {
-  border-color: oklch(0.75 0.1 55);
-}
-
-.theme-toggle-track:focus-visible {
-  outline: 2px solid oklch(0.55 0.22 25);
-  outline-offset: 2px;
-}
-
-.dark .theme-toggle-track {
-  background: oklch(0.22 0.02 50);
-  border-color: oklch(0.35 0.08 25 / 0.5);
-}
-
-.dark .theme-toggle-track:hover {
-  border-color: oklch(0.5 0.15 25);
-}
-
-.theme-toggle-glow {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-.theme-toggle-orb {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow:
-    0 1px 3px oklch(0 0 0 / 0.15),
-    0 2px 6px oklch(0 0 0 / 0.1);
-}
-
-.dark .theme-toggle-orb {
-  box-shadow:
-    0 1px 3px oklch(0 0 0 / 0.3),
-    0 0 8px oklch(0.7 0.1 250 / 0.3);
-}
-
-.theme-toggle-icon {
-  width: 14px;
-  height: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* Sun rays rotation animation */
-@keyframes rotateSunRays {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.sun-rays {
-  transform-origin: center;
-  animation: rotateSunRays 12s linear infinite;
-}
-
-.dark ::placeholder {
-  color: oklch(0.5 0.015 50);
-}
+/* ===========================================================================
+   END OF FILE — and end of the pre-Matchbook design system (W2 / P4)
+
+   Everything below this point used to be the old theme, 1060 lines of it,
+   beginning with `PLAYFUL WARM THEME - Cream + Bold Red`. It is deleted:
+
+     - the second `:root` — 46 shadcn tokens (`--primary` the old warm red,
+       `--card`, `--popover`, `--muted`, `--secondary`, `--accent`,
+       `--destructive`, `--border`, `--input`, `--ring`, `--radius`, the eight
+       `--status-*`, the five `--chart-*`, the three decorative and the ten
+       `--card-*` playful-card colours);
+     - the `.dark` block, 46 more of the same (charter Appendix A D-15: dark
+       mode is dropped, and it had been mis-stating reality on 7 of 13 routes);
+     - `@layer base { * { @apply border-border outline-ring/50 } body { @apply
+       bg-background text-foreground } }` — measured across all 31 routes at
+       both viewports before removal: **0** elements anywhere were still
+       resolving a border colour from it, and the body paint was visible at 0
+       of ~4400 hit-test sample points;
+     - the card families `.soft-card`, `.glass-card`, `.playful-card` and its
+       five colour variants, `.bg-tournament`, `.bg-waves`;
+     - the button families `.btn-playful*`, `.btn-red-gradient`,
+       `.btn-teal-gradient`, `.btn-soft`, and `.glass-nav` / `.flat-nav` /
+       `.glass-input`;
+     - `.shadow-soft*`, `.glow-*`, `.animated-gradient*`, `.shine-hover`,
+       `.card-lift`, `.color-transition`, the GPU-hint block, the three
+       `.team-*-gradient`s, `.text-highlight*`, `.vs-divider`, `.score-text`,
+       `.score-glow`, `.icon-container`;
+     - `.status-*`, `.live-dot`, `.animate-fade-in*`, `.stagger-1..6`,
+       `.decorative-circle`, `.decorative-blob`, `.illustration-*`,
+       `.rank-gold/silver/bronze`, the `.theme-toggle-*` set and `.sun-rays`;
+     - the legacy `::placeholder` and `::selection` (the latter re-declared in
+       Matchbook navy up in the zone-A block — see "SELECTION");
+     - the global `:focus-visible { outline: 2px solid oklch(0.55 0.22 25) }`.
+       Matchbook scopes its own ring to `.matchbook-surface :focus-visible`
+       against `--mb-focus`, which is the coral/paper-bright pair that flips on
+       navy grounds. The legacy rule was the app's only focus ring for
+       everything outside the surface and its colour was the old red;
+     - `button:active:not(:disabled) { transform: scale(0.98) }`. This one was
+       not merely dead — it was actively wrong. At (0,2,1) it applied to every
+       `<button>` in the app including `.mb-tab`, `.mb-nav-item` and every
+       Matchbook control, it fought the deliberate press recipes above, and it
+       survived `prefers-reduced-motion` because the legacy clamp only
+       shortened durations and a `transform` on `:active` has no duration to
+       shorten. The system's own 25 `:active` rules replace it;
+     - the legacy `@media (prefers-reduced-motion: reduce)` universal clamp,
+       re-declared verbatim inside the Matchbook zone before this deletion, per
+       design language §7.3.
+
+   Nothing here had a consumer. The audit that established that ran three ways:
+   an import graph over `src/` (the legacy React tree was a closed island whose
+   only doors were `PageLoadingSpinner` on `/login` and `ThemeProvider` in
+   `Providers.tsx`, both migrated first), a literal grep for all 78 class names
+   above across every `.ts`/`.tsx` (only hits were inside doc comments), and a
+   live computed-style probe on all 31 routes at desktop and mobile.
+
+   The file is now one system. If you need a colour, it is `--mb-*`; if you
+   need a radius, it is 4/3/2/999 written literally; if you need a control, it
+   is in `src/components/matchbook/`. There is no second stylesheet to fall
+   back to, and that is the point.
+   =========================================================================== */

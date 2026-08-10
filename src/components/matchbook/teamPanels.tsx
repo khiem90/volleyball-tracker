@@ -253,7 +253,10 @@ export const TeamReadinessPanel = ({ rows }: { rows: MbReadinessRow[] }) => (
                     <span className="w-8 text-[0.76rem] font-semibold tabular-nums">
                       {row.percent}%
                     </span>
-                    <span className="h-[7px] w-24 overflow-hidden rounded-sm bg-[var(--mb-tint-3)]">
+                    {/* 2px to match `.mb-meter` — see the note on the same bar
+                        in `panels.tsx`. `rounded-sm` resolved to 8px through
+                        the legacy `--radius`, which P4 deletes. */}
+                    <span className="h-[7px] w-24 overflow-hidden rounded-[2px] bg-[var(--mb-tint-3)]">
                       <span
                         className="block h-full"
                         style={{

@@ -4,7 +4,8 @@ import { useCallback, useState } from "react";
 import { useSession } from "@/context/SessionContext";
 import { useAuth } from "@/context/AuthContext";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
-import { MbButton, MbButtonLink } from "@/components/matchbook/Button";
+import { MbButton } from "@/components/matchbook/Button";
+import { SessionAuthPanel } from "@/components/auth";
 import { MbCopyField } from "@/components/matchbook/CopyField";
 import {
   MbDialog,
@@ -26,14 +27,10 @@ import { MbField, MbTextInput } from "@/components/matchbook/form";
 
    ---------------------------------------------------------------- W6 HOOK-UP
 
-   The auth step's body is the one thing here that is not finished, and it is
-   not this workstream's to finish: `auth/SessionAuthPanel.tsx` — the sign-in
-   FORM with no dialog of its own — is W6's P2b deliverable and does not exist
-   on disk yet. The step, its rail entry, its back path and its footer are all
-   in place; when the panel lands the only change is to swap the placeholder
-   block below for `<SessionAuthPanel onDone={() => setStep("name")} />`.
-   Rendering the existing `<SessionAuth>` here instead would re-introduce the
-   exact nested dialog this rewrite removes, so it deliberately does not.
+   Landed. `auth/SessionAuthPanel.tsx` is the sign-in FORM with no dialog of
+   its own, and it renders as this dialog's `auth` step. Rendering the old
+   `<SessionAuth>` here instead would have re-introduced the exact nested
+   overlay this rewrite removed.
    =========================================================================== */
 
 type SessionStep = "name" | "auth" | "created";
@@ -232,19 +229,15 @@ export const CreateSessionDialog = ({
         )}
 
         {step === "auth" && (
-          /* --- W6 drop-in point: replace with <SessionAuthPanel/>. --- */
-          <MbNotice tone="info" icon="login" title="Sign in on the login screen">
-            <span className="flex flex-col items-start gap-2">
-              <span>
-                The in-dialog sign-in form is not wired up yet. Signing in on
-                the login screen and returning here has the same effect — your
-                session name is remembered while this dialog is open.
-              </span>
-              <MbButtonLink variant="outline-navy" size="sm" icon="login" href="/login">
-                Open the login screen
-              </MbButtonLink>
-            </span>
-          </MbNotice>
+          /* W6's panel, landed. It is the sign-in FORM with no dialog of its
+             own, so the nested-overlay problem charter H11 forbids never
+             arises — this is a step of THIS dialog, not a second one. The
+             admin-token mode is withheld: `applyAdminToken` validates against
+             the session you are watching, and there is no session here yet. */
+          <SessionAuthPanel
+            modes={["signin", "signup"]}
+            onDone={() => setStep("name")}
+          />
         )}
 
         {step === "created" && created && (

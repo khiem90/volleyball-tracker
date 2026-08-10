@@ -4,7 +4,9 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { MatchbookShell } from "@/components/matchbook/AppShell";
 import { MbButton, MbButtonLink } from "@/components/matchbook/Button";
+import { MbCopyField } from "@/components/matchbook/CopyField";
 import { MbEmptyState } from "@/components/matchbook/EmptyState";
+import { MbShareAction } from "@/components/matchbook/ShareAction";
 import { MbIcon } from "@/components/matchbook/MbIcon";
 import { MbNotice } from "@/components/matchbook/Notice";
 import { MbSkeleton } from "@/components/matchbook/Skeleton";
@@ -208,6 +210,26 @@ export default function SharedFormationPage() {
 
   const tags = formation.tags ?? [];
 
+  /**
+   * The link this page was reached by, handed back so it can be passed on.
+   *
+   * A shared artefact that cannot itself be shared is a dead end: the parent
+   * who was sent this has no way to forward it except by reading the address
+   * bar, and on a phone the address bar is truncated. Same pair the public
+   * match report uses — `MbCopyField` for the always-visible manual leg,
+   * `MbShareAction` for the native sheet — so the app has one share language
+   * across both of its public surfaces (charter §2.3, brief N3/N4).
+   *
+   * `shareId` alone. It carries no token and no account: `getFormationByShareId`
+   * gates on `visibility`, so revoking the share is what closes the link.
+   * `window` is safe to read here — the loading branch above returns first on
+   * the server, so this expression never reaches server output.
+   */
+  const shareUrl =
+    typeof window === "undefined"
+      ? ""
+      : `${window.location.origin}/tools/volleyball-rotations/shared/${shareId}`;
+
   return (
     <MatchbookShell
       variant="public"
@@ -326,6 +348,25 @@ export default function SharedFormationPage() {
                   </MbButtonLink>
                 </>
               )}
+            </div>
+
+            {/* Coral is already spent in this panel on the copy/sign-in key,
+                so the share control takes the quiet outline (invariant 15). */}
+            <div className="flex flex-col gap-3 border-t border-mb-navy p-4">
+              <p className="mb-kicker">Pass it on</p>
+              <MbCopyField
+                label="Public formation link"
+                value={shareUrl}
+                help="Anyone with the link can view this rotation. Editing stays with its owner."
+              />
+              <MbShareAction
+                variant="button"
+                tone="outline-navy"
+                url={shareUrl}
+                title={formation.name}
+                text={`${formation.name} — a volleyball rotation on Tournament Tracker`}
+                label="Share formation"
+              />
             </div>
           </Panel>
 

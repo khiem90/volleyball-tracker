@@ -455,7 +455,13 @@ export const ReadinessPanel = ({ rows }: { rows: MbReadinessRow[] }) => (
                     <span className="w-7 text-[0.74rem] font-semibold tabular-nums">
                       {row.percent}%
                     </span>
-                    <span className="h-[7px] w-12 overflow-hidden rounded-sm bg-[var(--mb-tint-3)]">
+                    {/* `rounded-[2px]`, not `rounded-sm`: while the legacy
+                        `:root` lived, `--radius-sm` was `calc(0.75rem - 4px)`
+                        and this 7px bar rendered an 8px radius — off the
+                        4/3/2/999 vocabulary (invariant 24) and inherited from
+                        the pre-Matchbook system rather than chosen. 2px is
+                        what `.mb-meter` itself uses. */}
+                    <span className="h-[7px] w-12 overflow-hidden rounded-[2px] bg-[var(--mb-tint-3)]">
                       <span
                         className="block h-full"
                         style={{
