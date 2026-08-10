@@ -5,6 +5,7 @@ import { MbIcon } from "./MbIcon";
 import { MbMatchRow, MbSeedBox } from "./MatchRow";
 import { MbSegmented } from "./Segmented";
 import { Crest, PanelEmpty } from "./Panel";
+import { MbTeamName } from "./TeamName";
 import {
   bracketConnectorPaths,
   layoutBracket,
@@ -106,6 +107,7 @@ const CellSide = ({
   score,
   won,
   showScore,
+  placeholder = "TBD",
   last = false,
 }: {
   team: MbTeam | null;
@@ -113,6 +115,13 @@ const CellSide = ({
   score: number;
   won: boolean;
   showScore: boolean;
+  /**
+   * What an empty side says. `TBD` = a real slot awaiting a winner; `—` = there
+   * is no opponent at all because the other side had a bye. The row uses the
+   * same two words for the same two states (F12/F13), so the schedule and the
+   * bracket beside it cannot describe one match with two vocabularies.
+   */
+  placeholder?: "TBD" | "—";
   last?: boolean;
 }) => (
   <span
@@ -131,17 +140,30 @@ const CellSide = ({
         className="block h-[13px] w-[13px] shrink-0 rounded-[2px] border border-dashed border-mb-rule"
       />
     )}
-    <span
-      className={`matchbook-display min-w-0 flex-1 truncate text-[0.72rem] ${
-        team
-          ? won
-            ? "font-bold"
-            : "font-semibold text-mb-ink-muted"
-          : "font-semibold text-mb-ink-muted"
-      }`}
-    >
-      {team?.name ?? "TBD"}
-    </span>
+    {team ? (
+      /* Middle elision, not end truncation. This box measures 93px at 1440
+         holding a 237px name, and the fixture's two Wolverhampton sides differ
+         only in their last character — end-truncation printed both cells as
+         "WOLVERHAM…" and the reader could not tell which side was which
+         (F15). `MbTeamName` keeps the last token. */
+      <MbTeamName
+        name={team.name}
+        className={`matchbook-display min-w-0 flex-1 text-[0.72rem] ${
+          won ? "font-bold" : "font-semibold text-mb-ink-muted"
+        }`}
+      />
+    ) : (
+      <span className="matchbook-display min-w-0 flex-1 truncate text-[0.72rem] font-semibold text-mb-ink-muted">
+        {placeholder === "—" ? (
+          <>
+            <span aria-hidden="true">—</span>
+            <span className="sr-only">No opponent</span>
+          </>
+        ) : (
+          "TBD"
+        )}
+      </span>
+    )}
     {showScore && (
       <span
         className={`matchbook-display shrink-0 text-[0.78rem] tabular-nums ${
@@ -204,6 +226,7 @@ const BracketCellInner = ({
         score={cell.awayScore}
         won={cell.awayWon}
         showScore={showScore}
+        placeholder={cell.bye ? "—" : "TBD"}
       />
       <span className="flex h-6 items-center justify-between gap-1 border-t border-mb-rule px-2">
         {cell.label ? (
@@ -385,8 +408,8 @@ export const MbBracketChampionBlock = ({
       >
         {champion.caption ?? "Champion"}
       </p>
-      <p className="matchbook-display truncate text-[1.5rem] font-bold leading-tight tracking-[0.02em]">
-        {champion.team.name}
+      <p className="matchbook-display flex min-w-0 text-[1.5rem] font-bold leading-tight tracking-[0.02em]">
+        <MbTeamName name={champion.team.name} />
       </p>
       {champion.score && (
         <p className="matchbook-display text-[0.78rem] font-semibold tabular-nums tracking-[0.08em]">
@@ -437,13 +460,23 @@ const RoundsList = ({
                   away={cell.away}
                   homeSeed={cell.homeSeed}
                   awaySeed={cell.bye ? undefined : cell.awaySeed}
-                  homeScore={cell.pending || cell.tbd ? undefined : cell.homeScore}
-                  awayScore={cell.pending || cell.tbd ? undefined : cell.awayScore}
+                  /* `cell.bye` joins the guard on the scores. Without it this
+                     list — the cut a PHONE gets, where the rail is not shown —
+                     rendered the generator's bookkeeping 1–0 as a result, the
+                     same F12 defect the desktop Schedule panel had, while the
+                     cell one tap away said "Bye". */
+                  homeScore={
+                    cell.pending || cell.tbd || cell.bye ? undefined : cell.homeScore
+                  }
+                  awayScore={
+                    cell.pending || cell.tbd || cell.bye ? undefined : cell.awayScore
+                  }
                   homeWon={cell.homeWon}
                   awayWon={cell.awayWon}
                   status={
                     cell.live ? "live" : cell.pending || cell.tbd ? "pending" : "completed"
                   }
+                  bye={cell.bye}
                   variant={cell.pending ? "schedule" : "result"}
                   onSelect={
                     onSelect && !cell.tbd && !cell.bye

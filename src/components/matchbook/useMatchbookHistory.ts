@@ -4,7 +4,8 @@ import { exportMatchesCsv } from "@/lib/exportCsv";
 import type { Match } from "@/types/game";
 import { buildTeamTallies } from "./teamStats";
 import { toast } from "./Toast";
-import { crestForTeam, type MbTeam } from "./types";
+import { createTeamRef } from "./useMatchbookCompetitionDetail";
+import { type MbTeam } from "./types";
 
 export interface MbLedgerEntry {
   id: string;
@@ -86,12 +87,12 @@ export const useMatchbookHistory = (filters: {
       year: "numeric",
     });
 
-    const teamName = (id: string) =>
-      state.teams.find((t) => t.id === id)?.name ?? "Unknown";
-    const refFor = (id: string): MbTeam => ({
-      name: teamName(id),
-      crest: crestForTeam(id, teamName(id)),
-    });
+    /* One resolver, shared with the other four `useMatchbook*` hooks, so a team
+       the state no longer holds is named the same thing on every screen. This
+       file's own version answered "Unknown", which is the string that painted
+       as "UNKNO…" on the overview (F13). */
+    const refFor = createTeamRef(state.teams);
+    const teamName = (id: string) => refFor(id).name;
     const compName = (id: string | null) =>
       state.competitions.find((c) => c.id === id)?.name ?? "Quick Match";
 

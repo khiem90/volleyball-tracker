@@ -67,6 +67,32 @@
 @theme inline {
   --font-sans: var(--font-outfit, "Outfit");
 
+  /* ---------------------------------------------------------------------
+     TAILWIND'S OWN MOTION DEFAULTS, REPOINTED AT THE TOKENS (F4)
+
+     Tailwind 4.1 ships `--default-transition-duration: 150ms` and
+     `--default-transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1)` in
+     its theme, and every bare `transition` / `transition-colors` /
+     `transition-opacity` written in JSX resolves through them. That is why
+     150ms was the DOMINANT duration in the system even after the `.mb-*`
+     recipes were tokenised: measured on `/` before this change, 25 of the 62
+     transitioning elements ran at 0.15s, and only some of them were the
+     `.mb-nav-item` literal below — the rest were markup utilities nobody
+     could see in this file.
+
+     Repointing the theme keys fixes every one of them at once, without a
+     single JSX edit, and it means a `transition-colors` written next year is
+     on the ladder by default rather than by discipline.
+
+     The easing is repointed to `--mb-ease-in-out`, whose value is BYTE
+     IDENTICAL to the Tailwind default it replaces — so this half is a pure
+     re-naming with no motion change; only the duration actually moves
+     (150ms -> 120ms), which is the defect being fixed. `duration-*` /
+     `ease-*` utilities still override per call site as before.
+     --------------------------------------------------------------------- */
+  --default-transition-duration: var(--mb-dur-fast);
+  --default-transition-timing-function: var(--mb-ease-in-out);
+
   /* Matchbook palette (home redesign) */
   --color-mb-paper: var(--mb-paper);
   --color-mb-paper-bright: var(--mb-paper-bright);
@@ -211,6 +237,34 @@
   --mb-rule-accent: 3px;
   --mb-rule-anchor: 4px;
 
+  /* --- the pill radius, named once (F7) ---------------------------------
+     The system has TWO spellings of the same idea and they are not the same
+     number. `999px` is the one design language 3.3 declares, and it is what
+     every `.mb-*` rule in this file writes — 89 nodes across 19 routes.
+     Tailwind v4's `rounded-full` is a static utility that compiles to
+     `calc(infinity * 1px)`, which computes to 3.35544e+07px — 63 nodes across
+     16 routes. Both LOOK like a pill on a 7px dot, so the split survived
+     review; it shows up the moment anything is measured, because a radius
+     census reports two values for one intent and neither can be told from the
+     other by eye.
+
+     `rounded-full` cannot be re-pointed: v4 hard-codes it rather than reading
+     a `--radius-*` theme key, so there is no token to override. The answer is
+     therefore a class the system owns. Authors write `.mb-round`; components
+     that draw their own geometry read `--mb-radius-round`.
+
+     999px rather than infinity is not arbitrary either — it is a real length,
+     so it composes in `calc()`, animates, and prints; `calc(infinity * 1px)`
+     does none of those reliably.
+
+     The radius vocabulary is otherwise deliberately literal (4/3/2 written as
+     `rounded-[4px]` etc, see the utility-surface note at the top of this file)
+     so it can never be redefined out from under a component. This token is the
+     exception because it is the one radius with a NAME rather than a value in
+     the spec — "the pill" — and because it is the one authors reach for a
+     Tailwind utility to express. */
+  --mb-radius-round: 999px;
+
   /* --- focus (GAP-12) ---------------------------------------------------
      FOCUS IS NOT CORAL. It used to be, and that put the focus ring and the
      active-tab underline in the same hue with opposite meanings: a focused
@@ -238,6 +292,15 @@
   --mb-ease-out: cubic-bezier(0.2, 0.8, 0.3, 1);
   --mb-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
   --mb-stagger: 40ms;
+  /* The heartbeat. Deliberately NOT one of the three feedback steps above:
+     fast/base/slow are the bands a state change is allowed to occupy
+     (120-280ms), and a pulse that repeats forever is a different kind of
+     motion — an ambient rhythm, read in peripheral vision, which is why the
+     rubric's D5-10 anchor asks the live element to have "its own distinct
+     rhythm". It is a token rather than the literal `1.4s` it used to be so the
+     duration census resolves 100% to `--mb-dur-*` and so the one place the
+     system beats slowly is named, not buried in an animation shorthand. */
+  --mb-dur-pulse: 1400ms;
 
   /* --- press (the click feel) -------------------------------------------
      The ink a flush surface takes while it is held down. One tier past
@@ -475,8 +538,127 @@
     text-transform: uppercase;
     letter-spacing: 0.06em;
   }
+
+  /* THE NUMERALS DECLARE `normal`, AND THAT IS A VALUE, NOT AN OMISSION (F8).
+
+     These three are the only classes in the file that set the display face and
+     did not appear in this layer. Every other display class above carries an
+     authored tracking; these carried whatever they inherited, because
+     `letter-spacing` is an inherited property and a score box or a stepper
+     value routinely sits inside a `.matchbook-display` container. That made
+     their tracking a property of where they were placed rather than of what
+     they are — the exact "default that is correct for nothing" D1-8 rejects,
+     one level down.
+
+     The authored value is `normal`, for a reason that is specific to figures:
+     tracking is added AFTER the last glyph as well as between glyphs, so a
+     centred numeral in a fixed reserve is pushed off its own centre by half a
+     letter-space, and `.mb-numeral-digit`'s `1ch` cells stop matching the
+     advance they were measured against (see the `.mb-numeral` note further
+     down — an N-figure value must be exactly N x 1ch wide or the score
+     reflows). Letterspaced figures are also simply wrong in a scoreboard: the
+     ladder tracks WORDS, and a number is not a word.
+
+     Declaring it here blocks inheritance and puts these three on the ladder as
+     an explicit step. No pixel moves today; what changes is that a display
+     container can no longer reach in and shift a score sideways. Tailwind
+     `tracking-*` still wins per call site — the "VS" pip is `.mb-score-box`
+     with `tracking-[0.1em]`, and it is a word. */
+  .mb-score-box,
+  .mb-stepper-value,
+  .mb-numeral {
+    letter-spacing: normal;
+  }
+
+  /* -------------------------------------------------------------------------
+     THE TRACKING LADDER (F8)
+
+     Every value above is a DEFAULT a class carries. The named type scale
+     (design language 2.1) also assigns a tracking to each display role that
+     has no class of its own — masthead, panel title, status word, meta line,
+     badge caption — and those are written at the call site as
+     `tracking-[0.05em]`, `tracking-[0.1em]`, `tracking-[0.22em]`. An arbitrary
+     value is un-auditable: nothing stops the next one being `[0.055em]`, and
+     nothing tells a reviewer whether `[0.1em]` is `display/status` or a guess.
+
+     That is what produces the collisions D1-1.3 counts — one (size, weight)
+     pair carrying two or more letter-spacings. Measured at 1440:
+
+       /summaries  48px/700     0.48px vs 0.96px
+                   = the masthead's `tracking-[0.01em]` against a bare
+                     `.matchbook-display` inheriting the 0.02em default above
+       /teams      13.6px/600   1.088px (.mb-nav-item, 0.08em)
+                                vs 0.272px (bare .matchbook-display, 0.02em)
+       /teams      13.6px/700   0.272px vs 0.544px
+       /teams      11.52px/600  0.4608px (.mb-panel-link) vs normal vs 0.2304px
+
+     Every one of those collisions is a call site that wrote a size without
+     writing the tracking that belongs to it. This block is the thing to point
+     them at: one class per named step, so the ladder is a closed vocabulary
+     that can be grepped and counted instead of an open field of decimals.
+
+     They are declared LAST in `@layer components` so a role class always beats
+     the class defaults above it, and they are in the components layer (not
+     unlayered) so a Tailwind `tracking-*` utility still wins where an author
+     genuinely needs an exception — the same contract this whole layer exists
+     to restore.
+     ------------------------------------------------------------------------- */
+  .mb-track-masthead { letter-spacing: 0.01em; }  /* display/masthead        */
+  .mb-track-display  { letter-spacing: 0.02em; }  /* .matchbook-display base */
+  .mb-track-link     { letter-spacing: 0.04em; }  /* display/link            */
+  .mb-track-title    { letter-spacing: 0.05em; }  /* display/panel-title     */
+  .mb-track-button   { letter-spacing: 0.06em; }  /* display/button          */
+  .mb-track-nav      { letter-spacing: 0.08em; }  /* display/nav             */
+  .mb-track-status   { letter-spacing: 0.1em; }   /* display/status, /meta   */
+  .mb-track-head     { letter-spacing: 0.12em; }  /* display/table-head      */
+  .mb-track-kicker   { letter-spacing: 0.16em; }  /* display/kicker          */
+  .mb-track-badge    { letter-spacing: 0.22em; }  /* display/badge-label     */
 }
 
+/* ---------------------------------------------------------------------------
+   THE PANEL SIZES TO ITS CONTENT (F5)
+
+   `.mb-panel` used to carry `height: 100%`, which made every panel fill the
+   grid row its neighbour set. A row is as tall as its tallest card, so a
+   one-line panel beside a nine-row table was stretched to the table's height
+   and spent the difference on blank paper-bright. Measured at 1440 before this
+   change, biggest single void per panel:
+
+     /competitions  Live Courts        357.97px trailing   87.4% of the panel dead
+     /competitions  Upcoming Schedule  190.69px trailing   81.8% dead
+     /competitions  Tournament Status  126.94px internal   69.7% dead
+     /summaries     Shared Reports     282.61px trailing   83.6% dead
+     /summaries     Archive Summary    220.33px trailing   72.7% dead
+     /              Match of the Day   167.45px internal   59.6% dead
+
+   ("Dead" is panel height minus the union of every band that paints ink — a
+   text run, an image, a control, a filled leaf. A stretched wrapper's own box
+   does not count as ink, which is the whole point.)
+
+   Three ways out were on the table. DISTRIBUTING the content — `justify-
+   content: space-between` on the body — was rejected: it spreads list rows
+   apart, and equal row rhythm is what makes a ledger scannable (D2), so it
+   trades a void for a worse defect. FILLING with a taller last row is the same
+   trade one level down. What is left is the honest one: the panel stops
+   claiming height it has nothing to put in.
+
+   So `height` is gone. The card is now exactly as tall as what it prints, and
+   the leftover height stays in the grid cell as PAPER — the page stock, with
+   its grain, which is what an almanac page does with a short column. The tall
+   panel in the row is untouched: it was setting the row height already, and
+   nothing about it changes.
+
+   `display: flex; flex-direction: column` STAYS, and `mt-auto` with it: a
+   panel can still be taller than its content for a reason of its own (a
+   `min-h-*` from the call site, a body with `flex-1` and a `max-h` scroller),
+   and when it is, the footer strip still sits on the bottom edge. What no
+   longer happens is height arriving from a neighbour.
+
+   Two call sites depended on the old behaviour and both are now no-ops rather
+   than breakages: `login/page.tsx`'s `mb-panel h-auto!` escape hatch (§3.4)
+   and the `@media print` `height: auto` override further down. Neither is
+   removed here — they belong to other agents' files and they cost nothing.
+   --------------------------------------------------------------------------- */
 .mb-panel {
   background: var(--mb-paper-bright);
   border: var(--mb-rule-edge) solid var(--mb-navy);
@@ -485,7 +667,28 @@
   box-shadow: var(--mb-panel-shadow);
   display: flex;
   flex-direction: column;
-  height: 100%;
+}
+
+/* The other half of the same fix. Removing `height` is enough where the panel
+   sits inside a grid CELL (a `<div className="xl:col-span-5">` wrapper): the
+   cell still stretches, the panel inside it no longer does, and an empty cell
+   paints nothing. It is NOT enough where the panel IS the grid item — there
+   the default `align-self: stretch` re-imposes the row height on a box whose
+   `height` is auto, and the void comes straight back.
+
+   `align-self` is scoped to the grid child rather than declared on `.mb-panel`
+   itself, because on `.mb-panel` it would also apply inside the column-flex
+   stacking cells the layout uses (`<div className="flex flex-col gap-4">`),
+   where the cross axis is HORIZONTAL — a panel would shrink to the width of
+   its longest word. The parent-side rule cannot make that mistake: in a
+   `grid-cols-*` container the axis is always the block axis.
+
+   `:has(> .mb-panel)` covers the wrapper form and keeps the rule off cells
+   that hold something else — a `MbChoiceCard` grid, a tile row — where equal
+   heights are the design rather than an accident. */
+.matchbook-surface [class*="grid-cols-"] > .mb-panel,
+.matchbook-surface [class*="grid-cols-"] > :has(> .mb-panel) {
+  align-self: start;
 }
 
 .mb-panel-head {
@@ -506,6 +709,68 @@
   align-items: center;
   gap: 0.2rem;
   white-space: nowrap;
+  /* The containing block for the hit pad below. Inert on its own. */
+  position: relative;
+}
+
+/* ---------------------------------------------------------------------------
+   THE PANEL LINK'S HIT PAD (F6)
+
+   `.mb-panel-link` renders 17.27px tall — measured at fine pointer on `/`,
+   `/teams`, `/competitions`, `/summaries`, `/tools` and `/quick-match`. It is
+   0.72rem/600 letterforms and nothing else, so its border box IS its ink. That
+   is rubric HF-2 (any interactive target under 44x44 of real hit area) on six
+   routes, and it slipped through two floors at once: it is an <a>, not a
+   <button>, so `.mb-btn`'s geometry never applied; and the blanket coarse-
+   pointer rule further down only arms under `[data-mb-touch="on"]`, which says
+   nothing about a mouse or a stylus. The brief is explicit — a real target at
+   EVERY pointer type.
+
+   Three shapes were considered:
+
+     min-height: 44px      Honest, but it is the head that pays. `.mb-panel-head`
+                           measures 42.98px today (padding 10.4/8.8 + a 22.78px
+                           title + the hairline); a 44px child takes it to
+                           64.2px, on every panel on every screen, and the head
+                           padding is a baked value other agents' components
+                           measure against (design language 3.4).
+     negative margins      44px box, ~18px of layout. Works, but the box then
+                           overhangs its neighbours by 13px in both directions
+                           and getBoundingClientRect reports the overhang, so
+                           the 8px-separation sweep starts failing on rows that
+                           are perfectly fine.
+     a hit pad             What is below. Generated content is painted and
+                           hit-tested AS ITS ORIGINATING ELEMENT, so
+                           `elementFromPoint` at the corners of the 44x44 square
+                           returns the link. Zero layout, zero ink, and the
+                           harness anticipates it by name: audit.mjs probes the
+                           square rather than the border box precisely "because
+                           a ::before/::after overlay is painted and hit-tested
+                           as its originating element".
+
+   Geometry: 44px tall, centred, and at least 44px wide (`max()` so a link
+   wider than 44px is never made wider — an absolutely positioned box counts
+   toward scrollable overflow, and the horizontal guard is a hard fail).
+   Vertical spill inside a panel head is ~1px each way: the head is 42.98px and
+   the pad is 44px, so it is very nearly the head itself.
+
+   Scoped to elements that are actually operable. `.mb-panel-link` is also used
+   as a MARK — the "Open Tool" line inside an `MbChoiceCard`, where the card is
+   the link and the span is decoration — and giving decoration a tap target
+   would be a lie in the other direction. `<a>` here means `a[href]`: a bare
+   anchor is not a target either.
+   --------------------------------------------------------------------------- */
+a[href].mb-panel-link::after,
+button.mb-panel-link::after,
+[role="button"].mb-panel-link::after,
+[role="link"].mb-panel-link::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: max(100%, 44px);
+  height: 44px;
+  transform: translate(-50%, -50%);
 }
 
 /* A link hover does not need a hue. Coral-deep here was a coral letterform
@@ -609,7 +874,18 @@
   font-weight: 600;
   color: var(--mb-navy);
   border-left: var(--mb-rule-accent) solid transparent;
-  transition: background-color 0.15s ease, color 0.15s ease;
+  /* THE LAST LITERAL DURATION IN THE SYSTEM (F4).
+     This line read `0.15s ease, 0.15s ease` and it was the single most
+     rendered duration in the app — 24 elements on `/`, 25 on `/teams`, 49 on
+     the single-elimination detail — because the sidebar is on every
+     authenticated screen and every nav row carries it. A dominant duration
+     that is not a token is the exact failure D5-8 names ("a dominant 150ms
+     that is not a token fails this, however tidy it looks").
+     `ease` went with it: the system has two easings and neither is the UA
+     keyword. Fast + ease-out matches `.mb-btn`, which is the other control a
+     finger lands on most. */
+  transition: background-color var(--mb-dur-fast) var(--mb-ease-out),
+    color var(--mb-dur-fast) var(--mb-ease-out);
   touch-action: manipulation;
 }
 
@@ -648,13 +924,25 @@
   display: inline-block;
 }
 
+/* THE PILL, SPELLED ONCE (F7). Use this instead of `rounded-full` anywhere the
+   four sanctioned round marks are drawn — the live dot, the account disc, an
+   icon disc, a colour swatch — and nowhere else; design language 3.3 reserves
+   the radius to exactly those. `.mb-live-dot`, `.mb-icon-mark[data-shape=disc]`
+   and `.mb-icon-disc` already bake it, so a call site only needs this class
+   when it is drawing one of the four by hand.
+   See `--mb-radius-round` above for why `rounded-full` cannot simply be
+   re-pointed and why the value is a real length. */
+.mb-round {
+  border-radius: var(--mb-radius-round);
+}
+
 .mb-live-dot {
   width: 7px;
   height: 7px;
-  border-radius: 999px;
+  border-radius: var(--mb-radius-round);
   background: var(--mb-red);
   display: inline-block;
-  animation: mb-pulse 1.4s ease-in-out infinite;
+  animation: mb-pulse var(--mb-dur-pulse) var(--mb-ease-in-out) infinite;
 }
 
 @keyframes mb-pulse {
@@ -1127,7 +1415,7 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  border-radius: 999px;
+  border-radius: var(--mb-radius-round);
   border: var(--mb-rule-edge) solid var(--mb-navy);
   color: var(--mb-navy);
 }

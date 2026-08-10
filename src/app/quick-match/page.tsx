@@ -82,7 +82,11 @@ const ScorePreviewSide = ({
     {summary ? (
       <>
         <Crest team={summary.team} size={64} />
-        <span className="matchbook-display text-[0.95rem] font-bold">
+        {/* 0.95rem/700 is `display/panel-title`'s pair, and every `<Panel>`
+            head on this screen declares 0.05em for it. Left undeclared this
+            fell through to `.matchbook-display`'s 0.02em, so the pair carried
+            two trackings at once (rubric 1.3). */}
+        <span className="matchbook-display text-[0.95rem] font-bold tracking-[0.05em]">
           {summary.team.name}
         </span>
         <span className="mb-kicker tabular-nums">({summary.record})</span>
@@ -233,7 +237,7 @@ export default function QuickMatchPage() {
                     <Crest team={guestHome} size={56} />
                     <span className="matchbook-display text-[0.9rem] font-bold">Team A</span>
                   </div>
-                  <span className="mb-score-box px-2 text-[0.7rem] tracking-[0.1em]">VS</span>
+                  <span className="mb-score-box px-2 tracking-[0.05em]">VS</span>
                   <div className="flex flex-col items-center gap-2">
                     <Crest team={guestAway} size={56} />
                     <span className="matchbook-display text-[0.9rem] font-bold">Team B</span>
@@ -284,7 +288,13 @@ export default function QuickMatchPage() {
                     className="mb-btn mb-btn-outline-navy mt-9 h-12 w-12 shrink-0 flex-col gap-0.5 p-0"
                   >
                     <MbIcon id="swap" size={16} />
-                    <span className="matchbook-display text-[0.5rem] font-bold tracking-[0.12em]">
+                    {/* `display/kicker` — 0.62rem/600/0.16em, the step every
+                        `.mb-kicker` on this screen already prints. 0.5rem was
+                        8px, the smallest type in the app and two steps below
+                        the scale's floor; it is not inked muted because this
+                        one sits inside a button and must take the button's
+                        ink through every state. */}
+                    <span className="matchbook-display text-[0.62rem] font-semibold tracking-[0.16em]">
                       Swap
                     </span>
                   </button>
@@ -328,7 +338,7 @@ export default function QuickMatchPage() {
                 <ScorePreviewSide summary={homeSummary} placeholder="Home team" />
                 <div className="flex items-center gap-2.5">
                   <span className="matchbook-display text-6xl font-bold tabular-nums">0</span>
-                  <span className="mb-score-box px-2 text-[0.7rem] tracking-[0.1em]">VS</span>
+                  <span className="mb-score-box px-2 tracking-[0.05em]">VS</span>
                   <span className="matchbook-display text-6xl font-bold tabular-nums">0</span>
                 </div>
                 <ScorePreviewSide summary={awaySummary} placeholder="Away team" />
@@ -374,7 +384,7 @@ export default function QuickMatchPage() {
                           {m.date}
                         </p>
                         <TeamMark team={m.home} className="justify-self-start" />
-                        <span className="matchbook-display whitespace-nowrap text-[0.95rem] font-bold tabular-nums">
+                        <span className="matchbook-display whitespace-nowrap text-[0.95rem] font-bold tracking-[0.05em] tabular-nums">
                           {m.homeScore} – {m.awayScore}
                         </span>
                         <TeamMark team={m.away} reverse className="justify-self-end" />
@@ -409,7 +419,11 @@ export default function QuickMatchPage() {
                       </div>
                       <div className="text-center">
                         <p className="mb-kicker">Record</p>
-                        <p className="matchbook-display text-[1.05rem] font-bold tabular-nums">
+                        {/* `display/stat-sm` — a kicker over a figure is the
+                            stat block anatomy, and 1.2rem is the step §2.1
+                            names for its value. 1.05rem (16.8px) was between
+                            steps. */}
+                        <p className="matchbook-display text-[1.2rem] font-bold leading-tight tabular-nums">
                           {homeSummary.record} · {awaySummary.record}
                         </p>
                       </div>

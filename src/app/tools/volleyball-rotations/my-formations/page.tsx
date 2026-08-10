@@ -381,7 +381,7 @@ export default function MyFormationsPage() {
                 href="/tools/volleyball-rotations/editor"
                 className="mb-btn-touch mb-row-hover flex min-h-14 items-center gap-3 border-b border-mb-rule px-4 py-2"
               >
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-mb-navy text-mb-navy">
+                <span className="mb-icon-disc h-10 w-10">
                   <MbIcon id="court" size={18} />
                 </span>
                 <span className="min-w-0">
@@ -403,7 +403,7 @@ export default function MyFormationsPage() {
                   href={`/tools/volleyball-rotations/editor?template=${encodeURIComponent(template.id)}`}
                   className="mb-btn-touch mb-row-hover flex min-h-14 items-center gap-3 border-b border-mb-rule px-4 py-2"
                 >
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-mb-navy text-mb-navy">
+                  <span className="mb-icon-disc h-10 w-10">
                     <MbIcon id="clipboard" size={18} />
                   </span>
                   <span className="min-w-0">

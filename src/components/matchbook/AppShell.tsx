@@ -50,6 +50,67 @@ import { MbEventBar } from "./EventBar";
 
 export type MatchbookShellVariant = "console" | "public" | "focus";
 
+/* ------------------------------------------------- which shell is this URL? */
+
+/**
+ * THE ROUTE → VARIANT PREDICATE, and why a shell that is otherwise declared by
+ * the page needs one.
+ *
+ * `app/loading.tsx` is the ROOT loading boundary, and Next always paints the
+ * OUTERMOST invalidated boundary first: a nested `loading.tsx` takes over only
+ * once the parent subtree has resolved, so it cannot remove the frames above
+ * it. `app/match/loading.tsx` states this residual in its own docblock and
+ * hands it here. Measured against a PRODUCTION build (`next build && next
+ * start`, 390x844, `waitUntil:"commit"`) with the root boundary declaring
+ * `variant="console"`:
+ *
+ *   /summary/GYMDAY                     12 `.mb-nav-item` + `nav[aria-label=
+ *   /session/SUMMER                     "Primary"]` + the bottom bar in the
+ *   /tools/…/shared/demoShare1          FIRST PAINTED FRAME, for 34 / 40 / 172
+ *   /login                              / 255 ms respectively.
+ *
+ * That is the app's private navigation on the four screens the product hands
+ * to strangers — and on `/login`, which has no shell at all. It is also
+ * invariant 26's own words failing: a skeleton at "the FINAL GEOMETRY" is
+ * exactly what the console shell is not, on a route whose final geometry is a
+ * centred 1100px column with no rail.
+ *
+ * The fix is not another nested boundary. It is that the root boundary stops
+ * assuming, and asks the URL — which is the same question `MatchbookShell`
+ * already answers for `active`, through the same `usePathname()`.
+ *
+ * PAGES STILL DECLARE THEIR OWN VARIANT. This does not replace that (shell
+ * brief R6: the ROUTE declares which shell it is, rather than a component
+ * string-matching the pathname to decide whether to hide itself). It is the
+ * loading boundary's best guess at what the page is about to declare, and
+ * `src/__tests__/shell/shellVariant.test.ts` reads every `page.tsx` in
+ * `src/app` and fails if a guess and a declaration ever disagree.
+ */
+const MB_PUBLIC_ROOTS = [
+  "/session",
+  "/summary",
+  "/tools/volleyball-rotations/shared",
+] as const;
+
+const MB_FOCUS_ROOTS = ["/match", "/tools/volleyball-rotations/editor"] as const;
+
+/** Segment-boundary aware: `/summaries` is NOT under `/summary`. */
+const under = (pathname: string, root: string) =>
+  pathname === root || pathname.startsWith(`${root}/`);
+
+export const mbShellVariantFor = (pathname: string): MatchbookShellVariant => {
+  if (MB_PUBLIC_ROOTS.some((root) => under(pathname, root))) return "public";
+  if (MB_FOCUS_ROOTS.some((root) => under(pathname, root))) return "focus";
+  return "console";
+};
+
+/**
+ * `/login` is the one route that is not a shell at all — a full-bleed two-column
+ * poster — so no variant is the right answer for it and the root boundary draws
+ * the poster's own bones instead.
+ */
+export const mbIsChromelessRoute = (pathname: string) => under(pathname, "/login");
+
 export type MbShellCta = MbSidebarCta;
 
 /** The rail's default primary action, and the app's actual primary action. */
@@ -186,9 +247,24 @@ const PublicBrand = () => (
           height={30}
           priority
         />
+        {/* "Tracker" is `--mb-coral-deep`, NOT `--mb-coral` — the same fix
+            `Sidebar.tsx:86` took, arriving here late because the two lockups
+            were written in different files on different days.
+
+            Measured on `--mb-paper` at this exact step: `--mb-coral` is
+            **3.26:1 at 15.2px/700** against the 4.5:1 floor that applies below
+            18.66px — rubric HF-6, and this is `variant="public"`, so it was
+            live on every share link the product hands to a stranger — the
+            session viewer, the match report, the shared formation, `/login`
+            and `global-error`. The ink twin measures **4.62:1** at the same size,
+            and design language §1.3 declares it for exactly this case: "coral
+            letterforms under 18.66px". The two-tone lockup survives intact.
+
+            Coral job 3 — the masthead's emphasised word — is unaffected: that
+            word ships at 36/48px where the 3:1 large-text floor applies. */}
         <span className="matchbook-display text-[0.95rem] font-bold leading-none tracking-[0.05em]">
           <span className="text-mb-navy">Tournament </span>
-          <span className="text-mb-coral">Tracker</span>
+          <span className="text-mb-coral-deep">Tracker</span>
         </span>
       </Link>
     </div>

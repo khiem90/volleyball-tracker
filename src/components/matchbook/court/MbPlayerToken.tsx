@@ -334,8 +334,13 @@ export const MbPlayerTarget = ({
          worst measured `click` on this screen is 512ms at 4x CPU throttle, and
          a press drawn from React state would have been 512ms late. Round,
          because the button is; the hover wash also finally shows a mouse user
-         where the 52px target actually is. */
-      className="mb-row-hover absolute rounded-full"
+         where the 52px target actually is. 999px in the literal the radius
+         vocabulary declares, not `rounded-full` — that utility compiles to
+         `calc(infinity * 1px)` and measures 3.35544e+07px, a second spelling of
+         the same round in the D2 census. This one is a bare hit area, so it
+         takes the literal rather than `.mb-icon-disc`, which would draw a navy
+         edge around an element that must stay invisible. */
+      className="mb-row-hover absolute rounded-[999px]"
       style={{
         ...position,
         width: TOKEN_HIT_PX,
@@ -356,7 +361,12 @@ export const MbPlayerTarget = ({
  * summary. Same three rules as the SVG disc, drawn in HTML so it can sit in a
  * table row without an SVG wrapper. 999px is sanctioned for it: the radius
  * vocabulary reserves the full round for discs and swatches, and this is the
- * disc.
+ * disc — so it takes `.mb-icon-disc`, the class that *names* that round, rather
+ * than `rounded-full`, which compiles to `calc(infinity * 1px)` and measures as
+ * a second round value. The class also supplies the inline-flex centring, the
+ * no-shrink and the solid border style; width, border width, border colour,
+ * background, ink and the detached ring all still come from `roleChipStyle`
+ * below, which outranks it.
  *
  * The setter's and libero's detached rings come from `roleChipStyle`, which
  * derives them from the same `roleToken` the court draws, as an `outline` —
@@ -383,7 +393,7 @@ export const MbRoleChip = ({
   return (
     <span
       aria-hidden="true"
-      className={`matchbook-display inline-flex shrink-0 items-center justify-center rounded-full border font-bold ${className}`}
+      className={`matchbook-display mb-icon-disc font-bold ${className}`}
       style={{
         width: size,
         height: size,

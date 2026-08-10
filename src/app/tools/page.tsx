@@ -113,13 +113,21 @@ export default function ToolsPage() {
                   href={tool.href}
                   className="group flex flex-col gap-2 border border-mb-navy bg-mb-paper-bright p-4 transition-colors hover:bg-[var(--mb-tint-1)] active:bg-[var(--mb-tint-press)]"
                 >
-                  <span className="flex h-11 w-11 items-center justify-center rounded-full border border-mb-navy text-mb-navy">
+                  {/* The named 999px, not `rounded-full`'s
+                      `calc(infinity * 1px)`. */}
+                  <span className="mb-icon-disc h-11 w-11">
                     <MbIcon id={tool.icon} size={20} />
                   </span>
-                  <span className="matchbook-display text-[0.95rem] font-bold tracking-[0.06em]">
+                  {/* 0.05em, not 0.06em. This is 0.95rem/700 — the same pair as
+                      every `<Panel>` title on the screen, which declares
+                      `display/panel-title`'s 0.05em. Two trackings on one
+                      size/weight pair is rubric 1.3, and 0.01em bought nothing
+                      that a reader could see. */}
+                  <span className="matchbook-display text-[0.95rem] font-bold tracking-[0.05em]">
                     {tool.title}
                   </span>
-                  <span className="text-[0.76rem] leading-snug text-mb-ink-muted">
+                  {/* `body/xs`. 0.76rem sat between 0.72 and 0.78. */}
+                  <span className="text-[0.78rem] leading-snug text-mb-ink-muted">
                     {tool.description}
                   </span>
                   {/* The card IS the link, so this is a mark, not a second

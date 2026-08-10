@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import {
   MbButton,
   MbButtonLink,
@@ -8,6 +8,7 @@ import {
   type MbButtonVariant,
 } from "./Button";
 import { MbIcon } from "./MbIcon";
+import { MbTeamName } from "./TeamName";
 import type { MbFormResult, MbTeam } from "./types";
 
 export const Panel = ({
@@ -81,21 +82,23 @@ const TEAM_MARK_STEPS: Record<TeamMarkSize, { crest: number; name: string }> = {
 /**
  * How the name behaves when the column is narrower than the name.
  *
- * `truncate` is the default because most marks live in a table row or a list,
- * where a second line would break the row rhythm. `wrap` is for the places that
- * are *about* the identity — the scoreboard — where an ellipsis is a worse
- * failure than a taller block: "Northwest Kalamazoo Thunderhawks Academy" and
- * "Northside Community Volleyball Association" both truncate to "North…", and
- * the rubric's own reference anchor (Apple Sports under Dynamic Type) wraps
- * rather than truncates for exactly that reason.
+ * The single-line default is `MbTeamName`, not `truncate`. Both paint one line
+ * with one ellipsis; `MbTeamName` puts the ellipsis in the MIDDLE so the last
+ * token survives. That is the F15 fix and it belongs here rather than at three
+ * call sites: measured at 1440 on `/competitions/s-se-13`, end-truncation
+ * rendered "Wolverhampton Wanderers Athletic Club B" and "…Club C" as the same
+ * string in the bracket (93px box), the schedule row (188px) and the standings
+ * cell (162px) — three surfaces on which two different teams were one team.
+ *
+ * `wrap` stays for the places that are *about* the identity — the scoreboard —
+ * where a taller block beats any ellipsis at all: "Northwest Kalamazoo
+ * Thunderhawks Academy" and "Northside Community Volleyball Association" share
+ * no trailing token, so no elision saves them and only the full name does.
  *
  * `anywhere`, not `break-word`: only `anywhere` also shrinks min-content, and
  * these names sit in `1fr` grid cells that are sized by their longest word.
  */
-const NAME_OVERFLOW = {
-  truncate: "truncate",
-  wrap: "[overflow-wrap:anywhere]",
-} as const;
+const WRAP_NAME = "[overflow-wrap:anywhere]";
 
 export const TeamMark = ({
   team,
@@ -127,7 +130,6 @@ export const TeamMark = ({
   const crestSize = typeof size === "number" ? size : TEAM_MARK_STEPS[size].crest;
   const nameClass =
     typeof size === "number" ? "text-[0.82rem]" : TEAM_MARK_STEPS[size].name;
-  const overflow = NAME_OVERFLOW[wrap ? "wrap" : "truncate"];
 
   if (orientation === "vertical") {
     return (
@@ -138,13 +140,18 @@ export const TeamMark = ({
       >
         <Crest team={team} size={crestSize} />
         <span className="flex flex-col items-center gap-1 min-w-0 max-w-full">
-          <span
-            className={`matchbook-display font-semibold ${nameClass} ${overflow} max-w-full ${
-              wrap ? "w-full text-center" : ""
-            }`}
-          >
-            {team.name}
-          </span>
+          {wrap ? (
+            <span
+              className={`matchbook-display font-semibold ${nameClass} ${WRAP_NAME} w-full max-w-full text-center`}
+            >
+              {team.name}
+            </span>
+          ) : (
+            <MbTeamName
+              name={team.name}
+              className={`matchbook-display font-semibold ${nameClass} max-w-full`}
+            />
+          )}
           {accent && (
             <span
               className="block h-[3px] w-full"
@@ -177,87 +184,130 @@ export const TeamMark = ({
       ) : (
         <Crest team={team} size={crestSize} />
       )}
-      <span className={`matchbook-display font-semibold ${nameClass} ${overflow}`}>
-        {team.name}
-      </span>
+      {wrap ? (
+        <span className={`matchbook-display font-semibold ${nameClass} ${WRAP_NAME}`}>
+          {team.name}
+        </span>
+      ) : (
+        <MbTeamName
+          name={team.name}
+          className={`matchbook-display font-semibold ${nameClass}`}
+        />
+      )}
     </span>
   );
 };
 
-/** The MARK fills — `FormSquares`, which paints no letterform over them. */
-const FORM_COLORS: Record<MbFormResult, string> = {
-  W: "var(--mb-green)",
-  L: "var(--mb-red)",
+/* ---------------------------------------------------------------------------
+   THE FORM GUIDE
+
+   ONE device, because there was never a second thing to say. The app used to
+   draw a W/L run two ways: `FormSquares`, an 11x11 block with no letterform,
+   and `FormLetters`. Measured on the running app:
+
+     FormSquares  W `--mb-green`      relative luminance 0.186
+                  L `--mb-red`                           0.171   → 1.07:1
+     FormLetters  W `--mb-green-ink`                     0.147
+                  L `--mb-red`                           0.171   → 1.12:1
+
+   1.07:1 is one flat grey. The square carried no letter, no border difference
+   and no `title`, so on a desaturated capture of `/teams` the whole Status
+   column read as an identical run of blocks — invariant 13, and the most
+   repeated status device in the app. The letters cut was barely better: the
+   two grounds are 1.12:1 apart, so a 9.28px letterform was the entire second
+   channel.
+
+   A result now differs THREE ways at once, none of them hue:
+
+     FILL vs VOID   W is a solid cell, L a ruled outline on bright paper. The
+                    two grounds are 0.147 vs 0.960 — 5.13:1 — so the run reads
+                    as a rhythm of dark and light blocks in greyscale, scanned
+                    rather than read. That is the property `FormSquares`
+                    claimed and never had, and it is the same filled/hollow
+                    vocabulary `ResultMark` on `/quick-match` already ships.
+     LETTERFORM     W and L, at the 9.28px/700 the letters cut already set.
+     WORDS          an `sr-only` sentence naming the run in order, because a
+                    strip of one-letter spans is not a sentence to a screen
+                    reader — it is read out "W L L W W".
+
+   Ink is measured against the ground it is actually on, not the page behind
+   it: `--mb-paper-bright` on `--mb-green-ink` is 5.13:1, `--mb-red` on
+   `--mb-paper-bright` is 4.58:1. Both clear the 4.5:1 floor this size demands,
+   and the L cell states its own ground rather than inheriting it, because on
+   `--mb-paper` the same red would measure 4.20:1 and fail.
+
+   Both cells carry a 1px border — the W's is its own fill — so the two states
+   are the same 14x14 box and a W→L swap moves nothing.
+   --------------------------------------------------------------------------- */
+
+const FORM_CELL =
+  "matchbook-display inline-flex h-[14px] w-[14px] items-center justify-center rounded-[2px] border text-[0.58rem] font-bold";
+
+const FORM_STYLE: Record<MbFormResult, CSSProperties> = {
+  W: {
+    background: "var(--mb-green-ink)",
+    borderColor: "var(--mb-green-ink)",
+    color: "var(--mb-paper-bright)",
+  },
+  L: {
+    background: "var(--mb-paper-bright)",
+    borderColor: "var(--mb-red)",
+    color: "var(--mb-red)",
+  },
 };
 
-/**
- * The LETTERFORM fills. `FormLetters` sets white type on the same swatch, and
- * `globals.css` already states the arithmetic that forces the split: "#fff on
- * --mb-red is 4.76:1; on --mb-green it is 4.45:1", which is why `MbBadge`
- * restricts `variant="solid"` to `tone="live"`. The W pip was that same
- * 4.45:1 pairing at 9.28px/700 against a 4.5:1 floor — measured on `/` (14
- * instances) and `/teams` (16) and the only contrast failure left on the six
- * converted routes. `--mb-green-ink` is the twin declared for exactly this and
- * carries white at 5.33:1; L keeps `--mb-red` at 4.76:1. The square beside it
- * keeps the bright mark tone, so the two greens never appear in one row.
- */
-const FORM_LETTER_COLORS: Record<MbFormResult, string> = {
-  W: "var(--mb-green-ink)",
-  L: "var(--mb-red)",
-};
+const FORM_WORD: Record<MbFormResult, string> = { W: "won", L: "lost" };
 
-export const FormSquares = ({
+/** 14px cells, 2px apart: the width a run of `slots` results occupies. */
+const formRunWidth = (slots: number) => slots * 14 + (slots - 1) * 2;
+
+export const FormLetters = ({
   form,
-  slots = 8,
-  warnTint = false,
+  slots,
 }: {
   form: MbFormResult[];
+  /**
+   * Reserve the width of `slots` results so a table column keeps one width
+   * whatever the run length. A *reservation*, not padding: an unplayed match
+   * draws nothing at all. `FormSquares` used to paint `slots` blank cells, and
+   * its default was eight against a `recentForm()` that returns at most five —
+   * three permanently dead cells in every row of every form column in the app.
+   * Runs are right-ranged inside the reservation, which is what
+   * `MbStandingsTable` already does with its own 78px box (= `slots={5}`).
+   */
   slots?: number;
-  warnTint?: boolean;
-}) => {
-  const winCount = form.filter((r) => r === "W").length;
-  const tint =
-    warnTint && form.length > 0 && winCount <= form.length / 2
-      ? winCount === 0
-        ? "var(--mb-red)"
-        : "var(--mb-gold)"
-      : null;
-  return (
-    <span className="inline-flex items-center gap-[3px]">
-      {Array.from({ length: slots }, (_, i) => {
-        const result = form[i];
-        return (
-          <span
-            key={i}
-            className="mb-form-square"
-            style={{
-              background: result
-                ? tint ?? FORM_COLORS[result]
-                : "var(--mb-tint-3)",
-            }}
-          />
-        );
-      })}
+}) => (
+  <span
+    className="inline-flex items-center justify-end"
+    style={slots ? { minWidth: formRunWidth(slots) } : undefined}
+  >
+    <span className="sr-only">
+      {form.length === 0
+        ? "No matches played yet"
+        : `Recent form, oldest first: ${form.map((r) => FORM_WORD[r]).join(", ")}.`}
     </span>
-  );
-};
-
-export const FormLetters = ({ form }: { form: MbFormResult[] }) => (
-  <span className="inline-flex items-center gap-[2px]">
-    {form.length === 0 && (
-      <span className="text-[0.7rem] text-mb-ink-muted">—</span>
-    )}
-    {form.map((r, i) => (
-      <span
-        key={i}
-        className="matchbook-display inline-flex h-[14px] w-[14px] items-center justify-center rounded-[2px] text-[0.58rem] font-bold text-white"
-        style={{ background: FORM_LETTER_COLORS[r] }}
-      >
-        {r}
-      </span>
-    ))}
+    <span aria-hidden="true" className="inline-flex items-center gap-[2px]">
+      {form.length === 0 ? (
+        <span className="text-[0.7rem] text-mb-ink-muted">—</span>
+      ) : (
+        form.map((r, i) => (
+          <span key={i} className={FORM_CELL} style={FORM_STYLE[r]}>
+            {r}
+          </span>
+        ))
+      )}
+    </span>
   </span>
 );
+
+/**
+ * @deprecated There is no separate square cut any more — this IS `FormLetters`,
+ * and every call site in `panels.tsx` / `teamPanels.tsx` now says so. The alias
+ * survives for one caller outside this slice,
+ * `components/competitions/new/TeamsStep.tsx`, which passes `slots={5}` and
+ * gets the identical render. Fold it in when that file is next opened.
+ */
+export const FormSquares = FormLetters;
 
 /**
  * In-panel state tones. `MbEmptyState` covers the page-level equivalent;

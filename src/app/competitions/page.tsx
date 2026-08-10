@@ -12,7 +12,11 @@ import { MbButtonLink } from "@/components/matchbook/Button";
 import { MbMenu } from "@/components/matchbook/Menu";
 import { Crest, Panel, PanelEmpty, TeamMark } from "@/components/matchbook/Panel";
 import { MbPanelHeadLink } from "@/components/matchbook/panels";
-import { MbTableScroll } from "@/components/matchbook/TableScroll";
+import {
+  MbStandingsLegend,
+  MbStandingsTable,
+} from "@/components/matchbook/StandingsTable";
+import { MbTeamName } from "@/components/matchbook/TeamName";
 import {
   useMatchbookCompete,
   type MbBracketCell,
@@ -63,23 +67,39 @@ const BracketBox = ({ cell }: { cell: MbBracketCell }) => {
       {team ? (
         <>
           <Crest team={team} size={16} />
-          <span
-            className={`matchbook-display flex-1 truncate text-[0.7rem] ${won ? "font-bold" : "font-semibold text-mb-ink-muted"}`}
-          >
-            {team.name}
-          </span>
+          {/* `display/link` — 0.72rem at 0.04em. 0.7rem (11.2px) was between
+              steps, and the tracking is declared so this pair does not carry
+              two values against `.mb-panel-link`, which owns 0.72rem/600 on
+              this screen. */}
+          <MbTeamName
+            name={team.name}
+            className={`matchbook-display min-w-0 flex-1 text-[0.72rem] tracking-[0.04em] ${won ? "font-bold" : "font-semibold text-mb-ink-muted"}`}
+          />
         </>
       ) : (
-        <span className="matchbook-display flex-1 text-[0.7rem] text-mb-ink-muted">
-          TBD
+        /* Two words for two states, matching `BracketRail`'s cell and
+           `MbMatchRow` exactly: "TBD" is a slot awaiting a winner, "—" is a
+           side that does not exist because the other team had a bye (F12). */
+        <span className="matchbook-display flex-1 text-[0.72rem] tracking-[0.04em] text-mb-ink-muted">
+          {cell.bye ? (
+            <>
+              <span aria-hidden="true">—</span>
+              <span className="sr-only">No opponent</span>
+            </>
+          ) : (
+            "TBD"
+          )}
         </span>
       )}
-      {!cell.pending && (
+      {!cell.pending && !cell.bye && (
         /* The winner was marked in coral at 12px/700 — 3.55:1, and a fifth
            coral job besides. Weight already says who won; the loser's score is
            muted, so the pair reads in greyscale too. */
+        /* `display/team-mark`'s size — 0.82rem, the step `TeamMark` already
+           prints beside it — so the cell's score outranks its 0.72rem name.
+           0.75rem (12px) was between steps. */
         <span
-          className={`matchbook-display text-[0.75rem] tabular-nums ${won ? "font-bold" : "font-semibold text-mb-ink-muted"}`}
+          className={`matchbook-display text-[0.82rem] tabular-nums ${won ? "font-bold" : "font-semibold text-mb-ink-muted"}`}
         >
           {score}
         </span>
@@ -90,10 +110,17 @@ const BracketBox = ({ cell }: { cell: MbBracketCell }) => {
   return (
     <div className="w-[148px] shrink-0 border border-mb-navy bg-mb-paper-bright">
       {side(cell.home, cell.homeScore, cell.homeWon)}
-      {side(cell.away, cell.awayScore, cell.awayWon, !cell.live)}
+      {side(cell.away, cell.awayScore, cell.awayWon, !cell.live && !cell.bye)}
       {cell.live && (
         <div className="flex items-center justify-end gap-1 border-t border-mb-rule px-2 py-0.5">
           <MbBadge tone="live">Live</MbBadge>
+        </div>
+      )}
+      {/* The word the full rail's cell foot carries, so the compact cut of the
+          same bracket says the same thing about the same match. */}
+      {cell.bye && (
+        <div className="mb-kicker border-t border-mb-rule px-2 py-0.5 text-right">
+          Bye
         </div>
       )}
     </div>
@@ -112,15 +139,20 @@ const StatusStat = ({
   sub?: string;
 }) => (
   <div className="flex items-center gap-3">
-    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-mb-navy text-mb-navy">
+    {/* The named 999px, not `rounded-full`'s `calc(infinity * 1px)`. */}
+    <span className="mb-icon-disc h-10 w-10">
       <MbIcon id={icon} size={18} />
     </span>
     <div>
       <p className="mb-kicker">{label}</p>
       <p className="matchbook-display text-[1.2rem] font-bold leading-tight tabular-nums">
         {value}
+        {/* Inside a `.matchbook-display` paragraph, so this is display type at
+            0.72rem/600 — the `display/link` pair. It declares 0.04em rather
+            than inheriting 0.02em, because `.mb-panel-link` owns that pair on
+            this screen and one pair carries one tracking. */}
         {sub && (
-          <span className="ml-2 text-[0.7rem] font-semibold text-mb-ink-muted">
+          <span className="ml-2 text-[0.72rem] font-semibold tracking-[0.04em] text-mb-ink-muted">
             {sub}
           </span>
         )}
@@ -174,49 +206,23 @@ const MainPanel = ({ selected }: { selected: MbCompeteSelected }) => {
       {selected.standings.length === 0 ? (
         <PanelEmpty message="No standings exist yet — play matches to build the table." />
       ) : (
-        <MbTableScroll>
-          <table className="mb-table mb-table-compact w-full border-collapse">
-            <thead>
-              <tr>
-                <th className="w-8 pl-3! text-center">#</th>
-                <th>Team</th>
-                <th className="text-center">W</th>
-                <th className="text-center">L</th>
-                <th className="text-center">Pct</th>
-                <th className="text-center">PF</th>
-                <th className="text-center">PA</th>
-                <th className="pr-3! text-center">PD</th>
-              </tr>
-            </thead>
-            <tbody>
-              {selected.standings.map((line, i) => (
-                <tr key={line.team.name + i}>
-                  <td
-                    className="matchbook-display pl-3! text-center font-bold tabular-nums"
-                    style={
-                      i === 0
-                        ? { boxShadow: "inset 3px 0 0 var(--mb-teal)" }
-                        : undefined
-                    }
-                  >
-                    {i + 1}
-                  </td>
-                  <td>
-                    <TeamMark team={line.team} size={20} />
-                  </td>
-                  <td className="text-center tabular-nums">{line.won}</td>
-                  <td className="text-center tabular-nums">{line.lost}</td>
-                  <td className="text-center tabular-nums">{line.pct}</td>
-                  <td className="text-center tabular-nums">{line.pointsFor}</td>
-                  <td className="text-center tabular-nums">{line.pointsAgainst}</td>
-                  <td className="matchbook-display pr-3! text-center font-bold tabular-nums">
-                    {line.diff}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </MbTableScroll>
+        /* This was the app's fourth standings table and its only one ranked by
+           a measure it did not print: `W L Pct PF PA PD`, no Pts, no Form, no
+           legend, rank read off the map index. Measured against the SAME
+           league on `/competitions/s-rr-28`, it showed two teams on `.667` and
+           three on `.500` in an order the detail screen explained with 13/12
+           and 10/10/9 competition points — so a reader who saw both screens
+           could not reconcile them (F14). It is the one component now, with
+           the one column order and the legend that names every abbreviation.
+           `compact` keeps the row height this narrow column had. */
+        <>
+          <MbStandingsTable
+            rows={selected.standings}
+            caption={`${selected.competition.name} standings`}
+            compact
+          />
+          <MbStandingsLegend />
+        </>
       )}
     </Panel>
   );
@@ -267,7 +273,12 @@ const EventRow = ({
       <span className="matchbook-display truncate text-[0.9rem] font-bold">
         {row.name}
       </span>
-      <span className="truncate text-[0.7rem] tabular-nums text-mb-ink-muted">
+      {/* `body/2xs`, and it WRAPS. `truncate` cost this line 12px at 390 —
+          "Double Elimination • 8 teams • 0/0 matches" lost the word "matches"
+          on the width where it is the only description of the event. A meta
+          line is prose, not a label, so it takes a second line rather than an
+          ellipsis; the row's height already floats on `mb-btn-touch`. */}
+      <span className="text-[0.72rem] tabular-nums text-mb-ink-muted">
         {row.typeLabel} • {row.teamCount} teams • {row.completed}/{row.total} matches
       </span>
     </button>
@@ -453,19 +464,29 @@ export default function CompetitionsPage() {
                 {selected.liveCourts.map((line, i) => (
                   <div
                     key={i}
-                    className="grid grid-cols-[52px_1fr_auto_1fr_auto] items-center gap-2 px-3 py-2.5"
+                    /* NO `justify-self`, and `minmax(0,1fr)` on the name
+                       tracks. A grid item with `justify-self` other than
+                       `stretch` is sized by its MAX-CONTENT, which is the
+                       whole name whatever the ellipsis does — `text-overflow`
+                       paints, it does not reduce an intrinsic contribution.
+                       Measured on the stress fixture at 320: this mark
+                       reported 291px inside a 320px viewport and pushed
+                       `body.scrollWidth` 50px past the document. `reverse` is
+                       what puts the away mark against the right edge; it
+                       never needed `justify-self` to do it. */
+                    className="grid grid-cols-[52px_minmax(0,1fr)_auto_minmax(0,1fr)_auto] items-center gap-2 px-3 py-2.5"
                   >
-                    <p className="matchbook-display border-r border-mb-rule pr-2 text-[0.7rem] font-bold tabular-nums">
+                    <p className="matchbook-display border-r border-mb-rule pr-2 text-[0.72rem] font-bold tracking-[0.04em] tabular-nums">
                       {line.court}
                     </p>
-                    <TeamMark team={line.home} className="justify-self-start" />
+                    <TeamMark team={line.home} />
                     {/* Navy. A live score in coral measured 3.55:1 at
                         15.2px/700 — and it is the one number on the row a
                         reader must not have to work for. */}
-                    <span className="matchbook-display whitespace-nowrap text-[0.95rem] font-bold tabular-nums">
+                    <span className="matchbook-display whitespace-nowrap text-[0.95rem] font-bold tracking-[0.05em] tabular-nums">
                       {line.homeScore} – {line.awayScore}
                     </span>
-                    <TeamMark team={line.away} reverse className="justify-self-end" />
+                    <TeamMark team={line.away} reverse />
                     <MbBadge tone="live">Live</MbBadge>
                   </div>
                 ))}
@@ -489,19 +510,30 @@ export default function CompetitionsPage() {
                     key={i}
                     className="grid grid-cols-[58px_1fr] items-center gap-2 py-2 pl-3 pr-3"
                   >
-                    <p className="matchbook-display text-[0.66rem] font-bold tabular-nums">
+                    {/* `display/status` — 0.66rem/700 at 0.1em, the tracking
+                        `.mb-badge` already declares for that pair here. */}
+                    <p className="matchbook-display text-[0.66rem] font-bold tracking-[0.1em] tabular-nums">
                       {line.label}
                     </p>
+                    {/* `basis-0 flex-1` and `MbTeamName` on both sides. As
+                        authored, flex shrink is proportional to base size, so
+                        at 1440 "Wolverhampton Wanderers Athletic Club B" held
+                        181px and "Apex" opposite it was cut to 19px; and the
+                        181px it did hold end-truncated to the same string as
+                        the "…Club C" row above it (F15). Equal halves, and the
+                        last token survives inside each half. */}
                     <div className="flex min-w-0 items-center gap-1.5">
                       <Crest team={line.home} size={18} />
-                      <span className="matchbook-display truncate text-[0.72rem] font-semibold">
-                        {line.home.name}
-                      </span>
+                      <MbTeamName
+                        name={line.home.name}
+                        className="matchbook-display basis-0 flex-1 text-[0.72rem] font-semibold tracking-[0.04em]"
+                      />
                       <span className="text-[0.6rem] text-mb-ink-muted">vs</span>
                       <Crest team={line.away} size={18} />
-                      <span className="matchbook-display truncate text-[0.72rem] font-semibold">
-                        {line.away.name}
-                      </span>
+                      <MbTeamName
+                        name={line.away.name}
+                        className="matchbook-display basis-0 flex-1 text-[0.72rem] font-semibold tracking-[0.04em]"
+                      />
                     </div>
                   </div>
                 ))}
@@ -520,21 +552,20 @@ export default function CompetitionsPage() {
                 {selected.recent.map((line, i) => (
                   <div
                     key={i}
-                    className="grid grid-cols-[44px_1fr_auto_1fr] items-center gap-1.5 px-3 py-2"
+                    /* Same `justify-self` / `minmax(0,1fr)` correction as the
+                       Live Courts row above. */
+                    className="grid grid-cols-[44px_minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-1.5 px-3 py-2"
                   >
-                    <p className="matchbook-display text-[0.64rem] font-bold tabular-nums text-mb-ink-muted">
+                    {/* `display/status`. 0.64rem (10.24px) was between steps
+                        and shipped five times on this screen. */}
+                    <p className="matchbook-display text-[0.66rem] font-bold tracking-[0.1em] tabular-nums text-mb-ink-muted">
                       {line.label}
                     </p>
-                    <TeamMark team={line.home} size={18} className="justify-self-start" />
+                    <TeamMark team={line.home} size={18} />
                     <span className="matchbook-display whitespace-nowrap text-[0.85rem] font-bold tabular-nums">
                       {line.homeScore} – {line.awayScore}
                     </span>
-                    <TeamMark
-                      team={line.away}
-                      size={18}
-                      reverse
-                      className="justify-self-end"
-                    />
+                    <TeamMark team={line.away} size={18} reverse />
                   </div>
                 ))}
               </div>
@@ -553,7 +584,7 @@ export default function CompetitionsPage() {
                   <MbIcon id="calendar" size={18} className="shrink-0 text-mb-navy" />
                   <div>
                     <p className="mb-kicker">Created</p>
-                    <p className="text-[0.82rem] font-semibold tabular-nums">
+                    <p className="text-[0.78rem] font-semibold tabular-nums">
                       {selected.createdDate}
                     </p>
                   </div>
@@ -562,7 +593,7 @@ export default function CompetitionsPage() {
                   <MbIcon id="bracket" size={18} className="shrink-0 text-mb-navy" />
                   <div>
                     <p className="mb-kicker">Format</p>
-                    <p className="text-[0.82rem] font-semibold tabular-nums">
+                    <p className="text-[0.78rem] font-semibold tabular-nums">
                       {selected.teamCount} teams • {selected.typeLabel}
                     </p>
                   </div>
@@ -571,7 +602,7 @@ export default function CompetitionsPage() {
                   <MbIcon id="volleyball" size={18} className="shrink-0 text-mb-navy" />
                   <div>
                     <p className="mb-kicker">Match Format</p>
-                    <p className="text-[0.82rem] font-semibold tabular-nums">
+                    <p className="text-[0.78rem] font-semibold tabular-nums">
                       {selected.seriesLabel}
                     </p>
                   </div>

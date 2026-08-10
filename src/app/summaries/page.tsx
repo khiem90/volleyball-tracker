@@ -36,12 +36,18 @@ const SummaryStat = ({
   value: string;
 }) => (
   <div className="flex items-center gap-3">
-    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-mb-navy text-mb-navy">
+    {/* `.mb-icon-disc` is the system's named 999px, and the only round this
+        screen is allowed. `rounded-full` compiled to `calc(infinity * 1px)` —
+        3.35544e+07px in the D2 census, a second spelling of the same shape. */}
+    <span className="mb-icon-disc h-9 w-9">
       <MbIcon id={icon} size={16} />
     </span>
     <div>
       <p className="mb-kicker">{label}</p>
-      <p className="matchbook-display text-[1.15rem] font-bold leading-tight tabular-nums">
+      {/* 1.2rem, not 1.15rem: `display/stat-sm` is the named step and §2.1
+          points it at `SummaryStat` values by name. 1.15rem was a 0.05rem drift
+          off it, and it shipped four times on this screen. */}
+      <p className="matchbook-display text-[1.2rem] font-bold leading-tight tabular-nums">
         {value}
       </p>
     </div>
@@ -158,7 +164,11 @@ export default function HistoryPage() {
                 {data.days.map((day) => (
                   <div key={day.label}>
                     <div className="flex items-center justify-between border-b border-mb-rule bg-[var(--mb-band)] px-4 py-1.5">
-                      <p className="matchbook-display text-[0.7rem] font-bold tracking-[0.08em] tabular-nums">
+                      {/* `display/meta` — 0.74rem/700/0.1em, the step the
+                          masthead dateline already prints on this screen. The
+                          day band is the same object one level down, so it
+                          joins that step instead of opening an 11.2px one. */}
+                      <p className="matchbook-display text-[0.74rem] font-bold tracking-[0.1em] tabular-nums">
                         {day.label}
                       </p>
                       <p className="mb-kicker tabular-nums">
@@ -182,7 +192,9 @@ export default function HistoryPage() {
                             : undefined
                         }
                       >
-                        <span className="text-[0.68rem] tabular-nums text-mb-ink-muted">
+                        {/* `body/3xs`. 0.68rem was between steps and rendered
+                            twenty-five times on this one screen. */}
+                        <span className="text-[0.66rem] tabular-nums text-mb-ink-muted">
                           {entry.time}
                         </span>
                         <TeamMark team={entry.home} size={18} className="justify-self-start" />
@@ -202,7 +214,7 @@ export default function HistoryPage() {
                             `truncate` stays — invariant 37 — because a long
                             enough event name must still cut rather than reflow
                             the ledger. */}
-                        <span className="hidden w-24 truncate text-right text-[0.64rem] text-mb-ink-muted lg:block xl:w-40">
+                        <span className="hidden w-24 truncate text-right text-[0.66rem] text-mb-ink-muted lg:block xl:w-40">
                           {entry.competition}
                         </span>
                       </button>
@@ -210,7 +222,7 @@ export default function HistoryPage() {
                   </div>
                 ))}
                 {data.filteredCount > 25 && (
-                  <p className="px-4 py-2 text-center text-[0.7rem] tabular-nums text-mb-ink-muted">
+                  <p className="px-4 py-2 text-center text-[0.72rem] tabular-nums text-mb-ink-muted">
                     Showing 25 of {data.filteredCount} results — refine filters or
                     export the full CSV.
                   </p>
@@ -233,7 +245,13 @@ export default function HistoryPage() {
                     <span className="mb-kicker tabular-nums">({report.homeRecord})</span>
                   </div>
                   <div className="text-center">
-                    <p className="matchbook-display text-5xl font-bold tabular-nums">
+                    {/* The tracking is declared, not inherited. `text-5xl`
+                        (48px) at 700 is also the masthead's `sm:` size, and the
+                        masthead declares 0.01em; this numeral was falling
+                        through to `.matchbook-display`'s 0.02em, so one
+                        size/weight pair carried two trackings (0.48px and
+                        0.96px) on this screen — rubric 1.3's exact failure. */}
+                    <p className="matchbook-display whitespace-nowrap text-5xl font-bold tracking-[0.01em] tabular-nums">
                       {report.entry.homeScore} – {report.entry.awayScore}
                     </p>
                     <p className="mb-kicker mt-1">Final</p>
@@ -321,7 +339,12 @@ export default function HistoryPage() {
                     key={i}
                     className="grid grid-cols-[18px_auto_1fr_auto] items-center gap-2 px-4 py-2"
                   >
-                    <span className="matchbook-display text-[0.8rem] font-bold tabular-nums text-mb-ink-muted">
+                    {/* 0.06em declared. At 390 the mobile top strip prints its
+                        short title at 0.8rem/700/0.06em, so this rank numeral
+                        left on `.matchbook-display`'s 0.02em put two trackings
+                        on one size/weight pair — a collision that only exists
+                        below `lg`, which is why it survived a desktop read. */}
+                    <span className="matchbook-display text-[0.8rem] font-bold tracking-[0.06em] tabular-nums text-mb-ink-muted">
                       {i + 1}
                     </span>
                     <span className="flex items-center gap-1">

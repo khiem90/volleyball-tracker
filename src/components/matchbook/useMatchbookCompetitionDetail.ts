@@ -65,6 +65,11 @@ export interface MbMatchLine {
   homeWon: boolean;
   awayWon: boolean;
   status: MbLineStatus;
+  /**
+   * A walkover. `home` is the team that advanced and `away` is null; the
+   * scores are the generator's own bookkeeping and MUST NOT be rendered.
+   */
+  bye: boolean;
 }
 
 export interface MbScheduleRound {
@@ -459,9 +464,17 @@ export const useMatchbookCompetitionDetail = ({
     const isRotation =
       competition.type === "win2out" || competition.type === "two_match_rotation";
 
-    const completed = matches.filter((m) => m.status === "completed");
-    const live = matches.filter((m) => m.status === "in_progress");
-    const pending = matches.filter((m) => m.status === "pending");
+    /* A bye is not a match. It is a slot in the draw that resolves without
+       anybody playing, so it is excluded from every COUNT — the progress
+       readout on `/competitions/s-se-13` said "7 / 15 · 47%" when four matches
+       had been played out of twelve that will be. It still appears in the
+       schedule and in the bracket, because the draw is where it is a fact.
+       `useMatchbookSummary` already counted this way (`!m.isBye`); this is the
+       live screen agreeing with the report it will generate. */
+    const playable = matches.filter((m) => !m.isBye);
+    const completed = playable.filter((m) => m.status === "completed");
+    const live = playable.filter((m) => m.status === "in_progress");
+    const pending = playable.filter((m) => m.status === "pending");
 
     const completedNewestFirst = [...completed].sort(
       (a, b) => (b.completedAt ?? 0) - (a.completedAt ?? 0)
@@ -470,19 +483,41 @@ export const useMatchbookCompetitionDetail = ({
 
     /* ------------------------------------------------------------- lines */
 
-    const lineFor = (match: Match, label: string, subLabel?: string): MbMatchLine => ({
-      id: match.id,
-      match,
-      label,
-      subLabel,
-      home: match.homeTeamId ? refFor(match.homeTeamId) : null,
-      away: match.awayTeamId ? refFor(match.awayTeamId) : null,
-      homeScore: match.homeScore,
-      awayScore: match.awayScore,
-      homeWon: match.status === "completed" && match.winnerId === match.homeTeamId,
-      awayWon: match.status === "completed" && match.winnerId === match.awayTeamId,
-      status: statusOf(match),
-    });
+    /* F12 — ONE SHAPE FOR A WALKOVER, shared with the bracket cell.
+       `bracketCellFor` already resolved a bye correctly: the advancing team on
+       the home side, nothing on the away side, no score. `lineFor` did not —
+       it read `homeTeamId` / `awayTeamId` / the two scores straight off the
+       match, and `lib/singleElimination.ts:164-175` writes a bye as a
+       *completed* match scoring 1–0 with one team id blank. So the Schedule
+       panel printed `1 – 0` against "TBD" on three rows of
+       `/competitions/s-se-13` while the Bracket panel beside it said `BYE`.
+       Both now derive the same three facts from `isBye`. */
+    const lineFor = (match: Match, label: string, subLabel?: string): MbMatchLine => {
+      const bye = match.isBye === true;
+      const advancing = bye
+        ? (match.winnerId ?? match.homeTeamId ?? match.awayTeamId)
+        : null;
+      return {
+        id: match.id,
+        match,
+        label,
+        subLabel,
+        home: bye
+          ? advancing
+            ? refFor(advancing)
+            : null
+          : match.homeTeamId
+            ? refFor(match.homeTeamId)
+            : null,
+        away: bye ? null : match.awayTeamId ? refFor(match.awayTeamId) : null,
+        homeScore: match.homeScore,
+        awayScore: match.awayScore,
+        homeWon: !bye && match.status === "completed" && match.winnerId === match.homeTeamId,
+        awayWon: !bye && match.status === "completed" && match.winnerId === match.awayTeamId,
+        status: statusOf(match),
+        bye,
+      };
+    };
 
     const roundLabel = (match: Match) =>
       isElimination
@@ -582,9 +617,9 @@ export const useMatchbookCompetitionDetail = ({
       .filter((m) => m.homeTeamId && m.awayTeamId)
       .sort((a, b) => a.round - b.round || a.position - b.position)
       .map((m) => lineFor(m, roundLabel(m)));
-    const resultLines = completedNewestFirst
-      .filter((m) => !m.isBye)
-      .map((m, i) => lineFor(m, `#${completedNewestFirst.length - i}`));
+    const resultLines = completedNewestFirst.map((m, i) =>
+      lineFor(m, `#${completedNewestFirst.length - i}`)
+    );
 
     /* ---------------------------------------------------------- bracket */
 
@@ -878,10 +913,10 @@ export const useMatchbookCompetitionDetail = ({
         completed: completed.length,
         live: live.length,
         pending: pending.length,
-        total: matches.length,
+        total: playable.length,
         pct:
-          matches.length > 0
-            ? Math.round((completed.length / matches.length) * 100)
+          playable.length > 0
+            ? Math.round((completed.length / playable.length) * 100)
             : 0,
       },
       standings,

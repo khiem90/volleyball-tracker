@@ -1,5 +1,9 @@
 // Matchbook dashboard panel shapes and team-crest helpers.
 
+import type { MbStandingLine } from "./StandingsTable";
+
+export type { MbStandingLine };
+
 export interface MbTeam {
   name: string;
   crest: string;
@@ -7,15 +11,12 @@ export interface MbTeam {
 
 export type MbFormResult = "W" | "L";
 
-export interface MbStandingRow {
-  team: MbTeam;
-  played: number;
-  won: number;
-  lost: number;
-  sets: string;
-  points: number;
-  form: MbFormResult[];
-}
+/* `MbStandingRow` is gone. It was the fourth standings shape in the app — P, W,
+   L, a combined `PF–PA` string and a `points` field that was `won * 3` however
+   the competition actually scores — and it is what let `/` rank a league by a
+   different measure than `/competitions/[id]` did for the same teams (F14).
+   Every standings surface now carries `MbStandingLine` from `StandingsTable`
+   and is ranked by `rankTeams()`. */
 
 export interface MbSetScore {
   home: number;
@@ -97,8 +98,9 @@ export interface MbStatTotal {
 export interface MbDashboardData {
   dateLine: string;
   matchesCompleted: number;
+  /** The competition the standings table is actually for. */
   league: string;
-  standings: MbStandingRow[];
+  standings: MbStandingLine[];
   featured: MbFeaturedMatch | null;
   liveCourts: MbLiveCourt[];
   schedule: MbScheduleItem[];

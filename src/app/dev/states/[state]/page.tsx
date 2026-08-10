@@ -156,7 +156,9 @@ export default function DevStatePage() {
         <div className="matchbook-surface min-h-screen">
           <main id="mb-main" className="px-4 py-5 sm:px-6 lg:px-8">
             <p className="matchbook-display mb-5 text-[1.05rem] font-bold leading-none tracking-[0.05em]">
-              Tournament <span className="text-mb-coral">Tracker</span>
+              {/* Mirrors `app/global-error.tsx`, including its ink: the harness
+                  must show the colour that ships, not the one that was fixed. */}
+              Tournament <span className="text-mb-coral-deep">Tracker</span>
             </p>
             <MbRouteState
               state="globalError"

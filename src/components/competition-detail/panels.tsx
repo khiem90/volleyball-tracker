@@ -376,11 +376,18 @@ const ScheduleRow = ({
     label={line.label}
     home={line.home}
     away={line.away}
-    homeScore={line.status === "pending" ? undefined : line.homeScore}
-    awayScore={line.status === "pending" ? undefined : line.awayScore}
+    homeScore={line.status === "pending" || line.bye ? undefined : line.homeScore}
+    awayScore={line.status === "pending" || line.bye ? undefined : line.awayScore}
     homeWon={line.homeWon}
     awayWon={line.awayWon}
     status={line.status}
+    /* A walkover carries a generator-written 1–0 and a blank opponent id
+       (`lib/singleElimination.ts:164-175`). Without this flag the row read the
+       two numbers as a result and printed "1 – 0 · TBD" on three rows of
+       `/competitions/s-se-13` while the Bracket panel beside it said BYE
+       (F12). `MbMatchRow` also drops its Open and Change controls for a bye —
+       there is no sheet to open and no pair of teams to swap. */
+    bye={line.bye}
     variant={line.status === "completed" ? "result" : "schedule"}
     /* Every match opens, including a completed one. The shipped row gated the
        handler on `status !== "completed"`, so a finished match could not be

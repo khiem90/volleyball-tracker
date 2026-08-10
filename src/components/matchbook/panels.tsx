@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { MbIcon } from "./MbIcon";
 import { MbTableScroll } from "./TableScroll";
-import { Crest, FormLetters, FormSquares, Panel, PanelEmpty, TeamMark } from "./Panel";
+import { Crest, FormLetters, Panel, PanelEmpty, TeamMark } from "./Panel";
+import { MbStandingsLegend, MbStandingsTable } from "./StandingsTable";
+import { MbTeamName } from "./TeamName";
 import { readinessColor, readinessInk } from "./teamStats";
 import type {
   MbBracket,
@@ -11,8 +13,8 @@ import type {
   MbReadinessRow,
   MbRecentResult,
   MbScheduleItem,
+  MbStandingLine,
   MbStatTotal,
-  MbStandingRow,
 } from "./types";
 
 /* ---------------------------------------------------------------------------
@@ -58,22 +60,68 @@ const FooterLink = ({ href, label }: { href: string; label: string }) => (
   </div>
 );
 
-/**
- * The rank column's numerals. `.matchbook-display` sets the display face but
- * not the figure set, so an ordinal column was reflowing between "9" and "10"
- * — HF-13, and measured by `audit.mjs` as 6 standalone numerals on `/` and 8
- * on `/teams`. Declared once here rather than re-typed per `<td>`.
- */
-const RANK_CELL = "matchbook-display text-center font-bold tabular-nums";
+/* ---------------------------------------------------------------------------
+   THE VOID BAND ABOVE A FOOTER LINK
+
+   `.mb-panel` is a flex column and its grid row stretches it to the tallest
+   panel beside it. A panel whose body is a ruled list had NOTHING in it that
+   grows, so the stretch landed in one lump: `mt-auto` threw the footer link to
+   the bottom edge and left a band of blank paper between the last rule and the
+   footer rule. Measured at 1440 before this change:
+
+     /      Recent Results     109.5px void in a 397.5px panel   (28%)
+     /      Live Courts         87.8px void in a 315.5px panel   (28%)
+     /      Upcoming Schedule   53.3px void in a 315.5px panel   (17%)
+     /teams Upcoming Fixtures  166.3px void in a 525px panel     (32%)
+     /teams Recent Form        153.1px void in a 525px panel     (29%)
+
+   The panels that did NOT void — Team Leaders, Championship Bracket, Event
+   Details — all had a `flex-1` child, so the fix is the same one they already
+   use, pushed one level down: the list grows, and the rows share what it gains.
+   A ledger's rules divide the page it is printed on, not just the ink on it, so
+   five fixtures set at even intervals down the column read as a set list rather
+   than as a short list with a hole under it.
+
+   `grow` and not `flex-1`, on purpose. `flex-1` is `flex: 1 1 0%`, and a zero
+   basis in an AUTO-height column makes the container's intrinsic height (row
+   count x tallest row) — every row would inflate to the tallest one on a panel
+   that is not being stretched at all. `grow` leaves the basis at `auto`, so
+   with no free space to hand out these classes change nothing, which is what
+   keeps them correct whichever way `.mb-panel`'s own height resolves.
+
+   Written as a plain `grow` on each list and each row rather than as a shared
+   constant: it is one Tailwind word, and a constant aliasing one word would
+   hide which elements carry it.
+   --------------------------------------------------------------------------- */
+
+/* `RANK_CELL` is gone with the hand-rolled standings table it existed for.
+   `MbStandingsTable` sets the rank column itself, and it reads `rank` /
+   `sharesRank` off the row rather than the map index, so a joint 2nd renders
+   as "=2" on two rows and the next team as 4th. */
 
 /* ------------------------------- Standings ------------------------------- */
 
+/**
+ * The overview's league table.
+ *
+ * It used to be a hand-rolled `<table>` with its own column set — P, W, L, a
+ * combined `PF–PA` cell, Pts, Form, no PD, no legend, and a rank read off the
+ * map index so joint positions could not be shown. That was the FOURTH
+ * standings vocabulary in the app and the ranking behind it was a third
+ * measure again (F14). It is `MbStandingsTable` now: the same component,
+ * the same canonical column order and the same `rankTeams()` ordering that
+ * `/competitions/[id]`, `/session/[code]` and `/summary/[code]` render, with
+ * the legend that names every abbreviation on screen.
+ */
 export const StandingsPanel = ({
   title,
+  caption,
   rows,
 }: {
   title: string;
-  rows: MbStandingRow[];
+  /** Which competition's table this is. Read out before the table. */
+  caption: string;
+  rows: MbStandingLine[];
 }) => (
   <Panel title={title} meta={<MbPanelHeadLink href="/competitions" label="View Full Table" />}>
     {rows.length === 0 ? (
@@ -83,58 +131,10 @@ export const StandingsPanel = ({
         href="/teams"
       />
     ) : (
-      <MbTableScroll>
-        <table className="mb-table w-full border-collapse">
-          <thead>
-            <tr>
-              <th className="w-8 text-center">#</th>
-              <th>Team</th>
-              <th className="text-center">P</th>
-              <th className="text-center">W</th>
-              <th className="text-center">L</th>
-              {/* "Sets" was a mislabel, not a shorthand. `MbStandingRow.sets`
-                  is built as `${pointsFor}–${pointsAgainst}` in
-                  `useMatchbookDashboard`, so a column headed Sets was showing
-                  points — and `/teams` headed the SAME quantity "Pts", which is
-                  the ranking number one column to the right of it here. Both
-                  screens now use the glossary's own PF / PA. (The hook's field
-                  is still named `sets`; that rename belongs to the hook.) */}
-              <th className="text-center">PF–PA</th>
-              <th className="text-center">Pts</th>
-              <th>Form</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row, i) => (
-              <tr key={row.team.name + i}>
-                <td
-                  className={RANK_CELL}
-                  style={
-                    i === 0
-                      ? { boxShadow: "inset 3px 0 0 var(--mb-teal)" }
-                      : undefined
-                  }
-                >
-                  {i + 1}
-                </td>
-                <td>
-                  <TeamMark team={row.team} />
-                </td>
-                <td className="text-center tabular-nums">{row.played}</td>
-                <td className="text-center tabular-nums">{row.won}</td>
-                <td className="text-center tabular-nums">{row.lost}</td>
-                <td className="text-center tabular-nums whitespace-nowrap">{row.sets}</td>
-                <td className="matchbook-display text-center font-bold tabular-nums">
-                  {row.points}
-                </td>
-                <td>
-                  <FormSquares form={row.form} warnTint />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </MbTableScroll>
+      <>
+        <MbStandingsTable rows={rows} caption={caption} />
+        <MbStandingsLegend />
+      </>
     )}
   </Panel>
 );
@@ -234,16 +234,36 @@ export const LiveCourtsPanel = ({ courts }: { courts: MbLiveCourt[] }) => (
         href="/quick-match"
       />
     ) : (
-      <div className="flex flex-col divide-y divide-mb-rule">
+      <div className="flex grow flex-col divide-y divide-mb-rule">
         {courts.map((court, i) => (
-          <div key={i} className="grid grid-cols-[64px_1fr_auto_1fr_auto] items-center gap-2 px-3 py-3">
+          <div
+            key={i}
+            /* `minmax(0,1fr)` on the two NAME tracks and a bound on everything
+               that competes with them. A bare `1fr` is `minmax(auto,1fr)`, so
+               the auto tracks took their max-content first and the names got
+               what was left: measured at 1440, "Peak" (29px of glyphs) was
+               handed a 27px box and rendered "PE…" — a four-letter team name
+               truncated to two. The competition label under the score was the
+               thief: "THIRTEEN TEAM CUP" set the centre track to 95px, wider
+               than the scoreline it captions. */
+            className="grid grow grid-cols-[56px_minmax(0,1fr)_auto_minmax(0,1fr)_auto] items-center gap-2 px-3 py-3"
+          >
             <div className="border-r border-mb-rule pr-2">
               <p className="matchbook-display text-[0.72rem] font-bold leading-tight">
                 {court.court}
               </p>
               <p className="text-[0.68rem] text-mb-ink-muted">{court.time}</p>
             </div>
-            <TeamMark team={court.home} className="justify-self-start" />
+            {/* NO `justify-self`. A grid item with `justify-self` other than
+                `stretch` is sized by its MAX-CONTENT, so the name never
+                truncated — it ran straight through the scoreline beside it.
+                Reproduced at 1440 with the fixture's two 39-character
+                Wolverhampton sides: both names painted over the 104 – 99 and
+                over each other. `MbMatchRow` carries this exact note and this
+                exact fix; these two panels never got it. Stretched to the
+                track, `min-w-0` inside `TeamMark` does its job and the away
+                mark's `reverse` is what puts it against the right edge. */}
+            <TeamMark team={court.home} />
             <div className="flex flex-col items-center gap-0.5">
               {/* `.mb-score-box` sets the display face and a 26px min-width but
                   no figure set, so a live score stepping 9 -> 10 re-cut its own
@@ -254,9 +274,11 @@ export const LiveCourtsPanel = ({ courts }: { courts: MbLiveCourt[] }) => (
                 <span className="text-mb-ink-muted text-xs">–</span>
                 <span className="mb-score-box tabular-nums">{court.awayScore}</span>
               </span>
-              <span className="mb-kicker">{court.setLabel}</span>
+              {/* Capped at the scoreline it sits under, so a long competition
+                  name cannot widen the centre track at the names' expense. */}
+              <span className="mb-kicker max-w-[76px] truncate">{court.setLabel}</span>
             </div>
-            <TeamMark team={court.away} reverse className="justify-self-end" />
+            <TeamMark team={court.away} reverse />
             <span className="flex items-center gap-1">
               <span className="mb-live-dot" />
               <span className="matchbook-display text-[0.62rem] font-bold text-mb-red">
@@ -282,11 +304,11 @@ export const SchedulePanel = ({ items }: { items: MbScheduleItem[] }) => (
         href="/competitions/new"
       />
     ) : (
-      <div className="ml-3 flex flex-col divide-y divide-mb-rule border-l-2 border-mb-coral">
+      <div className="ml-3 flex grow flex-col divide-y divide-mb-rule border-l-2 border-mb-coral">
         {items.map((item, i) => (
           <div
             key={i}
-            className="grid grid-cols-[42px_50px_1fr] items-center gap-1 py-2 pl-2.5 pr-2.5"
+            className="grid grow grid-cols-[42px_50px_1fr] items-center gap-1 py-2 pl-2.5 pr-2.5"
           >
             {/* The coral on this list is the 2px SPINE (coral job 4), which is
                 a mark. The date beside it was a second coral doing the same job
@@ -302,18 +324,36 @@ export const SchedulePanel = ({ items }: { items: MbScheduleItem[] }) => (
             </div>
             <p className="text-[0.72rem] font-semibold tabular-nums">{item.time}</p>
             <div className="flex items-center justify-between gap-1.5 min-w-0">
-              <span className="flex items-center gap-1 min-w-0">
+              {/* `basis-0 flex-1` on BOTH names, and `MbTeamName` on each.
+                  Two separate failures met in this cell and each one alone
+                  loses a team's identity:
+
+                  1. shrink is proportional to BASE size, so a long name kept
+                     its share and a short one paid for it — measured at 1440,
+                     "Wolverhampton Wanderers Athletic Club B" held 58px while
+                     "Apex" beside it was squeezed to 6px, which paints as no
+                     name at all. An equal `basis-0` split gives each side the
+                     same half whatever the two names measure.
+                  2. within that half, end-truncation made the two Wolverhampton
+                     sides the same string (F15). `MbTeamName` keeps the last
+                     token, so "…B" and "…C" still separate them. */}
+              <span className="flex min-w-0 flex-1 items-center gap-1">
                 <Crest team={item.home} size={18} />
-                <span className="matchbook-display text-[0.72rem] font-semibold truncate">
-                  {item.home.name}
-                </span>
+                <MbTeamName
+                  name={item.home.name}
+                  className="matchbook-display basis-0 flex-1 text-[0.72rem] font-semibold"
+                />
                 <span className="px-0.5 text-[0.6rem] text-mb-ink-muted">vs</span>
                 <Crest team={item.away} size={18} />
-                <span className="matchbook-display text-[0.72rem] font-semibold truncate">
-                  {item.away.name}
-                </span>
+                <MbTeamName
+                  name={item.away.name}
+                  className="matchbook-display basis-0 flex-1 text-[0.72rem] font-semibold"
+                />
               </span>
-              <span className="hidden xl:flex max-w-[104px] items-center gap-1 text-[0.62rem] text-mb-ink-muted">
+              {/* 104 -> 72. `xl` is where this panel is narrowest on the
+                  dashboard, so the widest cap was applied at the width with
+                  the least to give. */}
+              <span className="hidden xl:flex max-w-[72px] shrink-0 items-center gap-1 text-[0.62rem] text-mb-ink-muted">
                 <MbIcon id="location" size={10} className="shrink-0" />
                 <span className="truncate">{item.venue}</span>
               </span>
@@ -349,9 +389,10 @@ export const BracketPanel = ({ bracket }: { bracket: MbBracket | null }) => (
                       {seed.seed}
                     </span>
                     <Crest team={seed.team} size={20} />
-                    <span className="matchbook-display text-[0.76rem] font-semibold truncate">
-                      {seed.team.name}
-                    </span>
+                    <MbTeamName
+                      name={seed.team.name}
+                      className="matchbook-display min-w-0 flex-1 text-[0.76rem] font-semibold"
+                    />
                   </div>
                 ))}
               </div>
@@ -397,21 +438,28 @@ export const RecentResultsPanel = ({ results }: { results: MbRecentResult[] }) =
         href="/quick-match"
       />
     ) : (
-      <div className="flex flex-col divide-y divide-mb-rule">
+      <div className="flex grow flex-col divide-y divide-mb-rule">
         {results.map((r, i) => (
           <div
             key={i}
-            className="grid grid-cols-[44px_1fr_auto_1fr] items-center gap-2 py-2.5 pl-3 pr-3 xl:grid-cols-[44px_1fr_auto_1fr_88px]"
+            /* Same `minmax(0,1fr)` on the name tracks, and the competition
+               column trimmed 88 -> 64: it is revealed at `xl`, which on this
+               dashboard is where the panel is NARROWEST (three across), so it
+               was taking a quarter of the row from the two names it captions. */
+            className="grid grow grid-cols-[44px_minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 py-2.5 pl-3 pr-3 xl:grid-cols-[44px_minmax(0,1fr)_auto_minmax(0,1fr)_64px]"
             style={{ boxShadow: `inset 3px 0 0 ${r.accent}` }}
           >
             <p className="matchbook-display text-[0.66rem] font-bold leading-tight text-mb-ink-muted">
               {r.date}
             </p>
-            <TeamMark team={r.home} className="justify-self-start" />
+            {/* Same `justify-self` defect as Live Courts above: max-content
+                sizing meant the two 39-character names in this fixture printed
+                over the scoreline between them. */}
+            <TeamMark team={r.home} />
             <span className="matchbook-display whitespace-nowrap text-[0.95rem] font-bold tabular-nums">
               {r.homeScore} – {r.awayScore}
             </span>
-            <TeamMark team={r.away} reverse className="justify-self-end" />
+            <TeamMark team={r.away} reverse />
             <span className="hidden truncate text-right text-[0.64rem] text-mb-ink-muted xl:block">
               {r.venue}
             </span>

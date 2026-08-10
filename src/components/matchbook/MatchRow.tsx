@@ -51,6 +51,11 @@ export interface MbMatchRowProps {
   homeWon?: boolean;
   awayWon?: boolean;
   status: MbMatchRowStatus;
+  /**
+   * A walkover: one team advances and NOTHING was played. See `Measure` for
+   * why this cannot be left to the score props (F12).
+   */
+  bye?: boolean;
   variant?: MbMatchRowVariant;
   /** Opens the match. Omit and the row renders as static type. */
   onSelect?: () => void;
@@ -61,11 +66,29 @@ export interface MbMatchRowProps {
   className?: string;
 }
 
-const TBD = () => (
-  <span className="matchbook-display truncate text-[0.78rem] font-semibold text-mb-ink-muted">
-    TBD
-  </span>
-);
+/**
+ * An empty side. TWO words, because they are two different facts and the app
+ * was printing one of them for both (F12/F13).
+ *
+ *   `TBD`  the slot exists and will be filled by the winner of an earlier match
+ *   `—`    there is no opponent and never will be — the other side had a bye
+ *
+ * `BracketRail`'s cell draws exactly this pair for exactly these two states, so
+ * the schedule and the bracket beside it say the same word about the same
+ * match. The em dash is `aria-hidden` with the meaning spelled out beside it:
+ * a screen reader that announces "em dash" has been told nothing.
+ */
+const EmptySide = ({ bye = false }: { bye?: boolean }) =>
+  bye ? (
+    <span className="matchbook-display text-[0.78rem] font-semibold text-mb-ink-muted">
+      <span aria-hidden="true">—</span>
+      <span className="sr-only">No opponent</span>
+    </span>
+  ) : (
+    <span className="matchbook-display truncate text-[0.78rem] font-semibold text-mb-ink-muted">
+      TBD
+    </span>
+  );
 
 /**
  * Winner emphasis, reaching the name itself.
@@ -140,17 +163,39 @@ export const MB_SCORE_TRACK = 76;
 
 const Measure = ({
   status,
+  bye,
   homeScore,
   awayScore,
   homeWon,
   awayWon,
 }: {
   status: MbMatchRowStatus;
+  bye: boolean;
   homeScore?: number;
   awayScore?: number;
   homeWon: boolean;
   awayWon: boolean;
 }) => {
+  /* F12 — THE FABRICATED SCORELINE.
+     `generateSingleEliminationBracket` writes a walkover as a COMPLETED match
+     carrying `homeScore: 1, awayScore: 0` and `isBye: true`
+     (`lib/singleElimination.ts:164-175`); the 1–0 is bookkeeping that lets the
+     generator name a `winnerId`, not a result anybody played. Every consumer
+     that read `status` and the two scores and ignored `isBye` therefore printed
+     it as fact: on `/competitions/s-se-13` the Schedule panel showed three rows
+     reading `1 – 0` against an opponent called "TBD" while the Bracket panel on
+     the same screen labelled the identical matches `BYE`.
+
+     The word wins over the numerals, and it is checked FIRST — before the
+     score-undefined guard — so no caller can reinstate the scoreline by passing
+     the raw fields through. */
+  if (bye) {
+    return (
+      <span className="matchbook-display text-center text-[0.74rem] font-bold uppercase tracking-[0.1em] text-mb-ink-muted">
+        Bye
+      </span>
+    );
+  }
   if (status === "pending" || homeScore === undefined || awayScore === undefined) {
     return (
       <span className="matchbook-display text-center text-[0.74rem] font-bold tracking-[0.1em] text-mb-ink-muted">
@@ -192,21 +237,32 @@ export const MbMatchRow = ({
   homeWon = false,
   awayWon = false,
   status,
+  bye = false,
   variant = "schedule",
   onSelect,
   onEdit,
   name,
   className = "",
 }: MbMatchRowProps) => {
-  const rowName = name ?? `${home?.name ?? "TBD"} v ${away?.name ?? "TBD"}`;
-  const scored = status !== "pending" && homeScore !== undefined && awayScore !== undefined;
+  const rowName = bye
+    ? `${home?.name ?? away?.name ?? "TBD"} — bye, no opponent`
+    : (name ?? `${home?.name ?? "TBD"} v ${away?.name ?? "TBD"}`);
+  const scored =
+    !bye && status !== "pending" && homeScore !== undefined && awayScore !== undefined;
   /* The control's name carries the score, because the numerals inside it are
      display type the screen reader should not read figure by figure. */
   const openName = scored
     ? `${home?.name ?? "TBD"} ${homeScore}, ${away?.name ?? "TBD"} ${awayScore}`
     : rowName;
+  /* A bye is not a match, so it cannot be opened and it cannot be edited —
+     there is no sheet to open and no pair of teams to swap. `BracketRail`'s
+     cell has always refused both for `cell.bye`; the row refuses them HERE
+     rather than trusting each caller to remember, which is what let the
+     Schedule panel hand a walkover a button labelled "Open … 1, TBD 0". */
+  const openable = Boolean(onSelect) && !bye;
+  const editable = Boolean(onEdit) && !bye;
   const markClass = (won: boolean) =>
-    status !== "completed" ? "" : won ? MARK_WON : MARK_LOST;
+    status !== "completed" || bye ? "" : won ? MARK_WON : MARK_LOST;
 
   const body = (
     /* `flex-col` below `sm` and one line from `sm` up. The meta cluster keeps
@@ -248,10 +304,11 @@ export const MbMatchRow = ({
             <TeamMark team={home} size="sm" className={markClass(homeWon)} />
           </span>
         ) : (
-          <TBD />
+          <EmptySide bye={bye} />
         )}
         <Measure
           status={status}
+          bye={bye}
           homeScore={homeScore}
           awayScore={awayScore}
           homeWon={homeWon}
@@ -264,7 +321,7 @@ export const MbMatchRow = ({
           </span>
         ) : (
           <span className="flex justify-end">
-            <TBD />
+            <EmptySide bye={bye} />
           </span>
         )}
       </span>
@@ -284,15 +341,21 @@ export const MbMatchRow = ({
        on `competition-se-live@390`: 8 spacing violations before, 0 after. */
     <div
       className={`mb-row-hover flex items-stretch gap-2 py-1 pr-1.5 ${className}`}
+      /* A bye takes NO rail. The rail's two states are "in play" and "played",
+         and a walkover is neither — `variant` arrives as `result` for it
+         (nothing is pending about a bye), which would have marked a match that
+         never happened as a finished one. */
       style={
-        status === "live"
-          ? { boxShadow: "inset 3px 0 0 var(--mb-coral)" }
-          : variant === "result"
-            ? { boxShadow: "inset 3px 0 0 var(--mb-tint-3)" }
-            : undefined
+        bye
+          ? undefined
+          : status === "live"
+            ? { boxShadow: "inset 3px 0 0 var(--mb-coral)" }
+            : variant === "result"
+              ? { boxShadow: "inset 3px 0 0 var(--mb-tint-3)" }
+              : undefined
       }
     >
-      {onSelect ? (
+      {openable ? (
         <button
           type="button"
           onClick={onSelect}
@@ -305,7 +368,7 @@ export const MbMatchRow = ({
         <span className="flex min-w-0 flex-1 items-center px-3 py-2.5">{body}</span>
       )}
 
-      {onEdit && (
+      {editable && onEdit && (
         <span className="flex shrink-0 items-center">
           <MbIconButton
             icon="edit"

@@ -81,8 +81,13 @@ export default function DashboardPage() {
           removed outright under prefers-reduced-motion. */}
       <div className="mb-enter-grid grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-12">
         <div className="md:col-span-2 xl:col-span-7">
+          {/* The panel head names the OBJECT and the table's caption names the
+              competition, the same split `/competitions/[id]` uses. The head
+              used to carry the competition name over a table built from every
+              team and every match in the app (F14). */}
           <StandingsPanel
-            title={`${data.league} Standings`}
+            title="Standings"
+            caption={`${data.league} standings`}
             rows={data.standings}
           />
         </div>

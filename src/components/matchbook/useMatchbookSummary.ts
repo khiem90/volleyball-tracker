@@ -10,7 +10,8 @@ import { shareLink } from "./ShareAction";
 import type { MbStandingLine } from "./StandingsTable";
 import { buildTeamTallies, recentForm } from "./teamStats";
 import { toast } from "./Toast";
-import { crestForTeam, type MbTeam } from "./types";
+import { createTeamRef } from "./useMatchbookCompetitionDetail";
+import { type MbTeam } from "./types";
 
 /* ===========================================================================
    THE MATCH REPORT, SHAPED (charter §2.3 `useMatchbookSummary`, W6 / P3b)
@@ -194,11 +195,10 @@ export const useMatchbookSummary = (): MbSummaryData => {
     const competition = summary?.competition ?? null;
 
     const teamById = new Map(teams.map((t) => [t.id, t]));
-    const nameOf = (id: string) => teamById.get(id)?.name ?? "Unknown team";
-    const refFor = (id: string): MbTeam => ({
-      name: nameOf(id),
-      crest: crestForTeam(id, nameOf(id)),
-    });
+    /* The shared resolver, so the report names a missing team exactly as the
+       live screen it was generated from does. */
+    const refFor = createTeamRef(teams);
+    const nameOf = (id: string) => refFor(id).name;
     const accentOf = (id: string) => teamById.get(id)?.color || undefined;
 
     /* Bye matches are skipped everywhere a result is counted — `rankTeams` and

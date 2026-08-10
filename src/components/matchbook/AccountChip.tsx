@@ -28,10 +28,18 @@ export type MbAccountChipVariant = "masthead" | "rail" | "compact";
    unconfigured (shell brief R6). `MatchbookShell` enforces that.
    =========================================================================== */
 
-/** The 40px crest disc. One of the four sanctioned 999px radii. */
+/**
+ * The 40px crest disc. One of the four sanctioned 999px radii — and it now says
+ * so in the system's own spelling. `rounded-full` compiles to
+ * `calc(infinity * 1px)`, which measures 3.35544e+07px and shows up in the D2
+ * radius census as a *second* round value beside the 999px the vocabulary
+ * declares. `.mb-icon-disc` is the named class for exactly this shape (design
+ * language §3.3 / §4.1b) and carries the geometry, the navy edge and the ink,
+ * so the utility stack below it collapses to the size.
+ */
 const AccountDisc = ({ size = 40 }: { size?: number }) => (
   <span
-    className="flex shrink-0 items-center justify-center rounded-full border-[1.5px] border-mb-navy bg-mb-paper-bright"
+    className="mb-icon-disc bg-mb-paper-bright"
     style={{ width: size, height: size }}
   >
     <Image
@@ -106,7 +114,13 @@ export const MbAccountChip = ({
         <div className="flex min-w-0 items-center gap-2.5">
           <AccountDisc />
           <span className="flex min-w-0 flex-col">
-            <span className="matchbook-display truncate text-[0.72rem] font-bold leading-tight tracking-[0.08em]">
+            {/* 0.04em, not 0.08em. 0.72rem carries exactly one tracking in the
+                named scale — `display/link`'s 0.04em — and this chip renders on
+                every route, so a second value here put a tracking collision on
+                the (11.52px, 700) pair of all seven screens at once. §3.2's
+                account-chip sample still prints 0.08em; the sample is the bug
+                (this document's own rule: the shipped page wins). */}
+            <span className="matchbook-display truncate text-[0.72rem] font-bold leading-tight tracking-[0.04em]">
               {isGuest ? "Guest" : name}
             </span>
             <span className="truncate text-[0.66rem] leading-tight text-mb-ink-muted">

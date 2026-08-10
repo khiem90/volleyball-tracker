@@ -47,7 +47,10 @@ export default function GlobalError({
                 crest is an SVG over the network, and this is the one screen
                 that must not depend on the network having worked. */}
             <p className="matchbook-display mb-5 text-[1.05rem] font-bold leading-none tracking-[0.05em]">
-              Tournament <span className="text-mb-coral">Tracker</span>
+              {/* `--mb-coral-deep`, not `--mb-coral`: measured 3.26:1 at
+                  16.8px/700 on `--mb-paper` against the 4.5:1 floor below
+                  18.66px (HF-6). The ink twin is 4.62:1 at the same step. */}
+              Tournament <span className="text-mb-coral-deep">Tracker</span>
             </p>
             <MbRouteState
               state="globalError"

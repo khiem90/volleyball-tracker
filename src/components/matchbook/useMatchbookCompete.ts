@@ -1,8 +1,11 @@
 import { useMemo, useState } from "react";
 import { useApp } from "@/context/AppContext";
-import { calculateStandings } from "@/lib/roundRobin";
+import { rankTeams } from "@/lib/standings";
 import type { Competition, CompetitionType, Match } from "@/types/game";
-import { crestForTeam, type MbTeam } from "./types";
+import type { MbStandingLine } from "./StandingsTable";
+import { buildTeamTallies, recentForm } from "./teamStats";
+import { createTeamRef } from "./useMatchbookCompetitionDetail";
+import { type MbTeam } from "./types";
 
 export const COMPETITION_TYPE_LABELS: Record<CompetitionType, string> = {
   round_robin: "Round Robin",
@@ -31,6 +34,8 @@ export interface MbBracketCell {
   awayWon: boolean;
   live: boolean;
   pending: boolean;
+  /** A walkover: `home` advanced, there is no `away`, and no score exists. */
+  bye: boolean;
 }
 
 export interface MbBracketRound {
@@ -38,15 +43,23 @@ export interface MbBracketRound {
   cells: MbBracketCell[];
 }
 
-export interface MbStandingLine {
-  team: MbTeam;
-  won: number;
-  lost: number;
-  pct: string;
-  pointsFor: number;
-  pointsAgainst: number;
-  diff: string;
-}
+/* F14 — THE FIFTH STANDINGS SHAPE, DELETED.
+   This screen shipped its own `MbStandingLine` — `W L Pct PF PA PD`, no Pts,
+   no Form, no rank, no legend — and it was the ONLY surface in the app that
+   printed a percentage. Measured on `/competitions` against the same league on
+   `/competitions/s-rr-28`: the list screen showed rows 1 and 2 both on `.667`
+   and rows 3, 4 and 5 all on `.500`, so the printed measure could not
+   reproduce the printed order, while the detail screen separated the same
+   teams by 13 / 12 and 10 / 10 / 9 competition points. Two screens, one
+   league, one of them ranked by a measure it did not show.
+
+   The type is now `MbStandingLine` from `StandingsTable` — the canonical one —
+   and the rows come from `rankTeams()`, which also fixes what
+   `lib/roundRobin.calculateStandings` got wrong underneath: it counts bye
+   matches, it decides the winner from the scoreline instead of `winnerId`, and
+   it drops a draw entirely when the competition forbids ties, so
+   `played !== won + lost + tied`. */
+export type { MbStandingLine };
 
 export interface MbCourtLine {
   court: string;
@@ -116,13 +129,12 @@ export const useMatchbookCompete = (): MbCompeteData => {
       year: "numeric",
     });
 
-    const refFor = (teamId: string): MbTeam => {
-      const team = state.teams.find((t) => t.id === teamId);
-      return {
-        name: team?.name ?? "Unknown",
-        crest: crestForTeam(teamId, team?.name ?? ""),
-      };
-    };
+    /* One resolver for the whole app. This hook's own version answered an
+       unresolved id with the name "Unknown", which in a narrow cell paints as
+       "UNKNO…" — a truncated placeholder shown to the reader as a team (F13) —
+       and it did a linear `find` per call inside a render. `createTeamRef`
+       memoises and answers "Unknown team". */
+    const refFor = createTeamRef(state.teams);
 
     const matchesOf = (competitionId: string): Match[] =>
       state.matches.filter((m) => m.competitionId === competitionId);
@@ -134,7 +146,9 @@ export const useMatchbookCompete = (): MbCompeteData => {
     });
 
     const rows: MbCompetitionRow[] = competitions.map((c) => {
-      const matches = matchesOf(c.id);
+      /* `7/15 matches` counted three walkovers as matches played and as
+         matches to play. A bye is neither. */
+      const matches = matchesOf(c.id).filter((m) => !m.isBye);
       return {
         id: c.id,
         name: c.name,
@@ -155,9 +169,14 @@ export const useMatchbookCompete = (): MbCompeteData => {
     const competition = competitions.find((c) => c.id === selectedId);
     if (competition) {
       const matches = matchesOf(competition.id);
-      const completed = matches.filter((m) => m.status === "completed");
-      const live = matches.filter((m) => m.status === "in_progress");
-      const pending = matches.filter((m) => m.status === "pending");
+      /* A bye is a completed match carrying a generator-written 1–0 and one
+         blank team id. It is not a result, so it is out of every count and out
+         of the Recent Results strip — the same rule `useMatchbookSummary` and
+         `useMatchbookHistory` already apply. */
+      const playable = matches.filter((m) => !m.isBye);
+      const completed = playable.filter((m) => m.status === "completed");
+      const live = playable.filter((m) => m.status === "in_progress");
+      const pending = playable.filter((m) => m.status === "pending");
       const isElimination =
         competition.type === "single_elimination" ||
         competition.type === "double_elimination";
@@ -173,16 +192,35 @@ export const useMatchbookCompete = (): MbCompeteData => {
           const cells = bracketMatches
             .filter((m) => m.round === round)
             .sort((a, b) => a.position - b.position)
-            .map((m) => ({
-              home: m.homeTeamId ? refFor(m.homeTeamId) : null,
-              away: m.awayTeamId ? refFor(m.awayTeamId) : null,
-              homeScore: m.homeScore,
-              awayScore: m.awayScore,
-              homeWon: m.winnerId === m.homeTeamId && m.status === "completed",
-              awayWon: m.winnerId === m.awayTeamId && m.status === "completed",
-              live: m.status === "in_progress",
-              pending: m.status === "pending",
-            }));
+            /* Byes resolve to the advancing team with no opponent and no
+               score, exactly as `bracketCellFor` shapes them for the full
+               rail. Read straight off the match, this cell printed the
+               generator's 1–0 against "TBD" (F12). */
+            .map((m) => {
+              const bye = m.isBye === true;
+              const advancing = bye
+                ? (m.winnerId ?? m.homeTeamId ?? m.awayTeamId)
+                : null;
+              return {
+                home: bye
+                  ? advancing
+                    ? refFor(advancing)
+                    : null
+                  : m.homeTeamId
+                    ? refFor(m.homeTeamId)
+                    : null,
+                away: bye ? null : m.awayTeamId ? refFor(m.awayTeamId) : null,
+                homeScore: m.homeScore,
+                awayScore: m.awayScore,
+                homeWon:
+                  !bye && m.winnerId === m.homeTeamId && m.status === "completed",
+                awayWon:
+                  !bye && m.winnerId === m.awayTeamId && m.status === "completed",
+                live: m.status === "in_progress",
+                pending: m.status === "pending",
+                bye,
+              };
+            });
           if (cells.length > 0) {
             bracket.push({ label: roundLabel(round, maxRound, cells.length), cells });
           }
@@ -190,33 +228,38 @@ export const useMatchbookCompete = (): MbCompeteData => {
         bracket = bracket.slice(0, 4);
       }
 
-      const standings = !isElimination
-        ? calculateStandings(competition.teamIds, matches, competition.config).map(
-            (s) => ({
-              team: refFor(s.teamId),
-              won: s.won,
-              lost: s.lost,
-              pct:
-                s.played > 0
-                  ? (s.won / s.played).toFixed(3).replace(/^0/, "")
-                  : "—",
-              pointsFor: s.pointsFor,
-              pointsAgainst: s.pointsAgainst,
-              diff: `${s.pointsDiff >= 0 ? "+" : ""}${s.pointsDiff}`,
-            })
-          )
-        : [];
+      const tallies = buildTeamTallies(
+        [...completed].sort((a, b) => (b.completedAt ?? 0) - (a.completedAt ?? 0))
+      );
+
+      const standings: MbStandingLine[] = isElimination
+        ? []
+        : rankTeams(competition.teamIds, matches, competition.config).map((row) => ({
+            teamId: row.teamId,
+            team: refFor(row.teamId),
+            rank: row.rank,
+            sharesRank: row.sharesRank,
+            played: row.played,
+            won: row.won,
+            lost: row.lost,
+            tied: row.tied,
+            pointsFor: row.pointsFor,
+            pointsAgainst: row.pointsAgainst,
+            diff: row.pointsDiff,
+            points: row.competitionPoints,
+            form: recentForm(tallies.get(row.teamId)),
+          }));
 
       selected = {
         competition,
         typeLabel: COMPETITION_TYPE_LABELS[competition.type],
         isElimination,
         teamCount: competition.teamIds.length,
-        matchTotal: matches.length,
+        matchTotal: playable.length,
         matchesCompleted: completed.length,
         completionPct:
-          matches.length > 0
-            ? Math.round((completed.length / matches.length) * 100)
+          playable.length > 0
+            ? Math.round((completed.length / playable.length) * 100)
             : 0,
         courtCount: competition.numberOfCourts ?? null,
         winner: competition.winnerId ? refFor(competition.winnerId) : null,

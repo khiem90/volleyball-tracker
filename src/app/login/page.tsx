@@ -4,9 +4,9 @@ import { Suspense } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { MbIcon } from "@/components/matchbook/MbIcon";
-import { MbSkeleton } from "@/components/matchbook/Skeleton";
 import { crestPath } from "@/components/matchbook/types";
 import { useLoginPage } from "@/hooks/useLoginPage";
+import { LoginSkeleton } from "./LoginSkeleton";
 
 const SHOWCASE_CRESTS = [
   { slug: "surge", name: "Surge" },
@@ -23,100 +23,6 @@ const FEATURES = [
   { icon: "history", label: "Match History" },
   { icon: "cloud", label: "Cloud Sync" },
 ];
-
-/* ---------------------------------------------------------------------------
-   THE LOADING STATE (invariants 2 and 26, W2 / P4)
-
-   This replaces `PageLoadingSpinner`, which was the LAST consumer of the
-   pre-Matchbook shell anywhere in the app: it rendered `<Navigation/>` — the
-   old warm-red nav bar — over `bg-background` with a framer-motion ring
-   spinning in the middle of an empty `max-w-6xl` column. On this route that
-   meant the redesigned poster was preceded, on every cold load and on every
-   `useSearchParams` suspension, by a flash of the design system this whole
-   programme exists to remove. Invariant 2 hard-fails a converted route that
-   renders `<Navigation/>` "including during loading"; invariant 26 hard-fails
-   the spinner separately.
-
-   `MbPageLoading` is the general answer but not this route's: its three
-   variants all draw the console or public *shell*, and `/login` has no shell —
-   it is a full-bleed two-column poster. So the bones are local, and they are
-   the poster's own geometry, not a generic grey page: the 52x60 crest slot and
-   two-line wordmark, the masthead row with its bordered "All Events" block,
-   the `.mb-panel` carrying a full-width button, the ruled "or", two 48px
-   fields and the coral submit, then the guest row. Nothing moves when the real
-   form arrives.
-
-   The promo half stays `hidden lg:block` and paints flat navy: it is a static
-   poster with no data to wait for, so drawing skeleton bones over it would
-   invent a wait that does not exist.
-   --------------------------------------------------------------------------- */
-
-const LoginSkeleton = () => (
-  <div className="min-h-screen lg:grid lg:grid-cols-2">
-    <div className="matchbook-surface flex min-h-screen flex-col items-center justify-center px-5 py-6 lg:min-h-0">
-      <span className="sr-only" role="status">
-        Loading sign-in
-      </span>
-      <div className="w-full max-w-[460px]" aria-hidden="true">
-        {/* Brand lockup — crest box + the two wordmark lines */}
-        <div className="mb-5 flex items-center gap-3">
-          <MbSkeleton w={52} h={60} radius={3} />
-          <span className="flex flex-col gap-1.5">
-            <MbSkeleton w="8.5rem" h="1.15rem" />
-            <MbSkeleton w="6rem" h="1.15rem" />
-          </span>
-        </div>
-
-        {/* Masthead — the h1 measure beside the framed "All / Events" block */}
-        <div className="mb-3 flex items-center gap-3 sm:gap-4">
-          <span className="flex-1">
-            <MbSkeleton w="88%" h="2rem" radius={3} className="sm:h-[2.9rem]!" />
-          </span>
-          <span className="flex flex-col items-center gap-1 border-[2px] border-mb-rule px-2.5 py-1">
-            <MbSkeleton w="1.6rem" h="0.8rem" />
-            <MbSkeleton w="2.6rem" h="0.8rem" />
-          </span>
-        </div>
-        <span className="mb-5 block">
-          <MbSkeleton w="72%" h="0.82rem" />
-        </span>
-
-        {/* Form panel at its final geometry */}
-        <div className="mb-panel h-auto!">
-          <div className="flex flex-col gap-4 p-5">
-            <MbSkeleton w="100%" h={48} radius={4} />
-            <span className="flex items-center gap-3">
-              <span className="h-px flex-1 bg-mb-rule" />
-              <MbSkeleton w="11rem" h="0.62rem" />
-              <span className="h-px flex-1 bg-mb-rule" />
-            </span>
-            {[0, 1].map((i) => (
-              <span key={i} className="block">
-                <span className="mb-1 block">
-                  <MbSkeleton w="4.5rem" h="0.62rem" />
-                </span>
-                <MbSkeleton w="100%" h={48} radius={4} />
-              </span>
-            ))}
-            <MbSkeleton w="100%" h={52} radius={4} />
-            <span className="flex justify-center">
-              <MbSkeleton w="15rem" h="0.72rem" />
-            </span>
-          </div>
-        </div>
-
-        {/* Guest row */}
-        <div className="mt-5 flex items-center gap-3">
-          <MbSkeleton w={22} h={22} radius={3} />
-          <span className="flex-1">
-            <MbSkeleton w="100%" h={48} radius={4} />
-          </span>
-        </div>
-      </div>
-    </div>
-    <div className="hidden bg-mb-navy lg:block" aria-hidden="true" />
-  </div>
-);
 
 const LoginPageContent = () => {
   const {
@@ -163,9 +69,17 @@ const LoginPageContent = () => {
               height={60}
               priority
             />
+            {/* `--mb-coral-deep`. At 1.15rem the wordmark computes to
+                **18.4px**, which is 0.26px SHORT of WCAG's 18.66px bold
+                large-text threshold — so the 4.5:1 floor applies and
+                `--mb-coral` measured 3.26:1 on paper. The ink twin is 4.62:1.
+                Same fix as `Sidebar.tsx:86` and `AppShell.tsx`; a size that
+                lands within a quarter of a pixel of the threshold is exactly
+                why design language §1.3 makes the ink twin the rule rather
+                than "check whether it happens to be big enough". */}
             <span className="matchbook-display text-[1.15rem] font-bold leading-[1.05]">
               <span className="block text-mb-navy">Tournament</span>
-              <span className="block text-mb-coral">Tracker</span>
+              <span className="block text-mb-coral-deep">Tracker</span>
             </span>
           </Link>
 
@@ -182,7 +96,13 @@ const LoginPageContent = () => {
                 </>
               )}
             </h1>
-            <div className="flex flex-col items-center border-[2px] border-mb-coral px-2.5 py-1 text-mb-coral">
+            {/* The FRAME is coral, the CAPTION is navy — register D-10, already
+                settled for `MatchbookMasthead` and reproduced here because this
+                badge is hand-rolled rather than drawn by that component. The
+                captions measured **3.26:1 at 12.8px/700**; navy is 11.79:1.
+                Coral job 3 scopes the accent to "the emphasised title word +
+                the 2px badge frame" — the frame, never the caption. */}
+            <div className="flex flex-col items-center border-[2px] border-mb-coral px-2.5 py-1 text-mb-navy">
               <span className="matchbook-display text-[0.8rem] font-bold leading-tight tracking-[0.1em]">
                 All
               </span>
@@ -208,9 +128,15 @@ const LoginPageContent = () => {
                   {error}
                 </p>
               )}
+              {/* Frame in `--mb-green` (the mark colour), ink in
+                  `--mb-green-ink` (the letterform twin). Measured at 12.8px:
+                  `--mb-green` is **4.28:1** on `--mb-paper-bright`, under the
+                  4.5:1 floor; the twin is 5.13:1 and reads as the same green at
+                  label size. The error line above it needs no change —
+                  `--mb-red` measures 4.58:1 on bright. */}
               {notice && (
                 <p
-                  className="border-[1.5px] border-mb-green px-3 py-2 text-[0.8rem] font-medium text-mb-green"
+                  className="border-[1.5px] border-mb-green px-3 py-2 text-[0.8rem] font-medium text-mb-green-ink"
                   role="status"
                 >
                   {notice}
@@ -278,7 +204,11 @@ const LoginPageContent = () => {
                       type="button"
                       onClick={handleForgotPassword}
                       disabled={isSubmitting}
-                      className="matchbook-display text-[0.68rem] font-bold tracking-[0.1em] text-mb-navy hover:text-mb-coral"
+                      /* Hover ink is `--mb-coral-deep`: a hover state is still
+                         text, and at 10.88px/700 `--mb-coral` measured 3.55:1
+                         on paper-bright. The twin is 5.03:1. Same substitution
+                         `.mb-panel-link:hover` already made in `globals.css`. */
+                      className="matchbook-display text-[0.68rem] font-bold tracking-[0.1em] text-mb-navy hover:text-mb-coral-deep"
                     >
                       Forgot Password?
                     </button>
@@ -305,7 +235,10 @@ const LoginPageContent = () => {
                 <button
                   type="button"
                   onClick={toggleMode}
-                  className="font-bold text-mb-coral hover:underline"
+                  /* 11.52px/700 — `--mb-coral` measured 3.55:1 here, the twin
+                     5.03:1. This is the only way to reach sign-up, so it is
+                     the last control on the screen that may be hard to read. */
+                  className="font-bold text-mb-coral-deep hover:underline"
                 >
                   {isSignUp ? "Sign In" : "Sign Up"}
                 </button>
@@ -372,7 +305,11 @@ const LoginPageContent = () => {
 
           {/* Sample scoreline */}
           <div className="mt-6 flex items-center justify-center gap-3 rounded-[4px] border-[1.5px] border-mb-paper-bright bg-[rgba(255,250,241,0.06)] px-4 py-2.5">
-            <span className="matchbook-display rounded-[2px] bg-mb-coral px-1.5 py-0.5 text-[0.6rem] font-bold tracking-[0.14em] text-white">
+            {/* Fill is `--mb-coral-deep`, not `--mb-coral`: white on raw coral
+                measured **3.69:1 at 9.6px/700**, and this is the same pairing
+                `.mb-btn-coral` moved off in P0 (charter D-20). White on the
+                deep fill is 5.23:1. */}
+            <span className="matchbook-display rounded-[2px] bg-mb-coral-deep px-1.5 py-0.5 text-[0.6rem] font-bold tracking-[0.14em] text-white">
               Live
             </span>
             <Image src={crestPath("surge")} alt="" width={26} height={30} />
@@ -386,7 +323,15 @@ const LoginPageContent = () => {
               Tide
             </span>
             <Image src={crestPath("tide")} alt="" width={26} height={30} />
-            <span className="mb-kicker text-[rgba(255,250,241,0.7)]">• Final</span>
+            {/* NOT `.mb-kicker`. That class bakes `color: var(--mb-ink-muted)`
+                and is UNLAYERED, so it beats the `text-[rgba(...)]` utility
+                that was written beside it — the line rendered in ink-muted at
+                **2.44:1 on navy**, not in the paper-bright the author asked
+                for. The kicker step is composed explicitly instead, which is
+                what `.mb-kicker` would have to be overridden into anyway. */}
+            <span className="matchbook-display text-[0.62rem] font-semibold text-[rgba(255,250,241,0.75)]">
+              • Final
+            </span>
           </div>
 
           {/* Tagline */}
@@ -395,7 +340,16 @@ const LoginPageContent = () => {
             <MbIcon id="star" size={14} className="text-mb-coral" />
             <span className="h-[2px] flex-1 bg-mb-coral" />
           </div>
-          <p className="matchbook-display mt-3 text-center text-[1rem] font-bold tracking-[0.12em]">
+          {/* `1.2rem`, not `1rem` — the `display/stat-sm` step.
+              On navy, `--mb-coral` is 3.62:1: AA-LARGE only, which at 16px/700
+              is not large and failed the 4.5:1 floor. There is no ink twin
+              available here — design language §1.3 records `--mb-coral-deep`
+              on navy at 2.55:1, "a paper ink only" — so the remedy is the
+              other half of the same rule, the size gate: at **19.2px/700** the
+              3:1 large-text floor applies and 3.62:1 clears it. Keeping coral
+              also keeps §1's one-accent promise on a poster that already
+              carries the coral h2 word, the coral rules and the coral star. */}
+          <p className="matchbook-display mt-3 text-center text-[1.2rem] font-bold tracking-[0.12em]">
             Every Team. Every Match.{" "}
             <span className="text-mb-coral">One Record.</span>
           </p>

@@ -3,7 +3,7 @@ import { MbIcon } from "./MbIcon";
 import { MbButton, MbButtonLink } from "./Button";
 import { MbPanelHeadLink } from "./panels";
 import { MbTableScroll } from "./TableScroll";
-import { Crest, FormLetters, FormSquares, Panel, PanelEmpty, TeamMark } from "./Panel";
+import { Crest, FormLetters, Panel, PanelEmpty, TeamMark } from "./Panel";
 import { readinessColor, readinessInk } from "./teamStats";
 import type {
   MbFormRow,
@@ -31,6 +31,50 @@ const statusInk = (status: MbTeamRow["status"]) =>
 
 /** See `panels.tsx` — the rank column's figures must not reflow (HF-13). */
 const RANK_CELL = "matchbook-display text-center font-bold tabular-nums";
+
+/* ---------------------------------------------------------------------------
+   THE DIRECTORY'S MOBILE COLUMN SET
+
+   Eight columns do not fit a phone, and this table was not merely scrolling
+   inside `MbTableScroll` — it was widening the DOCUMENT. Measured at 390 with
+   the fixture, on load, `body.scrollWidth` against a 390 `clientWidth`:
+
+     table 602.4 (as shipped)                        → document 612  ✗
+     table 591.4 (the pre-P5 11px square footprint)  → document 601  ✗
+     table 562.8 (form run deleted outright)         → document 390  ✓
+     table 356   (Entered In + Next Match dropped)   → document 390  ✓
+
+   So the failure predates the form guide — the old squares overflowed by
+   +211px — and no width the form column could plausibly take would clear it:
+   the run is 11px of a 212px excess. What clears it is the two widest columns
+   not being drawn on a phone at all. `Entered In` holds a competition name and
+   `Next Match` a date, an opponent and a kick-off line; together they are 246px
+   of the 602.
+
+   They are not deleted, they ride the team cell as one `.mb-kicker` line — the
+   same route `MbStandingsTable` gives P / PF / PA / PD, down to the class. W,
+   L, PF–PA and the form guide all stay at every width, because those are what
+   the directory is read FOR.
+   --------------------------------------------------------------------------- */
+const REVEAL_ENTERED = "hidden md:table-cell";
+const REVEAL_NEXT = "hidden md:table-cell";
+
+/**
+ * The hidden columns as one line. Reads "Summer League +4 · Jul 31 vs Tide",
+ * and drops each half rather than printing an empty separator when a team has
+ * no competition or no fixture.
+ */
+const rowDigest = (row: MbTeamRow): string => {
+  const entered =
+    row.competitions.length === 0
+      ? null
+      : row.competitions[0] +
+        (row.competitions.length > 1 ? ` +${row.competitions.length - 1}` : "");
+  const next = row.nextMatch
+    ? `${row.nextMatch.date} ${row.nextMatch.isHome ? "vs" : "@"} ${row.nextMatch.opponent.name}`
+    : null;
+  return [entered, next].filter(Boolean).join(" · ");
+};
 
 /* ----------------------------- Team directory ----------------------------- */
 
@@ -93,7 +137,7 @@ export const TeamDirectoryPanel = ({
             <tr>
               <th className="w-8 text-center">#</th>
               <th>Team</th>
-              <th>Entered In</th>
+              <th className={REVEAL_ENTERED}>Entered In</th>
               <th className="text-center">W</th>
               <th className="text-center">L</th>
               {/* Was "Pts" over `${pointsFor}–${pointsAgainst}`. On `/` the
@@ -101,7 +145,7 @@ export const TeamDirectoryPanel = ({
                   quantities across two screens. See the note in
                   `panels.tsx`. */}
               <th className="text-center">PF–PA</th>
-              <th>Next Match</th>
+              <th className={REVEAL_NEXT}>Next Match</th>
               <th className="text-right">Status</th>
             </tr>
           </thead>
@@ -144,8 +188,17 @@ export const TeamDirectoryPanel = ({
                     >
                       <TeamMark team={row.team} />
                     </button>
+                    {/* The route to the two columns the breakpoints take away.
+                        They ride the team cell rather than needing a scroller
+                        or an accordion, which is the same answer
+                        `MbStandingsTable` gives for P / PF / PA / PD. Outside
+                        the `<button>` on purpose: the control's accessible name
+                        stays the team, not the team plus its next fixture. */}
+                    <span className="mb-kicker mt-0.5 block tabular-nums md:hidden">
+                      {rowDigest(row)}
+                    </span>
                   </td>
-                  <td className="text-[0.76rem] text-mb-ink-muted">
+                  <td className={`text-[0.76rem] text-mb-ink-muted ${REVEAL_ENTERED}`}>
                     {row.competitions.length === 0 ? (
                       <span className="text-mb-ink-muted/70">No competition</span>
                     ) : (
@@ -160,7 +213,7 @@ export const TeamDirectoryPanel = ({
                   <td className="text-center tabular-nums whitespace-nowrap">
                     {row.played === 0 ? "—" : `${row.pointsFor}–${row.pointsAgainst}`}
                   </td>
-                  <td className="text-[0.72rem] whitespace-nowrap">
+                  <td className={`text-[0.72rem] whitespace-nowrap ${REVEAL_NEXT}`}>
                     {row.nextMatch ? (
                       <>
                         <span className="matchbook-display font-bold tracking-[0.04em]">
@@ -187,8 +240,20 @@ export const TeamDirectoryPanel = ({
                     >
                       {row.status}
                     </span>
+                    {/* `warnTint` used to overwrite EVERY cell of this run
+                        with one gold (or red at nil wins) as soon as the team
+                        was at or under a 50% win rate — so the two rows whose
+                        form is most worth reading, APEX and FLARE in the
+                        fixture, showed five identical gold blocks and no
+                        per-match result at all. A form guide is the sequence;
+                        a mood ring over the sequence is not a summary of it,
+                        it is a deletion of it. The signal it was reaching for
+                        is already on the same row twice — the W and L columns
+                        four cells to the left — and now reads straight off the
+                        run itself, since a losing side sets as a light strip
+                        of outlined cells and a winning one as a dark strip. */}
                     <span className="mt-1 block">
-                      <FormSquares form={row.form} slots={5} warnTint />
+                      <FormLetters form={row.form} slots={5} />
                     </span>
                   </td>
                 </tr>
@@ -393,7 +458,9 @@ export const TeamProfilePanel = ({
             {row.form.length === 0 ? (
               <p className="text-[0.8rem] text-mb-ink-muted">No matches played yet</p>
             ) : (
-              <FormSquares form={row.form} slots={row.form.length} warnTint />
+              /* No `slots`: this is not a column, so nothing has to be
+                 reserved — the run is as wide as the matches played. */
+              <FormLetters form={row.form} />
             )}
           </div>
         </div>
@@ -449,11 +516,15 @@ export const UpcomingFixturesPanel = ({ items }: { items: MbScheduleItem[] }) =>
          mark's 3:1 floor applies and 3.26:1 clears. `SchedulePanel` on `/`
          already drew this list that way; this one did not, so the same object
          had two vocabularies across two routes. */
-      <div className="ml-3 flex flex-col divide-y divide-mb-rule border-l-2 border-mb-coral">
+      /* `grow` on the list and on every row — see the void-band note in
+         `panels.tsx`. This panel was the worst of the five: 166.3px of blank
+         paper in a 525px box at 1440, because the Team Profile beside it sets
+         the row height and five fixtures do not reach it. */
+      <div className="ml-3 flex grow flex-col divide-y divide-mb-rule border-l-2 border-mb-coral">
         {items.map((item, i) => (
           <div
             key={i}
-            className="grid grid-cols-[42px_56px_1fr] items-center gap-2 py-2 pl-3 pr-3"
+            className="grid grow grid-cols-[42px_56px_1fr] items-center gap-2 py-2 pl-3 pr-3"
           >
             <div>
               <p className="matchbook-display text-[0.64rem] font-bold leading-tight">
@@ -507,11 +578,11 @@ export const RecentFormPanel = ({ rows }: { rows: MbFormRow[] }) => (
         href="/quick-match"
       />
     ) : (
-      <div className="flex flex-col divide-y divide-mb-rule">
+      <div className="flex grow flex-col divide-y divide-mb-rule">
         {rows.map((row) => (
           <div
             key={row.team.name}
-            className="flex items-center justify-between gap-2 px-3 py-2.5"
+            className="flex grow items-center justify-between gap-2 px-3 py-2.5"
           >
             <TeamMark team={row.team} size={22} className="min-w-0 flex-1" />
             <FormLetters form={row.form} />
