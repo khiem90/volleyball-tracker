@@ -8,6 +8,7 @@ import { useCompetitionDetailPage } from "@/hooks/useCompetitionDetailPage";
 import { MatchbookShell } from "@/components/matchbook/AppShell";
 import { MbPageLoading } from "@/components/matchbook/Loading";
 import { MbBadge, type MbBadgeTone } from "@/components/matchbook/Badge";
+import { MbButton } from "@/components/matchbook/Button";
 import { MbLiveStatus } from "@/components/matchbook/LiveStatus";
 import { MbNotice } from "@/components/matchbook/Notice";
 import { MbShareAction } from "@/components/matchbook/ShareAction";
@@ -105,6 +106,36 @@ export default function CompetitionDetailPage() {
     );
   }, [competition, page.matches, page.competitionTeams]);
 
+  /**
+   * The masthead action set — and what coral is NOT allowed to be.
+   *
+   * Three things were wrong here and all three spent the screen's accent on
+   * something that is not the reader's job:
+   *
+   *   `Share live`      was the coral primary of a live console. Broadcasting
+   *                     is optional and secondary to the event, and the
+   *                     masthead renders its actions full-width below `sm`, so
+   *                     even in navy it read as a 358x48 slab between the title
+   *                     and the live score. It goes back to the outline it had
+   *                     before the redesign.
+   *   `End competition` was `tone: "coral"` — a terminal, irreversible action
+   *                     painted as the house CTA. Charter §2.3 assigns it to
+   *                     `MbDestructiveButton`, which `MbAction` cannot express
+   *                     (`MbActionTone = MbButtonVariant` has no danger
+   *                     member — register D-16). The quiet outline is the
+   *                     nearest honest thing the bar can render, and the
+   *                     destructive treatment lives where the commit actually
+   *                     happens: `EndCompetitionDialog` → `MbConfirm` →
+   *                     `MbDestructiveButton`.
+   *   `Start` on draft  rendered coral TWICE on one 1,129px page — here and in
+   *                     `PreviewPanel`'s footer. The footer keeps it: it sits
+   *                     directly under the preview of what Start will build,
+   *                     and on a phone it is in the bottom third where the
+   *                     thumb is (rubric 6.5). The masthead's copy goes navy.
+   *
+   * Net: coral does ONE job on this screen's own chrome — live — against a
+   * ceiling of two (rubric 3.4).
+   */
   const actions = useMemo<MbAction[]>(() => {
     if (!competition) return [];
     if (competition.status === "draft") {
@@ -112,7 +143,7 @@ export default function CompetitionDetailPage() {
         ? [
             {
               label: "Start competition",
-              tone: "coral",
+              tone: "navy",
               icon: "quick",
               onClick: () => page.setShowStartConfirm(true),
             },
@@ -125,7 +156,7 @@ export default function CompetitionDetailPage() {
           ? [
               {
                 label: "Share live",
-                tone: "coral",
+                tone: "outline-navy",
                 icon: "share",
                 onClick: () => page.setShowCreateSession(true),
               },
@@ -136,7 +167,7 @@ export default function CompetitionDetailPage() {
         ? [
             {
               label: "End competition",
-              tone: "coral",
+              tone: "outline-navy",
               icon: "check",
               onClick: () => page.setShowEndConfirm(true),
             },
@@ -219,10 +250,28 @@ export default function CompetitionDetailPage() {
         <div className="mb-4">
           {/* Never the raw provider string (invariant 28) — `SessionContext`
               exposes `error` and this screen was the only one that never read
-              it (brief S9). */}
+              it (brief S9). It also has to offer a way OUT: a `danger` state
+              with no control on it is a dead end (rubric 7.4). "Reconnect"
+              re-joins the same share code through the same context path that
+              failed, so it is a real retry rather than a page reload. */}
           <MbNotice tone="danger" title="Live sync stopped">
-            This device is no longer receiving updates for the shared session.
-            Everything below is still correct locally.
+            <div className="flex flex-col items-start gap-2">
+              <span>
+                This device is no longer receiving updates for the shared
+                session. Everything below is still correct locally.
+              </span>
+              {page.canRetrySync && (
+                <MbButton
+                  variant="outline-navy"
+                  size="sm"
+                  icon="refresh"
+                  loading={page.isRetryingSync}
+                  onClick={page.retrySync}
+                >
+                  Reconnect
+                </MbButton>
+              )}
+            </div>
           </MbNotice>
         </div>
       )}

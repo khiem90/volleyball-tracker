@@ -81,7 +81,9 @@ export const RotationConsole = ({
         label="Competition views"
       />
 
-      <div className="mb-enter-grid grid grid-cols-1 items-start gap-4 xl:grid-cols-12">
+      {/* No `items-start` — see `bodies.tsx`. Every row packs 7+5 and the two
+          short panels stack in one column rather than leaving it bare. */}
+      <div className="mb-enter-grid grid grid-cols-1 gap-4 xl:grid-cols-12">
         <div className={`xl:col-span-7 ${tabs.groupClass("courts")}`}>
           <CourtsPanel
             data={data}
@@ -98,16 +100,16 @@ export const RotationConsole = ({
           <EventStatusPanel data={data} status={status} />
         </div>
 
-        <div className={`xl:col-span-5 ${tabs.groupClass("queue")}`}>
-          <QueuePanel data={data} canEdit={canEdit} onReorder={onReorderQueue} />
-        </div>
-
         <div className={`xl:col-span-7 ${tabs.groupClass("leaderboard")}`}>
           <LeaderboardPanel
             data={data}
             primaryLabel={primaryLabel}
             caption={`${competitionName} leaderboard`}
           />
+        </div>
+
+        <div className={`xl:col-span-5 ${tabs.groupClass("queue")}`}>
+          <QueuePanel data={data} canEdit={canEdit} onReorder={onReorderQueue} />
         </div>
 
         <div className={`xl:col-span-7 ${tabs.groupClass("results")}`}>

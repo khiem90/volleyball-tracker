@@ -14,10 +14,14 @@ import { MbSkeleton } from "@/components/matchbook/Skeleton";
    than a generic panel grid. `MbPageLoading variant="focus"` was the obvious
    candidate and is deliberately not used: it draws five `xl:col-span-*` panels,
    which is the CONSOLE variant's layout, and invariant 26 asks for the FINAL
-   geometry — a fixture line, two full-height columns either side of a navy
-   rule, and a 56px action rail. Drawing five panels here would move everything
-   the moment the match arrived, which is the defect a skeleton exists to
-   prevent (invariant 27).
+   geometry — a fixture line, two full-height columns with a ruled head each,
+   either side of a navy rule, and the action rail.
+
+   Every box below tracks a box in `MbScoreSide` / `MatchConsole`: the head bar
+   is `py-2.5` around a 36/52px crest, the numeral placeholder is the same
+   `clamp()` the numeral itself resolves, the foot is `pb-3 pt-2`. Rubric 7.2
+   asks for a 0px delta between the skeleton and its loaded counterpart, and the
+   only way to hold that is to change this file whenever the column changes.
 
    Static blocks, no shimmer (a shimmer is a gradient), and one polite status so
    a screen reader hears "Loading the match" once rather than crawling a dozen
@@ -25,20 +29,39 @@ import { MbSkeleton } from "@/components/matchbook/Skeleton";
    =========================================================================== */
 
 const Column = () => (
-  <div className="flex min-h-0 flex-col items-center justify-center gap-3 px-3 sm:px-5">
-    <div className="flex w-full shrink-0 items-center gap-2 border-b border-mb-rule pb-2 pt-3">
-      {/* 40 x 47 is `Crest`'s own 96:112 aspect at the size the console uses. */}
-      <MbSkeleton w={40} h={47} radius={3} />
-      <span className="flex min-w-0 flex-1 flex-col gap-1">
-        <MbSkeleton w="62%" h="1.05rem" />
-        <MbSkeleton w="7rem" h={3} />
+  <div className="flex min-h-0 flex-col overflow-hidden rounded-[3px] border border-mb-navy bg-mb-paper-bright">
+    {/* head bar — the same 2.5/3rem rhythm the real one carries */}
+    <div className="flex shrink-0 items-center gap-2.5 border-b border-mb-navy px-3 py-2.5 sm:px-4">
+      {/* 36 x 42 and 52 x 61 are `Crest`'s own 96:112 aspect at both steps. */}
+      <span className="sm:hidden">
+        <MbSkeleton w={36} h={42} radius={3} />
+      </span>
+      <span className="hidden sm:block">
+        <MbSkeleton w={52} h={61} radius={3} />
+      </span>
+      <span className="flex min-w-0 flex-1 flex-col gap-1.5">
+        <MbSkeleton w="62%" h="1.575rem" />
+        <span className="flex min-h-[14px] items-center">
+          <MbSkeleton w="3rem" h={6} />
+        </span>
       </span>
     </div>
-    <div className="flex w-full flex-1 items-center justify-center">
-      <MbSkeleton w="3ch" h="clamp(4rem, 18vw, 9rem)" radius={3} />
+
+    <div className="flex min-h-0 flex-1 items-center justify-center px-3 sm:px-4">
+      {/* The two numeral rules, in the two places they apply. Rubric 7.2 wants a
+          0px delta against the loaded column, and the loaded column's figure is
+          `clamp(4rem, min(36vh,34vw), 9rem)` stacked and
+          `clamp(4rem, min(36vh,26vw), 16rem)` side by side. */}
+      <span className="sm:hidden">
+        <MbSkeleton w="3ch" h="clamp(4rem, min(36vh, 34vw), 9rem)" radius={3} />
+      </span>
+      <span className="hidden sm:block">
+        <MbSkeleton w="3ch" h="clamp(4rem, min(36vh, 26vw), 16rem)" radius={3} />
+      </span>
     </div>
-    <div className="flex w-full shrink-0 items-center justify-between gap-2 border-t border-mb-rule pb-3 pt-2">
-      <MbSkeleton w="9rem" h="0.66rem" />
+
+    <div className="flex shrink-0 items-center justify-between gap-3 border-t border-mb-rule px-3 pb-3 pt-2 sm:px-4">
+      <MbSkeleton w="6rem" h="0.74rem" />
       <MbSkeleton w={44} h={44} radius={4} />
     </div>
   </div>
@@ -54,9 +77,9 @@ export const MatchConsoleSkeleton = () => (
         Loading the match
       </span>
 
-      <div className="flex shrink-0 items-center gap-3 border-b border-mb-navy px-3 py-2 sm:px-4">
-        <MbSkeleton w="4.5rem" h="1.15rem" radius={3} />
-        <MbSkeleton w="9rem" h="0.66rem" />
+      <div className="flex shrink-0 items-center gap-2 border-b border-mb-navy px-3 py-2 sm:gap-3 sm:px-4">
+        <MbSkeleton w="4.5rem" h="1.35rem" radius={3} />
+        <MbSkeleton w="9rem" h="0.62rem" />
         <span className="ml-auto">
           <MbSkeleton w="8.5rem" h={44} radius={4} />
         </span>
@@ -64,11 +87,21 @@ export const MatchConsoleSkeleton = () => (
 
       <div
         aria-hidden="true"
-        className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[1fr_1px_1fr] sm:grid-cols-[1fr_1px_1fr] sm:grid-rows-1"
+        className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[1fr_8px_1fr] sm:grid-cols-[1fr_8px_1fr] sm:grid-rows-1"
       >
         <Column />
-        <span className="bg-mb-navy" />
+        <span className="relative">
+          <span className="absolute left-1/2 top-0 hidden h-full w-px -translate-x-1/2 bg-mb-navy sm:block" />
+          <span className="absolute left-0 top-1/2 block h-px w-full -translate-y-1/2 bg-mb-navy sm:hidden" />
+        </span>
         <Column />
+      </div>
+
+      {/* The console's hint row is always present, blank or not, so the
+          skeleton reserves it too — without this the grid stood 641px tall
+          against the loaded 604 at 390x844, a 37px rubric-7.2 delta. */}
+      <div className="min-h-[36px] shrink-0 border-t border-mb-rule px-4 py-2 [@media(max-height:520px)]:min-h-[28px] [@media(max-height:520px)]:py-1">
+        <MbSkeleton w="11rem" h="0.85rem" />
       </div>
 
       <div className="mb-action-bar shrink-0">

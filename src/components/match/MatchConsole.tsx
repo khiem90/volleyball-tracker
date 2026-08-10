@@ -6,7 +6,12 @@ import { MbActionBar, type MbAction } from "@/components/matchbook/ActionBar";
 import { MbBadge } from "@/components/matchbook/Badge";
 import { MbButton } from "@/components/matchbook/Button";
 import { MbLiveStatus, type MbLiveStatusValue } from "@/components/matchbook/LiveStatus";
-import { MbScoreSide, MbSetStrip, type MbSetCell } from "@/components/matchbook/ScoreSide";
+import {
+  MB_SHORT,
+  MbScoreSide,
+  MbSetStrip,
+  type MbSetCell,
+} from "@/components/matchbook/ScoreSide";
 import type { MbTeam } from "@/components/matchbook/types";
 import { RotateDeviceDialog } from "./RotateDeviceDialog";
 import { useCourtView } from "@/hooks/useCourtView";
@@ -22,16 +27,22 @@ import { useCourtView } from "@/hooks/useCourtView";
 
    ------------------------------------------------------------------- layout
 
-   A printed scorer's card, top to bottom:
+   A printed scorer's card, top to bottom, in EVERY orientation:
 
      navy strip     `MbEventBar`, drawn by `MatchbookShell variant="focus"`.
                     The way back, and the fixture's name.
      fixture line   paper, hairline-ruled: the live/final mark, the competition,
-                    the set strip, and the way into Court View.
+                    THE STAGE, the set strip, and the way into Court View. It is
+                    in normal flow at every size — see "the landscape strip".
      two columns    `MbScoreSide` either side of an 8px gutter with a navy
                     hairline down its centre. The gutter is a real grid track,
                     so it is one device in both axes, and its width is hard-fail
                     2's separation floor between two adjacent tap targets.
+     hint line      one short sentence, full width, wrapping. It is NOT the
+                    action bar's `status` slot: that slot is a single truncating
+                    line, and the only explanation the screen has for a disabled
+                    primary was losing 60px of itself at 320 ("Scores are level —
+                    a winner is needed before this can…").
      action rail    `MbActionBar`. THE PRIMARY ACTION IS HERE, never in the
                     header. The console this replaces put End Match in the top
                     strip as a 36px unlabelled red disc 8px from an equally
@@ -43,26 +54,25 @@ import { useCourtView } from "@/hooks/useCourtView";
    The console never scrolls, in either orientation. See `FRAME_H` below for
    how the frame is sized and for the one residual on iOS.
 
-   ------------------------------------------------------------- short screens
+   ------------------------------------------------------ the landscape strip
 
-   `@media (max-height: 520px)` is the landscape contract. Today the console
-   ignores it: the "Leading" pill overlaps the team name and both steppers are
-   clipped off the bottom edge at 844x390. Here the columns go side by side
-   whatever the width, and the fixture line lifts out of the flow into a
-   floating Court View key, which buys the columns back its whole height. The
-   four `.hide-landscape` helpers in `globals.css` are NOT used: they sit in
-   zone B, which nobody owns and which P4 may delete (design language §8), so
-   the query is written locally as the design language instructs.
+   `@media (max-height: 520px)` is the landscape contract, and the previous cut
+   answered it by lifting the fixture line OUT of the flow to `absolute right-2
+   top-2` so the columns could keep its height. That put an interactive control
+   INSIDE another interactive control's box: measured at 844x390, the Court View
+   key overlapped the away column's tap target by **106.5 x 44px**, and
+   `document.elementFromPoint` at its centre returned the key — so the top-right
+   corner of the away column silently opened Court View instead of awarding a
+   point. Hard fail 2, and invisible to `audit.mjs`, which is only ever run at
+   three portrait presets.
+
+   The strip is in flow now, at every size, and the column track is what gives
+   up the 46px. Nothing overlaps `.mb-console-column`, in either mode, at any
+   size. The height that buys it back comes out of the columns' own internals:
+   `MbScoreSide` moves its `±` keys inline beside the numeral and drops its foot
+   under the same query (see `MB_SHORT`), so nothing there depends on vertical
+   slack that a 390px-tall viewport does not have.
    =========================================================================== */
-
-/**
- * Every class below is written out in full, never interpolated.
- *
- * Tailwind generates a utility only when its literal text appears in a source
- * file, so `` `${SHORT}:hidden` `` compiles to nothing at all and the landscape
- * contract would silently not exist. A named constant holding the WHOLE class
- * string is scanned; a template that assembles one is not.
- */
 
 /**
  * The frame's height — the viewport, less the strip above it.
@@ -113,18 +123,17 @@ const FRAME_H =
    Escaping it means a portal to `<body>`, which would unmount and remount the
    whole console — and the fallback's real job is the wake lock and the
    landscape scoreboard layout, not the last 61 pixels. So the in-page mode is
-   the console's own box with `data-view="court"`: the fixture line lifts out,
-   the columns go side by side, the chrome collapses, the screen stays awake,
-   and the navy strip stays put with the way out on it. The notice says so in
-   as many words rather than pretending it is fullscreen.
+   the console's own box with `data-view="court"`: the chrome compacts, the
+   columns go side by side, the screen stays awake, and the navy strip stays put
+   with the way out on it. The notice says so in as many words rather than
+   pretending it is fullscreen.
+
+   Court View is landscape-only, so it and the landscape console resolve to the
+   SAME layout through the SAME media query — which is what brief §3.4 asks for
+   ("the console automatically adopts the Court View layout") and why there is
+   no second, JS-driven mechanism for it to drift against.
    --------------------------------------------------------------------------- */
 
-/* The landscape contract, `@media (max-height: 520px)`, written locally —
-   `globals.css`'s `.hide-landscape` family sits in zone B, which nobody owns
-   and which P4 may delete (design language §8). */
-const SHORT_HIDE = "[@media(max-height:520px)]:hidden";
-const SHORT_FLOAT =
-  "[@media(max-height:520px)]:absolute [@media(max-height:520px)]:right-2 [@media(max-height:520px)]:top-2 [@media(max-height:520px)]:border-0 [@media(max-height:520px)]:bg-transparent [@media(max-height:520px)]:p-0";
 /* The hairline inside the gutter. Two spans rather than one responsive span,
    because the axis follows the GRID's axis and the grid turns to columns on
    either of two conditions — `sm` (wide enough) or `max-height:520px`
@@ -135,9 +144,6 @@ const RULE_VERTICAL =
 const RULE_HORIZONTAL =
   "absolute left-0 top-1/2 block h-px w-full -translate-y-1/2 bg-mb-navy sm:hidden [@media(max-height:520px)]:hidden";
 
-const SHORT_SIDE_BY_SIDE =
-  "[@media(max-height:520px)]:grid-cols-[1fr_8px_1fr] [@media(max-height:520px)]:grid-rows-1";
-
 export interface MbConsoleSide {
   team: MbTeam;
   /** The team's own colour. Rendered as a bar, never as a ground (charter D-9). */
@@ -145,6 +151,10 @@ export interface MbConsoleSide {
   score: number;
   leading: boolean;
   won: boolean;
+  /** The other half of `won`. Muted name and numeral — the loss channel. */
+  lost: boolean;
+  /** Games taken in a series, or null outside one. */
+  games?: number | null;
 }
 
 export interface MbConsoleSeries {
@@ -164,6 +174,14 @@ export interface MatchConsoleProps {
   title: string;
   /** Competition name, or the guest note. */
   kicker?: string | null;
+  /**
+   * Where this fixture sits in its competition — "Semi-Finals", "Round 3",
+   * "Court 2". A bracket semifinal used to say nowhere on the screen that it
+   * was a semifinal, and a win-2-&-out match carried no series context at all.
+   */
+  stage?: string | null;
+  /** Rendered beside the Final mark. The date the result was recorded. */
+  completedOn?: string | null;
   back: { href?: string; onClick?: () => void; label: string };
   mode: MbConsoleMode;
   guest?: boolean;
@@ -178,7 +196,7 @@ export interface MatchConsoleProps {
   undoRestored?: boolean;
   canComplete?: boolean;
   endLabel?: string;
-  /** One short line in the rail. Tie explanations, the guest note, offline. */
+  /** One short line above the rail. Tie explanations, the guest note, offline. */
   hint?: ReactNode;
   /** `mode="final"` rail. */
   finalActions?: { secondary?: MbAction; primary: MbAction };
@@ -259,11 +277,18 @@ const setCells = (series: MbConsoleSeries): MbSetCell[] => {
   });
 };
 
+/** The hairline between two facts on one strip. Never a bullet character. */
+const Dot = () => (
+  <span aria-hidden="true" className="h-[3px] w-[3px] shrink-0 bg-mb-ink-muted" />
+);
+
 export const MatchConsole = ({
   home,
   away,
   title,
   kicker,
+  stage = null,
+  completedOn = null,
   back,
   mode,
   guest = false,
@@ -317,7 +342,6 @@ export const MatchConsole = ({
 
   const scoringRail = (
     <MbActionBar
-      status={railHint}
       secondary={{
         label: "Undo",
         icon: "undo",
@@ -336,11 +360,7 @@ export const MatchConsole = ({
   );
 
   const finalRail = finalActions && (
-    <MbActionBar
-      status={railHint}
-      secondary={finalActions.secondary}
-      primary={finalActions.primary}
-    />
+    <MbActionBar secondary={finalActions.secondary} primary={finalActions.primary} />
   );
 
   const watchRail = (
@@ -355,14 +375,52 @@ export const MatchConsole = ({
 
   const rail = mode === "scoring" ? scoringRail : mode === "final" ? finalRail : watchRail;
 
+  /* The one status mark, drawn one way. All three tones carry a frame so the
+     slot is visibly one object; the MARK inside it is what differs, which is
+     `Badge.tsx`'s deliberate greyscale channel (a pulsing disc, a circled tick,
+     a hollow disc) rather than three hues of one square. `solid` is permitted
+     for `live` alone — every other tone degrades to `framed` in the component,
+     because white-on-tone clears 4.5:1 only on `--mb-red`. */
+  const statusMark =
+    mode === "final" ? (
+      <MbBadge tone="final" variant="framed">
+        Final
+      </MbBadge>
+    ) : guest ? (
+      <MbBadge tone="guest" variant="framed">
+        Guest
+      </MbBadge>
+    ) : (
+      <MbBadge tone="live" variant="solid">
+        Live
+      </MbBadge>
+    );
+
+  /**
+   * WHAT THE NAVY STRIP SAYS, AND WHY IT IS NOT THE FIXTURE.
+   *
+   * `MbEventBar` truncates its title into whatever the strip has left after the
+   * Back control, and the fixture is two team names joined by " v " — measured
+   * at 87 characters with two 42-character names, losing 468px at 390 and 538px
+   * at 320, which rubric 4.4 counts as a truncated header. It was also the same
+   * two names the two 24px column heads carry sixty pixels below it.
+   *
+   * The strip says WHERE you are; the columns say WHO. The fixture survives in
+   * the `<h1>`, in the document title and in the route announcement, none of
+   * which is width-bound.
+   *
+   * The EVENT ALONE, not the event and the stage: "Spring Invitational · Round
+   * 1" lost 28px at 320 while "Spring Invitational" fits, and the stage is
+   * already on the paper strip directly underneath. A very long competition
+   * name still truncates here at 320 — `MbEventBar` truncates by construction —
+   * and that is W2's box.
+   */
+  const eventLine = kicker || "Match";
+
   /* -------------------------------------------------------------- render */
 
   return (
-    <MatchbookShell
-      variant="focus"
-      back={back}
-      masthead={{ title, shortTitle: title }}
-    >
+    <MatchbookShell variant="focus" back={back} masthead={{ title, shortTitle: eventLine }}>
       <div
         ref={frameRef}
         data-view={court.isCourtView ? "court" : "console"}
@@ -376,35 +434,59 @@ export const MatchConsole = ({
           {announcement}
         </p>
 
-        {/* ---------------------------------------------------- fixture line */}
+        {/* ---------------------------------------------------- fixture line
+
+            THE ENTRANCE IS AUTHORED HERE, not inherited. `.mb-enter-grid` on
+            the column grid staggered by `:nth-child`, and child 2 is the 8px
+            divider — so the authored order was column, hairline, column and the
+            away side arrived two steps behind the home side for no reason at
+            all. The order now says what it means: chrome settles, then BOTH
+            columns together (they are co-equal), then the rail. */}
         <div
-          className={`z-20 flex shrink-0 items-center gap-2 border-b border-mb-navy bg-mb-paper-bright px-3 py-2 sm:gap-3 sm:px-4 ${SHORT_FLOAT}`}
+          className={`mb-enter z-20 flex shrink-0 items-center gap-3 border-b border-mb-navy bg-mb-paper-bright px-3 py-2 sm:px-4 [@media(max-height:520px)]:py-1`}
         >
-          <span className={`flex min-w-0 flex-1 items-center gap-2 sm:gap-3 ${SHORT_HIDE}`}>
-            {mode === "final" ? (
-              <MbBadge tone="final">Final</MbBadge>
-            ) : guest ? (
-              <MbBadge tone="guest">Guest</MbBadge>
-            ) : (
-              <MbBadge tone="live" variant="solid">
-                Live
-              </MbBadge>
-            )}
+          <span className="flex min-w-0 flex-1 items-center gap-3">
+            {statusMark}
 
-            {kicker && (
-              <span className="mb-kicker min-w-0 truncate" title={kicker}>
-                {kicker}
-              </span>
-            )}
+            {/* ONE WRAPPER FOR THE WHOLE FIXTURE LINE, and it leaves as a unit
+                below `sm`.
 
-            {series && (
-              <span className="hidden min-w-0 items-center gap-2 sm:flex">
-                <span className="mb-kicker shrink-0">Best of {series.length}</span>
-                <MbSetStrip
-                  sets={setCells(series)}
-                  current={(series.game ?? 1)}
-                  tally={{ home: series.homeWins, away: series.awayWins }}
-                />
+                Two things forced that. The separating rules must never outlive
+                the facts they separate — the competition's name was left
+                trailing a bare dot on a phone once the stage moved down a row —
+                and at 320 the strip has a status mark and a 106px Court View
+                key on it, which left 99px for a 111px competition name and
+                truncated it by 12px. Below `sm` the strip carries the status
+                and the way into Court View and nothing else; every fact goes to
+                the row underneath, where it has the full width. */}
+            {(kicker || stage || completedOn || series) && (
+              <span className="hidden min-w-0 items-center gap-3 sm:flex">
+                {kicker && (
+                  <span className="mb-kicker min-w-0 truncate" title={kicker}>
+                    {kicker}
+                  </span>
+                )}
+                {stage && (
+                  <>
+                    <Dot />
+                    <span className="mb-kicker shrink-0">{stage}</span>
+                  </>
+                )}
+                {completedOn && (
+                  <>
+                    <Dot />
+                    <span className="mb-kicker shrink-0 tabular-nums" suppressHydrationWarning>
+                      {completedOn}
+                    </span>
+                  </>
+                )}
+                {series && (
+                  <>
+                    <Dot />
+                    <span className="mb-kicker shrink-0">Best of {series.length}</span>
+                    <MbSetStrip sets={setCells(series)} current={series.game ?? 1} />
+                  </>
+                )}
               </span>
             )}
           </span>
@@ -420,18 +502,42 @@ export const MatchConsole = ({
           </MbButton>
         </div>
 
-        {/* The series line gets its own row below `sm`, where it cannot share
-            one with the competition name without truncating both. */}
-        {series && (
-          <div
-            className={`flex shrink-0 items-center gap-2 border-b border-mb-rule px-3 py-1.5 sm:hidden ${SHORT_HIDE}`}
-          >
-            <span className="mb-kicker shrink-0">Best of {series.length}</span>
-            <MbSetStrip
-              sets={setCells(series)}
-              current={series.game ?? 1}
-              tally={{ home: series.homeWins, away: series.awayWins }}
-            />
+        {/* Below `sm` every fact about the fixture gets this row to itself, at
+            the full width of the card, because the strip above cannot hold the
+            competition's name AND a 106px Court View key inside 320px. It is
+            `sm:hidden`, and every landscape viewport is at least 640px wide, so
+            this row never appears in landscape and needs no height query of its
+            own. The competition truncates first because the stage, the date and
+            the series are each a handful of characters and are what the reader
+            cannot reconstruct from the navy strip. */}
+        {(kicker || stage || completedOn || series) && (
+          <div className="flex shrink-0 items-center gap-3 overflow-hidden border-b border-mb-rule px-3 py-1.5 sm:hidden">
+            {kicker && (
+              <span className="mb-kicker min-w-0 truncate" title={kicker}>
+                {kicker}
+              </span>
+            )}
+            {stage && (
+              <>
+                {kicker && <Dot />}
+                <span className="mb-kicker shrink-0">{stage}</span>
+              </>
+            )}
+            {completedOn && (
+              <>
+                {(kicker || stage) && <Dot />}
+                <span className="mb-kicker shrink-0 tabular-nums" suppressHydrationWarning>
+                  {completedOn}
+                </span>
+              </>
+            )}
+            {series && (
+              <>
+                {(kicker || stage || completedOn) && <Dot />}
+                <span className="mb-kicker shrink-0">Best of {series.length}</span>
+                <MbSetStrip sets={setCells(series)} current={series.game ?? 1} />
+              </>
+            )}
           </div>
         )}
 
@@ -443,7 +549,7 @@ export const MatchConsole = ({
 
         {/* -------------------------------------------------------- columns */}
         <div
-          className={`mb-enter-grid relative grid min-h-0 flex-1 grid-cols-1 grid-rows-[1fr_8px_1fr] sm:grid-cols-[1fr_8px_1fr] sm:grid-rows-1 ${SHORT_SIDE_BY_SIDE}`}
+          className={`relative grid min-h-0 flex-1 grid-cols-1 grid-rows-[1fr_8px_1fr] sm:grid-cols-[1fr_8px_1fr] sm:grid-rows-1 ${MB_SHORT.sideBySide}`}
         >
           <MbScoreSide
             team={home.team}
@@ -452,12 +558,13 @@ export const MatchConsole = ({
             side="home"
             leading={home.leading}
             won={home.won}
+            lost={home.lost}
+            games={home.games ?? null}
             canEdit={canEdit}
             viewOnly={viewOnly}
-            view={court.isCourtView ? "court" : "console"}
             onScore={onScore && (() => onScore("home"))}
             onAdjust={onAdjust && ((delta: number) => onAdjust("home", delta))}
-            className="min-h-0"
+            className="mb-enter mb-stagger-1 min-h-0"
           />
 
           {/* One divider, one device, in both axes — and an 8px track rather
@@ -480,19 +587,23 @@ export const MatchConsole = ({
             side="away"
             leading={away.leading}
             won={away.won}
+            lost={away.lost}
+            games={away.games ?? null}
             canEdit={canEdit}
             viewOnly={viewOnly}
-            view={court.isCourtView ? "court" : "console"}
             onScore={onScore && (() => onScore("away"))}
             onAdjust={onAdjust && ((delta: number) => onAdjust("away", delta))}
-            className="min-h-0"
+            className="mb-enter mb-stagger-1 min-h-0"
           />
 
           {stamp !== null && (
             <span
               /* Spans both tracks and sits on the rule, because the new game
-                 belongs to the match rather than to either side. */
-              className="mb-enter pointer-events-none absolute left-1/2 top-1/2 z-30 -translate-x-1/2 -translate-y-1/2 border-[1.5px] border-mb-coral bg-mb-paper-bright px-4 py-2"
+                 belongs to the match rather than to either side. Navy, not
+                 coral: coral has exactly two jobs on this screen — the primary
+                 action, and the score that just changed — and a third one on a
+                 passing stamp is what took the census to three. */
+              className="mb-enter pointer-events-none absolute left-1/2 top-1/2 z-30 -translate-x-1/2 -translate-y-1/2 border-[1.5px] border-mb-navy bg-mb-paper-bright px-4 py-2"
               role="status"
             >
               <span className="matchbook-display text-[1.1rem] font-bold tracking-[0.12em] text-mb-navy tabular-nums">
@@ -502,8 +613,31 @@ export const MatchConsole = ({
           )}
         </div>
 
+        {/* ----------------------------------------------------------- hint
+
+            THE ROW IS ALWAYS THERE, EVEN WHEN IT IS BLANK, and that is the
+            whole reason it is written this way. `undoRestored` flips from false
+            to true when the persisted stack has been consulted, one commit
+            after hydration, so a conditionally-rendered hint appeared out of
+            nowhere and pushed the columns and the rail up by 34px — measured
+            **CLS 0.0306 with one shift entry at 390x844**, against the 0.0000
+            the console had before the row existed. The tie explanation has the
+            same problem in the other direction: it would resize the columns on
+            the point that levelled the scores.
+
+            A blank ruled strip under two scoring columns is a caption line with
+            nothing to caption, which is what a printed card does anyway. A
+            reserved box is what invariant 27 asks for. It is reserved only where the flip can happen —
+            a scoring console — so a final, whose hint is fixed for the life of
+            the screen, does not spend 36px of paper saying nothing. */}
+        {(canEdit || railHint) && (
+          <p className="flex min-h-[36px] shrink-0 items-center border-t border-mb-rule bg-mb-paper-bright px-4 py-2 text-[0.85rem] leading-[1.35] text-mb-ink-muted [@media(max-height:520px)]:min-h-[28px] [@media(max-height:520px)]:py-1">
+            {railHint}
+          </p>
+        )}
+
         {/* ----------------------------------------------------------- rail */}
-        <div className="shrink-0">{rail}</div>
+        <div className="mb-enter mb-stagger-2 shrink-0">{rail}</div>
       </div>
 
       <RotateDeviceDialog open={rotatePrompt} onOpenChange={setRotatePrompt} />

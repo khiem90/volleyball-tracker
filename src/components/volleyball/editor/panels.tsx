@@ -128,7 +128,7 @@ export const ArrowsPanel = ({
         {arrows.map((role) => (
           <li key={role} className="flex items-center gap-2.5 py-1.5">
             <MbRoleChip role={role} row={backRow(role) ? "back" : "front"} size={26} />
-            <span className="matchbook-display min-w-0 flex-1 truncate text-[0.76rem] font-bold tracking-[0.04em]">
+            <span className="matchbook-display min-w-0 flex-1 truncate text-[0.78rem] font-bold tracking-[0.04em]">
               {role}
             </span>
             <MbIconButton

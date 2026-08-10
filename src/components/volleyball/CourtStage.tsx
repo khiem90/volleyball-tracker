@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useCallback } from "react";
+import { memo, useCallback, useState } from "react";
 import type {
   GameMode,
   MovementArrow,
@@ -71,6 +71,10 @@ export const CourtStage = memo(
     className = "",
   }: CourtStageProps) => {
     const reduce = useMbReducedMotion();
+    /* Which token is under a finger. Lifted here because the picture and the
+       target are siblings in two different layers: the button reports the
+       press, the disc draws it. */
+    const [pressedRole, setPressedRole] = useState<string | null>(null);
 
     const handleKeyDown = useCallback(
       (event: React.KeyboardEvent<HTMLDivElement>) => {
@@ -122,11 +126,11 @@ export const CourtStage = memo(
               key={player.role}
               role={player.role}
               label={player.label}
-              zone={player.zone}
               row={player.isBackRow ? "back" : "front"}
               x={coords.x}
               y={coords.y}
               size={tokenSize}
+              pressed={pressedRole === player.role}
               /* Rotation order, so the six tokens settle Z1 -> Z6 and the eye
                  can follow the clockwise move rather than seeing six things
                  teleport at once. */
@@ -151,6 +155,9 @@ export const CourtStage = memo(
           x={coords.x}
           y={coords.y}
           state={selectedPlayer === player.role ? "selected" : "idle"}
+          onPressedChange={(pressed) =>
+            setPressedRole(pressed ? player.role : null)
+          }
           onClick={() =>
             onPlayerSelect(selectedPlayer === player.role ? null : player.role)
           }

@@ -112,7 +112,7 @@ export const ShareFormationDialog = ({
             />
             <div className="flex flex-col gap-1.5 border-t border-mb-rule pt-3">
               <p className="mb-kicker">Stop sharing</p>
-              <p className="text-[0.76rem] leading-snug text-mb-ink-muted">
+              <p className="text-[0.78rem] leading-snug text-mb-ink-muted">
                 Making it private breaks the existing link. Sharing again creates
                 a new one.
               </p>

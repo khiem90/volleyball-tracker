@@ -16,9 +16,10 @@ The worktree has no `node_modules` and no `.env.local` of its own — both are r
 # 1. node_modules junction to the main checkout (Windows; ~1s, no npm install needed)
 New-Item -ItemType Junction -Path "C:\Dev\Tournament-Tracker\.claude\worktrees\app-redesign-features-cf1ebd\node_modules" -Target "C:\Dev\Tournament-Tracker\node_modules"
 
-# 2. env file — copy from main, then append the design-preview flag
+# 2. env file — copy from main, then append BOTH design-preview flags
 Copy-Item "C:\Dev\Tournament-Tracker\.env.local" "C:\Dev\Tournament-Tracker\.claude\worktrees\app-redesign-features-cf1ebd\.env.local"
 Add-Content "C:\Dev\Tournament-Tracker\.claude\worktrees\app-redesign-features-cf1ebd\.env.local" "`nNEXT_PUBLIC_DEV_PREVIEW_AUTH=1"
+Add-Content "C:\Dev\Tournament-Tracker\.claude\worktrees\app-redesign-features-cf1ebd\.env.local" "NEXT_PUBLIC_DEV_PREVIEW_SESSION=1"
 ```
 
 ```bash
@@ -39,6 +40,46 @@ machine. The bypass lives in `src/context/AuthContext.tsx` behind
 `process.env.NODE_ENV !== "production" && NEXT_PUBLIC_DEV_PREVIEW_AUTH === "1"`, so it compiles out of any
 production build. `.env.local` is gitignored and never ships. **Decide before the final merge whether to keep
 or strip it.**
+
+**Why the preview-session flag exists (charter Appendix A, D-12):** the three public share routes read
+Firestore, and the Firestore emulator needs Java too, so all three rendered their not-found state and W6
+could not verify a single pixel of them. `NEXT_PUBLIC_DEV_PREVIEW_SESSION=1` serves them from the harness
+fixture instead, declared exactly like the auth flag — `process.env.NODE_ENV !== "production" &&
+NEXT_PUBLIC_DEV_PREVIEW_SESSION === "1"`, which Turbopack inlines to a literal `false` in a production build,
+so every branch behind it is dead code the minifier deletes.
+
+| Where | What it serves |
+| --- | --- |
+| `src/lib/sessions.ts` | Sessions and summaries, projected from `localStorage["tournament-tracker-state"]` — the same `pw/fixture.json` `shot.mjs` seeds. An in-memory store, not a lookup table: writes fire the subscribers, so create / edit / end-session all round-trip |
+| `src/lib/volleyball/userFormations.ts` | The shared formation (built from the app's own `standard-5-1` template) and the signed-in user's archive, which starts **empty** |
+
+Rules it follows, and the traps behind them:
+
+- **Nothing contacts Firestore while the flag is on.** An unknown share code resolves to null locally, so the
+  not-found states are auditable rather than dressed-up network failures. It also removed the background
+  NET_FAIL noise from `/summaries` and `/tools/volleyball-rotations/my-formations`.
+- **The fixture is snapshotted at module load, never lazily.** `AppContext` truncates
+  `localStorage["tournament-tracker-state"]` during hydration — its load effect dispatches `LOAD_STATE` while
+  its save effect, committing in the same pass, writes the still-empty initial state back. The share routes'
+  first lookup lands inside that window; measured, it read 43 bytes. Seeding lazily produced an empty store
+  and "not found" on every code with the full fixture sitting right next to it.
+- **No `Date.now()` in seeded data.** Every timestamp comes from the fixture's fixed clock, so durations and
+  dates do not drift between screenshot runs.
+
+Roles, so the read-only and permission-denied paths are both reachable: `FRDAY2` and `SPRNG7` are owned by
+the preview uid (creator — edit affordances, End Session, Delete); `SUMMER`, `CTYCUP` and `GYMDAY` are owned
+by someone else (viewer — read-only). `/session/SUMMER?admin=dev-preview-admin-token` promotes viewer to
+admin through the real `applyAdminToken` → `validateAdminToken` path.
+
+Route ids are in `pw/routes.mjs`: `session-live-rr`, `session-live-bracket`, `session-live-admin`,
+`session-live-token`, `session-notfound`, `summary-creator`, `summary-viewer`, `summary-notfound`,
+`vb-shared-formation`, `vb-shared-notfound`. All ten load with **0 console errors and 0 load failures**; the
+two volleyball ones audit fully clean (already Matchbook), and the session/summary ones now report real
+baselines for W6 (58 / 10 / 9 / 58 / 2 / 85 / 67 / 2 violations at desktop) instead of being unmeasurable.
+
+**`NEXT_PUBLIC_FIREBASE_USE_EMULATOR=1` must stay in `.env.local`** — no emulator process is needed and
+nothing contacts it, but it is what makes `isFirebaseConfigured()` true without a real project, and
+`/session/[shareCode]` renders `SessionNotConfigured` when that is false.
 
 ---
 
@@ -74,7 +115,7 @@ Matchbook block at the top of `src/app/globals.css`.
 | P2a shell | W2 | not started |
 | P2b toast/loading/offline/layout, contexts | W2 + W8 | not started |
 | P3a create-flows, competition-detail, live-scoring, volleyball | W3 W4 W5 W7 | not started |
-| P3b public share | W6 | not started (gated on W4) |
+| P3b public share | W6 | not started (gated on W4). **Firestore blocker cleared** — all three share routes render populated locally behind `NEXT_PUBLIC_DEV_PREVIEW_SESSION=1` (§1), with viewer, creator and `?admin=` token variants and their not-found states as separate route ids |
 | P4 legacy deletion | W2 | not started |
 
 ### Gate 1r verdict — 57 / 65 / 66, three FAILs
@@ -480,6 +521,8 @@ The critics all scored `/dev/kit`. These are on the **shipped** screens and were
 | D-25 | **Motion property census**: 0 of 358 transitioning elements animate `transform`; 27 animate `opacity`; **324 animate paint properties and 7 animate `width`** (`.mb-meter > span`, layout-triggering). The dominant duration is **150ms**, which is not one of `--mb-dur-fast/base/slow` (120/180/280) — 7 hand-written `0.15s` in `globals.css` plus Tailwind's `transition-colors` default | C-D5 | Partly closed: the `:active` recipes landed this round (§8.1). The `width`→`transform: scaleX()` change and the duration sweep did not | W1 — next round | rubric **5.1** (`props.layout` must be 0) and **5.2** (every duration resolves to a token) |
 | D-26 | **`.mb-enter` / `.mb-stagger-1..6` have zero consumers outside the `/dev/kit` demo tile** — the documented entrance vocabulary is applied to 6 demo elements on a 20,900px page and to nothing shipped. The brief calls "alive" a first-class requirement | A-D5, C-D5 | Applying entrance choreography to shipped screens is a per-screen authoring decision (which elements, in what order), not a kit change — it belongs to each screen's conversion | W2 / P2a (shell) then W3–W7 / P3 (screens) | rubric **5.4** (`entrance.count > 0 and ordered`). Until a screen conversion applies it, D5 cannot reach 8 on that screen |
 | D-27 | **Type does not escalate on mobile** — `/dev/kit` renders 9.92px labels and 11.52px body at 390px, byte-identical to 1440px except the `h1` | C-D6 | A responsive type-scale decision for the design language, then a kit pass | design-language owner → W1 | rubric **6.6** |
+
+| D-40 | **`/summary/[shareCode]` names a champion its own standings rank 4th.** Newly visible now that the route renders populated (`/summary/SPRNG7`): the hero reads "Champion — Tide, 3 wins" while Final Standings puts Apex 1st and Tide 4th. Two different rankings, one screen. `computeSessionStats` (`sessions.ts`) picks the first team to reach the highest win count, with no tiebreak and iteration order deciding; `useSummaryPage.teamStats` sorts by wins **then point differential**. Four teams are on 3 wins in that fixture, so they disagree by construction, not by chance | found by W8 while building the preview fixture; no critic saw it, because the route could not render | It is a real data-correctness defect on a public, shareable screen, and the fix is a ranking decision (`rankTeams` in `lib/standings.ts` is the existing shared authority) that belongs with whoever rebuilds the screen — patching `computeSessionStats` now would collide with W6's rewrite | **W6 / P3b** | The two rankings must agree: the hero team is `rankTeams(...)[0]`, or the hero is dropped. Re-check on `/summary/SPRNG7`, where the disagreement is currently visible |
 
 #### Not-yet-built components — SCHEDULED ABSENCES, noted not scored (rubric §2.2)
 

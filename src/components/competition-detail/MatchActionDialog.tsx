@@ -133,7 +133,7 @@ export const MatchActionDialog = ({
             show={!!(live || done)}
             won={match.winnerId === match.homeTeamId}
           />
-          <span className="matchbook-display pt-10 text-[0.8rem] font-semibold text-mb-ink-muted">
+          <span className="matchbook-display pt-10 text-[0.74rem] font-bold tracking-[0.1em] text-mb-ink-muted">
             {live || done ? "–" : "vs"}
           </span>
           <Side
@@ -152,7 +152,7 @@ export const MatchActionDialog = ({
           </p>
         )}
 
-        <p className="text-center text-[0.82rem] leading-[1.5] text-mb-ink-muted">
+        <p className="text-center text-[0.85rem] leading-[1.5] text-mb-ink-muted">
           {done
             ? "Opening a finished match lets you review it and correct the score."
             : live

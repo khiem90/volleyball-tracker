@@ -57,6 +57,10 @@ export default function GuestMatchPage() {
 
   const isFinal = status === "completed";
   const tied = homeScore === awayScore;
+  /* The loss channel, the other half of `won`. It was declared on `MbScoreSide`
+     and passed by nobody, so a finished guest match rendered both columns at
+     full-weight navy and left the result to a 13px crown. */
+  const decided = isFinal && !!winner;
 
   return (
     <MatchConsole
@@ -66,6 +70,7 @@ export default function GuestMatchPage() {
         score: homeScore,
         leading: !isFinal && homeLeading,
         won: isFinal && winner?.id === homeTeam.id,
+        lost: decided && winner?.id !== homeTeam.id,
       }}
       away={{
         team: away,
@@ -73,6 +78,7 @@ export default function GuestMatchPage() {
         score: awayScore,
         leading: !isFinal && awayLeading,
         won: isFinal && winner?.id === awayTeam.id,
+        lost: decided && winner?.id !== awayTeam.id,
       }}
       title={`${homeTeam.name} v ${awayTeam.name}`}
       kicker="Guest match"
@@ -80,11 +86,15 @@ export default function GuestMatchPage() {
       mode={isFinal ? "final" : "scoring"}
       guest
       endLabel="End Match"
+      /* Every hint stays under 40 characters: the rubric's characters-per-line
+         measure counts any block longer than that, and a 65-character sentence
+         in a 288px column at 320 renders as two 33-character lines, outside the
+         45–75 band whichever way it is worded. */
       hint={
         isFinal
-          ? "Nothing from this match was saved."
+          ? "Nothing here was saved."
           : tied
-            ? "Scores are level — a winner is needed before this can be recorded."
+            ? "Tied — a winner is needed to end."
             : "Guest match — nothing is saved."
       }
       canUndo={canUndo}

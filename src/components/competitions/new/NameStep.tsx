@@ -28,13 +28,32 @@ import { FormatPreviewPanel } from "./FormatPreviewPanel";
    carries the FORMAT'S OWN mark: the old sheet rendered a generic trophy, so
    picking "Win 2 & Out" with a crown showed a trophy on the next screen.
 
-   `Format Preview` returns here as a full-width third panel. Two reasons, and
-   the second is the load-bearing one: it is the last chance to see what the
-   competition will actually contain before it exists, and without it the grid
-   left a measured 380x930 column of empty paper under `Event Details` at 1440
-   whenever `Advanced Settings` was the taller column. A 12-wide row under both
-   columns cannot produce that void at any width, because there is no second
-   column beside it to be shorter than.
+   `Format Preview` returns here as a third panel — it is the last chance to
+   see what the competition will actually contain before it exists.
+
+   ------------------------------------------------- where the preview sits
+
+   Whichever column is shorter ends in a void, and which column that is depends
+   entirely on `standingsPoints`. Measured panel heights at 1440:
+
+     format                Event Details   Advanced Settings   void
+     round_robin                 382             672           290px under EVENT DETAILS
+     single_elimination          382             369            13px
+     two_match_rotation          501             369           132px under ADVANCED
+
+   Only the standings-points formats have a right column tall enough to leave a
+   hole beside it, and only they have somewhere to put one: the preview moves
+   into the LEFT column under `Event Details` and `Advanced Settings` spans both
+   rows, which measures 724 against 672 — a 52px difference instead of 290. For
+   every other format the right column is already the short one, so the preview
+   stays a full-width third row where it cannot make that worse (moving it into
+   the left column unconditionally measured a 355px void on single elimination
+   and 521px on two-match rotation — a fixed layout is what produced the defect
+   in the first place, at the other end).
+
+   The DOM order is the same either way — details, preview, settings — so the
+   reading order runs down the left column and then into the right, and the
+   phone stacks name → what it will generate → optional configuration.
    =========================================================================== */
 
 const SCORING_OPTIONS = [
@@ -115,14 +134,23 @@ export const NameStep = ({
   previewBasis,
 }: NameStepProps) => {
   const meta = FORMAT_META[format];
-  const { series, courts, scoringMode } = meta.supports;
+  const { series, courts, scoringMode, standingsPoints } = meta.supports;
   const venue = advanced.venueName.trim() || "court";
   const playing = Math.min(numberOfCourts * 2, entryCount);
   const queued = Math.max(entryCount - playing, 0);
 
+  /* Whole class strings, never interpolated fragments: Tailwind compiles a
+     utility only when its literal text appears in a source file. */
+  const previewSpan = standingsPoints
+    ? "xl:col-span-7 xl:col-start-1 xl:row-start-2"
+    : "xl:col-span-12 xl:col-start-1 xl:row-start-2";
+  const settingsSpan = standingsPoints
+    ? "xl:col-span-5 xl:col-start-8 xl:row-start-1 xl:row-span-2"
+    : "xl:col-span-5 xl:col-start-8 xl:row-start-1";
+
   return (
     <>
-      <div className="xl:col-span-7">
+      <div className="xl:col-span-7 xl:col-start-1 xl:row-start-1">
         <Panel title="Event Details" icon="clipboard">
           <div className="flex flex-col gap-4 px-4 py-4">
             <MbField
@@ -146,7 +174,14 @@ export const NameStep = ({
                 maxLength={60}
                 autoComplete="off"
                 icon="compete"
-                autoFocus
+                /* No `autoFocus`. It was there and it never fired: the route's
+                   own step effect focuses the visually-hidden step heading on
+                   every advance, it runs after the input mounts, and the
+                   measured `document.activeElement` on arriving at step 3 was
+                   `H2#wizard-step-heading` every time. Two focus authorities
+                   racing is a bug whichever one wins, and the heading is the
+                   one that also announces the step; on a phone, autofocusing a
+                   text field would open the keyboard over the form as well. */
               />
             </MbField>
 
@@ -246,21 +281,21 @@ export const NameStep = ({
         </Panel>
       </div>
 
-      <div className="xl:col-span-5">
+      <div className={previewSpan}>
+        <FormatPreviewPanel
+          format={format}
+          lines={previewLines}
+          basis={previewBasis}
+        />
+      </div>
+
+      <div className={settingsSpan}>
         <AdvancedSettingsPanel
           format={format}
           settings={advanced}
           onChange={onAdvancedChange}
           onReset={onAdvancedReset}
           customised={advancedCustomised}
-        />
-      </div>
-
-      <div className="xl:col-span-12">
-        <FormatPreviewPanel
-          format={format}
-          lines={previewLines}
-          basis={previewBasis}
         />
       </div>
     </>

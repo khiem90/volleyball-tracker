@@ -17,17 +17,56 @@ import type { OverlapType } from "@/lib/volleyball/types";
      front / back   ONE crossbar   — a gate the back-row player may not cross
      left / right   TWO crossbars  — the middle must stay between its two sides
 
-   The help copy and the legend both name the mark by its shape ("one crossbar",
-   "two crossbars"), never by its hue, so the two agree in greyscale and on a
-   monochrome printout. Hue is retained as a *redundant* channel — navy for the
-   front/back rule and teal for the left/right one — because for a reader who
-   can see it, it is faster.
+   reinforced by the dash: a long `9 5` rule for front/back, a fine `3 4` dotting
+   for left/right. Two independent shape channels, both of which survive
+   desaturation and a monochrome printout.
+
+   TWO CORRECTIONS IN THIS PASS.
+
+   THE MARKS WERE THE FAINTEST INK ON THE COURT. Measured against
+   `--mb-court-fill` (#fffaf1): front/back navy at 0.35 alpha = 2.04:1,
+   left/right teal at 0.45 = 1.76:1, against a 3:1 floor for a non-text mark —
+   while the *suggestive* movement arrows sat at 3.38:1. The rule marks are FIVB
+   7.4: they are the analytic payload of the diagram, the "must", and they were
+   drawing lighter than the "may". One rest opacity now serves both families and
+   it is chosen so the rules are the heaviest ink in the overlay:
+
+     rest        0.72 -> 5.52:1     (arrows sit at 0.55 -> 3.38:1)
+     highlighted 1.00 -> 12.84:1
+
+   HUE IS NO LONGER A CHANNEL HERE, and that is the fix rather than a loss.
+   Teal at any legible alpha is 3.8:1 at best — it has no headroom on paper —
+   and it was already spending itself on the 3 m attack line, so `--mb-teal`
+   meant two different things on one drawing. Both families now draw in
+   `--mb-court-line-strong`; the dash and the crossbar count tell them apart,
+   which is what the legend and the help copy have always named. Teal is left to
+   mean exactly one thing on this court: the 3 m line.
+
+   `MbConstraintKey` draws from the same constant. It previously drew at
+   0.55/0.65 while the court drew at 0.35/0.45 — a key 44-57% stronger than the
+   thing it keys, which is the one failure that component exists to prevent.
    =========================================================================== */
 
 const HAIRLINE = { vectorEffect: "non-scaling-stroke" } as const;
 
 /** Half-length of a midpoint crossbar, in user units. */
 const TICK = 7;
+
+/**
+ * Ink strength of a rule mark. ONE table, read by the court and by the legend,
+ * so the two cannot drift. Measured against `--mb-court-fill`: 0.72 = 5.52:1,
+ * 1 = 12.84:1. The floor for a meaning-bearing non-text mark is 3:1.
+ */
+export const CONSTRAINT_INK = { rest: 0.72, highlighted: 1 } as const;
+
+/** Stroke weights. Emphasis is carried by WIDTH, since the ink is already full. */
+const CONSTRAINT_WIDTH = { rest: 1.5, highlighted: 3 } as const;
+
+/** The dash that names each family, shared by the court and the key. */
+export const CONSTRAINT_DASH: Record<OverlapType, string> = {
+  "front-back": "9 5",
+  "left-right": "3 4",
+};
 
 export interface MbConstraintLineProps {
   type: OverlapType;
@@ -42,11 +81,10 @@ export interface MbConstraintLineProps {
 export const MbConstraintLine = memo(
   ({ type, x1, y1, x2, y2, highlighted = false }: MbConstraintLineProps) => {
     const frontBack = type === "front-back";
-    const tone = frontBack
-      ? "var(--mb-court-line-strong)"
-      : "var(--mb-court-accent)";
-    const opacity = highlighted ? 0.95 : frontBack ? 0.35 : 0.45;
-    const width = highlighted ? 2.5 : 1.5;
+    const opacity = highlighted ? CONSTRAINT_INK.highlighted : CONSTRAINT_INK.rest;
+    const width = highlighted
+      ? CONSTRAINT_WIDTH.highlighted
+      : CONSTRAINT_WIDTH.rest;
 
     const dx = x2 - x1;
     const dy = y2 - y1;
@@ -78,9 +116,12 @@ export const MbConstraintLine = memo(
 
     return (
       <g
-        stroke={tone}
+        stroke="var(--mb-court-line-strong)"
         strokeOpacity={opacity}
-        style={{ transition: "stroke-opacity var(--mb-dur-fast) var(--mb-ease-out)" }}
+        style={{
+          transition:
+            "stroke-opacity var(--mb-dur-fast) var(--mb-ease-out), stroke-width var(--mb-dur-fast) var(--mb-ease-out)",
+        }}
       >
         <line
           x1={x1}
@@ -88,7 +129,7 @@ export const MbConstraintLine = memo(
           x2={x2}
           y2={y2}
           strokeWidth={width}
-          strokeDasharray={frontBack ? "9 5" : "3 4"}
+          strokeDasharray={CONSTRAINT_DASH[type]}
           style={HAIRLINE}
         />
         <g style={HAIRLINE}>
@@ -103,18 +144,26 @@ export const MbConstraintLine = memo(
 MbConstraintLine.displayName = "MbConstraintLine";
 
 /**
- * The legend's cut of the same two marks, drawn at row scale so the key and the
- * court cannot describe different things.
+ * The legend's cut of the same two marks, drawn at row scale from the SAME ink
+ * and dash constants the court uses, so the key and the drawing cannot describe
+ * different things.
  */
 export const MbConstraintKey = ({ type }: { type: OverlapType }) => {
   const frontBack = type === "front-back";
   return (
     <svg width={46} height={14} viewBox="0 0 46 14" aria-hidden="true" className="shrink-0">
       <g
-        stroke={frontBack ? "var(--mb-court-line-strong)" : "var(--mb-court-accent)"}
-        strokeOpacity={frontBack ? 0.55 : 0.65}
+        stroke="var(--mb-court-line-strong)"
+        strokeOpacity={CONSTRAINT_INK.rest}
       >
-        <line x1={1} y1={7} x2={45} y2={7} strokeWidth={1.5} strokeDasharray={frontBack ? "9 5" : "3 4"} />
+        <line
+          x1={1}
+          y1={7}
+          x2={45}
+          y2={7}
+          strokeWidth={CONSTRAINT_WIDTH.rest}
+          strokeDasharray={CONSTRAINT_DASH[type]}
+        />
         {frontBack ? (
           <line x1={23} y1={1} x2={23} y2={13} strokeWidth={2} strokeLinecap="round" />
         ) : (

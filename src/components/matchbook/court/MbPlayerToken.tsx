@@ -1,6 +1,13 @@
 "use client";
 
-import { memo, type CSSProperties, type KeyboardEvent, type PointerEvent, type ReactNode } from "react";
+import {
+  memo,
+  useCallback,
+  type CSSProperties,
+  type KeyboardEvent,
+  type PointerEvent,
+  type ReactNode,
+} from "react";
 import type { CourtZone, PlayerRole } from "@/lib/volleyball/types";
 import { PLAYER_INFO } from "@/lib/volleyball/constants";
 import { roleToken, roleChipStyle } from "@/lib/volleyball/roleTokens";
@@ -16,9 +23,9 @@ import { courtPercent } from "./MbCourt";
    that is drawn at whatever size the diagram needs.
 
    Identity is the LETTERFORM. Row is the FILL (navy disc = front, paper disc =
-   back). Setter and libero add a detached ring. Nothing here is carried by hue
-   alone, which is the whole difference from the seven-hue map it replaces —
-   see `lib/volleyball/roleTokens.ts` for the reasoning.
+   back). Setter and libero add a detached ring, solid and dashed respectively.
+   Nothing here is carried by hue alone, which is the whole difference from the
+   seven-hue map it replaces — see `lib/volleyball/roleTokens.ts`.
 
    MOTION. The token is positioned by a CSS `transform` on its group and moves
    by transitioning that transform, so a rotation change is one composited
@@ -26,6 +33,27 @@ import { courtPercent } from "./MbCourt";
    (invariants 40, 41, 51). While a finger is down, `instant` switches the
    transition off entirely: a drag that eases toward the pointer feels like lag,
    and the brief's whole ask for this screen is that dragging feel exact.
+
+   THE PRESS, in two layers. Before this the target was a transparent
+   `<button>` carrying no `mb-*` class, so the only rule that reached it was the
+   legacy `button:active { transform: scale(0.98) }` — applied to a fully
+   transparent element, which is zero visible feedback on the screen's
+   most-touched object.
+
+     1. The TARGET carries `.mb-row-hover`, the system's flush press recipe. It
+        is CSS, so the ink lands on the next frame whatever the state update
+        behind the tap costs — and on this screen the worst measured `click` is
+        512ms at 4x CPU throttle, so a press drawn from React state would have
+        arrived half a second late. This is the feedback that matters.
+     2. The drawn TOKEN additionally takes the RAISED recipe — a 1px sink,
+        landing in zero time, easing back over `--mb-dur-fast` — because a token
+        is a counter sitting ON the diagram, not a row that IS the page plane.
+        It rides a React prop and is therefore the slower of the two; it is a
+        refinement on top of the ink, never the only signal.
+
+   The sink lives on an INNER group. The outer group carries the position and a
+   `--mb-stagger` rotation-ordered settle delay; putting the press on the outer
+   group would make the release wait out that delay and feel mushy.
 
    `--mb-stagger` fractions give the six tokens a rotation-ordered settle so the
    eye can follow the clockwise move. No literal duration appears here; every
@@ -38,7 +66,6 @@ export interface MbPlayerTokenProps {
   role: PlayerRole;
   /** Rendered letterform. Usually the role, but the libero substitutes in place. */
   label: string;
-  zone?: CourtZone;
   row: "front" | "back";
   /** Centre, already in the fixed SVG user space. */
   x: number;
@@ -49,18 +76,31 @@ export interface MbPlayerTokenProps {
   instant?: boolean;
   /** 0-5, the token's place in the rotation-ordered settle. */
   order?: number;
-  /** Rendered under the disc when set — the editor's live x,y readout. */
+  /**
+   * Rendered under the disc when set — the editor's live x,y readout.
+   *
+   * The read-only court passes nothing. It used to print `Z{zone}`, which said
+   * the zone a THIRD time (the cell already carries a 36-unit watermark and the
+   * On Court ledger carries a `Zone n` column) and, being 15 units below a disc
+   * that constraint lines and arrows run through, was overlapped by a stroke in
+   * 10 of the 12 rotation x mode states.
+   */
   caption?: string;
+  /** Held down. Draws the raised recipe's 1px sink. */
+  pressed?: boolean;
 }
 
+/* Both literals are named steps of the display scale (design language §2.1):
+   19.2px = 1.2rem `display/stat-sm`, 11.52px = 0.72rem. They were 17 and 12,
+   which are between steps and were counted as off-scale sizes (rubric 1.2). */
 const LETTERFORM: CSSProperties = {
-  fontSize: 17,
+  fontSize: 19.2,
   fontWeight: 700,
   letterSpacing: "0.02em",
 };
 
 const CAPTION: CSSProperties = {
-  fontSize: 12,
+  fontSize: 11.52,
   fontWeight: 700,
   letterSpacing: "0.1em",
   fill: "var(--mb-ink-muted)",
@@ -73,7 +113,6 @@ export const MbPlayerToken = memo(
   ({
     role,
     label,
-    zone,
     row,
     x,
     y,
@@ -82,6 +121,7 @@ export const MbPlayerToken = memo(
     instant = false,
     order = 0,
     caption,
+    pressed = false,
   }: MbPlayerTokenProps) => {
     const token = roleToken(role, row === "back");
     const radius = size === "sm" ? TOKEN_RADIUS_SM : TOKEN_RADIUS;
@@ -104,77 +144,89 @@ export const MbPlayerToken = memo(
         data-mb-token={role}
         aria-hidden="true"
       >
-        {/* Selection. Coral, which is one of the three structural jobs
-            invariant 15 reserves for it: this is the selection rail, drawn
-            round instead of straight. No Gaussian glow — the old
-            `filter="url(#glow)"` was both a banned effect and a repaint. */}
-        {selected && (
-          <circle
-            r={radius + 7}
-            fill="none"
-            stroke="var(--mb-coral)"
-            strokeWidth={2.5}
-            style={HAIRLINE}
-          />
-        )}
-
-        {/* Drag. A second, dashed ring rather than a colour change, so the two
-            states can coexist and both survive greyscale. */}
-        {dragging && (
-          <circle
-            r={radius + 12}
-            fill="none"
-            stroke="var(--mb-court-line-strong)"
-            strokeWidth={1}
-            strokeDasharray="5 4"
-            strokeOpacity={0.55}
-            style={HAIRLINE}
-          />
-        )}
-
-        {/* The role mark: gold for the setter, a second hairline for the
-            libero. A shape, not a hue — see `roleTokens.ts`. */}
-        {token.ring && (
-          <circle
-            r={radius + token.ring.gap}
-            fill="none"
-            stroke={token.ring.tone}
-            strokeWidth={2}
-            style={HAIRLINE}
-          />
-        )}
-
-        <circle
-          r={radius}
-          fill={token.fill}
-          stroke={token.edge}
-          strokeWidth={2}
+        <g
+          /* THE PRESS — raised recipe. The sink is a transform, it lands in 0s
+             and eases back over --mb-dur-fast, exactly as `.mb-btn:active`
+             does. `--mb-press-shift` is the same token the CSS recipe reads. */
           style={{
-            ...HAIRLINE,
-            transform: dragging ? "scale(1.06)" : undefined,
-            transition: instant ? "none" : "transform var(--mb-dur-fast) var(--mb-ease-out)",
+            transform: pressed ? "translateY(var(--mb-press-shift))" : undefined,
+            transition: "transform var(--mb-dur-fast) var(--mb-ease-out)",
+            transitionDuration: pressed ? "0s" : undefined,
           }}
-        />
-
-        <text
-          className="matchbook-display select-none"
-          textAnchor="middle"
-          dominantBaseline="central"
-          style={{ ...LETTERFORM, fill: token.ink, pointerEvents: "none" }}
         >
-          {label}
-        </text>
+          {/* Selection. Coral, which is one of the three structural jobs
+              invariant 15 reserves for it: this is the selection rail, drawn
+              round instead of straight. No Gaussian glow — the old
+              `filter="url(#glow)"` was both a banned effect and a repaint. */}
+          {selected && (
+            <circle
+              r={radius + 10}
+              fill="none"
+              stroke="var(--mb-coral)"
+              strokeWidth={2.5}
+              style={HAIRLINE}
+            />
+          )}
 
-        {(caption || zone) && (
+          {/* Drag. A third ring, dotted rather than dashed so it cannot be read
+              as the libero's mark, at a radius outside both. */}
+          {dragging && (
+            <circle
+              r={radius + 15}
+              fill="none"
+              stroke="var(--mb-court-line-strong)"
+              strokeWidth={1}
+              strokeDasharray="2 5"
+              strokeOpacity={0.55}
+              style={HAIRLINE}
+            />
+          )}
+
+          {/* The role mark: a SOLID ring for the setter, a DASHED one for the
+              libero. A shape, not a hue — see `roleTokens.ts`. */}
+          {token.ring && (
+            <circle
+              r={radius + token.ring.gap}
+              fill="none"
+              stroke={token.ring.tone}
+              strokeWidth={2}
+              strokeDasharray={token.ring.dash ?? undefined}
+              style={HAIRLINE}
+            />
+          )}
+
+          <circle
+            r={radius}
+            fill={token.fill}
+            stroke={token.edge}
+            strokeWidth={2}
+            style={{
+              ...HAIRLINE,
+              transform: dragging ? "scale(1.06)" : undefined,
+              transition: instant ? "none" : "transform var(--mb-dur-fast) var(--mb-ease-out)",
+            }}
+          />
+
           <text
             className="matchbook-display select-none"
             textAnchor="middle"
-            y={radius + 15}
-            style={{ ...CAPTION, pointerEvents: "none" }}
+            dominantBaseline="central"
+            style={{ ...LETTERFORM, fill: token.ink, pointerEvents: "none" }}
           >
-            {caption ?? `Z${zone}`}
+            {label}
           </text>
-        )}
+
+          {caption && (
+            <text
+              className="matchbook-display select-none"
+              textAnchor="middle"
+              y={radius + 15}
+              style={{ ...CAPTION, pointerEvents: "none" }}
+            >
+              {caption}
+            </text>
+          )}
+        </g>
       </g>
     );
   }
@@ -195,6 +247,10 @@ MbPlayerToken.displayName = "MbPlayerToken";
  * invariant 40 allows only `transform` and `opacity` to animate — and it costs
  * nothing here, because the button is invisible: the eye follows the SVG disc,
  * which eases, while its target snaps. During a drag both are instant anyway.
+ *
+ * The press is reported UPWARD through `onPressedChange` so the drawn token can
+ * take the sink; the target itself inks at `--mb-tint-press` as well, because a
+ * thumb covering a 37px disc hides the sink and not the halo around it.
  */
 export const MbPlayerTarget = ({
   role,
@@ -205,6 +261,7 @@ export const MbPlayerTarget = ({
   y,
   state = "idle",
   ariaLabel,
+  onPressedChange,
   onPointerDown,
   onPointerMove,
   onPointerUp,
@@ -221,6 +278,8 @@ export const MbPlayerTarget = ({
   y: number;
   state?: MbPlayerTokenState;
   ariaLabel?: string;
+  /** Fires true on pointer/key down and false on up, cancel or blur. */
+  onPressedChange?: (pressed: boolean) => void;
   onPointerDown?: (event: PointerEvent<HTMLButtonElement>) => void;
   onPointerMove?: (event: PointerEvent<HTMLButtonElement>) => void;
   onPointerUp?: (event: PointerEvent<HTMLButtonElement>) => void;
@@ -236,18 +295,47 @@ export const MbPlayerTarget = ({
       zone ? `, zone ${zone}` : ""
     }`;
 
+  const press = useCallback(
+    (next: boolean) => onPressedChange?.(next),
+    [onPressedChange]
+  );
+
   return (
     <button
       type="button"
       aria-label={name}
+      title={name}
       aria-pressed={state === "selected" || state === "arrow-source"}
-      onPointerDown={onPointerDown}
+      onPointerDown={(event) => {
+        press(true);
+        onPointerDown?.(event);
+      }}
       onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
-      onPointerCancel={onPointerUp}
+      onPointerUp={(event) => {
+        press(false);
+        onPointerUp?.(event);
+      }}
+      onPointerCancel={(event) => {
+        press(false);
+        onPointerUp?.(event);
+      }}
+      onPointerLeave={() => press(false)}
+      onBlur={() => press(false)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") press(true);
+        onKeyDown?.(event);
+      }}
+      onKeyUp={() => press(false)}
       onClick={onClick}
-      onKeyDown={onKeyDown}
-      className="absolute rounded-full bg-transparent"
+      /* `.mb-row-hover` is the system's FLUSH press recipe and it is CSS, not
+         React: `:active` inks at `--mb-tint-press` in 0s and eases back over
+         `--mb-dur-fast`, so the feedback lands on the next frame no matter how
+         long the state update behind the tap takes. That matters here — the
+         worst measured `click` on this screen is 512ms at 4x CPU throttle, and
+         a press drawn from React state would have been 512ms late. Round,
+         because the button is; the hover wash also finally shows a mouse user
+         where the 52px target actually is. */
+      className="mb-row-hover absolute rounded-full"
       style={{
         ...position,
         width: TOKEN_HIT_PX,
@@ -269,6 +357,12 @@ export const MbPlayerTarget = ({
  * table row without an SVG wrapper. 999px is sanctioned for it: the radius
  * vocabulary reserves the full round for discs and swatches, and this is the
  * disc.
+ *
+ * The setter's and libero's detached rings come from `roleChipStyle`, which
+ * derives them from the same `roleToken` the court draws, as an `outline` —
+ * outside the border box, reserving no space. The chip used to draw the setter
+ * as a 3px `--mb-gold` BORDER, which is a different mark from the court's
+ * detached ring and measured 2.15:1 on paper.
  */
 export const MbRoleChip = ({
   role,
@@ -293,17 +387,23 @@ export const MbRoleChip = ({
       style={{
         width: size,
         height: size,
-        fontSize: size <= 26 ? "0.6rem" : "0.72rem",
-        letterSpacing: "0.02em",
-        borderWidth: role === "S" ? 3 : 1,
-        borderColor: role === "S" ? "var(--mb-gold)" : style.borderColor,
+        /* 0.62rem, not 0.6rem: `display/badge-label` is 0.6rem/700 at 0.22em
+           and the masthead prints one on this very screen, so a 0.6rem/700
+           chip at any other tracking is a collision (rubric 1.3). 0.08em is
+           then the tracking BOTH surviving pairs already carry — the bottom
+           bar's "More" at 0.62rem/700 and the account chip at 0.72rem/700 —
+           so the chip joins an existing step instead of opening a new one.
+           `textIndent` cancels the trailing letter-space so a centred
+           letterform stays centred in its disc. */
+        fontSize: size <= 26 ? "0.62rem" : "0.72rem",
+        letterSpacing: "0.08em",
+        textIndent: "0.08em",
+        borderWidth: 1,
+        borderColor: style.borderColor,
         background: style.background,
         color: style.color,
-        // The libero's second circle. An `outline` rather than a `box-shadow`:
-        // it draws outside the box without reserving space, and invariant 24
-        // permits no shadow but `--mb-panel-shadow`.
-        outline: role === "L" ? "1px solid var(--mb-court-line-strong)" : undefined,
-        outlineOffset: role === "L" ? 2 : undefined,
+        outline: style.outline,
+        outlineOffset: style.outlineOffset,
       }}
     >
       {children ?? label ?? role}

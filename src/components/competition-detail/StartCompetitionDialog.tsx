@@ -107,7 +107,7 @@ export const StartCompetitionDialog = ({
               Choose {playInTeamCount} {pluralise("team", playInTeamCount)} for the
               play-in {pluralise(matchWord, playInMatchCount)}
             </p>
-            <span className="matchbook-display shrink-0 text-[0.8rem] font-bold tabular-nums">
+            <span className="matchbook-display shrink-0 text-[0.78rem] font-bold tabular-nums">
               {selected.length}/{playInTeamCount}
             </span>
           </div>

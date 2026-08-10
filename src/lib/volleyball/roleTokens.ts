@@ -18,23 +18,44 @@ import type { PlayerRole } from "./types";
      front row   solid navy disc, paper letterform          (dark in greyscale)
      back row    paper disc, navy edge, navy letterform      (light in greyscale)
 
-   Two roles carry a second, non-colour mark on top of that:
+   Two roles carry a second mark on top of that, and — this is the correction —
+   both of them are a RING, told apart by whether it is SOLID or DASHED:
 
-     Setter      a detached gold ring — the system's "leader" mark, the same
-                 job `--mb-gold` does on a crown or a rank rail. The setter is
-                 the one player whose position changes what the rotation MEANS
-                 (front-row setter = 2 attackers), so it earns a mark.
-     Libero      a plum disc AND a detached hairline ring. Plum is the libero's
-                 one categorical job in this system, but plum and navy are close
-                 enough in luminance to be a colour-alone failure on their own,
-                 so the ring is what actually reads: a substituted player is the
-                 only token drawn with a second circle around it.
+     Setter      a solid detached ring.
+     Libero      a dashed detached ring. A dash is the drawing convention for
+                 "not permanently part of this", which is exactly what a
+                 substituted player is.
+
+   WHAT CHANGED IN THIS PASS, and why:
+
+     THE SETTER'S RING WAS 2.15:1. It drew in `--mb-gold`, which is a mark
+     colour for navy grounds; the detached ring sits OUTSIDE the disc, so its
+     ground is always `--mb-court-fill` (#fffaf1), where gold measures 2.15:1
+     against a 3:1 floor for a non-text mark. It now draws in `--mb-gold-ink`,
+     the same hue family darkened until it is legible on paper — 5.59:1 on
+     `--mb-court-fill`. Same mark, same meaning, over the floor by 1.9x.
+
+     THE LIBERO WAS A FILLED PLUM DISC UNDER A LEGEND THAT SAID "HOLLOW DISC —
+     BACK ROW". The libero IS back row, always, by rule; drawing it filled made
+     the diagram contradict its own key and made plum the last surviving
+     hue-as-identity in the file whose comment claimed they were gone. It is now
+     an ordinary back-row disc — paper fill, navy edge, navy letterform — and
+     the substitution is carried entirely by the dashed ring. `--mb-plum` is no
+     longer referenced here.
 
    `PLAYER_COLORS` is deliberately not imported here and is no longer read by
    anything that renders. It stays in `constants.ts` because `PlayerInfo.color`
    is part of a published type and `rotations.ts` still fills it; nothing paints
    with it.
    =========================================================================== */
+
+/** A detached ring outside the disc — the second, shape-borne channel. */
+export interface MbRoleRing {
+  tone: string;
+  gap: number;
+  /** SVG dash pattern, or `null` for a solid ring. */
+  dash: string | null;
+}
 
 /** How one token is drawn. Every value is a `--mb-*` reference. */
 export interface MbRoleToken {
@@ -48,15 +69,19 @@ export interface MbRoleToken {
    * A detached ring outside the disc, or `null`. The second channel: it is a
    * shape, so it survives desaturation and it survives a monochrome printout.
    */
-  ring: { tone: string; gap: number } | null;
+  ring: MbRoleRing | null;
   /** Long form for the accessible name — "front row" / "back row". */
   rowWord: "front row" | "back row";
 }
 
 const PAPER = "var(--mb-court-fill)";
 const NAVY = "var(--mb-court-line-strong)";
-const PLUM = "var(--mb-plum)";
-const GOLD = "var(--mb-gold)";
+/* Gold as INK, not as a mark on navy. Measured on --mb-court-fill (#fffaf1):
+   --mb-gold 2.15:1 (fails the 3:1 non-text floor), --mb-gold-ink 5.59:1. */
+const GOLD_INK = "var(--mb-gold-ink)";
+
+/** The libero's ring pattern. Distinct from the drag ring's `2 5` dotting. */
+export const LIBERO_RING_DASH = "5 4";
 
 /**
  * The token for one role in one row.
@@ -70,12 +95,13 @@ export const roleToken = (role: PlayerRole, isBackRow: boolean): MbRoleToken => 
   const rowWord = isBackRow ? "back row" : "front row";
 
   if (role === "L") {
+    // The libero is back row by rule, so it takes the back-row recipe exactly —
+    // the legend says "hollow disc — back row" and now the drawing agrees.
     return {
-      fill: PLUM,
-      ink: PAPER,
+      fill: PAPER,
+      ink: NAVY,
       edge: NAVY,
-      // Two circles: the mark that says "this is a substitution", not a hue.
-      ring: { tone: NAVY, gap: 5 },
+      ring: { tone: NAVY, gap: 5, dash: LIBERO_RING_DASH },
       rowWord: "back row",
     };
   }
@@ -86,7 +112,7 @@ export const roleToken = (role: PlayerRole, isBackRow: boolean): MbRoleToken => 
 
   return {
     ...base,
-    ring: role === "S" ? { tone: GOLD, gap: 5 } : null,
+    ring: role === "S" ? { tone: GOLD_INK, gap: 5, dash: null } : null,
     rowWord,
   };
 };
@@ -97,11 +123,32 @@ export const roleToken = (role: PlayerRole, isBackRow: boolean): MbRoleToken => 
  * a future change to the disc recipe cannot make the legend disagree with the
  * court, which is exactly how the old legend ended up drawing a hue the court
  * had already stopped using.
+ *
+ * The ring is returned as an `outline` because an outline draws OUTSIDE the
+ * border box without reserving space — the HTML equivalent of the SVG's
+ * detached circle — and because invariant 24 permits no shadow but
+ * `--mb-panel-shadow`.
  */
 export const roleChipStyle = (
   role: PlayerRole,
   isBackRow: boolean
-): { background: string; color: string; borderColor: string } => {
+): {
+  background: string;
+  color: string;
+  borderColor: string;
+  outline?: string;
+  outlineOffset?: number;
+} => {
   const token = roleToken(role, isBackRow);
-  return { background: token.fill, color: token.ink, borderColor: token.edge };
+  const base = {
+    background: token.fill,
+    color: token.ink,
+    borderColor: token.edge,
+  };
+  if (!token.ring) return base;
+  return {
+    ...base,
+    outline: `2px ${token.ring.dash ? "dashed" : "solid"} ${token.ring.tone}`,
+    outlineOffset: 2,
+  };
 };

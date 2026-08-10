@@ -5,13 +5,18 @@ import { useUserFormations } from "@/hooks/useUserFormations";
 import { useVolleyballRotation } from "@/hooks/useVolleyballRotation";
 import { getFormations } from "@/lib/volleyball/formations";
 import { getTemplateById, getTemplateFormations } from "@/lib/volleyball/templateFormations";
+import { BACK_ROW_ZONES } from "@/lib/volleyball/constants";
 import {
+  ROTATION_CHART,
+  buildPlayerPositions,
   getFrontRowAttackerCount,
   isSetterFrontRow,
 } from "@/lib/volleyball/rotations";
 import type {
+  CourtZone,
   FormationData,
   FormationType,
+  PlayerRole,
   UserFormation,
 } from "@/lib/volleyball/types";
 
@@ -47,6 +52,17 @@ export const isBuiltinFormation = (id: string): id is FormationType =>
 
 export type MbFormationCategory = "builtin" | "starter" | "custom";
 
+/**
+ * One dot on a formation's thumbnail, in the stored normalised space
+ * (x 0..1 left to right, y 0..1 end line to net).
+ */
+export interface MbFormationDot {
+  role: PlayerRole;
+  x: number;
+  y: number;
+  back: boolean;
+}
+
 export interface MbFormationChoice {
   category: MbFormationCategory;
   id: string;
@@ -56,7 +72,41 @@ export interface MbFormationChoice {
   tradeoffs?: string;
   /** `null` for built-ins, which are computed rather than stored. */
   data: FormationData | null;
+  /**
+   * Rotation 1, receiving — the frame that actually differs between formations,
+   * shaped for the card thumbnail. A serve-receive formation IS a shape, and
+   * describing five shapes in prose inside an app that owns a court renderer is
+   * the one thing this screen had no excuse for.
+   */
+  preview: MbFormationDot[];
 }
+
+/** Rotation-1 receive shape of a computed built-in. */
+const builtinPreview = (id: FormationType): MbFormationDot[] =>
+  buildPlayerPositions(1, "receiving", id, false).map((player) => ({
+    role: player.role,
+    x: player.position.x,
+    y: player.position.y,
+    back: player.isBackRow,
+  }));
+
+/** Rotation-1 receive shape of a stored formation (starter or saved). */
+const storedPreview = (data: FormationData | null): MbFormationDot[] => {
+  const spots = data?.receiving?.[1]?.roleSpots;
+  if (!spots) return [];
+  const dots: MbFormationDot[] = [];
+  for (const [zoneKey, role] of Object.entries(ROTATION_CHART[1])) {
+    const spot = spots[role];
+    if (!spot) continue;
+    dots.push({
+      role,
+      x: spot.x,
+      y: spot.y,
+      back: BACK_ROW_ZONES.includes(Number(zoneKey) as CourtZone),
+    });
+  }
+  return dots;
+};
 
 /* ------------------------------------------------------------------ designer */
 
@@ -76,6 +126,7 @@ export const useMatchbookDesigner = () => {
         description: formation.description,
         tradeoffs: formation.tradeoffs,
         data: null,
+        preview: builtinPreview(formation.id),
       })),
     []
   );
@@ -88,6 +139,7 @@ export const useMatchbookDesigner = () => {
         name: template.name,
         description: template.description,
         data: template.data,
+        preview: storedPreview(template.data),
       })),
     []
   );
@@ -100,6 +152,7 @@ export const useMatchbookDesigner = () => {
         name: formation.name,
         description: formation.description ?? "",
         data: formation.data,
+        preview: storedPreview(formation.data),
       })),
     [formations.formations]
   );
@@ -122,6 +175,7 @@ export const useMatchbookDesigner = () => {
         name: template.name,
         description: template.description,
         data: template.data,
+        preview: storedPreview(template.data),
       };
     }
     const saved = getById(selectedId);
@@ -132,6 +186,7 @@ export const useMatchbookDesigner = () => {
         name: saved.name,
         description: saved.description ?? "",
         data: saved.data,
+        preview: storedPreview(saved.data),
       };
     }
     // The selected document was deleted (possibly in another tab). Fall back

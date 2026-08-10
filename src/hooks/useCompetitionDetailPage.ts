@@ -45,6 +45,8 @@ export const useCompetitionDetailPage = () => {
     endSession,
     error: sessionError,
     getShareUrl,
+    session,
+    joinSession,
   } = useSession();
   const { isConfigured } = useAuth();
 
@@ -332,7 +334,30 @@ export const useCompetitionDetailPage = () => {
     ? state.teams.find((t) => t.id === competition.winnerId) ?? null
     : null;
 
+  /**
+   * The sync-error strip's action.
+   *
+   * "Live sync stopped" used to be a dead end — a `danger` notice with no
+   * control on it at all (rubric 7.4: an error state must offer a way out).
+   * `joinSession` re-subscribes to the same share code through the existing
+   * `SessionContext` path, which is exactly the operation that failed, so the
+   * retry is the real one rather than a page reload.
+   */
+  const [isRetryingSync, setIsRetryingSync] = useState(false);
+  const retrySync = useCallback(async () => {
+    if (!session?.shareCode || isRetryingSync) return;
+    setIsRetryingSync(true);
+    try {
+      await joinSession(session.shareCode);
+    } finally {
+      setIsRetryingSync(false);
+    }
+  }, [session?.shareCode, joinSession, isRetryingSync]);
+
   return {
+    canRetrySync: Boolean(session?.shareCode),
+    isRetryingSync,
+    retrySync,
     allTeams: state.teams,
     canEdit,
     competition,

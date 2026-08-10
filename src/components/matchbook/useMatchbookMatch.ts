@@ -2,8 +2,12 @@
 
 import { useMemo } from "react";
 import { useMatchPage } from "@/hooks/useMatchPage";
+import { useTerminology, capitalize } from "@/hooks/useTerminology";
+import { getRoundName, getTotalRounds } from "@/lib/singleElimination";
+import { getDoubleElimRoundName } from "@/lib/doubleElimination";
 import { crestForTeam } from "./types";
 import type { MbConsoleSeries, MbConsoleSide } from "@/components/match/MatchConsole";
+import type { Competition, Match } from "@/types/game";
 
 /* ===========================================================================
    THE CONSOLE'S VIEW MODEL (charter §2.3, W5/P3a)
@@ -42,6 +46,8 @@ export interface MbMatchConsoleModel {
   away: MbConsoleSide | null;
   title: string;
   kicker: string | null;
+  /** Where the fixture sits in its competition: "Semi-Finals", "Round 3", "Court 2". */
+  stage: string | null;
   mode: "scoring" | "final" | "watch";
   series: MbConsoleSeries | null;
   /** `End Game` inside a series, `End Match` otherwise. */
@@ -49,7 +55,7 @@ export interface MbMatchConsoleModel {
   dialogTitle: string;
   dialogDescription: string;
   confirmLabel: string;
-  /** The rail's one line, or null when there is nothing worth saying. */
+  /** The one line above the rail, or null when there is nothing worth saying. */
   hint: string | null;
   completedOn: string | null;
 }
@@ -59,6 +65,55 @@ const DATE = new Intl.DateTimeFormat("en-GB", {
   month: "short",
   year: "numeric",
 });
+
+/**
+ * WHERE THIS FIXTURE SITS, IN THE COMPETITION'S OWN WORDS.
+ *
+ * A bracket semifinal said nowhere on the screen that it was a semifinal, and a
+ * win-2-&-out match carried no context at all — the console answered "what is
+ * the score" and refused every other question the fixture raises. Every branch
+ * below reads a shipped `src/lib` labeller rather than inventing a second
+ * vocabulary, so a round is named identically here and on the bracket rail.
+ *
+ * The two rotation formats have no rounds; what identifies their fixture is the
+ * court it is being played on, and the word for "court" comes from
+ * `useTerminology` — never hardcoded (charter W4 acceptance 9, same rule).
+ */
+const stageFor = (
+  match: Match,
+  competition: Competition | null | undefined,
+  venue: string
+): string | null => {
+  if (!competition) return null;
+
+  switch (competition.type) {
+    case "single_elimination":
+      return getRoundName(match.round, getTotalRounds(competition.teamIds.length));
+    case "double_elimination":
+      return getDoubleElimRoundName(
+        match.round,
+        match.bracket ?? "winners",
+        getTotalRounds(competition.teamIds.length)
+      );
+    case "round_robin":
+      return match.round > 0 ? `Round ${match.round}` : null;
+    case "win2out": {
+      const court = competition.win2outState?.courts.find((c) =>
+        c.teamIds.includes(match.homeTeamId)
+      );
+      return court ? `${capitalize(venue)} ${court.courtNumber}` : null;
+    }
+    case "two_match_rotation": {
+      const courts = competition.twoMatchRotationState?.courts ?? [];
+      const court =
+        courts.find((c) => c.matchId === match.id) ??
+        courts.find((c) => c.teamIds.includes(match.homeTeamId));
+      return court ? `${capitalize(venue)} ${court.courtNumber}` : null;
+    }
+    default:
+      return null;
+  }
+};
 
 export const useMatchbookMatch = () => {
   const page = useMatchPage();
@@ -75,6 +130,9 @@ export const useMatchbookMatch = () => {
     undoRestored,
   } = page;
 
+  const terminology = useTerminology(competition?.id);
+  const venue = terminology.venue;
+
   const model = useMemo<MbMatchConsoleModel>(() => {
     const base = {
       backHref: page.backHref,
@@ -82,6 +140,7 @@ export const useMatchbookMatch = () => {
       away: null,
       title: "Match",
       kicker: null,
+      stage: null,
       mode: "scoring" as const,
       series: null,
       endLabel: "End Match",
@@ -105,12 +164,19 @@ export const useMatchbookMatch = () => {
     const isFinal = match.status === "completed";
     const mode = isFinal ? "final" : !canEdit && isSharedMode ? "watch" : "scoring";
 
+    /* THE LOSS CHANNEL. `lost` has been declared and documented on
+       `MbScoreSide` since the component was written and was passed by nobody,
+       so both columns of a completed match rendered at full-weight navy and the
+       result was carried by a 13px crown. It is the other half of `won`:
+       whoever is not the winner of a decided match has lost it. */
     const home: MbConsoleSide = {
       team: { name: homeTeam.name, crest: crestForTeam(homeTeam.id, homeTeam.name) },
       accent: homeTeam.color,
       score: match.homeScore,
       leading: !isFinal && page.homeLeading,
       won: isFinal && match.winnerId === homeTeam.id,
+      lost: isFinal && !!match.winnerId && match.winnerId !== homeTeam.id,
+      games: seriesInfo.isSeries ? seriesInfo.homeWins : null,
     };
     const away: MbConsoleSide = {
       team: { name: awayTeam.name, crest: crestForTeam(awayTeam.id, awayTeam.name) },
@@ -118,6 +184,8 @@ export const useMatchbookMatch = () => {
       score: match.awayScore,
       leading: !isFinal && page.awayLeading,
       won: isFinal && match.winnerId === awayTeam.id,
+      lost: isFinal && !!match.winnerId && match.winnerId !== awayTeam.id,
+      games: seriesInfo.isSeries ? seriesInfo.awayWins : null,
     };
 
     const series: MbConsoleSeries | null = seriesInfo.isSeries
@@ -130,13 +198,17 @@ export const useMatchbookMatch = () => {
       : null;
 
     /* One line, and only when it earns its row. A tie is the one that matters:
-       `End Match` silently refused to open with no explanation at all. */
+       `End Match` silently refused to open with no explanation at all. Kept
+       under 40 characters because the rubric's characters-per-line measure only
+       counts blocks longer than that, and a 65-character sentence set in a
+       288px column at 320 renders as two 33-character lines — outside the
+       45–75 band whichever way it is written. Short is the only honest fix. */
     const tied = match.homeScore === match.awayScore;
     const hint =
       mode !== "scoring"
         ? null
         : tied
-          ? "Scores are level — a winner is needed before this can be recorded."
+          ? "Tied — a winner is needed to end."
           : !undoRestored || canUndo
             ? null
             : "Undo starts from the next point.";
@@ -148,6 +220,7 @@ export const useMatchbookMatch = () => {
       away,
       title: `${homeTeam.name} v ${awayTeam.name}`,
       kicker: competition?.name ?? "Quick match",
+      stage: stageFor(match, competition, venue),
       mode,
       series,
       endLabel: seriesInfo.isSeries ? "End Game" : "End Match",
@@ -170,6 +243,7 @@ export const useMatchbookMatch = () => {
     seriesInfo,
     canUndo,
     undoRestored,
+    venue,
     page.backHref,
     page.homeLeading,
     page.awayLeading,

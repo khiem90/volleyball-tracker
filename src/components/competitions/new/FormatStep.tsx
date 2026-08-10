@@ -15,8 +15,26 @@ import { FormatPreviewPanel } from "./FormatPreviewPanel";
 
    Five `MbChoiceCard`s driven by `FORMAT_META` and a preview panel that
    answers the question the card grid cannot: "what will this actually
-   produce?". The preview is why the step is two columns rather than a lone
-   card grid floating in paper (invariant 52).
+   produce?".
+
+   ------------------------------------------------- why 12 over 12, not 7/5
+
+   The preview used to sit in an `xl:col-span-5` column beside the cards. The
+   brief (§3.1) offers both arrangements — "a right rail (`xl:col-span-4` on a
+   second row, **or stacked under the grid**)" — and the measurement chose
+   between them: at 1440 the card grid stood 900px tall and the preview 200px,
+   leaving a **473 x ~700px hole of paper** as the largest unshaped void on the
+   screen, which is D2's "whitespace is leftover, not shaped" exactly. Stacked,
+   there is no second column to be shorter than, at any width.
+
+   It also fixes the measure. In the 7-col column each card was 320px wide, so
+   every blurb set two short lines: the D1.4 census read **30-37 characters per
+   line** on five of them at both 1440 and 390, against the rubric's 45-75 band.
+   Across the full 12 the same card is 573px, the same sentence sets on one
+   line, and the census reads 57-68.
+
+   Step 3 already stacks `Format Preview` full-width under its two columns, so
+   this is the wizard agreeing with itself rather than a second idea.
    =========================================================================== */
 
 /**
@@ -61,13 +79,22 @@ export const FormatStep = ({
   previewBasis,
 }: FormatStepProps) => (
   <>
-    <div className="xl:col-span-7">
+    <div className="xl:col-span-12">
       <Panel
         title="Choose a Format"
         icon="compete"
         meta={<span className="mb-kicker tabular-nums">{formats.length} formats</span>}
       >
-        <div className="grid gap-3 p-4 sm:grid-cols-2">
+        {/* A second `.mb-enter-grid`, nested inside the step's.
+
+            The outer grid settles the two panels (0ms / 40ms); this one settles
+            the five choices behind them (0 / 40 / 80 / 120 / 160ms), which is
+            the one thing on the screen the user is here to do. Before it, the
+            entrance was two panels and nothing inside them: the D5.4 census
+            found `.mb-enter-grid` with exactly two children on a screen whose
+            content is five cards. The delays come from the stylesheet's own
+            `nth-child` ladder — this file names no timing. */}
+        <div className="mb-enter-grid grid gap-3 p-4 sm:grid-cols-2">
           {formats.map(({ type, meta, kicker }, index) => (
             <MbChoiceCard
               key={type}
@@ -93,7 +120,7 @@ export const FormatStep = ({
       </Panel>
     </div>
 
-    <div className="xl:col-span-5">
+    <div className="xl:col-span-12">
       <FormatPreviewPanel
         format={selectedFormat}
         lines={previewLines}

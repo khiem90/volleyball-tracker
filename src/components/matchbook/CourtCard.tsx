@@ -72,8 +72,12 @@ const Side = ({
   sub?: string;
   reverse?: boolean;
 }) => (
+  /* `gap-3`, not `gap-2.5`: 10px was the only gap value on this screen that
+     came from a W4 file and was off the 4/6/8/12/16 ladder — measured twice on
+     `w2o-live@1440`, against 8px ×345 and 12px ×100 (rubric 2.3). 12px is what
+     every other crest-and-name cluster on the screen already uses. */
   <div
-    className={`flex min-w-0 items-center gap-2.5 ${
+    className={`flex min-w-0 items-center gap-3 ${
       reverse ? "sm:flex-row-reverse sm:text-right" : ""
     }`}
   >

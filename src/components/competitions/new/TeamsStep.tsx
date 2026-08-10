@@ -170,15 +170,13 @@ export const TeamsStep = ({
   return (
     <>
       <div className="xl:col-span-7">
-        <Panel
-          title="Team Directory"
-          icon="teams"
-          meta={
-            <span className="mb-kicker tabular-nums">
-              {filtered.length} shown
-            </span>
-          }
-        >
+        {/* No `meta`.
+            It carried "{n} shown", and `MbSelectList`'s own header row already
+            reads "8 OF 8 SELECTED" over the same filtered set — so the panel
+            head, the list head and the commit bar's "8 teams selected" stated
+            one number three times in one 390px viewport. The list head is the
+            one that also carries the selection, so it keeps the job. */}
+        <Panel title="Team Directory" icon="teams">
           <MbSelectList
             items={filtered}
             getKey={(row) => row.id}

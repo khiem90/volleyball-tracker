@@ -81,9 +81,19 @@ const TBD = () => (
 const MARK_WON = "[&>span:last-child]:font-bold";
 const MARK_LOST = "[&>span:last-child]:text-mb-ink-muted";
 
-/** A seeding position, in the printed-draw box. */
-const Seed = ({ value }: { value: number }) => (
-  <span className="mb-seed-box shrink-0 px-1.5! py-0.5! matchbook-display text-[0.62rem] font-bold tracking-[0.06em] tabular-nums text-mb-ink-muted">
+/**
+ * A seeding position, in the printed-draw box — the ONE seed mark in the
+ * system, exported so the bracket cell, the rounds list and the draft preview
+ * cannot draw three.
+ *
+ * `.mb-seed-box` is `globals.css`'s own class and had zero consumers in the
+ * whole tree until these three; rubric 4's 8-anchor requires seeds and byes to
+ * be explicit. Fixed `w-[18px]` and centred, so a 1 and a 16 cost the layout
+ * the same and no name column moves between rounds — the same constant-box
+ * argument the score track makes below.
+ */
+export const MbSeedBox = ({ value }: { value: number }) => (
+  <span className="mb-seed-box w-[18px] shrink-0 justify-center px-0! py-0! matchbook-display text-[0.62rem] font-bold tracking-[0.06em] tabular-nums text-mb-ink-muted">
     {value}
   </span>
 );
@@ -158,7 +168,11 @@ const Measure = ({
       <span className={`flex-1 text-right ${side(homeWon)}`}>
         <Figures value={homeScore} />
       </span>
-      <span className="text-mb-ink-muted">–</span>
+      {/* `font-semibold`, not the inherited 400: at 0.9rem the digits already
+          run at 600 (loser) and 700 (winner), and a 400 dash between them was a
+          THIRD weight at the same size — one more step on a scale of 23 for a
+          glyph nobody reads as lighter. */}
+      <span className="font-semibold text-mb-ink-muted">–</span>
       <span className={`flex-1 text-left ${side(awayWon)}`}>
         <Figures value={awayScore} />
       </span>
@@ -230,7 +244,7 @@ export const MbMatchRow = ({
       >
         {home ? (
           <span className="flex min-w-0 items-center gap-1.5">
-            {homeSeed !== undefined && <Seed value={homeSeed} />}
+            {homeSeed !== undefined && <MbSeedBox value={homeSeed} />}
             <TeamMark team={home} size="sm" className={markClass(homeWon)} />
           </span>
         ) : (
@@ -245,7 +259,7 @@ export const MbMatchRow = ({
         />
         {away ? (
           <span className="flex min-w-0 flex-row-reverse items-center gap-1.5">
-            {awaySeed !== undefined && <Seed value={awaySeed} />}
+            {awaySeed !== undefined && <MbSeedBox value={awaySeed} />}
             <TeamMark team={away} size="sm" reverse className={markClass(awayWon)} />
           </span>
         ) : (

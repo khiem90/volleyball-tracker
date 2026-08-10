@@ -182,8 +182,14 @@ export interface MbNewCompetitionView {
    * is for.
    */
   statusLine: string;
-  /** The masthead's context line — what is being configured, not where. */
-  subLine: string;
+  /* No `subLine`.
+     It returned `format · n of m teams entered` for the masthead, and the step
+     rail already prints both halves of that ("FORMAT / Round Robin",
+     "TEAMS / 8 selected") — a fifth restatement of the wizard's own progress in
+     a viewport that had four. The masthead's line is now the library size,
+     which is what the wizard draws FROM rather than what it is doing, needs no
+     wizard state, and therefore survives the masthead being hoisted above the
+     step machine (route file, note 1). */
   primaryLabel: string;
   seriesOptions: { value: string; label: string }[];
   courtOptionList: { value: string; label: string }[];
@@ -343,11 +349,6 @@ export const useMatchbookNewCompetition = (
       : "Name the competition to create it";
   }, [step, selectedFormat, validation.message, entryCount, wizard.competitionName]);
 
-  const subLine = useMemo(() => {
-    if (!selectedFormat) return `${teams.length} teams in library`;
-    return `${FORMAT_META[selectedFormat].label} · ${entryCount} of ${teams.length} teams entered`;
-  }, [selectedFormat, entryCount, teams.length]);
-
   const seriesOptions = useMemo(
     () =>
       [1, 3, 5, 7].map((count) => ({
@@ -375,7 +376,6 @@ export const useMatchbookNewCompetition = (
     previewBasis,
     formatLabel: selectedFormat ? FORMAT_META[selectedFormat].label : "",
     statusLine,
-    subLine,
     primaryLabel: step === "details" ? "Create competition" : "Next",
     seriesOptions,
     courtOptionList,

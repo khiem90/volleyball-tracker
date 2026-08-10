@@ -77,9 +77,16 @@ const GRID_STEPS = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 
 const HAIRLINE = { vectorEffect: "non-scaling-stroke" } as const;
 
+/* Both SVG steps below are named steps of the display scale (design language
+   §2.1) rather than numbers picked to look right: 13.6 = 0.85rem, 36 = 2.25rem
+   `display/stat-xl`. They were 13 and 44, which sit between steps and were
+   counted as off-scale sizes (rubric 1.2). Dropping the watermark from 44 to 36
+   also buys back 8 units of clearance between the numeral and the discs that
+   stand on the centre line. */
+
 /** Reference labels, set at the kicker step and inked muted so they recede. */
 const EDGE_LABEL: CSSProperties = {
-  fontSize: 13,
+  fontSize: 13.6,
   fontWeight: 700,
   letterSpacing: "0.16em",
   fill: "var(--mb-ink-muted)",
@@ -87,9 +94,12 @@ const EDGE_LABEL: CSSProperties = {
 };
 
 const ZONE_NUMERAL: CSSProperties = {
-  fontSize: 44,
+  fontSize: 36,
   fontWeight: 700,
-  letterSpacing: "0.02em",
+  /* 0.01em, which is `display/masthead`'s tracking at the same 36px/700 the
+     mobile `<h1>` renders at. Left at `.matchbook-display`'s 0.02em default it
+     was a tracking collision with the page's own title (rubric 1.3). */
+  letterSpacing: "0.01em",
   fill: "var(--mb-court-line-strong)",
   fillOpacity: 0.1,
   fontVariantNumeric: "tabular-nums",

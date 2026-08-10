@@ -2,7 +2,7 @@
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MbIcon } from "./MbIcon";
-import { MbMatchRow } from "./MatchRow";
+import { MbMatchRow, MbSeedBox } from "./MatchRow";
 import { MbSegmented } from "./Segmented";
 import { Crest, PanelEmpty } from "./Panel";
 import {
@@ -102,12 +102,14 @@ export type {
 
 const CellSide = ({
   team,
+  seed,
   score,
   won,
   showScore,
   last = false,
 }: {
   team: MbTeam | null;
+  seed?: number;
   score: number;
   won: boolean;
   showScore: boolean;
@@ -118,6 +120,7 @@ const CellSide = ({
       last ? "" : "border-b border-mb-rule"
     }`}
   >
+    {seed !== undefined && <MbSeedBox value={seed} />}
     {team ? (
       <Crest team={team} size={15} />
     ) : (
@@ -190,12 +193,14 @@ const BracketCellInner = ({
     <>
       <CellSide
         team={cell.home}
+        seed={cell.homeSeed}
         score={cell.homeScore}
         won={cell.homeWon}
         showScore={showScore}
       />
       <CellSide
         team={cell.bye ? null : cell.away}
+        seed={cell.bye ? undefined : cell.awaySeed}
         score={cell.awayScore}
         won={cell.awayWon}
         showScore={showScore}
@@ -233,7 +238,9 @@ const BracketCellInner = ({
       type="button"
       onClick={() => onSelect?.(cell.id)}
       aria-label={`Open ${cell.home?.name ?? "TBD"} v ${cell.away?.name ?? "TBD"}`}
-      className={`${frame} transition-colors hover:bg-[var(--mb-tint-1)]`}
+      /* Explicit duration token: bare `transition-colors` carries Tailwind's
+         own 150ms, which is not `--mb-dur-fast/base/slow` (rubric 5.2). */
+      className={`${frame} transition-colors duration-[var(--mb-dur-fast)] ease-[var(--mb-ease-out)] hover:bg-[var(--mb-tint-1)]`}
       style={style}
     >
       {body}
@@ -311,12 +318,21 @@ const RailSection = ({
         structure at all and `DoubleBracket.tsx` used `<h3>` inconsistently. */}
     <div className="flex" style={{ gap: MB_COL_GAP }}>
       {layout.columns.map((column) => (
+        /* The round the event is standing on is marked by INVERTING its head —
+           navy ground, paper letterforms — so "where are we" survives a
+           desaturated capture. `PlacedColumn.current` shipped computed and
+           never drawn, so every round head read identically (rubric 4). */
         <h4
           key={column.label}
-          className="mb-kicker shrink-0 truncate pb-2"
+          className={`mb-kicker shrink-0 truncate ${
+            column.current
+              ? "mb-1 rounded-[2px] bg-mb-navy px-1.5 py-0.5 text-mb-paper-bright!"
+              : "pb-2"
+          }`}
           style={{ width: MB_CELL_W, scrollSnapAlign: "start" }}
         >
           {column.label}
+          {column.current ? " · Now" : ""}
         </h4>
       ))}
     </div>
@@ -399,11 +415,18 @@ const RoundsList = ({
         .map((round) => (
           <div key={`${section.id}-${round.label}`}>
             <p
-              className="mb-kicker border-b border-mb-rule bg-[var(--mb-band)] px-3 py-1.5 text-mb-navy"
+              className={`mb-kicker flex items-center justify-between gap-2 border-b px-3 py-1.5 ${
+                round.current
+                  ? "border-mb-navy bg-mb-navy text-mb-paper-bright!"
+                  : "border-mb-rule bg-[var(--mb-band)] text-mb-navy"
+              }`}
               style={{ boxShadow: `inset 3px 0 0 ${ACCENT_VAR[section.accent]}` }}
             >
-              {sections.length > 1 ? `${section.label} · ` : ""}
-              {round.label}
+              <span className="truncate">
+                {sections.length > 1 ? `${section.label} · ` : ""}
+                {round.label}
+              </span>
+              {round.current && <span className="shrink-0">Now playing</span>}
             </p>
             <div className="flex flex-col divide-y divide-mb-rule">
               {round.cells.map((cell) => (
@@ -412,6 +435,8 @@ const RoundsList = ({
                   label={cell.label}
                   home={cell.home}
                   away={cell.away}
+                  homeSeed={cell.homeSeed}
+                  awaySeed={cell.bye ? undefined : cell.awaySeed}
                   homeScore={cell.pending || cell.tbd ? undefined : cell.homeScore}
                   awayScore={cell.pending || cell.tbd ? undefined : cell.awayScore}
                   homeWon={cell.homeWon}

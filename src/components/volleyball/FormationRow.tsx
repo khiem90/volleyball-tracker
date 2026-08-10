@@ -22,6 +22,14 @@ import { MbMenu } from "@/components/matchbook/Menu";
 
    Visibility is a WORD plus a mark, never a hue alone: `SHARED` with a filled
    square, `PRIVATE` with a hollow one.
+
+   NOTHING HERE LIVES IN A `title` ATTRIBUTE ANY MORE. The description was
+   truncated with the full string in a tooltip and the tags past the third were
+   replaced by "+N more" with the rest in a second tooltip — on a touch screen
+   both are simply gone, which is hard fail 12. The description wraps and every
+   tag renders. Tags are one to three words each; a formation with nine of them
+   costs one extra line, and a row that is one line taller is a better failure
+   than a row whose content is unreachable.
    =========================================================================== */
 
 const VisibilityMark = ({ shared }: { shared: boolean }) => (
@@ -59,8 +67,6 @@ export const FormationRow = memo(
     pending = null,
   }: FormationRowProps) => {
     const tags = formation.tags ?? [];
-    const shown = tags.slice(0, 3);
-    const overflow = tags.length - shown.length;
 
     return (
       <div
@@ -69,19 +75,19 @@ export const FormationRow = memo(
       >
         <Link
           href={href}
-          className="mb-btn-touch mb-row-hover -mx-2 flex min-w-0 flex-col justify-center px-2 py-1"
+          className="mb-btn-touch mb-row-hover -mx-2 flex min-w-0 flex-col justify-center gap-0.5 px-2 py-1"
         >
-          <span className="matchbook-display truncate text-[0.85rem] font-bold tracking-[0.03em]">
+          <span className="matchbook-display text-[0.85rem] font-bold tracking-[0.03em] break-words">
             {formation.name}
           </span>
           {formation.description && (
-            <span className="truncate text-[0.7rem] text-mb-ink-muted" title={formation.description}>
+            <span className="text-[0.72rem] leading-snug text-mb-ink-muted break-words">
               {formation.description}
             </span>
           )}
-          {shown.length > 0 && (
-            <span className="mt-1 flex flex-wrap items-center gap-1">
-              {shown.map((tag) => (
+          {tags.length > 0 && (
+            <span className="mt-0.5 flex flex-wrap items-center gap-1">
+              {tags.map((tag) => (
                 <span
                   key={tag}
                   className="mb-kicker rounded-[2px] border border-mb-rule px-1.5 py-[1px]"
@@ -89,14 +95,6 @@ export const FormationRow = memo(
                   {tag}
                 </span>
               ))}
-              {overflow > 0 && (
-                <span
-                  className="mb-kicker tabular-nums"
-                  title={tags.slice(3).join(", ")}
-                >
-                  +{overflow} more
-                </span>
-              )}
             </span>
           )}
         </Link>

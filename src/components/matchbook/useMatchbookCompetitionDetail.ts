@@ -21,6 +21,7 @@ import type { MbStandingLine } from "./StandingsTable";
 import type {
   MbBracketCellData,
   MbBracketChampion,
+  MbBracketRound,
   MbBracketSection,
 } from "./BracketRail";
 
@@ -117,10 +118,15 @@ export interface MbConfigLine {
 export interface MbDraftPreview {
   /** One sentence: what pressing Start will generate. */
   summary: string;
-  /** Seeded round-one pairings for an elimination format. */
-  pairings: { home: MbTeam; away: MbTeam }[];
-  /** Teams that receive a first-round bye. */
-  byes: MbTeam[];
+  /**
+   * Seeded round-one pairings for an elimination format, with the seed each
+   * team enters on. The seeds are the whole point of a seeded draw — 1 v 8 and
+   * 4 v 5 are checkable, "Nova v Storm" is not (rubric 4, "seeds and byes are
+   * explicit") — and `.mb-seed-box` shipped with zero consumers until these.
+   */
+  pairings: { home: MbTeam; away: MbTeam; homeSeed: number; awaySeed: number }[];
+  /** Teams that receive a first-round bye, with the seed that earned it. */
+  byes: { team: MbTeam; seed: number }[];
   /** How many teams must be chosen for play-in matches (0 when none). */
   playInTeamCount: number;
 }
@@ -145,6 +151,12 @@ export interface MbCompetitionDetail {
   };
   standings: MbStandingLine[];
   scheduleRounds: MbScheduleRound[];
+  /**
+   * The `id` of the round being played, or of the next one to be played — the
+   * one round the schedule marks. Three identical `.mb-kicker` bands answered
+   * "where is this competition" with nothing (rubric 4).
+   */
+  currentRoundId: string | null;
   liveLines: MbMatchLine[];
   resultLines: MbMatchLine[];
   upcomingLines: MbMatchLine[];
@@ -228,15 +240,30 @@ export const createTeamRef = (teams: PersistentTeam[]) => {
   };
 };
 
+/**
+ * Seeds are drawn on the OPENING round only.
+ *
+ * A seed is the position a team entered the draw on; past round one a cell's
+ * occupants are whoever won, and printing "1" beside a semi-finalist would be
+ * stating a fact about a different match. Losers-bracket cells never carry one
+ * for the same reason. This is the rule that lets `.mb-seed-box` — shipped with
+ * zero consumers — mean exactly one thing wherever it appears.
+ */
+const seedsApply = (match: Match) =>
+  match.round === 1 && match.bracket !== "losers" && match.bracket !== "grand_finals";
+
 /** A `Match` as the rail's cell contract. Byes carry the advancing team only. */
 export const bracketCellFor = (
   match: Match,
-  refFor: (teamId: string) => MbTeam
+  refFor: (teamId: string) => MbTeam,
+  seedOf?: (teamId: string) => number | undefined
 ): MbBracketCellData => {
   const bye = match.isBye === true;
   const advancing = bye
     ? (match.winnerId ?? match.homeTeamId ?? match.awayTeamId)
     : null;
+  const seed = (teamId: string | undefined | null) =>
+    seedOf && teamId && seedsApply(match) ? seedOf(teamId) : undefined;
   return {
     id: match.id,
     label: `M${match.position}`,
@@ -248,6 +275,8 @@ export const bracketCellFor = (
         ? refFor(match.homeTeamId)
         : null,
     away: bye ? null : match.awayTeamId ? refFor(match.awayTeamId) : null,
+    homeSeed: seed(bye ? advancing : match.homeTeamId),
+    awaySeed: bye ? undefined : seed(match.awayTeamId),
     homeScore: match.homeScore,
     awayScore: match.awayScore,
     homeWon:
@@ -269,25 +298,38 @@ export interface MbBracketView {
   champion: MbBracketChampion | null;
 }
 
+/**
+ * Marks the one round a section is ON: the earliest round holding a live cell,
+ * else the earliest holding an unplayed one. `MbBracketRound.current` shipped
+ * declared and never written, so every round head read identically.
+ */
+const markCurrent = (rounds: MbBracketRound[]): MbBracketRound[] => {
+  let index = rounds.findIndex((r) => r.cells.some((c) => c.live));
+  if (index === -1)
+    index = rounds.findIndex((r) => r.cells.some((c) => c.pending && !c.bye));
+  return rounds.map((round, i) => ({ ...round, current: i === index }));
+};
+
 /** Single elimination: one section, one round per column, byes included. */
 export const buildSingleBracket = (
   matches: Match[],
   totalTeams: number,
-  refFor: (teamId: string) => MbTeam
+  refFor: (teamId: string) => MbTeam,
+  seedOf?: (teamId: string) => number | undefined
 ): MbBracketView => {
   const totalRounds = getTotalRounds(totalTeams);
-  const rounds = [];
+  const rounds: MbBracketRound[] = [];
   for (let round = 1; round <= totalRounds; round += 1) {
     rounds.push({
       label: getRoundName(round, totalRounds),
       cells: matches
         .filter((m) => m.round === round)
         .sort((a, b) => a.position - b.position)
-        .map((m) => bracketCellFor(m, refFor)),
+        .map((m) => bracketCellFor(m, refFor, seedOf)),
     });
   }
   const sections: MbBracketSection[] = rounds.some((r) => r.cells.length > 0)
-    ? [{ id: "main", label: "Bracket", accent: "teal", rounds }]
+    ? [{ id: "main", label: "Bracket", accent: "teal", rounds: markCurrent(rounds) }]
     : [];
 
   const final = matches.find(
@@ -309,7 +351,8 @@ export const buildSingleBracket = (
 export const buildDoubleBracket = (
   matches: Match[],
   totalTeams: number,
-  refFor: (teamId: string) => MbTeam
+  refFor: (teamId: string) => MbTeam,
+  seedOf?: (teamId: string) => number | undefined
 ): MbBracketView => {
   const winnersRounds = getTotalWinnersRounds(totalTeams);
   const structure = getDoubleBracketStructure(matches, totalTeams);
@@ -325,10 +368,11 @@ export const buildDoubleBracket = (
     const rounds = groups
       .map((group, i) => ({
         label: getDoubleElimRoundName(i + 1, side, winnersRounds),
-        cells: group.map((m) => bracketCellFor(m, refFor)),
+        cells: group.map((m) => bracketCellFor(m, refFor, seedOf)),
       }))
       .filter((round) => round.cells.length > 0);
-    if (rounds.length > 0) sections.push({ id, label, accent, rounds });
+    if (rounds.length > 0)
+      sections.push({ id, label, accent, rounds: markCurrent(rounds) });
   };
 
   push("winners", "Winners", "teal", structure.winners, "winners");
@@ -394,6 +438,7 @@ export const useMatchbookCompetitionDetail = ({
       counts: { completed: 0, live: 0, pending: 0, total: 0, pct: 0 },
       standings: [],
       scheduleRounds: [],
+      currentRoundId: null,
       liveLines: [],
       resultLines: [],
       upcomingLines: [],
@@ -522,6 +567,16 @@ export const useMatchbookCompetitionDetail = ({
         };
       });
 
+    /* Where the competition IS: the earliest round with something in play,
+       else the earliest with something still to play. Null once every round is
+       finished — a completed competition has no current round, and marking one
+       would be a lie the reader can check. */
+    const currentRoundId =
+      scheduleRounds.find((round) => round.lines.some((l) => l.status === "live"))
+        ?.id ??
+      scheduleRounds.find((round) => !round.complete)?.id ??
+      null;
+
     const liveLines = live.map((m) => lineFor(m, roundLabel(m)));
     const upcomingLines = pending
       .filter((m) => m.homeTeamId && m.awayTeamId)
@@ -533,11 +588,16 @@ export const useMatchbookCompetitionDetail = ({
 
     /* ---------------------------------------------------------- bracket */
 
+    /* `teamIds` IS the seeding order — the generators index straight into it —
+       so the seed is the position plus one, resolved once. */
+    const seedIndex = new Map(competition.teamIds.map((id, i) => [id, i + 1]));
+    const seedOf = (teamId: string) => seedIndex.get(teamId);
+
     const bracket: MbBracketView =
       competition.type === "single_elimination"
-        ? buildSingleBracket(matches, competition.teamIds.length, refFor)
+        ? buildSingleBracket(matches, competition.teamIds.length, refFor, seedOf)
         : competition.type === "double_elimination"
-          ? buildDoubleBracket(matches, competition.teamIds.length, refFor)
+          ? buildDoubleBracket(matches, competition.teamIds.length, refFor, seedOf)
           : { sections: [], champion: null };
     const { sections: bracketSections, champion } = bracket;
 
@@ -763,22 +823,40 @@ export const useMatchbookCompetitionDetail = ({
         draft.summary = `${perRound * rounds} ${pluralise(matchWord.one, perRound * rounds)} over ${rounds} rounds.`;
       } else if (isElimination) {
         const order = seededOrder(bracketSize);
-        const byeIds: string[] = [];
+        const byes: { team: MbTeam; seed: number }[] = [];
         for (let i = 0; i < order.length; i += 2) {
           const homeIndex = order[i];
           const awayIndex = order[i + 1];
           const home = competition.teamIds[homeIndex];
           const away = competition.teamIds[awayIndex];
-          if (home && away) draft.pairings.push({ home: refFor(home), away: refFor(away) });
-          else if (home) byeIds.push(home);
-          else if (away) byeIds.push(away);
+          /* The seed IS the index in `teamIds` + 1 — that array is the entry
+             order the generator seeds from, which is why `seededOrder` indexes
+             straight into it. Printing them is what makes the preview
+             checkable: 1 v 8, 4 v 5, and the byes named by seed. */
+          if (home && away)
+            draft.pairings.push({
+              home: refFor(home),
+              away: refFor(away),
+              homeSeed: homeIndex + 1,
+              awaySeed: awayIndex + 1,
+            });
+          else if (home) byes.push({ team: refFor(home), seed: homeIndex + 1 });
+          else if (away) byes.push({ team: refFor(away), seed: awayIndex + 1 });
         }
-        draft.byes = byeIds.map(refFor);
-        draft.playInTeamCount = byeIds.length > 0 ? teamCount - (bracketSize / 2) : 0;
+        draft.byes = byes;
+        draft.playInTeamCount = byes.length > 0 ? teamCount - (bracketSize / 2) : 0;
+        /* Round counts come from the app's own tested generators, never from a
+           second arithmetic. `Math.log2(bracketSize) + 1` told an 8-team draft
+           it would build "4 winners rounds"; `getTotalWinnersRounds(8)` — which
+           this file already calls at :314 to LABEL those rounds — says 3, and
+           the setup console's whole job is telling the truth about what Start
+           will do. The double-elimination match total is `2n - 1` (every team
+           but the champion loses twice, plus the grand final). */
+        const deMatches = Math.max(0, teamCount * 2 - 1);
         draft.summary =
           competition.type === "single_elimination"
-            ? `${bracketSize - 1} ${pluralise(matchWord.one, bracketSize - 1)} over ${Math.log2(bracketSize)} rounds.`
-            : `A winners bracket, a losers bracket and a grand final over ${Math.log2(bracketSize) + 1} winners rounds.`;
+            ? `${bracketSize - 1} ${pluralise(matchWord.one, bracketSize - 1)} over ${getTotalRounds(teamCount)} rounds.`
+            : `Up to ${deMatches} ${pluralise(matchWord.one, deMatches)}: a winners bracket over ${getTotalWinnersRounds(teamCount)} rounds, a losers bracket and a grand final.`;
       } else {
         const numCourts = competition.numberOfCourts ?? 1;
         draft.summary = `${numCourts} ${pluralise(venue.one, numCourts)} in play, ${Math.max(0, teamCount - numCourts * 2)} teams in the queue.`;
@@ -808,6 +886,7 @@ export const useMatchbookCompetitionDetail = ({
       },
       standings,
       scheduleRounds,
+      currentRoundId,
       liveLines,
       resultLines,
       upcomingLines,

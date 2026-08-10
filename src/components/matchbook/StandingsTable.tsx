@@ -230,7 +230,7 @@ export const MbStandingsTable = ({
             <tr key={line.teamId} className="mb-row-hover">
               <th
                 scope="row"
-                className="matchbook-display pl-3! text-center text-[0.8rem] font-bold tabular-nums"
+                className="matchbook-display pl-3! text-center text-[0.78rem] font-bold tabular-nums"
                 style={rail ? { boxShadow: `inset 3px 0 0 ${rail}` } : undefined}
               >
                 {/* A joint rank is marked with the printed-table "=" rather

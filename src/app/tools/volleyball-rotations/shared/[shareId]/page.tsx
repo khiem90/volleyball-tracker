@@ -222,7 +222,7 @@ export default function SharedFormationPage() {
       }}
     >
       {formation.description && (
-        <p className="mb-4 max-w-[62ch] text-[0.86rem] leading-[1.55] text-mb-ink-muted">
+        <p className="mb-4 max-w-[62ch] text-[0.85rem] leading-[1.55] text-mb-ink-muted">
           {formation.description}
         </p>
       )}
@@ -282,7 +282,7 @@ export default function SharedFormationPage() {
                     <MbIcon id="check" size={16} className="shrink-0 text-mb-green" />
                     Saved to your archive
                   </p>
-                  <p className="text-[0.76rem] leading-snug text-mb-ink-muted">
+                  <p className="text-[0.78rem] leading-snug text-mb-ink-muted">
                     Your copy is independent — editing it does not change the
                     original.
                   </p>

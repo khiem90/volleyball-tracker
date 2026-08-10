@@ -4,7 +4,7 @@ import { memo } from "react";
 import type { GameMode, RotationNumber } from "@/lib/volleyball/types";
 import { MbIconButton } from "@/components/matchbook/IconButton";
 import { MbSegmented } from "@/components/matchbook/Segmented";
-import { MbToggleChip } from "@/components/matchbook/form";
+import { MbToggle, MbToggleChip } from "@/components/matchbook/form";
 
 /* ===========================================================================
    THE CONTROL RAIL
@@ -152,24 +152,47 @@ export const RotationLayers = ({
      exact mis-tap the separation floor exists to stop, a page control and a nav
      control a finger-width apart. Full width, the chip and the bar cannot be
      confused for one another, and the target grows from 175px to 324px. */
-  <div className="grid grid-cols-1 gap-2 border-t border-mb-rule px-4 py-3 sm:grid-cols-3">
-    <MbToggleChip pressed={liberoActive} onPressedChange={onLiberoToggle} icon="swap">
-      Libero
-    </MbToggleChip>
-    <MbToggleChip
-      pressed={showOverlaps}
-      onPressedChange={onShowOverlapsChange}
-      icon={showOverlaps ? "eye" : "eye-off"}
-    >
-      Overlaps
-    </MbToggleChip>
-    <MbToggleChip
-      pressed={showArrows}
-      onPressedChange={onShowArrowsChange}
-      icon={showArrows ? "eye" : "eye-off"}
-    >
-      Arrows
-    </MbToggleChip>
+  /* LIBERO IS A SWITCH, THE OTHER TWO ARE CHIPS, and that split is the
+     charter's own (§2.3: `MbToggle` consumers "wizard allowTies, W7 libero";
+     `MbToggleChip` consumers "W7 overlaps/arrows"). It is also the right
+     reading. Libero changes WHO IS ON THE COURT — a fact about the formation —
+     while Overlaps and Arrows change what is DRAWN over it. A filled navy bar
+     for each of the three made the display options the heaviest ink in a panel
+     whose subject is the diagram above them; a switch row is a setting, and
+     it reads like one.
+
+     The rung stays `md` (48px) on the chips. `sm` (44px) was tried and at
+     390x844 it lifted the last chip to 6.4px above the fixed bottom bar's nav
+     row — four counted separation violations and a hard fail (HF-2). A 4px
+     rung is not worth a mis-tap between a page control and a nav control. */
+  <div className="border-t border-mb-rule">
+    <div className="border-b border-mb-rule px-3 py-1.5">
+      <MbToggle
+        checked={liberoActive}
+        onChange={onLiberoToggle}
+        label="Libero"
+        /* 35 characters. At 43 it set one 43-character line, which the measure
+           band (45-75) counts as a short line even though a switch hint is a
+           label, not prose (rubric 1.4). */
+        hint="Replaces the back-row middle blocker"
+      />
+    </div>
+    <div className="grid grid-cols-1 gap-2 px-4 py-3 sm:grid-cols-2">
+      <MbToggleChip
+        pressed={showOverlaps}
+        onPressedChange={onShowOverlapsChange}
+        icon={showOverlaps ? "eye" : "eye-off"}
+      >
+        Overlaps
+      </MbToggleChip>
+      <MbToggleChip
+        pressed={showArrows}
+        onPressedChange={onShowArrowsChange}
+        icon={showArrows ? "eye" : "eye-off"}
+      >
+        Arrows
+      </MbToggleChip>
+    </div>
   </div>
 );
 
@@ -191,16 +214,20 @@ export const RotationFacts = ({
   setterRow: "Front" | "Back";
   frontRowAttackers: number;
 }) => (
+  /* Tracking is 0.05em, not 0.04em. `display/panel-title` is 0.95rem/700 at
+     0.05em and it is on this very screen four times over; a second 0.95rem/700
+     at a different tracking is a tracking collision (rubric 1.3) — the same
+     size and weight saying two things about how it is set. */
   <dl className="grid grid-cols-2 border-t border-mb-rule">
     <div className="border-r border-mb-rule px-4 py-2">
       <dt className="mb-kicker">Setter</dt>
-      <dd className="matchbook-display text-[0.95rem] font-bold tracking-[0.04em]">
+      <dd className="matchbook-display text-[0.95rem] font-bold tracking-[0.05em]">
         {setterRow} Row
       </dd>
     </div>
     <div className="px-4 py-2">
       <dt className="mb-kicker">Front-Row Attackers</dt>
-      <dd className="matchbook-display text-[0.95rem] font-bold tracking-[0.04em] tabular-nums">
+      <dd className="matchbook-display text-[0.95rem] font-bold tracking-[0.05em] tabular-nums">
         {frontRowAttackers}
       </dd>
     </div>
