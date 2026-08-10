@@ -8,6 +8,7 @@ import {
   detectTeamSwap,
   calculateSwapUpdates,
 } from "@/lib/eliminationSwap";
+import { applyRotationCourtSwap } from "@/lib/rotationCourts";
 
 interface UseEditMatchDialogProps {
   match: Match | null;
@@ -143,70 +144,19 @@ export const useEditMatchDialog = ({
         );
         swapMatchTeams(updates);
 
-        // For rotation formats, also update the court state
+        /* For rotation formats the court state has to follow the match.
+           Two near-identical 30-line index-search blocks lived here — one per
+           state key — and both silently no-opped when either index was -1.
+           They are now `src/lib/rotationCourts.ts`, under test, with the
+           no-op made explicit as a `null` return (charter W4 acceptance 8). */
         if (isRotationFormat && competition) {
-          const swappingTeamId = swapInfo.swappingTeamId;
-          const displacedTeamId = swapInfo.displacedTeamId;
-
-          if (competition.win2outState) {
-            const courts = [...competition.win2outState.courts];
-            const currentCourtIndex = courts.findIndex(
-              (c) =>
-                c.teamIds.includes(match.homeTeamId) &&
-                c.teamIds.includes(match.awayTeamId)
-            );
-            const otherCourtIndex = courts.findIndex(
-              (c, idx) =>
-                c.teamIds.includes(swappingTeamId) && idx !== currentCourtIndex
-            );
-
-            if (currentCourtIndex !== -1 && otherCourtIndex !== -1) {
-              courts[currentCourtIndex] = {
-                ...courts[currentCourtIndex],
-                teamIds: [homeTeamId, awayTeamId] as [string, string],
-              };
-              const otherCourt = courts[otherCourtIndex];
-              courts[otherCourtIndex] = {
-                ...otherCourt,
-                teamIds: otherCourt.teamIds.map((id) =>
-                  id === swappingTeamId ? displacedTeamId : id
-                ) as [string, string],
-              };
-              updateCompetition({
-                ...competition,
-                win2outState: { ...competition.win2outState, courts },
-              });
-            }
-          } else if (competition.twoMatchRotationState) {
-            const courts = [...competition.twoMatchRotationState.courts];
-            const currentCourtIndex = courts.findIndex(
-              (c) =>
-                c.teamIds.includes(match.homeTeamId) &&
-                c.teamIds.includes(match.awayTeamId)
-            );
-            const otherCourtIndex = courts.findIndex(
-              (c, idx) =>
-                c.teamIds.includes(swappingTeamId) && idx !== currentCourtIndex
-            );
-
-            if (currentCourtIndex !== -1 && otherCourtIndex !== -1) {
-              courts[currentCourtIndex] = {
-                ...courts[currentCourtIndex],
-                teamIds: [homeTeamId, awayTeamId] as [string, string],
-              };
-              const otherCourt = courts[otherCourtIndex];
-              courts[otherCourtIndex] = {
-                ...otherCourt,
-                teamIds: otherCourt.teamIds.map((id) =>
-                  id === swappingTeamId ? displacedTeamId : id
-                ) as [string, string],
-              };
-              updateCompetition({
-                ...competition,
-                twoMatchRotationState: { ...competition.twoMatchRotationState, courts },
-              });
-            }
-          }
+          const updated = applyRotationCourtSwap(competition, {
+            currentTeamIds: [match.homeTeamId, match.awayTeamId],
+            nextTeamIds: [homeTeamId, awayTeamId],
+            swappingTeamId: swapInfo.swappingTeamId,
+            displacedTeamId: swapInfo.displacedTeamId,
+          });
+          if (updated) updateCompetition(updated);
         }
       } else {
         updateMatchTeams(match.id, homeTeamId, awayTeamId);

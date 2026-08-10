@@ -1,68 +1,36 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Loader2, Trash2 } from "lucide-react";
+import { MbConfirm } from "@/components/matchbook/Confirm";
 
-interface EndCompetitionDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  isEnding: boolean;
-  onEndCompetition: () => void;
-}
-
+/**
+ * Ending a shared competition completes it, closes the live session, removes
+ * the local copy and redirects to the generated summary. That is four
+ * irreversible things behind one word, so it goes through the one confirmation
+ * dialog in the system rather than a bespoke modal (Appendix B: `MbConfirm` is
+ * the only confirmation dialog).
+ */
 export const EndCompetitionDialog = ({
   open,
   onOpenChange,
   isEnding,
+  competitionName,
   onEndCompetition,
-}: EndCompetitionDialogProps) => (
-  <Dialog open={open} onOpenChange={onOpenChange}>
-    <DialogContent className="sm:max-w-md">
-      <DialogHeader>
-        <DialogTitle className="flex items-center gap-2 text-destructive">
-          <Trash2 className="w-5 h-5" />
-          End Competition?
-        </DialogTitle>
-        <DialogDescription>
-          This will end the competition and close the live session for all viewers. A summary will be created.
-        </DialogDescription>
-      </DialogHeader>
-      <DialogFooter className="flex-row gap-2 sm:gap-2">
-        <Button
-          variant="outline"
-          onClick={() => onOpenChange(false)}
-          disabled={isEnding}
-          className="flex-1"
-        >
-          Cancel
-        </Button>
-        <Button
-          variant="destructive"
-          onClick={onEndCompetition}
-          disabled={isEnding}
-          className="flex-1 gap-2"
-        >
-          {isEnding ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Ending...
-            </>
-          ) : (
-            <>
-              <Trash2 className="w-4 h-4" />
-              End Competition
-            </>
-          )}
-        </Button>
-      </DialogFooter>
-    </DialogContent>
-  </Dialog>
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  isEnding: boolean;
+  competitionName?: string;
+  onEndCompetition: () => void;
+}) => (
+  <MbConfirm
+    open={open}
+    onOpenChange={onOpenChange}
+    title="End this competition?"
+    verb="End"
+    subject={competitionName}
+    confirmLabel="End competition"
+    loading={isEnding}
+    onConfirm={onEndCompetition}
+    body="The live session closes for everyone watching, a permanent summary is generated, and this device stops tracking the event. Unplayed matches are left unplayed."
+  />
 );

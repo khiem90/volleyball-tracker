@@ -8,7 +8,7 @@ import type {
   FormationType,
   MovementArrow,
 } from './types';
-import { PLAYER_COLORS, ZONE_POSITIONS, BACK_ROW_ZONES } from './constants';
+import { ZONE_POSITIONS, BACK_ROW_ZONES } from './constants';
 
 /**
  * 5-1 Rotation Chart: Which role is in which zone for each rotation
@@ -440,7 +440,6 @@ export const buildPlayerPositions = (
       zone,
       position,
       label: actualRole,
-      color: PLAYER_COLORS[actualRole].bg,
       isBackRow,
       isLiberoEligible: isMiddleBlocker,
     });

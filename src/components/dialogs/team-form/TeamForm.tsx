@@ -1,19 +1,29 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { useMemo, useRef } from "react";
+import { useApp } from "@/context/AppContext";
+import { MbButton } from "@/components/matchbook/Button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { ColorPicker } from "@/components/ui/color-picker";
-import { Users, Check } from "lucide-react";
+  MbDialog,
+  MbDialogBody,
+  MbDialogFooter,
+} from "@/components/matchbook/Dialog";
+import { MbNotice } from "@/components/matchbook/Notice";
+import { TeamMark } from "@/components/matchbook/Panel";
+import { MbField, MbSwatchPicker, MbTextInput } from "@/components/matchbook/form";
+import { crestForTeam } from "@/components/matchbook/types";
 import type { PersistentTeam } from "@/types/game";
-import { useTeamForm } from "./useTeamForm";
+import { TEAM_NAME_MAX, useTeamForm } from "./useTeamForm";
+
+/* ===========================================================================
+   CREATE / EDIT TEAM
+
+   The preview is the change worth naming: it used to be a gradient banner with
+   a white initial on it — a mark the app renders nowhere else. It is now the
+   real matchbook team row, crest and all, so what the dialog shows is what
+   `/teams`, the wizard and every scoreboard will draw. The colour is a 3px bar
+   beside the crest and nothing more (charter D-9).
+   =========================================================================== */
 
 interface TeamFormProps {
   open: boolean;
@@ -23,12 +33,20 @@ interface TeamFormProps {
 }
 
 export const TeamForm = ({ open, onOpenChange, team, onSubmit }: TeamFormProps) => {
+  const { state } = useApp();
+  const nameRef = useRef<HTMLInputElement | null>(null);
+
+  const existingNames = useMemo(
+    () => state.teams.map((entry) => entry.name),
+    [state.teams]
+  );
+
   const {
     name,
     color,
     error,
     isEditing,
-    previewInitial,
+    duplicate,
     previewName,
     handleNameChange,
     handleColorSelect,
@@ -38,84 +56,95 @@ export const TeamForm = ({ open, onOpenChange, team, onSubmit }: TeamFormProps) 
   } = useTeamForm({
     open,
     team,
+    existingNames,
     onSubmit,
     onClose: () => onOpenChange(false),
   });
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Users className="w-5 h-5 text-primary" />
-            {isEditing ? "Edit Team" : "Create Team"}
-          </DialogTitle>
-          <DialogDescription>
-            {isEditing
-              ? "Update your team's name and color."
-              : "Give your team a name and pick a color."}
-          </DialogDescription>
-        </DialogHeader>
+  const previewTeam = {
+    name: previewName,
+    crest: crestForTeam(team?.id ?? previewName, previewName),
+  };
 
-        <div className="space-y-6 py-4">
-          {/* Team Name Input */}
-          <div className="space-y-2">
-            <label htmlFor="team-name" className="text-sm font-medium">
-              Team Name
-            </label>
-            <Input
+  return (
+    <MbDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={isEditing ? "Edit Team" : "Create Team"}
+      icon="teams"
+      kicker="Team directory"
+      size="md"
+      initialFocus={nameRef}
+    >
+      <MbDialogBody className="flex flex-col gap-5">
+        {/* A callback ref on the wrapper, not on `MbTextInput`: `form.tsx` is
+            W1's file and its inputs do not forward a ref. Refs attach in the
+            commit phase, ahead of Radix's own focus effect, so `initialFocus`
+            still lands on the field rather than on the close button. */}
+        <div
+          ref={(node) => {
+            nameRef.current = node?.querySelector("input") ?? null;
+          }}
+        >
+          <MbField
+            label="Team name"
+            htmlFor="team-name"
+            hint="Shown on every scoreboard and standings table."
+            error={error || undefined}
+            required
+          >
+            <MbTextInput
               id="team-name"
-              type="text"
               value={name}
               onChange={handleNameChange}
               onKeyDown={handleKeyDown}
-              placeholder="Enter team name"
-              autoFocus
-              className={error ? "border-destructive focus-visible:ring-destructive" : ""}
-              aria-describedby={error ? "team-name-error" : undefined}
-              aria-invalid={!!error}
+              placeholder="e.g. Coastal Comets"
+              maxLength={TEAM_NAME_MAX}
+              autoComplete="off"
+              icon="teams"
             />
-            {error && (
-              <p id="team-name-error" className="text-sm text-destructive">
-                {error}
-              </p>
-            )}
-          </div>
-
-          {/* Color Picker */}
-          <div className="space-y-3">
-            <label className="text-sm font-medium">Team Color</label>
-            <ColorPicker value={color} onChange={handleColorSelect} />
-          </div>
-
-          {/* Preview */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Preview</label>
-            <div
-              className="p-4 rounded-xl flex items-center gap-4 text-white relative overflow-hidden"
-              style={{
-                background: `linear-gradient(135deg, ${color}, ${color}cc)`,
-              }}
-            >
-              <div className="absolute inset-0 bg-white/5" />
-              <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center relative z-10">
-                <span className="text-2xl font-bold">{previewInitial}</span>
-              </div>
-              <span className="font-semibold text-lg relative z-10">{previewName}</span>
-            </div>
-          </div>
+          </MbField>
         </div>
 
-        <DialogFooter className="flex-row gap-2 sm:gap-2">
-          <Button variant="outline" onClick={handleCancel} className="flex-1">
-            Cancel
-          </Button>
-          <Button onClick={handleSubmit} className="flex-1 gap-2 shadow-lg shadow-primary/20">
-            <Check className="w-4 h-4" />
-            {isEditing ? "Save Changes" : "Create Team"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        {duplicate && (
+          <MbNotice tone="warn" title="A team already has this name">
+            Two teams with the same name are hard to tell apart in a bracket.
+            You can still save it.
+          </MbNotice>
+        )}
+
+        <div className="flex flex-col gap-2.5">
+          <span className="mb-kicker">Team colour</span>
+          <MbSwatchPicker
+            value={color}
+            onChange={handleColorSelect}
+            allowCustom
+            label="Team colour"
+          />
+        </div>
+
+        <div className="flex flex-col gap-2 border-t border-mb-rule pt-4">
+          <span className="mb-kicker">Preview</span>
+          <div className="flex min-h-[44px] items-center gap-3">
+            <TeamMark
+              team={previewTeam}
+              accent={color}
+              size="lg"
+              wrap
+              className="min-w-0 flex-1"
+            />
+          </div>
+        </div>
+      </MbDialogBody>
+
+      <MbDialogFooter>
+        <MbButton variant="outline-navy" size="lg" onClick={handleCancel}>
+          Cancel
+        </MbButton>
+        <MbButton variant="coral" size="lg" icon="check" onClick={handleSubmit}>
+          {isEditing ? "Save changes" : "Create team"}
+        </MbButton>
+      </MbDialogFooter>
+    </MbDialog>
   );
 };

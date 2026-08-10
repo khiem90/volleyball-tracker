@@ -1,19 +1,37 @@
 "use client";
 
-import { useState, useCallback, type KeyboardEvent, type ChangeEvent } from "react";
+import { useCallback, useState, type KeyboardEvent, type ChangeEvent } from "react";
 import type { PersistentTeam } from "@/types/game";
-import { DEFAULT_TEAM_COLORS } from "@/components/ui/color-picker";
+import { MB_SWATCH_PALETTE } from "@/components/matchbook/form";
+
+/** Team colour is stored as a token reference so it keeps resolving through
+ *  `--mb-*` wherever it is painted (invariant 10). `allowCustom` on the picker
+ *  is the escape hatch that yields a literal hex for a club's own colour. */
+export const TEAM_ACCENTS: readonly string[] = MB_SWATCH_PALETTE.map(
+  (swatch) => swatch.value
+);
+
+const MIN_NAME_LENGTH = 2;
+export const TEAM_NAME_MAX = 40;
 
 interface UseTeamFormProps {
   open: boolean;
   team?: PersistentTeam | null;
+  /** Every other team's name, for the non-blocking duplicate warning. */
+  existingNames?: string[];
   onSubmit: (name: string, color: string) => void;
   onClose: () => void;
 }
 
-export const useTeamForm = ({ open, team, onSubmit, onClose }: UseTeamFormProps) => {
+export const useTeamForm = ({
+  open,
+  team,
+  existingNames = [],
+  onSubmit,
+  onClose,
+}: UseTeamFormProps) => {
   const [name, setName] = useState("");
-  const [color, setColor] = useState(DEFAULT_TEAM_COLORS[0]);
+  const [color, setColor] = useState(TEAM_ACCENTS[0]);
   const [error, setError] = useState("");
 
   const isEditing = !!team;
@@ -25,11 +43,11 @@ export const useTeamForm = ({ open, team, onSubmit, onClose }: UseTeamFormProps)
     if (open) {
       if (team) {
         setName(team.name);
-        setColor(team.color || DEFAULT_TEAM_COLORS[0]);
+        setColor(team.color || TEAM_ACCENTS[0]);
       } else {
         setName("");
         // eslint-disable-next-line react-hooks/purity -- intentional random default color on dialog open
-        setColor(DEFAULT_TEAM_COLORS[Math.floor(Math.random() * DEFAULT_TEAM_COLORS.length)]);
+        setColor(TEAM_ACCENTS[Math.floor(Math.random() * TEAM_ACCENTS.length)]);
       }
       setError("");
     }
@@ -50,7 +68,7 @@ export const useTeamForm = ({ open, team, onSubmit, onClose }: UseTeamFormProps)
       setError("Team name is required");
       return;
     }
-    if (trimmedName.length < 2) {
+    if (trimmedName.length < MIN_NAME_LENGTH) {
       setError("Team name must be at least 2 characters");
       return;
     }
@@ -61,6 +79,7 @@ export const useTeamForm = ({ open, team, onSubmit, onClose }: UseTeamFormProps)
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLInputElement>) => {
       if (e.key === "Enter") {
+        e.preventDefault();
         handleSubmit();
       }
     },
@@ -72,21 +91,28 @@ export const useTeamForm = ({ open, team, onSubmit, onClose }: UseTeamFormProps)
   }, [onClose]);
 
   // Preview data
-  const previewInitial = name.trim().charAt(0).toUpperCase() || "T";
-  const previewName = name.trim() || "Team Name";
+  const previewName = name.trim() || "Team name";
+
+  /**
+   * A warning, never a block. Two squads can legitimately share a name across
+   * seasons, and the app has no uniqueness constraint — so the honest UI is to
+   * say it and let the user decide (brief §1.3).
+   */
+  const duplicate =
+    name.trim().length >= MIN_NAME_LENGTH &&
+    existingNames.some(
+      (existing) =>
+        existing.trim().toLowerCase() === name.trim().toLowerCase() &&
+        existing.trim().toLowerCase() !== team?.name.trim().toLowerCase()
+    );
 
   return {
-    // State
     name,
     color,
     error,
     isEditing,
-
-    // Preview data
-    previewInitial,
+    duplicate,
     previewName,
-
-    // Actions
     handleNameChange,
     handleColorSelect,
     handleSubmit,

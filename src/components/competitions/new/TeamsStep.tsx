@@ -1,165 +1,340 @@
 "use client";
 
-import { ArrowLeft, ArrowRight, Check, Users } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import type { PersistentTeam } from "@/types/game";
+import { useMemo, useState } from "react";
+import { MbButton } from "@/components/matchbook/Button";
+import { MbNotice } from "@/components/matchbook/Notice";
+import {
+  FormSquares,
+  MbStateBlock,
+  Panel,
+  PanelEmpty,
+  TeamMark,
+} from "@/components/matchbook/Panel";
+import { MbScoreNumeral } from "@/components/matchbook/ScoreNumeral";
+import {
+  MbSelectList,
+  type MbSelectColumn,
+} from "@/components/matchbook/SelectList";
+import type { MbEntryRow } from "@/components/matchbook/useMatchbookNewCompetition";
+import type { EntryValidation } from "@/hooks/useNewCompetitionPage";
 
-interface TeamValidation {
-  valid: boolean;
-  message: string;
-}
+/* ===========================================================================
+   STEP 2 — TEAMS
 
-interface TeamsStepProps {
-  teams: PersistentTeam[];
-  teamsCount: number;
-  currentFormatLabel?: string;
-  teamValidation: TeamValidation;
-  selectedTeamIds: string[];
-  allSelected: boolean;
-  onToggleTeam: (teamId: string) => void;
-  onToggleSelectAll: () => void;
-  onQuickCreateTeam: () => void;
-  onNext: () => void;
-  onBack: () => void;
+   A hairline multi-select against a live entry list, not a grid of coloured
+   initial squares.
+
+   ------------------------------------------------------- reading order
+
+   The DIRECTORY is first in the DOM and the entry list follows it, at every
+   width. It was the other way round, on the reasoning that a phone should see
+   the count without scrolling — and the measurement said otherwise: at 390x844
+   that put ~1000px of summary, validation and four buttons above the first
+   tickable row, so the step whose entire job is "tick some teams" showed
+   **zero** of them on the first screen. The count is not lost by the swap: the
+   sticky commit bar carries the live gate ("Select at least 3 teams",
+   "8 teams selected") in the one place that is on screen at every scroll
+   position, which is what a commit bar is for.
+   =========================================================================== */
+
+/**
+ * Module scope: `MbSelectRow` is memoised and re-renders on any new identity.
+ *
+ * Below `sm` the two data columns are hidden — 9rem of competition name and a
+ * W-L measure will not share a 390px row with a crest and a name — so the row
+ * would otherwise be eight identical crest+name lines with nothing to choose
+ * between. The same two facts are set as a second line instead, at the columns'
+ * own `0.72rem` muted step, and disappear the moment the columns appear.
+ */
+const renderPrimary = (row: MbEntryRow) => (
+  <span className="flex min-w-0 flex-1 flex-col justify-center gap-0.5">
+    <TeamMark team={row.team} accent={row.accent} size="sm" className="min-w-0" />
+    <span className="truncate text-[0.72rem] leading-tight text-mb-ink-muted tabular-nums sm:hidden">
+      {row.record} · {row.enteredIn}
+    </span>
+  </span>
+);
+
+const COLUMNS: MbSelectColumn<MbEntryRow>[] = [
+  {
+    key: "enteredIn",
+    header: "Entered in",
+    render: (row) => row.enteredIn,
+    hide: "sm",
+    width: "9rem",
+  },
+  {
+    key: "record",
+    header: "W-L",
+    render: (row) => row.record,
+    hide: "sm",
+    align: "right",
+    width: "3rem",
+  },
+];
+
+/** The entry roster is a summary, not a second directory. */
+const ROSTER_LIMIT = 12;
+
+export interface TeamsStepProps {
+  rows: MbEntryRow[];
+  selectedIds: Set<string>;
+  entryIds: string[];
+  entryRowsById: Map<string, MbEntryRow>;
+  validation: EntryValidation;
+  formatLabel: string;
+  onToggle: (id: string) => void;
+  onSelectAll: (ids: string[]) => void;
+  onClear: () => void;
+  onCreateTeam: () => void;
+  onQuickAdd: () => void;
+  readOnly: boolean;
 }
 
 export const TeamsStep = ({
-  teams,
-  teamsCount,
-  currentFormatLabel,
-  teamValidation,
-  selectedTeamIds,
-  allSelected,
-  onToggleTeam,
-  onToggleSelectAll,
-  onQuickCreateTeam,
-  onNext,
-  onBack,
-}: TeamsStepProps) => (
-  <div className="space-y-6">
-    <div className="text-center mb-8">
-      <h2 className="text-2xl font-bold mb-2">Select Teams</h2>
-      <p className="text-muted-foreground">
-        Choose which teams will participate in this{" "}
-        {currentFormatLabel?.toLowerCase()}
-      </p>
-    </div>
+  rows,
+  selectedIds,
+  entryIds,
+  entryRowsById,
+  validation,
+  formatLabel,
+  onToggle,
+  onSelectAll,
+  onClear,
+  onCreateTeam,
+  onQuickAdd,
+  readOnly,
+}: TeamsStepProps) => {
+  const [search, setSearch] = useState("");
 
-    {teamsCount === 0 ? (
-      <div className="text-center py-12">
-        <div className="w-20 h-20 mx-auto mb-4 rounded-3xl bg-muted/50 flex items-center justify-center">
-          <Users className="w-10 h-10 text-muted-foreground/40" />
-        </div>
-        <h3 className="text-lg font-semibold mb-2">No teams available</h3>
-        <p className="text-muted-foreground mb-4">
-          Create some teams first to build a competition.
-        </p>
-        <Button
-          onClick={onQuickCreateTeam}
-          variant="outline"
-          className="gap-2"
-        >
-          <Users className="w-4 h-4" />
-          Quick Create Team
-        </Button>
+  const filtered = useMemo(() => {
+    const needle = search.trim().toLowerCase();
+    if (!needle) return rows;
+    return rows.filter((row) => row.team.name.toLowerCase().includes(needle));
+  }, [rows, search]);
+
+  const filteredIds = useMemo(() => filtered.map((row) => row.id), [filtered]);
+  const filtering = search.trim().length > 0;
+  const roster = entryIds.slice(0, ROSTER_LIMIT);
+  const overflow = entryIds.length - roster.length;
+
+  /**
+   * An empty library is ONE state, drawn once.
+   *
+   * Both panels used to render on it, and the result was two display-step
+   * headlines in one viewport ("NO TEAMS ENTERED YET" and "NO TEAMS EXIST
+   * YET"), a notice title ("NOT ENOUGH TEAMS"), a "TEAMS ENTERED 0 / OF 0 IN
+   * LIBRARY" stat, a "0 SHOWN" meta and the bar's status line — six instruments
+   * on an empty screen, one of which gave impossible advice ("Tick a team in
+   * the directory" when the directory is empty). There is nothing to enter and
+   * nothing to summarise, so the summary does not render at all and the one
+   * remaining block says the one true thing plus the two ways out of it.
+   */
+  if (rows.length === 0) {
+    return (
+      <div className="xl:col-span-12">
+        <Panel title="Team Directory" icon="teams">
+          <MbStateBlock
+            scale="panel"
+            tone="empty"
+            headline="No teams exist yet"
+            deck="A competition needs entrants before it can be scheduled. Create one by hand, or add a batch and rename them later."
+            action={
+              <div className="mt-1 flex flex-wrap gap-2">
+                <MbButton
+                  variant="navy"
+                  size="sm"
+                  icon="plus"
+                  onClick={onCreateTeam}
+                  disabled={readOnly}
+                >
+                  Create a team
+                </MbButton>
+                <MbButton
+                  variant="outline-navy"
+                  size="sm"
+                  icon="import"
+                  onClick={onQuickAdd}
+                  disabled={readOnly}
+                >
+                  Quick add teams
+                </MbButton>
+              </div>
+            }
+          />
+        </Panel>
       </div>
-    ) : (
-      <>
-        <div className="flex items-center justify-center gap-3 mb-4">
-          <Badge
-            variant={teamValidation.valid ? "default" : "secondary"}
-            className={teamValidation.valid ? "bg-emerald-500" : ""}
-          >
-            {teamValidation.message}
-          </Badge>
-          <Button
-            onClick={onToggleSelectAll}
-            variant="outline"
-            size="sm"
-            aria-pressed={allSelected}
-          >
-            {allSelected ? "Deselect All" : "Select All"}
-          </Button>
-          <Button
-            onClick={onQuickCreateTeam}
-            variant="ghost"
-            size="sm"
-            className="gap-2"
-          >
-            <Users className="w-4 h-4" />
-            Quick Add Team
-          </Button>
-        </div>
+    );
+  }
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-          {teams.map((team) => {
-            const isSelected = selectedTeamIds.includes(team.id);
-            const teamColor = team.color || "#3b82f6";
+  return (
+    <>
+      <div className="xl:col-span-7">
+        <Panel
+          title="Team Directory"
+          icon="teams"
+          meta={
+            <span className="mb-kicker tabular-nums">
+              {filtered.length} shown
+            </span>
+          }
+        >
+          <MbSelectList
+            items={filtered}
+            getKey={(row) => row.id}
+            selected={selectedIds}
+            onToggle={onToggle}
+            search={search}
+            onSearchChange={setSearch}
+            columns={COLUMNS}
+            renderPrimary={renderPrimary}
+            label="Team directory"
+            emptyMessage={`No teams match “${search.trim()}” — try a different search.`}
+          />
+        </Panel>
+      </div>
 
-            return (
-              <Card
-                key={team.id}
-                className={`
-                  cursor-pointer transition-all duration-200 overflow-hidden
-                  ${
-                    isSelected
-                      ? "ring-2 ring-primary shadow-md"
-                      : "border-border/40 bg-card/30 hover:bg-card/60 hover:border-primary/30"
-                  }
-                `}
-                onClick={() => onToggleTeam(team.id)}
-                role="checkbox"
-                tabIndex={0}
-                aria-checked={isSelected}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" || event.key === " ") {
-                    event.preventDefault();
-                    onToggleTeam(team.id);
-                  }
-                }}
+      <div className="xl:col-span-5">
+        <Panel
+          title="Entry List"
+          tone="navy"
+          icon="teams"
+          meta={
+            <span className="matchbook-display text-[0.66rem] font-bold tracking-[0.16em] text-mb-paper-bright">
+              {formatLabel}
+            </span>
+          }
+        >
+          <div className="flex items-end justify-between gap-3 border-b border-mb-rule px-4 py-3">
+            <div className="min-w-0">
+              <span className="mb-kicker block">Teams entered</span>
+              {/* `MbScoreNumeral`, not a hand-rolled `matchbook-display
+                  text-4xl`: it boxes every figure to 1ch so 9 → 10 repaints one
+                  glyph and reflows nothing, and it cross-fades the change over
+                  `--mb-dur-fast`. That cross-fade is the authored response to
+                  ticking a team — the one interaction this step exists for. */}
+              <MbScoreNumeral
+                value={entryIds.length}
+                size="compact"
+                digits={2}
+                align="start"
+                className="mt-0.5"
+              />
+            </div>
+            <span className="mb-kicker shrink-0 tabular-nums">
+              of {rows.length} in library
+            </span>
+          </div>
+
+          <div className="flex flex-col gap-3 border-b border-mb-rule px-4 py-3">
+            {validation.valid ? (
+              validation.byes > 0 ? (
+                <MbNotice tone="warn" icon="bracket" title="Bracket padding">
+                  {entryIds.length} teams entered, so the bracket of{" "}
+                  {validation.bracketSize} carries {validation.byes}{" "}
+                  {validation.byes === 1 ? "bye" : "byes"} in the first round.
+                </MbNotice>
+              ) : (
+                <MbNotice tone="success" title="Ready">
+                  {validation.message}.
+                </MbNotice>
+              )
+            ) : (
+              <MbNotice tone="info" title="Not enough teams">
+                {validation.message || "Choose a format first"}.
+              </MbNotice>
+            )}
+
+            <div className="flex flex-wrap gap-2">
+              {/* The ONLY select-all on the step.
+                  `MbSelectList` ships one in its own header row, and that
+                  button abuts the first ruled row at 1px — a measured
+                  invariant-33 separation failure on a kit file this workstream
+                  does not own. Omitting `onSelectAll` there turns that header
+                  into a plain count, and this control takes the job. It also
+                  respects the filter, which the list's own never could. */}
+              <MbButton
+                variant="outline-navy"
+                size="sm"
+                icon="check"
+                onClick={() => onSelectAll(filteredIds)}
+                disabled={filteredIds.length === 0}
+                className="flex-auto"
               >
-                <CardContent className="p-3">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 shadow-md relative"
-                      style={{
-                        background: `linear-gradient(135deg, ${teamColor}, ${teamColor}99)`,
-                      }}
-                    >
-                      {isSelected ? (
-                        <Check className="w-5 h-5 text-white" />
-                      ) : (
-                        <span className="text-sm font-bold text-white">
-                          {team.name.charAt(0).toUpperCase()}
-                        </span>
-                      )}
-                    </div>
-                    <span className="font-medium truncate">{team.name}</span>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      </>
-    )}
+                {filtering ? `Select ${filtered.length} shown` : "Select all"}
+              </MbButton>
+              <MbButton
+                variant="outline-navy"
+                size="sm"
+                icon="close"
+                onClick={onClear}
+                disabled={entryIds.length === 0}
+                className="flex-auto"
+              >
+                Clear
+              </MbButton>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <MbButton
+                variant="navy"
+                size="sm"
+                icon="plus"
+                onClick={onCreateTeam}
+                disabled={readOnly}
+                className="flex-auto"
+              >
+                Add team
+              </MbButton>
+              <MbButton
+                variant="outline-navy"
+                size="sm"
+                icon="import"
+                onClick={onQuickAdd}
+                disabled={readOnly}
+                className="flex-auto"
+              >
+                Quick add
+              </MbButton>
+            </div>
+          </div>
 
-    <div className="flex justify-between pt-4">
-      <Button variant="outline" onClick={onBack} className="gap-2">
-        <ArrowLeft className="w-4 h-4" />
-        Back
-      </Button>
-      <Button
-        onClick={onNext}
-        disabled={!teamValidation.valid}
-        className="gap-2 shadow-lg shadow-primary/20"
-        size="lg"
-      >
-        Next
-        <ArrowRight className="w-4 h-4" />
-      </Button>
-    </div>
-  </div>
-);
+          {entryIds.length === 0 ? (
+            <PanelEmpty message="No teams entered yet — tick a team in the directory to add it to this competition." />
+          ) : (
+            <>
+              <ul className="divide-y divide-mb-rule">
+                {roster.map((id) => {
+                  const row = entryRowsById.get(id);
+                  if (!row) return null;
+                  return (
+                    <li
+                      key={id}
+                      className="flex min-h-[44px] items-center gap-3 px-4 py-3"
+                    >
+                      <TeamMark
+                        team={row.team}
+                        accent={row.accent}
+                        size="sm"
+                        wrap
+                        className="min-w-0 flex-1"
+                      />
+                      <span className="mb-kicker shrink-0 tabular-nums">
+                        {row.record}
+                      </span>
+                      <FormSquares form={row.form} slots={5} />
+                    </li>
+                  );
+                })}
+              </ul>
+              {overflow > 0 && (
+                <p className="border-t border-mb-rule px-4 py-3 text-[0.78rem] text-mb-ink-muted tabular-nums">
+                  + {overflow} more entered
+                </p>
+              )}
+            </>
+          )}
+        </Panel>
+      </div>
+    </>
+  );
+};

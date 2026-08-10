@@ -1,20 +1,42 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { useCallback, useState } from "react";
 import { useSession } from "@/context/SessionContext";
 import { useAuth } from "@/context/AuthContext";
-import { Share2, Globe, Copy, Check, Loader2 } from "lucide-react";
-import { SessionAuth } from "@/components/auth";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import { MbButton, MbButtonLink } from "@/components/matchbook/Button";
+import { MbCopyField } from "@/components/matchbook/CopyField";
+import {
+  MbDialog,
+  MbDialogBody,
+  MbDialogFooter,
+} from "@/components/matchbook/Dialog";
+import { MbNotice } from "@/components/matchbook/Notice";
+import { MbStepRail } from "@/components/matchbook/StepRail";
+import { MbField, MbTextInput } from "@/components/matchbook/form";
+
+/* ===========================================================================
+   CREATE A SHARED SESSION
+
+   The nested-dialog problem is gone (charter H11): sign-in is a STEP inside
+   this dialog, not a second Radix dialog mounted as a sibling. Two Radix
+   overlays stacked on a bottom sheet fight over the focus trap, the scroll
+   lock and the escape key, and on a phone the inner one opened behind the
+   outer one's backdrop.
+
+   ---------------------------------------------------------------- W6 HOOK-UP
+
+   The auth step's body is the one thing here that is not finished, and it is
+   not this workstream's to finish: `auth/SessionAuthPanel.tsx` — the sign-in
+   FORM with no dialog of its own — is W6's P2b deliverable and does not exist
+   on disk yet. The step, its rail entry, its back path and its footer are all
+   in place; when the panel lands the only change is to swap the placeholder
+   block below for `<SessionAuthPanel onDone={() => setStep("name")} />`.
+   Rendering the existing `<SessionAuth>` here instead would re-introduce the
+   exact nested dialog this rewrite removes, so it deliberately does not.
+   =========================================================================== */
+
+type SessionStep = "name" | "auth" | "created";
 
 interface CreateSessionDialogProps {
   open: boolean;
@@ -37,240 +59,267 @@ export const CreateSessionDialog = ({
 }: CreateSessionDialogProps) => {
   const { createNewSession, isLoading, error } = useSession();
   const { user, isConfigured } = useAuth();
+  const online = useOnlineStatus();
 
   const [sessionName, setSessionName] = useState(defaultName);
-  const [step, setStep] = useState<"name" | "created">("name");
-  const [createdData, setCreatedData] = useState<{ shareCode: string; adminToken: string } | null>(null);
-  const [showAuth, setShowAuth] = useState(false);
-  const [copiedCode, setCopiedCode] = useState(false);
-  const [copiedToken, setCopiedToken] = useState(false);
+  const [step, setStep] = useState<SessionStep>("name");
+  const [created, setCreated] = useState<{
+    shareCode: string;
+    adminToken: string;
+  } | null>(null);
+  const [failure, setFailure] = useState<string | null>(null);
 
-  const handleCreate = useCallback(async () => {
-    if (!sessionName.trim()) return;
+  /* Reset on OPEN, as a render-time state adjustment — the same pattern
+     `useTeamForm` uses.
 
-    try {
-      const result = await createNewSession(sessionName.trim(), competitionData);
-      setCreatedData(result);
-      setStep("created");
-      onCreated?.(result.shareCode, result.adminToken);
-    } catch (err) {
-      console.error("Failed to create session:", err);
-    }
-  }, [sessionName, createNewSession, competitionData, onCreated]);
-
-  const handleCopyCode = useCallback(async () => {
-    if (!createdData) return;
-    try {
-      await navigator.clipboard.writeText(createdData.shareCode);
-      setCopiedCode(true);
-      setTimeout(() => setCopiedCode(false), 2000);
-    } catch (err) {
-      console.error("Failed to copy:", err);
-    }
-  }, [createdData]);
-
-  const handleCopyToken = useCallback(async () => {
-    if (!createdData) return;
-    try {
-      await navigator.clipboard.writeText(createdData.adminToken);
-      setCopiedToken(true);
-      setTimeout(() => setCopiedToken(false), 2000);
-    } catch (err) {
-      console.error("Failed to copy:", err);
-    }
-  }, [createdData]);
-
-  const handleClose = useCallback(() => {
-    onOpenChange(false);
-    // Reset state after dialog closes
-    setTimeout(() => {
+     It replaces a `setTimeout(…, 200)` tuned to the exit animation, so any
+     change to that animation silently changed when the form cleared, and a
+     fast reopen showed the previous session's admin token. Adjusting on open
+     rather than on close also means the token is never cleared out from under
+     a dialog that is still on screen. */
+  const [wasOpen, setWasOpen] = useState(false);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) {
       setStep("name");
       setSessionName(defaultName);
-      setCreatedData(null);
-    }, 200);
-  }, [onOpenChange, defaultName]);
+      setCreated(null);
+      setFailure(null);
+    }
+  }
+
+  const handleCreate = useCallback(async () => {
+    const name = sessionName.trim();
+    if (!name || isLoading) return;
+    setFailure(null);
+    try {
+      const result = await createNewSession(name, competitionData);
+      setCreated(result);
+      setStep("created");
+      onCreated?.(result.shareCode, result.adminToken);
+    } catch {
+      /* Never the provider's own message: it names the backend and the
+         collection path, neither of which helps anybody (invariant 28). */
+      setFailure(
+        "The session could not be created. Check your connection and try again."
+      );
+    }
+  }, [sessionName, isLoading, createNewSession, competitionData, onCreated]);
+
+  /* ------------------------------------------------------- not configured */
 
   if (!isConfigured) {
     return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Firebase Not Configured</DialogTitle>
-            <DialogDescription>
-              To enable session sharing, please configure Firebase. Add your Firebase configuration to the environment variables.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button onClick={() => onOpenChange(false)} className="cursor-pointer">Close</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <MbDialog
+        open={open}
+        onOpenChange={onOpenChange}
+        title="Live Sharing Unavailable"
+        icon="cloud"
+        kicker="Shared session"
+        size="sm"
+      >
+        <MbDialogBody>
+          <MbNotice tone="info" icon="settings" title="No cloud backend">
+            This installation has no cloud backend configured, so sessions
+            cannot be shared live. Everything you score is still saved on this
+            device and can be exported from the history screen.
+          </MbNotice>
+        </MbDialogBody>
+        <MbDialogFooter>
+          <MbButton variant="navy" size="lg" onClick={() => onOpenChange(false)}>
+            Close
+          </MbButton>
+        </MbDialogFooter>
+      </MbDialog>
     );
   }
 
+  const shareUrl =
+    created && typeof window !== "undefined"
+      ? `${window.location.origin}/session/${created.shareCode}`
+      : "";
+
+  /* ------------------------------------------------------------------ UI */
+
   return (
-    <>
-      <Dialog open={open} onOpenChange={handleClose}>
-        <DialogContent className="sm:max-w-md">
-          {step === "name" && (
-            <>
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2">
-                  <Globe className="w-5 h-5 text-primary" />
-                  Create Shareable Session
-                </DialogTitle>
-                <DialogDescription>
-                  Create a session that others can join and view live scores.
-                  {!user && " You can sign in to manage your sessions."}
-                </DialogDescription>
-              </DialogHeader>
+    <MbDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={
+        step === "created"
+          ? "Session Created"
+          : step === "auth"
+            ? "Sign In"
+            : "Create Shared Session"
+      }
+      icon={step === "created" ? "check" : step === "auth" ? "login" : "share"}
+      kicker="Shared session"
+      size="md"
+      dismissible={!isLoading}
+    >
+      <MbDialogBody className="flex flex-col gap-5">
+        <MbStepRail
+          steps={[
+            { id: "name", label: "Name", value: sessionName.trim() || undefined },
+            {
+              id: "created",
+              label: "Share",
+              value: created?.shareCode ?? undefined,
+            },
+          ]}
+          current={step === "created" ? "created" : "name"}
+          onNavigate={() => setStep("name")}
+          label="Session setup"
+        />
 
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Session Name</label>
-                  <Input
-                    placeholder="e.g., Beach Volleyball Tournament"
-                    value={sessionName}
-                    onChange={(e) => setSessionName(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && sessionName.trim()) {
-                        handleCreate();
-                      }
-                    }}
-                  />
-                </div>
+        {step === "name" && (
+          <>
+            <MbField
+              label="Session name"
+              htmlFor="session-name"
+              hint="Viewers see this at the top of the live scoreboard."
+              required
+            >
+              <MbTextInput
+                id="session-name"
+                value={sessionName}
+                onChange={(event) => setSessionName(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    void handleCreate();
+                  }
+                }}
+                placeholder="e.g. Friday Night Open Gym"
+                maxLength={60}
+                autoComplete="off"
+                icon="compete"
+              />
+            </MbField>
 
-                {!user && (
-                  <p className="text-sm text-muted-foreground">
-                    <button
-                      type="button"
-                      className="text-primary hover:underline cursor-pointer"
-                      onClick={() => setShowAuth(true)}
-                    >
-                      Sign in
-                    </button>
-                    {" "}to link this session to your account (optional).
-                  </p>
-                )}
+            {!online && (
+              <MbNotice tone="warn" icon="wifi-off" title="You are offline">
+                A shared session needs a connection. Reconnect and try again —
+                nothing you have scored is lost.
+              </MbNotice>
+            )}
 
-                {error && (
-                  <p className="text-sm text-destructive">{error}</p>
-                )}
-              </div>
+            {!user && (
+              <MbNotice tone="info" icon="login" title="Not signed in">
+                <span className="flex flex-col items-start gap-2">
+                  <span>
+                    The session will still work. Signing in links it to your
+                    account so you can find and end it later.
+                  </span>
+                  <MbButton
+                    variant="outline-navy"
+                    size="sm"
+                    icon="login"
+                    onClick={() => setStep("auth")}
+                  >
+                    Sign in first
+                  </MbButton>
+                </span>
+              </MbNotice>
+            )}
 
-              <DialogFooter className="flex-row gap-2 sm:gap-2">
-                <Button
-                  variant="outline"
-                  onClick={handleClose}
-                  className="flex-1 cursor-pointer"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleCreate}
-                  disabled={!sessionName.trim() || isLoading}
-                  className="flex-1 gap-2 cursor-pointer"
-                >
-                  {isLoading ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Share2 className="w-4 h-4" />
-                  )}
-                  Create Session
-                </Button>
-              </DialogFooter>
-            </>
-          )}
+            {(failure || error) && (
+              <MbNotice tone="danger" title="Could not create the session">
+                {failure ?? "Something went wrong. Try again."}
+              </MbNotice>
+            )}
+          </>
+        )}
 
-          {step === "created" && createdData && (
-            <>
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2 text-emerald-500">
-                  <Check className="w-5 h-5" />
-                  Session Created!
-                </DialogTitle>
-                <DialogDescription>
-                  Your session is ready. Share the code with viewers or the admin token with people who should edit scores.
-                </DialogDescription>
-              </DialogHeader>
+        {step === "auth" && (
+          /* --- W6 drop-in point: replace with <SessionAuthPanel/>. --- */
+          <MbNotice tone="info" icon="login" title="Sign in on the login screen">
+            <span className="flex flex-col items-start gap-2">
+              <span>
+                The in-dialog sign-in form is not wired up yet. Signing in on
+                the login screen and returning here has the same effect — your
+                session name is remembered while this dialog is open.
+              </span>
+              <MbButtonLink variant="outline-navy" size="sm" icon="login" href="/login">
+                Open the login screen
+              </MbButtonLink>
+            </span>
+          </MbNotice>
+        )}
 
-              <div className="space-y-4 py-4">
-                {/* Share Code */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Share Code</label>
-                  <p className="text-xs text-muted-foreground">
-                    Anyone with this code can view the session.
-                  </p>
-                  <div className="flex gap-2">
-                    <Input
-                      value={createdData.shareCode}
-                      readOnly
-                      className="font-mono font-bold text-lg text-center tracking-widest"
-                    />
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={handleCopyCode}
-                      className="shrink-0 cursor-pointer"
-                    >
-                      {copiedCode ? (
-                        <Check className="w-4 h-4 text-emerald-500" />
-                      ) : (
-                        <Copy className="w-4 h-4" />
-                      )}
-                    </Button>
-                  </div>
-                </div>
+        {step === "created" && created && (
+          <>
+            <div className="flex flex-col gap-2">
+              <span className="mb-kicker">Share code</span>
+              <p
+                className="matchbook-display border-[1.5px] border-mb-navy bg-mb-paper-bright px-4 py-3 text-center text-2xl font-bold tabular-nums"
+                style={{ letterSpacing: "0.35em" }}
+              >
+                {created.shareCode}
+              </p>
+              <p className="text-[0.78rem] text-mb-ink-muted">
+                Anyone with this code can watch the scores live.
+              </p>
+            </div>
 
-                {/* Admin Token */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-amber-500">Admin Token (Secret)</label>
-                  <p className="text-xs text-muted-foreground">
-                    Share this with trusted people who should be able to edit scores.
-                  </p>
-                  <div className="flex gap-2">
-                    <Input
-                      value={createdData.adminToken}
-                      readOnly
-                      type="password"
-                      className="font-mono text-sm"
-                    />
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={handleCopyToken}
-                      className="shrink-0 cursor-pointer"
-                    >
-                      {copiedToken ? (
-                        <Check className="w-4 h-4 text-emerald-500" />
-                      ) : (
-                        <Copy className="w-4 h-4" />
-                      )}
-                    </Button>
-                  </div>
-                </div>
+            <MbCopyField
+              label="Viewer link"
+              value={shareUrl}
+              help="Safe to post anywhere — it cannot change a score."
+            />
 
-                <p className="text-xs text-amber-500/80 p-2 bg-amber-500/10 rounded-lg">
-                  ⚠️ Save the admin token somewhere safe. You{"'"}ll need it to regain admin access if you lose it.
-                </p>
-              </div>
+            <MbCopyField
+              label="Admin token"
+              value={created.adminToken}
+              secret
+              help="Give this only to people who should be able to edit scores."
+            />
 
-              <DialogFooter>
-                <Button onClick={handleClose} className="w-full cursor-pointer">
-                  Got it, let{"'"}s go!
-                </Button>
-              </DialogFooter>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
+            <MbNotice tone="warn" icon="key" title="Save the admin token">
+              It is shown once. Without it you cannot regain admin access to
+              this session.
+            </MbNotice>
+          </>
+        )}
+      </MbDialogBody>
 
-      <SessionAuth
-        open={showAuth}
-        onOpenChange={setShowAuth}
-        showViewerOption={false}
-      />
-    </>
+      <MbDialogFooter>
+        {step === "created" ? (
+          <MbButton variant="coral" size="lg" onClick={() => onOpenChange(false)}>
+            Done
+          </MbButton>
+        ) : step === "auth" ? (
+          <MbButton
+            variant="outline-navy"
+            size="lg"
+            icon="chevron-left"
+            onClick={() => setStep("name")}
+          >
+            Back
+          </MbButton>
+        ) : (
+          <>
+            <MbButton
+              variant="outline-navy"
+              size="lg"
+              onClick={() => onOpenChange(false)}
+              disabled={isLoading}
+            >
+              Cancel
+            </MbButton>
+            <MbButton
+              variant="coral"
+              size="lg"
+              icon="share"
+              loading={isLoading}
+              disabled={!sessionName.trim() || !online}
+              onClick={() => void handleCreate()}
+            >
+              {isLoading ? "Creating…" : "Create session"}
+            </MbButton>
+          </>
+        )}
+      </MbDialogFooter>
+    </MbDialog>
   );
 };
-

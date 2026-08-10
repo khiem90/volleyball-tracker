@@ -268,36 +268,4 @@ export const getOverlapWarnings = (data: FormationData): FormationValidationErro
   return errors.filter((e) => e.type === 'overlap');
 };
 
-/**
- * Validate a single position update (for real-time feedback)
- */
-const validatePositionUpdate = (
-  position: CourtPosition
-): FormationValidationError | null => {
-  if (!isValidPosition(position)) {
-    return {
-      type: 'position',
-      message: `Position out of bounds (x: ${position.x.toFixed(2)}, y: ${position.y.toFixed(2)}). Must be between 0 and 1.`,
-    };
-  }
-  return null;
-};
 
-/**
- * Get summary of validation errors
- */
-const getValidationSummary = (
-  errors: FormationValidationError[]
-): { blocking: number; warnings: number; byRotation: Record<number, number> } => {
-  const blocking = errors.filter((e) => e.type !== 'overlap').length;
-  const warnings = errors.filter((e) => e.type === 'overlap').length;
-
-  const byRotation: Record<number, number> = {};
-  for (const error of errors) {
-    if (error.rotation) {
-      byRotation[error.rotation] = (byRotation[error.rotation] || 0) + 1;
-    }
-  }
-
-  return { blocking, warnings, byRotation };
-};

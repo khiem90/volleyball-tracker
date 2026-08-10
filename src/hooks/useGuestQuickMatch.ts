@@ -1,10 +1,40 @@
-import { useState, useCallback } from "react";
+"use client";
+
+import { useCallback, useMemo, useState } from "react";
 import { GUEST_HOME_TEAM, GUEST_AWAY_TEAM } from "@/constants/guestTeams";
+import { useScoreHistory } from "@/hooks/useScoreHistory";
 import type { PersistentTeam } from "@/types/game";
+
+/* ===========================================================================
+   THE GUEST CONSOLE'S STATE
+
+   The score is no longer a second copy of the same numbers. It IS
+   `history.tip`, so the desync that shipped here — `setMatch` using the updater
+   form while `setHistory` read `match.homeScore` from the closure, five rapid
+   taps then six undos leaving the score stuck at 1 — is unrepresentable rather
+   than merely fixed. There is exactly one place a guest score can change and it
+   is `useScoreHistory`.
+
+   Nothing is persisted, deliberately: a guest match is in memory and the console
+   says so out loud in the action rail. That includes the undo stack — a page
+   reload starts a new match, so a restored stack would be a stack for a game
+   that no longer exists.
+
+   The two guest teams carry hard-coded blue and orange hexes in
+   `src/constants/guestTeams.ts`, which is not this workstream's file and is
+   consumed elsewhere. They are mapped to Matchbook tokens here rather than
+   passed through, so no off-palette colour reaches a rendered surface
+   (invariant 10).
+   =========================================================================== */
 
 type MatchStatus = "pending" | "in_progress" | "completed";
 
-interface GuestMatch {
+export const GUEST_ACCENTS = {
+  home: "var(--mb-teal)",
+  away: "var(--mb-coral)",
+} as const;
+
+export interface GuestMatch {
   homeTeam: PersistentTeam;
   awayTeam: PersistentTeam;
   homeScore: number;
@@ -13,145 +43,85 @@ interface GuestMatch {
   winnerId?: string;
 }
 
-interface ScoreHistory {
-  home: number;
-  away: number;
-}
-
-/**
- * Hook for managing in-memory guest match state.
- * No data is persisted - all state is lost on page refresh.
- */
 export const useGuestQuickMatch = () => {
-  const [match, setMatch] = useState<GuestMatch>({
-    homeTeam: GUEST_HOME_TEAM,
-    awayTeam: GUEST_AWAY_TEAM,
-    homeScore: 0,
-    awayScore: 0,
-    status: "pending",
-  });
-
-  const [history, setHistory] = useState<ScoreHistory[]>([]);
+  const [status, setStatus] = useState<MatchStatus>("pending");
+  const [winnerId, setWinnerId] = useState<string | undefined>(undefined);
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
   const [showResultModal, setShowResultModal] = useState(false);
 
-  const startMatch = useCallback(() => {
-    setMatch((prev) => ({
-      ...prev,
-      status: "in_progress",
-    }));
-    setHistory([{ home: 0, away: 0 }]);
-  }, []);
+  const history = useScoreHistory({ seed: { home: 0, away: 0 } });
+  const { home: homeScore, away: awayScore } = history.tip;
+
+  const startMatch = useCallback(() => setStatus("in_progress"), []);
 
   const handleAddPoint = useCallback(
     (team: "home" | "away") => {
-      if (match.status === "completed") return;
-
-      setMatch((prev) => {
-        const newHome = team === "home" ? prev.homeScore + 1 : prev.homeScore;
-        const newAway = team === "away" ? prev.awayScore + 1 : prev.awayScore;
-        return { ...prev, homeScore: newHome, awayScore: newAway };
-      });
-
-      setHistory((prev) => {
-        const currentHome = match.homeScore;
-        const currentAway = match.awayScore;
-        const newHome = team === "home" ? currentHome + 1 : currentHome;
-        const newAway = team === "away" ? currentAway + 1 : currentAway;
-        return [...prev, { home: newHome, away: newAway }];
-      });
+      if (status === "completed") return;
+      history.bump(team, 1);
     },
-    [match.status, match.homeScore, match.awayScore]
+    [history, status]
   );
 
   const handleDeductPoint = useCallback(
     (team: "home" | "away") => {
-      if (match.status === "completed") return;
-
-      setMatch((prev) => {
-        const newHome =
-          team === "home" ? Math.max(0, prev.homeScore - 1) : prev.homeScore;
-        const newAway =
-          team === "away" ? Math.max(0, prev.awayScore - 1) : prev.awayScore;
-        return { ...prev, homeScore: newHome, awayScore: newAway };
-      });
-
-      setHistory((prev) => {
-        const currentHome = match.homeScore;
-        const currentAway = match.awayScore;
-        const newHome = team === "home" ? Math.max(0, currentHome - 1) : currentHome;
-        const newAway = team === "away" ? Math.max(0, currentAway - 1) : currentAway;
-        return [...prev, { home: newHome, away: newAway }];
-      });
+      if (status === "completed") return;
+      history.bump(team, -1);
     },
-    [match.status, match.homeScore, match.awayScore]
+    [history, status]
   );
 
   const handleUndo = useCallback(() => {
-    if (history.length < 2 || match.status === "completed") return;
-
-    const prevState = history[history.length - 2];
-    setHistory((prev) => prev.slice(0, -1));
-    setMatch((prev) => ({
-      ...prev,
-      homeScore: prevState.home,
-      awayScore: prevState.away,
-    }));
-  }, [history, match.status]);
+    if (status === "completed") return;
+    history.undo();
+  }, [history, status]);
 
   const handleOpenCompleteDialog = useCallback(() => {
-    if (match.status === "completed") return;
-    if (match.homeScore === match.awayScore) return;
+    if (status === "completed") return;
+    if (homeScore === awayScore) return;
     setShowCompleteDialog(true);
-  }, [match.status, match.homeScore, match.awayScore]);
+  }, [status, homeScore, awayScore]);
 
   const handleCompleteMatch = useCallback(() => {
-    const winnerId =
-      match.homeScore > match.awayScore
-        ? match.homeTeam.id
-        : match.awayTeam.id;
-
-    setMatch((prev) => ({
-      ...prev,
-      status: "completed",
-      winnerId,
-    }));
+    setWinnerId(
+      homeScore > awayScore ? GUEST_HOME_TEAM.id : GUEST_AWAY_TEAM.id
+    );
+    setStatus("completed");
     setShowCompleteDialog(false);
     setShowResultModal(true);
-  }, [match.homeScore, match.awayScore, match.homeTeam.id, match.awayTeam.id]);
+  }, [homeScore, awayScore]);
 
   const resetMatch = useCallback(() => {
-    setMatch({
-      homeTeam: GUEST_HOME_TEAM,
-      awayTeam: GUEST_AWAY_TEAM,
-      homeScore: 0,
-      awayScore: 0,
-      status: "pending",
-      winnerId: undefined,
-    });
-    setHistory([]);
+    history.reset({ home: 0, away: 0 });
+    setStatus("pending");
+    setWinnerId(undefined);
     setShowCompleteDialog(false);
     setShowResultModal(false);
-  }, []);
+  }, [history]);
 
-  const canComplete =
-    match.status !== "completed" && match.homeScore !== match.awayScore;
+  const match: GuestMatch = useMemo(
+    () => ({
+      homeTeam: GUEST_HOME_TEAM,
+      awayTeam: GUEST_AWAY_TEAM,
+      homeScore,
+      awayScore,
+      status,
+      winnerId,
+    }),
+    [homeScore, awayScore, status, winnerId]
+  );
 
-  const homeLeading = match.homeScore > match.awayScore;
-  const awayLeading = match.awayScore > match.homeScore;
-
-  const winner = match.winnerId
-    ? match.winnerId === match.homeTeam.id
-      ? match.homeTeam
-      : match.awayTeam
+  const winner = winnerId
+    ? winnerId === GUEST_HOME_TEAM.id
+      ? GUEST_HOME_TEAM
+      : GUEST_AWAY_TEAM
     : null;
 
   return {
     match,
-    history,
-    homeLeading,
-    awayLeading,
-    canComplete,
+    canUndo: history.canUndo,
+    homeLeading: homeScore > awayScore,
+    awayLeading: awayScore > homeScore,
+    canComplete: status !== "completed" && homeScore !== awayScore,
     winner,
     showCompleteDialog,
     showResultModal,

@@ -11,7 +11,7 @@ import type {
 } from '@/lib/volleyball/types';
 import { buildPlayerPositions, buildMovementArrows, ROTATION_CHART } from '@/lib/volleyball/rotations';
 import { getOverlapConstraints } from '@/lib/volleyball/overlap';
-import { PLAYER_COLORS, BACK_ROW_ZONES } from '@/lib/volleyball/constants';
+import { BACK_ROW_ZONES } from '@/lib/volleyball/constants';
 
 type UseVolleyballRotationOptions = {
   initialRotation?: RotationNumber;
@@ -88,7 +88,6 @@ const buildPlayerPositionsFromCustom = (
         zone,
         position: pos,
         label: actualRole,
-        color: PLAYER_COLORS[actualRole as PlayerRole]?.bg || 'gray',
         isBackRow,
         isLiberoEligible: isMiddleBlocker,
       });

@@ -1,82 +1,142 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { useCallback, useMemo, useState } from "react";
+import { MbButton } from "@/components/matchbook/Button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Minus, Plus, Sparkles, Check } from "lucide-react";
+  MbDialog,
+  MbDialogBody,
+  MbDialogFooter,
+} from "@/components/matchbook/Dialog";
+import { MbSegmented } from "@/components/matchbook/Segmented";
+import { MbCheckMark } from "@/components/matchbook/SelectList";
+import { TeamMark } from "@/components/matchbook/Panel";
+import {
+  MbNumberStepper,
+  MbSwatchPicker,
+  MB_FIELD_LABEL,
+  MB_SWATCH_PALETTE,
+} from "@/components/matchbook/form";
+import { crestForTeam } from "@/components/matchbook/types";
 
-// Color style presets
-const colorStyles = [
+/* ===========================================================================
+   BULK TEAM CREATION
+
+   Three defects the old dialog shipped, fixed here rather than restyled:
+
+   1. `startNumber` was STATE seeded once by a `useState(() => …)` used as an
+      effect. `/teams` mounts this dialog permanently, so the initialiser ran
+      on page mount and never again: bulk-add twice and the second batch
+      restarted at 1, producing duplicate names. It is derived now.
+   2. The preview avatar printed `name.charAt(name.length - 1)` — the LAST
+      character, so "Team 12" previewed as "2". The preview is the real crest
+      the app will draw.
+   3. Group / Side lettering was `String.fromCharCode(64 + n)`, which produces
+      "[" at 27. It carries past Z now.
+
+   The eight colour presets were 64 literal hex values (invariant 10). They are
+   re-keyed onto the house palette; five named schemes plus a single-colour
+   custom, all resolving through `--mb-*`.
+   =========================================================================== */
+
+const TEAM_COUNT_MIN = 2;
+const TEAM_COUNT_MAX = 16;
+
+const TOKEN = Object.fromEntries(
+  MB_SWATCH_PALETTE.map((swatch) => [swatch.label.toLowerCase(), swatch.value])
+) as Record<string, string>;
+
+interface ColourScheme {
+  id: string;
+  name: string;
+  description: string;
+  colors: string[];
+}
+
+const COLOUR_SCHEMES: ColourScheme[] = [
   {
-    id: "vibrant",
-    name: "Vibrant",
-    description: "Bold, energetic colors",
-    colors: ["#ef4444", "#f97316", "#eab308", "#22c55e", "#06b6d4", "#3b82f6", "#8b5cf6", "#ec4899"],
+    id: "house",
+    name: "House",
+    description: "The full matchbook palette, in order.",
+    colors: MB_SWATCH_PALETTE.map((swatch) => swatch.value),
   },
   {
-    id: "ocean",
-    name: "Ocean",
-    description: "Cool blues and teals",
-    colors: ["#0ea5e9", "#06b6d4", "#14b8a6", "#0d9488", "#0891b2", "#0284c7", "#0369a1", "#155e75"],
+    id: "cool",
+    name: "Cool",
+    description: "Teal, navy, plum and slate.",
+    colors: [TOKEN.teal, TOKEN.navy, TOKEN.plum, TOKEN.slate],
   },
   {
-    id: "sunset",
-    name: "Sunset",
-    description: "Warm oranges and reds",
-    colors: ["#dc2626", "#ea580c", "#d97706", "#ca8a04", "#f59e0b", "#fb923c", "#f87171", "#fbbf24"],
+    id: "warm",
+    name: "Warm",
+    description: "Coral, gold and red.",
+    colors: [TOKEN.coral, TOKEN.gold, TOKEN.red],
   },
   {
-    id: "forest",
-    name: "Forest",
-    description: "Natural greens",
-    colors: ["#16a34a", "#15803d", "#166534", "#14532d", "#22c55e", "#4ade80", "#059669", "#10b981"],
+    id: "sides",
+    name: "Two sides",
+    description: "Alternating navy and coral, for head-to-head draws.",
+    colors: [TOKEN.navy, TOKEN.coral],
   },
   {
-    id: "berry",
-    name: "Berry",
-    description: "Purples and pinks",
-    colors: ["#7c3aed", "#8b5cf6", "#a855f7", "#c026d3", "#d946ef", "#ec4899", "#f472b6", "#9333ea"],
-  },
-  {
-    id: "monochrome",
-    name: "Monochrome",
-    description: "Shades of gray",
-    colors: ["#1f2937", "#374151", "#4b5563", "#6b7280", "#9ca3af", "#64748b", "#475569", "#334155"],
-  },
-  {
-    id: "rainbow",
-    name: "Rainbow",
-    description: "Full spectrum",
-    colors: ["#ef4444", "#f97316", "#facc15", "#4ade80", "#22d3ee", "#3b82f6", "#a855f7", "#f472b6"],
-  },
-  {
-    id: "neon",
-    name: "Neon",
-    description: "Bright, electric colors",
-    colors: ["#ff0080", "#00ff80", "#8000ff", "#ff8000", "#00ffff", "#ff00ff", "#80ff00", "#0080ff"],
+    id: "mono",
+    name: "Uniform",
+    description: "Every team the same navy.",
+    colors: [TOKEN.navy],
   },
 ];
 
-const namingStyles = [
-  { id: "team", prefix: "Team", example: "Team 1, Team 2..." },
-  { id: "squad", prefix: "Squad", example: "Squad 1, Squad 2..." },
-  { id: "group", prefix: "Group", example: "Group A, Group B..." },
-  { id: "court", prefix: "Court", example: "Court 1, Court 2..." },
-  { id: "side", prefix: "Side", example: "Side A, Side B..." },
-];
+const NAMING_STYLES = [
+  { id: "team", prefix: "Team", letters: false },
+  { id: "squad", prefix: "Squad", letters: false },
+  { id: "group", prefix: "Group", letters: true },
+  { id: "court", prefix: "Court", letters: false },
+  { id: "side", prefix: "Side", letters: true },
+] as const;
+
+/** 1 → A, 26 → Z, 27 → AA. The old `fromCharCode(64 + n)` printed "[" at 27. */
+export const columnLetters = (n: number): string => {
+  let value = Math.max(1, Math.floor(n));
+  let out = "";
+  while (value > 0) {
+    const remainder = (value - 1) % 26;
+    out = String.fromCharCode(65 + remainder) + out;
+    value = Math.floor((value - 1) / 26);
+  }
+  return out;
+};
+
+export interface QuickAddPlan {
+  name: string;
+  color: string;
+}
+
+/**
+ * Pure, and exported so the numbering rule can be pinned by a test: the
+ * regression this dialog shipped was entirely in how `start` was obtained.
+ */
+export const buildQuickAddPlan = (options: {
+  count: number;
+  start: number;
+  naming: string;
+  colors: string[];
+}): QuickAddPlan[] => {
+  const style =
+    NAMING_STYLES.find((entry) => entry.id === options.naming) ?? NAMING_STYLES[0];
+  const palette = options.colors.length > 0 ? options.colors : [TOKEN.navy];
+
+  return Array.from({ length: Math.max(0, options.count) }, (_, index) => {
+    const ordinal = options.start + index;
+    return {
+      name: `${style.prefix} ${style.letters ? columnLetters(ordinal) : ordinal}`,
+      color: palette[index % palette.length],
+    };
+  });
+};
 
 interface QuickAddTeamsProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAddTeams: (teams: { name: string; color: string }[]) => void;
+  onAddTeams: (teams: QuickAddPlan[]) => void;
   existingTeamCount: number;
 }
 
@@ -87,215 +147,217 @@ export const QuickAddTeams = ({
   existingTeamCount,
 }: QuickAddTeamsProps) => {
   const [teamCount, setTeamCount] = useState(4);
-  const [selectedStyle, setSelectedStyle] = useState(colorStyles[0].id);
-  const [selectedNaming, setSelectedNaming] = useState(namingStyles[0].id);
-  const [startNumber, setStartNumber] = useState(existingTeamCount + 1);
+  const [scheme, setScheme] = useState(COLOUR_SCHEMES[0].id);
+  const [naming, setNaming] = useState<string>(NAMING_STYLES[0].id);
+  const [customColor, setCustomColor] = useState(TOKEN.coral);
 
-  // Update start number when dialog opens
-  useState(() => {
-    setStartNumber(existingTeamCount + 1);
-  });
+  /* Derived, never stored — see the note at the top of the file. */
+  const start = existingTeamCount + 1;
 
-  const currentColorStyle = useMemo(
-    () => colorStyles.find((s) => s.id === selectedStyle) || colorStyles[0],
-    [selectedStyle]
+  const colors = useMemo(() => {
+    if (scheme === "custom") return [customColor];
+    return (
+      COLOUR_SCHEMES.find((entry) => entry.id === scheme) ?? COLOUR_SCHEMES[0]
+    ).colors;
+  }, [scheme, customColor]);
+
+  const plan = useMemo(
+    () => buildQuickAddPlan({ count: teamCount, start, naming, colors }),
+    [teamCount, start, naming, colors]
   );
-
-  const currentNamingStyle = useMemo(
-    () => namingStyles.find((s) => s.id === selectedNaming) || namingStyles[0],
-    [selectedNaming]
-  );
-
-  const handleDecrease = useCallback(() => {
-    setTeamCount((prev) => Math.max(2, prev - 1));
-  }, []);
-
-  const handleIncrease = useCallback(() => {
-    setTeamCount((prev) => Math.min(16, prev + 1));
-  }, []);
-
-  const getTeamLabel = useCallback(
-    (index: number) => {
-      const num = startNumber + index;
-      if (currentNamingStyle.id === "group" || currentNamingStyle.id === "side") {
-        const letter = String.fromCharCode(64 + num);
-        return `${currentNamingStyle.prefix} ${letter}`;
-      }
-      return `${currentNamingStyle.prefix} ${num}`;
-    },
-    [currentNamingStyle, startNumber]
-  );
-
-  const getTeamColor = useCallback(
-    (index: number) => {
-      return currentColorStyle.colors[index % currentColorStyle.colors.length];
-    },
-    [currentColorStyle]
-  );
-
-  const previewTeams = useMemo(() => {
-    return Array.from({ length: teamCount }, (_, i) => ({
-      name: getTeamLabel(i),
-      color: getTeamColor(i),
-    }));
-  }, [teamCount, getTeamLabel, getTeamColor]);
 
   const handleCreate = useCallback(() => {
-    onAddTeams(previewTeams);
+    onAddTeams(plan);
     onOpenChange(false);
     setTeamCount(4);
-  }, [previewTeams, onAddTeams, onOpenChange]);
+  }, [plan, onAddTeams, onOpenChange]);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col">
-        <DialogHeader className="shrink-0">
-          <DialogTitle className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-primary" />
-            Quick Add Teams
-          </DialogTitle>
-          <DialogDescription>
-            Quickly create multiple numbered teams with a consistent style.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-6 py-4 overflow-y-auto flex-1 min-h-0">
-          {/* Team Count */}
-          <div className="space-y-3">
-            <label className="text-sm font-medium">Number of Teams</label>
-            <div className="flex items-center justify-center gap-6">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={handleDecrease}
-                disabled={teamCount <= 2}
-                className="h-12 w-12 rounded-full"
-              >
-                <Minus className="w-5 h-5" />
-              </Button>
-              <div className="text-center">
-                <span className="text-5xl font-bold tabular-nums text-primary">
-                  {teamCount}
-                </span>
-                <p className="text-xs text-muted-foreground mt-1">teams</p>
-              </div>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={handleIncrease}
-                disabled={teamCount >= 16}
-                className="h-12 w-12 rounded-full"
-              >
-                <Plus className="w-5 h-5" />
-              </Button>
-            </div>
-          </div>
-
-          {/* Naming Style */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Naming Style</label>
-            <div className="flex flex-wrap gap-2">
-              {namingStyles.map((style) => (
-                <button
-                  key={style.id}
-                  type="button"
-                  onClick={() => setSelectedNaming(style.id)}
-                  className={`
-                    px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer
-                    ${selectedNaming === style.id
-                      ? "bg-primary text-primary-foreground shadow-md"
-                      : "bg-card border border-border/40 hover:border-primary/40"
-                    }
-                  `}
-                >
-                  {style.prefix}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Color Style */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Color Style</label>
-            <div className="grid grid-cols-2 gap-2">
-              {colorStyles.map((style) => (
-                <button
-                  key={style.id}
-                  type="button"
-                  onClick={() => setSelectedStyle(style.id)}
-                  className={`
-                    p-3 rounded-xl text-left transition-all duration-200 cursor-pointer
-                    ${selectedStyle === style.id
-                      ? "ring-2 ring-inset ring-primary bg-primary/5"
-                      : "bg-card border border-border/40 hover:border-primary/40"
-                    }
-                  `}
-                >
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <div className="flex -space-x-1">
-                      {style.colors.slice(0, 4).map((color, i) => (
-                        <div
-                          key={i}
-                          className="w-4 h-4 rounded-full border-2 border-background"
-                          style={{ backgroundColor: color }}
-                        />
-                      ))}
-                    </div>
-                    <span className="text-sm font-medium">{style.name}</span>
-                    {selectedStyle === style.id && (
-                      <Check className="w-4 h-4 text-primary ml-auto" />
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground">{style.description}</p>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Preview */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium">Preview</label>
-              <Badge variant="secondary">{teamCount} teams</Badge>
-            </div>
-            <div className="p-4 rounded-xl bg-card/50 border border-border/40 max-h-40 overflow-y-auto scrollbar-thin">
-              <div className="grid grid-cols-2 gap-2">
-                {previewTeams.map((team, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center gap-2 p-2 rounded-lg"
-                    style={{
-                      background: `linear-gradient(135deg, ${team.color}15, ${team.color}08)`,
-                    }}
-                  >
-                    <div
-                      className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 shadow-sm"
-                      style={{
-                        background: `linear-gradient(135deg, ${team.color}, ${team.color}cc)`,
-                      }}
-                    >
-                      <span className="text-xs font-bold text-white">
-                        {team.name.charAt(team.name.length - 1)}
-                      </span>
-                    </div>
-                    <span className="text-sm font-medium truncate">{team.name}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+    <MbDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Quick Add Teams"
+      icon="import"
+      kicker="Team directory"
+      size="lg"
+      description="Create a numbered block of teams in one go. Numbering continues from the teams you already have."
+    >
+      <MbDialogBody className="flex flex-col gap-5">
+        <div className="flex flex-col gap-2.5">
+          <span className={MB_FIELD_LABEL.className} style={MB_FIELD_LABEL.style}>
+            How many teams
+          </span>
+          <MbNumberStepper
+            label="Teams to create"
+            value={teamCount}
+            onChange={setTeamCount}
+            min={TEAM_COUNT_MIN}
+            max={TEAM_COUNT_MAX}
+            size="lg"
+            suffix=" teams"
+          />
+          <p className="text-[0.78rem] text-mb-ink-muted tabular-nums">
+            Numbering starts at {start}.
+          </p>
         </div>
 
-        <DialogFooter className="flex-row gap-2 sm:gap-2 shrink-0 pt-4 border-t">
-          <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
-            Cancel
-          </Button>
-          <Button onClick={handleCreate} className="flex-1 gap-2 shadow-lg shadow-primary/20">
-            <Sparkles className="w-4 h-4" />
-            Create {teamCount} Teams
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        <div className="flex flex-col gap-2.5">
+          <span
+            className={MB_FIELD_LABEL.className}
+            style={MB_FIELD_LABEL.style}
+            id="quick-add-naming-label"
+          >
+            Naming style
+          </span>
+          {/* Five columns at every width — a count that divides the options
+              exactly. `.mb-segmented`'s ground is navy, so `base: 2` or
+              `base: 3` leaves a half-filled row that paints an empty navy cell
+              reading as a sixth, broken option. Measured at 390px: five cells
+              of 71px leave 47px of text box against ~43px for "SQUAD". */}
+          <MbSegmented
+            name="quick-add-naming"
+            aria-labelledby="quick-add-naming-label"
+            value={naming}
+            onChange={setNaming}
+            options={NAMING_STYLES.map((style) => ({
+              value: style.id,
+              label: style.prefix,
+            }))}
+            columns={{ base: NAMING_STYLES.length, sm: NAMING_STYLES.length }}
+          />
+          <p className="text-[0.78rem] text-mb-ink-muted tabular-nums">
+            First two: {plan[0]?.name ?? "—"}, {plan[1]?.name ?? "—"}.
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-2.5">
+          <span className={MB_FIELD_LABEL.className} style={MB_FIELD_LABEL.style}>
+            Colour scheme
+          </span>
+          {/* One column at every width: the old 2-column grid clipped
+              "Monochrome" to "Monochrom" at 390px. */}
+          <ul
+            role="radiogroup"
+            aria-label="Colour scheme"
+            className="divide-y divide-mb-rule border-y border-mb-rule"
+          >
+            {[...COLOUR_SCHEMES, { id: "custom", name: "Single colour", description: "Pick one colour for every team.", colors: [customColor] }].map(
+              (entry) => {
+                const active = scheme === entry.id;
+                return (
+                  <li key={entry.id}>
+                    <button
+                      type="button"
+                      role="radio"
+                      aria-checked={active}
+                      onClick={() => setScheme(entry.id)}
+                      data-selected={active}
+                      className={`mb-row-hover flex min-h-[52px] w-full items-center gap-3 px-2 py-2 text-left ${
+                        active ? "mb-rail" : ""
+                      }`}
+                      style={
+                        active
+                          ? ({ "--mb-rail-color": "var(--mb-coral)" } as React.CSSProperties)
+                          : undefined
+                      }
+                    >
+                      <span
+                        aria-hidden="true"
+                        className={`inline-grid h-[18px] w-[18px] shrink-0 place-content-center rounded-[2px] border-[1.5px] ${
+                          active
+                            ? "border-mb-coral-deep bg-mb-coral-deep text-mb-paper-bright"
+                            : "border-mb-navy"
+                        }`}
+                      >
+                        {active && <MbCheckMark />}
+                      </span>
+                      <span aria-hidden="true" className="flex shrink-0 items-center gap-[3px]">
+                        {entry.colors.slice(0, 4).map((color, index) => (
+                          <span
+                            key={`${entry.id}-${index}`}
+                            className="block h-4 w-4 rounded-[2px]"
+                            style={{ background: color }}
+                          />
+                        ))}
+                      </span>
+                      <span className="flex min-w-0 flex-1 flex-col">
+                        <span className="matchbook-display truncate text-[0.85rem] font-bold tracking-[0.05em]">
+                          {entry.name}
+                        </span>
+                        <span className="text-[0.72rem] leading-snug text-mb-ink-muted">
+                          {entry.description}
+                        </span>
+                      </span>
+                    </button>
+                  </li>
+                );
+              }
+            )}
+          </ul>
+          {scheme === "custom" && (
+            <MbSwatchPicker
+              value={customColor}
+              onChange={setCustomColor}
+              allowCustom
+              label="Team colour"
+            />
+          )}
+        </div>
+
+        <div className="flex flex-col gap-2.5">
+          <div className="flex items-center justify-between gap-3">
+            <span
+              className={MB_FIELD_LABEL.className}
+              style={MB_FIELD_LABEL.style}
+            >
+              Preview
+            </span>
+            <span className="mb-kicker tabular-nums">
+              {teamCount} to create
+            </span>
+          </div>
+          {/* No nested scroller: the dialog body is the only one. */}
+          <ul className="divide-y divide-mb-rule border-y border-mb-rule">
+            {plan.map((entry) => (
+              <li
+                key={entry.name}
+                className="flex min-h-[40px] items-center gap-3 py-1.5"
+              >
+                <TeamMark
+                  team={{ name: entry.name, crest: crestForTeam(entry.name, entry.name) }}
+                  accent={entry.color}
+                  size="sm"
+                  className="min-w-0 flex-1"
+                />
+              </li>
+            ))}
+          </ul>
+        </div>
+      </MbDialogBody>
+
+      {/* The footer stacks below `sm`. Sharing a 390px row, "Create 4 teams"
+          had 89px of text box and rendered "Create 4 tea…" — and the commit
+          verb is the one label in a dialog that must never be clipped. Wrapped,
+          the primary takes a full-width row nearest the thumb. */}
+      <MbDialogFooter className="max-sm:flex-wrap">
+        <MbButton
+          variant="outline-navy"
+          size="lg"
+          onClick={() => onOpenChange(false)}
+          className="max-sm:basis-full!"
+        >
+          Cancel
+        </MbButton>
+        <MbButton
+          variant="coral"
+          size="lg"
+          icon="check"
+          onClick={handleCreate}
+          className="max-sm:basis-full!"
+        >
+          Create {teamCount} teams
+        </MbButton>
+      </MbDialogFooter>
+    </MbDialog>
   );
 };

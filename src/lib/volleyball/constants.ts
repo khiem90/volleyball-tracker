@@ -1,20 +1,17 @@
 import type { PlayerRole, PlayerInfo, CourtZone, CourtPosition } from './types';
 
 /**
- * Player color scheme using OKLch for perceptual consistency
- */
-export const PLAYER_COLORS: Record<PlayerRole, { bg: string; text: string }> = {
-  S: { bg: 'oklch(0.55 0.22 25)', text: 'white' }, // Red - Setter
-  OPP: { bg: 'oklch(0.55 0.15 250)', text: 'white' }, // Blue - Opposite
-  OH1: { bg: 'oklch(0.55 0.15 145)', text: 'white' }, // Green - Outside 1
-  OH2: { bg: 'oklch(0.60 0.12 145)', text: 'white' }, // Light Green - Outside 2
-  MB1: { bg: 'oklch(0.60 0.15 55)', text: 'white' }, // Orange - Middle 1
-  MB2: { bg: 'oklch(0.65 0.12 55)', text: 'white' }, // Light Orange - Middle 2
-  L: { bg: 'oklch(0.60 0.18 310)', text: 'white' }, // Purple - Libero
-};
-
-/**
- * Player metadata for legend display
+ * Player metadata for the legend.
+ *
+ * The seven-hue `PLAYER_COLORS` map that used to sit above this — seven raw
+ * `oklch(...)` literals, one per role — is GONE, and with it the `color` and
+ * `textColor` fields it fed. It was the court's primary identity channel, which
+ * made role identity a hue and nothing else: desaturate it and six of the seven
+ * tokens became the same grey. Role tokens now come from
+ * `lib/volleyball/roleTokens.ts`, which maps a role and its ROW to `--mb-*`
+ * references and carries a second, non-colour mark for the setter and the
+ * libero. Nothing in the app paints from a literal any more (invariant 10,
+ * charter W7 acceptance 8).
  */
 export const PLAYER_INFO: Record<PlayerRole, PlayerInfo> = {
   S: {
@@ -22,56 +19,42 @@ export const PLAYER_INFO: Record<PlayerRole, PlayerInfo> = {
     fullName: 'Setter',
     shortName: 'S',
     description: 'Orchestrates the offense by setting to attackers',
-    color: PLAYER_COLORS.S.bg,
-    textColor: PLAYER_COLORS.S.text,
   },
   OPP: {
     role: 'OPP',
     fullName: 'Opposite',
     shortName: 'OPP',
     description: 'Right-side hitter, opposite the setter in rotation',
-    color: PLAYER_COLORS.OPP.bg,
-    textColor: PLAYER_COLORS.OPP.text,
   },
   OH1: {
     role: 'OH1',
     fullName: 'Outside Hitter 1',
     shortName: 'OH1',
     description: 'Primary left-side attacker, typically strongest hitter',
-    color: PLAYER_COLORS.OH1.bg,
-    textColor: PLAYER_COLORS.OH1.text,
   },
   OH2: {
     role: 'OH2',
     fullName: 'Outside Hitter 2',
     shortName: 'OH2',
     description: 'Secondary left-side attacker',
-    color: PLAYER_COLORS.OH2.bg,
-    textColor: PLAYER_COLORS.OH2.text,
   },
   MB1: {
     role: 'MB1',
     fullName: 'Middle Blocker 1',
     shortName: 'MB1',
     description: 'Primary middle attacker and blocker',
-    color: PLAYER_COLORS.MB1.bg,
-    textColor: PLAYER_COLORS.MB1.text,
   },
   MB2: {
     role: 'MB2',
     fullName: 'Middle Blocker 2',
     shortName: 'MB2',
     description: 'Secondary middle attacker and blocker',
-    color: PLAYER_COLORS.MB2.bg,
-    textColor: PLAYER_COLORS.MB2.text,
   },
   L: {
     role: 'L',
     fullName: 'Libero',
     shortName: 'L',
     description: 'Defensive specialist, replaces back-row middles',
-    color: PLAYER_COLORS.L.bg,
-    textColor: PLAYER_COLORS.L.text,
   },
 };
 
@@ -87,11 +70,6 @@ export const ZONE_POSITIONS: Record<CourtZone, CourtPosition> = {
   5: { x: 0.17, y: 0.25 }, // Left Back
   6: { x: 0.50, y: 0.25 }, // Middle Back
 };
-
-/**
- * Front row zones (near net)
- */
-const FRONT_ROW_ZONES: CourtZone[] = [2, 3, 4];
 
 /**
  * Back row zones (near endline)

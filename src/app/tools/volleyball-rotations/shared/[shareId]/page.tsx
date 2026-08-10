@@ -1,371 +1,360 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
-import { useParams, useRouter } from "next/navigation";
-import Link from "next/link";
-import { Navigation } from "@/components/Navigation";
-import { VolleyballCourt, RotationControls, LegendPanel } from "@/components/volleyball";
+import { useCallback, useEffect, useState } from "react";
+import { useParams } from "next/navigation";
+import { MatchbookShell } from "@/components/matchbook/AppShell";
+import { MbButton, MbButtonLink } from "@/components/matchbook/Button";
+import { MbEmptyState } from "@/components/matchbook/EmptyState";
+import { MbIcon } from "@/components/matchbook/MbIcon";
+import { MbNotice } from "@/components/matchbook/Notice";
+import { MbSkeleton } from "@/components/matchbook/Skeleton";
+import { Panel } from "@/components/matchbook/Panel";
+import { COURT_ASPECT } from "@/components/matchbook/court/geometry";
+import {
+  CourtStage,
+  OnCourtPanel,
+  RotationFacts,
+  RotationLayers,
+  RotationRail,
+} from "@/components/volleyball";
 import { useUserFormations } from "@/hooks/useUserFormations";
-import { getFormationByShareId } from "@/lib/volleyball/userFormations";
-import { getOverlapConstraints } from "@/lib/volleyball/overlap";
-import type {
-  UserFormation,
-  RotationNumber,
-  GameMode,
-  PlayerPosition,
-  PlayerRole,
-  MovementArrow,
-} from "@/lib/volleyball/types";
-import { PLAYER_COLORS, BACK_ROW_ZONES } from "@/lib/volleyball/constants";
-import { ROTATION_CHART } from "@/lib/volleyball/rotations";
-import { MotionDiv, slideUp } from "@/components/motion";
+import { useVolleyballRotation } from "@/hooks/useVolleyballRotation";
+import {
+  getFormationByShareId,
+  type ShareLookupFailure,
+} from "@/lib/volleyball/userFormations";
+import {
+  getFrontRowAttackerCount,
+  isSetterFrontRow,
+} from "@/lib/volleyball/rotations";
+import type { UserFormation } from "@/lib/volleyball/types";
+
+/* ===========================================================================
+   PUBLIC FORMATION VIEWER
+
+   A link a coach sends to a parent, so it takes `variant="public"`: brand
+   lockup, no sidebar, no bottom bar, no account chip — the same shell
+   `/summary/[shareCode]` uses.
+
+   THE FAILURE STATES ARE NOW THREE, NOT ONE. Every thrown error used to land on
+   the same centred "Formation Not Found" sentence, including a network timeout
+   and — worse — a missing Firestore composite index. `getFormationByShareId`
+   filters on `shareId` AND `visibility`, which needs an index on
+   (`shareId`, `visibility`); without it production throws `failed-precondition`
+   and every visitor was told the owner had un-shared the link. Each cause now
+   gets its own copy, and only the recoverable ones get a Retry.
+
+   COPYING DOES NOT REDIRECT. It used to navigate away 1.5s after the copy
+   landed, which takes the page out from under a reader who wanted to keep
+   looking at the diagram. It confirms in place and offers the archive as a
+   link.
+   =========================================================================== */
+
+const FAILURE_COPY: Record<
+  ShareLookupFailure,
+  { tone: "notfound" | "offline" | "error"; title: string; body: string; retry: boolean }
+> = {
+  notfound: {
+    tone: "notfound",
+    title: "This formation is not shared",
+    body: "The link may have been revoked by its owner, or it may never have existed. Ask them for a fresh link.",
+    retry: false,
+  },
+  offline: {
+    tone: "offline",
+    title: "The formation could not be reached",
+    body: "The connection to the formation store timed out. The link is probably fine — try again in a moment.",
+    retry: true,
+  },
+  unindexed: {
+    tone: "error",
+    title: "Shared formations are temporarily unavailable",
+    body: "The lookup this link needs is not available right now. This is a fault on our side, not a problem with the link.",
+    retry: true,
+  },
+  error: {
+    tone: "error",
+    title: "The formation could not be loaded",
+    body: "Something went wrong reading this link. Trying again usually clears it.",
+    retry: true,
+  },
+};
+
+const formatDate = (timestamp: number) =>
+  new Date(timestamp).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+
+/** Loading, at the FINAL geometry: masthead block, court box, legend rows. */
+const ViewerSkeleton = () => (
+  <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
+    <div className="xl:col-span-7">
+      <Panel title="Formation">
+        <div className="p-4">
+          <MbSkeleton w="100%" h={12} className="mb-3" />
+          <div className="mb-skeleton w-full" style={{ aspectRatio: COURT_ASPECT }} />
+        </div>
+      </Panel>
+    </div>
+    <div className="xl:col-span-5">
+      <Panel title="On Court">
+        <div className="flex flex-col gap-3 p-4">
+          {[0, 1, 2, 3, 4, 5].map((index) => (
+            <MbSkeleton key={index} w="100%" h={34} />
+          ))}
+        </div>
+      </Panel>
+    </div>
+  </div>
+);
 
 export default function SharedFormationPage() {
   const params = useParams();
-  const router = useRouter();
-  const shareId = params.shareId as string;
+  const shareId = typeof params.shareId === "string" ? params.shareId : "";
 
   const { duplicate, isAuthenticated } = useUserFormations();
 
-  const [formation, setFormation] = useState<UserFormation | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isCopying, setIsCopying] = useState(false);
-  const [copied, setCopied] = useState(false);
+  /**
+   * ONE piece of state for the whole fetch, tagged with the request that
+   * produced it, and `isLoading` derived from whether the tag matches the
+   * request the render wants.
+   *
+   * The obvious shape — three `useState`s and `setIsLoading(true)` at the top of
+   * the effect — is a cascading render (React's own `set-state-in-effect` rule
+   * rejects it) and it has a real bug in it: pressing Retry sets loading in a
+   * second commit, so for one frame the page shows the previous FAILURE with a
+   * retry that appears not to have done anything.
+   */
+  const [attempt, setAttempt] = useState(0);
+  const requestKey = `${shareId}#${attempt}`;
+  const [result, setResult] = useState<{
+    key: string;
+    formation: UserFormation | null;
+    failure: ShareLookupFailure | null;
+  } | null>(null);
 
-  // Rotation state
-  const [rotation, setRotation] = useState<RotationNumber>(1);
-  const [mode, setMode] = useState<GameMode>("receiving");
-  const [liberoActive, setLiberoActive] = useState(true);
+  const isLoading = Boolean(shareId) && result?.key !== requestKey;
+  const formation = result?.key === requestKey ? result.formation : null;
+  const failure = result?.key === requestKey ? result.failure : null;
+  const [copyState, setCopyState] = useState<"idle" | "copying" | "copied" | "failed">(
+    "idle"
+  );
+
   const [selectedPlayer, setSelectedPlayer] = useState<string | null>(null);
   const [showOverlaps, setShowOverlaps] = useState(true);
   const [showArrows, setShowArrows] = useState(true);
 
-  // Fetch formation
   useEffect(() => {
-    const fetchFormation = async () => {
-      if (!shareId) return;
-
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const result = await getFormationByShareId(shareId);
-        if (result) {
-          setFormation(result);
-        } else {
-          setError("Formation not found or is no longer shared");
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load formation");
-      } finally {
-        setIsLoading(false);
-      }
+    if (!shareId) return;
+    let cancelled = false;
+    getFormationByShareId(shareId).then((lookup) => {
+      if (!cancelled) setResult({ key: requestKey, ...lookup });
+    });
+    return () => {
+      cancelled = true;
     };
+  }, [shareId, requestKey]);
 
-    fetchFormation();
-  }, [shareId]);
+  const rotation = useVolleyballRotation({
+    customFormationData: formation?.data ?? null,
+  });
 
-  // Build player positions from custom formation data
-  const players = useMemo((): PlayerPosition[] => {
-    if (!formation) return [];
-
-    const frame = formation.data[mode]?.[rotation];
-    if (!frame) return [];
-
-    const positions: PlayerPosition[] = [];
-    const chart = ROTATION_CHART[rotation];
-
-    // Determine which MB is in back row
-    const getBackRowMB = (): "MB1" | "MB2" => {
-      for (const [zoneStr, role] of Object.entries(chart)) {
-        const zone = parseInt(zoneStr);
-        if ((role === "MB1" || role === "MB2") && BACK_ROW_ZONES.includes(zone as 1 | 2 | 3 | 4 | 5 | 6)) {
-          return role;
-        }
-      }
-      return "MB1";
-    };
-
-    const backRowMB = getBackRowMB();
-
-    for (const [zoneStr, role] of Object.entries(chart)) {
-      const zone = parseInt(zoneStr) as 1 | 2 | 3 | 4 | 5 | 6;
-      const isBackRow = BACK_ROW_ZONES.includes(zone);
-      const isMiddleBlocker = role === "MB1" || role === "MB2";
-      const shouldShowLibero = liberoActive && isBackRow && isMiddleBlocker;
-
-      const actualRole = shouldShowLibero ? "L" : role;
-      const pos = shouldShowLibero
-        ? frame.roleSpots.L || frame.roleSpots[backRowMB]
-        : frame.roleSpots[role];
-
-      if (pos) {
-        positions.push({
-          role: actualRole,
-          zone,
-          position: pos,
-          label: actualRole,
-          color: PLAYER_COLORS[actualRole]?.bg || "gray",
-          isBackRow,
-          isLiberoEligible: isMiddleBlocker,
-        });
-      }
-    }
-
-    return positions;
-  }, [formation, rotation, mode, liberoActive]);
-
-  // Build movement arrows from custom formation data
-  const arrows = useMemo((): MovementArrow[] => {
-    if (!formation) return [];
-
-    const frame = formation.data[mode]?.[rotation];
-    if (!frame?.movementArrows) return [];
-
-    return Object.entries(frame.movementArrows)
-      .filter(([, arrow]) => arrow !== undefined)
-      .map(([role, arrow]) => ({
-        role: role as PlayerRole,
-        from: arrow!.from,
-        to: arrow!.to,
-      }));
-  }, [formation, rotation, mode]);
-
-  const overlaps = useMemo(() => getOverlapConstraints(), []);
-
-  // Navigation
-  const nextRotation = useCallback(() => {
-    setRotation((prev) => (prev === 6 ? 1 : ((prev + 1) as RotationNumber)));
-  }, []);
-
-  const prevRotation = useCallback(() => {
-    setRotation((prev) => (prev === 1 ? 6 : ((prev - 1) as RotationNumber)));
-  }, []);
-
-  // Copy to my formations
-  const handleCopyToMyFormations = useCallback(async () => {
-    if (!formation || !isAuthenticated) return;
-
-    setIsCopying(true);
+  const handleCopy = useCallback(async () => {
+    if (!formation) return;
+    setCopyState("copying");
     try {
       await duplicate(formation);
-      setCopied(true);
-      setTimeout(() => {
-        router.push("/tools/volleyball-rotations/my-formations");
-      }, 1500);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to copy formation");
-    } finally {
-      setIsCopying(false);
+      setCopyState("copied");
+    } catch {
+      setCopyState("failed");
     }
-  }, [formation, isAuthenticated, duplicate, router]);
+  }, [formation, duplicate]);
 
-  // Loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background">
-        <Navigation />
-        <main className="max-w-7xl mx-auto px-4 py-12">
-          <div className="flex items-center justify-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-          </div>
-        </main>
-      </div>
+      <MatchbookShell
+        variant="public"
+        masthead={{
+          title: "Shared Formation",
+          shortTitle: "Shared Formation",
+          badge: { lines: ["Shared", "Formation"] },
+        }}
+      >
+        <ViewerSkeleton />
+      </MatchbookShell>
     );
   }
 
-  // Error state
-  if (error || !formation) {
+  if (!shareId || failure || !formation) {
+    const copy = FAILURE_COPY[failure ?? "notfound"];
     return (
-      <div className="min-h-screen bg-background">
-        <Navigation />
-        <main className="max-w-4xl mx-auto px-4 py-12">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold mb-4">Formation Not Found</h1>
-            <p className="text-muted-foreground mb-6">
-              {error || "This formation doesn't exist or is no longer shared."}
-            </p>
-            <Link
-              href="/tools/volleyball-rotations"
-              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
-            >
-              Go to Rotations Tool
-            </Link>
-          </div>
-        </main>
-      </div>
+      <MatchbookShell variant="public">
+        <MbEmptyState
+          tone={copy.tone}
+          title={copy.title}
+          body={copy.body}
+          actions={[
+            ...(copy.retry
+              ? [{ label: "Try again", onClick: () => setAttempt((n) => n + 1), tone: "coral" as const }]
+              : []),
+            { label: "Open the rotation designer", href: "/tools/volleyball-rotations" },
+          ]}
+        />
+      </MatchbookShell>
     );
   }
+
+  const tags = formation.tags ?? [];
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navigation />
+    <MatchbookShell
+      variant="public"
+      masthead={{
+        /* The title is user data, so it carries no coral span: the one coral on
+           this screen is the copy action, and a two-tone split of somebody
+           else's formation name would be an invented emphasis. */
+        title: formation.name,
+        shortTitle: formation.name,
+        badge: { lines: ["Shared", "Formation"] },
+        subLine: tags.length > 0 ? tags.join(" · ") : undefined,
+      }}
+    >
+      {formation.description && (
+        <p className="mb-4 max-w-[62ch] text-[0.86rem] leading-[1.55] text-mb-ink-muted">
+          {formation.description}
+        </p>
+      )}
 
-      <main className="max-w-7xl mx-auto px-4 py-6 pb-12">
-        {/* Header */}
-        <MotionDiv
-          initial="hidden"
-          animate="visible"
-          variants={slideUp}
-          className="mb-8"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <Link
-              href="/tools/volleyball-rotations"
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              &larr; Back to Rotations
-            </Link>
-            <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 rounded-full">
-              Shared Formation
-            </span>
-          </div>
-          <h1 className="text-3xl font-black tracking-tight mb-2">
-            {formation.name}
-          </h1>
-          {formation.description && (
-            <p className="text-muted-foreground">{formation.description}</p>
-          )}
-          {formation.tags && formation.tags.length > 0 && (
-            <div className="flex flex-wrap gap-2 mt-2">
-              {formation.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="px-2 py-0.5 text-xs bg-accent rounded-md"
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-          )}
-        </MotionDiv>
-
-        {/* Copy to My Formations CTA */}
-        <MotionDiv
-          initial="hidden"
-          animate="visible"
-          variants={slideUp}
-          className="mb-6"
-        >
-          {isAuthenticated ? (
-            <div className="p-4 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-between">
-              <div>
-                <p className="font-medium">Like this formation?</p>
-                <p className="text-sm text-muted-foreground">
-                  Copy it to your collection to customize it
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={handleCopyToMyFormations}
-                disabled={isCopying || copied}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                  copied
-                    ? "bg-green-500 text-white"
-                    : "bg-primary text-primary-foreground hover:bg-primary/90"
-                } disabled:opacity-50`}
-              >
-                {copied ? "Copied!" : isCopying ? "Copying..." : "Copy to My Formations"}
-              </button>
-            </div>
-          ) : (
-            <div className="p-4 rounded-xl bg-accent/50 border border-border flex items-center justify-between">
-              <div>
-                <p className="font-medium">Want to customize this formation?</p>
-                <p className="text-sm text-muted-foreground">
-                  Sign in to copy it to your collection
-                </p>
-              </div>
-              <Link
-                href={`/login?redirect=${encodeURIComponent(`/tools/volleyball-rotations/shared/${shareId}`)}`}
-                className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 font-medium"
-              >
-                Sign In
-              </Link>
-            </div>
-          )}
-        </MotionDiv>
-
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
-          {/* Left Column: Court + Controls */}
-          <div className="space-y-6">
-            {/* Controls Card */}
-            <div className="rounded-2xl border border-border bg-card p-4 md:p-6 shadow-soft">
-              <RotationControls
-                rotation={rotation}
-                mode={mode}
-                liberoActive={liberoActive}
-                showOverlaps={showOverlaps}
-                showArrows={showArrows}
-                onRotationChange={setRotation}
-                onModeChange={setMode}
-                onLiberoToggle={setLiberoActive}
-                onShowOverlapsToggle={setShowOverlaps}
-                onShowArrowsToggle={setShowArrows}
-                onNext={nextRotation}
-                onPrev={prevRotation}
-              />
-            </div>
-
-            {/* Court Visualization Card */}
-            <div className="rounded-2xl border border-border bg-card p-4 md:p-6 shadow-soft">
-              <VolleyballCourt
-                players={players}
-                overlaps={overlaps}
-                arrows={arrows}
-                selectedPlayer={selectedPlayer}
-                onPlayerSelect={setSelectedPlayer}
-                mode={mode}
-                showOverlaps={showOverlaps}
-                showArrows={showArrows}
-              />
-            </div>
-          </div>
-
-          {/* Right Sidebar: Legend */}
-          <div className="space-y-6 lg:sticky lg:top-20 lg:h-fit">
-            {/* Legend Panel */}
-            <div className="rounded-2xl border border-border bg-card p-4 shadow-soft">
-              <LegendPanel
-                players={players}
-                rotation={rotation}
-                mode={mode}
-                selectedPlayer={selectedPlayer}
-                onPlayerSelect={setSelectedPlayer}
-              />
-            </div>
-
-            {/* Formation Info */}
-            <div className="rounded-2xl border border-border bg-card p-4 shadow-soft">
-              <h3 className="font-semibold mb-2">About This Formation</h3>
-              <dl className="space-y-2 text-sm">
-                <div>
-                  <dt className="text-muted-foreground">Created</dt>
-                  <dd>
-                    {new Date(formation.createdAt).toLocaleDateString(undefined, {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-muted-foreground">Last Updated</dt>
-                  <dd>
-                    {new Date(formation.updatedAt).toLocaleDateString(undefined, {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}
-                  </dd>
-                </div>
-              </dl>
-            </div>
-          </div>
+      <div className="mb-enter-grid grid grid-cols-1 gap-4 xl:grid-cols-12">
+        <div className="xl:col-span-7">
+          <Panel
+            title={`Rotation ${rotation.rotation} · ${
+              rotation.mode === "serving" ? "Serving" : "Receiving"
+            }`}
+          >
+            <RotationRail
+              rotation={rotation.rotation}
+              mode={rotation.mode}
+              onRotationChange={rotation.setRotation}
+              onModeChange={rotation.setMode}
+              onNext={rotation.nextRotation}
+              onPrev={rotation.prevRotation}
+            />
+            <CourtStage
+              players={rotation.players}
+              overlaps={rotation.overlaps}
+              arrows={rotation.arrows}
+              mode={rotation.mode}
+              rotation={rotation.rotation}
+              selectedPlayer={selectedPlayer}
+              onPlayerSelect={setSelectedPlayer}
+              showOverlaps={showOverlaps}
+              showArrows={showArrows}
+            />
+            <RotationLayers
+              liberoActive={rotation.liberoActive}
+              onLiberoToggle={rotation.setLiberoActive}
+              showOverlaps={showOverlaps}
+              showArrows={showArrows}
+              onShowOverlapsChange={setShowOverlaps}
+              onShowArrowsChange={setShowArrows}
+            />
+            <RotationFacts
+              setterRow={isSetterFrontRow(rotation.rotation) ? "Front" : "Back"}
+              frontRowAttackers={getFrontRowAttackerCount(rotation.rotation)}
+            />
+          </Panel>
         </div>
-      </main>
-    </div>
+
+        <div className="flex flex-col gap-4 xl:col-span-5">
+          <Panel title="Use This Formation">
+            <div className="flex flex-col gap-3 p-4">
+              {copyState === "failed" && (
+                <MbNotice tone="danger">
+                  The copy could not be saved. Check your connection and try again.
+                </MbNotice>
+              )}
+              {copyState === "copied" ? (
+                <>
+                  <p className="flex items-center gap-2 text-[0.82rem] font-semibold">
+                    <MbIcon id="check" size={16} className="shrink-0 text-mb-green" />
+                    Saved to your archive
+                  </p>
+                  <p className="text-[0.76rem] leading-snug text-mb-ink-muted">
+                    Your copy is independent — editing it does not change the
+                    original.
+                  </p>
+                  <MbButtonLink
+                    variant="outline-navy"
+                    href="/tools/volleyball-rotations/my-formations"
+                    icon="save"
+                  >
+                    Open In Archive
+                  </MbButtonLink>
+                </>
+              ) : isAuthenticated ? (
+                <>
+                  <p className="text-[0.78rem] leading-snug text-mb-ink-muted">
+                    Take a copy into your own archive and edit it freely. The
+                    original is untouched.
+                  </p>
+                  <MbButton
+                    variant="coral"
+                    icon="copy"
+                    loading={copyState === "copying"}
+                    onClick={() => void handleCopy()}
+                  >
+                    Copy To My Formations
+                  </MbButton>
+                </>
+              ) : (
+                <>
+                  <p className="text-[0.78rem] leading-snug text-mb-ink-muted">
+                    Sign in to keep a copy of this formation and edit it. Viewing
+                    it needs no account.
+                  </p>
+                  <MbButtonLink
+                    variant="coral"
+                    icon="login"
+                    href={`/login?redirect=${encodeURIComponent(
+                      `/tools/volleyball-rotations/shared/${shareId}`
+                    )}`}
+                  >
+                    Sign In To Copy
+                  </MbButtonLink>
+                </>
+              )}
+            </div>
+          </Panel>
+
+          <Panel title="On Court">
+            <OnCourtPanel
+              players={rotation.players}
+              selectedPlayer={selectedPlayer}
+              onPlayerSelect={setSelectedPlayer}
+            />
+          </Panel>
+
+          <Panel title="Record">
+            <dl className="flex flex-col">
+              <div className="flex items-center justify-between border-b border-mb-rule px-4 py-2">
+                <dt className="mb-kicker">Created</dt>
+                <dd className="text-[0.78rem] font-semibold tabular-nums" suppressHydrationWarning>
+                  {formatDate(formation.createdAt)}
+                </dd>
+              </div>
+              <div className="flex items-center justify-between px-4 py-2">
+                <dt className="mb-kicker">Last updated</dt>
+                <dd className="text-[0.78rem] font-semibold tabular-nums" suppressHydrationWarning>
+                  {formatDate(formation.updatedAt)}
+                </dd>
+              </div>
+            </dl>
+          </Panel>
+        </div>
+      </div>
+    </MatchbookShell>
   );
 }

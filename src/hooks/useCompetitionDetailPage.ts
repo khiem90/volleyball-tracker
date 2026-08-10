@@ -17,15 +17,7 @@ import {
   initializeTwoMatchRotationState,
   generateInitialMatches as generateTwoMatchRotationInitialMatches,
 } from "@/lib/twoMatchRotation";
-import type { Match, PersistentTeam } from "@/types/game";
-
-export interface RoundRobinMatchRow {
-  match: Match;
-  homeTeam?: PersistentTeam;
-  awayTeam?: PersistentTeam;
-  homeWon: boolean;
-  awayWon: boolean;
-}
+import type { Match } from "@/types/game";
 
 export const useCompetitionDetailPage = () => {
   const params = useParams();
@@ -41,10 +33,19 @@ export const useCompetitionDetailPage = () => {
     startCompetitionWithMatches,
     completeCompetition,
     removeCompetitionLocal,
+    updateCompetition,
+    deleteCompetition,
     canEdit,
   } = useApp();
 
-  const { isSharedMode, isCreator, createNewSession, endSession } = useSession();
+  const {
+    isSharedMode,
+    isCreator,
+    createNewSession,
+    endSession,
+    error: sessionError,
+    getShareUrl,
+  } = useSession();
   const { isConfigured } = useAuth();
 
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
@@ -69,42 +70,6 @@ export const useCompetitionDetailPage = () => {
     if (!competition) return [];
     return state.teams.filter((t) => competition.teamIds.includes(t.id));
   }, [competition, state.teams]);
-
-  const competitionTeamsMap = useMemo(() => {
-    const map = new Map<string, PersistentTeam>();
-    competitionTeams.forEach((team) => map.set(team.id, team));
-    return map;
-  }, [competitionTeams]);
-
-  const roundRobinMatches = useMemo<RoundRobinMatchRow[]>(() => {
-    if (!competition || competition.type !== "round_robin") return [];
-
-    const statusOrder = {
-      in_progress: 0,
-      pending: 1,
-      completed: 2,
-    } as const;
-
-    return [...matches]
-      .sort((a, b) => {
-        const statusDiff = statusOrder[a.status] - statusOrder[b.status];
-        if (statusDiff !== 0) return statusDiff;
-        if (a.round !== b.round) return a.round - b.round;
-        return a.position - b.position;
-      })
-      .map((match) => {
-        const homeTeam = competitionTeamsMap.get(match.homeTeamId);
-        const awayTeam = competitionTeamsMap.get(match.awayTeamId);
-
-        return {
-          match,
-          homeTeam,
-          awayTeam,
-          homeWon: match.winnerId === match.homeTeamId,
-          awayWon: match.winnerId === match.awayTeamId,
-        };
-      });
-  }, [competition, matches, competitionTeamsMap]);
 
   const handleStartCompetition = useCallback((byeTeamIds?: string[]) => {
     if (!competition) return;
@@ -311,6 +276,43 @@ export const useCompetitionDetailPage = () => {
     router,
   ]);
 
+  /* ------------------------------------------------------------ draft edits
+     The draft console can add and remove entrants (brief §2.5 — the shipped
+     screen could do neither). Both are guarded on `status === "draft"`: once a
+     schedule exists the entrant list is what the fixtures were generated from,
+     and editing it would orphan matches. */
+
+  const handleAddTeams = useCallback(
+    (teamIds: string[]) => {
+      if (!competition || competition.status !== "draft" || teamIds.length === 0) return;
+      const existing = new Set(competition.teamIds);
+      const added = teamIds.filter((id) => !existing.has(id));
+      if (added.length === 0) return;
+      updateCompetition({
+        ...competition,
+        teamIds: [...competition.teamIds, ...added],
+      });
+    },
+    [competition, updateCompetition]
+  );
+
+  const handleRemoveTeam = useCallback(
+    (teamId: string) => {
+      if (!competition || competition.status !== "draft") return;
+      updateCompetition({
+        ...competition,
+        teamIds: competition.teamIds.filter((id) => id !== teamId),
+      });
+    },
+    [competition, updateCompetition]
+  );
+
+  const handleDeleteCompetition = useCallback(() => {
+    if (!competition) return;
+    deleteCompetition(competition.id);
+    router.push("/competitions");
+  }, [competition, deleteCompetition, router]);
+
   const completedMatches = matches.filter(
     (m) => m.status === "completed"
   ).length;
@@ -331,11 +333,17 @@ export const useCompetitionDetailPage = () => {
     : null;
 
   return {
+    allTeams: state.teams,
     canEdit,
     competition,
     competitionTeams,
     completedMatches,
     editingMatch,
+    handleAddTeams,
+    handleRemoveTeam,
+    handleDeleteCompetition,
+    sessionError,
+    getShareUrl,
     handleMatchClick,
     handlePlayMatch,
     handleStartCompetition,
@@ -346,7 +354,6 @@ export const useCompetitionDetailPage = () => {
     isEndingCompetition,
     matches,
     pendingMatches,
-    roundRobinMatches,
     selectedMatch,
     setEditingMatch,
     setSelectedMatch,

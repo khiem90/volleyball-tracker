@@ -1,236 +1,268 @@
 "use client";
 
-import { ArrowLeft, Trophy } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
+import type { ReactNode } from "react";
+import { MbButton } from "@/components/matchbook/Button";
+import { MbIcon } from "@/components/matchbook/MbIcon";
+import { MbSegmented } from "@/components/matchbook/Segmented";
+import { Panel } from "@/components/matchbook/Panel";
+import {
+  MbField,
+  MbTextInput,
+  MB_FIELD_LABEL,
+} from "@/components/matchbook/form";
+import { FORMAT_META } from "@/components/matchbook/formatMeta";
+import type {
+  MbPreviewBasis,
+  MbPreviewLine,
+} from "@/components/matchbook/useMatchbookNewCompetition";
+import { pluralise } from "@/lib/text";
+import type { AdvancedSettings } from "@/hooks/useNewCompetitionPage";
 import type { CompetitionType } from "@/types/game";
-import type { FormatOption, AdvancedSettings, AdvancedSettingsHandlers } from "@/hooks/useNewCompetitionPage";
 import { AdvancedSettingsPanel } from "./AdvancedSettingsPanel";
+import { FormatPreviewPanel } from "./FormatPreviewPanel";
 
-interface NameStepProps {
+/* ===========================================================================
+   STEP 3 — DETAILS
+
+   A two-column setup sheet, not a 448px centred stack. The format summary
+   carries the FORMAT'S OWN mark: the old sheet rendered a generic trophy, so
+   picking "Win 2 & Out" with a crown showed a trophy on the next screen.
+
+   `Format Preview` returns here as a full-width third panel. Two reasons, and
+   the second is the load-bearing one: it is the last chance to see what the
+   competition will actually contain before it exists, and without it the grid
+   left a measured 380x930 column of empty paper under `Event Details` at 1440
+   whenever `Advanced Settings` was the taller column. A 12-wide row under both
+   columns cannot produce that void at any width, because there is no second
+   column beside it to be shorter than.
+   =========================================================================== */
+
+const SCORING_OPTIONS = [
+  { value: "points", label: "Score points" },
+  { value: "instant", label: "Instant win" },
+];
+
+/**
+ * The label above a segmented group.
+ *
+ * `MbField` cannot do this job: it renders `<label htmlFor>`, and a
+ * `<label for>` may only point at a labelable element — a radiogroup is not
+ * one, so the group has to be named by `aria-labelledby` against a plain span.
+ * Written out three times it was three chances to drift; written once it is the
+ * same treatment as every `MbField` label on the screen, because both read the
+ * same exported `MB_FIELD_LABEL`.
+ *
+ * HANDOFF (W1): the kit has no `MbFieldGroup` — a field wrapper that names a
+ * composite through `aria-labelledby` and still owns the hint and error slots.
+ * `MbSegmented`, `MbSwatchPicker` and `MbToggleChip` groups all need it.
+ */
+const GroupLabel = ({ id, children }: { id: string; children: ReactNode }) => (
+  <span id={id} className={MB_FIELD_LABEL.className} style={MB_FIELD_LABEL.style}>
+    {children}
+  </span>
+);
+
+export interface NameStepProps {
+  format: CompetitionType;
   competitionName: string;
-  currentFormat: FormatOption | undefined;
-  selectedFormat: CompetitionType | null;
-  selectedTeamIds: string[];
-  maxCourts: number;
-  numberOfCourts: number;
-  matchSeriesLength: number;
-  instantWinEnabled: boolean;
   nameError: string;
   onNameChange: (value: string) => void;
-  onBack: () => void;
-  onCreateCompetition: () => void;
-  onSelectCourts: (count: number) => void;
-  onSelectSeriesLength: (count: number) => void;
-  onSelectInstantWin: (enabled: boolean) => void;
-  advancedSettings: AdvancedSettings;
-  advancedSettingsHandlers: AdvancedSettingsHandlers;
+  onSubmit: () => void;
+  onChangeFormat: () => void;
+  entryCount: number;
+
+  seriesOptions: { value: string; label: string }[];
+  matchSeriesLength: number;
+  onSeriesChange: (value: number) => void;
+
+  courtOptionList: { value: string; label: string }[];
+  numberOfCourts: number;
+  onCourtsChange: (value: number) => void;
+
+  instantWinEnabled: boolean;
+  onInstantWinChange: (value: boolean) => void;
+
+  advanced: AdvancedSettings;
+  onAdvancedChange: (patch: Partial<AdvancedSettings>) => void;
+  onAdvancedReset: () => void;
+  advancedCustomised: boolean;
+
+  previewLines: MbPreviewLine[];
+  previewBasis: MbPreviewBasis;
 }
 
 export const NameStep = ({
+  format,
   competitionName,
-  currentFormat,
-  selectedFormat,
-  selectedTeamIds,
-  maxCourts,
-  numberOfCourts,
-  matchSeriesLength,
-  instantWinEnabled,
   nameError,
   onNameChange,
-  onBack,
-  onCreateCompetition,
-  onSelectCourts,
-  onSelectSeriesLength,
-  onSelectInstantWin,
-  advancedSettings,
-  advancedSettingsHandlers,
+  onSubmit,
+  onChangeFormat,
+  entryCount,
+  seriesOptions,
+  matchSeriesLength,
+  onSeriesChange,
+  courtOptionList,
+  numberOfCourts,
+  onCourtsChange,
+  instantWinEnabled,
+  onInstantWinChange,
+  advanced,
+  onAdvancedChange,
+  onAdvancedReset,
+  advancedCustomised,
+  previewLines,
+  previewBasis,
 }: NameStepProps) => {
-  const { venueName } = advancedSettings;
+  const meta = FORMAT_META[format];
+  const { series, courts, scoringMode } = meta.supports;
+  const venue = advanced.venueName.trim() || "court";
+  const playing = Math.min(numberOfCourts * 2, entryCount);
+  const queued = Math.max(entryCount - playing, 0);
 
   return (
-    <div className="space-y-6 max-w-md mx-auto">
-      <div className="text-center mb-8">
-        <h2 className="text-2xl font-bold mb-2">Name Your Competition</h2>
-        <p className="text-muted-foreground">
-          Give your competition a memorable name
-        </p>
-      </div>
-
-      <Card className="border-border/40 bg-card/30 overflow-hidden">
-        <div className={`h-1 w-full bg-linear-to-r ${currentFormat?.gradient}`} />
-        <CardContent className="p-4">
-          <div className="flex items-center gap-4">
-            <div
-              className={`w-14 h-14 rounded-2xl bg-linear-to-br ${currentFormat?.gradient} flex items-center justify-center shadow-lg`}
+    <>
+      <div className="xl:col-span-7">
+        <Panel title="Event Details" icon="clipboard">
+          <div className="flex flex-col gap-4 px-4 py-4">
+            <MbField
+              label="Competition name"
+              htmlFor="competition-name"
+              hint="Shown on every scoreboard, share link and summary."
+              error={nameError || undefined}
+              required
             >
-              <Trophy className="w-7 h-7 text-white" />
-            </div>
-            <div>
-              <p className="font-semibold text-lg">{currentFormat?.label}</p>
-              <p className="text-sm text-muted-foreground">
-                {selectedTeamIds.length} teams competing
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="space-y-2">
-        <label htmlFor="competition-name" className="text-sm font-medium">
-          Competition Name
-        </label>
-        <Input
-          id="competition-name"
-          type="text"
-          value={competitionName}
-          onChange={(event) => onNameChange(event.target.value)}
-          placeholder="e.g., Summer Tournament 2025"
-          autoFocus
-          className={nameError ? "border-destructive focus-visible:ring-destructive" : ""}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              onCreateCompetition();
-            }
-          }}
-        />
-        {nameError && <p className="text-sm text-destructive">{nameError}</p>}
-      </div>
-
-      {(selectedFormat === "two_match_rotation" || selectedFormat === "win2out") &&
-        maxCourts > 1 && (
-          <div className="space-y-3">
-            <label className="text-sm font-medium">Number of {venueName}s</label>
-            <p className="text-xs text-muted-foreground">
-              Run multiple games simultaneously. More {venueName}s = faster rotation.
-            </p>
-            <div className="flex gap-2">
-              {Array.from({ length: Math.min(maxCourts, 4) }, (_, i) => i + 1).map(
-                (num) => (
-                  <button
-                    key={num}
-                    type="button"
-                    onClick={() => onSelectCourts(num)}
-                    className={`
-                      flex-1 py-3 rounded-xl font-semibold transition-all duration-200 cursor-pointer
-                      ${
-                        numberOfCourts === num
-                          ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
-                          : "bg-card border border-border/40 hover:border-primary/30"
-                      }
-                    `}
-                  >
-                    {num} {venueName}{num > 1 ? "s" : ""}
-                  </button>
-                )
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground text-center">
-              {numberOfCourts * 2} teams play at once,{" "}
-              {selectedTeamIds.length - numberOfCourts * 2} in queue
-            </p>
-          </div>
-        )}
-
-      {(selectedFormat === "two_match_rotation" || selectedFormat === "win2out") && (
-        <div className="space-y-3">
-          <label className="text-sm font-medium">Scoring Mode</label>
-          <p className="text-xs text-muted-foreground">
-            Choose how match winners are determined.
-          </p>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => onSelectInstantWin(false)}
-              className={`
-                flex-1 py-3 rounded-xl font-semibold transition-all duration-200 cursor-pointer
-                ${
-                  !instantWinEnabled
-                    ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
-                    : "bg-card border border-border/40 hover:border-primary/30"
-                }
-              `}
-            >
-              Score Points
-            </button>
-            <button
-              type="button"
-              onClick={() => onSelectInstantWin(true)}
-              className={`
-                flex-1 py-3 rounded-xl font-semibold transition-all duration-200 cursor-pointer
-                ${
-                  instantWinEnabled
-                    ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
-                    : "bg-card border border-border/40 hover:border-primary/30"
-                }
-              `}
-            >
-              Instant Win
-            </button>
-          </div>
-          <p className="text-xs text-muted-foreground text-center">
-            {instantWinEnabled
-              ? "Tap a team to instantly declare them winner"
-              : "Track points and complete matches manually"}
-          </p>
-        </div>
-      )}
-
-      {(selectedFormat === "round_robin" ||
-        selectedFormat === "single_elimination" ||
-        selectedFormat === "double_elimination") && (
-        <div className="space-y-3">
-          <label className="text-sm font-medium">Matches per Matchup</label>
-          <p className="text-xs text-muted-foreground">
-            Choose how many games teams play to decide a winner (best of).
-          </p>
-          <div className="flex gap-2">
-            {[1, 3, 5, 7].map((count) => (
-              <button
-                key={count}
-                type="button"
-                onClick={() => onSelectSeriesLength(count)}
-                className={`
-                  flex-1 py-3 rounded-xl font-semibold transition-all duration-200 cursor-pointer
-                  ${
-                    matchSeriesLength === count
-                      ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
-                      : "bg-card border border-border/40 hover:border-primary/30"
+              <MbTextInput
+                id="competition-name"
+                value={competitionName}
+                onChange={(event) => onNameChange(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    onSubmit();
                   }
-                `}
+                }}
+                placeholder="e.g. Summer Tournament 2026"
+                maxLength={60}
+                autoComplete="off"
+                icon="compete"
+                autoFocus
+              />
+            </MbField>
+
+            {/* Format summary — the format's own mark, its own name, and the
+                way back to change it.
+
+                The disc is styled inline because `.mb-icon-disc` sets
+                `border-color` and `color` from UNLAYERED css, which outranks
+                every Tailwind colour utility. HANDOFF (W1): there is no
+                `MbIconDisc` in the kit, so this shape is authored a third time
+                here after `MbChoiceCard` and `MbStat`. */}
+            <div className="flex flex-wrap items-center gap-3 border-y border-mb-rule py-3">
+              <span
+                aria-hidden="true"
+                className="mb-icon-disc h-11 w-11 shrink-0"
+                style={{ borderColor: "var(--mb-navy)", color: "var(--mb-navy)" }}
               >
-                {count === 1 ? "Single Game" : `Best of ${count}`}
-              </button>
-            ))}
+                <MbIcon id={meta.icon} size={20} />
+              </span>
+              <span className="flex min-w-0 flex-1 flex-col">
+                {/* `break-words`, never `truncate`: at 320px the truncating
+                    version clipped 44px of ink and set "DOUBLE ELIM…" on the
+                    one line naming the thing about to be created. */}
+                <span className="matchbook-display text-[0.95rem] font-bold tracking-[0.05em] [overflow-wrap:anywhere]">
+                  {meta.label}
+                </span>
+                <span className="mb-kicker tabular-nums">
+                  {entryCount} teams entered
+                </span>
+              </span>
+              <MbButton
+                variant="outline-navy"
+                size="sm"
+                icon="undo"
+                onClick={onChangeFormat}
+                className="shrink-0"
+              >
+                Change
+              </MbButton>
+            </div>
+
+            {courts && courtOptionList.length > 1 && (
+              <div className="flex flex-col gap-2">
+                <GroupLabel id="courts-label">{pluralise(venue)} in play</GroupLabel>
+                <MbSegmented
+                  name="wizard-courts"
+                  aria-labelledby="courts-label"
+                  value={String(numberOfCourts)}
+                  onChange={(value) => onCourtsChange(Number(value))}
+                  options={courtOptionList}
+                  columns={{ base: 2, sm: Math.min(courtOptionList.length, 4) }}
+                />
+                <p className="text-[0.78rem] text-mb-ink-muted tabular-nums">
+                  {playing} teams play at once, {queued} in queue.
+                </p>
+              </div>
+            )}
+
+            {scoringMode && (
+              <div className="flex flex-col gap-2">
+                <GroupLabel id="scoring-label">Scoring mode</GroupLabel>
+                <MbSegmented
+                  name="wizard-scoring"
+                  aria-labelledby="scoring-label"
+                  value={instantWinEnabled ? "instant" : "points"}
+                  onChange={(value) => onInstantWinChange(value === "instant")}
+                  options={SCORING_OPTIONS}
+                  columns={{ base: 2, sm: 2 }}
+                />
+                <p className="text-[0.78rem] text-mb-ink-muted">
+                  {instantWinEnabled
+                    ? "Tap a team to declare it the winner without keeping score."
+                    : "Track points and complete each match manually."}
+                </p>
+              </div>
+            )}
+
+            {series && (
+              <div className="flex flex-col gap-2">
+                <GroupLabel id="series-label">Matches per matchup</GroupLabel>
+                <MbSegmented
+                  name="wizard-series"
+                  aria-labelledby="series-label"
+                  value={String(matchSeriesLength)}
+                  onChange={(value) => onSeriesChange(Number(value))}
+                  options={seriesOptions}
+                  columns={{ base: 2, sm: 4 }}
+                />
+                <p className="text-[0.78rem] text-mb-ink-muted tabular-nums">
+                  {matchSeriesLength === 1
+                    ? "One game decides each matchup."
+                    : `First to ${Math.ceil(matchSeriesLength / 2)} wins takes the matchup.`}
+                </p>
+              </div>
+            )}
           </div>
-        </div>
-      )}
-
-      <AdvancedSettingsPanel
-        selectedFormat={selectedFormat}
-        settings={advancedSettings}
-        handlers={advancedSettingsHandlers}
-      />
-
-      <Separator />
-
-      <div className="flex justify-between pt-2">
-        <Button variant="outline" onClick={onBack} className="gap-2">
-          <ArrowLeft className="w-4 h-4" />
-          Back
-        </Button>
-        <Button
-          onClick={onCreateCompetition}
-          disabled={!competitionName.trim()}
-          className="gap-2 shadow-lg shadow-primary/20"
-          size="lg"
-        >
-          <Trophy className="w-5 h-5" />
-          Create Competition
-        </Button>
+        </Panel>
       </div>
-    </div>
+
+      <div className="xl:col-span-5">
+        <AdvancedSettingsPanel
+          format={format}
+          settings={advanced}
+          onChange={onAdvancedChange}
+          onReset={onAdvancedReset}
+          customised={advancedCustomised}
+        />
+      </div>
+
+      <div className="xl:col-span-12">
+        <FormatPreviewPanel
+          format={format}
+          lines={previewLines}
+          basis={previewBasis}
+        />
+      </div>
+    </>
   );
 };

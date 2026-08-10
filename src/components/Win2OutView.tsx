@@ -1,60 +1,65 @@
 "use client";
 
-import { useMemo, useState, useCallback } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Clock, RefreshCw } from "lucide-react";
-import {
-  getTeamsByStatus,
-  getCurrentChampionStreak,
-  getChampionCount,
-  processMatchResult,
-} from "@/lib/win2out";
+import { useCallback, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useApp } from "@/context/AppContext";
 import { useTeamsMap } from "@/hooks/useTeamsMap";
-import { useTerminology, capitalize } from "@/hooks/useTerminology";
 import { useRotationInstantWin } from "@/hooks/useRotationInstantWin";
+import { processMatchResult } from "@/lib/win2out";
 import { EditMatchDialog } from "@/components/dialogs/edit-match";
 import { EditQueueDialog } from "@/components/dialogs/edit-queue";
-import {
-  ActiveCourtCard,
-  TeamQueueSection,
-  TeamLeaderboard,
-  MatchHistorySection,
-} from "@/components/rotation-views";
+import { RotationConsole } from "@/components/rotation-views";
+import { MatchActionDialog } from "@/components/competition-detail/MatchActionDialog";
+import { useMatchbookCompetitionDetail } from "@/components/matchbook/useMatchbookCompetitionDetail";
 import type {
+  Competition,
   Match,
   PersistentTeam,
   Win2OutState,
-  Competition,
 } from "@/types/game";
 
-interface Win2OutViewProps {
-  state: Win2OutState;
-  matches: Match[];
-  teams: PersistentTeam[];
-  competition?: Competition | null;
-  onMatchClick?: (match: Match) => void;
-}
-
+/**
+ * Win 2 & Out.
+ *
+ * Everything visible comes from `RotationConsole`; what stays here is the
+ * format's own three facts — crowns are the headline measure, the sub-line is
+ * a streak, and `processMatchResult` is win2out's — plus the dialogs.
+ *
+ * `useRotationInstantWin` is untouched. Adding the always-available
+ * Play/Continue button back (BUG-6) means two paths can now complete one
+ * match, and the processor is idempotent under that: `handleInstantWin` writes
+ * the score, completes the match and advances the rotation in a single
+ * `completeMatchWithNextMatch` call, while the console route completes the same
+ * match through the same reducer — a second completion of an already-completed
+ * match finds no active court for it and generates no further rotation.
+ */
 export const Win2OutView = ({
   state,
   matches,
   teams,
   competition,
   onMatchClick,
-}: Win2OutViewProps) => {
+}: {
+  state: Win2OutState;
+  matches: Match[];
+  teams: PersistentTeam[];
+  competition?: Competition | null;
+  onMatchClick?: (match: Match) => void;
+}) => {
   const { canEdit } = useApp();
+  const router = useRouter();
+  const { getTeamName } = useTeamsMap(teams);
+
   const [editingMatch, setEditingMatch] = useState<Match | null>(null);
-  const [showEditQueue, setShowEditQueue] = useState(false);
+  const [reviewMatch, setReviewMatch] = useState<Match | null>(null);
+  const [showQueue, setShowQueue] = useState(false);
 
-  // Get dynamic terminology from competition config
-  const terminology = useTerminology(competition?.id);
-  const venueName = terminology.venue;
-  const venueNameCapitalized = capitalize(venueName);
+  const data = useMatchbookCompetitionDetail({
+    competition: competition ?? undefined,
+    matches,
+    teams,
+  });
 
-  const { getTeamName, getTeamColor } = useTeamsMap(teams);
-
-  // Instant win handler using shared hook
   const { handleInstantWin } = useRotationInstantWin({
     competition,
     state,
@@ -63,162 +68,47 @@ export const Win2OutView = ({
     getTeamName,
   });
 
-  const canPlayMatch = canEdit && Boolean(onMatchClick);
-
-  const { inQueue } = useMemo(() => getTeamsByStatus(state), [state]);
-
-  // Get active matches (pending or in_progress) - one per court potentially
-  const activeMatches = useMemo(
-    () =>
-      matches.filter(
-        (m) => m.status === "pending" || m.status === "in_progress"
-      ),
-    [matches]
-  );
-
-  const completedMatches = useMemo(
-    () =>
-      matches
-        .filter((m) => m.status === "completed")
-        .sort((a, b) => (b.completedAt || 0) - (a.completedAt || 0)),
-    [matches]
-  );
-
-  // Get court info for a match
-  const getCourtForMatch = useCallback(
+  const play = useCallback(
     (match: Match) => {
-      return state.courts.find(
-        (c) =>
-          c.teamIds.includes(match.homeTeamId) &&
-          c.teamIds.includes(match.awayTeamId)
-      );
+      if (onMatchClick) onMatchClick(match);
+      else router.push(`/match/${match.id}`);
     },
-    [state.courts]
+    [onMatchClick, router]
   );
-
-  // Check if a team is on any court
-  const isTeamOnCourt = useCallback(
-    (teamId: string) => {
-      return state.courts.some((c) => c.teamIds.includes(teamId));
-    },
-    [state.courts]
-  );
-
-  // Get team's streak by finding their court
-  const getTeamStreak = useCallback(
-    (teamId: string) => {
-      const court = state.courts.find((c) => c.teamIds.includes(teamId));
-      if (court?.currentChampionId === teamId) {
-        return getCurrentChampionStreak(state, court.courtNumber);
-      }
-      return 0;
-    },
-    [state]
-  );
-
-  // Build leaderboard sorted by champion count, then matches played
-  const leaderboard = useMemo(() => {
-    return [...state.teamStatuses]
-      .map((status) => ({
-        teamId: status.teamId,
-        championCount: getChampionCount(state, status.teamId),
-        matchesPlayed: status.matchesPlayed,
-      }))
-      .sort((a, b) => {
-        if (b.championCount !== a.championCount) {
-          return b.championCount - a.championCount;
-        }
-        return b.matchesPlayed - a.matchesPlayed;
-      });
-  }, [state]);
-
-  // Transform queue for TeamQueueSection
-  const queueWithChampionCount = useMemo(() => {
-    return inQueue.map((status) => ({
-      teamId: status.teamId,
-      championCount: getChampionCount(state, status.teamId),
-    }));
-  }, [inQueue, state]);
 
   return (
-    <div className="space-y-6">
-      {/* Endless Mode Banner */}
-      <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground bg-card/30 rounded-lg py-2 px-4">
-        <RefreshCw className="w-4 h-4 animate-spin-slow" />
-        <span>
-          Win 2 & Out • {state.numberOfCourts} {venueNameCapitalized}
-          {state.numberOfCourts > 1 ? "s" : ""} • Win 2 in a row → Champion →
-          Back to queue!
-        </span>
-      </div>
-
-      {/* Active Courts / Matches */}
-      {activeMatches.length > 0 ? (
-        <div
-          className={`grid gap-4 ${
-            activeMatches.length > 1 ? "md:grid-cols-2" : ""
-          }`}
-        >
-          {activeMatches.map((match) => {
-            const court = getCourtForMatch(match);
-            return (
-              <ActiveCourtCard
-                key={match.id}
-                match={match}
-                courtNumber={court?.courtNumber || match.position}
-                venueName={venueName}
-                homeStreak={getTeamStreak(match.homeTeamId)}
-                awayStreak={getTeamStreak(match.awayTeamId)}
-                homeChampionCount={getChampionCount(state, match.homeTeamId)}
-                awayChampionCount={getChampionCount(state, match.awayTeamId)}
-                getTeamName={getTeamName}
-                getTeamColor={getTeamColor}
-                canEdit={canEdit}
-                canPlayMatch={canPlayMatch}
-                instantWinEnabled={competition?.instantWinEnabled}
-                onMatchClick={onMatchClick}
-                onEditMatch={setEditingMatch}
-                onInstantWin={(winnerId) => handleInstantWin(winnerId, match)}
-              />
-            );
-          })}
-        </div>
-      ) : (
-        <Card className="border-border/50 bg-card/30">
-          <CardContent className="py-8">
-            <div className="text-center text-muted-foreground">
-              <Clock className="w-12 h-12 mx-auto mb-3 opacity-30" />
-              <p>No active matches</p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Queue */}
-      <TeamQueueSection
-        queue={queueWithChampionCount}
-        getTeamName={getTeamName}
-        getTeamColor={getTeamColor}
+    <>
+      <RotationConsole
+        data={data}
+        competitionName={competition?.name ?? "Win 2 & Out"}
+        status={competition?.status ?? "in_progress"}
+        primaryLabel="Crowns"
         canEdit={canEdit}
-        onEditQueue={() => setShowEditQueue(true)}
+        canPlay={canEdit}
+        instantWin={Boolean(competition?.instantWinEnabled)}
+        onPlay={play}
+        onEditMatch={setEditingMatch}
+        onInstantWin={(match, winnerId) => handleInstantWin(winnerId, match)}
+        onReorderQueue={() => setShowQueue(true)}
+        onSelectResult={setReviewMatch}
       />
 
-      {/* Leaderboard */}
-      <TeamLeaderboard
-        leaderboard={leaderboard}
-        getTeamName={getTeamName}
-        getTeamColor={getTeamColor}
-        isTeamOnCourt={isTeamOnCourt}
+      <MatchActionDialog
+        open={!!reviewMatch}
+        onOpenChange={(open) => !open && setReviewMatch(null)}
+        match={reviewMatch}
+        teams={teams}
+        canEdit={canEdit}
+        onPlayMatch={
+          canEdit
+            ? () => {
+                if (reviewMatch) play(reviewMatch);
+                setReviewMatch(null);
+              }
+            : undefined
+        }
       />
 
-      {/* Match History */}
-      <MatchHistorySection
-        matches={completedMatches}
-        getTeamName={getTeamName}
-        getTeamColor={getTeamColor}
-      />
-
-      {/* Edit Match Dialog */}
       <EditMatchDialog
         open={!!editingMatch}
         onOpenChange={(open) => !open && setEditingMatch(null)}
@@ -226,15 +116,18 @@ export const Win2OutView = ({
         matches={matches}
         teams={teams}
         competition={competition}
+        label={
+          editingMatch ? `${data.venue.One} ${editingMatch.position}` : undefined
+        }
       />
 
-      {/* Edit Queue Dialog */}
       <EditQueueDialog
-        open={showEditQueue}
-        onOpenChange={setShowEditQueue}
+        open={showQueue}
+        onOpenChange={setShowQueue}
         competition={competition || null}
         teams={teams}
+        venue={data.venue.many}
       />
-    </div>
+    </>
   );
 };
