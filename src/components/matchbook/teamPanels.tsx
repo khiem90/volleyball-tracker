@@ -4,6 +4,7 @@ import { MbButton, MbButtonLink } from "./Button";
 import { MbPanelHeadLink } from "./panels";
 import { MbTableScroll } from "./TableScroll";
 import { Crest, FormLetters, Panel, PanelEmpty, TeamMark } from "./Panel";
+import { MbTeamName } from "./TeamName";
 import { readinessColor, readinessInk } from "./teamStats";
 import type {
   MbFormRow,
@@ -386,11 +387,31 @@ export const TeamProfilePanel = ({
               <div>
                 <p className="mb-kicker">Colour</p>
                 <span className="flex items-center gap-2">
+                  {/* 2px, the `.mb-swatch` radius — NOT `rounded-full`.
+
+                      Two reasons, and the second is the stronger one.
+
+                      1. `rounded-full` is Tailwind v4's static
+                         `calc(infinity * 1px)`, which computes to
+                         33554400px. That is the SECOND spelling of the pill
+                         the system already names once as
+                         `--mb-radius-round: 999px` / `.mb-round`, and a radius
+                         census cannot tell the two apart by eye — this was the
+                         last `rounded-full` node left on /teams.
+                      2. This chip is the READOUT of the colour the user picked
+                         with `MbSwatchPicker`, whose chips are `.mb-swatch` —
+                         24px squares at radius 2px. A round readout of a square
+                         picker is one object drawn two ways.
+
+                      Design language §3.3 lists "a colour swatch" among the
+                      999px exemptions AND lists `.mb-swatch` at 2px in the same
+                      section; the shipped class is the tie-breaker under the
+                      doc's own "the page wins" rule. Flagged in the return. */}
                   <span
-                    className="h-4 w-4 rounded-full border border-mb-navy"
+                    className="h-4 w-4 rounded-[2px] border border-mb-navy"
                     style={{ background: row.color }}
                   />
-                  <span className="text-[0.76rem] font-medium uppercase tabular-nums">
+                  <span className="text-[0.72rem] font-medium uppercase tabular-nums">
                     {row.color}
                   </span>
                 </span>
@@ -536,18 +557,42 @@ export const UpcomingFixturesPanel = ({ items }: { items: MbScheduleItem[] }) =>
             </div>
             <p className="text-[0.72rem] font-semibold tabular-nums">{item.time}</p>
             <div className="min-w-0">
+              {/* `basis-0 flex-1` on BOTH names, and `MbTeamName` on each —
+                  the same cell `SchedulePanel` already fixed in `panels.tsx`.
+                  This panel is that panel's twin and had neither, so one
+                  object still read two ways across two routes. Measured here
+                  with the long-name fixture, before:
+
+                    1440  home box  14.4px ("Pe…")  away box 134.1px
+                    320   home box   5.9px ("…")    away box  55.2px
+
+                  Two failures, each of which alone loses a team's identity:
+
+                  1. flex shrink is proportional to BASE size, so the long
+                     name kept its share and the short one paid for it — "Peak"
+                     was squeezed to 14px beside a 134px "Wolverhampton…",
+                     which paints as no name at all. An equal `basis-0` split
+                     gives each side the same half whatever the names measure.
+                  2. within that half, end-truncation made the two Wolverhampton
+                     sides the SAME STRING (F15): both painted
+                     "Wolverhampton Wandere…", as did "Northamptonshire Metr…"
+                     for Rovers and Reserves. `MbTeamName` pins the last token,
+                     so "…B"/"…C" and "…Rovers"/"…Reserves" still separate
+                     them. */}
               <span className="flex items-center gap-1.5 min-w-0">
                 <Crest team={item.home} size={18} />
-                <span className="matchbook-display text-[0.72rem] font-semibold truncate">
-                  {item.home.name}
-                </span>
+                <MbTeamName
+                  name={item.home.name}
+                  className="matchbook-display basis-0 flex-1 text-[0.72rem] font-semibold"
+                />
                 <span className="px-0.5 text-[0.6rem] text-mb-ink-muted">vs</span>
                 <Crest team={item.away} size={18} />
-                <span className="matchbook-display text-[0.72rem] font-semibold truncate">
-                  {item.away.name}
-                </span>
+                <MbTeamName
+                  name={item.away.name}
+                  className="matchbook-display basis-0 flex-1 text-[0.72rem] font-semibold"
+                />
               </span>
-              <span className="block truncate text-[0.64rem] text-mb-ink-muted">
+              <span className="block truncate text-[0.66rem] text-mb-ink-muted">
                 {item.venue}
               </span>
             </div>

@@ -163,10 +163,74 @@ export const useNewCompetitionPage = () => {
 
   const stepIndex = WIZARD_STEPS.indexOf(step);
 
+  /* ----------------------------------------------------------- the gate */
+
+  /**
+   * THE PRIMARY IS NEVER DISABLED, ON ANY STEP.
+   *
+   * It used to be, on steps 1 and 2, and the treatment was the defect: a
+   * `disabled` `MbButton variant="coral"` is `disabled:opacity-40` over a
+   * filled coral ground, which measured `rgb(201,53,31)` at `opacity: 0.4` —
+   * a washed-out pink that reads as broken rather than as "not yet". Beside it
+   * sat a full-contrast outlined "Cancel" measuring 166px against the
+   * primary's 148px, so on the app's first-run screen the loudest, widest
+   * control in the commit bar was the way OUT of the task.
+   *
+   * Step 3 already solved this the honest way and said so in a comment: keep
+   * the control live, and make pressing it say what is missing and put the
+   * user in front of it. This extends that to the other two. The gate is now:
+   *
+   *   - `canAdvance` still exists — the bar's status line reads from it
+   *     ("Choose a format to continue") so the reason is on screen BEFORE the
+   *     press, not only after it.
+   *   - Pressing a blocked primary sets `gateAskedAt`, which renders a notice
+   *     at the top of the panel that owns the gate, and moves focus to that
+   *     panel (`[data-wizard-gate]`), which scrolls it into view on a phone.
+   *   - The notice disappears the instant the gate is satisfied, because it is
+   *     derived from `canAdvance` rather than cleared by hand.
+   */
+  const canAdvance =
+    step === "format"
+      ? Boolean(selectedFormat)
+      : step === "teams"
+        ? validation.valid
+        : true;
+
+  const [gateAskedAt, setGateAskedAt] = useState<WizardStep | null>(null);
+
+  const gateMessage =
+    gateAskedAt !== step || canAdvance
+      ? ""
+      : step === "format"
+        ? "Pick one of the five formats below — the wizard needs to know what it is scheduling before it can go on."
+        : state.teams.length === 0
+          ? "There are no teams in this account yet. Create some below and they are entered automatically."
+          : `${validation.message || "Select the teams that will take part"} before you can continue.`;
+
+  /**
+   * Focus the panel that owns the gate.
+   *
+   * `[data-wizard-gate]` is a `tabIndex={-1}` wrapper rendered by whichever
+   * step is on screen — exactly one exists at a time — so this needs no
+   * knowledge of either step's internals, and moving focus there both scrolls
+   * it into view and puts a screen reader's cursor on the notice that has just
+   * appeared inside it.
+   */
+  const focusGate = useCallback(() => {
+    if (typeof document === "undefined") return;
+    document.querySelector<HTMLElement>("[data-wizard-gate]")?.focus();
+  }, []);
+
   const handleNext = useCallback(() => {
-    if (step === "format" && selectedFormat) goToStep("teams");
-    else if (step === "teams" && validation.valid) goToStep("details");
-  }, [step, selectedFormat, validation.valid, goToStep]);
+    if (canAdvance) {
+      setGateAskedAt(null);
+      if (step === "format") goToStep("teams");
+      else if (step === "teams") goToStep("details");
+      return;
+    }
+    setGateAskedAt(step);
+    focusGate();
+  }, [canAdvance, step, goToStep, focusGate]);
 
   /** Retreat uses history, so the wizard and the Back button agree. */
   const handleBack = useCallback(() => {

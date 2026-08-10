@@ -11,6 +11,50 @@ import {
   recentForm,
 } from "./teamStats";
 import { type MbDashboardData, type MbLeader, type MbTeam } from "./types";
+import type { MbStartStep, MbStepState } from "./panels";
+
+/* ---------------------------------------------------------------------------
+   THE FIRST-RUN VIEW
+
+   `MbDashboardData` lives in `types.ts`, which this workstream does not own, so
+   the first-run fields extend it here rather than editing it. Nothing that
+   reads `MbDashboardData` changes shape.
+   --------------------------------------------------------------------------- */
+
+/** A destination the reader can actually reach right now. */
+export interface MbDashboardAction {
+  label: string;
+  href: string;
+  /** Sprite id. */
+  icon: string;
+}
+
+export interface MbDashboardView extends MbDashboardData {
+  /**
+   * No match exists in any state — so standings, match of the day, live
+   * courts, schedule, bracket, results, readiness and leaders are ALL
+   * necessarily empty, and the screen renders the first-run composition
+   * instead of eight `PanelEmpty` blocks in a column.
+   *
+   * Keyed on matches rather than on teams: a competition whose schedule has
+   * not been generated has nothing to report either, and a standings table of
+   * eight teams on `0 0 0` plus a "projected" bracket seeded from it is worse
+   * than no table at all.
+   */
+  isFirstRun: boolean;
+  /** The three steps to a first match, with the live one marked. */
+  startSteps: MbStartStep[];
+  /**
+   * The masthead's one action. It is derived from the data because the shipped
+   * one was not: on an account with zero teams and zero matches the loudest
+   * control on the screen read "Record Result".
+   */
+  primaryAction: MbDashboardAction;
+  /** A second, genuinely different path, once the data allows one. */
+  altAction: { label: string; href: string } | null;
+  /** The masthead's kicker, which must not read "0 matches completed". */
+  subLine: string;
+}
 
 /* ===========================================================================
    THE OVERVIEW VIEW MODEL
@@ -63,7 +107,54 @@ const shortTime = (ts?: number) =>
     ? new Date(ts).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
     : "TBD";
 
-const buildDashboard = (state: AppState): MbDashboardData => {
+/* ---------------------------------------------------------------------------
+   THE PROGRESSION
+
+   Three steps, and the FIRST unfinished one is the live step — not a stored
+   cursor, so it cannot disagree with the data behind it. A user who adds teams
+   from `/teams`, or creates a competition from the wizard's own quick-add,
+   arrives back here with the ledger already moved on.
+   --------------------------------------------------------------------------- */
+
+const buildSteps = (
+  teamCount: number,
+  competitionName: string | null
+): MbStartStep[] => {
+  /* Step 3 is never `done` in a first run: the moment a match exists the whole
+     composition is replaced by the populated overview. */
+  const done = [teamCount >= 2, competitionName !== null, false];
+  const currentIndex = done.indexOf(false);
+  const stateOf = (i: number): MbStepState =>
+    done[i] ? "done" : i === currentIndex ? "current" : "todo";
+
+  return [
+    {
+      n: "01",
+      title: "Add Your Teams",
+      deck: "A match needs two sides. A team keeps its crest and its record for the whole season.",
+      state: stateOf(0),
+      note:
+        teamCount > 0
+          ? `${teamCount} ${teamCount === 1 ? "team" : "teams"} added`
+          : undefined,
+    },
+    {
+      n: "02",
+      title: "Create a Competition",
+      deck: "Round robin, knockout or rotation — the format writes the schedule for you.",
+      state: stateOf(1),
+      note: competitionName ?? undefined,
+    },
+    {
+      n: "03",
+      title: "Play the First Match",
+      deck: "Every score you record lands on this page: standings, live courts, results and leaders.",
+      state: stateOf(2),
+    },
+  ];
+};
+
+const buildDashboard = (state: AppState): MbDashboardView => {
   const dateLine = new Date().toLocaleDateString("en-US", {
     weekday: "long",
     month: "long",
@@ -233,9 +324,48 @@ const buildDashboard = (state: AppState): MbDashboardData => {
   const totalPoints = completed.reduce((sum, m) => sum + m.homeScore + m.awayScore, 0);
   const playableTotal = state.matches.filter((m) => !m.isBye).length;
 
+  /* ------------------------------------------------------------- first run */
+
+  const teamCount = state.teams.length;
+  const newest =
+    [...state.competitions].sort((a, b) => b.createdAt - a.createdAt)[0] ?? null;
+  const isFirstRun = state.matches.length === 0;
+
+  /* The one action that is possible, in the order the data unlocks it. Every
+     branch below was reachable on the shipped build and every one of them
+     printed "Record Result". */
+  const primaryAction: MbDashboardAction = !isFirstRun
+    ? { label: "Record Result", href: "/competitions", icon: "plus" }
+    : teamCount < 2
+      ? {
+          label: teamCount === 0 ? "Add Your First Team" : "Add Another Team",
+          href: "/teams",
+          icon: "teams",
+        }
+      : newest === null
+        ? { label: "Create a Competition", href: "/competitions/new", icon: "plus" }
+        : {
+            label: "Open the Competition",
+            href: `/competitions/${newest.id}`,
+            icon: "compete",
+          };
+
   return {
     dateLine,
     matchesCompleted: completed.length,
+    isFirstRun,
+    startSteps: buildSteps(teamCount, newest?.name ?? null),
+    primaryAction,
+    /* Quick Match is the app's own primary and it needs two teams to name the
+       sides, so it becomes a real alternative exactly when it becomes possible
+       — and never as a second copy of `primaryAction`. */
+    altAction:
+      isFirstRun && teamCount >= 2
+        ? { label: "Score a Quick Match", href: "/quick-match" }
+        : null,
+    subLine: isFirstRun
+      ? "No matches recorded yet"
+      : `${completed.length} matches completed`,
     /* The name of the competition the table above actually belongs to — the
        panel used to be headed with one competition's name over a table built
        from every team and every match in the app. */
@@ -257,7 +387,7 @@ const buildDashboard = (state: AppState): MbDashboardData => {
   };
 };
 
-export const useMatchbookDashboard = (): MbDashboardData => {
+export const useMatchbookDashboard = (): MbDashboardView => {
   const { state } = useApp();
   return useMemo(() => buildDashboard(state), [state]);
 };

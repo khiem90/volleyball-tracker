@@ -132,6 +132,28 @@ const STEP_LABEL: Record<WizardStep, string> = {
   details: "Details",
 };
 
+/**
+ * Four words per format, for the chooser's second line.
+ *
+ * `FORMAT_META.blurb` is a full sentence and stays the authority — it is what
+ * `FormatPreviewPanel` prints the moment a format is chosen. But a sentence
+ * sets two lines in a 207px row column, and a row that sets two lines cannot
+ * be one of five on a 390px phone screen (the measurement is in
+ * `FormatChoiceList`). So the LIST carries the shortest true thing and the
+ * PREVIEW carries the sentence, one panel below.
+ *
+ * Not in `formatMeta.ts` because that module is the shared format table and
+ * this string exists for one control on one step. If a second chooser ever
+ * needs it, it moves there and this disappears.
+ */
+const FORMAT_SUMMARY: Record<CompetitionType, string> = {
+  round_robin: "Everyone plays everyone",
+  single_elimination: "Lose once, you are out",
+  double_elimination: "Two losses to go out",
+  win2out: "Winner stays on",
+  two_match_rotation: "Two matches, then rotate",
+};
+
 const STEP_HEADING: Record<WizardStep, string> = {
   format: "Choose a format",
   teams: "Select teams",
@@ -162,13 +184,34 @@ export interface MbPreviewBasis {
   source: MbPreviewSource;
   /** One sentence naming the basis, printed under the lines. */
   caption: string;
+  /**
+   * The panel head's right-hand label — a NUMBER AND A NOUN, never a bare
+   * participle.
+   *
+   * It used to be the single word `Entered`, chosen by `source === "library" ?
+   * "Projected" : "Entered"`. On an empty account `source` is `none`, so the
+   * head of a panel that had nothing to count printed the orphan word
+   * "ENTERED" with no figure attached to it. Empty when there is nothing to
+   * label, so the head simply carries its title.
+   */
+  label: string;
+}
+
+/** One row of the step-1 chooser. */
+export interface MbFormatOption {
+  type: CompetitionType;
+  meta: FormatMetaEntry;
+  /** Right-hand column: "Min 3", or "Needs 3" when the library is short. */
+  kicker: string;
+  /** Four words under the name. The full sentence lives in the preview panel. */
+  summary: string;
 }
 
 export interface MbNewCompetitionView {
   entryRows: MbEntryRow[];
   entryRowsById: Map<string, MbEntryRow>;
   railSteps: MbStep[];
-  formats: { type: CompetitionType; meta: FormatMetaEntry; kicker: string }[];
+  formats: MbFormatOption[];
   previewLines: MbPreviewLine[];
   previewBasis: MbPreviewBasis;
   /** The chosen format's display name, or "" before one is chosen. */
@@ -274,10 +317,15 @@ export const useMatchbookNewCompetition = (
   /**
    * The library size gates nothing — a format below the minimum stays
    * selectable because the very next step can create teams. The kicker says so
-   * instead of the card going dead, which is the difference between a
+   * instead of the row going dead, which is the difference between a
    * constraint and a dead end.
+   *
+   * Two words, not six. It used to read `Needs 3 teams · 0 in library`, which
+   * is 27 characters in a 40px right-hand column, and the second half of it is
+   * already the masthead's dateline ("0 teams in library") on every step. The
+   * column now carries the one figure that differs between the five rows.
    */
-  const formats = useMemo(
+  const formats = useMemo<MbFormatOption[]>(
     () =>
       FORMAT_ORDER.map((type) => {
         const meta = FORMAT_META[type];
@@ -285,9 +333,8 @@ export const useMatchbookNewCompetition = (
         return {
           type,
           meta,
-          kicker: short
-            ? `Needs ${meta.minTeams} teams · ${teams.length} in library`
-            : `Min ${meta.minTeams} teams`,
+          kicker: short ? `Needs ${meta.minTeams}` : `Min ${meta.minTeams}`,
+          summary: FORMAT_SUMMARY[type],
         };
       }),
     [teams.length]
@@ -301,17 +348,20 @@ export const useMatchbookNewCompetition = (
         caption: `Based on the ${entryCount} ${
           entryCount === 1 ? "team" : "teams"
         } entered so far. The numbers update as you pick teams.`,
+        label: `${entryCount} ${entryCount === 1 ? "team" : "teams"} entered`,
       };
     if (teams.length > 0)
       return {
         count: teams.length,
         source: "library",
         caption: `Projected for all ${teams.length} teams in your library. Enter fewer on the next step and these numbers come down.`,
+        label: `${teams.length} ${teams.length === 1 ? "team" : "teams"} projected`,
       };
     return {
       count: 0,
       source: "none",
       caption: "",
+      label: "",
     };
   }, [entryCount, teams.length]);
 
@@ -376,7 +426,22 @@ export const useMatchbookNewCompetition = (
     previewBasis,
     formatLabel: selectedFormat ? FORMAT_META[selectedFormat].label : "",
     statusLine,
-    primaryLabel: step === "details" ? "Create competition" : "Next",
+    /**
+     * The primary NAMES ITS DESTINATION.
+     *
+     * It read "Next", and measured 148px beside a 166px "Cancel" at 390px —
+     * an 18px deficit that made the escape hatch the widest control in the
+     * commit bar on the app's first-run screen. `MbAction` has no width axis
+     * (and should not), so the fix is the label: "Next: teams" is both wider
+     * than "Cancel" and more useful than "Next", because a three-step wizard's
+     * commit control should say where it goes.
+     */
+    primaryLabel:
+      step === "format"
+        ? "Next: teams"
+        : step === "teams"
+          ? "Next: details"
+          : "Create competition",
     seriesOptions,
     courtOptionList,
   };

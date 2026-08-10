@@ -101,9 +101,31 @@ export interface MbCompeteData {
   rows: MbCompetitionRow[];
   selectedId: string | null;
   setSelectedId: (id: string) => void;
+  /**
+   * `null` **only** on a first run.
+   *
+   * `selectedId` falls back to `competitions[0]`, so a non-empty `rows` always
+   * resolves an event: `selected === null` and `rows.length === 0` are the same
+   * condition, and the route branches on this one because it is the one that
+   * narrows. That matters — every panel on the screen reads off `selected`, and
+   * when it was `null` the shipped build printed "No competition exists yet"
+   * TWICE (Tournament Status, Event Details) and "No competitions exist yet" a
+   * third time, three headlines separated by an invisible plural, three of the
+   * seven with no action at all.
+   */
   selected: MbCompeteSelected | null;
   deleteCompetition: (id: string) => void;
+  /**
+   * Teams already on the books, capped for display. The one fact that decides
+   * whether a competition can be created, printed on the screen that creates
+   * one — `teamCount` is the honest total.
+   */
+  teams: MbTeam[];
+  teamCount: number;
 }
+
+/** How many team marks the first-run panel prints before it counts the rest. */
+const TEAMS_SHOWN = 6;
 
 const shortDate = (ts?: number) =>
   ts
@@ -309,6 +331,9 @@ export const useMatchbookCompete = (): MbCompeteData => {
       setSelectedId: setManualSelectedId,
       selected,
       deleteCompetition,
+      isFirstRun: rows.length === 0,
+      teams: state.teams.slice(0, TEAMS_SHOWN).map((team) => refFor(team.id)),
+      teamCount: state.teams.length,
     };
   }, [state, manualSelectedId, deleteCompetition]);
 };

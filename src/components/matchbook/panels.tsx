@@ -15,6 +15,7 @@ import type {
   MbScheduleItem,
   MbStandingLine,
   MbStatTotal,
+  MbTeam,
 } from "./types";
 
 /* ---------------------------------------------------------------------------
@@ -98,6 +99,274 @@ const FooterLink = ({ href, label }: { href: string; label: string }) => (
    `MbStandingsTable` sets the rank column itself, and it reads `rank` /
    `sharesRank` off the row rather than the map index, so a joint 2nd renders
    as "=2" on two rows and the next team as 4th. */
+
+/* ===========================================================================
+   THE ZERO STATE
+
+   Measured on a brand-new account at 390px, `/` was 2540px of paper carrying
+   EIGHT consecutive panels — No standings · No match of the day · No live
+   matches · No upcoming matches · No bracket · No results · No teams · No team
+   leaders — every one of them a `display/stat-sm` headline of the same size and
+   weight, every one with its own hung rule, and twenty controls between them.
+   The one filled button on the screen read "Record Result", on an account with
+   zero teams and zero matches.
+
+   That is not an empty state. It is a populated page with the data removed, and
+   it is the first thirty seconds every user of this product has.
+
+   Three components below replace it. None of them is an "empty state" in the
+   §5.7 sense, because a screen with nothing to report is not eight empty
+   objects — it is ONE screen with a different job:
+
+     `MbStepsPanel`   the progression, numbered, with the live step marked by
+                      the coral selection rail (coral's declared structural job,
+                      invariant 15) and a word, so the mark survives greyscale.
+     `MbLedgerPanel`  a ruled index. It is what the seven mute panels collapse
+                      into: term + what makes it appear, at `display/row-title`
+                      over `body/2xs`, so SEVEN equal display headlines become
+                      ZERO and the promise is still on the page.
+
+   Invariant 25 is intact, not waived: it binds "every list, table, bracket and
+   panel that CAN be empty", and neither of these can be — the steps are always
+   three and the index is always its own rows. The panels that would have been
+   empty are not rendered at all, which is the one thing eight `PanelEmpty`
+   blocks in a column can never be talked into.
+
+   Invariant 52 is the reason for the shapes: a numbered ledger and a contents
+   index are the two most editorial objects a programme has. Neither is a
+   centred lone card, and neither would survive being pasted into a CRM.
+   =========================================================================== */
+
+export type MbStepState = "done" | "current" | "todo";
+
+export interface MbStartStep {
+  /** "01". The leading zero is part of the string — it is set, not computed. */
+  n: string;
+  title: string;
+  /** One sentence, sentence case, full stop. */
+  deck: string;
+  state: MbStepState;
+  /** What finishing the step produced: "8 teams added", the event's name. */
+  note?: string;
+}
+
+/**
+ * The state as a WORD, so the row does not rest on the rail alone.
+ * `todo` stays unlabelled: "not started" is what a row says by saying nothing,
+ * and three status words in a three-row list is a legend, not a state.
+ */
+const STEP_WORD: Record<MbStepState, string | null> = {
+  done: "Done",
+  current: "Next",
+  todo: null,
+};
+
+/**
+ * The numbered progression.
+ *
+ * It carries no button of its own. On a first-run screen exactly one action is
+ * possible, the masthead already prints it at the top of the page in the
+ * position a thumb reaches first, and printing it a second time 300px lower —
+ * which is what `/competitions` did with its create action, twice, in panel
+ * bodies — is how a screen ends up with twenty controls and no primary.
+ * `footer` is for a genuinely DIFFERENT path, never a second copy of the first.
+ */
+export const MbStepsPanel = ({
+  title,
+  steps,
+  footer,
+}: {
+  title: string;
+  steps: MbStartStep[];
+  /** A second, different destination. Not a repeat of the masthead action. */
+  footer?: { href: string; label: string };
+}) => (
+  <Panel title={title} tone="navy" icon="clipboard">
+    <ol className="flex grow flex-col divide-y divide-mb-rule">
+      {steps.map((step) => {
+        const current = step.state === "current";
+        const word = STEP_WORD[step.state];
+        return (
+          <li
+            key={step.n}
+            aria-current={current ? "step" : undefined}
+            className="grid grow grid-cols-[2rem_minmax(0,1fr)] items-start gap-x-3 px-4 py-4"
+            /* The same 3px coral inset `EventRow` uses for the selected event —
+               one selection mark, one orientation, one width. */
+            style={current ? { boxShadow: "inset 3px 0 0 var(--mb-coral)" } : undefined}
+          >
+            <span
+              className={`matchbook-display text-2xl font-bold leading-none tabular-nums ${
+                current ? "" : "text-mb-ink-muted"
+              }`}
+            >
+              {step.n}
+            </span>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <p
+                  className={`matchbook-display text-[0.95rem] tracking-[0.05em] ${
+                    current ? "font-bold" : "font-semibold text-mb-ink-muted"
+                  }`}
+                >
+                  {step.title}
+                </p>
+                {word && (
+                  <span className="mb-kicker flex shrink-0 items-center gap-1">
+                    {step.state === "done" && <MbIcon id="check" size={12} />}
+                    {word}
+                  </span>
+                )}
+              </div>
+              <p className="mt-1 max-w-[48ch] text-[0.85rem] leading-[1.5] text-mb-ink-muted">
+                {step.deck}
+              </p>
+              {step.note && (
+                <p className="matchbook-display mt-1.5 text-[0.66rem] font-bold tracking-[0.1em] tabular-nums">
+                  {step.note}
+                </p>
+              )}
+            </div>
+          </li>
+        );
+      })}
+    </ol>
+    {footer && <FooterLink href={footer.href} label={footer.label} />}
+  </Panel>
+);
+
+export interface MbLedgerRow {
+  /** The thing. `display/row-title`. */
+  term: string;
+  /** What it is, or what makes it appear. `body/2xs`, ink-muted. */
+  gloss: string;
+  /** Sprite id, drawn once beside the term. Ignored when `dense`. */
+  icon?: string;
+  /**
+   * A 3px contained rail — `FORMAT_META`'s own accent and nothing else, so no
+   * new colour mapping is invented (invariant 16, design language §1.2).
+   * Decorative: every row is already told apart by its word and its glyph.
+   */
+  accent?: string;
+}
+
+/**
+ * A ruled index of terms.
+ *
+ * `dense` is the contents cut — term left, condition right, two columns, no
+ * glyph — which is what the seven mute Overview panels become. The default cut
+ * gives each row a rail, a glyph and a full sentence, for a list the reader is
+ * choosing FROM rather than being promised.
+ */
+export const MbLedgerPanel = ({
+  title,
+  rows,
+  meta,
+  dense = false,
+}: {
+  title: string;
+  rows: MbLedgerRow[];
+  meta?: React.ReactNode;
+  dense?: boolean;
+}) => (
+  <Panel title={title} meta={meta}>
+    <dl className="flex grow flex-col divide-y divide-mb-rule">
+      {rows.map((row) =>
+        dense ? (
+          <div
+            key={row.term}
+            className="grid grow grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] items-baseline gap-x-3 px-4 py-2.5"
+          >
+            <dt className="matchbook-display text-[0.78rem] font-bold">{row.term}</dt>
+            <dd className="text-[0.72rem] leading-[1.4] text-mb-ink-muted">{row.gloss}</dd>
+          </div>
+        ) : (
+          <div
+            key={row.term}
+            className="grid grow grid-cols-[3px_1.5rem_minmax(0,1fr)] items-start gap-x-2.5 px-4 py-3"
+          >
+            <span
+              aria-hidden="true"
+              className="block h-full w-[3px] self-stretch"
+              style={{ background: row.accent ?? "var(--mb-rule)" }}
+            />
+            {row.icon ? (
+              <MbIcon id={row.icon} size={18} className="mt-0.5 shrink-0 text-mb-navy" />
+            ) : (
+              <span />
+            )}
+            <div className="min-w-0">
+              <dt className="matchbook-display text-[0.78rem] font-bold">{row.term}</dt>
+              <dd className="mt-0.5 text-[0.72rem] leading-[1.45] text-mb-ink-muted">
+                {row.gloss}
+              </dd>
+            </div>
+          </div>
+        )
+      )}
+    </dl>
+  </Panel>
+);
+
+/**
+ * What the Overview becomes, in the order the populated screen prints it.
+ *
+ * It lives beside the panels it describes so the two cannot drift: a row here
+ * and a `PanelEmpty` message in the same file are the same promise written
+ * once each, and the file that owns one owns the other.
+ */
+export const MB_OVERVIEW_CONTENTS: MbLedgerRow[] = [
+  { term: "Standings", gloss: "Ranked from the first result on." },
+  { term: "Match of the Day", gloss: "The latest match you finished." },
+  { term: "Live Courts", gloss: "Scores while a match is in progress." },
+  { term: "Upcoming Schedule", gloss: "Fixtures the format writes for you." },
+  { term: "Championship Bracket", gloss: "Once four teams are ranked." },
+  { term: "Recent Results", gloss: "Every finished match, newest first." },
+  { term: "Team Readiness", gloss: "Form and readiness, team by team." },
+  { term: "Team Leaders", gloss: "Wins, points and the longest streak." },
+];
+
+/**
+ * The teams already on the books — the one fact that decides whether a
+ * competition can be created at all, printed on the screen that creates one.
+ * Real data rather than a promise, which is why this panel is not another
+ * ledger row.
+ */
+export const TeamsReadyPanel = ({
+  teams,
+  total,
+}: {
+  /** Already capped by the hook; `total` is the honest count. */
+  teams: MbTeam[];
+  total: number;
+}) => (
+  <Panel
+    title="Teams Ready"
+    meta={<span className="mb-kicker tabular-nums">{total} Total</span>}
+  >
+    {total === 0 ? (
+      <PanelEmpty
+        message="No teams exist yet — add them here, or create them inside the wizard as you go."
+        actionLabel="Add teams"
+        href="/teams"
+      />
+    ) : (
+      <div className="flex grow flex-col divide-y divide-mb-rule">
+        {teams.map((team) => (
+          <div key={team.name} className="flex grow items-center px-4 py-2">
+            <TeamMark team={team} size="sm" />
+          </div>
+        ))}
+        {total > teams.length && (
+          <p className="mb-kicker px-4 py-2 tabular-nums">
+            +{total - teams.length} more
+          </p>
+        )}
+      </div>
+    )}
+    <FooterLink href="/teams" label="Open the Team Directory" />
+  </Panel>
+);
 
 /* ------------------------------- Standings ------------------------------- */
 
