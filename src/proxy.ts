@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
 
 /**
  * Keep the development-only segment off production.
@@ -19,7 +18,7 @@ import type { NextRequest } from "next/server";
  */
 export const config = { matcher: "/dev/:path*" };
 
-export const proxy = (request: NextRequest) => {
+export const proxy = () => {
   if (process.env.NODE_ENV === "production") {
     return new NextResponse("Not Found", {
       status: 404,
