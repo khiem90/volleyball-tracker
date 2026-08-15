@@ -73,7 +73,7 @@ export const SessionShareDialog = ({
       <div className="flex flex-col gap-2">
         <span className="mb-kicker">Share code</span>
         <div className="flex flex-wrap items-center gap-2.5">
-          <span className="mb-code-chip text-[1.05rem]">{shareCode}</span>
+          <span className="mb-code-chip">{shareCode}</span>
           {/* Not `MbBadge`: `tone="neutral"`'s mark is a horizontal bar, and
               beside the event's own name it read as a stray em dash rather
               than as a status. A name is not a status. */}

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { FORMAT_META, FORMAT_ORDER } from "./formatMeta";
+import { MbMatchupPair } from "./MatchRow";
 import { MbIcon } from "./MbIcon";
 import { MbTableScroll } from "./TableScroll";
 import { Crest, FormLetters, Panel, PanelEmpty, TeamMark } from "./Panel";
@@ -198,7 +199,7 @@ export const MbStepsPanel = ({
             style={current ? { boxShadow: "inset 3px 0 0 var(--mb-coral)" } : undefined}
           >
             <span
-              className={`matchbook-display text-2xl font-bold leading-none tabular-nums ${
+              className={`matchbook-display text-2xl mb-track-display font-bold leading-none tabular-nums ${
                 current ? "" : "text-mb-ink-muted"
               }`}
             >
@@ -207,7 +208,7 @@ export const MbStepsPanel = ({
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                 <p
-                  className={`matchbook-display text-[0.95rem] tracking-[0.05em] ${
+                  className={`matchbook-display text-[0.95rem] mb-track-title ${
                     current ? "font-bold" : "font-semibold text-mb-ink-muted"
                   }`}
                 >
@@ -224,7 +225,7 @@ export const MbStepsPanel = ({
                 {step.deck}
               </p>
               {step.note && (
-                <p className="matchbook-display mt-1.5 text-[0.66rem] font-bold tracking-[0.1em] tabular-nums">
+                <p className="matchbook-display mt-1.5 text-[0.66rem] mb-track-status font-bold tabular-nums">
                   {step.note}
                 </p>
               )}
@@ -296,7 +297,7 @@ export const MbLedgerPanel = ({
               wide ? "xl:grid-cols-[minmax(0,20rem)_minmax(0,1fr)]" : ""
             }`}
           >
-            <dt className="matchbook-display text-[0.78rem] font-bold">{row.term}</dt>
+            <dt className="matchbook-display text-[0.78rem] mb-track-display font-bold">{row.term}</dt>
             <dd className="text-[0.72rem] leading-[1.4] text-mb-ink-muted">{row.gloss}</dd>
           </div>
         ) : (
@@ -315,7 +316,7 @@ export const MbLedgerPanel = ({
               <span />
             )}
             <div className="min-w-0">
-              <dt className="matchbook-display text-[0.78rem] font-bold">{row.term}</dt>
+              <dt className="matchbook-display text-[0.78rem] mb-track-display font-bold">{row.term}</dt>
               <dd className="mt-0.5 text-[0.72rem] leading-[1.45] text-mb-ink-muted">
                 {row.gloss}
               </dd>
@@ -573,7 +574,7 @@ export const MatchOfTheDayPanel = ({ match }: { match: MbFeaturedMatch | null })
   <section className="mb-panel">
     <header className="flex items-center gap-2 bg-mb-navy px-4 py-2.5 text-mb-paper-bright">
       <MbIcon id="star" size={16} className="text-mb-gold" />
-      <h2 className="matchbook-display text-[0.95rem] font-bold tracking-[0.05em]">
+      <h2 className="matchbook-display text-[0.95rem] mb-track-title font-bold">
         Match of the Day
       </h2>
     </header>
@@ -586,36 +587,64 @@ export const MatchOfTheDayPanel = ({ match }: { match: MbFeaturedMatch | null })
     ) : (
       <div className="flex flex-col flex-1">
         <div className="flex items-center justify-between px-4 pt-3">
-          <p className="matchbook-display text-[0.72rem] font-semibold tracking-[0.08em]">
+          <p className="matchbook-display text-[0.72rem] mb-track-link font-semibold">
             {match.division}
           </p>
           {/* Navy, not coral. 12.8px/700 coral on `--mb-paper-bright` measured
               3.55:1 against a 4.5:1 floor, and a kick-off time is data, not a
               call to action — coral's job list has no entry for it. */}
-          <p className="matchbook-display text-[0.8rem] font-bold tabular-nums">
+          <p className="matchbook-display text-[0.8rem] mb-track-button font-bold tabular-nums">
             {match.time}
           </p>
         </div>
-        <div className="grid grid-cols-[1fr_auto_auto_auto_1fr] items-center gap-3 px-5 py-4">
-          <div className="flex flex-col items-center gap-1.5">
-            <Crest team={match.home} size={58} />
-            <span className="matchbook-display text-[0.8rem] font-bold">
-              {match.home.name}
-            </span>
-          </div>
-          <span className="matchbook-display text-5xl font-bold tabular-nums">
+        {/* `minmax(0,1fr)`, not `1fr` (R2). A bare `1fr` is `minmax(auto,1fr)`,
+            and `auto` as a track MINIMUM is min-content — so each name column's
+            floor was the longest word in a club name, whatever the viewport
+            said. Measured on `/` at 320 with an ordinary roster ("Oakfield
+            Panthers", "Stonebridge Saints"), before:
+
+              scoreline row  321px of content in a 286px track
+              document       documentElement.scrollWidth 338 vs 320
+              bottom nav     stretched to 338 (it is `fixed inset-x-0`), and
+                             under mobile emulation the layout viewport grows
+                             with it: 9px of the 57px bar visible, all five
+                             cells failing `elementFromPoint`
+
+            The three `auto` score columns are untouched, so at every width where
+            the row already fitted nothing moves. After: 320 vs 320, bar 57px,
+            five of five cells hittable. The track minimum and the CONTENT
+            minimum are two different floors and both had to go — see the note
+            on the cell below for the second. */}
+        <div className="grid grid-cols-[minmax(0,1fr)_auto_auto_auto_minmax(0,1fr)] items-center gap-3 px-5 py-4">
+          {/* The W1 return's own closing sentence — "the names in these two
+              cells are still raw and still WRAP rather than elide" — is the
+              defect this closes. `minmax(0,1fr)` lets the TRACK shrink to zero;
+              it does not let the CONTENT, and a raw span's min-content floor is
+              its longest word. Measured at 320 with an eight-club roster,
+              "Eastfield Kestrels" laid out from x 272.6 to 328.2 and took
+              `documentElement.scrollWidth` to 328 against a 320 client width —
+              which, with `html { overflow-x: hidden }`, is the bottom nav
+              pushed off a viewport that cannot be scrolled to reach it.
+
+              `TeamMark orientation="vertical" wrap` is the system's own answer
+              and carries `[overflow-wrap:anywhere]`, which is the only wrap
+              value that also lowers min-content, plus `min-w-0` and the crest
+              at a named step. Invariant 21 wanted this cell to be a `TeamMark`
+              anyway; it was the last raw crest-and-name pair on the screen. */}
+          <TeamMark team={match.home} size={58} orientation="vertical" wrap />
+          <span className="matchbook-display text-5xl mb-track-masthead font-bold tabular-nums">
             {match.homeScore}
           </span>
-          <span className="mb-score-box text-[0.7rem] tracking-[0.1em] px-2">VS</span>
-          <span className="matchbook-display text-5xl font-bold tabular-nums">
+          {/* `.mb-score-box` sets `font-size: 0.95rem` UNLAYERED, so the
+              `text-[0.72rem]` this carried never applied — the pip has always
+              rendered at 0.95rem. `mb-track-title` is that step's rung, and it
+              is also what the other two VS pips (`/quick-match`) now use; the
+              three of them shipped at 0.1em, 0.05em and 0.05em. */}
+          <span className="mb-score-box mb-track-title px-2">VS</span>
+          <span className="matchbook-display text-5xl mb-track-masthead font-bold tabular-nums">
             {match.awayScore}
           </span>
-          <div className="flex flex-col items-center gap-1.5">
-            <Crest team={match.away} size={58} />
-            <span className="matchbook-display text-[0.8rem] font-bold">
-              {match.away.name}
-            </span>
-          </div>
+          <TeamMark team={match.away} size={58} orientation="vertical" wrap />
         </div>
         {match.sets.length > 0 && (
           <div className="mx-4 border-t border-mb-rule">
@@ -640,7 +669,7 @@ export const MatchOfTheDayPanel = ({ match }: { match: MbFeaturedMatch | null })
         <div className="mt-auto flex items-center justify-between border-t border-mb-navy px-4 py-2">
           <span className="flex items-center gap-1.5 text-[0.72rem] font-medium">
             <MbIcon id="location" size={13} className="text-mb-navy" />
-            <span className="matchbook-display tracking-[0.06em]">{match.venue}</span>
+            <span className="matchbook-display mb-track-link">{match.venue}</span>
           </span>
           {match.attendance && (
             <span className="mb-kicker">Attendance: {match.attendance}</span>
@@ -666,50 +695,52 @@ export const LiveCourtsPanel = ({ courts }: { courts: MbLiveCourt[] }) => (
         {courts.map((court, i) => (
           <div
             key={i}
-            /* `minmax(0,1fr)` on the two NAME tracks and a bound on everything
-               that competes with them. A bare `1fr` is `minmax(auto,1fr)`, so
-               the auto tracks took their max-content first and the names got
-               what was left: measured at 1440, "Peak" (29px of glyphs) was
-               handed a 27px box and rendered "PE…" — a four-letter team name
-               truncated to two. The competition label under the score was the
-               thief: "THIRTEEN TEAM CUP" set the centre track to 95px, wider
-               than the scoreline it captions. */
-            className="grid grow grid-cols-[56px_minmax(0,1fr)_auto_minmax(0,1fr)_auto] items-center gap-2 px-3 py-3"
+            /* Three tracks, not five: the matchup is ONE cell now.
+               `minmax(0,1fr)` on it because a bare `1fr` is `minmax(auto,1fr)`
+               and the auto floor would let the pair push the row wide. */
+            className="grid grow grid-cols-[56px_minmax(0,1fr)_auto] items-center gap-2 px-3 py-3"
           >
             <div className="border-r border-mb-rule pr-2">
-              <p className="matchbook-display text-[0.72rem] font-bold leading-tight">
+              <p className="matchbook-display text-[0.72rem] mb-track-link font-bold leading-tight">
                 {court.court}
               </p>
-              <p className="text-[0.68rem] text-mb-ink-muted">{court.time}</p>
+              <p className="text-[0.66rem] text-mb-ink-muted">{court.time}</p>
             </div>
-            {/* NO `justify-self`. A grid item with `justify-self` other than
-                `stretch` is sized by its MAX-CONTENT, so the name never
-                truncated — it ran straight through the scoreline beside it.
-                Reproduced at 1440 with the fixture's two 39-character
-                Wolverhampton sides: both names painted over the 104 – 99 and
-                over each other. `MbMatchRow` carries this exact note and this
-                exact fix; these two panels never got it. Stretched to the
-                track, `min-w-0` inside `TeamMark` does its job and the away
-                mark's `reverse` is what puts it against the right edge. */}
-            <TeamMark team={court.home} />
-            <div className="flex flex-col items-center gap-0.5">
-              {/* `.mb-score-box` sets the display face and a 26px min-width but
-                  no figure set, so a live score stepping 9 -> 10 re-cut its own
-                  box. These are the highest-frequency numerals on the screen;
-                  HF-13 names them first. */}
-              <span className="flex items-center gap-1.5">
-                <span className="mb-score-box tabular-nums">{court.homeScore}</span>
-                <span className="text-mb-ink-muted text-xs">–</span>
-                <span className="mb-score-box tabular-nums">{court.awayScore}</span>
-              </span>
-              {/* Capped at the scoreline it sits under, so a long competition
-                  name cannot widen the centre track at the names' expense. */}
-              <span className="mb-kicker max-w-[76px] truncate">{court.setLabel}</span>
+            {/* The `justify-self` fix stopped the two names painting over the
+                scoreline, but what it left was the other half of the same
+                defect: with a real club roster the name tracks measured 46.3
+                and 49px at 1440, and "Riverside", "Eastfield" and "Ashford"
+                all painted at 0px of their 52–58px heads. A four-of-twelve
+                panel cannot hold two identities and a scoreline on one line,
+                so `MbMatchupPair` gives each team its own line below 376px of
+                container and keeps the mirrored scoreline above it.
+
+                `setLabel` moves out of the centre and under the pair. It was
+                captioning the score from inside the track the names were
+                fighting for — "THIRTEEN TEAM CUP" set that track to 95px, wider
+                than the scoreline it captions — and it is row meta, not part
+                of the measure.
+
+                The two `.mb-score-box` frames go with it. A box is 26px wide
+                before a figure is in it, twice, in the cell the names could not
+                afford; and the pair's own two-figure reserve plus
+                `.mb-numeral-digit` gives the constant width the box was being
+                asked for, so a live 9 -> 10 still re-cuts nothing. The row now
+                sets its scoreline in the same figures as the Recent Results
+                row beside it and the archive ledger it links to. */}
+            <div className="flex min-w-0 flex-col gap-0.5">
+              <MbMatchupPair
+                home={court.home}
+                away={court.away}
+                homeScore={court.homeScore}
+                awayScore={court.awayScore}
+                decided={false}
+              />
+              <span className="mb-kicker truncate">{court.setLabel}</span>
             </div>
-            <TeamMark team={court.away} reverse />
             <span className="flex items-center gap-1">
               <span className="mb-live-dot" />
-              <span className="matchbook-display text-[0.62rem] font-bold text-mb-red">
+              <span className="matchbook-display text-[0.62rem] mb-track-nav font-bold text-mb-red">
                 Live
               </span>
             </span>
@@ -736,52 +767,50 @@ export const SchedulePanel = ({ items }: { items: MbScheduleItem[] }) => (
         {items.map((item, i) => (
           <div
             key={i}
-            className="grid grow grid-cols-[42px_50px_1fr] items-center gap-1 py-2 pl-2.5 pr-2.5"
+            className="grid grow grid-cols-[42px_50px_minmax(0,1fr)] items-center gap-1 py-2 pl-2.5 pr-2.5"
           >
             {/* The coral on this list is the 2px SPINE (coral job 4), which is
                 a mark. The date beside it was a second coral doing the same job
                 as a letterform: 10.24px/700 at 3.55:1 on `--mb-paper-bright`.
                 Navy, and the spine keeps the accent. */}
             <div>
-              <p className="matchbook-display text-[0.64rem] font-bold leading-tight">
+              <p className="matchbook-display text-[0.66rem] mb-track-status font-bold leading-tight">
                 {item.day}
               </p>
-              <p className="matchbook-display text-[0.64rem] font-bold leading-tight tabular-nums">
+              <p className="matchbook-display text-[0.66rem] mb-track-status font-bold leading-tight tabular-nums">
                 {item.date}
               </p>
             </div>
             <p className="text-[0.72rem] font-semibold tabular-nums">{item.time}</p>
-            <div className="flex items-center justify-between gap-1.5 min-w-0">
-              {/* `basis-0 flex-1` on BOTH names, and `MbTeamName` on each.
-                  Two separate failures met in this cell and each one alone
-                  loses a team's identity:
+            <div className="flex min-w-0 flex-col gap-0.5">
+              {/* An EQUAL split of a cell that is 183px wide is still 91px a
+                  side, and the previous fix — `basis-0 flex-1` on both names
+                  so neither could hog the pair — only made the failure fair.
+                  Measured at 1440 with a real club roster, each name held a
+                  48.2px box: "Westhill" painted 0px of 46, "Northside" 0.1px
+                  of 54, "Kingsway" 7px of 50. `MbTeamName` pins the last token
+                  and elides from the middle, so what survived was the tail
+                  alone — "Kingsway Rovers" and "Riverside Rovers" both read
+                  "… ROVERS", two clubs one string, on the screen that shows
+                  both at once.
 
-                  1. shrink is proportional to BASE size, so a long name kept
-                     its share and a short one paid for it — measured at 1440,
-                     "Wolverhampton Wanderers Athletic Club B" held 58px while
-                     "Apex" beside it was squeezed to 6px, which paints as no
-                     name at all. An equal `basis-0` split gives each side the
-                     same half whatever the two names measure.
-                  2. within that half, end-truncation made the two Wolverhampton
-                     sides the same string (F15). `MbTeamName` keeps the last
-                     token, so "…B" and "…C" still separate them. */}
-              <span className="flex min-w-0 flex-1 items-center gap-1">
-                <Crest team={item.home} size={18} />
-                <MbTeamName
-                  name={item.home.name}
-                  className="matchbook-display basis-0 flex-1 text-[0.72rem] font-semibold"
-                />
-                <span className="px-0.5 text-[0.6rem] text-mb-ink-muted">vs</span>
-                <Crest team={item.away} size={18} />
-                <MbTeamName
-                  name={item.away.name}
-                  className="matchbook-display basis-0 flex-1 text-[0.72rem] font-semibold"
-                />
-              </span>
-              {/* 104 -> 72. `xl` is where this panel is narrowest on the
-                  dashboard, so the widest cap was applied at the width with
-                  the least to give. */}
-              <span className="hidden xl:flex max-w-[72px] shrink-0 items-center gap-1 text-[0.62rem] text-mb-ink-muted">
+                  No split of one line fixes that, because one line is the
+                  problem: a two-word club name sets in 107.5px at this step
+                  and this panel is `xl:col-span-4`. `MbMatchupPair` reflows to
+                  one line per team from its own container width, which is the
+                  only width that knows. */}
+              <MbMatchupPair home={item.home} away={item.away} note="vs" size="sm" />
+              {/* The venue drops OUT of the name line and under it.
+                  It was `hidden xl:flex max-w-[72px]`, revealed at exactly the
+                  breakpoint where this panel becomes `xl:col-span-4` and is at
+                  its narrowest — so 78px of a 186px cell went to the venue at
+                  1280 and the two names it captions were left 82px between
+                  them, which painted "Harrowgate" at 18.2px of its 48. As a
+                  caption line it costs the names nothing at any width, it
+                  stops being hidden below `xl` (invariant 38 no longer has to
+                  be argued for it), and it is the same row grammar as Live
+                  Courts' set label directly above. */}
+              <span className="flex min-w-0 items-center gap-1 text-[0.62rem] text-mb-ink-muted">
                 <MbIcon id="location" size={10} className="shrink-0" />
                 <span className="truncate">{item.venue}</span>
               </span>
@@ -805,7 +834,27 @@ export const BracketPanel = ({ bracket }: { bracket: MbBracket | null }) => (
         href="/competitions/new"
       />
     ) : (
-      <div className="flex items-center gap-0 px-4 py-4 flex-1">
+      /* Stacked when the panel is narrow, the printed draw when it is not —
+         and the panel's OWN width decides, not the viewport, because the two
+         disagree: this panel is 322px wide at a 1280px viewport (`xl` turns
+         the grid into twelve columns and takes it to `col-span-4`) and 720px
+         at 768px, where the grid is still one column. A media query would have
+         to stack the wide case and spread the narrow one.
+
+         The 118px Final block and its two connectors are 146px of the content
+         line, and the seed row pays all of it: measured with an eight-club
+         roster, the semifinal names held a 36.4px box at 320 and a 70.4px box
+         at 1280, painting heads of 0–25.7px against naturals of 49–70 — so
+         "Westhill Wanderers" and any other Wanderers were the same string. At
+         320px of content line the seed name gets 96px, which is the same
+         floor `MbMatchupPair` sets, and every roster name sets whole.
+
+         The padding sits on the CONTAINER and the cut on its child: a
+         container query styles a container's descendants and never the
+         container itself, so 320 here is the content line the draw actually
+         gets rather than the panel's outer box. */
+      <div className="@container flex flex-1 flex-col px-4 py-4">
+      <div className="flex flex-1 flex-col gap-4 @min-[320px]:flex-row @min-[320px]:items-center @min-[320px]:gap-0">
         <div className="flex flex-col gap-4 flex-1 min-w-0">
           <p className="mb-kicker -mb-2">Semifinals</p>
           {bracket.semifinals.map((pair, i) => (
@@ -813,13 +862,13 @@ export const BracketPanel = ({ bracket }: { bracket: MbBracket | null }) => (
               <div className="flex flex-col gap-1.5 flex-1 min-w-0">
                 {pair.map((seed) => (
                   <div key={seed.seed} className="mb-seed-box">
-                    <span className="matchbook-display w-4 text-center text-[0.72rem] font-bold tabular-nums text-mb-ink-muted">
+                    <span className="matchbook-display w-4 text-center text-[0.72rem] mb-track-link font-bold tabular-nums text-mb-ink-muted">
                       {seed.seed}
                     </span>
                     <Crest team={seed.team} size={20} />
                     <MbTeamName
                       name={seed.team.name}
-                      className="matchbook-display min-w-0 flex-1 text-[0.76rem] font-semibold"
+                      className="matchbook-display min-w-0 flex-1 text-[0.78rem] mb-track-display font-semibold"
                     />
                   </div>
                 ))}
@@ -832,12 +881,13 @@ export const BracketPanel = ({ bracket }: { bracket: MbBracket | null }) => (
             </div>
           ))}
         </div>
-        <div className="w-4 shrink-0 border-t border-mb-navy" />
-        <div className="flex w-[118px] shrink-0 flex-col items-center gap-1.5">
+        {/* The elbow into the final only means anything beside the draw. */}
+        <div className="hidden w-4 shrink-0 border-t border-mb-navy @min-[320px]:block" />
+        <div className="flex w-full shrink-0 flex-col items-center gap-1.5 @min-[320px]:w-[118px]">
           <p className="mb-kicker self-start">Final</p>
           <div className="flex w-full items-center gap-2 border border-mb-navy bg-mb-paper-bright px-2.5 py-2">
             <MbIcon id="compete" size={20} className="text-mb-navy" />
-            <span className="matchbook-display text-[0.76rem] font-semibold leading-tight text-mb-ink-muted">
+            <span className="matchbook-display text-[0.78rem] mb-track-display font-semibold leading-tight text-mb-ink-muted">
               TBD
               <br />
               TBD
@@ -849,6 +899,7 @@ export const BracketPanel = ({ bracket }: { bracket: MbBracket | null }) => (
             {bracket.finalVenue}
           </p>
         </div>
+      </div>
       </div>
     )}
     <FooterLink href="/competitions" label="View Full Bracket" />
@@ -870,25 +921,38 @@ export const RecentResultsPanel = ({ results }: { results: MbRecentResult[] }) =
         {results.map((r, i) => (
           <div
             key={i}
-            /* Same `minmax(0,1fr)` on the name tracks, and the competition
-               column trimmed 88 -> 64: it is revealed at `xl`, which on this
-               dashboard is where the panel is NARROWEST (three across), so it
-               was taking a quarter of the row from the two names it captions. */
-            className="grid grow grid-cols-[44px_minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 py-2.5 pl-3 pr-3 xl:grid-cols-[44px_minmax(0,1fr)_auto_minmax(0,1fr)_64px]"
+            /* Two tracks below `xl`, three at `xl`, and the matchup is ONE
+               cell. The venue column stayed at 64: it is revealed at `xl`,
+               which on this dashboard is where the panel is NARROWEST (three
+               across), so it was taking a quarter of the row from the two
+               names it captions. */
+            className="grid grow grid-cols-[44px_minmax(0,1fr)] items-center gap-2 py-2.5 pl-3 pr-3 xl:grid-cols-[44px_minmax(0,1fr)_64px]"
             style={{ boxShadow: `inset 3px 0 0 ${r.accent}` }}
           >
-            <p className="matchbook-display text-[0.66rem] font-bold leading-tight text-mb-ink-muted">
+            <p className="matchbook-display text-[0.66rem] mb-track-status font-bold leading-tight text-mb-ink-muted">
               {r.date}
             </p>
-            {/* Same `justify-self` defect as Live Courts above: max-content
-                sizing meant the two 39-character names in this fixture printed
-                over the scoreline between them. */}
-            <TeamMark team={r.home} />
-            <span className="matchbook-display whitespace-nowrap text-[0.95rem] font-bold tabular-nums">
-              {r.homeScore} – {r.awayScore}
-            </span>
-            <TeamMark team={r.away} reverse />
-            <span className="hidden truncate text-right text-[0.64rem] text-mb-ink-muted xl:block">
+            {/* The `justify-self` fix stopped the names printing over the
+                scoreline; it did not give them anywhere to go. Measured at
+                1440 with a club roster, the eight names in this panel held
+                47.6–48.8px boxes and six of them painted a head of 0–1.9px
+                against naturals of 52–62 — "Eastfield Kestrels" and "Ashford
+                Athletic" both reduced to their tail. `MbMatchupPair` reflows
+                to one line per team below 376px of container, which is every
+                width this `xl:col-span-4` panel has ever had.
+
+                0.95rem -> 0.9rem on the figures: the pair sets one scoreline
+                step for the dashboard, the archive ledger and the live board,
+                and 0.9rem is the step two of the three already used. */}
+            <MbMatchupPair
+              home={r.home}
+              away={r.away}
+              homeScore={r.homeScore}
+              awayScore={r.awayScore}
+              homeWon={r.homeScore > r.awayScore}
+              awayWon={r.awayScore > r.homeScore}
+            />
+            <span className="hidden truncate text-right text-[0.66rem] text-mb-ink-muted xl:block">
               {r.venue}
             </span>
           </div>
@@ -954,7 +1018,7 @@ export const ReadinessPanel = ({ rows }: { rows: MbReadinessRow[] }) => (
                 {/* Ink, not mark: see `readinessInk`. The bar above keeps the
                     bright tone; the word takes the twin that clears 4.5:1. */}
                 <td
-                  className="matchbook-display pr-3! text-right text-[0.64rem] font-bold"
+                  className="matchbook-display pr-3! text-right mb-track-display font-bold"
                   style={{ color: readinessInk(row.percent) }}
                 >
                   {row.status}
@@ -990,11 +1054,11 @@ export const LeadersPanel = ({
         {leaders.map((leader) => (
           <div key={leader.stat} className="flex flex-col items-center gap-1 px-2 text-center">
             <Crest team={leader.team} size={54} />
-            <span className="matchbook-display mt-1 text-[0.8rem] font-bold">
+            <span className="matchbook-display mt-1 text-[0.8rem] mb-track-button font-bold">
               {leader.team.name}
             </span>
             <span className="mb-kicker">{leader.stat}</span>
-            <span className="matchbook-display text-4xl font-bold tabular-nums">
+            <span className="matchbook-display text-4xl mb-track-masthead font-bold tabular-nums">
               {leader.value}
             </span>
           </div>
@@ -1003,13 +1067,13 @@ export const LeadersPanel = ({
     )}
     {totals.length > 0 && (
       <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-mb-navy px-4 py-2">
-        <span className="matchbook-display text-[0.68rem] font-bold tracking-[0.08em]">
+        <span className="matchbook-display text-[0.66rem] mb-track-status font-bold">
           All-Time Totals
         </span>
         {totals.map((total) => (
           <span key={total.label} className="flex items-baseline gap-1.5">
             <span className="mb-kicker">{total.label}</span>
-            <span className="matchbook-display text-[0.8rem] font-bold tabular-nums">
+            <span className="matchbook-display text-[0.8rem] mb-track-button font-bold tabular-nums">
               {total.value}
             </span>
           </span>

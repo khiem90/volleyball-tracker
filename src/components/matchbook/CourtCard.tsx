@@ -87,7 +87,7 @@ const Side = ({
           tracking. The card used 0.02em here and the panel head above it uses
           0.05em, which is a size/weight pair carrying two trackings on one
           screen (rubric 1.3). */}
-      <p className="matchbook-display truncate text-[0.95rem] font-bold leading-tight tracking-[0.05em]">
+      <p className="matchbook-display truncate text-[0.95rem] mb-track-title font-bold leading-tight">
         {team.name}
       </p>
       {sub && <p className="mb-kicker truncate tabular-nums">{sub}</p>}

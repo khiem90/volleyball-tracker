@@ -50,7 +50,7 @@ const Side = ({
       size={40}
     />
     <p
-      className={`matchbook-display w-full text-center text-[0.9rem] leading-tight [overflow-wrap:anywhere] ${
+      className={`matchbook-display w-full text-center text-[0.9rem] mb-track-display leading-tight [overflow-wrap:anywhere] ${
         won ? "font-bold" : "font-semibold"
       }`}
     >
@@ -133,7 +133,7 @@ export const MatchActionDialog = ({
             show={!!(live || done)}
             won={match.winnerId === match.homeTeamId}
           />
-          <span className="matchbook-display pt-10 text-[0.74rem] font-bold tracking-[0.1em] text-mb-ink-muted">
+          <span className="matchbook-display pt-10 text-[0.74rem] mb-track-status font-bold text-mb-ink-muted">
             {live || done ? "–" : "vs"}
           </span>
           <Side

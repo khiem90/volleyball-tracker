@@ -77,7 +77,7 @@ export const FormationRow = memo(
           href={href}
           className="mb-btn-touch mb-row-hover -mx-2 flex min-w-0 flex-col justify-center gap-0.5 px-2 py-1"
         >
-          <span className="matchbook-display text-[0.85rem] font-bold tracking-[0.03em] break-words">
+          <span className="matchbook-display text-[0.85rem] mb-track-display font-bold break-words">
             {formation.name}
           </span>
           {formation.description && (

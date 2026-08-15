@@ -399,15 +399,22 @@ export const MbRoleChip = ({
         height: size,
         /* 0.62rem, not 0.6rem: `display/badge-label` is 0.6rem/700 at 0.22em
            and the masthead prints one on this very screen, so a 0.6rem/700
-           chip at any other tracking is a collision (rubric 1.3). 0.08em is
-           then the tracking BOTH surviving pairs already carry — the bottom
-           bar's "More" at 0.62rem/700 and the account chip at 0.72rem/700 —
-           so the chip joins an existing step instead of opening a new one.
-           `textIndent` cancels the trailing letter-space so a centred
-           letterform stays centred in its disc. */
+           chip at any other tracking would be a collision (rubric 1.3).
+
+           The TRACKING follows the size, because the ladder is per (size,
+           weight) and this chip renders at two sizes: 0.62rem/700 is
+           `mb-track-nav`'s 0.08em, 0.72rem is `mb-track-link`'s 0.04em. A
+           single 0.08em for both put the larger disc on a rung 0.72rem does not
+           have, which measured as 12 nodes at 0.08em against 169 at 0.04em.
+
+           Inline rather than a class because the disc also sets its size, ink
+           and ring from `roleChipStyle` in the same object, and `textIndent`
+           has to move with it: it cancels the trailing letter-space so a
+           centred letterform stays centred in a fixed disc — the same reason
+           `globals.css` declares `letter-spacing: normal` on the numerals. */
         fontSize: size <= 26 ? "0.62rem" : "0.72rem",
-        letterSpacing: "0.08em",
-        textIndent: "0.08em",
+        letterSpacing: size <= 26 ? "0.08em" : "0.04em",
+        textIndent: size <= 26 ? "0.08em" : "0.04em",
         borderWidth: 1,
         borderColor: style.borderColor,
         background: style.background,

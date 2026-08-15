@@ -89,7 +89,7 @@ export const MbStepRail = ({
               {state === "done" ? (
                 <MbCheckMark size={11} />
               ) : (
-                <span className="matchbook-display text-[0.8rem] font-bold leading-none tracking-[0.02em] tabular-nums">
+                <span className="matchbook-display text-[0.8rem] mb-track-button font-bold leading-none tabular-nums">
                   {index + 1}
                 </span>
               )}
@@ -107,7 +107,7 @@ export const MbStepRail = ({
               }`}
             >
               <span
-                className={`matchbook-display max-w-full truncate border-b-[3px] pb-1 text-[0.74rem] font-bold tracking-[0.1em] tabular-nums ${LABEL_CLASS[state]}`}
+                className={`matchbook-display max-w-full truncate border-b-[3px] pb-1 text-[0.74rem] mb-track-status font-bold tabular-nums ${LABEL_CLASS[state]}`}
               >
                 {step.label}
               </span>

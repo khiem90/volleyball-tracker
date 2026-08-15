@@ -61,7 +61,7 @@ const Side = ({
     }`}
   >
     <Crest team={team} size={40} />
-    <span className="matchbook-display w-full truncate text-[0.85rem] font-bold tracking-[0.04em]">
+    <span className="matchbook-display w-full truncate text-[0.85rem] mb-track-display font-bold">
       {team.name}
     </span>
     {accent && (
@@ -109,7 +109,7 @@ export const GuestMatchComplete = ({
           style={{ borderColor: "var(--mb-green)" }}
         >
           <span className="mb-kicker shrink-0">Winner</span>
-          <span className="matchbook-display min-w-0 truncate text-[1.05rem] font-bold tracking-[0.04em] text-mb-navy">
+          <span className="matchbook-display min-w-0 truncate text-[1.2rem] mb-track-display font-bold text-mb-navy">
             {winner.name}
           </span>
         </div>

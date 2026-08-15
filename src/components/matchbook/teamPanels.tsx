@@ -390,29 +390,65 @@ export const TeamDirectoryPanel = ({
                   <td className="text-center tabular-nums whitespace-nowrap">
                     {row.played === 0 ? "—" : `${row.pointsFor}–${row.pointsAgainst}`}
                   </td>
-                  <td className={`text-[0.72rem] whitespace-nowrap ${REVEAL_NEXT}`}>
+                  {/* THE OTHER NAME IN THIS TABLE (R3).
+
+                      The Team column has had `MbTeamName` and `NAME_COL` since
+                      G18. This column holds a team name too — the opponent —
+                      and it had neither, which is the same information failure
+                      one column to the right. It was a raw `<span>` inside a
+                      `whitespace-nowrap` cell, so it never truncated at all; it
+                      just ran off the end of `MbTableScroll`'s window and the
+                      reader saw whatever fitted. Measured at 1440 with the
+                      long-name fixture, before:
+
+                        opponent span 306px wide, painted AT REST:
+                          "Wolverhampton Wanderers Athletic Club B" → "Wolverhampto"
+                          "Wolverhampton Wanderers Athletic Club C" → "Wolverhampto"
+
+                      Two different teams, one string, on the screen the reader
+                      is using to tell teams apart — with the "B"/"C" 130px past
+                      the right edge of a scroller most readers never move. The
+                      Team column's own note calls that out; this column was the
+                      door it did not close.
+
+                      The row is a flex line so the name can be a block without
+                      dropping to its own line: date and "vs" are `shrink-0`
+                      because they are two words and a date, and the name is the
+                      part that gives. The ceiling is narrower than `NAME_COL`
+                      (11rem vs 13rem) because this is the secondary reference
+                      in the row — the Team cell is the identity, this is who
+                      they are playing — and because it is the widest column in
+                      a table that is already the widest object on the screen.
+                      `28vw` tracks the viewport for the same reason `NAME_COL`
+                      uses `50vw`. */}
+                  <td className={REVEAL_NEXT}>
                     {row.nextMatch ? (
                       <>
-                        <span className="matchbook-display font-bold tracking-[0.04em]">
-                          {row.nextMatch.date}
-                        </span>{" "}
-                        <span className="text-mb-ink-muted">
-                          {row.nextMatch.isHome ? "vs" : "@"}
-                        </span>{" "}
-                        <span className="matchbook-display font-semibold">
-                          {row.nextMatch.opponent.name}
+                        <span className="flex items-baseline gap-1 whitespace-nowrap">
+                          <span className="matchbook-display mb-track-display shrink-0 font-bold">
+                            {row.nextMatch.date}
+                          </span>
+                          <span className="shrink-0 text-mb-ink-muted">
+                            {row.nextMatch.isHome ? "vs" : "@"}
+                          </span>
+                          <MbTeamName
+                            name={row.nextMatch.opponent.name}
+                            className="matchbook-display mb-track-nav max-w-[min(11rem,28vw)] font-semibold"
+                          />
                         </span>
-                        <span className="block text-[0.66rem] text-mb-ink-muted">
+                        <span className="block whitespace-nowrap text-[0.66rem] text-mb-ink-muted">
                           {row.nextMatch.time} • {row.nextMatch.competition}
                         </span>
                       </>
                     ) : (
-                      <span className="text-mb-ink-muted">Not scheduled</span>
+                      <span className="whitespace-nowrap text-mb-ink-muted">
+                        Not scheduled
+                      </span>
                     )}
                   </td>
                   <td className="text-right">
                     <span
-                      className="matchbook-display text-[0.66rem] font-bold whitespace-nowrap"
+                      className="matchbook-display text-[0.66rem] mb-track-status font-bold whitespace-nowrap"
                       style={{ color: statusInk(row.status) }}
                     >
                       {row.status}
@@ -458,7 +494,7 @@ export const ClubSnapshotPanel = ({ stats }: { stats: MbStatTotal[] }) => (
             size={30}
             className="text-mb-navy"
           />
-          <span className="matchbook-display text-4xl font-bold leading-none tabular-nums">
+          <span className="matchbook-display text-4xl mb-track-masthead font-bold leading-none tabular-nums">
             {stat.value}
           </span>
           <span className="mb-kicker">{stat.label}</span>
@@ -519,7 +555,7 @@ export const TeamReadinessPanel = ({
                 <td className="pl-3!">
                   <MbTeamName
                     name={row.team.name}
-                    className={`matchbook-display text-[0.8rem] font-semibold ${NAME_COL}`}
+                    className={`matchbook-display text-[0.8rem] mb-track-button font-semibold ${NAME_COL}`}
                   />
                 </td>
                 <td>
@@ -565,7 +601,7 @@ export const TeamReadinessPanel = ({
                 </td>
                 {/* Bar takes the mark colour, word takes the ink twin. */}
                 <td
-                  className="matchbook-display pr-3! text-right text-[0.66rem] font-bold"
+                  className="matchbook-display pr-3! text-right mb-track-display font-bold"
                   style={{ color: readinessInk(row.percent, row.played) }}
                 >
                   {row.status}
@@ -584,7 +620,7 @@ export const TeamReadinessPanel = ({
 const ProfileStat = ({ label, value }: { label: string; value: string }) => (
   <div className="flex flex-col items-center justify-center gap-0.5 border border-mb-rule px-2 py-2 text-center">
     <span className="mb-kicker">{label}</span>
-    <span className="matchbook-display text-2xl font-bold leading-none tabular-nums">
+    <span className="matchbook-display text-2xl mb-track-display font-bold leading-none tabular-nums">
       {value}
     </span>
   </div>
@@ -609,7 +645,7 @@ export const TeamProfilePanel = ({
           <div className="flex min-w-[150px] flex-1 flex-col gap-2">
             <div className="flex items-center gap-3">
               <Crest team={row.team} size={62} />
-              <span className="matchbook-display text-2xl font-bold leading-tight">
+              <span className="matchbook-display text-2xl mb-track-display font-bold leading-tight">
                 {row.team.name}
               </span>
             </div>
@@ -699,7 +735,7 @@ export const TeamProfilePanel = ({
                 pixel with the tier it actually paints. */}
             <div className="col-span-2 flex flex-col items-center justify-center gap-0.5 border border-mb-navy px-2 py-2">
               <span className="mb-kicker">Overall Record</span>
-              <span className="matchbook-display text-3xl font-bold leading-none tabular-nums">
+              <span className="matchbook-display text-3xl mb-track-display font-bold leading-none tabular-nums">
                 {row.won} - {row.lost}
               </span>
             </div>
@@ -725,7 +761,7 @@ export const TeamProfilePanel = ({
             <p className="mb-kicker">Next Match</p>
             {row.nextMatch ? (
               <>
-                <p className="matchbook-display text-[0.85rem] font-bold tracking-[0.04em]">
+                <p className="matchbook-display text-[0.85rem] mb-track-display font-bold">
                   {row.nextMatch.date} {row.nextMatch.isHome ? "vs" : "@"}{" "}
                   {row.nextMatch.opponent.name}
                 </p>
@@ -820,15 +856,27 @@ export const UpcomingFixturesPanel = ({ items }: { items: MbScheduleItem[] }) =>
          the row height and five fixtures do not reach it. */
       <div className="ml-3 flex grow flex-col divide-y divide-mb-rule border-l-2 border-mb-coral">
         {items.map((item, i) => (
+          /* `minmax(0,1fr)`, not `1fr` (R2). A bare `1fr` is `minmax(auto,1fr)`
+             and `auto` as a track MINIMUM is min-content — so this track could
+             never go narrower than the two names, four crests and the "vs"
+             inside it, whatever the viewport said. At 320 with a club-name
+             roster that floor measured 291px in a 272px track and the excess
+             left the panel, left `main`, and widened the layout viewport, which
+             is what pushes the fixed bottom nav off-screen.
+
+             `minmax(0,1fr)` lets the track take its share and no more, which is
+             what makes the `min-w-0` below and `MbTeamName`'s elision able to
+             fire at all. The two fixed columns are already definite, so nothing
+             else in this row changes at any width. */
           <div
             key={i}
-            className="grid grow grid-cols-[42px_56px_1fr] items-center gap-2 py-2 pl-3 pr-3"
+            className="grid grow grid-cols-[42px_56px_minmax(0,1fr)] items-center gap-2 py-2 pl-3 pr-3"
           >
             <div>
-              <p className="matchbook-display text-[0.66rem] font-bold leading-tight">
+              <p className="matchbook-display text-[0.66rem] mb-track-status font-bold leading-tight">
                 {item.day}
               </p>
-              <p className="matchbook-display text-[0.66rem] font-bold leading-tight tabular-nums">
+              <p className="matchbook-display text-[0.66rem] mb-track-status font-bold leading-tight tabular-nums">
                 {item.date}
               </p>
             </div>
@@ -860,13 +908,13 @@ export const UpcomingFixturesPanel = ({ items }: { items: MbScheduleItem[] }) =>
                 <Crest team={item.home} size={18} />
                 <MbTeamName
                   name={item.home.name}
-                  className="matchbook-display basis-0 flex-1 text-[0.72rem] font-semibold"
+                  className="matchbook-display basis-0 flex-1 text-[0.72rem] mb-track-link font-semibold"
                 />
                 <span className="px-0.5 text-[0.6rem] text-mb-ink-muted">vs</span>
                 <Crest team={item.away} size={18} />
                 <MbTeamName
                   name={item.away.name}
-                  className="matchbook-display basis-0 flex-1 text-[0.72rem] font-semibold"
+                  className="matchbook-display basis-0 flex-1 text-[0.72rem] mb-track-link font-semibold"
                 />
               </span>
               <span className="block truncate text-[0.66rem] text-mb-ink-muted">
@@ -902,7 +950,7 @@ export const RecentFormPanel = ({ rows }: { rows: MbFormRow[] }) => (
           >
             <TeamMark team={row.team} size={22} className="min-w-0 flex-1" />
             <FormLetters form={row.form} />
-            <span className="matchbook-display w-10 text-right text-[0.78rem] font-bold tabular-nums">
+            <span className="matchbook-display w-10 text-right text-[0.78rem] mb-track-display font-bold tabular-nums">
               {row.record}
             </span>
           </div>

@@ -199,7 +199,7 @@ export const FormatChoiceList = ({
             </span>
 
             <span className="flex min-w-0 flex-1 flex-col justify-center gap-0.5">
-              <span className="matchbook-display truncate text-[0.95rem] leading-tight font-bold tracking-[0.05em] tabular-nums">
+              <span className="matchbook-display truncate text-[0.95rem] mb-track-title leading-tight font-bold tabular-nums">
                 {option.meta.label}
               </span>
               <span className="truncate text-[0.72rem] leading-tight text-mb-ink-muted tabular-nums">

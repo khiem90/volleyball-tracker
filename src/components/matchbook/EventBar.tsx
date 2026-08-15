@@ -113,11 +113,11 @@ export const MbEventBar = ({
 
       <div className="flex min-w-0 flex-1 flex-col justify-center">
         {kicker && (
-          <span className="matchbook-display truncate text-[0.62rem] font-semibold leading-none tracking-[0.16em] opacity-80">
+          <span className="matchbook-display truncate text-[0.62rem] mb-track-kicker font-semibold leading-none opacity-80">
             {kicker}
           </span>
         )}
-        <span className="matchbook-display min-w-0 truncate text-[0.95rem] font-bold leading-tight tracking-[0.05em]">
+        <span className="matchbook-display min-w-0 truncate text-[0.95rem] mb-track-title font-bold leading-tight">
           {title}
         </span>
       </div>

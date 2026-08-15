@@ -101,7 +101,7 @@ export const MbOfflineBanner = ({
         <p className="min-w-0 text-[0.78rem] leading-[1.4]">
           {/* The WORD carries the state; the hue only agrees with it. A
               greyscale render still reads "Offline" (invariant 13). */}
-          <span className="matchbook-display font-bold tracking-[0.06em]">
+          <span className="matchbook-display mb-track-display font-bold">
             Offline
           </span>
           <span className="mx-1.5 text-mb-ink-muted">—</span>

@@ -169,7 +169,7 @@ const CoreControlsSection = () => {
   return (
     <section id="w1-p1-core-controls" className="mt-10">
       <header className="mb-5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b-[1.5px] border-mb-navy pb-2">
-        <h2 className="matchbook-display text-2xl font-bold leading-none tracking-[0.05em]">
+        <h2 className="matchbook-display text-2xl mb-track-display font-bold leading-none">
           Core <span className="text-mb-coral">Controls</span>
         </h2>
         <p className="mb-kicker tabular-nums">
@@ -333,7 +333,7 @@ const CoreControlsSection = () => {
 
             <KitBlock label="In place — panel header and action rail">
               <div className="mb-tile flex items-center justify-between gap-2 rounded-[3px] px-2 py-2">
-                <span className="matchbook-display min-w-0 truncate px-1.5 text-[0.9rem] font-bold">
+                <span className="matchbook-display min-w-0 truncate px-1.5 text-[0.9rem] mb-track-display font-bold">
                   Harbor Classic
                 </span>
                 <span className="flex shrink-0 items-center gap-2">
@@ -343,7 +343,7 @@ const CoreControlsSection = () => {
               </div>
               <div className="mt-3 flex items-center gap-2">
                 <MbIconButton icon="chevron-left" label="Previous round" tone="outline-navy" />
-                <span className="matchbook-display flex-1 text-center text-[0.9rem] font-bold tabular-nums">
+                <span className="matchbook-display flex-1 text-center text-[0.9rem] mb-track-display font-bold tabular-nums">
                   Round 3 of 7
                 </span>
                 <MbIconButton icon="chevron-right" label="Next round" tone="outline-navy" />
@@ -374,7 +374,7 @@ const CoreControlsSection = () => {
                 <tbody>
                   {BADGE_TONES.map((tone) => (
                     <tr key={tone}>
-                      <td className="matchbook-display text-[0.72rem] font-semibold tracking-[0.08em]">
+                      <td className="matchbook-display text-[0.72rem] mb-track-link font-semibold">
                         {tone}
                       </td>
                       <td>
@@ -438,7 +438,7 @@ const CoreControlsSection = () => {
             <KitBlock label="Edge cases — long label, numerals, truncating row">
               <div className="flex flex-col gap-2.5">
                 <div className="mb-tile flex items-center gap-2 rounded-[3px] px-3 py-2">
-                  <span className="matchbook-display min-w-0 flex-1 truncate text-[0.85rem] font-bold">
+                  <span className="matchbook-display min-w-0 flex-1 truncate text-[0.85rem] mb-track-display font-bold">
                     Northside Community Volleyball Association
                   </span>
                   <MbBadge tone="live" variant="solid" className="shrink-0">
@@ -446,7 +446,7 @@ const CoreControlsSection = () => {
                   </MbBadge>
                 </div>
                 <div className="mb-tile flex items-center gap-2 rounded-[3px] px-3 py-2">
-                  <span className="matchbook-display min-w-0 flex-1 truncate text-[0.85rem] font-bold">
+                  <span className="matchbook-display min-w-0 flex-1 truncate text-[0.85rem] mb-track-display font-bold">
                     Harbor Classic
                   </span>
                   <MbBadge tone="neutral" className="shrink-0">
@@ -482,7 +482,7 @@ const CoreControlsSection = () => {
                 ]}
               />
               <p className="mt-3 text-[0.85rem]">
-                Selected: <span className="matchbook-display font-bold tracking-[0.06em]">{tab}</span>
+                Selected: <span className="matchbook-display mb-track-display font-bold">{tab}</span>
               </p>
             </KitBlock>
 
@@ -576,7 +576,7 @@ const CoreControlsSection = () => {
                 />
                 <p className="mt-3 text-[0.85rem]">
                   Selected:{" "}
-                  <span className="matchbook-display font-bold tracking-[0.06em]">{mode}</span>
+                  <span className="matchbook-display mb-track-display font-bold">{mode}</span>
                 </p>
               </div>
 
@@ -731,7 +731,7 @@ const LogicFlag = ({ on, label }: { on: boolean; label: string }) => (
       style={{ background: on ? "var(--mb-green)" : "var(--mb-tint-3)" }}
     />
     <span
-      className={`matchbook-display text-[0.66rem] font-bold tracking-[0.1em] ${
+      className={`matchbook-display text-[0.66rem] mb-track-status font-bold ${
         on ? "text-mb-navy" : "text-mb-ink-muted"
       }`}
     >
@@ -750,7 +750,7 @@ const LogicAndPanelSection = () => {
   return (
     <section id="w1-p1-logic-and-panel" className="mt-10">
       <header className="mb-5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b-[1.5px] border-mb-navy pb-2">
-        <h2 className="matchbook-display text-2xl font-bold leading-none tracking-[0.05em]">
+        <h2 className="matchbook-display text-2xl mb-track-display font-bold leading-none">
           Shared <span className="text-mb-coral">Logic</span>
         </h2>
         <p className="mb-kicker">
@@ -783,10 +783,10 @@ const LogicAndPanelSection = () => {
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-0.5">
-                      <span className="matchbook-display text-[0.9rem] font-bold">
+                      <span className="matchbook-display text-[0.9rem] mb-track-display font-bold">
                         {meta.label}
                       </span>
-                      <span className="matchbook-display text-[0.66rem] font-bold tracking-[0.1em] text-mb-ink-muted tabular-nums">
+                      <span className="matchbook-display text-[0.66rem] mb-track-status font-bold text-mb-ink-muted tabular-nums">
                         {countOf(meta.minTeams, "team")} minimum
                       </span>
                     </div>
@@ -836,7 +836,7 @@ const LogicAndPanelSection = () => {
               </div>
 
               <div className="mb-tile rounded-[3px] px-3.5 py-3">
-                <p className="matchbook-display text-2xl font-bold leading-none tabular-nums">
+                <p className="matchbook-display text-2xl mb-track-display font-bold leading-none tabular-nums">
                   {countOf(count, venueWord)}
                 </p>
                 <p className="mt-1.5 text-[0.72rem] text-mb-ink-muted">
@@ -863,7 +863,7 @@ const LogicAndPanelSection = () => {
                     return (
                       <tr key={word}>
                         <td>{word}</td>
-                        <td className="matchbook-display font-semibold">{correct}</td>
+                        <td className="matchbook-display mb-track-nav font-semibold">{correct}</td>
                         {/* Wrongness rides a strike-through as well as the ink,
                             so it survives a desaturated screenshot (§4.13). */}
                         <td
@@ -899,7 +899,7 @@ const LogicAndPanelSection = () => {
                   <MbIcon id="refresh" size={20} />
                 </span>
                 <div className="min-w-0">
-                  <p className="matchbook-display text-2xl font-bold leading-none">
+                  <p className="matchbook-display text-2xl mb-track-display font-bold leading-none">
                     {reducedMotion ? "Reduce" : "No preference"}
                   </p>
                   <p className="mt-1 text-[0.72rem] text-mb-ink-muted">
@@ -954,7 +954,7 @@ const LogicAndPanelSection = () => {
           <Panel title="onAction" tone="navy">
             <div className="flex flex-1 flex-col items-center justify-center gap-1.5 p-4">
               <span className="mb-kicker">Last handler fired</span>
-              <span className="matchbook-display text-2xl font-bold leading-none">
+              <span className="matchbook-display text-2xl mb-track-display font-bold leading-none">
                 {actionLog}
               </span>
             </div>
@@ -1062,7 +1062,7 @@ const LogicAndPanelSection = () => {
                     accent="var(--mb-teal)"
                     className="min-w-0"
                   />
-                  <span className="matchbook-display text-2xl font-bold leading-none tabular-nums">
+                  <span className="matchbook-display text-2xl mb-track-display font-bold leading-none tabular-nums">
                     25–19
                   </span>
                   <TeamMark
@@ -1191,7 +1191,7 @@ const FormKitSection = () => {
   return (
     <section id="w1-p1-form-kit" className="mt-10">
       <header className="mb-5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b-[1.5px] border-mb-navy pb-2">
-        <h2 className="matchbook-display text-2xl font-bold leading-none tracking-[0.05em]">
+        <h2 className="matchbook-display text-2xl mb-track-display font-bold leading-none">
           Form <span className="text-mb-coral">Kit</span>
         </h2>
         <p className="mb-kicker">
@@ -1905,7 +1905,7 @@ const OverlaysAndFeedbackSection = () => {
   return (
     <section id="w1-p1-overlays-feedback" className="mt-10">
       <header className="mb-5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b-[1.5px] border-mb-navy pb-2">
-        <h2 className="matchbook-display text-2xl font-bold leading-none tracking-[0.05em]">
+        <h2 className="matchbook-display text-2xl mb-track-display font-bold leading-none">
           Overlays &amp; <span className="text-mb-coral">Feedback</span>
         </h2>
         <p className="mb-kicker">
@@ -2124,13 +2124,13 @@ const OverlaysAndFeedbackSection = () => {
                       <p className="mb-kicker border-b border-mb-rule px-4 py-2">Loaded</p>
                       {OVERLAY_ROSTER.slice(0, 4).map((name, i) => (
                         <OverlayLedgerRow key={name}>
-                          <span className="matchbook-display w-5 shrink-0 text-[0.78rem] font-bold tabular-nums">
+                          <span className="matchbook-display w-5 shrink-0 text-[0.78rem] mb-track-display font-bold tabular-nums">
                             {i + 1}
                           </span>
-                          <span className="matchbook-display min-w-0 flex-1 truncate text-[0.78rem] font-semibold">
+                          <span className="matchbook-display min-w-0 flex-1 truncate text-[0.78rem] mb-track-display font-semibold">
                             {name}
                           </span>
-                          <span className="matchbook-display shrink-0 text-[0.78rem] font-bold tabular-nums">
+                          <span className="matchbook-display shrink-0 text-[0.78rem] mb-track-display font-bold tabular-nums">
                             {6 - i}-{i}
                           </span>
                         </OverlayLedgerRow>
@@ -2215,7 +2215,7 @@ const OverlaysAndFeedbackSection = () => {
               key={name}
               className="flex items-center justify-between gap-3 border-b border-mb-rule pb-2 last:border-b-0 last:pb-0"
             >
-              <span className="matchbook-display min-w-0 truncate text-[0.78rem] font-semibold">
+              <span className="matchbook-display min-w-0 truncate text-[0.78rem] mb-track-display font-semibold">
                 {name}
               </span>
               <span className="mb-kicker tabular-nums">Court {i + 1}</span>
@@ -2315,10 +2315,10 @@ const OverlaysAndFeedbackSection = () => {
           {OVERLAY_LEDGER.map((row) => (
             <OverlayLedgerRow key={row.round}>
               <span className="mb-kicker w-14 shrink-0 tabular-nums">R{row.round}</span>
-              <span className="matchbook-display min-w-0 flex-1 truncate text-[0.78rem] font-semibold">
+              <span className="matchbook-display min-w-0 flex-1 truncate text-[0.78rem] mb-track-display font-semibold">
                 Court {row.court}
               </span>
-              <span className="matchbook-display shrink-0 text-[0.9rem] font-bold tabular-nums">
+              <span className="matchbook-display shrink-0 text-[0.9rem] mb-track-display font-bold tabular-nums">
                 {row.home}-{row.away}
               </span>
             </OverlayLedgerRow>
@@ -2355,7 +2355,7 @@ const OverlaysAndFeedbackSection = () => {
               onClick={() => setOpenId(null)}
             >
               <MbIcon id="teams" size={16} className="shrink-0" />
-              <span className="matchbook-display min-w-0 flex-1 truncate text-[0.78rem] font-semibold">
+              <span className="matchbook-display min-w-0 flex-1 truncate text-[0.78rem] mb-track-display font-semibold">
                 {name}
               </span>
               <MbIcon id="chevron-right" size={11} className="shrink-0" />
@@ -2369,10 +2369,10 @@ const OverlaysAndFeedbackSection = () => {
           {OVERLAY_LEDGER.map((row) => (
             <OverlayLedgerRow key={row.round}>
               <span className="mb-kicker w-14 shrink-0 tabular-nums">R{row.round}</span>
-              <span className="matchbook-display min-w-0 flex-1 truncate text-[0.78rem] font-semibold">
+              <span className="matchbook-display min-w-0 flex-1 truncate text-[0.78rem] mb-track-display font-semibold">
                 Court {row.court}
               </span>
-              <span className="matchbook-display shrink-0 text-[0.9rem] font-bold tabular-nums">
+              <span className="matchbook-display shrink-0 text-[0.9rem] mb-track-display font-bold tabular-nums">
                 {row.home}-{row.away}
               </span>
             </OverlayLedgerRow>
@@ -2512,7 +2512,7 @@ const ScoreAndStatusSection = () => {
   return (
     <section id="w1-p1-score-and-status" className="mt-10">
       <header className="mb-5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b-[1.5px] border-mb-navy pb-2">
-        <h2 className="matchbook-display text-2xl font-bold leading-none tracking-[0.05em]">
+        <h2 className="matchbook-display text-2xl mb-track-display font-bold leading-none">
           Score &amp; <span className="text-mb-coral">Status</span>
         </h2>
         <p className="mb-kicker">
@@ -2718,7 +2718,7 @@ const ScoreAndStatusSection = () => {
             <ScoreKitBlock label='tone="paper" — on navy'>
               <div className="flex items-center justify-center gap-3 rounded-[4px] bg-mb-navy px-4 py-4">
                 <MbScoreNumeral value={home} size="compact" tone="paper" />
-                <span className="matchbook-display text-[0.74rem] font-bold tracking-[0.1em] text-mb-paper-bright">
+                <span className="matchbook-display text-[0.74rem] mb-track-status font-bold text-mb-paper-bright">
                   vs
                 </span>
                 <MbScoreNumeral value={away} size="compact" tone="paper" />
@@ -2918,7 +2918,7 @@ const ScoreAndStatusSection = () => {
             <ScoreKitBlock label="In place — against a scoreline">
               <div className="mb-scoreline mb-tile rounded-[4px] px-3 py-3">
                 <TeamMark team={SCORE_HOME} size="sm" accent="var(--mb-teal)" />
-                <span className="matchbook-display text-2xl font-bold leading-none tabular-nums">
+                <span className="matchbook-display text-2xl mb-track-display font-bold leading-none tabular-nums">
                   25–19
                 </span>
                 <span className="flex justify-end">
@@ -3095,7 +3095,7 @@ const ActionAndSharingSection = () => {
   return (
     <section id="w1-p1-action-sharing" className="mt-10">
       <header className="mb-5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b-[1.5px] border-mb-navy pb-2">
-        <h2 className="matchbook-display text-2xl font-bold leading-none tracking-[0.05em]">
+        <h2 className="matchbook-display text-2xl mb-track-display font-bold leading-none">
           Action &amp; <span className="text-mb-coral">Sharing</span>
         </h2>
         <p className="mb-kicker">
@@ -3335,7 +3335,7 @@ const ActionAndSharingSection = () => {
           >
             <ActionBlock label="Default trigger — 44px, icon only">
               <div className="flex items-center justify-between gap-3 border-[1.5px] border-mb-navy bg-mb-paper-bright px-3 py-2">
-                <span className="matchbook-display min-w-0 truncate text-[0.85rem] font-semibold tracking-[0.05em]">
+                <span className="matchbook-display min-w-0 truncate text-[0.85rem] mb-track-nav font-semibold">
                   Surge <span className="tabular-nums text-mb-ink-muted">21</span> — Riptide{" "}
                   <span className="tabular-nums text-mb-ink-muted">18</span>
                 </span>
@@ -3496,7 +3496,7 @@ const getSeedKey = (seed: KitSeed) => seed.id;
 
 const renderKitSeed = (seed: KitSeed) => (
   <span className="flex min-w-0 items-baseline gap-2">
-    <span className="matchbook-display truncate text-[0.82rem] font-bold tabular-nums">
+    <span className="matchbook-display truncate text-[0.82rem] mb-track-display font-bold tabular-nums">
       {seed.label}
     </span>
     <span className="truncate text-[0.72rem] text-mb-ink-muted">{seed.club}</span>
@@ -3527,7 +3527,7 @@ const KIT_QUEUE: KitQueueItem[] = [
 
 const renderKitQueue = (item: KitQueueItem) => (
   <span className="flex min-w-0 flex-col gap-0.5">
-    <span className="matchbook-display line-clamp-2 text-[0.85rem] font-bold leading-tight tabular-nums">
+    <span className="matchbook-display line-clamp-2 text-[0.85rem] mb-track-display font-bold leading-tight tabular-nums">
       {item.fixture}
     </span>
     <span className="mb-kicker truncate tabular-nums">{item.venue}</span>
@@ -3637,7 +3637,7 @@ const SelectionListsSection = () => {
   return (
     <section id="w1-p1-selection-lists" className="mt-10">
       <header className="mb-5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b-[1.5px] border-mb-navy pb-2">
-        <h2 className="matchbook-display text-2xl font-bold leading-none tracking-[0.05em]">
+        <h2 className="matchbook-display text-2xl mb-track-display font-bold leading-none">
           Selection <span className="text-mb-coral">&amp; Lists</span>
         </h2>
         <p className="mb-kicker tabular-nums">
@@ -4039,7 +4039,7 @@ const KitEntranceBlock = () => {
         {STAGGER_TILES.map((tile, i) => (
           <div key={tile.label} className={`mb-tile mb-enter ${tile.delay} rounded-[4px] px-3 py-4`}>
             <p className="mb-kicker tabular-nums">delay {(i + 1) * 40}ms</p>
-            <p className="matchbook-display mt-1 text-[0.9rem] font-bold">{tile.label}</p>
+            <p className="matchbook-display mt-1 text-[0.9rem] mb-track-display font-bold">{tile.label}</p>
           </div>
         ))}
       </div>
@@ -4121,7 +4121,7 @@ const KitSafeTopBlock = () => {
     <>
       <div ref={ref} className="mb-safe-top mb-tile rounded-[4px] px-3 pb-3">
         <p className="mb-kicker">Masthead</p>
-        <p className="matchbook-display text-[0.9rem] font-bold">
+        <p className="matchbook-display text-[0.9rem] mb-track-display font-bold">
           Padded by env(safe-area-inset-top)
         </p>
       </div>
@@ -4144,7 +4144,7 @@ const P0UnclaimedSection = () => (
     </a>
 
     <header className="mb-5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b-[1px] border-mb-navy pb-2">
-      <h2 className="matchbook-display text-2xl font-bold leading-none tracking-[0.05em]">
+      <h2 className="matchbook-display text-2xl mb-track-display font-bold leading-none">
         P0 <span className="text-mb-coral">Unclaimed</span>
       </h2>
       <p className="mb-kicker tabular-nums">
@@ -4371,7 +4371,7 @@ const ShellSection = () => {
   return (
     <section id="shell" className="mt-10">
       <header className="mb-5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b-[1.5px] border-mb-navy pb-2">
-        <h2 className="matchbook-display text-2xl font-bold leading-none tracking-[0.05em]">
+        <h2 className="matchbook-display text-2xl mb-track-display font-bold leading-none">
           App <span className="text-mb-coral">Shell</span>
         </h2>
         <p className="mb-kicker tabular-nums">W2 / P2a — 6 components</p>
@@ -4663,7 +4663,7 @@ const FEEDBACK_TWIN_ROWS: { team: MbTeam; value: string }[] = [
 const FeedbackLoadedTwin = () => (
   <section className="mb-panel">
     <header className="mb-panel-head">
-      <h3 className="matchbook-display flex items-center gap-2 text-[0.95rem] font-bold tracking-[0.05em]">
+      <h3 className="matchbook-display flex items-center gap-2 text-[0.95rem] mb-track-title font-bold">
         Standings
       </h3>
       <span className="mb-kicker tabular-nums">4 Teams</span>
@@ -4675,10 +4675,10 @@ const FeedbackLoadedTwin = () => (
           className="flex items-center gap-3 border-b border-mb-rule px-4 py-2.5 last:border-b-0"
         >
           <Crest team={row.team} size={24} />
-          <span className="matchbook-display min-w-0 flex-1 truncate text-[0.82rem] font-semibold">
+          <span className="matchbook-display min-w-0 flex-1 truncate text-[0.82rem] mb-track-display font-semibold">
             {row.team.name}
           </span>
-          <span className="matchbook-display shrink-0 text-[0.9rem] font-bold tabular-nums">
+          <span className="matchbook-display shrink-0 text-[0.9rem] mb-track-display font-bold tabular-nums">
             {row.value}
           </span>
         </div>
@@ -4702,7 +4702,7 @@ const FeedbackSection = () => {
   return (
     <section id="feedback" className="mt-10">
       <header className="mb-5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b-[1.5px] border-mb-navy pb-2">
-        <h2 className="matchbook-display text-2xl font-bold leading-none tracking-[0.05em]">
+        <h2 className="matchbook-display text-2xl mb-track-display font-bold leading-none">
           Feedback <span className="text-mb-coral">Layer</span>
         </h2>
         <p className="mb-kicker">
@@ -5090,7 +5090,7 @@ const FeedbackSection = () => {
 export default function DevKitPage() {
   return (
     <div className="matchbook-surface min-h-screen p-6">
-      <h1 className="matchbook-display text-4xl font-bold leading-none tracking-[0.01em] sm:text-5xl">
+      <h1 className="matchbook-display text-4xl mb-track-masthead font-bold leading-none sm:text-5xl">
         Matchbook <span className="text-mb-coral">Kit</span>
       </h1>
       <p className="mb-kicker mt-2">Primitive gallery — dev only</p>

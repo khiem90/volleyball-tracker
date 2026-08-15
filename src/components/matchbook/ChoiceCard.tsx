@@ -98,7 +98,7 @@ export const MbChoiceCard = ({
       </span>
 
       <span
-        className={`matchbook-display text-[0.95rem] font-bold leading-tight tracking-[0.05em] break-words tabular-nums ${
+        className={`matchbook-display text-[0.95rem] mb-track-title font-bold leading-tight break-words tabular-nums ${
           disabled ? "text-mb-ink-muted" : ""
         }`}
       >

@@ -79,7 +79,7 @@ export const MbConfirm = ({
           }`}
         >
           <span className="mb-kicker">{verb}</span>
-          <span className="matchbook-display min-w-0 text-[1.2rem] font-bold leading-tight break-words">
+          <span className="matchbook-display min-w-0 text-[1.2rem] mb-track-display font-bold leading-tight break-words">
             {subject}
           </span>
         </div>

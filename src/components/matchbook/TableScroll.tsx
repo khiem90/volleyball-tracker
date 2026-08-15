@@ -49,6 +49,39 @@ import { MbIcon } from "./MbIcon";
    there ARE focusable descendants (the directory's row buttons) scrolling
    follows focus. Forcing `tabindex="0"` onto a `<div>` would trade a solved
    problem for an `a11y not-native` failure in the sweep.
+
+   ------------------------------------ what this scroller does NOT clip (R2)
+
+   `overflow-x: auto` clips only the descendants for which this box is in the
+   CONTAINING-BLOCK chain. An absolutely positioned descendant's containing
+   block is its nearest POSITIONED ancestor, and nothing here is positioned — so
+   an abspos box inside the table is laid out against a panel column OUTSIDE
+   this scroller and is not clipped by it at all. It keeps its static position,
+   which for anything past the fold of a scrolled table is off the right of the
+   viewport, and that widens the DOCUMENT.
+
+   That is not hypothetical. It is what shipped: Tailwind's `.sr-only` is
+   `position: absolute` with no inset, `FormLetters` puts one in the last cell
+   of every directory row, and the result was `documentElement.scrollWidth` 420
+   against a 390 viewport with the bottom nav dragged off-screen behind it. The
+   full mechanism is in globals.css under THE ESCAPED LABEL.
+
+   The guard is there and not here, and that is deliberate, because the obvious
+   fix here is worse than the bug. Making this box a containing block means
+   `position: relative` (or `contain: paint`, which also creates a stacking
+   context), and a positioned wrapper LATER IN THE DOM than the panel head
+   paints over the head link's `::before` hit expander. Measured on `/` at 1440,
+   probing every `.mb-panel-link` with `elementFromPoint` down its own column,
+   real hit height with `position: relative` added to this wrapper:
+
+     View Full Table        46px -> 43px   (44px floor, invariant 33: LOST)
+     View All Courts        47px -> 47px
+     View Full Bracket      47px -> 47px
+
+   One rescue lost to a containing block nobody can see, to fix something that
+   is fixed properly one declaration earlier. So: NOTHING IN THIS COMPONENT IS
+   POSITIONED, and anything absolutely positioned inside a `.mb-table` must
+   carry a definite inline inset of its own.
    =========================================================================== */
 
 export interface MbTableScrollProps {

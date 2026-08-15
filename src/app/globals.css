@@ -2620,9 +2620,57 @@ button.mb-panel-link::after,
      wheel +600 -> window.scrollY 600 · PageDown -> 787 · End -> 19968 · Home -> 0
      document.scrollHeight 18123 -> 20868 (it now reports the real content height)
 
-   `overflow-x: hidden` stays on html ONLY. It is the rubric §3.1 horizontal
-   guard and it is strictly stronger there, because a propagated root overflow
-   clips the whole viewport rather than one box inside it.
+   ----------------------------------------- why `overflow-x: hidden` is GONE
+
+   It used to stay on html, described here as "the rubric §3.1 horizontal guard".
+   It was not a guard. It was the thing that made a hard navigation failure both
+   invisible and unfixable-by-the-reader, and it is what let this ship:
+
+   A roster of ordinary club names — Westhill Wanderers, Northside Thunder,
+   Beckton Blues — put `documentElement.scrollWidth` at 419px inside a 390px
+   viewport on `/teams` (see THE ESCAPED LABEL below for the mechanism). Under
+   mobile emulation Chrome grows the LAYOUT VIEWPORT to the overflow, and the
+   bottom nav is `fixed inset-x-0`, so the nav stretched to 419px too and laid
+   its six cells out across a width the screen does not have. Measured, before:
+
+     viewport   doc.scrollWidth   nav width   the "More" cell (x 349..419)
+     320        419 vs 320        419         entirely off-screen
+     360        419 vs 360        419         59px of it off-screen
+     375        419 vs 375        419         44px of it off-screen
+     390        420 vs 390        420         30px of it off-screen
+     414        419 vs 419        419          5px of it off-screen
+
+   None of that was reachable. `window.scrollTo(420, 0)` left `scrollX` at 0 on
+   a phone — but do not credit that to this declaration, because it is not the
+   cause. Measured both ways with a 600px probe in a 390px viewport:
+
+                          wheel      window.scrollTo(2000, 0)
+     phone, no clip       scrollX 0  scrollX 0
+     phone, clip on html  scrollX 0  scrollX 0
+     desktop, no clip     scrollX 0  scrollX 210
+     desktop, clip        scrollX 0  scrollX 210
+
+   The unreachability is Chrome's own mobile behaviour: it grows the layout
+   viewport to the content and fits that to the screen instead of offering a
+   horizontal scroll, so there is no scroll position at which the off-screen
+   nav cells exist. The clip changes nothing about it.
+
+   What the clip DID do is hide it. No scrollbar, no cut edge, nothing for an
+   eye or a screenshot to catch — which is how a hard navigation failure passed
+   every review this programme has run. On `/` the same overflow left NINE
+   pixels of the 57px bar on screen with all five cells failing
+   `elementFromPoint`, and the page looked fine.
+
+   Rubric 6.3 counts "content clipped off-viewport by `overflow-x: hidden`" as
+   the defect, not the remedy, and charter invariant 31 says in as many words
+   that this declaration "hides the symptom, so verify the number". The number
+   is now verified instead: all 31 routes at 320/375/390/1440 on a 39-character
+   roster and at 320/360/390/414 on a club-name one,
+   `documentElement.scrollWidth === documentElement.clientWidth` on every one,
+   with the bottom bar 57px tall and all five cells hit-testable.
+
+   Do not put it back. If a route overflows, that is a defect in the route, and
+   without this line it is a visible one.
 
    Do not put `height: 100%` or any `overflow` back on `body`. Pages fill the
    viewport with `min-h-screen` (a vh unit), which needs nothing from body.
@@ -2632,7 +2680,59 @@ html {
   height: 100%;
   margin: 0;
   padding: 0;
-  overflow-x: hidden;
+}
+
+/* ---------------------------------------------------------------------------
+   THE ESCAPED LABEL — visually-hidden text must carry a definite inline start
+
+   The 419px above was not a table, a name or a column. It was ONE 1x1px
+   screen-reader label, and it is worth spelling out because the same trap is
+   waiting for every `sr-only` this app adds.
+
+   `FormLetters` ends its run with `<span class="sr-only">Recent form, oldest
+   first: won, won, lost…</span>`. Tailwind's `.sr-only` is `position: absolute`
+   with `width: 1px`, `overflow: hidden` and NO INSET — so the box takes its
+   STATIC position, which for that span is inside the directory table, at
+   x = 417.5 in a 390px viewport, because the table is 409px wide in a 356px
+   scrollport.
+
+   `MbTableScroll`'s `overflow-x: auto` does not clip it. An overflow clips only
+   the descendants for which it is in the CONTAINING-BLOCK chain, and an
+   absolutely positioned box's containing block is its nearest POSITIONED
+   ancestor — here `div.xl:col-span-7`, outside the scroller. So the label kept a
+   static position that the scroller had already scrolled away from, landed
+   28.5px past the viewport, and widened the document. Measured on `/teams` at
+   390 with a club-name roster:
+
+     baseline                                     documentElement.scrollWidth 420
+     `.sr-only { display: none }`                                             390
+     `.sr-only { inset-inline-start: 0 }`                                     390
+     `.sr-only { white-space: normal }`                                       420
+     `.sr-only { overflow: clip }`                                            420
+     `.sr-only { contain: strict }`                                           420
+     `.sr-only { max-width: 1px }`                                            420
+
+   Only the position changes it, because the position is the whole fault — the
+   text inside was never painted and never measured.
+
+   `inset-inline-start: 0` pins every such box to its containing block's inline
+   start, which is always inside the viewport, so it can never again be the
+   widest thing in the document. It cannot affect anything visually: the box is
+   1x1, `clip`ped, and unpainted. It cannot affect a screen reader either —
+   announcement order is DOM order, not layout order.
+
+   UNLAYERED and by attribute, both deliberately. Unlayered because Tailwind's
+   own `.sr-only` sits in `@layer utilities` and an unlayered rule beats every
+   layered one (see THE UTILITY SURFACE above). By attribute because the class
+   also ships behind variants — `TopStrip.tsx` uses `max-sm:sr-only` — and
+   `[class*=":sr-only"]` is the only selector that reaches those. Applying it to
+   an element that is NOT currently `sr-only` is free: inset properties do
+   nothing to a statically positioned box.
+   --------------------------------------------------------------------------- */
+
+[class~="sr-only"],
+[class*=":sr-only"] {
+  inset-inline-start: 0;
 }
 
 /* The canvas.

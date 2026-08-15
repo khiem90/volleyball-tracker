@@ -128,7 +128,7 @@ export const ArrowsPanel = ({
         {arrows.map((role) => (
           <li key={role} className="flex items-center gap-2.5 py-1.5">
             <MbRoleChip role={role} row={backRow(role) ? "back" : "front"} size={26} />
-            <span className="matchbook-display min-w-0 flex-1 truncate text-[0.78rem] font-bold tracking-[0.04em]">
+            <span className="matchbook-display min-w-0 flex-1 truncate text-[0.78rem] mb-track-display font-bold">
               {role}
             </span>
             <MbIconButton
@@ -267,13 +267,13 @@ export const ValidationPanel = ({
       <dl className="grid grid-cols-2 border-b border-mb-rule">
         <div className="border-r border-mb-rule px-4 py-2.5">
           <dt className="mb-kicker">Blocking</dt>
-          <dd className="matchbook-display text-[1.15rem] font-bold tabular-nums">
+          <dd className="matchbook-display text-[1.2rem] mb-track-display font-bold tabular-nums">
             {blockingErrors.length}
           </dd>
         </div>
         <div className="px-4 py-2.5">
           <dt className="mb-kicker">Warnings</dt>
-          <dd className="matchbook-display text-[1.15rem] font-bold tabular-nums">
+          <dd className="matchbook-display text-[1.2rem] mb-track-display font-bold tabular-nums">
             {overlapWarnings.length}
           </dd>
         </div>

@@ -606,7 +606,7 @@ export const MatchConsole = ({
               className="mb-enter pointer-events-none absolute left-1/2 top-1/2 z-30 -translate-x-1/2 -translate-y-1/2 border-[1.5px] border-mb-navy bg-mb-paper-bright px-4 py-2"
               role="status"
             >
-              <span className="matchbook-display text-[1.1rem] font-bold tracking-[0.12em] text-mb-navy tabular-nums">
+              <span className="matchbook-display text-[1.2rem] mb-track-display font-bold text-mb-navy tabular-nums">
                 Game {stamp}
               </span>
             </span>

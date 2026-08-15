@@ -73,9 +73,9 @@ admin through the real `applyAdminToken` → `validateAdminToken` path.
 
 Route ids are in `pw/routes.mjs`: `session-live-rr`, `session-live-bracket`, `session-live-admin`,
 `session-live-token`, `session-notfound`, `summary-creator`, `summary-viewer`, `summary-notfound`,
-`vb-shared-formation`, `vb-shared-notfound`. All ten load with **0 console errors and 0 load failures**; the
-two volleyball ones audit fully clean (already Matchbook), and the session/summary ones now report real
-baselines for W6 (58 / 10 / 9 / 58 / 2 / 85 / 67 / 2 violations at desktop) instead of being unmeasurable.
+`vb-shared-formation`, `vb-shared-notfound`. All ten load with **0 console errors and 0 load failures**. Those W6
+baselines (58 / 10 / 9 / 58 / 2 / 85 / 67 / 2 violations at desktop) are **discharged**: re-measured in the
+R6-R9 sweep, every `session-*` and `summary-*` route audits **0 violations at both viewports**.
 
 **`NEXT_PUBLIC_FIREBASE_USE_EMULATOR=1` must stay in `.env.local`** — no emulator process is needed and
 nothing contacts it, but it is what makes `isFirebaseConfigured()` true without a real project, and
@@ -109,14 +109,53 @@ Matchbook block at the top of `src/app/globals.css`.
 | P1 ranking + tests + audit.mjs | W8 | **DONE** — `audit.mjs` + `routes.mjs` + `shot.mjs` are the measurement harness |
 | **Gate 1 (regression + critique)** | — | **RUN — 64/100 FAIL** (one critic). PASS needs all ten rubric dimensions ≥8 and zero §3 hard fails |
 | Gate 1 fix round | W1–W8 (7 parallel agents) | **DONE** — 8 disjoint slices, all reported |
-| **Gate 1r re-critique** | — | **RUN — 57 / 65 / 66 out of 100. Three critics, three FAILs.** No dimension reached 8 on all three cards. Verdicts in §8 |
-| Gate 1r fix round | W1–W8 (parallel agents) | **IN FLIGHT — this round.** W8's slice (`audit.mjs` scrollport + fonts checks, `benchmark-rubric.md` §2, this file) is **done** |
-| **Gate 2 re-critique** | — | **NOT RUN.** The programme's verdict is 57/65/66 FAIL until it is. Nothing below claims a dimension moved |
-| P2a shell | W2 | not started |
-| P2b toast/loading/offline/layout, contexts | W2 + W8 | not started |
-| P3a create-flows, competition-detail, live-scoring, volleyball | W3 W4 W5 W7 | not started |
-| P3b public share | W6 | not started (gated on W4). **Firestore blocker cleared** — all three share routes render populated locally behind `NEXT_PUBLIC_DEV_PREVIEW_SESSION=1` (§1), with viewer, creator and `?admin=` token variants and their not-found states as separate route ids |
-| P4 legacy deletion | W2 | not started |
+| **Gate 1r re-critique** | — | **RUN — 57 / 65 / 66 out of 100. Three critics, three FAILs.** No dimension reached 8 on all three cards. Verdicts below |
+| Gate 1r fix round | W1–W8 (parallel agents) | **DONE** |
+| P2a shell | W2 | **DONE** — `cf90a61` converted the six shipped pages onto `MatchbookShell`; `ef939d2` landed the shell itself. `AppShell` · `Masthead` · `TopStrip` · `BottomBar` · `AccountChip` · `EventBar` all exist in `src/components/matchbook/`. `data-mb-touch="on"` is **armed** (`src/app/layout.tsx:92`), which closes register item D-5 |
+| P2b toast/loading/offline/layout, contexts | W2 + W8 | **DONE** — `Toast.tsx` (`MbToast` + `useToast` + `ToastHost`), `Loading.tsx` (`MbPageLoading`), `Offline.tsx` (`MbOfflineBanner`) |
+| P3a create-flows, competition-detail, live-scoring, volleyball | W3 W4 W5 W7 | **DONE** — `5ea8393` redesigned all four screen groups, `c4896bf` applied the critic defect lists. `StandingsTable` · `MatchRow` · `BracketRail` · `CourtCard` · `ScoreSide` (with `MbSetStrip`) · `ScoreboardHero` · `court/` all exist |
+| P3b public share | W6 | **DONE** — `356eaa2` shipped `/session/[shareCode]` and `/summary/[shareCode]` (with `layout.tsx`, `opengraph-image.tsx`, `summaryMeta.ts`), all rendering populated behind `NEXT_PUBLIC_DEV_PREVIEW_SESSION=1` (§1) |
+| P4 legacy deletion | W2 | **DONE** — `356eaa2` deleted the pre-Matchbook design system. Re-measured for this entry: `oklch(` in `globals.css` **231 → 2**; no `.dark` block; `ThemeToggle.tsx` and `ThemeContext.tsx` gone; **zero** `framer-motion` imports in `src/` (only prose mentions remain); `.scrollbar-thin` gone and both Matchbook consumers with it. Closes D-1, D-2, D-31, D-32 |
+| **Gate 2 re-critique** | — | **NOT RUN as a scored gate.** Later rounds landed critic *defect lists* (`c4896bf`, `0eef061`) without a recorded ten-dimension score, so **no card supersedes 57/65/66**. See the verdict history below |
+| Naive-walker verdict | — | **RUN — FAIL.** "Would I trust this with my club's tournament? **No.**" Root cause below. This is the current standing verdict and the reason for this round |
+| R6–R9 harness + fixture round | W8 | **DONE — this round.** Details in §4 |
+
+### Verdict history
+
+Every verdict this programme has recorded, newest last. A round that produced a
+defect list but no scored card is listed as such rather than being written up as
+a pass — the scored bar is still 57/65/66 FAIL.
+
+| When | Kind | Result |
+| --- | --- | --- |
+| Gate 1 | one critic, ten dimensions | **64 / 100 — FAIL** |
+| Gate 1r | three critics, ten dimensions | **57 / 65 / 66 — three FAILs.** No dimension ≥8 on all three cards |
+| post-1r rounds (`c4896bf`, `0eef061`) | critic defect lists | defects closed; **no scored card**, so the 57/65/66 bar stands |
+| this round | one naive user, walking the app cold | **"Would I trust this with my club's tournament? No."** |
+
+### The naive-walker verdict — one root cause, and it is the fixture
+
+The walker's findings all trace to a single fact: **this app had only ever been
+tested against eight team names — Surge, Tide, Storm, Apex, Flare, Peak, Nova,
+Riptide — none longer than seven characters and none of them two words.**
+
+Adding one team called **"Westhill Wanderers"**:
+
+| viewport | `documentElement.scrollWidth` | bottom nav |
+| --- | --- | --- |
+| 390 | 396 vs 390 | labels clipped |
+| 375 | 396 vs 375 | 9px of a 56px bar visible |
+| 360 | 396 vs 360 | entirely below the fold |
+| 320 | 397 vs 320 | 144px below the fold, unreachable |
+
+and `html { overflow-x: hidden }` means `window.scrollTo(scrollWidth, 0)` leaves
+`scrollX` at 0, so the navigation **cannot be scrolled to**. The app's primary
+navigation became unreachable because somebody typed a two-word team name.
+
+Our own sweep had reported `OFLOW 0` on all thirty routes, because `audit.mjs`
+measured `body.scrollWidth` and the fixture contained only short names. **The
+harness was measuring a world that does not exist.** Both halves — the fixture
+and the checks — were rebuilt this round; see §4.
 
 ### Gate 1r verdict — 57 / 65 / 66, three FAILs
 
@@ -159,18 +198,21 @@ forces the label, and §4's verdict format gained mandatory `IN-SCOPE INVENTORY`
 `SCHEDULED ABSENCES` and `MEASUREMENTS NOT TAKEN` blocks. The bar did not move —
 8 is still the pass line and all ten still have to clear it.
 
-**What still remains before P2 can start:**
+**What still remains.** P2, P3 and P4 have all shipped since this list was
+written (see the phase table above), so it is no longer a gate on starting them —
+it is the list of what is still open:
 
 1. **Gate 2 has not been run.** Until it scores all ten dimensions ≥8 with zero
    §3 hard fails on all cards, the verdict stands at FAIL.
 2. Everything in **§8, the deferred-defects register** — the findings this round
    is deliberately *not* fixing, each with an owner and the check that catches it.
-3. `--all` currently reports **295 sub-44px targets (desktop) / 222 (mobile)**,
-   **263 / 256 numerals without `tabular-nums`**, **82 / 79 a11y failures**, and
-   **1 horizontally overflowing route** across the 23 routes. Almost all of it is
-   un-converted legacy screens, which is expected and is P3's work — but it is
-   the baseline P3 has to clear. `/dev/kit` itself is at 1 TOUCH (the skip link),
-   4 SPACING, 0 SCROLLPORT, 0 FONTS failures, 0 everything else.
+3. ~~`--all` reports 295 sub-44px targets / 263 numerals / 82 a11y failures / 1
+   overflowing route across 23 routes.~~ **Superseded.** Re-measured across 30
+   routes at both viewports in the R6-R9 round: **sub-44px 0, numerals 0, a11y
+   0, fonts 0, console 0**, and 0 routes overflowing at their own viewport. What
+   replaced it is a different and newer baseline — 52 text overlaps, 2 fixed-
+   chrome findings and 3 overflowing widths at 320 — none of which the harness
+   could see before this round. The table is in §4.
 4. The three out-of-zone-A dependencies in §7.3 of the design language must be
    re-declared inside the Matchbook block **before** P4 deletes zone C, and zone
    B needs an owner. One of the three — the double scrollport — was closed this
@@ -217,8 +259,8 @@ Still unbuilt, with owners (also listed at the end of §4.2): `MatchbookMasthead
 
 ## 4. State of the tree
 
-`npx tsc --noEmit` clean · `npx eslint src` 0 errors / 27 pre-existing warnings · `npx vitest run` green
-(205 tests) — all three re-run at the end of the Gate-1r round.
+`npx tsc --noEmit` clean · `npx vitest run` green — **524 tests across 22 files**, re-run at the end of the
+R6–R9 round. (The Gate-1r figure in earlier revisions of this file, 205 tests, is three rounds stale.)
 
 **Do not trust a red build during a fix round without re-running it.** Mid-round, tsc reported 3 errors, all
 in `src/app/dev/kit/page.tsx` (`MbIconButtonSize` not exported, `size="sm"` not assignable to
@@ -231,6 +273,152 @@ agent can duplicate its `<section>`, and a mid-write render serves HTTP 500 — 
 returns `LOAD FAIL — HTTP 500` on `/dev/kit` while a fix round is in flight, wait and retry rather than
 debugging it. De-duplicating the gallery is the audit agent's job. The same applies to `--all` sweeps: a
 route can return `LOAD FAIL — HTTP 404` on one pass and load on the next while the dev server recompiles.
+
+### What the R6–R9 round changed in the harness (W8 slice)
+
+The naive-walker verdict (§3) was one root cause: the fixture. Both halves of the
+measurement were rebuilt.
+
+**R6 — the fixture.** `gen-fixture.mts` now seeds eight realistic club names in
+place of Surge/Tide/Storm/Apex/Flare/Peak/Nova/Riptide:
+
+| chars | name | what it tests |
+| --- | --- | --- |
+| 18 | Westhill Wanderers | the walker's own name — the one that broke the nav |
+| 20 | Riverside Rovers VBC | shares its last two words with… |
+| 20 | Redbridge Rovers VBC | …this one, and both open on "R" |
+| 22 | Northgate Thunderbirds | a 13-character unbreakable token |
+| 26 | Ashford & District Spikers | an ampersand |
+| 21 | St Brendan's Panthers | an apostrophe |
+| 28 | Kingsbridge Community Vipers | top of the realistic band |
+| 40 | Mount Pleasant Community Volleyball Club | the monster |
+
+Three files are written on every run and can never drift apart: `fixture.json`
+(realistic — **the default**), `fixture-short.json` (the old one-word roster) and
+`fixture-empty.json`. The short variant is the **same tournament** — same ids,
+same schedule, same scores, same clock, only `teams[].name` differs — so a diff
+between two runs is a pure measurement of name length. `audit.mjs --short` seeds
+it. Counts are unchanged at 8 teams / 6 competitions / 70 matches.
+
+The roster lands on **five** distinct crests, not eight, because no realistic
+name contains a pack slug so all eight hash over eight buckets. That is what an
+arbitrary real roster does. **Do not rename teams until the crests are distinct**
+— that is the same mistake as the eight short names in a new costume.
+
+The corpus is also pinned in the tree at `src/__tests__/lib/realisticNames.test.ts`
+(8 tests), because the scratchpad is wiped between sessions and the names would
+otherwise be lost. It asserts the roster's shape (so it cannot revert to short
+words) and holds `splitTeamName` and `crestForTeam` to it.
+
+**R7 — three new checks in `audit.mjs`.**
+
+- **`OVERFLOW` reads both scroll widths.** It measured `body.scrollWidth` alone
+  for the whole programme; the defect showed on `documentElement.scrollWidth`.
+  It now scores the worse of the two and names which one it came from.
+- **`WIDTHS`** re-asks the overflow question at invariant 31's widths rather than
+  at the one size the run happens to use, and adds the check that turns "the
+  layout is wide" into "the reader has lost the navigation": every
+  `position: fixed` element must be inside the viewport, unclipped horizontally,
+  hit-testable, and every control inside it reachable. `sticky` is held only to
+  the last two — a sticky element outside the viewport is what sticky IS.
+  A run sweeps the widths of its own device class (mobile 320/375/390/414 ·
+  desktop 768/1024/1280/1440), so `--all --mobile` plus `--all --desktop` covers
+  the invariant's eight exactly once.
+- **`TEXTOVER`** reports element pairs whose painted **line boxes** intersect —
+  measured with `Range.getClientRects()`, not element boxes, so it fires on
+  letters rather than on margins. Counted when both sides are in the flow;
+  printed but not counted when one side is fixed/sticky chrome (that is an
+  accident of where the page opens, and its permanent form is already counted by
+  `OCCLUSION anywhere` and `WIDTHS chrome-control-unreachable`).
+
+**The measurement that made `WIDTHS` work.** `window.innerHeight` is the wrong
+fold. When content overflows horizontally a mobile engine expands the initial
+containing block to the content width and scales its height to match. Measured on
+`/` at 320 with the realistic fixture:
+
+```
+documentElement.clientWidth  320     window.innerWidth   509
+documentElement.clientHeight 844     window.innerHeight 1343
+visualViewport               320x844 at scale 1
+nav.fixed                    0,1286  509x57
+```
+
+The bar is pinned to the bottom of the 1343px ICB — 442px below what the reader
+can see — and it is 509px wide in a 320px window. Judged against `innerHeight` it
+looks perfectly placed, which is exactly how this survived thirty routes of
+`OFLOW 0`. `WIDTH_PROBE` uses `visualViewport.height`.
+
+**Four false-positive classes were found and closed before the baseline was
+trusted**, each with a selftest case:
+
+1. the **skip-link idiom** (parked off-screen, revealed on `:focus`) is correct
+   code. An off-viewport control is now focused and re-measured; coming back is
+   the pattern, staying out is the defect. No selector, no allow-list;
+2. that focus probe **leaked focus** — restoring to `document.body`, whose
+   `focus()` is a no-op, left the skip link revealed at the next width, covering
+   the masthead wordmark. This tool reported a defect it had created itself.
+   Blur first, unconditionally;
+3. `Range.getClientRects()` returns **unclipped** geometry, so every `truncate`
+   span "overlapped" whatever followed it — including its own pinned tail, at
+   100%. Rects are now intersected with every clipping ancestor;
+4. a range rect is the **font box, not the CSS line box**, so two lines under
+   `leading-none` graze by 2–3px of ascender with nothing visibly touching.
+   Overlaps must now take a quarter of the smaller rect on both axes to count;
+   the grazes are still printed. Separately, `elementFromPoint` was returning the
+   **Next.js dev overlay** in the bottom-left corner — exactly where a bottom
+   nav's first item lives — so hit-testing skips dev-overlay layers and probes
+   five points rather than one.
+
+`--selftest` grew from 22 cases to **46**, all passing, and needs no dev server.
+New flags: `--short`, `--skip-widths`. Summary table gained `WIDTH` (chrome
+findings / widths overflowing) and `TXOV` (counted / total).
+
+**R8 — the re-baseline.** `--all` at both viewports against the realistic
+fixture, 30 routes, **60 runs, 0 load failures**:
+
+| | mobile | desktop |
+| --- | --- | --- |
+| total violations | **44** | **20** |
+| `TEXTOVER` counted (in flow) | **33 on 6 routes** | **19 on 6 routes** |
+| `TEXTOVER` under chrome / grazes (not counted) | 24 / 21 | 15 / 19 |
+| `WIDTHS` chrome findings | 2 on 2 routes | 0 |
+| widths overflowing beyond the run's own | 3 | 0 |
+| `SPACING` | 6 (all `/summaries`) | 0 |
+| `OCCLUSION` | 3 | 0 |
+| `SCROLLPORT` | 0 | 1 (`competition-rr-completed`, `body` 1794/1788 — 6px) |
+| `TOUCH` · `NUMERALS` · `FONTS` · `A11Y` · `CONSOLE` | 0 · 0 · 0 · 0 · 0 | same |
+
+**Every one of the 52 text overlaps is new signal — the harness could not see
+this class at all before, and none of it is visible on the short-name fixture.**
+The worst is `/quick-match@390`, 16 in-flow overlaps: the recent-quick-matches
+rows draw the date, the crest, both team names and the scoreline **on top of one
+another** and the row is unreadable. Screenshot evidence:
+`<SCRATCH>/shots/r7-crop.png`. Routes carrying counted overlaps: `quick-match`
+(16 mobile / 2 desktop), `teams` (5 / 5), `vb-rotations` (5 / 5),
+`vb-shared-formation` (4 / 4), `history` (2 / 2), `tools` (1 / 1).
+
+**The A/B that settles which half was at fault.** Same tree, same route, same
+checks, only the roster swapped — `node audit.mjs quick-match --mobile` against
+each fixture:
+
+| roster | `TEXTOVER` counted | violations |
+| --- | --- | --- |
+| `--short` (Surge, Tide, Storm…) | **1** | **1** |
+| default (realistic club names) | **16** | **16** |
+
+Fifteen of the sixteen defects on that screen were invisible to a harness that
+was otherwise identical. It was never the checks alone; it was what we fed them.
+
+The two `WIDTHS` findings are both at **320**: `/` draws its bottom nav 342px
+wide (22px past the right edge, `chrome-clipped-horizontally`), and
+`competition-de-draft` overflows +51px. `/summaries` overflows +1px at 320.
+
+**Reading these numbers.** `OFLOW 0` at every run's own viewport is now a real
+number rather than an artefact — the fixture that produced it has 40-character
+names in it. Six routes still lose their layout at 320 or draw text through text
+at 390, and that is the honest baseline. Expect the numbers to move under you:
+sibling agents were landing shell fixes while these sweeps ran, and `/` went from
+a 509px-wide nav at 390 to a clean one inside the same session.
 
 ### What the Gate-1r fix round changed in the harness (W8 slice)
 
@@ -376,22 +564,26 @@ the phase from scratch rather than resuming.
 
 ```bash
 cd "C:/Dev/Tournament-Tracker/.claude/worktrees/app-redesign-features-cf1ebd"
-npx tsx <SCRATCH>/pw/gen-fixture.mts     # deterministic: 8 teams, 6 competitions, 70 matches
+# deterministic: 8 teams (18-40 char club names), 6 competitions, 70 matches.
+# Writes fixture.json + fixture-short.json + fixture-empty.json every time.
+npx tsx <SCRATCH>/pw/gen-fixture.mts
 npx tsc --noEmit
 npx eslint src
-npx vitest run
+npx vitest run                           # 524 tests, 22 files
 ```
 
 ```bash
 cd <SCRATCH>/pw
-node routes.mjs                          # 23 route ids (login is BLOCKED locally)
+node routes.mjs                          # 31 route ids (login is BLOCKED locally)
 node shoot-all.mjs <SCRATCH>/shots/<label>
 node shot.mjs /competitions/comp-se-city-cup out.png --desktop --full
 node shot.mjs /dev/kit out.png --mobile  # the primitive gallery
 
 # the measurement sweep — read the docblock at the top of audit.mjs first
-node audit.mjs --selftest                        # 22 cases, no dev server needed. Run after editing it
+node audit.mjs --selftest                        # 46 cases, no dev server needed. Run after editing it
 node audit.mjs <routeId|/path> --mobile          # one route
+node audit.mjs <routeId> --mobile --short        # the same route on the OLD one-word roster.
+                                                 # Same ids, same scores — the diff is name length
 node audit.mjs --all --desktop --skip-motion     # every route, no reduced-motion pass
 node audit.mjs /dev/kit --desktop --groups       # list the grouped (waived) pairs
 node audit.mjs /dev/kit --desktop --no-composites # the same run with grouping OFF — the honest "before"
@@ -405,7 +597,10 @@ Reading the output:
 | `TOUCH` | yes | real hit area under 44×44, after probing all four corners with `elementFromPoint` |
 | `SPACING` | yes | adjacent interactive pairs under 8px that are **not** one composite's cells |
 | `GROUPED` | **no** | pairs waived as composite cells. Prints the kind and whether a rule was measured |
-| `OVERFLOW` | yes | `body.scrollWidth` vs `clientWidth`, with the widest unclipped culprits named |
+| `OVERFLOW` | yes | **both** `body.scrollWidth` and `documentElement.scrollWidth` vs `clientWidth`, worse of the two, with the widest unclipped culprits named. It read only the first for the whole programme, which is why one two-word team name went unreported on thirty routes |
+| `WIDTHS` | yes | the same overflow question at invariant 31's widths, plus: every `position: fixed` element inside the viewport, unclipped, hit-testable, with every control in it reachable. `sticky` is judged only on clipping and hit-testability. Mobile sweeps 320/375/390/414, desktop 768/1024/1280/1440 — run both to cover the invariant |
+| `TEXTOVER` in flow | yes | element pairs whose painted **line boxes** intersect, measured with `Range.getClientRects()` and clipped to their clipping ancestors |
+| `TEXTOVER` under chrome / grazes | **no** | one side fixed/sticky (an accident of where the page opens — its permanent form is counted by `OCCLUSION anywhere`), or an intersection under a quarter of the smaller rect (font-box bleed from tight leading) |
 | `SCROLLPORT` | yes | the document must be the scroller: `scrollingElement` is `<html>`, BODY is not a second scrollport, `window.scrollTo` moves `scrollY`, the viewport is not blank afterwards, and a **trusted wheel** moves the window |
 | `NUMERALS` | yes | standalone numerals with no `tabular-nums` (digits inside prose are counted separately and never fail) |
 | `FONTS` failures | yes | computed first font-family fell through to Tailwind preflight's text stack — the Oswald/Outfit chain is broken |
@@ -429,9 +624,13 @@ with an `onClick` and no `role`/`tabindex` is invisible to `A11Y` and to `TOUCH`
 
 Baseline to diff against: `<SCRATCH>/shots/baseline/` (60 PNGs).
 
-Known harness limits: `/login` cannot be shot while preview-auth is on; `/session/*`, `/summary/*` and
-`/tools/**/shared/*` render not-found until W8 adds `NEXT_PUBLIC_DEV_PREVIEW_SESSION`; mobile full-page shots
-reach ~8700px and need `--scroll` to read.
+Known harness limits: `/login` cannot be shot while preview-auth is on; mobile full-page shots reach ~8700px
+and need `--scroll` to read. (`/session/*`, `/summary/*` and `/tools/**/shared/*` all render populated now —
+`NEXT_PUBLIC_DEV_PREVIEW_SESSION` landed. That limit is gone.)
+
+Two limits that remain, and both are real. `TEXTOVER` measures the page **at rest**: two strings that only
+collide once a panel expands are invisible to it. And `WIDTHS` resizes the viewport without reloading, so a
+layout decided at mount from a width read in JS is measured in its mount-time shape, not its resized one.
 
 ---
 
@@ -470,6 +669,26 @@ settles it).
 | **No distinct pressed state on any button.** `.mb-console-column:active` was the only `:active` recipe against 60+ controls | A-D5, C-D5 | `globals.css` now carries **25 `:active` rules** covering `.mb-btn`, `.mb-tile`, `.mb-swatch`, `.mb-segmented > *`, `.mb-stepper button`, `.mb-nav-item`, `.mb-tab`, `.mb-row-hover`, `.mb-panel-link`, `.mb-console-column`, the outline variants, and a `prefers-reduced-motion` arm |
 | **Enabled field boundaries at 1.74:1.** `.mb-input`/`.mb-search`/`.mb-textarea` painted their only edge in `--mb-rule` | C-HF-6a | `.mb-input` now reads `border: var(--mb-rule-edge) solid var(--mb-navy)` |
 | **Both type faces were dead** (the pre-Gate-1r F20 bug) | F20 | New permanent check: `audit.mjs` **FONTS**. `--all` reports **0 preflight fall-throughs on 23 routes** at both viewports; `/dev/kit@1440` census `Oswald 987 · Outfit 364` |
+
+### 8.1b Closed since Gate 1r — re-measured for this entry
+
+Each row was measured against the working tree during the R6–R9 round, not
+copied from a commit message.
+
+| Finding | Register id | Verified closed by |
+| --- | --- | --- |
+| **The 44px coarse-pointer floor was written but never armed** — `[data-mb-touch="on"]` had 4 selector lines and 0 writers | D-5 | `src/app/layout.tsx:92` now sets it on the root element |
+| **231 `oklch(...)` declarations, the shadcn `:root` block and the `.dark` block** | D-1, D-31 | `356eaa2`. `grep -c "oklch(" src/app/globals.css` → **2**; no `.dark` block; `ThemeToggle.tsx` and `ThemeContext.tsx` are gone |
+| **`.scrollbar-thin` consumed by two Matchbook components** (`Sidebar.tsx`, `MobileBar.tsx`) | D-2 | the class and both consumers are gone; only a comment marking where it was remains |
+| **`.soft-card` / `.playful-card` / `.glass-*`** | D-32 | 4 remaining mentions in `globals.css` are prose, not rules |
+| **framer-motion on converted screens** | charter §7 | **zero** `from "framer-motion"` imports in `src/`; the six remaining hits are prose in comments |
+| **Not-yet-built components**: `MatchbookMasthead`, `MbEventBar`, `MatchbookTopStrip`, `MatchbookBottomBar`, `MbAccountChip`, `MbToast`/`useToast`/`ToastHost`, `MbPageLoading`, `MbOfflineBanner`, `MbScoreSide`, `MbSetStrip`, `MbStandingsTable`, `MbMatchRow`, `BracketRail`, `MbCourtCard` | D-28, D-29, D-30 | all present in `src/components/matchbook/`, verified by export grep. **Still absent: `MbPanelFoot` and `useCourtView`** — those two rows stay open |
+| **`audit.mjs` could not see horizontal overflow, unreachable fixed chrome, or text drawn through text** | — | R7. `OVERFLOW` reads both scroll widths; `WIDTHS` and `TEXTOVER` are new sections; `--selftest` is 46 cases. §4 has the numbers |
+| **The fixture had eight one-word team names** | — | R6. 18–40 character club names are the default; `fixture-short.json` keeps the old roster; the corpus is pinned in `src/__tests__/lib/realisticNames.test.ts` |
+| **295 sub-44px targets desktop / 222 mobile across 23 routes** | D-6 | **0 / 0** across 30 routes at both viewports. D-5 (arming the floor) was the fix, exactly as the register predicted |
+| **`/tools` overflows +35px at 390** | D-7 | `/tools` audits **0 overflow** at 390 and clean at 320/375/414 |
+| **16 numerals without `tabular-nums` on `/teams@390`; 263 / 256 app-wide** | D-11 | **0 / 0** across 30 routes at both viewports |
+| **`/competitions` renders seven equal-weight empty headlines** | D-14 | `/competitions` reports **0** headlines against a budget of 1, at both viewports; app-wide 7 headlines per 30-route sweep, **0 over budget on 0 runs**, at both viewports |
 
 ### 8.2 SCHEDULED — a named workstream owns it
 

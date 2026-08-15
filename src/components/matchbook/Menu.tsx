@@ -131,13 +131,14 @@ export const MbMenu = ({
                   // The ring is drawn inside the row; `overflow-hidden` on the
                   // panel would clip the surface rule's outward 2px offset.
                   outlineOffset: "-2px",
-                  // `.matchbook-display` pins letter-spacing to 0.02em from an
-                  // unlayered rule, so the `tracking-*` class below cannot lift
-                  // it. A menu row is a horizontal `.mb-nav-item`; it gets that
-                  // rule's 0.08em the only way that outranks the class.
-                  letterSpacing: "0.08em",
+                  // The rung is `mb-track-display` on the class below. It used
+                  // to be inline because `.matchbook-display` pinned
+                  // letter-spacing from an unlayered rule; that declaration is
+                  // in `@layer components` now, so the class wins. 0.78rem is
+                  // 0.02em everywhere else in the app and a menu row is not an
+                  // exception to it.
                 }}
-                className={`matchbook-display flex min-h-[44px] w-full cursor-pointer items-center gap-2.5 px-3.5 py-2.5 text-[0.78rem] font-semibold tracking-[0.08em] text-mb-navy transition-colors duration-[var(--mb-dur-fast)] select-none data-[highlighted]:bg-[var(--mb-tint-2)] data-[highlighted]:shadow-[inset_3px_0_0_var(--mb-coral)] data-[disabled]:cursor-not-allowed data-[disabled]:bg-transparent data-[disabled]:text-mb-ink-muted ${rule}`}
+                className={`matchbook-display flex min-h-[44px] w-full cursor-pointer items-center gap-2.5 px-3.5 py-2.5 text-[0.78rem] mb-track-display font-semibold text-mb-navy transition-colors duration-[var(--mb-dur-fast)] select-none data-[highlighted]:bg-[var(--mb-tint-2)] data-[highlighted]:shadow-[inset_3px_0_0_var(--mb-coral)] data-[disabled]:cursor-not-allowed data-[disabled]:bg-transparent data-[disabled]:text-mb-ink-muted ${rule}`}
               >
                 {item.icon && (
                   <MbIcon

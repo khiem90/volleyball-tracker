@@ -96,16 +96,15 @@ const mergeIds = (...ids: Array<string | undefined | false>) =>
  * the step `MbToggle` already uses for its own control label a few lines down,
  * so the two labels in a form now agree. 13.6px navy on paper is 11.79:1 AAA.
  *
- * `letterSpacing` is inline, not `tracking-[0.08em]`: `.matchbook-display` sets
- * `letter-spacing: 0.02em` from an *unlayered* rule and every Tailwind
- * `tracking-*` utility ships inside `@layer utilities`, which loses to it
- * regardless of specificity. (Measured: `MbToggle`'s `tracking-[0.08em]`
- * computes to 0.272px = 0.02em, not 1.088px. Same trap as `CELL_TRACK` in
- * `CopyField.tsx`.)
+ * The rung is the class `mb-track-nav`, not an inline `letterSpacing`. It used
+ * to have to be inline: `.matchbook-display` set `letter-spacing: 0.02em` from
+ * an UNLAYERED rule, and every Tailwind `tracking-*` utility ships inside
+ * `@layer utilities`, which loses to unlayered CSS regardless of specificity.
+ * That declaration now lives in `@layer components` (globals.css), so both the
+ * utility and the rung win and the workaround is gone.
  */
-export const MB_FIELD_LABEL: { className: string; style: CSSProperties } = {
-  className: "matchbook-display text-[0.85rem] font-semibold text-mb-navy",
-  style: { letterSpacing: "0.08em" },
+export const MB_FIELD_LABEL: { className: string } = {
+  className: "matchbook-display text-[0.85rem] mb-track-nav font-semibold text-mb-navy",
 };
 
 /* ------------------------------------------------------------------ MbField */
@@ -150,7 +149,6 @@ export const MbField = ({
       <label
         htmlFor={htmlFor}
         className={MB_FIELD_LABEL.className}
-        style={MB_FIELD_LABEL.style}
       >
         {label}
         {required && (
@@ -590,16 +588,14 @@ export const MbNumberStepper = ({
         />
         {unit && (
           <span
-            /* `display/link`. `letterSpacing` is inline for the reason
-               `MB_FIELD_LABEL` documents: `.matchbook-display` declares
-               `letter-spacing: 0.02em` unlayered and every Tailwind
-               `tracking-*` utility loses to it.
+            /* `display/link`, rung and all — `mb-track-link` carries the
+               0.04em that used to be inline here, for the reason
+               `MB_FIELD_LABEL` documents.
 
                `leading-none` so a one-word unit cannot add a half-line to the
                shell and take it back off the rung, and `self-center` so it
                sits on the figure's optical centre rather than stretching. */
-            className="matchbook-display shrink-0 self-center text-[0.72rem] font-semibold leading-none text-mb-ink-muted"
-            style={{ letterSpacing: "0.04em" }}
+            className="matchbook-display shrink-0 self-center text-[0.72rem] mb-track-link font-semibold leading-none text-mb-ink-muted"
           >
             {unit}
           </span>
@@ -695,16 +691,18 @@ export const MbToggle = ({
           treatment instead of overriding part of it. */}
       <span className="pointer-events-none min-w-0 leading-tight">
         {/* The same `MB_FIELD_LABEL` as `MbField` and `MbCopyField`, not a
-            hand-rolled copy of it. Written out it *looked* identical, but
-            `tracking-[0.08em]` is a layered utility and `.matchbook-display`
-            sets `letter-spacing: 0.02em` unlayered — so it measured 0.272px
-            here against 1.088px on a text field's label. A switch's label and
-            a text field's label sit in the same column of the same form; they
-            now resolve to one treatment because they share one constant. */}
+            hand-rolled copy of it. Written out it once *looked* identical and
+            measured 0.272px here against 1.088px on a text field's label,
+            because a tracking utility was a layered rule and
+            `.matchbook-display` set `letter-spacing: 0.02em` unlayered. That
+            declaration is in `@layer components` now and the rung is the class
+            `mb-track-nav`, so the trap is gone — but the constant stays: a
+            switch's label and a text field's label sit in the same column of
+            the same form and resolve to one treatment because they are one
+            string, not two that agree today. */}
         <span
           id={labelId}
           className={`${MB_FIELD_LABEL.className} block`}
-          style={MB_FIELD_LABEL.style}
         >
           {label}
         </span>
@@ -1019,10 +1017,6 @@ export const MbSwatchPicker = ({
 
 /* --------------------------------------------------------------- MbTagInput */
 
-/** Same unlayered-`.matchbook-display` trap as `MB_FIELD_LABEL`: the tag face
- *  wants 0.06em and a `tracking-*` utility cannot raise it above 0.02em. */
-const TAG_TRACK: CSSProperties = { letterSpacing: "0.06em" };
-
 export const MbTagInput = ({
   value,
   onChange,
@@ -1104,8 +1098,8 @@ export const MbTagInput = ({
              away from its own remove key. */
           <span key={tag} className="inline-flex min-w-0 max-w-full items-stretch gap-2.5">
             <span
-              className="matchbook-display flex min-w-0 items-center rounded-[3px] border-solid border-mb-navy bg-mb-paper-bright px-2.5 text-[0.78rem] font-bold"
-              style={{ ...EDGE_RULE, ...TAG_TRACK, minHeight: MB_CONTROL_HEIGHT.sm }}
+              className="matchbook-display flex min-w-0 items-center rounded-[3px] border-solid border-mb-navy bg-mb-paper-bright px-2.5 text-[0.78rem] mb-track-display font-bold"
+              style={{ ...EDGE_RULE, minHeight: MB_CONTROL_HEIGHT.sm }}
             >
               {/* Not the flex container itself: `text-overflow` is ignored on
                   one, so a long tag would clip with no ellipsis. As a flex

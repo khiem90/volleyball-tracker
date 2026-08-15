@@ -239,7 +239,7 @@ export const MbReorderList = <T,>({
                   />
                 </span>
 
-                <span className="matchbook-display w-5 shrink-0 text-right text-[0.8rem] font-bold leading-none tabular-nums text-mb-ink-muted">
+                <span className="matchbook-display w-5 shrink-0 text-right text-[0.8rem] mb-track-button font-bold leading-none tabular-nums text-mb-ink-muted">
                   {index + 1}
                 </span>
 

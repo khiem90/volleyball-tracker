@@ -76,7 +76,7 @@ export const MbLiveStatus = ({
       <span className={`inline-flex min-w-0 items-center gap-1.5 ${ink}`}>
         {state.dot && <span className="mb-live-dot shrink-0" />}
         {state.icon && <MbIcon id={state.icon} size={13} className="shrink-0" />}
-        <span className="matchbook-display truncate text-[0.66rem] font-bold tracking-[0.1em]">
+        <span className="matchbook-display truncate text-[0.66rem] mb-track-status font-bold">
           {state.word}
         </span>
       </span>

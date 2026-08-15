@@ -72,7 +72,7 @@ export const FormatPreviewPanel = ({
     icon="bracket"
     meta={
       basis.label ? (
-        <span className="matchbook-display text-[0.66rem] font-bold tracking-[0.16em] text-mb-paper-bright tabular-nums">
+        <span className="matchbook-display text-[0.66rem] mb-track-status font-bold text-mb-paper-bright tabular-nums">
           {basis.label}
         </span>
       ) : undefined
@@ -93,7 +93,7 @@ export const FormatPreviewPanel = ({
                   className="flex min-h-[44px] items-center justify-between gap-3 px-4 py-3"
                 >
                   <dt className="mb-kicker min-w-0 truncate">{line.label}</dt>
-                  <dd className="matchbook-display shrink-0 text-[0.95rem] font-bold tracking-[0.04em] tabular-nums">
+                  <dd className="matchbook-display shrink-0 text-[0.95rem] mb-track-title font-bold tabular-nums">
                     {line.value}
                   </dd>
                 </div>

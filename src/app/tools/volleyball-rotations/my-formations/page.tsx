@@ -385,7 +385,7 @@ export default function MyFormationsPage() {
                   <MbIcon id="court" size={18} />
                 </span>
                 <span className="min-w-0">
-                  <span className="matchbook-display block text-[0.82rem] font-bold tracking-[0.03em]">
+                  <span className="matchbook-display block text-[0.82rem] mb-track-display font-bold">
                     Neutral court
                   </span>
                   {/* Wrapped, never truncated. Both template blurbs ran past
@@ -407,7 +407,7 @@ export default function MyFormationsPage() {
                     <MbIcon id="clipboard" size={18} />
                   </span>
                   <span className="min-w-0">
-                    <span className="matchbook-display block text-[0.82rem] font-bold tracking-[0.03em]">
+                    <span className="matchbook-display block text-[0.82rem] mb-track-display font-bold">
                       {template.name}
                     </span>
                     <span className="block text-[0.72rem] leading-snug text-mb-ink-muted">
@@ -445,7 +445,7 @@ export default function MyFormationsPage() {
                       className="mb-btn-touch mb-row-hover flex h-11 w-full items-center gap-2.5 border-b border-mb-rule px-4 text-left"
                     >
                       <MbIcon id="link" size={15} className="shrink-0 text-mb-teal" />
-                      <span className="matchbook-display min-w-0 flex-1 truncate text-[0.78rem] font-bold">
+                      <span className="matchbook-display min-w-0 flex-1 truncate text-[0.78rem] mb-track-display font-bold">
                         {formation.name}
                       </span>
                       <span className="mb-kicker shrink-0">Manage</span>

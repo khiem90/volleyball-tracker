@@ -49,6 +49,48 @@
    Names that differ only in the middle still collide, and no width-free rule
    can fix that. A trailing distinguisher — "B"/"C", "II", "2024", "Reserves" —
    is the case this fixture has and the case real leagues generate.
+
+   ------------------------------------------------- the floor the tail set (R2)
+
+   `shrink-0` on the tail is what makes the elision work, and until R2 it also
+   made this component the widest thing on two screens. A flex item's automatic
+   minimum size is its content size, `shrink-0` means it never gives it back,
+   and `whitespace-pre` means that content cannot break — so a split name's
+   MIN-CONTENT was the width of its last word, permanently, and every `1fr`
+   grid track and `flex-1` box holding one inherited that as a floor.
+
+   Measured at 320 with a club-name roster ("Northside Thunder", "Hartley
+   United", "Oakfield Panthers" — nothing longer than 18 characters):
+
+     /teams  Upcoming Fixtures row, two names in one `1fr` track
+             track content 291px in a 272px track → document 322 vs 320
+
+   Two names, four crests and a "vs" cannot fit 272px, and the honest response
+   is to elide — but nothing could, because the floor was set by the parts that
+   refuse to shrink. The overflow left the panel, left `main`, and widened the
+   layout viewport, which is what moves the fixed bottom nav off-screen.
+
+   `overflow: clip` on the box is the fix, and it is one word for a reason.
+   Flexbox §4.5 gives a box whose `overflow` is not `visible` an automatic
+   minimum size of ZERO, so the pair stops advertising a floor it cannot honour
+   and the name becomes what its contract always said it was: never wider than
+   the box it is handed. Measured after, same viewport and roster: 320 vs 320.
+
+   `clip`, not `hidden`: `hidden` would make this a scroll container on both
+   axes (one axis `hidden` forces the other from `visible` to `auto`), which is
+   a scrollable box around a single line of text and a stray tab stop in
+   Chromium. `clip` clips and nothing else. It needs Safari 16, which is inside
+   the band this file already requires (`oklch`, `@layer` and `dvh` all need
+   15.4), and where it is not understood the declaration is simply dropped and
+   the box behaves exactly as it did before — the degradation is the old
+   behaviour, not a worse one.
+
+   The order in which the two spans give is unchanged. The head is the flex item
+   with `min-w-0`, so it absorbs every pixel of pressure first and the tail is
+   untouched at every width where the head still has letters to spend. Only when
+   the box is narrower than the last word ALONE — "…" plus a clipped tail — does
+   the tail lose anything, and that case previously broke the whole document
+   instead.
    =========================================================================== */
 
 /** Longest tail worth pinning, including its leading space. */
@@ -109,8 +151,17 @@ export const MbTeamName = ({
     /* `flex` on the name itself, so the head is the flex item that gives.
        `min-w-0` on the head is what lets it shrink below its content width —
        without it a flex item's floor is its min-content size and the pair
-       would overflow the cell instead of eliding. */
-    <span className={`flex min-w-0 items-baseline ${className}`} title={name}>
+       would overflow the cell instead of eliding.
+
+       `overflow-clip` is the same argument one level up: it zeroes THIS box's
+       own automatic minimum size, so the un-shrinkable tail inside can no
+       longer set a floor for the grid track or flex line around it. See "the
+       floor the tail set" above — without it a two-word club name widened the
+       document and took the bottom nav off-screen with it. */
+    <span
+      className={`flex min-w-0 items-baseline overflow-clip ${className}`}
+      title={name}
+    >
       <span className="min-w-0 truncate">{head}</span>
       {/* `whitespace-pre` keeps the joining space: the tail carries it, so
           `head + tail` is the name verbatim rather than the name with a space

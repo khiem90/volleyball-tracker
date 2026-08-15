@@ -159,7 +159,7 @@ const SessionView = () => {
                 `<code>` tag, and never a bare word, because a code like
                 "SUMMER" reads as prose without one. */}
             Code{" "}
-            <span className="tabular-nums tracking-[0.18em]">
+            <span className="tabular-nums">
               {session.shareCode}
             </span>
           </>
@@ -180,7 +180,7 @@ const SessionView = () => {
                   size={13}
                   className="shrink-0"
                 />
-                <span className="matchbook-display text-[0.66rem] font-bold tracking-[0.1em]">
+                <span className="matchbook-display text-[0.66rem] mb-track-status font-bold">
                   {page.role === "creator" ? "Organiser" : "Scorer"}
                 </span>
               </span>

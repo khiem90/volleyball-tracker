@@ -164,7 +164,7 @@ export const AdvancedSettingsPanel = ({
       tone="navy"
       icon="settings"
       meta={
-        <span className="matchbook-display text-[0.66rem] font-bold tracking-[0.16em] text-mb-paper-bright">
+        <span className="matchbook-display text-[0.66rem] mb-track-status font-bold text-mb-paper-bright">
           {customised ? "Customised" : "Defaults"}
         </span>
       }
@@ -228,7 +228,7 @@ export const AdvancedSettingsPanel = ({
             top rule, and two adjacent hairlines draw one 2px line that belongs
             to no tier. */}
         <div className="border-t border-mb-rule px-4 py-3">
-          <span className={MB_FIELD_LABEL.className} style={MB_FIELD_LABEL.style}>
+          <span className={MB_FIELD_LABEL.className}>
             Match score
           </span>
           <p className="mt-1 text-[0.78rem] leading-snug text-mb-ink-muted">
@@ -242,7 +242,6 @@ export const AdvancedSettingsPanel = ({
             <div className="border-y border-mb-rule px-4 py-3">
               <span
                 className={MB_FIELD_LABEL.className}
-                style={MB_FIELD_LABEL.style}
               >
                 Standings points
               </span>
@@ -302,7 +301,7 @@ export const AdvancedSettingsPanel = ({
 
         <div className="flex flex-col gap-4 px-4 py-4">
           <div>
-            <span className={MB_FIELD_LABEL.className} style={MB_FIELD_LABEL.style}>
+            <span className={MB_FIELD_LABEL.className}>
               Venue wording
             </span>
             <p className="mt-1 text-[0.78rem] leading-snug text-mb-ink-muted">

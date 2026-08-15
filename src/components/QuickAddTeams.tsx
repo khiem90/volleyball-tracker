@@ -489,7 +489,6 @@ export const QuickAddTeams = ({
         <div className="flex flex-col gap-2.5">
           <span
             className={MB_FIELD_LABEL.className}
-            style={MB_FIELD_LABEL.style}
             id="quick-add-mode-label"
           >
             How to add them
@@ -537,7 +536,7 @@ export const QuickAddTeams = ({
         ) : (
           <>
             <div className="flex flex-col gap-2.5">
-              <span className={MB_FIELD_LABEL.className} style={MB_FIELD_LABEL.style}>
+              <span className={MB_FIELD_LABEL.className}>
                 How many teams
               </span>
               {/* No `initialFocus` here, and that is a decision rather than an
@@ -567,7 +566,6 @@ export const QuickAddTeams = ({
             <div className="flex flex-col gap-2.5">
               <span
                 className={MB_FIELD_LABEL.className}
-                style={MB_FIELD_LABEL.style}
                 id="quick-add-naming-label"
               >
                 Naming style
@@ -596,7 +594,7 @@ export const QuickAddTeams = ({
         )}
 
         <div className="flex flex-col gap-2.5">
-          <span className={MB_FIELD_LABEL.className} style={MB_FIELD_LABEL.style}>
+          <span className={MB_FIELD_LABEL.className}>
             Colour scheme
           </span>
           {/* One column at every width: the old 2-column grid clipped
@@ -617,7 +615,13 @@ export const QuickAddTeams = ({
                       aria-checked={active}
                       onClick={() => setScheme(entry.id)}
                       data-selected={active}
-                      className={`mb-row-hover flex min-h-[52px] w-full items-center gap-3 px-2 py-2 text-left ${
+                      /* `min-h-14` (56), not `min-h-[52px]`. 52 is not a rung:
+                         `MB_CONTROL_HEIGHT` is {44, 48, 56} and this was the
+                         only authored control height in the app that sat
+                         between two of them. The row carries a crest and two
+                         lines, so it takes the `lg` rung rather than being
+                         pulled down to `md`. */
+                      className={`mb-row-hover flex min-h-14 w-full items-center gap-3 px-2 py-2 text-left ${
                         active ? "mb-rail" : ""
                       }`}
                       style={
@@ -652,7 +656,7 @@ export const QuickAddTeams = ({
                         ))}
                       </span>
                       <span className="flex min-w-0 flex-1 flex-col">
-                        <span className="matchbook-display truncate text-[0.85rem] font-bold tracking-[0.05em]">
+                        <span className="matchbook-display truncate text-[0.85rem] mb-track-display font-bold">
                           {entry.name}
                         </span>
                         <span className="text-[0.72rem] leading-snug text-mb-ink-muted">
@@ -692,7 +696,6 @@ export const QuickAddTeams = ({
           <div className="flex items-center justify-between gap-3">
             <span
               className={MB_FIELD_LABEL.className}
-              style={MB_FIELD_LABEL.style}
             >
               Preview
             </span>

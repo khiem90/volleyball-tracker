@@ -291,7 +291,7 @@ export const MbDialog = ({
                     double-elimination consolation br…" does not tell you what
                     you are about to destroy. `break-words` also catches a
                     single unbroken token wider than the frame. */}
-                <DialogPrimitive.Title className="matchbook-display flex min-w-0 items-start gap-2 text-[0.95rem] font-bold tracking-[0.05em]">
+                <DialogPrimitive.Title className="matchbook-display flex min-w-0 items-start gap-2 text-[0.95rem] mb-track-title font-bold">
                   {icon && (
                     <MbIcon
                       id={icon}

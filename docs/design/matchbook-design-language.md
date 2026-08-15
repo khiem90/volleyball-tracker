@@ -281,6 +281,121 @@ snippet in code. Never introduce a size between two steps.
 | `body/xs` | `0.78rem` | 600 | `text-[0.78rem] font-semibold` | Detail values (Match Report meta) |
 | `body/2xs` | `0.72rem` | 400/600 | `text-[0.72rem] text-mb-ink-muted` | Helper text, secondary row lines |
 | `body/3xs` | `0.66rem` | 400 | `text-[0.66rem] text-mb-ink-muted` | Sub-labels inside dense rows |
+| `body/input-floor` | `1rem` | 400 | `text-base! md:text-[0.9rem]!` | **Every text input, below `md` only** |
+
+`body/input-floor` is the one step in this table that was not chosen. Mobile
+Safari zooms the viewport when a focused field is under 16px, which is a layout
+shift the reader did not ask for and cannot undo — so a field is `1rem` below
+`md` and drops to `body/md` above it, where no such rule exists. It is a
+**platform floor, not a size**: it may appear on `.mb-input input`,
+`.mb-textarea`, `.mb-select-native` and `.mb-search input`, and nowhere else. The
+`!` is load-bearing — those four rules set `font-size` unlayered, and an
+unlayered declaration outranks every Tailwind utility (§2.1a).
+
+### 2.1a The tracking ladder — one rung per (size, weight)
+
+`.matchbook-display` sets `letter-spacing: 0.02em`, and for most of this
+programme that default WAS the tracking almost everywhere, because a call site
+that writes a size rarely remembers to write the tracking with it. Measured at
+1440 before this pass: **82 distinct (size, weight, tracking) tuples against a
+named scale of 24**, and **22 (size, weight) pairs carrying two or more
+letter-spacings** — `15.2px/700` carried four, `11.52px/600` carried five.
+
+The rungs are **classes now, not decimals** — `globals.css` declares them last in
+`@layer components`, one per named step:
+
+| Class | em | Named step |
+| --- | --- | --- |
+| `.mb-track-masthead` | `0.01` | `display/masthead`, `display/stat-xl` |
+| `.mb-track-display` | `0.02` | the `.matchbook-display` base — row titles, team marks, stat figures |
+| `.mb-track-link` | `0.04` | `display/link` |
+| `.mb-track-title` | `0.05` | `display/panel-title` |
+| `.mb-track-button` | `0.06` | `display/button` |
+| `.mb-track-nav` | `0.08` | `display/nav` |
+| `.mb-track-status` | `0.1` | `display/status`, `display/meta` |
+| `.mb-track-head` | `0.12` | `display/table-head` |
+| `.mb-track-kicker` | `0.16` | `display/kicker` |
+| `.mb-track-badge` | `0.22` | `display/badge-label` |
+
+**A (size, weight) pair gets exactly one rung.** Write the class, never a bare
+`tracking-[…]` — an arbitrary value is un-auditable, and nothing in review tells
+you whether `[0.1em]` is `display/status` or a guess. The canon:
+
+| Size | weight 600 | weight 700 | why that rung |
+| --- | --- | --- | --- |
+| `0.6rem` | — | `badge` | §2.1 |
+| `0.62rem` | `kicker` | `nav` | `.mb-kicker` pins 600 |
+| `0.66rem` | `head` | `status` | §2.1's own split (table-head vs status) |
+| `0.72rem` | `link` | `link` | `.mb-panel-link` pins 600; 700 is the same step |
+| `0.74rem` | — | `status` | §2.1 `display/meta` |
+| `0.78rem` | `display` | `display` | already single-valued |
+| `0.8rem` | `button` | `button` | `.mb-btn` pins it |
+| `0.82rem` | `display` | `display` | `display/team-mark` |
+| `0.85rem` | `nav` | `display` | `.mb-nav-item` / `.mb-tab` pin 600 |
+| `0.9rem` | `display` | `display` | `display/row-title` |
+| `0.95rem` | `title` | `title` | `.mb-select-native` pins it |
+| `1.2 / 1.5 / 1.875rem` | `display` | `display` | the stat steps |
+| `2.25 / 3rem` | `masthead` | `masthead` | §2.1 |
+
+Where a size splits on weight it is because an **unlayered** class in
+`globals.css` already owns one of the two and cannot be outranked from a call
+site. Those are facts about the stylesheet, not preferences.
+
+**Two exceptions, both measured, both `tracking-normal`:**
+
+1. **Figures and marks, not words.** Tracking is added after the LAST glyph as
+   well as between glyphs, so a numeral or a single letterform centred in a fixed
+   reserve is pushed off its own centre by a whole letter-space. `globals.css`
+   already declares `letter-spacing: normal` for `.mb-score-box`,
+   `.mb-stepper-value` and `.mb-numeral`; `FormLetters`' 14px W/L cell and
+   `MbPlayerToken`'s role disc take the same rule at the call site. A W in a 14px
+   cell at the badge rung carries 2.11px of trailing air and sits 1.05px left of
+   centre — 7% of the mark, five times across a form run. The ladder tracks
+   **words**, and a number is not a word.
+2. **`MatchbookBottomBar`'s label.** Its cell is 53px at 320 and "OVERVIEW" is
+   47px natural at `0.62rem/0.08em`. The rung for 0.62rem/600 is `.mb-kicker`'s
+   0.16em, which adds 6.35px and truncates the app's primary navigation at the
+   narrowest supported width. The label keeps `tracking-[0.08em]`, written with
+   the measurement beside it.
+
+**Where a size is set by an unlayered class, a `text-[…]` utility beside it is
+dead code.** `.mb-panel-link` (0.72), `.mb-btn` (0.8), `.mb-btn-lg` (0.9),
+`.mb-nav-item` (0.85), `.mb-kicker` (0.62), `.mb-score-box` (0.95),
+`.mb-table th` (0.66), `.mb-table td` (0.85), `.mb-badge` (0.66),
+`.mb-badge[data-size="md"]` (0.74), `.mb-tab` (0.85), `.mb-code-chip` (0.85),
+`.mb-day-head` (0.66), `.mb-stamp-final` (0.74), `.mb-skip-link` (0.8),
+`.mb-segmented > *` (0.8), `.mb-banner` (0.8), `.mb-search input` (0.78),
+`.mb-input input` / `.mb-textarea` (0.9), `.mb-select-native` (0.95),
+`.mb-field-hint` / `.mb-field-error` (0.72) and the three `.mb-numeral--*` all
+declare their own `font-size` outside every layer. Delete the utility; do not
+"fix" it to a nearer step.
+
+`letter-spacing` and `font-size` also **inherit**, so a bare
+`<span className="matchbook-display font-bold">` inside a styled row takes
+whatever the row happens to carry — which is how the same component rendered
+0.02em in one panel and 0.08em in another. Every display element carries its own
+rung (charter invariant 8), including the ones whose size comes from a parent.
+
+**What is left, and why — so the next sweep does not re-find it.** After this
+pass, 7 (size, weight) pairs at 1440 and 8 at 390 still carry two values. **None
+is a call-site choice**; every one is a component voice authored in
+`globals.css`, or one of the two exceptions above:
+
+| Pair | The two voices | Owner |
+| --- | --- | --- |
+| `0.74rem/700` | `display/meta` 0.1em vs `.mb-badge[data-size="md"]` 0.08em vs `.mb-stamp-final` 0.22em | `globals.css` |
+| `0.66rem/700` | `display/status` 0.1em vs `.mb-day-head` 0.12em | `globals.css` |
+| `0.85rem/700` | base 0.02em vs `.mb-code-chip` 0.18em (the code voice) | `globals.css` |
+| `0.9rem/600` | base 0.02em vs `.mb-btn-lg`'s label, which keeps `display/button`'s 0.06em at the `lg` rung | `globals.css` |
+| `0.95rem/700` | `display/panel-title` 0.05em vs `.mb-score-box` `normal` | numeral rule |
+| `1.875rem/700` | base 0.02em vs `.mb-numeral-digit` `normal` | numeral rule |
+| `0.6rem/700` | `display/badge-label` 0.22em vs `FormLetters`' mark `normal` | mark rule |
+| `0.62rem/600` *(mobile only)* | `.mb-kicker` 0.16em vs `MatchbookBottomBar` 0.08em | measured exception |
+
+Closing the first four means deciding whether a **role** may keep its tracking
+across two sizes (a large button is still a button; a code chip is still a code).
+That is a design-language question with an owner, not a call-site cleanup — do
+not "fix" it by pushing a rung onto a component from outside.
 
 ### 2.2 When to use what
 

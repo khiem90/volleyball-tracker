@@ -42,7 +42,7 @@ export const Panel = ({
             : "mb-panel-head"
         }
       >
-        <h2 className="matchbook-display flex items-center gap-2 text-[0.95rem] font-bold tracking-[0.05em]">
+        <h2 className="matchbook-display flex items-center gap-2 text-[0.95rem] mb-track-title font-bold">
           {icon && <MbIcon id={icon} size={16} className={navy ? "text-mb-gold" : ""} />}
           {title}
         </h2>
@@ -73,10 +73,20 @@ export const Crest = ({ team, size = 26 }: { team: MbTeam; size?: number }) => (
 /** Named crest steps. Numeric sizes stay supported — `md` is the historic default. */
 export type TeamMarkSize = "sm" | "md" | "lg";
 
+/* Each step carries its TRACKING as well as its size, and that is the single
+   highest-count fix in the type sweep. `TeamMark` composes
+   `matchbook-display font-semibold ${nameClass}` — the size arrives from here
+   while the class string is written there, so no call site ever declared the
+   rung and every team name in the app fell through to `.matchbook-display`'s
+   0.02em default. Measured at 1440 that was 358 rendered nodes reading 0.02em
+   at 0.72rem/600 against `.mb-panel-link`'s 0.04em at the same step — the
+   largest single (size, weight) tracking collision on the screen, from one
+   two-line map. `sm` is 0.72rem, whose rung `.mb-panel-link` pins to 0.04em;
+   `md` and `lg` are 0.82/0.9rem, whose rung is the 0.02em base. */
 const TEAM_MARK_STEPS: Record<TeamMarkSize, { crest: number; name: string }> = {
-  sm: { crest: 18, name: "text-[0.72rem]" },
-  md: { crest: 24, name: "text-[0.82rem]" },
-  lg: { crest: 34, name: "text-[0.9rem]" },
+  sm: { crest: 18, name: "text-[0.72rem] mb-track-link" },
+  md: { crest: 24, name: "text-[0.82rem] mb-track-display" },
+  lg: { crest: 34, name: "text-[0.9rem] mb-track-display" },
 };
 
 /**
@@ -99,6 +109,45 @@ const TEAM_MARK_STEPS: Record<TeamMarkSize, { crest: number; name: string }> = {
  * these names sit in `1fr` grid cells that are sized by their longest word.
  */
 const WRAP_NAME = "[overflow-wrap:anywhere]";
+
+/* ---------------------------------------------------------------------------
+   THE MARK'S OWN CEILING (R2)
+
+   `min-w-0` says "I may shrink". It does not say "I may not be wider than my
+   box", and those are different promises — `min-width` sets a FLOOR, and the
+   thing that was breaking pages is a CEILING that nobody had written.
+
+   A `truncate` box's min-content size is its whole string: `white-space:
+   nowrap` is unbreakable and no `overflow` value lowers a block's intrinsic
+   size. So `MbTeamName`'s min-content is the full name, and a mark that is
+   `justify-self: start` / `end` in a grid area is sized `fit-content` =
+   `min(max-content, max(MIN-CONTENT, area))` — which for a long name is
+   min-content, i.e. the whole name, whatever the area says. Measured on
+   `/quick-match` at 320 with a 39-character roster:
+
+     Recent Quick Matches row  grid area 59.6px, TeamMark 280.9px
+                               (min-content 280.9, so fit-content never bit)
+     row                       286px wide, 361px of content
+     document                  documentElement.scrollWidth 378 vs 320
+     bottom nav                stretched to 378: 0px of the 57px bar visible,
+                               all five cells failing `elementFromPoint`
+
+   `max-w-full` is the ceiling. Percentages resolve against the containing
+   block, which is the grid area or the flex line the mark was handed, so the
+   used width is clamped to the box even when the intrinsic floor is not — and
+   the elision inside then has a reason to fire. Measured after, same viewport
+   and roster: 320 vs 320, bar 57px, five of five cells hittable.
+
+   It belongs HERE and not at the call sites, because "a team mark is never
+   wider than the box it is given" is a property of the mark. The three call
+   sites that hit this — `/quick-match`'s results row, `/`'s scoreline, the
+   directory — had each been patched separately and a fourth was one long name
+   away.
+
+   It is inert wherever the mark already fits, which is every width above a
+   phone: `max-width` only ever removes pixels a box was not entitled to.
+   --------------------------------------------------------------------------- */
+const MARK_CEILING = "max-w-full";
 
 export const TeamMark = ({
   team,
@@ -129,12 +178,14 @@ export const TeamMark = ({
   // the narrowing through the expression that tested it.
   const crestSize = typeof size === "number" ? size : TEAM_MARK_STEPS[size].crest;
   const nameClass =
-    typeof size === "number" ? "text-[0.82rem]" : TEAM_MARK_STEPS[size].name;
+    typeof size === "number"
+      ? "text-[0.82rem] mb-track-display"
+      : TEAM_MARK_STEPS[size].name;
 
   if (orientation === "vertical") {
     return (
       <span
-        className={`inline-flex flex-col items-center gap-1.5 min-w-0 ${
+        className={`inline-flex flex-col items-center gap-1.5 min-w-0 ${MARK_CEILING} ${
           reverse ? "flex-col-reverse" : ""
         } ${className}`}
       >
@@ -165,7 +216,7 @@ export const TeamMark = ({
 
   return (
     <span
-      className={`inline-flex items-center gap-2 min-w-0 ${
+      className={`inline-flex items-center gap-2 min-w-0 ${MARK_CEILING} ${
         reverse ? "flex-row-reverse" : ""
       } ${className}`}
     >
@@ -240,8 +291,17 @@ export const TeamMark = ({
    are the same 14x14 box and a W→L swap moves nothing.
    --------------------------------------------------------------------------- */
 
+/* `display/badge-label`'s SIZE (0.6rem — it was 0.58rem, which is not a step)
+   but not its tracking, and that is the numeral rule one level down.
+   `globals.css` declares `letter-spacing: normal` on `.mb-score-box`,
+   `.mb-stepper-value` and `.mb-numeral` because tracking is added after the
+   LAST glyph as well as between glyphs, so a single centred character in a
+   fixed reserve is pushed off its own centre by the whole letter-space. A W in
+   a 14px cell at the badge rung's 0.22em carries 2.11px of trailing air and
+   sits 1.05px left of centre — 7% of the mark, five times across a form run.
+   This is a MARK, not a word, and the ladder tracks words. */
 const FORM_CELL =
-  "matchbook-display inline-flex h-[14px] w-[14px] items-center justify-center rounded-[2px] border text-[0.58rem] font-bold";
+  "matchbook-display inline-flex h-[14px] w-[14px] items-center justify-center rounded-[2px] border text-[0.6rem] tracking-normal font-bold";
 
 const FORM_STYLE: Record<MbFormResult, CSSProperties> = {
   W: {
@@ -258,8 +318,8 @@ const FORM_STYLE: Record<MbFormResult, CSSProperties> = {
 
 const FORM_WORD: Record<MbFormResult, string> = { W: "won", L: "lost" };
 
-/** 14px cells, 2px apart: the width a run of `slots` results occupies. */
-const formRunWidth = (slots: number) => slots * 14 + (slots - 1) * 2;
+/** 14px cells, `gap-[3px]` apart: the width a run of `slots` results occupies. */
+const formRunWidth = (slots: number) => slots * 14 + (slots - 1) * 3;
 
 export const FormLetters = ({
   form,
@@ -286,9 +346,9 @@ export const FormLetters = ({
         ? "No matches played yet"
         : `Recent form, oldest first: ${form.map((r) => FORM_WORD[r]).join(", ")}.`}
     </span>
-    <span aria-hidden="true" className="inline-flex items-center gap-[2px]">
+    <span aria-hidden="true" className="inline-flex items-center gap-[3px]">
       {form.length === 0 ? (
-        <span className="text-[0.7rem] text-mb-ink-muted">—</span>
+        <span className="text-[0.72rem] text-mb-ink-muted">—</span>
       ) : (
         form.map((r, i) => (
           <span key={i} className={FORM_CELL} style={FORM_STYLE[r]}>
@@ -530,7 +590,7 @@ export const MbStateBlock = ({
           from here. */}
       {headline && (
         <p
-          className={`matchbook-display text-balance font-bold leading-tight tracking-[0.02em] ${step.display}`}
+          className={`matchbook-display text-balance mb-track-display font-bold leading-tight ${step.display}`}
         >
           {headline}
         </p>

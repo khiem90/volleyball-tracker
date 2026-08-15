@@ -81,7 +81,7 @@ export const OnCourtPanel = memo(
                     row={player.isBackRow ? "back" : "front"}
                   />
                   <span className="min-w-0">
-                    <span className="matchbook-display block truncate text-[0.82rem] font-bold tracking-[0.03em]">
+                    <span className="matchbook-display block truncate text-[0.82rem] mb-track-display font-bold">
                       {info?.fullName ?? player.label}
                     </span>
                     <span className="block text-[0.66rem] text-mb-ink-muted">

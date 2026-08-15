@@ -303,7 +303,7 @@ export const TeamsStep = ({
           tone="navy"
           icon="teams"
           meta={
-            <span className="matchbook-display text-[0.66rem] font-bold tracking-[0.16em] text-mb-paper-bright">
+            <span className="matchbook-display text-[0.66rem] mb-track-status font-bold text-mb-paper-bright">
               {formatLabel}
             </span>
           }

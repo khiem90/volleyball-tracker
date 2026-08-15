@@ -71,7 +71,7 @@ const ScoreCell = ({
   align: MbScoreNumeralAlign;
   lead: Lead;
 }) => (
-  <span className={`flex flex-col gap-[5px] ${CELL_ALIGN[align]}`}>
+  <span className={`flex flex-col gap-1 ${CELL_ALIGN[align]}`}>
     <span
       aria-hidden="true"
       className={`mb-score-rule mb-numeral--${size}`}
@@ -217,7 +217,7 @@ export const MbScoreboardHero = ({
     : `${statusWord}. ${home.name} versus ${away.name}.${seriesSentence}`;
 
   const versus = (
-    <span className="matchbook-display px-1 text-[0.74rem] font-bold tracking-[0.1em] text-mb-ink-muted">
+    <span className="matchbook-display px-1 text-[0.74rem] mb-track-status font-bold text-mb-ink-muted">
       vs
     </span>
   );

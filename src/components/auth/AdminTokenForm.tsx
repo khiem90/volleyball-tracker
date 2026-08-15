@@ -45,7 +45,6 @@ export const AdminTokenForm = ({
         autoComplete="off"
         autoCapitalize="off"
         spellCheck={false}
-        className="tracking-[0.06em]"
       />
     </MbField>
 

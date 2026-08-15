@@ -44,7 +44,7 @@ const SheetFrame = ({
     >
       <header className="mb-dialog-head">
         {/* Wraps, never clips — same contract as `MbDialog`'s title (HF-14). */}
-        <DialogPrimitive.Title className="matchbook-display min-w-0 break-words text-[0.95rem] font-bold tracking-[0.05em]">
+        <DialogPrimitive.Title className="matchbook-display min-w-0 break-words text-[0.95rem] mb-track-title font-bold">
           {title}
         </DialogPrimitive.Title>
         {/* `self-start` keeps the controls in the corner once the title wraps. */}

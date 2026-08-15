@@ -275,7 +275,7 @@ const caption = (canEdit: boolean, viewOnly: boolean, won: boolean, lost: boolea
  * unlayered and would win against any utility anyway.
  */
 const LABEL =
-  "matchbook-display text-[0.74rem] font-bold uppercase leading-none tracking-[0.1em] sm:text-[0.66rem]";
+  "matchbook-display text-[0.74rem] mb-track-status font-bold uppercase leading-none sm:text-[0.66rem]";
 
 /** The same label on paper ink, for the inverted head. */
 const LABEL_MUTED = `${LABEL} text-mb-ink-muted`;
@@ -452,7 +452,7 @@ export const MbScoreSide = ({
                 because nothing else shares their row. */}
             <span
               title={team.name}
-              className={`matchbook-display line-clamp-2 text-2xl leading-[1.05] [overflow-wrap:anywhere] [@media(max-height:520px)]:line-clamp-1 [@media(max-height:520px)]:text-[1.2rem] ${
+              className={`matchbook-display line-clamp-2 text-2xl mb-track-display leading-[1.05] [overflow-wrap:anywhere] [@media(max-height:520px)]:line-clamp-1 [@media(max-height:520px)]:text-[1.2rem] ${
                 lost ? "font-semibold" : "font-bold"
               }`}
             >
@@ -565,7 +565,7 @@ export const MbScoreSide = ({
           {games !== null && (
             <span className="flex shrink-0 items-baseline gap-2">
               <span className={LABEL_MUTED}>Games</span>
-              <span className="matchbook-display text-[1.2rem] font-bold leading-tight tabular-nums">
+              <span className="matchbook-display text-[1.2rem] mb-track-display font-bold leading-tight tabular-nums">
                 {games}
               </span>
             </span>

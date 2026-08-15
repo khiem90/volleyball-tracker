@@ -148,12 +148,12 @@ const CellSide = ({
          (F15). `MbTeamName` keeps the last token. */
       <MbTeamName
         name={team.name}
-        className={`matchbook-display min-w-0 flex-1 text-[0.72rem] ${
+        className={`matchbook-display min-w-0 flex-1 text-[0.72rem] mb-track-link ${
           won ? "font-bold" : "font-semibold text-mb-ink-muted"
         }`}
       />
     ) : (
-      <span className="matchbook-display min-w-0 flex-1 truncate text-[0.72rem] font-semibold text-mb-ink-muted">
+      <span className="matchbook-display min-w-0 flex-1 truncate text-[0.72rem] mb-track-link font-semibold text-mb-ink-muted">
         {placeholder === "—" ? (
           <>
             <span aria-hidden="true">—</span>
@@ -166,7 +166,7 @@ const CellSide = ({
     )}
     {showScore && (
       <span
-        className={`matchbook-display shrink-0 text-[0.78rem] tabular-nums ${
+        className={`matchbook-display shrink-0 text-[0.78rem] mb-track-display tabular-nums ${
           won ? "font-bold" : "font-semibold text-mb-ink-muted"
         }`}
       >
@@ -418,11 +418,11 @@ export const MbBracketChampionBlock = ({
       >
         {champion.caption ?? "Champion"}
       </p>
-      <p className="matchbook-display flex min-w-0 text-[1.5rem] font-bold leading-tight tracking-[0.02em]">
+      <p className="matchbook-display flex min-w-0 text-[1.5rem] mb-track-display font-bold leading-tight">
         <MbTeamName name={champion.team.name} />
       </p>
       {champion.score && (
-        <p className="matchbook-display text-[0.78rem] font-semibold tabular-nums tracking-[0.08em]">
+        <p className="matchbook-display text-[0.78rem] mb-track-display font-semibold tabular-nums">
           {champion.score}
         </p>
       )}

@@ -134,7 +134,7 @@ export const TeamForm = ({ open, onOpenChange, team, onSubmit }: TeamFormProps) 
             labels at 9.92px muted under a 13.6px navy "Team name", so the sheet
             read as one field plus two captions. */}
         <div className="flex flex-col gap-2.5">
-          <span className={MB_FIELD_LABEL.className} style={MB_FIELD_LABEL.style}>
+          <span className={MB_FIELD_LABEL.className}>
             Team colour
           </span>
           {/* The picker speaks CSS; the hook stores an id. `colorCss` is the
@@ -168,7 +168,7 @@ export const TeamForm = ({ open, onOpenChange, team, onSubmit }: TeamFormProps) 
                generated id — a 7-in-8 chance that this preview was of a crest
                nobody was going to get. */}
         <div className="flex flex-col gap-2 border-t border-mb-rule pt-4">
-          <span className={MB_FIELD_LABEL.className} style={MB_FIELD_LABEL.style}>
+          <span className={MB_FIELD_LABEL.className}>
             Preview
           </span>
           <div className="flex min-h-[44px] items-center gap-3">

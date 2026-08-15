@@ -230,7 +230,7 @@ export const MbStandingsTable = ({
             <tr key={line.teamId} className="mb-row-hover">
               <th
                 scope="row"
-                className="matchbook-display pl-3! text-center text-[0.78rem] font-bold tabular-nums"
+                className="matchbook-display pl-3! text-center text-[0.78rem] mb-track-display font-bold tabular-nums"
                 style={rail ? { boxShadow: `inset 3px 0 0 ${rail}` } : undefined}
               >
                 {/* A joint rank is marked with the printed-table "=" rather
@@ -265,7 +265,7 @@ export const MbStandingsTable = ({
                           right-aligned box keeps the column's width constant
                           whatever the run length — the property the padded
                           square strip was providing. */}
-                      <span className="inline-flex w-[78px] justify-end">
+                      <span className="inline-flex w-[82px] justify-end">
                         <FormLetters form={line.form} />
                       </span>
                     </td>
@@ -322,7 +322,7 @@ export const MbStandingsLegend = ({
 export const MbStandingsLeaderMark = ({ team }: { team: MbTeam }) => (
   <span className="inline-flex items-center gap-2">
     <Crest team={team} size={20} />
-    <span className="matchbook-display truncate text-[0.82rem] font-bold">
+    <span className="matchbook-display truncate text-[0.82rem] mb-track-display font-bold">
       {team.name}
     </span>
   </span>

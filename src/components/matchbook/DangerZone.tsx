@@ -162,7 +162,7 @@ export const MbDangerZone = ({
         <MbIcon id="warning" size={12} className="shrink-0" />
         Danger zone
       </p>
-      <h3 className="matchbook-display mt-1.5 text-[0.9rem] font-bold tracking-[0.05em]">
+      <h3 className="matchbook-display mt-1.5 text-[0.9rem] mb-track-display font-bold">
         {title}
       </h3>
       <p className="mt-1 text-[0.8rem] text-mb-ink-muted">{description}</p>

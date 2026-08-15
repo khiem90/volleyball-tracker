@@ -171,7 +171,7 @@ const FormationCard = ({
           </span>
         </span>
 
-        <span className="matchbook-display w-full text-[0.95rem] font-bold leading-tight tracking-[0.05em] break-words">
+        <span className="matchbook-display w-full text-[0.95rem] mb-track-title font-bold leading-tight break-words">
           {choice.name}
         </span>
 

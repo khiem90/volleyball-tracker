@@ -119,17 +119,17 @@ const MastheadBadge = ({ badge }: { badge: MbMastheadBadge }) => (
       badge.lines.map((line) => (
         <span
           key={line}
-          className="matchbook-display text-[0.66rem] font-bold leading-tight tracking-[0.1em] text-mb-navy"
+          className="matchbook-display text-[0.66rem] mb-track-status font-bold leading-tight text-mb-navy"
         >
           {line}
         </span>
       ))
     ) : (
       <>
-        <span className="matchbook-display text-2xl font-bold leading-none text-mb-coral tabular-nums">
+        <span className="matchbook-display text-2xl mb-track-display font-bold leading-none text-mb-coral tabular-nums">
           {badge.value}
         </span>
-        <span className="matchbook-display text-[0.6rem] font-bold tracking-[0.22em] text-mb-navy">
+        <span className="matchbook-display text-[0.6rem] mb-track-badge font-bold text-mb-navy">
           {badge.label}
         </span>
       </>
@@ -195,7 +195,7 @@ export const MatchbookMasthead = ({
       <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2">
         {/* `break-words`, never `truncate`: a clipped event name is the one
             string on the screen the reader cannot reconstruct (register D-20). */}
-        <h1 className="matchbook-display min-w-0 break-words text-4xl font-bold leading-none tracking-[0.01em] sm:text-5xl">
+        <h1 className="matchbook-display min-w-0 break-words text-4xl mb-track-masthead font-bold leading-none sm:text-5xl">
           {title}
         </h1>
 
@@ -206,7 +206,7 @@ export const MatchbookMasthead = ({
           <div className="hidden min-w-0 sm:block">
             {dateLine && (
               <p
-                className="matchbook-display text-[0.74rem] font-bold tracking-[0.1em] tabular-nums"
+                className="matchbook-display text-[0.74rem] mb-track-status font-bold tabular-nums"
                 suppressHydrationWarning
               >
                 {dateLine}

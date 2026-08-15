@@ -154,11 +154,11 @@ export const ChampionPanel = ({ data }: { data: MbCompetitionDetail }) => {
               {/* Just "Winner". The competition name is the `<h1>` two rows up,
                   and repeating it wrapped this eyebrow onto two lines at 390. */}
               <p className="mb-kicker">Winner</p>
-              <p className="matchbook-display mt-1 truncate text-[1.5rem] font-bold leading-none">
+              <p className="matchbook-display mt-1 truncate text-[1.5rem] mb-track-display font-bold leading-none">
                 {data.winner.name}
               </p>
               {record && (
-                <p className="matchbook-display mt-1.5 text-[0.74rem] font-bold tracking-[0.1em] tabular-nums">
+                <p className="matchbook-display mt-1.5 text-[0.74rem] mb-track-status font-bold tabular-nums">
                   {record}
                   {data.champion?.score ? ` · ${data.champion.score}` : ""}
                 </p>
@@ -367,7 +367,7 @@ export const SchedulePanel = ({
                   onClick={() => setPage((p) => p + 1)}
                   className={PANEL_FOOT_BTN}
                 >
-                  <span className="matchbook-display text-[0.72rem] font-semibold tabular-nums">
+                  <span className="matchbook-display text-[0.72rem] mb-track-link font-semibold tabular-nums">
                     Show {Math.min(remaining, SCHEDULE_PAGE)} more
                   </span>
                   <MbIcon id="chevron-down" size={12} />
@@ -379,7 +379,7 @@ export const SchedulePanel = ({
                   onClick={() => setExpanded((open) => !open)}
                   className={PANEL_FOOT_BTN}
                 >
-                  <span className="matchbook-display text-[0.72rem] font-semibold tabular-nums">
+                  <span className="matchbook-display text-[0.72rem] mb-track-link font-semibold tabular-nums">
                     {expanded
                       ? `Hide ${finished.length} completed ${pluralise("round", finished.length)}`
                       : `Show ${finished.length} completed ${pluralise("round", finished.length)}`}
@@ -536,7 +536,7 @@ export const ResultsPanel = ({
               onClick={() => setPage((p) => p + 1)}
               className={PANEL_FOOT_BTN}
             >
-              <span className="matchbook-display text-[0.72rem] font-semibold tabular-nums">
+              <span className="matchbook-display text-[0.72rem] mb-track-link font-semibold tabular-nums">
                 Show {Math.min(remaining, RESULTS_PAGE)} more
               </span>
               <MbIcon id="chevron-down" size={12} />
@@ -682,7 +682,7 @@ export const QueuePanel = ({
                 : undefined
             }
           >
-            <span className="matchbook-display text-[0.78rem] font-bold tabular-nums">
+            <span className="matchbook-display text-[0.78rem] mb-track-display font-bold tabular-nums">
               {line.position}
             </span>
             <TeamMark team={line.team} size="sm" />
@@ -755,7 +755,7 @@ export const LeaderboardPanel = ({
               <tr key={line.teamId} className="mb-row-hover">
                 <th
                   scope="row"
-                  className="matchbook-display pl-3! text-center text-[0.78rem] font-bold tabular-nums"
+                  className="matchbook-display pl-3! text-center text-[0.78rem] mb-track-display font-bold tabular-nums"
                   style={
                     line.rank === 1
                       ? { boxShadow: "inset 3px 0 0 var(--mb-teal)" }
@@ -943,7 +943,7 @@ export const EntrantsPanel = ({
             {/* 0.8rem/700 is the screen's one rank-numeral step — the standings
                 rank cell, the queue position and the leaderboard rank all set
                 it. 0.75rem was a 28th step on a named scale of 23. */}
-            <span className="matchbook-display w-6 shrink-0 text-[0.78rem] font-bold tabular-nums text-mb-ink-muted">
+            <span className="matchbook-display w-6 shrink-0 text-[0.78rem] mb-track-display font-bold tabular-nums text-mb-ink-muted">
               {i + 1}
             </span>
             <span className="min-w-0 flex-1 py-1.5">
@@ -969,7 +969,7 @@ export const EntrantsPanel = ({
           className={PANEL_FOOT_BTN}
         >
           <MbIcon id="plus" size={13} />
-          <span className="matchbook-display text-[0.72rem] font-semibold">Add a team</span>
+          <span className="matchbook-display text-[0.72rem] mb-track-link font-semibold">Add a team</span>
         </button>
       </div>
     )}
@@ -1019,7 +1019,7 @@ export const SetupPanel = ({
          declared here — `display/status`, 0.66rem/700 at 0.1em, the step the
          panel heads already use for a right-aligned count. */
       <span
-        className="matchbook-display shrink-0 text-[0.66rem] font-bold tracking-[0.1em] tabular-nums"
+        className="matchbook-display shrink-0 text-[0.66rem] mb-track-status font-bold tabular-nums"
         suppressHydrationWarning
       >
         Created {createdDate}

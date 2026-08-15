@@ -10,6 +10,7 @@ import { MbPageLoading } from "@/components/matchbook/Loading";
 import { MbIcon } from "@/components/matchbook/MbIcon";
 import { MbMenu } from "@/components/matchbook/Menu";
 import { MbSelect, MbTextInput } from "@/components/matchbook/form";
+import { MbMatchupPair } from "@/components/matchbook/MatchRow";
 import { Crest, Panel, PanelEmpty, TeamMark } from "@/components/matchbook/Panel";
 import { MbLedgerPanel, MbPanelHeadLink } from "@/components/matchbook/panels";
 import {
@@ -90,7 +91,7 @@ const SummaryStat = ({
       {/* 1.2rem, not 1.15rem: `display/stat-sm` is the named step and §2.1
           points it at `SummaryStat` values by name. 1.15rem was a 0.05rem drift
           off it, and it shipped four times on this screen. */}
-      <p className="matchbook-display text-[1.2rem] font-bold leading-tight tabular-nums">
+      <p className="matchbook-display text-[1.2rem] mb-track-display font-bold leading-tight tabular-nums">
         {value}
       </p>
     </div>
@@ -276,7 +277,7 @@ export default function HistoryPage() {
                           masthead dateline already prints on this screen. The
                           day band is the same object one level down, so it
                           joins that step instead of opening an 11.2px one. */}
-                      <p className="matchbook-display text-[0.74rem] font-bold tracking-[0.1em] tabular-nums">
+                      <p className="matchbook-display text-[0.74rem] mb-track-status font-bold tabular-nums">
                         {day.label}
                       </p>
                       <p className="mb-kicker tabular-nums">
@@ -293,7 +294,21 @@ export default function HistoryPage() {
                         type="button"
                         onClick={() => data.selectMatch(entry.id)}
                         aria-pressed={entry.id === data.selectedId}
-                        className="mb-btn-touch mb-row-hover grid w-full cursor-pointer grid-cols-[52px_1fr_auto_1fr_auto] items-center gap-2 border-b border-mb-rule px-4 py-2 text-left"
+                        /* `minmax(0,1fr)` for the matchup, and the matchup is
+                           ONE cell now rather than three.
+
+                           It was `[52px_1fr_auto_1fr_auto]` with
+                           `justify-self-start` / `-end` on the two marks, and a
+                           grid item with a `justify-self` other than `stretch`
+                           is sized by its MAX-CONTENT — so with a real club
+                           roster neither name ever truncated and both painted
+                           straight through the score. Measured at 390 on the
+                           first row: "Rovers" at x 176.7→223.7 over "25" at
+                           197.3→212.6, 15.3px of overlap, six overlapping
+                           pairs in that row alone; 128 across the ledger at
+                           390, 262 at 320, worst 64.6px, nothing clipping any
+                           of it. `MbMatchupPair` carries the note. */
+                        className="mb-btn-touch mb-row-hover grid w-full cursor-pointer grid-cols-[52px_minmax(0,1fr)_auto] items-center gap-2 border-b border-mb-rule px-4 py-2 text-left"
                         style={
                           entry.id === data.selectedId
                             ? { boxShadow: "inset 3px 0 0 var(--mb-coral)" }
@@ -305,15 +320,27 @@ export default function HistoryPage() {
                         <span className="text-[0.66rem] tabular-nums text-mb-ink-muted">
                           {entry.time}
                         </span>
-                        <TeamMark team={entry.home} size={18} className="justify-self-start" />
-                        <span className="matchbook-display whitespace-nowrap text-[0.9rem] font-bold tabular-nums">
-                          {entry.homeScore} – {entry.awayScore}
-                        </span>
-                        <TeamMark
-                          team={entry.away}
-                          size={18}
-                          reverse
-                          className="justify-self-end"
+                        {/* `md`: the ledger row's names are `display/team-mark`
+                            (0.82rem), the step this row has always set. The
+                            pair keeps the mirrored `Home 25 – 20 Away` line
+                            wherever it has 376px — which is every width from
+                            768 up, and 1440 gives it 407 — and drops to one
+                            line per team below that, where the same line was
+                            painting the score through both names. */}
+                        <MbMatchupPair
+                          home={entry.home}
+                          away={entry.away}
+                          homeScore={entry.homeScore}
+                          awayScore={entry.awayScore}
+                          homeWon={entry.homeWon}
+                          awayWon={!entry.homeWon}
+                          /* The model's `homeWon` is binary and its `winner`
+                             is `homeWon ? home : away`, so a drawn match would
+                             mute the home side as the loser. `decided` is off
+                             when the figures are level: nothing is emphasised
+                             rather than the wrong thing being emphasised. */
+                          decided={entry.homeScore !== entry.awayScore}
+                          size="md"
                         />
                         {/* `w-24` was under-provisioned at desktop: the D4
                             truncation census measured 16px lost on "Friday
@@ -345,31 +372,51 @@ export default function HistoryPage() {
               <PanelEmpty message="No match report exists yet — pick a result from the ledger to see its report." />
             ) : (
               <div className="flex flex-1 flex-col gap-4 p-5 sm:flex-row sm:items-center">
-                <div className="flex flex-1 items-center justify-center gap-4">
-                  <div className="flex flex-col items-center gap-1.5">
-                    <Crest team={report.entry.home} size={56} />
-                    <span className="matchbook-display text-[0.85rem] font-bold">
-                      {report.entry.home.name}
-                    </span>
+                {/* `TeamMark`, not a raw crest over a raw span. The span had no
+                    wrap control and no `min-w-0`, so its min-content floor was
+                    the longest word in the name and the block overflowed the
+                    page: measured at 320 on the fixture roster, the home block
+                    laid out from x −0.8 and the away block to 320.8, taking
+                    `documentElement.scrollWidth` to 321 against a 320 client
+                    width — invariant 31, and with `html { overflow-x: hidden }`
+                    it is the bottom nav pushed off a viewport that cannot
+                    scroll to reach it. `wrap` is the right answer HERE rather
+                    than an ellipsis: this panel is about the identity of two
+                    teams, so a second line beats losing characters (the same
+                    call `MbScoreboardHero` makes). It also puts the name on
+                    `display/team-mark`, 0.82rem, which is the named step the
+                    0.85rem was a drift off. */}
+                <div className="flex min-w-0 flex-1 items-center justify-center gap-4">
+                  <div className="flex min-w-0 flex-1 flex-col items-center gap-1.5">
+                    <TeamMark
+                      team={report.entry.home}
+                      size={56}
+                      orientation="vertical"
+                      wrap
+                      className="w-full"
+                    />
                     <span className="mb-kicker tabular-nums">({report.homeRecord})</span>
                   </div>
-                  <div className="text-center">
+                  <div className="shrink-0 text-center">
                     {/* The tracking is declared, not inherited. `text-5xl`
                         (48px) at 700 is also the masthead's `sm:` size, and the
                         masthead declares 0.01em; this numeral was falling
                         through to `.matchbook-display`'s 0.02em, so one
                         size/weight pair carried two trackings (0.48px and
                         0.96px) on this screen — rubric 1.3's exact failure. */}
-                    <p className="matchbook-display whitespace-nowrap text-5xl font-bold tracking-[0.01em] tabular-nums">
+                    <p className="matchbook-display whitespace-nowrap text-5xl mb-track-masthead font-bold tabular-nums">
                       {report.entry.homeScore} – {report.entry.awayScore}
                     </p>
                     <p className="mb-kicker mt-1">Final</p>
                   </div>
-                  <div className="flex flex-col items-center gap-1.5">
-                    <Crest team={report.entry.away} size={56} />
-                    <span className="matchbook-display text-[0.85rem] font-bold">
-                      {report.entry.away.name}
-                    </span>
+                  <div className="flex min-w-0 flex-1 flex-col items-center gap-1.5">
+                    <TeamMark
+                      team={report.entry.away}
+                      size={56}
+                      orientation="vertical"
+                      wrap
+                      className="w-full"
+                    />
                     <span className="mb-kicker tabular-nums">({report.awayRecord})</span>
                   </div>
                 </div>
@@ -457,7 +504,7 @@ export default function HistoryPage() {
                         left on `.matchbook-display`'s 0.02em put two trackings
                         on one size/weight pair — a collision that only exists
                         below `lg`, which is why it survived a desktop read. */}
-                    <span className="matchbook-display text-[0.8rem] font-bold tracking-[0.06em] tabular-nums text-mb-ink-muted">
+                    <span className="matchbook-display text-[0.8rem] mb-track-button font-bold tabular-nums text-mb-ink-muted">
                       {i + 1}
                     </span>
                     <span className="flex items-center gap-1">
@@ -465,14 +512,14 @@ export default function HistoryPage() {
                       <Crest team={m.b} size={20} />
                     </span>
                     <span className="min-w-0">
-                      <span className="matchbook-display block truncate text-[0.78rem] font-bold">
+                      <span className="matchbook-display block truncate text-[0.78rem] mb-track-display font-bold">
                         {m.a.name} vs {m.b.name}
                       </span>
                       <span className="block text-[0.66rem] tabular-nums text-mb-ink-muted">
                         {m.leader}
                       </span>
                     </span>
-                    <span className="matchbook-display text-[0.9rem] font-bold tabular-nums">
+                    <span className="matchbook-display text-[0.9rem] mb-track-display font-bold tabular-nums">
                       {m.pct}
                     </span>
                   </div>
@@ -506,7 +553,7 @@ export default function HistoryPage() {
                         under the 3:1 floor a UI graphic needs. Navy. */}
                     <MbIcon id="compete" size={16} className="text-mb-navy" />
                     <span className="min-w-0">
-                      <span className="matchbook-display block truncate text-[0.78rem] font-bold">
+                      <span className="matchbook-display block truncate text-[0.78rem] mb-track-display font-bold">
                         {c.name}
                       </span>
                       <span className="block text-[0.66rem] tabular-nums text-mb-ink-muted">
@@ -542,7 +589,7 @@ export default function HistoryPage() {
                   >
                     <MbIcon id="clipboard" size={15} className="text-mb-navy" />
                     <span className="min-w-0">
-                      <span className="matchbook-display block truncate text-[0.78rem] font-bold">
+                      <span className="matchbook-display block truncate text-[0.78rem] mb-track-display font-bold">
                         {s.name}
                       </span>
                       <span className="block text-[0.66rem] tabular-nums text-mb-ink-muted">

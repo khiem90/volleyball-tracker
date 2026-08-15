@@ -73,15 +73,18 @@ export const MatchbookSidebar = ({
           height={72}
           priority
         />
-        {/* "Tracker" is `--mb-coral-deep`, not `--mb-coral`. Measured on
-            `--mb-paper` the bright coral is 3.26:1 at 16.8px/700, and the floor
-            below 18.66px is 4.5:1 — a live HF-6 that shipped on all six routes.
-            The ink twin measures 4.62:1 and `globals.css` declares it for
-            exactly this ("at label size it reads as the same colour"), so the
-            two-tone lockup survives the fix. Coral job 3 covers the masthead
-            `<h1>` word at >=36px, where the 3:1 large-text floor applies; a
-            16.8px wordmark is not that word. */}
-        <span className="matchbook-display text-center leading-[1.05] text-[1.05rem] font-bold">
+        {/* `display/stat-sm`. The lockup was `text-[1.05rem]` — 16.8px, dead
+            between steps 0.95 and 1.2 — and it was one of THREE sizes the same
+            two-word wordmark was drawn at (1.15rem on /login, 1.05rem here and
+            in `global-error`). One mark, one step; 1.2rem is the nearest, and
+            "Tournament" still fits the 170px the 218px rail leaves it.
+
+            "Tracker" stays `--mb-coral-deep`, not `--mb-coral`. At 16.8px/700
+            the bright coral measured 3.26:1 on `--mb-paper` against a 4.5:1
+            floor; 19.2px/700 now clears WCAG's 18.66px large-text threshold, so
+            3:1 would suffice — but §1.3 makes the ink twin the rule rather than
+            a size check, and at label size it reads as the same colour. */}
+        <span className="matchbook-display text-center leading-[1.05] text-[1.2rem] mb-track-display font-bold">
           <span className="block text-mb-navy">Tournament</span>
           <span className="block text-mb-coral-deep">Tracker</span>
         </span>

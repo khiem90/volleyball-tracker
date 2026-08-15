@@ -126,7 +126,7 @@ const SIZE: Record<MbButtonSize, SizeSpec> = {
   sm: {
     padding: "0.75rem",
     shell: "",
-    label: "text-[0.72rem] tracking-[0.04em]",
+    label: "text-[0.72rem] mb-track-link",
     glyph: 12,
   },
   md: { padding: "1.1rem", shell: "", label: "", glyph: 14 },

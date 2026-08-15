@@ -59,7 +59,7 @@ const Section = ({
           {/* 0.06em: the shell's mobile top-strip title is the other
               0.8rem/700 on this screen and it is tracked 0.06em. Two trackings
               on one size/weight pair is a collision (rubric 1.3). */}
-          <span className="matchbook-display text-[0.8rem] font-bold tracking-[0.06em]">
+          <span className="matchbook-display text-[0.8rem] mb-track-button font-bold">
             {title}
           </span>
           <MbIcon
@@ -137,7 +137,7 @@ export const DiagramGuide = memo(() => (
                 className="mt-[1px]"
               />
               <span className="min-w-0">
-                <span className="matchbook-display block text-[0.78rem] font-bold tracking-[0.04em] text-mb-navy">
+                <span className="matchbook-display block text-[0.78rem] mb-track-display font-bold text-mb-navy">
                   {info.fullName}
                 </span>
                 <span className="block">{info.description}</span>

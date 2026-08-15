@@ -162,14 +162,14 @@ const BracketBox = ({ cell }: { cell: MbBracketCell }) => {
               this screen. */}
           <MbTeamName
             name={team.name}
-            className={`matchbook-display min-w-0 flex-1 text-[0.72rem] tracking-[0.04em] ${won ? "font-bold" : "font-semibold text-mb-ink-muted"}`}
+            className={`matchbook-display min-w-0 flex-1 text-[0.72rem] mb-track-link ${won ? "font-bold" : "font-semibold text-mb-ink-muted"}`}
           />
         </>
       ) : (
         /* Two words for two states, matching `BracketRail`'s cell and
            `MbMatchRow` exactly: "TBD" is a slot awaiting a winner, "—" is a
            side that does not exist because the other team had a bye (F12). */
-        <span className="matchbook-display flex-1 text-[0.72rem] tracking-[0.04em] text-mb-ink-muted">
+        <span className="matchbook-display flex-1 text-[0.72rem] mb-track-link text-mb-ink-muted">
           {cell.bye ? (
             <>
               <span aria-hidden="true">—</span>
@@ -188,7 +188,7 @@ const BracketBox = ({ cell }: { cell: MbBracketCell }) => {
            prints beside it — so the cell's score outranks its 0.72rem name.
            0.75rem (12px) was between steps. */
         <span
-          className={`matchbook-display text-[0.82rem] tabular-nums ${won ? "font-bold" : "font-semibold text-mb-ink-muted"}`}
+          className={`matchbook-display text-[0.82rem] mb-track-display tabular-nums ${won ? "font-bold" : "font-semibold text-mb-ink-muted"}`}
         >
           {score}
         </span>
@@ -234,14 +234,14 @@ const StatusStat = ({
     </span>
     <div>
       <p className="mb-kicker">{label}</p>
-      <p className="matchbook-display text-[1.2rem] font-bold leading-tight tabular-nums">
+      <p className="matchbook-display text-[1.2rem] mb-track-display font-bold leading-tight tabular-nums">
         {value}
         {/* Inside a `.matchbook-display` paragraph, so this is display type at
             0.72rem/600 — the `display/link` pair. It declares 0.04em rather
             than inheriting 0.02em, because `.mb-panel-link` owns that pair on
             this screen and one pair carries one tracking. */}
         {sub && (
-          <span className="ml-2 text-[0.72rem] font-semibold tracking-[0.04em] text-mb-ink-muted">
+          <span className="ml-2 text-[0.72rem] mb-track-link font-semibold text-mb-ink-muted">
             {sub}
           </span>
         )}
@@ -318,7 +318,7 @@ const EntrantsPreviewPanel = ({ selected }: { selected: MbCompeteSelected }) => 
                 standings rank cell and the setup console's entrant list set.
                 In a draft the number is the SEED — the entry order every
                 bracket generator draws from. */}
-            <span className="matchbook-display w-6 shrink-0 text-[0.78rem] font-bold tabular-nums text-mb-ink-muted">
+            <span className="matchbook-display w-6 shrink-0 text-[0.78rem] mb-track-display font-bold tabular-nums text-mb-ink-muted">
               {i + 1}
             </span>
             <TeamMark team={team} size="md" />
@@ -442,7 +442,7 @@ const EventRow = ({
       aria-pressed={selected}
       className="mb-btn-touch flex min-w-0 flex-col justify-center px-4 py-2 text-left"
     >
-      <span className="matchbook-display truncate text-[0.9rem] font-bold">
+      <span className="matchbook-display truncate text-[0.9rem] mb-track-display font-bold">
         {row.name}
       </span>
       {/* `body/2xs`, and it WRAPS. `truncate` cost this line 12px at 390 —
@@ -610,7 +610,7 @@ const EventConsole = ({
               <Crest team={selected.winner} size={36} />
               <div>
                 <p className="mb-kicker">Champion</p>
-                <p className="matchbook-display text-[1.2rem] font-bold leading-tight">
+                <p className="matchbook-display text-[1.2rem] mb-track-display font-bold leading-tight">
                   {selected.winner.name}
                 </p>
               </div>
@@ -663,14 +663,14 @@ const EventConsole = ({
                    never needed `justify-self` to do it. */
                 className="grid grid-cols-[52px_minmax(0,1fr)_auto_minmax(0,1fr)_auto] items-center gap-2 px-3 py-2.5"
               >
-                <p className="matchbook-display border-r border-mb-rule pr-2 text-[0.72rem] font-bold tracking-[0.04em] tabular-nums">
+                <p className="matchbook-display border-r border-mb-rule pr-2 text-[0.72rem] mb-track-link font-bold tabular-nums">
                   {line.court}
                 </p>
                 <TeamMark team={line.home} />
                 {/* Navy. A live score in coral measured 3.55:1 at
                     15.2px/700 — and it is the one number on the row a
                     reader must not have to work for. */}
-                <span className="matchbook-display whitespace-nowrap text-[0.95rem] font-bold tracking-[0.05em] tabular-nums">
+                <span className="matchbook-display whitespace-nowrap text-[0.95rem] mb-track-title font-bold tabular-nums">
                   {line.homeScore} – {line.awayScore}
                 </span>
                 <TeamMark team={line.away} reverse />
@@ -701,7 +701,7 @@ const EventConsole = ({
               >
                 {/* `display/status` — 0.66rem/700 at 0.1em, the tracking
                     `.mb-badge` already declares for that pair here. */}
-                <p className="matchbook-display text-[0.66rem] font-bold tracking-[0.1em] tabular-nums">
+                <p className="matchbook-display text-[0.66rem] mb-track-status font-bold tabular-nums">
                   {line.label}
                 </p>
                 {/* `basis-0 flex-1` and `MbTeamName` on both sides. As
@@ -715,13 +715,13 @@ const EventConsole = ({
                   <Crest team={line.home} size={18} />
                   <MbTeamName
                     name={line.home.name}
-                    className="matchbook-display basis-0 flex-1 text-[0.72rem] font-semibold tracking-[0.04em]"
+                    className="matchbook-display basis-0 flex-1 text-[0.72rem] mb-track-link font-semibold"
                   />
                   <span className="text-[0.6rem] text-mb-ink-muted">vs</span>
                   <Crest team={line.away} size={18} />
                   <MbTeamName
                     name={line.away.name}
-                    className="matchbook-display basis-0 flex-1 text-[0.72rem] font-semibold tracking-[0.04em]"
+                    className="matchbook-display basis-0 flex-1 text-[0.72rem] mb-track-link font-semibold"
                   />
                 </div>
               </div>
@@ -749,11 +749,11 @@ const EventConsole = ({
               >
                 {/* `display/status`. 0.64rem (10.24px) was between steps
                     and shipped five times on this screen. */}
-                <p className="matchbook-display text-[0.66rem] font-bold tracking-[0.1em] tabular-nums text-mb-ink-muted">
+                <p className="matchbook-display text-[0.66rem] mb-track-status font-bold tabular-nums text-mb-ink-muted">
                   {line.label}
                 </p>
                 <TeamMark team={line.home} size={18} />
-                <span className="matchbook-display whitespace-nowrap text-[0.85rem] font-bold tabular-nums">
+                <span className="matchbook-display whitespace-nowrap text-[0.85rem] mb-track-display font-bold tabular-nums">
                   {line.homeScore} – {line.awayScore}
                 </span>
                 <TeamMark team={line.away} size={18} reverse />

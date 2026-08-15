@@ -109,15 +109,19 @@ const LoginPageContent = () => {
               height={60}
               priority
             />
-            {/* `--mb-coral-deep`. At 1.15rem the wordmark computes to
-                **18.4px**, which is 0.26px SHORT of WCAG's 18.66px bold
-                large-text threshold — so the 4.5:1 floor applies and
-                `--mb-coral` measured 3.26:1 on paper. The ink twin is 4.62:1.
-                Same fix as `Sidebar.tsx:86` and `AppShell.tsx`; a size that
-                lands within a quarter of a pixel of the threshold is exactly
-                why design language §1.3 makes the ink twin the rule rather
-                than "check whether it happens to be big enough". */}
-            <span className="matchbook-display text-[1.15rem] font-bold leading-[1.05]">
+            {/* `display/stat-sm`. It was `text-[1.15rem]`, which is not a step
+                — the same 0.05rem drift off 1.2rem that `SummaryStat` already
+                closed on /summaries, and the third size this one wordmark was
+                drawn at (1.05rem in `Sidebar` and `global-error`, 1.15rem here).
+
+                `--mb-coral-deep` stays whatever the size is. At 1.15rem the
+                wordmark computed to 18.4px, 0.26px short of WCAG's 18.66px
+                bold large-text threshold, so the 4.5:1 floor applied and
+                `--mb-coral` measured 3.26:1 on paper; 1.2rem is 19.2px and
+                clears it, but §1.3 makes the ink twin the rule rather than
+                "check whether it happens to be big enough", and the twin reads
+                as the same colour at label size. */}
+            <span className="matchbook-display text-[1.2rem] mb-track-display font-bold leading-[1.05]">
               <span className="block text-mb-navy">Tournament</span>
               <span className="block text-mb-coral-deep">Tracker</span>
             </span>
@@ -125,7 +129,18 @@ const LoginPageContent = () => {
 
           {/* Masthead */}
           <div className="mb-3 flex items-center gap-3 sm:gap-4">
-            <h1 className="matchbook-display whitespace-nowrap text-[2rem] font-bold leading-none tracking-[0.01em] sm:text-[2.9rem]">
+            {/* `display/masthead` verbatim — the same string `MatchbookMasthead`
+                emits, `text-4xl … sm:text-5xl`. It was `text-[2rem] …
+                sm:text-[2.9rem]`, two sizes that exist nowhere else in the app
+                and sit 0.25rem and 0.1rem below the step they were imitating.
+
+                `whitespace-nowrap` came with them and had to go with them: at
+                the named step "Welcome Back" is 2.25rem at 320px, and a nowrap
+                h1 that cannot fit is exactly how a screen starts pushing
+                `documentElement.scrollWidth` past the viewport. Every other
+                masthead in the app wraps (`min-w-0 break-words`); this one now
+                does too. */}
+            <h1 className="matchbook-display min-w-0 break-words text-4xl mb-track-masthead font-bold leading-none sm:text-5xl">
               {isSignUp ? (
                 <>
                   Join <span className="text-mb-coral">the Club</span>
@@ -143,15 +158,15 @@ const LoginPageContent = () => {
                 Coral job 3 scopes the accent to "the emphasised title word +
                 the 2px badge frame" — the frame, never the caption. */}
             <div className="flex flex-col items-center border-[2px] border-mb-coral px-2.5 py-1 text-mb-navy">
-              <span className="matchbook-display text-[0.8rem] font-bold leading-tight tracking-[0.1em]">
+              <span className="matchbook-display text-[0.8rem] mb-track-button font-bold leading-tight">
                 All
               </span>
-              <span className="matchbook-display text-[0.8rem] font-bold leading-tight tracking-[0.1em]">
+              <span className="matchbook-display text-[0.8rem] mb-track-button font-bold leading-tight">
                 Events
               </span>
             </div>
           </div>
-          <p className="matchbook-display mb-5 text-[0.82rem] font-semibold tracking-[0.14em] text-mb-navy">
+          <p className="matchbook-display mb-5 text-[0.82rem] mb-track-display font-semibold text-mb-navy">
             {isSignUp
               ? "Sign up to save your teams, tournaments, and match history."
               : "Sign in to manage your teams and tournaments."}
@@ -189,11 +204,21 @@ const LoginPageContent = () => {
                 onClick={handleGoogleSignIn}
                 disabled={isSubmitting}
               >
+                {/* `inline-block` is load-bearing. Tailwind preflight sets
+                    `img { display: block }`, and `MbButton` puts every child
+                    inside ONE label span — so a block child stacks ABOVE the
+                    label instead of sitting beside it. Measured at 1440 the
+                    button was 54.78px with the G centred over the words: not a
+                    rung, and not the row this control is supposed to be. The
+                    `icon` prop is the normal route, but it takes a sprite id
+                    and the Google mark is a brand asset that has to keep its
+                    own four colours, so it stays an `<Image>`. */}
                 <Image
                   src="/assets/matchbook/auth/google-g.svg"
                   alt=""
                   width={16}
                   height={16}
+                  className="mr-2 inline-block align-[-3px]"
                 />
                 Continue with Google
               </MbButton>
@@ -248,7 +273,7 @@ const LoginPageContent = () => {
                          text, and at 10.88px/700 `--mb-coral` measured 3.55:1
                          on paper-bright. The twin is 5.03:1. Same substitution
                          `.mb-panel-link:hover` already made in `globals.css`. */
-                      className="matchbook-display -my-[13.85px] inline-flex min-h-[44px] items-center text-[0.68rem] font-bold tracking-[0.1em] text-mb-navy hover:text-mb-coral-deep"
+                      className="matchbook-display -my-[13.85px] inline-flex min-h-[44px] items-center text-[0.66rem] mb-track-status font-bold text-mb-navy hover:text-mb-coral-deep"
                     >
                       Forgot Password?
                     </button>
@@ -262,9 +287,15 @@ const LoginPageContent = () => {
                 disabled={isSubmitting}
                 variant="coral"
                 size="lg"
+                icon="login"
                 fullWidth
               >
-                <MbIcon id="login" size={16} />
+                {/* The glyph goes through `icon`, not through `children`. As a
+                    child it landed inside the label span, where preflight's
+                    `svg { display: block }` stacked it over the words and made
+                    the primary CTA 63.61px instead of the `lg` rung's 56 — and
+                    the prop also hands the glyph its ladder size, which the
+                    hand-written `size={16}` was overriding. */}
                 {isSubmitting
                   ? "Please wait..."
                   : isSignUp
@@ -272,7 +303,7 @@ const LoginPageContent = () => {
                     : "Sign In"}
               </MbButton>
 
-              <p className="matchbook-display text-center text-[0.72rem] font-semibold tracking-[0.1em] text-mb-navy">
+              <p className="matchbook-display text-center text-[0.72rem] mb-track-link font-semibold text-mb-navy">
                 {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
                 <button
                   type="button"
@@ -309,7 +340,14 @@ const LoginPageContent = () => {
       {/* Promo half */}
       <div className="hidden bg-mb-navy px-10 py-12 text-mb-paper-bright lg:flex lg:min-h-screen lg:flex-col lg:items-center lg:justify-center">
         <div className="w-full max-w-[520px]">
-          <h2 className="matchbook-display whitespace-nowrap text-center text-[2.1rem] font-bold leading-tight xl:text-[2.6rem]">
+          {/* One step, not two. It was `text-[2.1rem] xl:text-[2.6rem]`: both
+              off-scale, and the pair cannot be put on the ladder as a pair —
+              1.875rem's rung is 0.02em and 2.25rem's is 0.01em, and one element
+              carries one tracking class. `display/stat-lg` at every width is
+              the step, and it also retires a `whitespace-nowrap` headline whose
+              natural width at 2.6rem exceeded the 432px the promo column
+              actually has at `lg`. */}
+          <h2 className="matchbook-display text-center text-[1.875rem] mb-track-display font-bold leading-tight">
             Your Tournaments, <span className="text-mb-coral">Ready.</span>
           </h2>
           <div className="mx-auto mt-5 mb-8 h-px w-full bg-mb-rule-on-navy" />
@@ -324,7 +362,7 @@ const LoginPageContent = () => {
                   width={86}
                   height={100}
                 />
-                <span className="matchbook-display text-[0.9rem] font-bold tracking-[0.1em]">
+                <span className="matchbook-display text-[0.9rem] mb-track-display font-bold">
                   {crest.name}
                 </span>
               </div>
@@ -339,7 +377,7 @@ const LoginPageContent = () => {
                 className="flex items-center gap-3 border-b border-mb-rule-on-navy py-2.5"
               >
                 <MbIcon id={feature.icon} size={20} className="text-mb-paper-bright" />
-                <span className="matchbook-display text-[0.95rem] font-semibold tracking-[0.1em]">
+                <span className="matchbook-display text-[0.95rem] mb-track-title font-semibold">
                   {feature.label}
                 </span>
               </div>
@@ -352,17 +390,17 @@ const LoginPageContent = () => {
                 measured **3.69:1 at 9.6px/700**, and this is the same pairing
                 `.mb-btn-coral` moved off in P0 (charter D-20). White on the
                 deep fill is 5.23:1. */}
-            <span className="matchbook-display rounded-[2px] bg-mb-coral-deep px-1.5 py-0.5 text-[0.6rem] font-bold tracking-[0.14em] text-white">
+            <span className="matchbook-display rounded-[2px] bg-mb-coral-deep px-1.5 py-0.5 text-[0.6rem] mb-track-badge font-bold text-white">
               Live
             </span>
             <Image src={crestPath("surge")} alt="" width={26} height={30} />
-            <span className="matchbook-display text-[0.85rem] font-bold tracking-[0.08em]">
+            <span className="matchbook-display text-[0.85rem] mb-track-display font-bold">
               Surge
             </span>
-            <span className="matchbook-display text-2xl font-bold tabular-nums">
+            <span className="matchbook-display text-2xl mb-track-display font-bold tabular-nums">
               3 <span className="text-mb-coral">—</span> 1
             </span>
-            <span className="matchbook-display text-[0.85rem] font-bold tracking-[0.08em]">
+            <span className="matchbook-display text-[0.85rem] mb-track-display font-bold">
               Tide
             </span>
             <Image src={crestPath("tide")} alt="" width={26} height={30} />
@@ -377,7 +415,7 @@ const LoginPageContent = () => {
                 `rgba(255,250,241,…)` this line used to carry (G20). It composites
                 to 7.86:1 on navy, so the tag stays visibly secondary beside the
                 opaque paper-bright score without going under the 4.5:1 floor. */}
-            <span className="matchbook-display text-[0.62rem] font-semibold text-mb-ink-on-navy-soft">
+            <span className="matchbook-display text-[0.62rem] mb-track-kicker font-semibold text-mb-ink-on-navy-soft">
               • Final
             </span>
           </div>
@@ -397,7 +435,7 @@ const LoginPageContent = () => {
               3:1 large-text floor applies and 3.62:1 clears it. Keeping coral
               also keeps §1's one-accent promise on a poster that already
               carries the coral h2 word, the coral rules and the coral star. */}
-          <p className="matchbook-display mt-3 text-center text-[1.2rem] font-bold tracking-[0.12em]">
+          <p className="matchbook-display mt-3 text-center text-[1.2rem] mb-track-display font-bold">
             Every Team. Every Match.{" "}
             <span className="text-mb-coral">One Record.</span>
           </p>

@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { MbBadge } from "./Badge";
 import { MbIconButton } from "./IconButton";
 import { TeamMark } from "./Panel";
@@ -80,12 +81,12 @@ export interface MbMatchRowProps {
  */
 const EmptySide = ({ bye = false }: { bye?: boolean }) =>
   bye ? (
-    <span className="matchbook-display text-[0.78rem] font-semibold text-mb-ink-muted">
+    <span className="matchbook-display text-[0.78rem] mb-track-display font-semibold text-mb-ink-muted">
       <span aria-hidden="true">—</span>
       <span className="sr-only">No opponent</span>
     </span>
   ) : (
-    <span className="matchbook-display truncate text-[0.78rem] font-semibold text-mb-ink-muted">
+    <span className="matchbook-display truncate text-[0.78rem] mb-track-display font-semibold text-mb-ink-muted">
       TBD
     </span>
   );
@@ -116,7 +117,7 @@ const MARK_LOST = "[&>span:last-child]:text-mb-ink-muted";
  * argument the score track makes below.
  */
 export const MbSeedBox = ({ value }: { value: number }) => (
-  <span className="mb-seed-box w-[18px] shrink-0 justify-center px-0! py-0! matchbook-display text-[0.62rem] font-bold tracking-[0.06em] tabular-nums text-mb-ink-muted">
+  <span className="mb-seed-box w-[18px] shrink-0 justify-center px-0! py-0! matchbook-display text-[0.62rem] mb-track-nav font-bold tabular-nums text-mb-ink-muted">
     {value}
   </span>
 );
@@ -191,14 +192,14 @@ const Measure = ({
      the raw fields through. */
   if (bye) {
     return (
-      <span className="matchbook-display text-center text-[0.74rem] font-bold uppercase tracking-[0.1em] text-mb-ink-muted">
+      <span className="matchbook-display text-center text-[0.74rem] mb-track-status font-bold uppercase text-mb-ink-muted">
         Bye
       </span>
     );
   }
   if (status === "pending" || homeScore === undefined || awayScore === undefined) {
     return (
-      <span className="matchbook-display text-center text-[0.74rem] font-bold tracking-[0.1em] text-mb-ink-muted">
+      <span className="matchbook-display text-center text-[0.74rem] mb-track-status font-bold text-mb-ink-muted">
         vs
       </span>
     );
@@ -209,7 +210,7 @@ const Measure = ({
   return (
     /* `end` then `start`: both scores hug the divider, so the reserve opens
        outward and the pair reads as a pair at 7–108 as well as at 21–18. */
-    <span className="matchbook-display flex items-center justify-center gap-1 whitespace-nowrap text-[0.9rem] leading-none tabular-nums">
+    <span className="matchbook-display flex items-center justify-center gap-1 whitespace-nowrap text-[0.9rem] mb-track-display leading-none tabular-nums">
       <span className={`flex-1 text-right ${side(homeWon)}`}>
         <Figures value={homeScore} />
       </span>
@@ -379,5 +380,282 @@ export const MbMatchRow = ({
         </span>
       )}
     </div>
+  );
+};
+
+/* ===========================================================================
+   THE MATCHUP PAIR (R4 / R5)
+
+   Two identities and their two figures, as ONE markup that reflows.
+
+   ------------------------------------------------------------------ the bug
+
+   Every shipped pair sized its two name tracks for the eight fixture names —
+   Surge, Tide, Storm, Apex, Flare, Peak, Nova, Riptide, none longer than seven
+   characters. A real club types "Westhill Wanderers", and the same track then
+   fails in one of exactly two ways, both measured on this build with an
+   eight-club roster:
+
+     OVERLAP — `/summaries`, the Results Ledger, whose row was
+       `grid-cols-[52px_1fr_auto_1fr_auto]` with `justify-self-start` / `-end`
+       on the two marks. A grid item with a `justify-self` other than `stretch`
+       is sized by its MAX-CONTENT, so the names never truncated and ran
+       straight through the score: at 390 the first row painted "Rovers" at
+       x 176.7→223.7 over a "25" at 197.3→212.6, a 15.3px overlap, and that one
+       row carried six overlapping pairs. 128 pairs across the ledger at 390;
+       262 at 320, the worst 64.6px. No ancestor clipped any of it.
+
+     STUB — `/`, at 1440, which is not a narrow-screen excuse. Upcoming
+       Schedule, Live Courts and Recent Results each hand a name a ~48px track
+       inside an `xl:col-span-4` panel. `MbTeamName` then elides everything it
+       can and the head paints at 0–7px of a 45–66px word, so "Kingsway Rovers"
+       and "Riverside Rovers" both render as their tail alone — two clubs, one
+       string. 18 of the 36 names on the dashboard were collapsed below half.
+
+   Both are the same defect — a track sized for a world of short names — and
+   both have the same answer: when the line cannot hold two identities, stop
+   trying to put them on one line.
+
+   ------------------------------------------------------------- the mechanism
+
+   `@container` on the pair's own wrapper, exactly as `MbScoreboardHero` picks
+   between its two cuts from the card rather than from the viewport, and for
+   the reason it gives: the same pair is 407px wide in the ledger and 183px in
+   the schedule panel ON THE SAME 1440px SCREEN, so a media query cannot tell
+   them apart. Here it is one markup rather than two, so there is no second
+   copy to keep in sync and nothing is duplicated into the accessibility tree:
+
+     wide    `minmax(0,1fr) auto minmax(0,1fr)`, away side `row-reverse`
+             [crest] Home ....25  –  20.... Away [crest]
+             the mirrored scoreline this app already prints, unchanged.
+
+     narrow  one column, away side back to `row`, centre withdrawn
+             [crest] Home ...................... 25
+             [crest] Away ...................... 20
+             one line per team, both ranged left, both figures in one
+             right-hand column — the shape every phone scoreboard uses, and
+             the one `MbScoreboardHero`'s own narrow cut already uses.
+
+   The threshold is the width at which each name still gets a track a two-word
+   club name survives, measured on this roster at each step:
+
+     sm   name 0.72rem — "Westhill Wanderers" sets in 107.5px; 96px keeps its
+          head at 74% and every shorter roster name whole. Side = 96 + 18 crest
+          + 8 mark gap + 8 figure gap + 22 two-figure reserve = 152.
+          Cut = 2 × 152 + 14 dash + 16 gaps = 336.
+     md   name 0.82rem — the same name sets in 123px; 110px is the same 89%.
+          Side = 110 + 24 + 8 + 8 + 22 = 172. Cut = 2 × 172 + 14 + 16 = 376.
+
+   `gap-y-1.5` (6px) is the row rhythm of the narrow cut, and it is measured
+   rather than picked: the archive ledger is 25 rows tiling continuously under
+   a fixed bottom bar, so one row boundary always lands somewhere in the last
+   row-height before the bar, and at 8px and 4px of gap that boundary fell
+   inside `audit.mjs`'s 8px separation floor at 390 (7.2px) and at 834 (2.8px)
+   respectively. At 6px both viewports clear it, and 6px is also the gap the
+   two lines want — 2px read as one wrapped line rather than two teams.
+
+   Both figures carry a `2ch` floor and `.mb-numeral-digit` cells, so a live
+   score stepping 9 → 10 moves nothing: the reserve already held two figures
+   and each figure is exactly one `1ch` box (invariant 43). That is the
+   guarantee `MB_SCORE_TRACK` gives `MbMatchRow` above, restated per side
+   because here each side carries its own figure.
+
+   `MbMatchRow` keeps its own constant centre track and is NOT rebuilt on this:
+   it models seeds, byes and a not-yet-played measure, none of which is a pair
+   of figures, and its `Measure` is the one place the fabricated 1–0 walkover
+   is refused. What the two share — `Figures`, `EmptySide`, the emphasis pair —
+   is shared, which is where the duplication actually was.
+
+   `Pair`, not `Matchup`, because `useMatchbookHistory` already exports an
+   `MbMatchup` and it is a different object: a RIVALRY (two teams, a head-to-head
+   record, a leader), not a single match between them.
+   =========================================================================== */
+
+export type MbMatchupSize = "sm" | "md";
+
+/**
+ * The container-query cut per step. Every class here is a LITERAL string:
+ * Tailwind scans source text, so an interpolated `@min-[${n}px]:` compiles to
+ * nothing and the wide cut would silently never arrive.
+ *
+ * The centre is `hidden` by default and revealed at the cut, rather than shown
+ * and hidden below it, so only the `@min-` variant is needed — and a pair with
+ * no figures opts out by simply never being hidden.
+ *
+ * `mark` mirrors the away identity itself — crest outboard of its name — which
+ * is what `TeamMark`'s `reverse` does everywhere else in the system. It is a
+ * class rather than the prop because the prop is JS and the cut is CSS: the
+ * same row is mirrored at 407px of container and stacked at 264px, and only
+ * the stylesheet knows which.
+ */
+const MB_MATCHUP_CUT: Record<
+  MbMatchupSize,
+  { grid: string; away: string; mark: string; centre: string; awayFigure: string }
+> = {
+  sm: {
+    grid: "@min-[336px]:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]",
+    away: "@min-[336px]:flex-row-reverse",
+    mark: "@min-[336px]:flex-row-reverse",
+    centre: "@min-[336px]:inline-flex",
+    awayFigure: "@min-[336px]:text-left",
+  },
+  md: {
+    grid: "@min-[376px]:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]",
+    away: "@min-[376px]:flex-row-reverse",
+    mark: "@min-[376px]:flex-row-reverse",
+    centre: "@min-[376px]:inline-flex",
+    awayFigure: "@min-[376px]:text-left",
+  },
+};
+
+/**
+ * One side's figure, in a two-figure reserve.
+ *
+ * `text-right` in the narrow cut, where both figures sit in one right-hand
+ * column; `text-left` for the away side once the cut mirrors it, so the pair
+ * hugs the dash from both directions — the "end then start" the scoreline
+ * above and `MbScoreboardHero` both already use.
+ */
+const MatchupFigure = ({
+  value,
+  emphasis,
+  className = "",
+}: {
+  value: number;
+  emphasis: string;
+  className?: string;
+}) => (
+  <span
+    className={`matchbook-display min-w-[2ch] shrink-0 text-right text-[0.9rem] mb-track-display leading-none tabular-nums ${emphasis} ${className}`}
+  >
+    <Figures value={value} />
+  </span>
+);
+
+const MatchupSide = ({
+  team,
+  figure,
+  markEmphasis,
+  figureEmphasis,
+  size,
+  reverse = false,
+  figureClass = "",
+  reverseClass = "",
+  markClass = "",
+}: {
+  team: MbTeam | null;
+  figure?: number;
+  markEmphasis: string;
+  figureEmphasis: string;
+  size: MbMatchupSize;
+  reverse?: boolean;
+  figureClass?: string;
+  reverseClass?: string;
+  markClass?: string;
+}) => (
+  <span className={`flex min-w-0 items-center gap-2 ${reverse ? reverseClass : ""}`}>
+    {team ? (
+      <TeamMark
+        team={team}
+        size={size}
+        className={`min-w-0 flex-1 ${markClass} ${markEmphasis}`}
+      />
+    ) : (
+      <span className="flex min-w-0 flex-1 items-center">
+        <EmptySide />
+      </span>
+    )}
+    {figure !== undefined && (
+      <MatchupFigure value={figure} emphasis={figureEmphasis} className={figureClass} />
+    )}
+  </span>
+);
+
+export interface MbMatchupPairProps {
+  home: MbTeam | null;
+  away: MbTeam | null;
+  /** Pass BOTH or neither — one figure alone is half a result. */
+  homeScore?: number;
+  awayScore?: number;
+  /** Which side won, once the match is `decided`. Drives weight, never hue. */
+  homeWon?: boolean;
+  awayWon?: boolean;
+  /** `false` while a match is in play: neither side is muted yet. */
+  decided?: boolean;
+  /**
+   * The centre word when there are no figures — "vs" on a fixture. It stays
+   * visible in the narrow cut, where it is the only thing saying the two names
+   * are one match; the dash between two figures does not, because the figures
+   * carry the measure on their own.
+   */
+  note?: ReactNode;
+  size?: MbMatchupSize;
+  className?: string;
+}
+
+export const MbMatchupPair = ({
+  home,
+  away,
+  homeScore,
+  awayScore,
+  homeWon = false,
+  awayWon = false,
+  decided = true,
+  note,
+  size = "md",
+  className = "",
+}: MbMatchupPairProps) => {
+  const cut = MB_MATCHUP_CUT[size];
+  const scored = homeScore !== undefined && awayScore !== undefined;
+  const markEmphasis = (won: boolean) =>
+    !scored || !decided ? "" : won ? MARK_WON : MARK_LOST;
+  const figureEmphasis = (won: boolean) =>
+    !decided ? "font-bold" : won ? "font-bold" : "font-semibold text-mb-ink-muted";
+
+  return (
+    /* The container is its own element: an `@container` query styles a
+       container's DESCENDANTS and never the container itself, so the grid
+       whose columns change cannot also be the box being measured. */
+    <span className={`@container block min-w-0 ${className}`}>
+      <span
+        className={`grid min-w-0 grid-cols-[minmax(0,1fr)] items-center gap-x-2 gap-y-1.5 ${cut.grid}`}
+      >
+        <MatchupSide
+          team={home}
+          figure={homeScore}
+          markEmphasis={markEmphasis(homeWon)}
+          figureEmphasis={figureEmphasis(homeWon)}
+          size={size}
+        />
+
+        {scored ? (
+          /* `font-semibold`, not the inherited 400: the figures beside it run
+             at 600 and 700, and a 400 dash would be a third weight at one
+             size — the same call `Measure` makes above. */
+          <span
+            aria-hidden="true"
+            className={`matchbook-display hidden shrink-0 items-center justify-center text-[0.9rem] mb-track-display font-semibold leading-none text-mb-ink-muted ${cut.centre}`}
+          >
+            –
+          </span>
+        ) : (
+          <span className="matchbook-display inline-flex shrink-0 items-center text-[0.74rem] mb-track-status font-bold text-mb-ink-muted">
+            {note}
+          </span>
+        )}
+
+        <MatchupSide
+          team={away}
+          figure={awayScore}
+          markEmphasis={markEmphasis(awayWon)}
+          figureEmphasis={figureEmphasis(awayWon)}
+          size={size}
+          reverse
+          reverseClass={cut.away}
+          markClass={cut.mark}
+          figureClass={cut.awayFigure}
+        />
+      </span>
+    </span>
   );
 };

@@ -171,7 +171,7 @@ const RecordItem = ({
   <div className="border-b border-mb-rule px-4 py-2.5 last:border-b-0 sm:border-b-0 sm:border-r sm:last:border-r-0">
     <dt className="mb-kicker">{label}</dt>
     <dd
-      className="matchbook-display mt-1 text-[0.82rem] font-bold tabular-nums"
+      className="matchbook-display mt-1 text-[0.82rem] mb-track-display font-bold tabular-nums"
       suppressHydrationWarning
     >
       {children}
@@ -245,14 +245,14 @@ export default function SummaryPage() {
             ) : (
               <div className="flex flex-col">
                 {champion ? (
-                  <div className="flex flex-wrap items-center gap-x-5 gap-y-3 px-4 py-5 sm:px-5">
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-3 px-4 py-5 sm:px-5">
                     <Crest team={champion.team} size={64} />
                     <div className="min-w-0 flex-1">
                       <p className="mb-kicker flex items-center gap-1.5">
                         <MbIcon id="crown" size={13} className="shrink-0" />
                         Champion
                       </p>
-                      <p className="matchbook-display mt-1.5 break-words text-[1.875rem] font-bold leading-none tracking-[0.01em]">
+                      <p className="matchbook-display mt-1.5 break-words text-[1.875rem] mb-track-display font-bold leading-none">
                         {champion.team.name}
                       </p>
                       {champion.accent && (
@@ -265,7 +265,7 @@ export default function SummaryPage() {
                       <p className="mt-2.5 text-[0.8rem] tabular-nums text-mb-ink-muted">
                         {champion.basis}
                       </p>
-                      <p className="matchbook-display mt-1 text-[0.82rem] font-bold tabular-nums">
+                      <p className="matchbook-display mt-1 text-[0.82rem] mb-track-display font-bold tabular-nums">
                         {champion.record}
                       </p>
                     </div>
@@ -279,12 +279,12 @@ export default function SummaryPage() {
                      level, and on what, is the report's actual finding. */
                   <div className="px-4 py-5 sm:px-5">
                     <p className="mb-kicker">No outright winner</p>
-                    <p className="matchbook-display mt-1.5 text-[1.2rem] font-bold leading-tight tracking-[0.02em] tabular-nums">
+                    <p className="matchbook-display mt-1.5 text-[1.2rem] mb-track-display font-bold leading-tight tabular-nums">
                       {levelAtTop?.teams.length ?? 0} teams finished level on{" "}
                       {levelAtTop?.points ?? 0} points
                     </p>
                     <span className="mt-2 block h-px w-16 bg-mb-navy" />
-                    <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2">
+                    <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2">
                       {levelAtTop?.teams.map((team) => (
                         <TeamMark key={team.name} team={team} size="md" />
                       ))}
@@ -524,10 +524,10 @@ export default function SummaryPage() {
       {/* The colophon. The one place this page advertises what made it, and
           the only line that survives onto paper — the public brand lockup at
           the top of `variant="public"` carries `.mb-print-hide`. */}
-      <footer className="mb-safe-bottom mt-4 flex flex-wrap items-center justify-between gap-x-5 gap-y-2 border-t-[1.5px] border-mb-navy pt-3">
+      <footer className="mb-safe-bottom mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t-[1.5px] border-mb-navy pt-3">
         <Link
           href="/"
-          className="mb-btn-touch matchbook-display flex items-center gap-2 text-[0.72rem] font-bold tracking-[0.1em] text-mb-navy"
+          className="mb-btn-touch matchbook-display flex items-center gap-2 text-[0.72rem] mb-track-link font-bold text-mb-navy"
         >
           <MbIcon id="volleyball" size={16} className="shrink-0" />
           Scored live with Tournament Tracker

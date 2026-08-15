@@ -262,7 +262,7 @@ const PublicBrand = () => (
 
             Coral job 3 — the masthead's emphasised word — is unaffected: that
             word ships at 36/48px where the 3:1 large-text floor applies. */}
-        <span className="matchbook-display text-[0.95rem] font-bold leading-none tracking-[0.05em]">
+        <span className="matchbook-display text-[0.95rem] mb-track-title font-bold leading-none">
           <span className="text-mb-navy">Tournament </span>
           <span className="text-mb-coral-deep">Tracker</span>
         </span>

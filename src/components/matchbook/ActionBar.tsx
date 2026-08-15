@@ -160,7 +160,7 @@ export const MbActionBar = ({
       {status ? (
         /* `w-full` is what breaks the line below `sm`. From `sm` up the status
            returns to the left of the controls on the same row. */
-        <div className="w-full min-w-0 truncate text-[0.75rem] leading-4 text-mb-ink-muted tabular-nums sm:w-auto sm:flex-1">
+        <div className="w-full min-w-0 truncate text-[0.72rem] leading-4 text-mb-ink-muted tabular-nums sm:w-auto sm:flex-1">
           {status}
         </div>
       ) : (

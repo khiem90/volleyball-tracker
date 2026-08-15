@@ -221,13 +221,13 @@ export const RotationFacts = ({
   <dl className="grid grid-cols-2 border-t border-mb-rule">
     <div className="border-r border-mb-rule px-4 py-2">
       <dt className="mb-kicker">Setter</dt>
-      <dd className="matchbook-display text-[0.95rem] font-bold tracking-[0.05em]">
+      <dd className="matchbook-display text-[0.95rem] mb-track-title font-bold">
         {setterRow} Row
       </dd>
     </div>
     <div className="px-4 py-2">
       <dt className="mb-kicker">Front-Row Attackers</dt>
-      <dd className="matchbook-display text-[0.95rem] font-bold tracking-[0.05em] tabular-nums">
+      <dd className="matchbook-display text-[0.95rem] mb-track-title font-bold tabular-nums">
         {frontRowAttackers}
       </dd>
     </div>

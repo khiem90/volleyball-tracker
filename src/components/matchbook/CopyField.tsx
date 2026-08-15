@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import type { CSSProperties, RefObject } from "react";
+import type { RefObject } from "react";
 import { MbIcon } from "./MbIcon";
 import { MB_FIELD_LABEL } from "./form";
 
@@ -57,13 +57,6 @@ export const copyToClipboard = async (value: string): Promise<MbCopyOutcome> => 
 
 /** How long the "Copied" confirmation stays up before the field returns to rest. */
 const CONFIRM_MS = 2400;
-
-/**
- * `.matchbook-display` pins letter-spacing to 0.02em from an unlayered rule, so
- * a `tracking-*` utility cannot raise it. Composite cells that are not `.mb-btn`
- * carry the button's 0.06em inline instead.
- */
-const CELL_TRACK: CSSProperties = { letterSpacing: "0.06em" };
 
 type CopyStatus = "idle" | "copied" | "manual";
 
@@ -156,7 +149,6 @@ export const MbCopyField = ({
       <label
         htmlFor={inputId}
         className={MB_FIELD_LABEL.className}
-        style={MB_FIELD_LABEL.style}
       >
         {label}
       </label>
@@ -213,8 +205,7 @@ export const MbCopyField = ({
           onClick={handleCopy}
           disabled={!hasValue}
           aria-label={`Copy ${label}`}
-          style={CELL_TRACK}
-          className="matchbook-display flex min-h-[48px] shrink-0 items-center gap-1.5 rounded-[4px] border-[1.5px] border-mb-navy bg-mb-navy px-3.5 text-[0.72rem] font-semibold text-mb-paper-bright transition-[filter] hover:brightness-125 disabled:bg-[var(--mb-tint-3)] disabled:text-mb-ink-muted"
+          className="matchbook-display flex min-h-[48px] shrink-0 items-center gap-1.5 rounded-[4px] border-[1.5px] border-mb-navy bg-mb-navy px-3.5 text-[0.72rem] mb-track-link font-semibold text-mb-paper-bright transition-[filter] hover:brightness-125 disabled:bg-[var(--mb-tint-3)] disabled:text-mb-ink-muted"
         >
           <MbIcon id={status === "copied" ? "check" : "copy"} size={14} />
           Copy

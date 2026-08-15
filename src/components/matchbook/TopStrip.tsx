@@ -138,7 +138,7 @@ export const MatchbookTopStrip = ({
       {/* The screen's own name, which the masthead used to carry until it
           scrolled away. `min-w-0` + `truncate` is what stops a long event name
           pushing the account control off the right edge. */}
-      <span className="matchbook-display min-w-0 flex-1 truncate text-[0.8rem] font-bold tracking-[0.06em]">
+      <span className="matchbook-display min-w-0 flex-1 truncate text-[0.8rem] mb-track-button font-bold">
         {title}
       </span>
 

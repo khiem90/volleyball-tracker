@@ -46,10 +46,15 @@ export default function GlobalError({
             {/* The wordmark, set in type rather than fetched as an asset — the
                 crest is an SVG over the network, and this is the one screen
                 that must not depend on the network having worked. */}
-            <p className="matchbook-display mb-5 text-[1.05rem] font-bold leading-none tracking-[0.05em]">
-              {/* `--mb-coral-deep`, not `--mb-coral`: measured 3.26:1 at
-                  16.8px/700 on `--mb-paper` against the 4.5:1 floor below
-                  18.66px (HF-6). The ink twin is 4.62:1 at the same step. */}
+            {/* `display/stat-sm` + its rung, matching `Sidebar` and `/login`.
+                Was `text-[1.05rem] tracking-[0.05em]`: a size between steps
+                0.95 and 1.2, on the panel-title tracking. `/dev/states/globalError`
+                mirrors this markup, so the two move together. */}
+            <p className="matchbook-display mb-5 text-[1.2rem] mb-track-display font-bold leading-none">
+              {/* `--mb-coral-deep`, not `--mb-coral`: at the old 16.8px/700 the
+                  bright coral measured 3.26:1 on `--mb-paper` against the 4.5:1
+                  floor below 18.66px (HF-6). The ink twin is 4.62:1 and stays
+                  the rule at any size (§1.3). */}
               Tournament <span className="text-mb-coral-deep">Tracker</span>
             </p>
             <MbRouteState

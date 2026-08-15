@@ -94,7 +94,7 @@ const ScorePreviewSide = ({
             head on this screen declares 0.05em for it. Left undeclared this
             fell through to `.matchbook-display`'s 0.02em, so the pair carried
             two trackings at once (rubric 1.3). */}
-        <span className="matchbook-display text-[0.95rem] font-bold tracking-[0.05em]">
+        <span className="matchbook-display text-[0.95rem] mb-track-title font-bold">
           {summary.team.name}
         </span>
         <span className="mb-kicker tabular-nums">({summary.record})</span>
@@ -124,9 +124,9 @@ const FormStatRow = ({
   right: string | number;
 }) => (
   <div className="grid grid-cols-[1fr_auto_1fr] items-center border-b border-mb-rule py-1.5 text-[0.9rem] tabular-nums last:border-b-0">
-    <span className="matchbook-display font-bold">{left}</span>
+    <span className="matchbook-display mb-track-display font-bold">{left}</span>
     <span className="mb-kicker">{label}</span>
-    <span className="matchbook-display text-right font-bold">{right}</span>
+    <span className="matchbook-display mb-track-display text-right font-bold">{right}</span>
   </div>
 );
 
@@ -286,12 +286,12 @@ export default function QuickMatchPage() {
                 <div className="flex items-center justify-center gap-5">
                   <div className="flex flex-col items-center gap-2">
                     <Crest team={guestHome} size={56} />
-                    <span className="matchbook-display text-[0.9rem] font-bold">Team A</span>
+                    <span className="matchbook-display text-[0.9rem] mb-track-display font-bold">Team A</span>
                   </div>
-                  <span className="mb-score-box px-2 tracking-[0.05em]">VS</span>
+                  <span className="mb-score-box mb-track-title px-2">VS</span>
                   <div className="flex flex-col items-center gap-2">
                     <Crest team={guestAway} size={56} />
-                    <span className="matchbook-display text-[0.9rem] font-bold">Team B</span>
+                    <span className="matchbook-display text-[0.9rem] mb-track-display font-bold">Team B</span>
                   </div>
                 </div>
                 <p className="text-center text-[0.85rem] text-mb-ink-muted">
@@ -320,7 +320,7 @@ export default function QuickMatchPage() {
               </div>
             ) : (
               <div className="flex flex-1 flex-col gap-4 p-5">
-                <div className="flex items-start gap-3 sm:gap-5">
+                <div className="flex items-start gap-3 sm:gap-4">
                   <TeamSelect
                     label="Home Team"
                     value={homeTeamId}
@@ -345,7 +345,7 @@ export default function QuickMatchPage() {
                         the scale's floor; it is not inked muted because this
                         one sits inside a button and must take the button's
                         ink through every state. */}
-                    <span className="matchbook-display text-[0.62rem] font-semibold tracking-[0.16em]">
+                    <span className="matchbook-display text-[0.62rem] mb-track-kicker font-semibold">
                       Swap
                     </span>
                   </button>
@@ -391,9 +391,9 @@ export default function QuickMatchPage() {
               <div className="flex items-center gap-3">
                 <ScorePreviewSide summary={homeSummary} placeholder="Home team" />
                 <div className="flex items-center gap-2.5">
-                  <span className="matchbook-display text-6xl font-bold tabular-nums">0</span>
-                  <span className="mb-score-box px-2 tracking-[0.05em]">VS</span>
-                  <span className="matchbook-display text-6xl font-bold tabular-nums">0</span>
+                  <span className="matchbook-display text-6xl tracking-normal font-bold tabular-nums">0</span>
+                  <span className="mb-score-box mb-track-title px-2">VS</span>
+                  <span className="matchbook-display text-6xl tracking-normal font-bold tabular-nums">0</span>
                 </div>
                 <ScorePreviewSide summary={awaySummary} placeholder="Away team" />
               </div>
@@ -436,11 +436,11 @@ export default function QuickMatchPage() {
                         key={i}
                         className="grid grid-cols-[44px_1fr_auto_1fr_14px] items-center gap-2 px-3 py-2.5"
                       >
-                        <p className="matchbook-display text-[0.66rem] font-bold leading-tight tabular-nums text-mb-ink-muted">
+                        <p className="matchbook-display text-[0.66rem] mb-track-status font-bold leading-tight tabular-nums text-mb-ink-muted">
                           {m.date}
                         </p>
                         <TeamMark team={m.home} className="justify-self-start" />
-                        <span className="matchbook-display whitespace-nowrap text-[0.95rem] font-bold tracking-[0.05em] tabular-nums">
+                        <span className="matchbook-display whitespace-nowrap text-[0.95rem] mb-track-title font-bold tabular-nums">
                           {m.homeScore} – {m.awayScore}
                         </span>
                         <TeamMark team={m.away} reverse className="justify-self-end" />
@@ -481,7 +481,7 @@ export default function QuickMatchPage() {
                             stat block anatomy, and 1.2rem is the step §2.1
                             names for its value. 1.05rem (16.8px) was between
                             steps. */}
-                        <p className="matchbook-display text-[1.2rem] font-bold leading-tight tabular-nums">
+                        <p className="matchbook-display text-[1.2rem] mb-track-display font-bold leading-tight tabular-nums">
                           {homeSummary.record} · {awaySummary.record}
                         </p>
                       </div>

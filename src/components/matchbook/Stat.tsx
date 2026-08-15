@@ -122,7 +122,7 @@ export const MbStat = ({
         >
           {value}
           {sub && (
-            <span className="ml-2 text-[0.7rem] font-semibold text-mb-ink-muted">
+            <span className="ml-2 text-[0.72rem] mb-track-link font-semibold text-mb-ink-muted">
               {sub}
             </span>
           )}

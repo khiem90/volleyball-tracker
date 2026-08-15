@@ -76,7 +76,7 @@ const SCORING_OPTIONS = [
  * `MbSegmented`, `MbSwatchPicker` and `MbToggleChip` groups all need it.
  */
 const GroupLabel = ({ id, children }: { id: string; children: ReactNode }) => (
-  <span id={id} className={MB_FIELD_LABEL.className} style={MB_FIELD_LABEL.style}>
+  <span id={id} className={MB_FIELD_LABEL.className}>
     {children}
   </span>
 );
@@ -205,7 +205,7 @@ export const NameStep = ({
                 {/* `break-words`, never `truncate`: at 320px the truncating
                     version clipped 44px of ink and set "DOUBLE ELIM…" on the
                     one line naming the thing about to be created. */}
-                <span className="matchbook-display text-[0.95rem] font-bold tracking-[0.05em] [overflow-wrap:anywhere]">
+                <span className="matchbook-display text-[0.95rem] mb-track-title font-bold [overflow-wrap:anywhere]">
                   {meta.label}
                 </span>
                 <span className="mb-kicker tabular-nums">

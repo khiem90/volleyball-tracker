@@ -46,7 +46,7 @@ import { useUndo } from "@/components/GlobalUndoToast";
 /** A plausible page body, so a fixed overlay can be judged against real content. */
 const SamplePage = () => (
   <>
-    <h1 className="matchbook-display mb-5 text-4xl font-bold leading-none tracking-[0.01em] sm:text-5xl">
+    <h1 className="matchbook-display mb-5 text-4xl mb-track-masthead font-bold leading-none sm:text-5xl">
       Tournament <span className="text-mb-coral">Overview</span>
     </h1>
     <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
@@ -155,7 +155,7 @@ export default function DevStatePage() {
       return (
         <div className="matchbook-surface min-h-screen">
           <main id="mb-main" className="px-4 py-5 sm:px-6 lg:px-8">
-            <p className="matchbook-display mb-5 text-[1.05rem] font-bold leading-none tracking-[0.05em]">
+            <p className="matchbook-display mb-5 text-[1.2rem] mb-track-display font-bold leading-none">
               {/* Mirrors `app/global-error.tsx`, including its ink: the harness
                   must show the colour that ships, not the one that was fixed. */}
               Tournament <span className="text-mb-coral-deep">Tracker</span>

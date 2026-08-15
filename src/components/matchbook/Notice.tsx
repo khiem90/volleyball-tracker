@@ -40,7 +40,7 @@ export const MbNotice = ({
     />
     <div className="flex min-w-0 flex-col gap-1">
       {title && (
-        <span className="matchbook-display text-[0.78rem] font-bold tracking-[0.02em]">
+        <span className="matchbook-display text-[0.78rem] mb-track-display font-bold">
           {title}
         </span>
       )}

@@ -136,7 +136,7 @@ export const MbAccountChip = ({
                 the (11.52px, 700) pair of all seven screens at once. §3.2's
                 account-chip sample still prints 0.08em; the sample is the bug
                 (this document's own rule: the shipped page wins). */}
-            <span className="matchbook-display truncate text-[0.72rem] font-bold leading-tight tracking-[0.04em]">
+            <span className="matchbook-display truncate text-[0.72rem] mb-track-link font-bold leading-tight">
               {isGuest ? "Guest" : name}
             </span>
             <span className="truncate text-[0.66rem] leading-tight text-mb-ink-muted">

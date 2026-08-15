@@ -122,7 +122,7 @@ const ToolLink = ({ tool }: { tool: (typeof TOOLS)[number] }) => (
           `<Panel>` title on the screen, which declares `display/panel-title`'s
           0.05em. Two trackings on one size/weight pair is rubric 1.3, and
           0.01em bought nothing that a reader could see. */}
-      <span className="matchbook-display text-[0.95rem] font-bold tracking-[0.05em]">
+      <span className="matchbook-display text-[0.95rem] mb-track-title font-bold">
         {tool.title}
       </span>
       {/* `body/xs`. 0.76rem sat between 0.72 and 0.78. */}
@@ -265,7 +265,7 @@ export default function ToolsPage() {
                   >
                     <MbIcon id="clipboard" size={15} className="text-mb-navy" />
                     <span className="min-w-0">
-                      <span className="matchbook-display block truncate text-[0.78rem] font-bold">
+                      <span className="matchbook-display block truncate text-[0.78rem] mb-track-display font-bold">
                         {formation.name}
                       </span>
                       {formation.description && (
