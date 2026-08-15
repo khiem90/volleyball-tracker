@@ -425,6 +425,8 @@ export const MbNumberStepper = ({
    * blur snaps the face back to the last clamped value.
    */
   const [draft, setDraft] = useState<string | null>(null);
+  const minusRef = useRef<HTMLButtonElement | null>(null);
+  const plusRef = useRef<HTMLButtonElement | null>(null);
   /**
    * `prefix` stays folded into the editable face; `suffix` no longer is.
    *
@@ -455,10 +457,44 @@ export const MbNumberStepper = ({
     if (next !== value) onChange(next);
   };
 
+  /**
+   * Where focus goes when the key you are pressing is about to disable itself.
+   *
+   * Measured in the quick-add sheet at 390px: stepping the count up to its
+   * maximum left `document.activeElement` on `<body>` — the pressed key had
+   * become `disabled` under the finger, and a focused disabled button drops
+   * focus to the document. Inside a modal that is the worst rung on the
+   * ladder: the reader is silently outside the dialog they are still looking
+   * at, and a screen reader loses the sheet's context mid-task. (Radix's focus
+   * scope pulls the next Tab back in, so the trap itself holds — this is the
+   * gap between the two keystrokes.)
+   *
+   * The opposite key takes it. It is 46px away, it is guaranteed live the
+   * moment its partner dies, and it is the only control the user can now want:
+   * having hit the ceiling, the next press is downward. The value input is the
+   * other candidate and is rejected — it selects its own contents on focus and
+   * raises the on-screen keyboard over the sheet, which is exactly the
+   * disruption `QuickAddTeams` avoids by declining `initialFocus`.
+   *
+   * Only when the key is *actually* focused, so a mouse press that never took
+   * focus does not move it either.
+   */
+  const handOffFocus = (delta: number, next: number) => {
+    if (wrap) return;
+    const pressed = delta < 0 ? minusRef.current : plusRef.current;
+    if (!pressed || document.activeElement !== pressed) return;
+    if (delta < 0 ? next > min : next < max) return;
+    const sibling = delta < 0 ? plusRef.current : minusRef.current;
+    if (!sibling || sibling.disabled) return;
+    sibling.focus();
+  };
+
   const stepBy = (delta: number) => {
     setDraft(null);
     const raw = value + delta;
-    commit(wrap ? wrapValue(raw, min, max) : clampValue(raw, min, max));
+    const next = wrap ? wrapValue(raw, min, max) : clampValue(raw, min, max);
+    commit(next);
+    handOffFocus(delta, next);
   };
 
   const atMin = !wrap && value <= min;
@@ -498,6 +534,7 @@ export const MbNumberStepper = ({
     >
       <button
         type="button"
+        ref={minusRef}
         title={`Decrease ${label}`}
         aria-label={`Decrease ${label}`}
         disabled={disabled || atMin}
@@ -565,6 +602,7 @@ export const MbNumberStepper = ({
       </span>
       <button
         type="button"
+        ref={plusRef}
         title={`Increase ${label}`}
         aria-label={`Increase ${label}`}
         disabled={disabled || atMax}

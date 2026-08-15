@@ -312,7 +312,7 @@ const LoginPageContent = () => {
           <h2 className="matchbook-display whitespace-nowrap text-center text-[2.1rem] font-bold leading-tight xl:text-[2.6rem]">
             Your Tournaments, <span className="text-mb-coral">Ready.</span>
           </h2>
-          <div className="mx-auto mt-5 mb-8 h-px w-full bg-[rgba(255,250,241,0.25)]" />
+          <div className="mx-auto mt-5 mb-8 h-px w-full bg-mb-rule-on-navy" />
 
           {/* Crest showcase */}
           <div className="grid grid-cols-3 gap-x-6 gap-y-5">
@@ -332,11 +332,11 @@ const LoginPageContent = () => {
           </div>
 
           {/* Feature list */}
-          <div className="mt-8 border-t border-[rgba(255,250,241,0.25)]">
+          <div className="mt-8 border-t border-mb-rule-on-navy">
             {FEATURES.map((feature) => (
               <div
                 key={feature.label}
-                className="flex items-center gap-3 border-b border-[rgba(255,250,241,0.25)] py-2.5"
+                className="flex items-center gap-3 border-b border-mb-rule-on-navy py-2.5"
               >
                 <MbIcon id={feature.icon} size={20} className="text-mb-paper-bright" />
                 <span className="matchbook-display text-[0.95rem] font-semibold tracking-[0.1em]">
@@ -347,7 +347,7 @@ const LoginPageContent = () => {
           </div>
 
           {/* Sample scoreline */}
-          <div className="mt-6 flex items-center justify-center gap-3 rounded-[4px] border-[1.5px] border-mb-paper-bright bg-[rgba(255,250,241,0.06)] px-4 py-2.5">
+          <div className="mt-6 flex items-center justify-center gap-3 rounded-[4px] border-[1.5px] border-mb-paper-bright bg-mb-tint-on-navy px-4 py-2.5">
             {/* Fill is `--mb-coral-deep`, not `--mb-coral`: white on raw coral
                 measured **3.69:1 at 9.6px/700**, and this is the same pairing
                 `.mb-btn-coral` moved off in P0 (charter D-20). White on the
@@ -367,12 +367,17 @@ const LoginPageContent = () => {
             </span>
             <Image src={crestPath("tide")} alt="" width={26} height={30} />
             {/* NOT `.mb-kicker`. That class bakes `color: var(--mb-ink-muted)`
-                and is UNLAYERED, so it beats the `text-[rgba(...)]` utility
-                that was written beside it — the line rendered in ink-muted at
-                **2.44:1 on navy**, not in the paper-bright the author asked
-                for. The kicker step is composed explicitly instead, which is
-                what `.mb-kicker` would have to be overridden into anyway. */}
-            <span className="matchbook-display text-[0.62rem] font-semibold text-[rgba(255,250,241,0.75)]">
+                and is UNLAYERED, so it beats the colour utility written beside
+                it — the line rendered in ink-muted at **2.44:1 on navy**, not
+                in the paper-bright the author asked for. The kicker step is
+                composed explicitly instead, which is what `.mb-kicker` would
+                have to be overridden into anyway.
+
+                `text-mb-ink-on-navy-soft` is the token, not the fifth hand-typed
+                `rgba(255,250,241,…)` this line used to carry (G20). It composites
+                to 7.86:1 on navy, so the tag stays visibly secondary beside the
+                opaque paper-bright score without going under the 4.5:1 floor. */}
+            <span className="matchbook-display text-[0.62rem] font-semibold text-mb-ink-on-navy-soft">
               • Final
             </span>
           </div>

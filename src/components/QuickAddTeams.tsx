@@ -17,6 +17,7 @@ import {
   MB_SWATCH_PALETTE,
 } from "@/components/matchbook/form";
 import { crestForTeam } from "@/components/matchbook/types";
+import { TEAM_BULK_ADD_LABEL } from "@/components/dialogs/team-form/labels";
 
 /* ===========================================================================
    BULK TEAM CREATION
@@ -63,7 +64,7 @@ const COLOUR_SCHEMES: ColourScheme[] = [
   {
     id: "house",
     name: "House",
-    description: "All six team inks, in order.",
+    description: "Every team ink, in order.",
     colors: MB_SWATCH_PALETTE.map((swatch) => swatch.value),
   },
   {
@@ -183,7 +184,7 @@ export const QuickAddTeams = ({
     <MbDialog
       open={open}
       onOpenChange={onOpenChange}
-      title="Quick add teams"
+      title={TEAM_BULK_ADD_LABEL}
       icon="import"
       kicker="Team directory"
       size="lg"
@@ -288,8 +289,14 @@ export const QuickAddTeams = ({
                       >
                         {active && <MbCheckMark />}
                       </span>
+                      {/* The whole scheme, not the first four of it. The cap
+                          was 4 while the "House" row says it carries every
+                          team ink — so the one row whose job is to show the
+                          full set showed two thirds of it. Six 16px chips and
+                          five 3px gaps are 111px, which the row affords at
+                          390px (measured: no name truncates). */}
                       <span aria-hidden="true" className="flex shrink-0 items-center gap-[3px]">
-                        {entry.colors.slice(0, 4).map((color, index) => (
+                        {entry.colors.map((color, index) => (
                           <span
                             key={`${entry.id}-${index}`}
                             className="block h-4 w-4 rounded-[2px]"

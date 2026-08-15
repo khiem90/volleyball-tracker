@@ -43,8 +43,9 @@
    one-and-a-half.
    =========================================================================== */
 
-import type { CSSProperties } from "react";
+import { useSyncExternalStore, type CSSProperties } from "react";
 import { usePathname } from "next/navigation";
+import { STORAGE_KEY } from "@/context/appReducer";
 import { MatchbookShell, type MatchbookShellVariant } from "./AppShell";
 import { MbSkeleton } from "./Skeleton";
 import { MbEmptyState, type MbEmptyStateAction } from "./EmptyState";
@@ -69,30 +70,88 @@ import type { PanelEmptyTone } from "./Panel";
    wrong spans, so nothing it reserved was even in the right column.
 
    So each console route now declares the geometry it is about to become. The
-   numbers are MEASURED off the shipped page against the standard fixture at
-   390x844 and 1440x900 (`pw/mb-geom.mjs`), not estimated, and the table is
-   ordered exactly as the page's own grid children are — same spans, same
-   column grouping — so a panel's bones land where its content will.
+   numbers are MEASURED off the shipped page at 390x844 and 1440x900
+   (`pw/mb-geom.mjs`), not estimated, and the table is ordered exactly as the
+   page's own grid children are — same spans, same column grouping — so a
+   panel's bones land where its content will.
 
-   ------------------------------------------------------ why the POPULATED page
+   ------------------------------------------------- TWO GEOMETRIES, NOT ONE
 
    A route's height depends on its data, and on `/` and `/competitions` so does
-   its PANEL COUNT (an empty account draws two panels where a populated one
-   draws eight). No fixed skeleton can be 0px against both. The table reserves
-   the POPULATED geometry, because the two residuals are not equally harmful:
-   reserve too little and the document GROWS, which pushes content down under a
-   finger that is already reaching for it; reserve too much and it SHRINKS,
-   which moves nothing the reader has touched — the page simply ends sooner.
-   A skeleton exists to hold space for arriving data, so holding the space that
-   data would need is also the honest reading of what it is for.
+   its PANEL COUNT: the first-run composition draws TWO panels where a
+   populated account draws eight. This table used to hold only the populated
+   numbers, and argued that no single skeleton could be 0px against both — true
+   as far as it went, and it picked the safer residual, because reserving too
+   little GROWS the document under a finger that is already reaching, while
+   reserving too much only ends the page sooner.
+
+   That argument was sound for a ±200px residual. It stopped being sound when
+   the first-run work landed and the empty compositions collapsed. Measured
+   against the empty fixture at 390x844, with the populated numbers reserved:
+
+       route          skeleton -> loaded          panels
+       /              3173 -> 1117    -2056       8 -> 2
+       /teams         3342 -> 1543    -1799       6 -> 6
+       /competitions  2520 ->  960    -1560       7 -> 2
+       /summaries     3178 -> 1600    -1578       6 -> 6
+       /quick-match   1382 -> 1195     -187       4 -> 4
+
+   That is the state EVERY user is in for their first thirty seconds, and what
+   it shows them is a tall ghost of an app they do not have, which then
+   collapses to a fifth of its height. It is the same defect the first-run work
+   was done to remove, arriving through the loading door: eight panels of
+   nothing, promised and then withdrawn.
+
+   The premise was also simply false. The skeleton CAN know which composition
+   is coming, because it can read the same `localStorage` the page reads — see
+   `readAccount` below. So each route carries `full` and, where its composition
+   swaps, `empty`, plus the `emptySignal` that decides between them. Unknown
+   accounts (server render, blocked storage, corrupt blob) still fall back to
+   `full`, which keeps the old safe-residual argument exactly where it belongs
+   — as the FALLBACK rather than the whole policy. Measured after, same fixture
+   and viewport, every route 0px per panel and correct in its panel count:
+
+       route          390x844          1440x900
+       /              1127 -> 1117     900 -> 900
+       /teams         1553 -> 1543     900 -> 900
+       /competitions   970 ->  960     900 -> 900
+       /summaries     1608 -> 1600     900 -> 900
+       /quick-match   1204 -> 1195     900 -> 900
+
+   (The residual 8–10px on the phone is `.mb-enter-grid`'s entrance transform
+   sampled mid-flight, not a box — it is the same 9px the populated table has
+   always carried, and it goes to 0 at rest.)
+
+   ------------------------------------------- ONE RESIDUAL: THE COLD DOCUMENT
+
+   `getServerSnapshot` returns "unknown", so the SSR'd HTML of a cold load
+   reserves `full` on every account. React re-renders with the real snapshot
+   directly after hydration — which is why every in-app navigation measures 0px
+   above — but on a COLD document that correction has no visible window:
+   hydration and `AuthContext` resolve in the same breath, so the next thing
+   painted is the page itself, not a corrected skeleton. Measured on `/` with
+   the empty fixture at 390x844, sampled every frame from commit:
+
+       157ms  8 panels / 3173px   the SSR skeleton (full geometry)
+       748ms  2 panels / 1117px   the real first-run page
+
+   So a brand-new account still meets one over-tall skeleton, once, on its
+   first document. Fixing that needs a value the server does not have, and the
+   two ways to get one are both worse: guessing `empty` instead moves the wrong
+   geometry onto every RETURNING user, who cold-loads far more often than a new
+   user does it once; and an inline pre-paint script that reads `localStorage`
+   into an attribute would have to live in `app/layout.tsx` and re-express this
+   whole table as CSS overrides. `full` is the right fallback because it is
+   right for the common case and wrong exactly once per user.
 
    ------------------------------------------------------------------ upkeep
 
    These are dimensions of OTHER components' output, so they rot when those
    components change. `src/__tests__/shell/skeletonSpec.test.ts` pins the shape
    (every console destination has a spec; every span is on the 12-col scale;
-   every reserved height is positive), which catches a deleted route but not a
-   re-cut panel. Re-run `pw/mb-geom.mjs` after any panel-level redesign. */
+   every reserved height is positive; an `empty` spec implies a signal), which
+   catches a deleted route but not a re-cut panel. Re-run `pw/mb-geom.mjs`
+   (and `pw/mb-geom.mjs --empty`) after any panel-level redesign. */
 
 /** One panel's bones. `h` is 390x844, `xl` is 1440x900; `xl` defaults to `h`. */
 export interface MbSkeletonPanelSpec {
@@ -126,95 +185,317 @@ export interface MbSkeletonRouteSpec {
 }
 
 /**
+ * Which count being zero means this route draws its first-run composition.
+ *
+ * A name rather than a predicate so the table stays data and the test can
+ * exercise every branch. Each one mirrors the page's OWN emptiness test, and
+ * where it does not it is named here:
+ *
+ *   played        `/` — `useMatchbookDashboard`'s `isFirstRun`, verbatim: no
+ *                 completed non-bye match and no in-progress one.
+ *                 `/summaries` reads the same count; its ledger is a list of
+ *                 exactly those matches.
+ *   competitions  `/competitions` — `useMatchbookCompete`'s `isFirstRun` is
+ *                 `rows.length === 0`, and `rows` is `competitions` mapped.
+ *   teams         `/teams` and `/quick-match`. Neither swaps its panel COUNT;
+ *                 both collapse when the directory has nothing to list, and a
+ *                 match cannot exist without teams, so this is the stricter
+ *                 of the two conditions and never fires on an account that
+ *                 has data to show.
+ */
+export type MbEmptySignal = "played" | "teams" | "competitions";
+
+export interface MbRouteSkeleton {
+  /** The account with data. Also the fallback whenever the account is unknown. */
+  full: MbSkeletonRouteSpec;
+  /** The first-run composition. Omitted where the route does not vary. */
+  empty?: MbSkeletonRouteSpec;
+  /** Required with `empty`, meaningless without it. */
+  emptySignal?: MbEmptySignal;
+}
+
+/**
  * Keyed by exact pathname. `active` is deliberately NOT consulted:
  * `/tools/volleyball-rotations/my-formations` passes `active="/tools"` for the
  * nav mark and is not remotely the shape of `/tools`, so a route that has not
  * been measured falls through to the generic grid rather than borrowing a
  * sibling's geometry.
  */
-export const MB_ROUTE_SKELETON: Record<string, MbSkeletonRouteSpec> = {
+export const MB_ROUTE_SKELETON: Record<string, MbRouteSkeleton> = {
   "/": {
-    grid: "grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-12",
-    lead: 202,
-    leadXl: 68,
-    cells: [
-      { span: 7, panels: [{ h: 568, xl: 465 }] },
-      { span: 5, panels: [{ h: 238, head: false }] },
-      { span: 4, panels: [{ h: 249, xl: 228 }] },
-      { span: 4, panels: [{ h: 283, xl: 262 }] },
-      { span: 4, panels: [{ h: 337, xl: 316 }] },
-      { span: 4, panels: [{ h: 309, xl: 288 }] },
-      { span: 4, panels: [{ h: 419, xl: 398 }] },
-      { span: 4, panels: [{ h: 292 }] },
-    ],
+    emptySignal: "played",
+    full: {
+      grid: "grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-12",
+      lead: 202,
+      leadXl: 68,
+      cells: [
+        { span: 7, panels: [{ h: 568, xl: 465 }] },
+        { span: 5, panels: [{ h: 238, head: false }] },
+        { span: 4, panels: [{ h: 249, xl: 228 }] },
+        { span: 4, panels: [{ h: 283, xl: 262 }] },
+        { span: 4, panels: [{ h: 337, xl: 316 }] },
+        { span: 4, panels: [{ h: 309, xl: 288 }] },
+        { span: 4, panels: [{ h: 419, xl: 398 }] },
+        { span: 4, panels: [{ h: 292 }] },
+      ],
+    },
+    /* Two panels: the progression, then the ruled index of what the page
+       becomes. The masthead is 46px shorter here than on a populated account
+       because its dateline has no figures to print. */
+    empty: {
+      grid: "grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-12",
+      lead: 156,
+      leadXl: 68,
+      cells: [
+        { span: 7, panels: [{ h: 349, head: false }] },
+        { span: 5, panels: [{ h: 442, xl: 365 }] },
+      ],
+    },
   },
   "/teams": {
-    grid: "grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-12",
-    lead: 134,
-    leadXl: 70,
-    cells: [
-      { span: 7, panels: [{ h: 964, xl: 598 }] },
-      { span: 5, panels: [{ h: 169, head: false }, { h: 377, head: false }] },
-      { span: 5, panels: [{ h: 700, xl: 525 }] },
-      { span: 4, panels: [{ h: 382, xl: 361 }] },
-      { span: 3, panels: [{ h: 372 }] },
-    ],
+    emptySignal: "teams",
+    full: {
+      grid: "grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-12",
+      lead: 134,
+      leadXl: 70,
+      cells: [
+        /* Re-measured 964/598 -> 960/594. The directory's head is now 64px
+           (it gained a second line); the 4px is that rule settling. NOTE for
+           whoever integrates this round: `teamPanels.tsx` was being edited by
+           another agent while this was measured, and this panel was seen at
+           750 mid-edit before settling back to 960 across three consecutive
+           runs. Re-run `pw/mb-geom.mjs` once that file is final. */
+        { span: 7, panels: [{ h: 960, xl: 594 }] },
+        { span: 5, panels: [{ h: 169, head: false }, { h: 377, head: false }] },
+        { span: 5, panels: [{ h: 700, xl: 525 }] },
+        { span: 4, panels: [{ h: 382, xl: 361 }] },
+        { span: 3, panels: [{ h: 372 }] },
+      ],
+    },
+    /* Same six panels in the same five cells — this page keeps its shape and
+       only loses its rows. */
+    empty: {
+      grid: "grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-12",
+      lead: 134,
+      leadXl: 70,
+      cells: [
+        { span: 7, panels: [{ h: 153 }] },
+        { span: 5, panels: [{ h: 169, head: false }, { h: 153, head: false }] },
+        { span: 5, panels: [{ h: 174, xl: 153 }] },
+        { span: 4, panels: [{ h: 274, xl: 252 }] },
+        { span: 3, panels: [{ h: 252, xl: 273 }] },
+      ],
+    },
   },
   "/quick-match": {
-    grid: "grid-cols-1 gap-4 xl:grid-cols-12",
-    lead: 134,
-    leadXl: 70,
-    cells: [
-      { span: 7, panels: [{ h: 330, xl: 301 }] },
-      { span: 5, panels: [{ h: 293, head: false }] },
-      { span: 7, panels: [{ h: 260, xl: 239 }] },
-      { span: 5, panels: [{ h: 153 }] },
-    ],
+    emptySignal: "teams",
+    full: {
+      grid: "grid-cols-1 gap-4 xl:grid-cols-12",
+      lead: 134,
+      leadXl: 70,
+      cells: [
+        { span: 7, panels: [{ h: 330, xl: 301 }] },
+        { span: 5, panels: [{ h: 293, head: false }] },
+        { span: 7, panels: [{ h: 260, xl: 239 }] },
+        { span: 5, panels: [{ h: 153 }] },
+      ],
+    },
+    empty: {
+      grid: "grid-cols-1 gap-4 xl:grid-cols-12",
+      lead: 134,
+      leadXl: 70,
+      cells: [
+        { span: 7, panels: [{ h: 192 }] },
+        { span: 5, panels: [{ h: 293, head: false }] },
+        { span: 7, panels: [{ h: 220, xl: 198 }] },
+        { span: 5, panels: [{ h: 153 }] },
+      ],
+    },
   },
   "/competitions": {
-    grid: "grid-cols-1 gap-4 xl:grid-cols-12",
-    lead: 148,
-    leadXl: 68,
-    cells: [
-      { span: 7, panels: [{ h: 465, xl: 430 }] },
-      { span: 5, panels: [{ h: 296, xl: 207, head: false }] },
-      { span: 7, panels: [{ h: 647, xl: 509 }] },
-      { span: 5, panels: [{ h: 117, xl: 96 }] },
-      { span: 4, panels: [{ h: 85 }] },
-      { span: 4, panels: [{ h: 237 }] },
-      { span: 4, panels: [{ h: 265 }] },
-    ],
+    emptySignal: "competitions",
+    full: {
+      grid: "grid-cols-1 gap-4 xl:grid-cols-12",
+      lead: 148,
+      leadXl: 68,
+      cells: [
+        { span: 7, panels: [{ h: 465, xl: 430 }] },
+        { span: 5, panels: [{ h: 296, xl: 207, head: false }] },
+        { span: 7, panels: [{ h: 647, xl: 509 }] },
+        { span: 5, panels: [{ h: 117, xl: 96 }] },
+        { span: 4, panels: [{ h: 85 }] },
+        { span: 4, panels: [{ h: 237 }] },
+        { span: 4, panels: [{ h: 265 }] },
+      ],
+    },
+    /* The one route whose GRID also changes: with two panels the page pairs
+       them at `md` instead of running one column to `xl`. Copied verbatim from
+       the shipped page, same as every other `grid` in this table. */
+    empty: {
+      grid: "grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-12",
+      lead: 120,
+      leadXl: 68,
+      cells: [
+        { span: 7, panels: [{ h: 442, xl: 359 }] },
+        { span: 5, panels: [{ h: 228, xl: 207 }] },
+      ],
+    },
   },
   "/summaries": {
-    /* The tallest lead in the app: this page puts a three-control filter bar
-       between its masthead and its grid, and on a phone those controls each
-       take their own line. */
-    grid: "grid-cols-1 gap-4 xl:grid-cols-12",
-    lead: 401,
-    leadXl: 179,
-    cells: [
-      { span: 7, panels: [{ h: 1335 }, { h: 363, xl: 222 }] },
-      {
-        span: 5,
-        panels: [
-          { h: 196, xl: 182, head: false },
-          { h: 253 },
-          { h: 274, xl: 253 },
-          { h: 112 },
-        ],
-      },
-    ],
+    emptySignal: "played",
+    full: {
+      /* The tallest lead in the app: this page puts a three-control filter bar
+         between its masthead and its grid, and on a phone those controls each
+         take their own line. */
+      grid: "grid-cols-1 gap-4 xl:grid-cols-12",
+      lead: 401,
+      leadXl: 179,
+      cells: [
+        { span: 7, panels: [{ h: 1335 }, { h: 363, xl: 222 }] },
+        {
+          span: 5,
+          panels: [
+            { h: 196, xl: 182, head: false },
+            { h: 253 },
+            { h: 274, xl: 253 },
+            { h: 112 },
+          ],
+        },
+      ],
+    },
+    /* The filter bar ships on the empty page too, so the lead is unchanged and
+       only the ledger collapses — 1335 to 207, which was the single largest
+       reservation error in the app. */
+    empty: {
+      grid: "grid-cols-1 gap-4 xl:grid-cols-12",
+      lead: 401,
+      leadXl: 179,
+      cells: [
+        { span: 7, panels: [{ h: 207 }, { h: 153 }] },
+        {
+          span: 5,
+          panels: [
+            { h: 153, head: false },
+            { h: 153 },
+            { h: 144, xl: 123 },
+            { h: 153 },
+          ],
+        },
+      ],
+    },
   },
+  /* No `empty`: the toolkit is static content, so this route is the same page
+     on every account. Measured -9px against the empty fixture, which is the
+     entrance transform and not a box. */
   "/tools": {
-    grid: "grid-cols-1 gap-4 xl:grid-cols-12",
-    lead: 130,
-    leadXl: 70,
-    cells: [
-      { span: 12, panels: [{ h: 906, xl: 260 }] },
-      { span: 7, panels: [{ h: 249, xl: 207 }] },
-      { span: 5, panels: [{ h: 326, xl: 335, head: false }] },
-    ],
+    full: {
+      grid: "grid-cols-1 gap-4 xl:grid-cols-12",
+      lead: 130,
+      leadXl: 70,
+      cells: [
+        { span: 12, panels: [{ h: 906, xl: 260 }] },
+        { span: 7, panels: [{ h: 249, xl: 207 }] },
+        { span: 5, panels: [{ h: 326, xl: 335, head: false }] },
+      ],
+    },
   },
+};
+
+/* ------------------------------------------------------------- the account
+
+   The skeleton needs one bit before any React state exists: is this account
+   populated? It reads the same `localStorage` blob `AppContext` reads, because
+   the alternative — waiting for `AppContext` — is exactly what the skeleton is
+   covering for. `AppContext` starts at `initialState` and fills in a mount
+   effect, so a skeleton that asked it would be told "empty" on every account
+   in the world for the first frame, which is the wrong answer far more often
+   than the right one.
+
+   `useSyncExternalStore` rather than `useEffect` + `useState`: this component
+   server-renders, and `getServerSnapshot` is the sanctioned way to say "the
+   server cannot know" without hydrating a mismatch (invariant 50). The server
+   and the hydrating client both see `null` and reserve `full`; the client
+   re-renders with the real answer immediately after. */
+
+/** Only the three counts any `emptySignal` asks about. */
+export interface MbAccountShape {
+  teams: number;
+  competitions: number;
+  /** Completed non-bye matches plus in-progress ones — `isFirstRun`'s count. */
+  played: number;
+}
+
+interface StoredMatch {
+  status?: string;
+  isBye?: boolean;
+}
+
+/** `null` for anything unreadable, which reserves `full`. */
+const shapeOf = (raw: string | null): MbAccountShape | null => {
+  // No key at all is not a failure — it is a brand new account, which is the
+  // single most important case this whole table exists to get right.
+  if (raw === null) return { teams: 0, competitions: 0, played: 0 };
+  try {
+    const state = JSON.parse(raw) as {
+      teams?: unknown[];
+      competitions?: unknown[];
+      matches?: StoredMatch[];
+    };
+    const matches = Array.isArray(state?.matches) ? state.matches : [];
+    return {
+      teams: Array.isArray(state?.teams) ? state.teams.length : 0,
+      competitions: Array.isArray(state?.competitions) ? state.competitions.length : 0,
+      played: matches.filter(
+        (m) => (m?.status === "completed" && !m?.isBye) || m?.status === "in_progress"
+      ).length,
+    };
+  } catch {
+    return null;
+  }
+};
+
+/* `useSyncExternalStore` calls `getSnapshot` on every render and compares by
+   reference, so a fresh object each time is an infinite render loop. The raw
+   string is the cache key: same blob, same shape object. */
+let cachedRaw: string | null | undefined;
+let cachedShape: MbAccountShape | null = null;
+
+const readAccount = (): MbAccountShape | null => {
+  let raw: string | null;
+  try {
+    raw = window.localStorage.getItem(STORAGE_KEY);
+  } catch {
+    // Blocked storage (private mode, embedded webview). Unknown, not empty.
+    return null;
+  }
+  if (raw !== cachedRaw) {
+    cachedRaw = raw;
+    cachedShape = shapeOf(raw);
+  }
+  return cachedShape;
+};
+
+/** The server has no `localStorage` and must not guess. */
+const serverAccount = (): MbAccountShape | null => null;
+
+const subscribeAccount = (onChange: () => void) => {
+  window.addEventListener("storage", onChange);
+  return () => window.removeEventListener("storage", onChange);
+};
+
+const IS_EMPTY: Record<MbEmptySignal, (a: MbAccountShape) => boolean> = {
+  played: (a) => a.played === 0,
+  teams: (a) => a.teams === 0,
+  competitions: (a) => a.competitions === 0,
+};
+
+/** The one place `full` and `empty` are chosen between. Exported for the test. */
+export const mbSkeletonSpecFor = (
+  entry: MbRouteSkeleton,
+  account: MbAccountShape | null
+): MbSkeletonRouteSpec => {
+  if (!entry.empty || !entry.emptySignal || account === null) return entry.full;
+  return IS_EMPTY[entry.emptySignal](account) ? entry.empty : entry.full;
 };
 
 /**
@@ -465,7 +746,9 @@ export const MbPageLoading = ({
      passes `active="/tools"` and looks nothing like `/tools`. Keying the
      geometry off it would reserve a 906px toolkit panel for a formations list. */
   const pathname = usePathname();
-  const spec = variant === "console" ? MB_ROUTE_SKELETON[pathname ?? ""] : undefined;
+  const account = useSyncExternalStore(subscribeAccount, readAccount, serverAccount);
+  const entry = variant === "console" ? MB_ROUTE_SKELETON[pathname ?? ""] : undefined;
+  const spec = entry ? mbSkeletonSpecFor(entry, account) : undefined;
 
   return (
     /* No `masthead` prop: a loading route has no title to put in one yet, so the

@@ -18,6 +18,7 @@ import {
 } from "@/components/matchbook/form";
 import { crestForTeam } from "@/components/matchbook/types";
 import type { PersistentTeam } from "@/types/game";
+import { TEAM_CREATE_LABEL } from "./labels";
 import { TEAM_NAME_MAX, useTeamForm } from "./useTeamForm";
 
 /* ===========================================================================
@@ -29,28 +30,6 @@ import { TEAM_NAME_MAX, useTeamForm } from "./useTeamForm";
    `/teams`, the wizard and every scoreboard will draw. The colour is a 3px bar
    beside the crest and nothing more (charter D-9).
    =========================================================================== */
-
-/**
- * The one name this action answers to, exported so no caller has to retype it.
- *
- * It had three. The masthead key on `/teams` said **ADD TEAM**, the empty
- * states said **CREATE A TEAM**, and the wizard's team step said "Create a
- * team" until the first team existed and then silently became "Add team" — the
- * same button, renamed ninety seconds into a first session, which is what a
- * first-run reader hit.
- *
- * "New team" rather than either of them, for two reasons. **Add** is already
- * spent: `AddEntrantsDialog` and the competition roster use "Add teams" to mean
- * *enter teams that already exist into this competition*, which is a different
- * action on the same nouns. And "Create a team" reads as a first-run
- * instruction — it is odd wording on the twelfth team, which is precisely how
- * the drift started. "New team" is true on the first and the fiftieth.
- *
- * The commit button inside the sheet stays a verb ("Create team"): a trigger
- * names where it goes, a commit names what it does. What must never differ
- * again is the trigger and the sheet it opens.
- */
-export const TEAM_CREATE_LABEL = "New team";
 
 interface TeamFormProps {
   open: boolean;

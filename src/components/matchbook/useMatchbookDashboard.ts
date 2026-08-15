@@ -12,7 +12,7 @@ import {
   recentForm,
 } from "./teamStats";
 import { type MbDashboardData, type MbLeader, type MbTeam } from "./types";
-import type { MbStartStep, MbStepState } from "./panels";
+import type { MbOverviewSection, MbStartStep, MbStepState } from "./panels";
 
 /* ---------------------------------------------------------------------------
    THE FIRST-RUN VIEW
@@ -66,6 +66,15 @@ export interface MbDashboardView extends MbDashboardData {
   primaryAction: MbDashboardAction;
   /** A second, genuinely different path, once the data allows one. */
   altAction: { label: string; href: string } | null;
+  /**
+   * The panels that have NOTHING to print, in the order the page prints them.
+   *
+   * Read straight off the same arrays the panels render, one line each, so a
+   * panel cannot be listed as mute while it is drawing rows or drawn empty
+   * while it is listed. `/` withholds these and names them in one index once
+   * there are two or more; below that they draw their own `PanelEmpty`.
+   */
+  muteSections: MbOverviewSection[];
   /** The masthead's kicker, which must not read "0 matches completed". */
   subLine: string;
 }
@@ -176,7 +185,7 @@ const buildSteps = (
   ];
 };
 
-const buildDashboard = (state: AppState): MbDashboardView => {
+export const buildDashboard = (state: AppState): MbDashboardView => {
   const dateLine = new Date().toLocaleDateString("en-US", {
     weekday: "long",
     month: "long",
@@ -379,10 +388,29 @@ const buildDashboard = (state: AppState): MbDashboardView => {
             icon: "compete",
           };
 
+  /* Which of the eight objects has nothing to say. Declared beside the arrays
+     themselves rather than inferred in the page, so the list and the panels
+     cannot disagree. */
+  const muteSections = (
+    [
+      ["standings", standings.length === 0],
+      ["featured", featured === null],
+      ["live", liveCourts.length === 0],
+      ["schedule", schedule.length === 0],
+      ["bracket", bracket === null],
+      ["results", recentResults.length === 0],
+      ["readiness", readiness.length === 0],
+      ["leaders", leaders.length === 0],
+    ] as const
+  )
+    .filter(([, mute]) => mute)
+    .map(([key]) => key);
+
   return {
     dateLine,
     matchesCompleted: completed.length,
     isFirstRun,
+    muteSections,
     startSteps: buildSteps(teamCount, newest?.name ?? null, pending.length),
     primaryAction,
     /* Quick Match is the app's own primary and it needs two teams to name the

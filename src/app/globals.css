@@ -108,6 +108,14 @@
   --color-mb-red: var(--mb-red);
   --color-mb-ink-muted: var(--mb-ink-muted);
   --color-mb-rule: var(--mb-rule);
+  /* The on-navy set (G20). Declared in `:root` below with the contrast
+     measurements that pick the three alphas; exposed here as utilities because
+     the only way a screen could reach them before was to re-type the rgba by
+     hand, which is what /login did five times. `border-mb-rule-on-navy`,
+     `bg-mb-tint-on-navy` and `text-mb-ink-on-navy-soft` are now the spelling. */
+  --color-mb-rule-on-navy: var(--mb-rule-on-navy);
+  --color-mb-tint-on-navy: var(--mb-tint-on-navy);
+  --color-mb-ink-on-navy-soft: var(--mb-ink-on-navy-soft);
 }
 
 /* ===================== Matchbook (home screen redesign) ===================== */

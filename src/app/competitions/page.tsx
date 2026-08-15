@@ -13,7 +13,11 @@ import { MbMenu } from "@/components/matchbook/Menu";
 import { Crest, Panel, PanelEmpty, TeamMark } from "@/components/matchbook/Panel";
 import {
   MB_COMPETITION_FORMATS,
+  MB_XL_SPAN,
+  mbClosingSpan,
+  mbContentsFor,
   MbLedgerPanel,
+  type MbOverviewSection,
   MbPanelHeadLink,
   TeamsReadyPanel,
 } from "@/components/matchbook/panels";
@@ -75,11 +79,32 @@ import {
    is the one fact that decides whether the wizard has anything to schedule —
    and ONE action, in the masthead, where a thumb reaches first.
 
-   Populated behaviour is untouched. Every panel renders as it did, in the same
-   twelve-column spans, and each keeps its own empty state for the states it
-   can still reach on a real competition: a draft has no fixtures generated, a
-   finished event has no live courts. What is gone is all seven of them being
-   empty at once, for one reason, with no way out of it.
+   ------------------------------------------------- and the state just after
+
+   That fixed the screen with NO competition on it. The screen with a competition
+   and nothing played had the same disease and reached it sooner, because a
+   competition exists here before a match does. Measured at 390px, on the
+   competition the wizard has just written:
+
+     created, no schedule   1802px   three empty headlines
+     schedule generated     1740px   two
+     first match live       1744px   two
+     first result           1733px   two
+
+   So `EventConsole` withholds a strip that has nothing to print and names it in
+   one index instead, from two upward — the same object, the same rows and the
+   same sentences the Overview uses, so the two screens cannot promise "Live
+   Courts" in two different sets of words.
+
+   The main panel is deliberately exempt. It is the screen's principal object
+   and its empty state names the one thing to do next; capping the screen at
+   that single headline is the rubric's anchor, not a compromise with it.
+
+   Populated behaviour is untouched, measured not asserted: on the full fixture
+   `muteSections` is empty, so every panel renders as it did in the same
+   twelve-column spans, and each keeps its own empty state for the states a real
+   competition can still reach. What is gone is seven of them, or three of them,
+   being empty at once, for one reason, with no way out of it.
    =========================================================================== */
 
 /** in_progress / draft / completed as the badge system already names them. */
@@ -402,7 +427,30 @@ const EventConsole = ({
   onSelect: (id: string) => void;
   onOpen: (id: string) => void;
   onDelete: (id: string) => void;
-}) => (
+}) => {
+  /* Arms at two, exactly as the Overview does and for the same reason: one
+     mute strip beside four populated panels is what a `PanelEmpty` is for.
+     On the full fixture `muteSections` is empty, so every span below resolves
+     to the composition that shipped. */
+  const collapsed = selected.muteSections.length >= 2;
+  const kept = (key: MbOverviewSection) =>
+    !collapsed || !selected.muteSections.includes(key);
+
+  /* The main panel and Live Courts are the 7+5 pair, the same shape Standings
+     and Match of the Day make on the Overview. Withhold the courts and the
+     main panel closes the row itself. */
+  const mainSpan = kept("live") ? 7 : 8;
+  const keptSpans = [
+    7,
+    5,
+    mainSpan,
+    kept("live") && 5,
+    kept("schedule") && 4,
+    kept("results") && 4,
+    4,
+  ].filter((span): span is number => span !== false);
+
+  return (
   <div className="mb-enter-grid grid grid-cols-1 gap-4 xl:grid-cols-12">
     {/* All events */}
     <div className="xl:col-span-7">
@@ -463,11 +511,12 @@ const EventConsole = ({
     </div>
 
     {/* Bracket / standings */}
-    <div className="xl:col-span-7">
+    <div className={MB_XL_SPAN[mainSpan]}>
       <MainPanel selected={selected} />
     </div>
 
     {/* Live courts */}
+    {kept("live") && (
     <div className="xl:col-span-5">
       <Panel
         title="Live Courts"
@@ -515,8 +564,10 @@ const EventConsole = ({
         )}
       </Panel>
     </div>
+    )}
 
     {/* Upcoming schedule */}
+    {kept("schedule") && (
     <div className="xl:col-span-4">
       <Panel title="Upcoming Schedule">
         {selected.schedule.length === 0 ? (
@@ -562,8 +613,10 @@ const EventConsole = ({
         )}
       </Panel>
     </div>
+    )}
 
     {/* Recent results */}
+    {kept("results") && (
     <div className="xl:col-span-4">
       <Panel title="Recent Results">
         {selected.recent.length === 0 ? (
@@ -593,6 +646,7 @@ const EventConsole = ({
         )}
       </Panel>
     </div>
+    )}
 
     {/* Event details */}
     <div className="xl:col-span-4">
@@ -639,8 +693,24 @@ const EventConsole = ({
         </div>
       </Panel>
     </div>
+
+    {/* The withheld strips, as one index that closes the last row flush. Same
+        object and same rows the Overview uses, so the two screens promise Live
+        Courts, Upcoming Schedule and Recent Results in one sentence each rather
+        than in two sets of words that can drift apart. */}
+    {collapsed && (
+      <div className={MB_XL_SPAN[mbClosingSpan(keptSpans)]}>
+        <MbLedgerPanel
+          title="Still to Come"
+          rows={mbContentsFor(selected.muteSections)}
+          dense
+          wide
+        />
+      </div>
+    )}
   </div>
-);
+  );
+};
 
 export default function CompetitionsPage() {
   const { isLoading, isAuthenticated } = useRequireAuth();

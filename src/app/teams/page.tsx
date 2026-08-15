@@ -4,7 +4,11 @@ import { useMemo, useState } from "react";
 import { useTeamsPage } from "@/hooks/useTeamsPage";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { DeleteConfirmDialog } from "@/components/shared";
-import { TeamForm } from "@/components/dialogs/team-form";
+import {
+  TeamForm,
+  TEAM_BULK_ADD_LABEL,
+  TEAM_CREATE_LABEL,
+} from "@/components/dialogs/team-form";
 import { QuickAddTeams } from "@/components/QuickAddTeams";
 import { MatchbookShell, MB_DEFAULT_CTA } from "@/components/matchbook/AppShell";
 import { MbPageLoading } from "@/components/matchbook/Loading";
@@ -27,7 +31,7 @@ import {
    (11.79:1) while the >=24px value and the 2px frame keep their coral, where
    the 3:1 mark floor applies.
 
-   Coral budget: the rail key (Quick Match) is the one coral fill. "Add Team"
+   Coral budget: the rail key (Quick Match) is the one coral fill. "New team"
    is the screen's own primary but it takes navy, because a directory's primary
    is not louder than the app's — and two coral fills on one screen is
    invariant 15's exact failure mode.
@@ -91,13 +95,13 @@ export default function TeamsPage() {
         subLine: `${data.matchesCompleted} matches completed`,
         actions: [
           {
-            label: "Add Team",
+            label: TEAM_CREATE_LABEL,
             icon: "plus",
             tone: "navy",
             onClick: handleCreateClick,
           },
           {
-            label: "Quick Add",
+            label: TEAM_BULK_ADD_LABEL,
             icon: "import",
             tone: "outline-navy",
             onClick: handleQuickAddClick,

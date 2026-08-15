@@ -77,6 +77,59 @@ const rowDigest = (row: MbTeamRow): string => {
   return [entered, next].filter(Boolean).join(" · ");
 };
 
+/* ---------------------------------------------------------------------------
+   THE NAME COLUMN'S CEILING (G18)
+
+   `MbTeamName` can only move the ellipsis into the middle of a name if
+   something first decides the name has to be elided. In a `table-layout: auto`
+   table nothing does: the Team column takes its max-content width, the table
+   grows to whatever the longest name needs, and `MbTableScroll` absorbs the
+   excess as horizontal scroll. So the elision never fires and the READER never
+   sees the part that separates one team from another.
+
+   Measured at 320 with `fixture-long.json`, before this cap:
+
+     directory  table 559px in a 286px scrollport, Team column 312.81px
+                name box 264.81, head box 253 of 253 content — NOT truncated
+                painted at rest: "Wolverhampton Wanderers Athletic Club"
+                                 "Wolverhampton Wanderers Athletic Club"
+     readiness  table 524.44px in 286px, Team column 292.08px, raw {name}
+                with no `MbTeamName` at all
+
+   Two different teams, byte-identical on screen, with the "B"/"C" that tells
+   them apart parked off the right edge of a scroller most readers never move.
+   That is the same information failure `TeamName.tsx` was written for, arriving
+   through the one door it cannot close by itself.
+
+   The ceiling is `min(13rem, 50vw)` rather than a flat rem so the constraint
+   tracks the thing that actually binds — the VIEWPORT, not the table. At 320
+   it yields 160px, which leaves the whole column inside the 286px scrollport
+   (24px rank + 160 = 184) and paints "Wolverhamp… B"; at >=416 it settles at
+   208px and stops one pathological name dragging the table 50px wider for
+   every other row.
+
+   IT GOES ON THE CONTENT, NEVER ON THE `<td>`. Written as `<td className=
+   {NAME_COL}>` it is not a ceiling at all: Blink feeds a cell's `max-width`
+   into auto table layout as the column's PREFERRED width, so the column
+   inflates UP to the cap even when the longest name in it is "Peak". Measured
+   at 390 with the shipped fixture, cap on the cell:
+
+     Team column 195px (= 50vw) for a 30px name, table 432.95px,
+     document.scrollWidth 443 vs clientWidth 390  → +53px
+
+   and that +53 is not confined to the panel, because under mobile emulation a
+   horizontal overflow widens the LAYOUT VIEWPORT, which the `inset-x-0` fixed
+   bottom nav then stretches to — the nav measured 443px wide with body at 390.
+   One `max-width` in a table cell moved the app's whole navigation off-screen.
+
+   On a block inside the cell the same value behaves as intended, because an
+   element's max-content CONTRIBUTION is clamped by its own max-width: "Peak"
+   contributes 30px, "Wolverhampton Wanderers Athletic Club B" contributes 195.
+   After the move, same viewport and fixture: Team column 90.36px, table
+   289.95px, document 390 vs 390.
+   --------------------------------------------------------------------------- */
+const NAME_COL = "max-w-[min(13rem,50vw)]";
+
 /* ----------------------------- Team directory ----------------------------- */
 
 export const TeamDirectoryPanel = ({
@@ -108,12 +161,22 @@ export const TeamDirectoryPanel = ({
            zooms the viewport on focus for anything under 16px, which is a
            layout shift the reader did not ask for.
 
-           `min-h-12`, not `min-h-11`, and that is the composite corollary
-           `Button.tsx` states: `.mb-search` is a FRAME around the target and
-           spends `--mb-rule-edge` twice, so a 44px shell leaves the `<input>`
-           itself at 42 — which is exactly what the sweep measured after the
-           first pass. At the `md` rung the field is 46px. */
-        <label className="mb-search min-h-12 py-0!">
+           No rung is spelled here any more. This call site used to carry
+           `min-h-12`, on the reasoning that `.mb-search` is a FRAME which
+           spends `--mb-rule-edge` twice and so needed a 48px shell to leave the
+           `<input>` a 44px interior. Both halves of that are now false, and the
+           class was INERT besides: `.mb-search` is unlayered, Tailwind's
+           utilities live in `@layer utilities`, and an unlayered declaration
+           beats every layered one — so `min-height: 44px` from the class won
+           and `min-h-12` never rendered. Measured at 390 and at 1440 with it
+           still written here: label 44, input 44.
+
+           It is also no longer needed, because G21 stopped charging the
+           interior for the frame (see THE FRAMED FIELD'S OWN HEIGHT in
+           `globals.css`): the stretched `<input>` now resolves to the shell's
+           border-box height rather than `rung − 2px`, which is what took this
+           field off the 46px non-rung. The rung lives in the class. */
+        <label className="mb-search py-0!">
           <MbIcon id="search" size={13} className="shrink-0 text-mb-ink-muted" />
           <input
             type="search"
@@ -168,38 +231,71 @@ export const TeamDirectoryPanel = ({
                   className="mb-row-hover cursor-pointer"
                   aria-current={selected}
                 >
+                  {/* `.mb-rail`, not a hand-written `inset 3px 0 0` (G24).
+
+                      Coral's job 2 — THE SELECTION RAIL — is declared in
+                      `globals.css` against a named class that already spells
+                      the 3px accent tier (`--mb-rule-accent`) and already takes
+                      a per-row colour through `--mb-rail-color`. This cell
+                      re-typed the whole shadow instead, which put the accent
+                      width and the coral literal in a JSX style object where no
+                      radius/rule census can see them, and made the leading-team
+                      teal a second hand-written shadow rather than the hook the
+                      class provides. Painted result is unchanged: `.mb-rail`
+                      resolves to the same `inset 3px 0 0` in the same two
+                      colours. Seven more sites still carry the inline spelling
+                      — listed in the return; none of them is this agent's. */}
                   <td
-                    className={RANK_CELL}
+                    className={`${RANK_CELL} ${selected || i === 0 ? "mb-rail" : ""}`}
                     style={
-                      selected
-                        ? { boxShadow: "inset 3px 0 0 var(--mb-coral)" }
-                        : i === 0
-                          ? { boxShadow: "inset 3px 0 0 var(--mb-teal)" }
-                          : undefined
+                      i === 0 && !selected
+                        ? ({ "--mb-rail-color": "var(--mb-teal)" } as React.CSSProperties)
+                        : undefined
                     }
                   >
                     {i + 1}
                   </td>
                   <td>
-                    <button
-                      type="button"
-                      onClick={() => onSelect(row.id)}
-                      aria-pressed={selected}
-                      className="mb-btn-touch flex w-full items-center rounded-[3px] text-left"
-                    >
-                      <TeamMark team={row.team} />
-                    </button>
-                    {/* The route to the two columns the breakpoints take away.
-                        They ride the team cell rather than needing a scroller
-                        or an accordion, which is the same answer
-                        `MbStandingsTable` gives for P / PF / PA / PD. Outside
-                        the `<button>` on purpose: the control's accessible name
-                        stays the team, not the team plus its next fixture. */}
-                    <span className="mb-kicker mt-0.5 block tabular-nums md:hidden">
-                      {rowDigest(row)}
+                    {/* The ceiling rides this wrapper, not the `<td>` — see
+                        THE NAME COLUMN'S CEILING above for the 443px document
+                        that the `<td>` spelling produced. */}
+                    <span className={`block ${NAME_COL}`}>
+                      <button
+                        type="button"
+                        onClick={() => onSelect(row.id)}
+                        aria-pressed={selected}
+                        /* `min-w-0` is what carries the cap INTO the mark: a
+                           flex item's floor is its min-content width until you
+                           say otherwise, so without it the button would simply
+                           overflow the capped wrapper and nothing would
+                           elide. */
+                        className="mb-btn-touch flex w-full min-w-0 items-center rounded-[3px] text-left"
+                      >
+                        <TeamMark team={row.team} />
+                      </button>
+                      {/* The route to the two columns the breakpoints take
+                          away. They ride the team cell rather than needing a
+                          scroller or an accordion, which is the same answer
+                          `MbStandingsTable` gives for P / PF / PA / PD. Outside
+                          the `<button>` on purpose: the control's accessible
+                          name stays the team, not the team plus its next
+                          fixture.
+
+                          It WRAPS, and must keep wrapping. `truncate` was tried
+                          here and is a trap: `white-space: nowrap` raises this
+                          cell's MIN-content width from one word to the whole
+                          digest, and a table column can never be narrower than
+                          its min-content. Measured at 390 with the shipped
+                          fixture — table 356 → 448.95, Team column 109.64 →
+                          211, document 390 → 443. A ceiling on the max-content
+                          side cannot undo a floor raised on the min-content
+                          side. */}
+                      <span className="mb-kicker mt-0.5 block tabular-nums md:hidden">
+                        {rowDigest(row)}
+                      </span>
                     </span>
                   </td>
-                  <td className={`text-[0.76rem] text-mb-ink-muted ${REVEAL_ENTERED}`}>
+                  <td className={`text-[0.78rem] text-mb-ink-muted ${REVEAL_ENTERED}`}>
                     {row.competitions.length === 0 ? (
                       <span className="text-mb-ink-muted/70">No competition</span>
                     ) : (
@@ -311,25 +407,51 @@ export const TeamReadinessPanel = ({ rows }: { rows: MbReadinessRow[] }) => (
           <tbody>
             {rows.map((row) => (
               <tr key={row.team.name}>
-                <td className="pl-3! matchbook-display text-[0.8rem] font-semibold">
-                  {row.team.name}
+                {/* Was a bare `{row.team.name}` — the one name in the system
+                    with no truncation rule of any kind on it, which is how two
+                    teams sharing a 36-character prefix reached the same painted
+                    string here. `MbTeamName` pins the last token; `NAME_COL`
+                    is what makes it fire (see the note above). */}
+                <td className="pl-3!">
+                  <MbTeamName
+                    name={row.team.name}
+                    className={`matchbook-display text-[0.8rem] font-semibold ${NAME_COL}`}
+                  />
                 </td>
                 <td>
                   <span className="flex items-center gap-2">
-                    <span className="w-8 text-[0.76rem] font-semibold tabular-nums">
+                    <span className="w-8 text-[0.78rem] font-semibold tabular-nums">
                       {row.percent}%
                     </span>
-                    {/* 2px to match `.mb-meter` — see the note on the same bar
-                        in `panels.tsx`. `rounded-sm` resolved to 8px through
-                        the legacy `--radius`, which P4 deletes. */}
-                    <span className="h-[7px] w-24 overflow-hidden rounded-[2px] bg-[var(--mb-tint-3)]">
-                      <span
-                        className="block h-full"
-                        style={{
-                          width: `${row.percent}%`,
-                          background: readinessColor(row.percent),
-                        }}
-                      />
+                    {/* `.mb-meter`, not a hand-drawn twin of it (G22).
+
+                        This bar was the system's second spelling of the meter:
+                        the same track, the same fill, the same 2px radius, but
+                        written out here with the fill sized by an inline
+                        `width: N%`. `width` is a layout property, which is the
+                        one thing charter invariant 40 rules out for a fill that
+                        can change — and it made the readiness bar the only
+                        meter in the app that would not have inherited the
+                        `scaleX` conversion.
+
+                        Geometry is preserved exactly: `.mb-meter` is unlayered
+                        so its `height: 4px` / `width: 100%` beat a plain
+                        utility, hence the two `!`. Painted result at 62% is
+                        pixel-identical to what it replaces — 7px tall, 96px
+                        wide, `--mb-tint-3` track, `readinessColor()` fill. The
+                        twin at `panels.tsx:923` (`w-12`) still carries the old
+                        recipe and is not this agent's file; the conversion
+                        there is this same four-line shape. */}
+                    <span
+                      className="mb-meter h-[7px]! w-24! shrink-0"
+                      style={
+                        {
+                          "--mb-meter-fill": row.percent / 100,
+                          "--mb-meter-color": readinessColor(row.percent),
+                        } as React.CSSProperties
+                      }
+                    >
+                      <span />
                     </span>
                   </span>
                 </td>
@@ -548,10 +670,10 @@ export const UpcomingFixturesPanel = ({ items }: { items: MbScheduleItem[] }) =>
             className="grid grow grid-cols-[42px_56px_1fr] items-center gap-2 py-2 pl-3 pr-3"
           >
             <div>
-              <p className="matchbook-display text-[0.64rem] font-bold leading-tight">
+              <p className="matchbook-display text-[0.66rem] font-bold leading-tight">
                 {item.day}
               </p>
-              <p className="matchbook-display text-[0.64rem] font-bold leading-tight tabular-nums">
+              <p className="matchbook-display text-[0.66rem] font-bold leading-tight tabular-nums">
                 {item.date}
               </p>
             </div>
@@ -631,7 +753,7 @@ export const RecentFormPanel = ({ rows }: { rows: MbFormRow[] }) => (
           >
             <TeamMark team={row.team} size={22} className="min-w-0 flex-1" />
             <FormLetters form={row.form} />
-            <span className="matchbook-display w-10 text-right text-[0.76rem] font-bold tabular-nums">
+            <span className="matchbook-display w-10 text-right text-[0.78rem] font-bold tabular-nums">
               {row.record}
             </span>
           </div>

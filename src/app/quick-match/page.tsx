@@ -18,6 +18,7 @@ import {
   type MbTeamFormSummary,
 } from "@/components/matchbook/useMatchbookQuickMatch";
 import { crestForTeam } from "@/components/matchbook/types";
+import { TEAM_CREATE_LABEL } from "@/components/dialogs/team-form/labels";
 
 /* ------------------------- Small building blocks ------------------------- */
 
@@ -264,7 +265,7 @@ export default function QuickMatchPage() {
                     : "Only one team exists — a quick match needs two."}
                 </p>
                 <MbButton variant="outline" icon="plus" onClick={handleQuickCreateTeam}>
-                  Create a team
+                  {TEAM_CREATE_LABEL}
                 </MbButton>
               </div>
             ) : (

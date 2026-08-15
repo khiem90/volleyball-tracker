@@ -5,6 +5,7 @@ import type { Competition, CompetitionType, Match } from "@/types/game";
 import type { MbStandingLine } from "./StandingsTable";
 import { buildTeamTallies, recentForm } from "./teamStats";
 import { createTeamRef } from "./useMatchbookCompetitionDetail";
+import type { MbOverviewSection } from "./panels";
 import { type MbTeam } from "./types";
 
 export const COMPETITION_TYPE_LABELS: Record<CompetitionType, string> = {
@@ -94,6 +95,23 @@ export interface MbCompeteSelected {
   recent: MbMatchLine[];
   createdDate: string;
   seriesLabel: string;
+  /**
+   * Which of the three secondary strips — Live Courts, Upcoming Schedule,
+   * Recent Results — has nothing to print.
+   *
+   * The console had the same sparse cliff the Overview did, and it arrives one
+   * step EARLIER because a competition exists here before a match does.
+   * Measured at 390px on a competition created and not yet started: 1802px,
+   * three `display/stat-sm` headlines (no live matches · no upcoming matches ·
+   * no results) among four populated panels.
+   *
+   * The main panel is deliberately NOT in this list. It is the screen's
+   * principal object, its empty state names the one thing to do next ("start
+   * the competition to generate it"), and §5.7 exists for exactly that. Capping
+   * the screen at that one headline is the rubric's anchor, not a compromise
+   * with it.
+   */
+  muteSections: MbOverviewSection[];
 }
 
 export interface MbCompeteData {
@@ -329,6 +347,22 @@ export const useMatchbookCompete = (): MbCompeteData => {
           competition.matchSeriesLength && competition.matchSeriesLength > 1
             ? `Best of ${competition.matchSeriesLength}`
             : "Single match",
+        /* Read off the three source arrays rather than off the shaped fields,
+           so this cannot claim a strip is mute while the strip is drawing rows.
+           `schedule` drops feeder fixtures with an unresolved side, so it is
+           the filtered list that decides — not `pending`. */
+        muteSections: (
+          [
+            ["live", live.length === 0],
+            [
+              "schedule",
+              pending.filter((m) => m.homeTeamId && m.awayTeamId).length === 0,
+            ],
+            ["results", completed.length === 0],
+          ] as const
+        )
+          .filter(([, mute]) => mute)
+          .map(([key]) => key),
       };
     }
 

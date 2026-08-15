@@ -261,8 +261,25 @@ export const SchedulePanel = ({
   const shown = expanded ? [...finished, ...pagedPending] : pagedPending;
 
   /* The head count is the RENDERED count, never the total — printing 30 over a
-     list of 7 is the same lie `MatchHistorySection` told (BUG-8). */
-  const rendered = shown.reduce((sum, round) => sum + round.lines.length, 0);
+     list of 7 is the same lie `MatchHistorySection` told (BUG-8).
+     ...
+     BUT BOTH NUMBERS MUST COUNT THE SAME THING, and they did not. The
+     denominator is `counts.total`, which is `playable.length` — byes excluded,
+     because `useMatchbookCompetitionDetail` decided a walkover is not a match
+     and every other readout in the app agrees. The numerator counted LINES, and
+     a bye still draws a line (the draw is where a walkover is a fact). So a
+     bracket with byes printed a numerator that could exceed its own
+     denominator. Measured at 390px on `/competitions/s-se-13` — a 13-team
+     single elimination, 15 slots of which 3 are byes — the Schedule head read
+     **"15 of 12"** with the completed rounds shown. The same arithmetic on a
+     5-team draw (8 slots, 3 byes, 4 real matches) prints "7 of 4", which is
+     the figure the second critic reported.
+     Counting the rendered PLAYABLE lines puts the two halves back on one
+     basis: "5 of 12" over eight rows, three of which are walkovers. */
+  const rendered = shown.reduce(
+    (sum, round) => sum + round.lines.filter((line) => !line.bye).length,
+    0
+  );
 
   return (
     <Panel

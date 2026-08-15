@@ -17,6 +17,11 @@ import {
 } from "@/components/matchbook/SelectList";
 import type { MbEntryRow } from "@/components/matchbook/useMatchbookNewCompetition";
 import type { EntryValidation } from "@/hooks/useNewCompetitionPage";
+import { MB_DORMANT } from "./dormant";
+import {
+  TEAM_BULK_ADD_LABEL,
+  TEAM_CREATE_LABEL,
+} from "@/components/dialogs/team-form/labels";
 
 /* ===========================================================================
    STEP 2 — TEAMS
@@ -174,8 +179,9 @@ export const TeamsStep = ({
                   icon="plus"
                   onClick={onCreateTeam}
                   disabled={readOnly}
+                  className={MB_DORMANT}
                 >
-                  Create a team
+                  {TEAM_CREATE_LABEL}
                 </MbButton>
                 <MbButton
                   variant="outline-navy"
@@ -183,8 +189,9 @@ export const TeamsStep = ({
                   icon="import"
                   onClick={onQuickAdd}
                   disabled={readOnly}
+                  className={MB_DORMANT}
                 >
-                  Quick add teams
+                  {TEAM_BULK_ADD_LABEL}
                 </MbButton>
               </div>
             }
@@ -247,7 +254,7 @@ export const TeamsStep = ({
                 icon="check"
                 onClick={() => onSelectAll(filteredIds)}
                 disabled={filteredIds.length === 0}
-                className="flex-auto"
+                className={`flex-auto ${MB_DORMANT}`}
               >
                 {filtering ? `Select ${filtered.length} shown` : "Select all"}
               </MbButton>
@@ -257,7 +264,7 @@ export const TeamsStep = ({
                 icon="close"
                 onClick={onClear}
                 disabled={entryIds.length === 0}
-                className="flex-auto"
+                className={`flex-auto ${MB_DORMANT}`}
               >
                 Clear
               </MbButton>
@@ -269,9 +276,9 @@ export const TeamsStep = ({
                 icon="plus"
                 onClick={onCreateTeam}
                 disabled={readOnly}
-                className="flex-auto"
+                className={`flex-auto ${MB_DORMANT}`}
               >
-                Add team
+                {TEAM_CREATE_LABEL}
               </MbButton>
               <MbButton
                 variant="outline-navy"
@@ -279,9 +286,9 @@ export const TeamsStep = ({
                 icon="import"
                 onClick={onQuickAdd}
                 disabled={readOnly}
-                className="flex-auto"
+                className={`flex-auto ${MB_DORMANT}`}
               >
-                Quick add
+                {TEAM_BULK_ADD_LABEL}
               </MbButton>
             </div>
           </div>

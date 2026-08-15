@@ -6,6 +6,7 @@ import { Crest, FormLetters, Panel, PanelEmpty, TeamMark } from "./Panel";
 import { MbStandingsLegend, MbStandingsTable } from "./StandingsTable";
 import { MbTeamName } from "./TeamName";
 import { readinessColor, readinessInk } from "./teamStats";
+import { TEAM_CREATE_LABEL } from "@/components/dialogs/team-form/labels";
 import type {
   MbBracket,
   MbFeaturedMatch,
@@ -264,11 +265,26 @@ export const MbLedgerPanel = ({
   rows,
   meta,
   dense = false,
+  wide = false,
 }: {
   title: string;
   rows: MbLedgerRow[];
   meta?: React.ReactNode;
   dense?: boolean;
+  /**
+   * The dense cut splits its width evenly, which is right in a five- or
+   * eight-column panel and wrong across the whole page: measured at 1440 with
+   * the index closing a flush row, "Live Courts" and the sentence explaining it
+   * sat 780px apart and stopped reading as one row. `wide` caps the term column
+   * so the gloss stays beside the word it glosses however wide the panel is.
+   *
+   * A prop AND a breakpoint: the prop says which panel is the wide one (the
+   * first-run index at five columns never is), and `xl:` is where the twelve
+   * column grid it sits in actually exists. Below `xl` the panel is one column
+   * on a phone, where the even split is already measured good — capping the
+   * term track there would leave the gloss nothing to sit in.
+   */
+  wide?: boolean;
 }) => (
   <Panel title={title} meta={meta}>
     <dl className="flex grow flex-col divide-y divide-mb-rule">
@@ -276,7 +292,9 @@ export const MbLedgerPanel = ({
         dense ? (
           <div
             key={row.term}
-            className="grid grow grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] items-baseline gap-x-3 px-4 py-2.5"
+            className={`grid grow grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] items-baseline gap-x-3 px-4 py-2.5 ${
+              wide ? "xl:grid-cols-[minmax(0,20rem)_minmax(0,1fr)]" : ""
+            }`}
           >
             <dt className="matchbook-display text-[0.78rem] font-bold">{row.term}</dt>
             <dd className="text-[0.72rem] leading-[1.4] text-mb-ink-muted">{row.gloss}</dd>
@@ -309,6 +327,80 @@ export const MbLedgerPanel = ({
   </Panel>
 );
 
+/* ===========================================================================
+   THE SPARSE STATE — the same cliff, one step further down the funnel
+
+   The zero state above is measured and fixed. Driving a REAL progression
+   through the running app — nothing, one team, two teams, a competition, a
+   generated schedule, a match in progress, a match finished — showed that it
+   only moved the cliff rather than removing it. At 390px:
+
+     nothing            1117px   0 empty headlines
+     one team           1139px   0
+     two teams          1184px   0
+     competition made   1205px   0
+     schedule written   1227px   0
+     FIRST MATCH LIVE   2527px   FIVE
+     first result       2494px   THREE
+
+   The sixth row is the same defect the zero state was condemned for, and it
+   arrives about ninety seconds later: the reader follows the three steps to
+   the letter, taps the one button the screen offers, and is dropped onto no
+   match of the day · no upcoming matches · no bracket · no results · no team
+   leaders — five `display/stat-sm` headlines of identical size and weight,
+   three of which (bracket, results, leaders) cannot possibly say anything on a
+   two-team account with one match in progress, over a live court that CAN.
+
+   `isFirstRun` cannot be widened to cover it. The instant a match is live the
+   screen has something real to report, and the steps panel would be hiding the
+   score the reader just started. The right object is not a different screen —
+   it is the SAME collapse the zero state already uses, applied per panel:
+
+     a panel with nothing to say is not rendered,
+     and the index below names what will fill it.
+
+   The rubric's anchor is <= 1 display headline on a screen, so the collapse
+   arms at TWO. One mute panel among seven populated ones is what §5.7 empty
+   states are FOR, and firing the machinery for it would replace an honest
+   empty panel with a row in a list — worse, not better. Measured on the full
+   fixture: zero mute panels at 390 and at 1440, so on a populated screen none
+   of this renders at all.
+   =========================================================================== */
+
+/**
+ * The objects the Overview prints, in the order it prints them.
+ *
+ * `/competitions` names three of the same eight — Live Courts, Upcoming
+ * Schedule and Recent Results are the same objects with the same conditions —
+ * so it draws its index from this table rather than restating it. Two screens
+ * promising the same thing in two different sentences is precisely the drift
+ * that put "no competition exists yet" on one screen twice.
+ */
+export type MbOverviewSection =
+  | "standings"
+  | "featured"
+  | "live"
+  | "schedule"
+  | "bracket"
+  | "results"
+  | "readiness"
+  | "leaders";
+
+const OVERVIEW_INDEX: {
+  key: MbOverviewSection;
+  term: string;
+  gloss: string;
+}[] = [
+  { key: "standings", term: "Standings", gloss: "Ranked from the first result on." },
+  { key: "featured", term: "Match of the Day", gloss: "The latest match you finished." },
+  { key: "live", term: "Live Courts", gloss: "Scores while a match is in progress." },
+  { key: "schedule", term: "Upcoming Schedule", gloss: "Fixtures the format writes for you." },
+  { key: "bracket", term: "Championship Bracket", gloss: "Once four teams are ranked." },
+  { key: "results", term: "Recent Results", gloss: "Every finished match, newest first." },
+  { key: "readiness", term: "Team Readiness", gloss: "Form and readiness, team by team." },
+  { key: "leaders", term: "Team Leaders", gloss: "Wins, points and the longest streak." },
+];
+
 /**
  * What the Overview becomes, in the order the populated screen prints it.
  *
@@ -316,16 +408,57 @@ export const MbLedgerPanel = ({
  * and a `PanelEmpty` message in the same file are the same promise written
  * once each, and the file that owns one owns the other.
  */
-export const MB_OVERVIEW_CONTENTS: MbLedgerRow[] = [
-  { term: "Standings", gloss: "Ranked from the first result on." },
-  { term: "Match of the Day", gloss: "The latest match you finished." },
-  { term: "Live Courts", gloss: "Scores while a match is in progress." },
-  { term: "Upcoming Schedule", gloss: "Fixtures the format writes for you." },
-  { term: "Championship Bracket", gloss: "Once four teams are ranked." },
-  { term: "Recent Results", gloss: "Every finished match, newest first." },
-  { term: "Team Readiness", gloss: "Form and readiness, team by team." },
-  { term: "Team Leaders", gloss: "Wins, points and the longest streak." },
-];
+export const MB_OVERVIEW_CONTENTS: MbLedgerRow[] = OVERVIEW_INDEX.map(
+  ({ term, gloss }) => ({ term, gloss })
+);
+
+/**
+ * The index for a SPARSE screen: the same rows, cut down to the panels that
+ * were actually withheld, in the same order. Reading it back tells the reader
+ * exactly what the page is still waiting for and nothing else.
+ */
+export const mbContentsFor = (
+  sections: readonly MbOverviewSection[]
+): MbLedgerRow[] =>
+  OVERVIEW_INDEX.filter((row) => sections.includes(row.key)).map(
+    ({ term, gloss }) => ({ term, gloss })
+  );
+
+/**
+ * The span that closes the last row of a 12-column auto-flow grid.
+ *
+ * Withholding panels breaks a tiling that was only ever exact by arithmetic —
+ * the Overview's 7+5+4+4+4+4+4+4 is three flush rows, and dropping any one of
+ * them leaves the index stranded beside a hole. This walks the kept spans the
+ * way `grid-auto-flow: row` does (an item that does not fit starts a new row)
+ * and returns what is left of the final one, so the index closes it flush.
+ *
+ * Under four columns there is no panel worth drawing in the remainder, so the
+ * index takes a full row of its own instead — which is also the answer when
+ * the last row is already flush.
+ */
+export const mbClosingSpan = (spans: readonly number[]): number => {
+  let used = 0;
+  for (const span of spans) used = used + span > 12 ? span : used + span;
+  const rest = 12 - used;
+  return rest >= 4 ? rest : 12;
+};
+
+/**
+ * `xl:col-span-N` as a literal, because Tailwind scans source text and a
+ * template string would compile to nothing.
+ */
+export const MB_XL_SPAN: Record<number, string> = {
+  4: "xl:col-span-4",
+  5: "xl:col-span-5",
+  6: "xl:col-span-6",
+  7: "xl:col-span-7",
+  8: "xl:col-span-8",
+  9: "xl:col-span-9",
+  10: "xl:col-span-10",
+  11: "xl:col-span-11",
+  12: "xl:col-span-12",
+};
 
 /**
  * The five formats, in the wizard's own presentation order.
@@ -422,7 +555,7 @@ export const StandingsPanel = ({
     {rows.length === 0 ? (
       <PanelEmpty
         message="No standings exist yet — create teams and play matches to build the table."
-        actionLabel="Create a team"
+        actionLabel={TEAM_CREATE_LABEL}
         href="/teams"
       />
     ) : (
@@ -773,7 +906,7 @@ export const ReadinessPanel = ({ rows }: { rows: MbReadinessRow[] }) => (
     {rows.length === 0 ? (
       <PanelEmpty
         message="No teams exist yet — add teams to track their form and readiness."
-        actionLabel="Create a team"
+        actionLabel={TEAM_CREATE_LABEL}
         href="/teams"
       />
     ) : (

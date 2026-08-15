@@ -19,6 +19,7 @@ import {
   type AdvancedSettings,
 } from "@/hooks/useNewCompetitionPage";
 import type { CompetitionType } from "@/types/game";
+import { MB_DORMANT } from "./dormant";
 
 /* ===========================================================================
    ADVANCED SETTINGS
@@ -150,10 +151,12 @@ export const AdvancedSettingsPanel = ({
      cannot slam it shut, and reverting to the defaults cannot either. */
   const [open, setOpen] = useState(() => customised);
 
-  /** What the closed row says is inside. One line, format-aware. */
+  /** What the closed row says is inside. Format-aware, and complete: a summary
+      that omits a block is a summary the reader cannot use to decide whether
+      to open the disclosure. */
   const summary = standingsPoints
-    ? `Standings points, ties and ${venue} wording`
-    : `${venue.charAt(0).toUpperCase()}${venue.slice(1)} wording`;
+    ? `Match scoring, standings points and ${venue} wording`
+    : `Match scoring and ${venue} wording`;
 
   return (
     <Panel
@@ -177,13 +180,26 @@ export const AdvancedSettingsPanel = ({
         aria-controls={bodyId}
         className="mb-btn-touch mb-row-hover flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
       >
+        {/* The closed row is an ACTION, not a second title.
+            It read "Advanced settings" over "… — left at the defaults", eight
+            pixels under a panel head already reading "ADVANCED SETTINGS ·
+            DEFAULTS": the title twice and the defaults twice, in one 44px
+            strip. The verb pair says the same thing about what the control
+            does and cannot be mistaken for the head, and the tail comes off
+            because the head owns that word.
+
+            And `truncate` comes off with it. Measured at 390px, the summary
+            span was 337px of text in a 300px box, so the line ended
+            "left at the defau…" — a disclosure summary that cannot finish its
+            own sentence tells the reader less than no summary. Two lines that
+            wrap cost 18px and clip nothing at 320px. */}
         <span className="flex min-w-0 flex-col gap-0.5">
           <span className="mb-kicker">
-            {open ? "Hide advanced settings" : "Advanced settings"}
+            {open ? "Hide advanced settings" : "Show advanced settings"}
           </span>
           {!open && (
-            <span className="truncate text-[0.78rem] leading-snug text-mb-ink-muted">
-              {summary} — {customised ? "customised" : "left at the defaults"}
+            <span className="text-[0.78rem] leading-snug text-mb-ink-muted">
+              {summary}
             </span>
           )}
         </span>
@@ -191,6 +207,36 @@ export const AdvancedSettingsPanel = ({
       </button>
 
       <div id={bodyId} hidden={!open}>
+        {/* WHERE "POINTS TO WIN" WOULD BE, AND WHY IT IS NOT A FIELD.
+            A first-run walkthrough went looking for a target score and found
+            no field for one anywhere in the wizard. There is none because the
+            app has no such concept to configure: `CompetitionConfig`
+            (src/types/competition-config.ts) carries points per RESULT and
+            terminology and nothing else, `Match` carries two running scores
+            and a status, and `useMatchPage.handleCompleteMatch` decides the
+            winner by comparing those two scores at the moment the user
+            presses Complete — it never compares either of them against a
+            threshold. A "points to win" input here would therefore write a
+            number that no code reads, which is worse than the gap: a setting
+            that lies. Adding the capability means changing the match model
+            and the completion path, and that path is marked BLACK BOX by
+            charter W5 acceptance 1.
+            So the wizard answers the question in the one place a user hunting
+            for a scoring setting will open, in a sentence rather than a
+            control. */}
+        {/* `border-t`, not `border-y`: every block below opens with its own
+            top rule, and two adjacent hairlines draw one 2px line that belongs
+            to no tier. */}
+        <div className="border-t border-mb-rule px-4 py-3">
+          <span className={MB_FIELD_LABEL.className} style={MB_FIELD_LABEL.style}>
+            Match score
+          </span>
+          <p className="mt-1 text-[0.78rem] leading-snug text-mb-ink-muted">
+            There is no target score to set. You keep the score as you play and
+            the match ends when you complete it, whatever the score is then.
+          </p>
+        </div>
+
         {standingsPoints ? (
           <>
             <div className="border-y border-mb-rule px-4 py-3">
@@ -297,7 +343,7 @@ export const AdvancedSettingsPanel = ({
             icon="undo"
             onClick={onReset}
             disabled={!customised}
-            className="self-start"
+            className={`self-start ${MB_DORMANT}`}
           >
             Reset to defaults
           </MbButton>

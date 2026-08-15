@@ -392,12 +392,42 @@ export const useMatchbookNewCompetition = (
         : "Choose a format to continue";
     }
     if (step === "teams") {
+      /* A LIBRARY TOO SMALL TO SATISFY THE FORMAT IS NOT A SELECTION PROBLEM.
+         `validateEntry` measures the SELECTION against the format minimum, so
+         its message is always "Select at least 3 teams" — and on a fresh
+         account that is 0 selected out of 0 that exist, which asks a
+         first-time user to tick a row in a directory reading NO TEAMS EXIST
+         YET four inches above it. It is the same impossible advice the
+         directory panel's own six instruments were cut down to remove, and it
+         survived in the commit bar because the bar reads a different source.
+         The bar is the one instrument on screen at every scroll position, so
+         it is the one that most has to be actionable.
+
+         `validateEntry` itself is not the place to fix it: it is pure, tested,
+         and it correctly answers the question it is asked ("is this selection
+         legal?"). What is missing is the OTHER constraint — how many teams
+         exist at all — and that is a view fact, so it is answered here. */
+      const need = validation.minTeams;
+      if (teams.length < need) {
+        const short = need - teams.length;
+        return teams.length === 0
+          ? `No teams exist yet — create ${need} to get started`
+          : `Add ${short} more ${pluralise("team", short)} — ${need} are needed`;
+      }
       return validation.message || "Select the teams that will take part";
     }
     return wizard.competitionName.trim()
       ? `Ready to create · ${entryCount} teams`
       : "Name the competition to create it";
-  }, [step, selectedFormat, validation.message, entryCount, wizard.competitionName]);
+  }, [
+    step,
+    selectedFormat,
+    validation.message,
+    validation.minTeams,
+    entryCount,
+    teams.length,
+    wizard.competitionName,
+  ]);
 
   const seriesOptions = useMemo(
     () =>
