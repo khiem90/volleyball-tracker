@@ -27,7 +27,12 @@ import { MbAccountChip } from "./AccountChip";
 export interface MbTopStripBack {
   href?: string;
   onClick?: () => void;
-  /** The visible word AND the accessible name. Keep it to one short word. */
+  /**
+   * Always the accessible name; visible from `sm` up, where there is room for
+   * it beside the title. Below `sm` the control is the chevron alone — see the
+   * note at the call site. Keep it to one short word regardless: from `sm` to
+   * `lg` it still shares the row with the title and the account chip.
+   */
   label: string;
 }
 
@@ -84,7 +89,39 @@ export const MatchbookTopStrip = ({
             icon="chevron-left"
             className="shrink-0"
           >
-            {back.label}
+            {/* BELOW `sm` THE BACK CONTROL IS THE CHEVRON ALONE.
+
+                This row is `shrink-0 back · flex-1 min-w-0 truncate title ·
+                shrink-0 account`, so the TITLE is the only child that can
+                absorb a long neighbour and it always loses first. Measured on
+                `/competitions/new`, where the back label is already down to
+                one word:
+
+                  390px  back 90.48 + account 112.94 → title 154.58 for 107 ✓
+                  320px  same two → title 84.58 for 107 → "NEW COMPETI…"
+
+                and that is the SHORTEST back label in the app —
+                `/competitions/[id]` passes "All competitions", sixteen
+                characters, and `/tools/…/my-formations` passes "Rotation
+                Designer". Neither could be measured in this round (the
+                competition-detail route was compiling 500 while this landed),
+                but no arithmetic makes them fit where one word barely does.
+                Every route that adds a back word re-opens the same hole, and
+                shortening labels one at a time has now been tried twice.
+
+                So the strip protects its title itself. The chevron in the
+                top-left of a phone is not a bare glyph in the sense G16
+                warns about — it is the most conventionalised control in
+                mobile UI, this component ALREADY renders exactly that for the
+                `onClick` spelling of the same prop (`MbIconButton` below), and
+                the word returns from `sm` up, where the strip still renders
+                until `lg`. The two spellings of `back` now agree at the width
+                where the room runs out.
+
+                `sr-only`, not `hidden`: the label is the control's accessible
+                name and the only thing that says WHERE back goes. Measured
+                after: back 59.19, title 115.81 for 107 at 320. */}
+            <span className="max-sm:sr-only">{back.label}</span>
           </MbButtonLink>
         ) : (
           <MbIconButton

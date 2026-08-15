@@ -8,7 +8,6 @@ import { MatchbookShell } from "@/components/matchbook/AppShell";
 import { MbPageLoading } from "@/components/matchbook/Loading";
 import { MbIcon } from "@/components/matchbook/MbIcon";
 import { MbBadge, type MbBadgeTone } from "@/components/matchbook/Badge";
-import { MbButtonLink } from "@/components/matchbook/Button";
 import { MbMenu } from "@/components/matchbook/Menu";
 import { Crest, Panel, PanelEmpty, TeamMark } from "@/components/matchbook/Panel";
 import {
@@ -130,8 +129,10 @@ const STATUS_LABEL: Record<MbCompetitionRow["status"], string> = {
  * — write the fixtures, score them, read them — and a button that names none of
  * them is a button that has to be tried to be understood.
  *
- * One table, both call sites, so the masthead and the Event Details foot cannot
- * disagree about what the destination is for.
+ * One table, ONE call site. It used to have two — the masthead and the Event
+ * Details foot — which is how the screen ended up printing the same words, the
+ * same glyph and the same destination twice in one viewport; see the note on
+ * that panel below.
  */
 const EVENT_ACTION: Record<
   MbCompetitionRow["status"],
@@ -449,8 +450,15 @@ const EventRow = ({
           on the width where it is the only description of the event. A meta
           line is prose, not a label, so it takes a second line rather than an
           ellipsis; the row's height already floats on `mb-btn-touch`. */}
+      {/* A draft has no fixtures, so it has no ratio: "0/0 matches" is two
+          zeros standing in for the one fact that is true about it. Same rule
+          the panels below now follow — a number that only exists because the
+          shape expects one is not a number. */}
       <span className="text-[0.72rem] tabular-nums text-mb-ink-muted">
-        {row.typeLabel} • {row.teamCount} teams • {row.completed}/{row.total} matches
+        {row.typeLabel} • {row.teamCount} teams •{" "}
+        {row.status === "draft"
+          ? "not started"
+          : `${row.completed}/${row.total} matches`}
       </span>
     </button>
 
@@ -759,7 +767,35 @@ const EventConsole = ({
 
     {/* Event details */}
     <div className="xl:col-span-4">
-      <Panel title="Event Details">
+      {/* -------------------------------------------------------------------
+          ONE PRIMARY, ONE CONTROL — the list screen's own copy of F2
+
+          This panel's foot carried a filled navy `MbButtonLink` reading
+          `EVENT_ACTION[status].label` — the SAME words, the same glyph, the
+          same destination and the same tone as the masthead action built from
+          the same table 700px above it. On the state a first-time reader
+          reaches (one draft, one event) both were in the first viewport at
+          once: measured at 1440x900, "SET UP & START" at y=61 and "SET UP &
+          START" at y=776. That is the defect the detail screen was cured of —
+          "two identical START COMPETITION buttons about 350px apart … one
+          primary action deserves one control" — reproduced on the list.
+
+          The masthead keeps it: it is the shell's action slot, it is on screen
+          at every width without a scroll, and it is what answers "how do I
+          start my tournament from this screen". What the panel gets instead is
+          the affordance its four neighbours already use — a head link, quiet,
+          named for the destination rather than for the commit, so the two can
+          no longer read as two copies of one button.
+          ------------------------------------------------------------------- */}
+      <Panel
+        title="Event Details"
+        meta={
+          <MbPanelHeadLink
+            href={`/competitions/${selected.competition.id}`}
+            label="Open Event"
+          />
+        }
+      >
         <div className="flex flex-1 flex-col gap-3 p-4">
           <div className="flex items-center gap-3">
             <MbIcon id="calendar" size={18} className="shrink-0 text-mb-navy" />
@@ -788,20 +824,6 @@ const EventConsole = ({
               </p>
             </div>
           </div>
-          {/* Navy: this is the masthead's own event action a second time, and
-              the screen's one coral is already spent on the rail. It is named
-              from `EVENT_ACTION`, so the two copies cannot drift — and it is
-              what packs this column to the height of Upcoming Schedule and
-              Recent Results beside it (design language §3.3). */}
-          <MbButtonLink
-            href={`/competitions/${selected.competition.id}`}
-            variant="navy"
-            icon={EVENT_ACTION[selected.competition.status].icon}
-            fullWidth
-            className="mt-auto"
-          >
-            {EVENT_ACTION[selected.competition.status].label}
-          </MbButtonLink>
         </div>
       </Panel>
     </div>

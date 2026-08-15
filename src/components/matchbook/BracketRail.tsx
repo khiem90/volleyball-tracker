@@ -355,7 +355,17 @@ const RailSection = ({
           style={{ width: MB_CELL_W, scrollSnapAlign: "start" }}
         >
           {column.label}
-          {column.current ? " · Now" : ""}
+          {/* Two states wear one mark: `current` is the round IN PLAY or the
+              next one to be played, and the word has to say which. On a
+              bracket that has just been generated every cell is pending, and
+              this head announced "· Now" over a column of TBDs. Read off the
+              column's own cells, the same rule the Schedule panel's band
+              follows, so the two cannot describe one round differently. */}
+          {column.current
+            ? column.cells.some((placed) => placed.cell.live)
+              ? " · Now"
+              : " · Next"
+            : ""}
         </h4>
       ))}
     </div>
@@ -449,7 +459,12 @@ const RoundsList = ({
                 {sections.length > 1 ? `${section.label} · ` : ""}
                 {round.label}
               </span>
-              {round.current && <span className="shrink-0">Now playing</span>}
+              {/* Same pair, same rule as the column head above. */}
+              {round.current && (
+                <span className="shrink-0">
+                  {round.cells.some((cell) => cell.live) ? "Now playing" : "Up next"}
+                </span>
+              )}
             </p>
             <div className="flex flex-col divide-y divide-mb-rule">
               {round.cells.map((cell) => (

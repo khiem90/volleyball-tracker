@@ -314,10 +314,15 @@ export const useMatchbookCompete = (): MbCompeteData => {
         [...completed].sort((a, b) => (b.completedAt ?? 0) - (a.completedAt ?? 0))
       );
 
-      /* A draft has no fixtures, so it has no table. `rankTeams` answers a
-         four-team draft with four all-zero rows tied at rank 1 — a ranking of
-         nothing, printed as if it were a league position. */
-      const standings: MbStandingLine[] = isElimination || notStarted
+      /* No result, no table. `rankTeams` answers a four-team competition that
+         has played nothing with four all-zero rows tied at rank 1 — a ranking
+         of nothing, printed as if it were a league position.
+         The condition is `completed.length === 0`, not `notStarted`: a draft
+         has it, and so does a competition one second past Start, which is the
+         state a first-time reader lands on straight after the commit and which
+         printed the same four zero rows here until it was measured. */
+      const standings: MbStandingLine[] =
+        isElimination || completed.length === 0
         ? []
         : rankTeams(competition.teamIds, matches, competition.config).map((row) => ({
             teamId: row.teamId,

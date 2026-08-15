@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import type { MbTabItem } from "@/components/matchbook/Tabs";
 import type { MbCompetitionDetail } from "@/components/matchbook/useMatchbookCompetitionDetail";
 import type { Competition, Match, PersistentTeam } from "@/types/game";
@@ -13,6 +13,7 @@ import {
   EventStatusPanel,
   LivePanel,
   PreviewPanel,
+  ReadyPanel,
   ResultsPanel,
   SchedulePanel,
   SetupPanel,
@@ -93,6 +94,69 @@ const PinnedChampion = ({ data }: { data: MbCompetitionDetail }) => (
   </div>
 );
 
+/* --------------------------------------------------------------- kickoff */
+
+/**
+ * Started, nothing played — the state between the Start dialog closing and the
+ * first point of the first match.
+ *
+ * The five bodies below all assume a competition HAS results, or is a draft
+ * that cannot. This one has neither: every readout they are built around reads
+ * zero, and the three panels that would carry them (Standings, Live Now,
+ * Results) have nothing but their own empty states to show. Measured on the
+ * four-team round robin a first-time reader creates, the instant Start
+ * completes: 35 printed zeros at 1440 and two equal-weight empty headlines
+ * against a budget of one — a screen made of the shape of a competition with
+ * the facts missing, which is the same defect the draft screen was cured of one
+ * step earlier.
+ *
+ * So the same cure: a narrower composition rather than the wide one with the
+ * numbers removed. Three panels, each with something true to say — what will
+ * be played, what to play first, and the settings it will be played under —
+ * and ONE control, the coral in `ReadyPanel`'s foot. Nothing is withheld that
+ * the reader has seen: a competition this age has no history to lose, and the
+ * tab strip does not appear because there are no longer three views to switch
+ * between.
+ *
+ * It ends by itself. The moment the first match is live or finished
+ * `data.unplayed` is false and the format's own body takes over, with the
+ * standings, live board and results it now has data for.
+ */
+const ReadyBody = ({
+  data,
+  canEdit,
+  principal,
+}: {
+  data: MbCompetitionDetail;
+  canEdit: boolean;
+  /**
+   * The 7-column object this format leads with before anything is played: the
+   * fixture list for a league, the DRAW for a bracket. A bracket's opening
+   * round is real information at this point — seeded pairings a reader can
+   * check against the entry order — which is why it is passed in rather than
+   * assumed.
+   */
+  principal: ReactNode;
+}) => (
+  <>
+    {/* The commit leads on a phone and sits in the 5-column stack at `xl` —
+        the same complementary pair `PinnedLive`/`HeadlinePanel` uses, so
+        exactly one copy paints at every width. */}
+    <div className="mb-4 xl:hidden">
+      <ReadyPanel data={data} canEdit={canEdit} />
+    </div>
+    <div className={GRID}>
+      <div className="xl:col-span-7">{principal}</div>
+      <div className="flex flex-col gap-4 xl:col-span-5">
+        <div className="hidden xl:block">
+          <ReadyPanel data={data} canEdit={canEdit} />
+        </div>
+        <DetailsPanel data={data} createdDate={data.createdDate} />
+      </div>
+    </div>
+  </>
+);
+
 /** The `xl`-only copy of whichever headline this state has. */
 const HeadlinePanel = ({
   done,
@@ -141,6 +205,26 @@ export const RoundRobinBody = ({
   );
   const tabs = useFormatTabs(items);
   const done = competition.status === "completed";
+
+  /* Started with nothing played is its own state, not this one with the
+     numbers at zero. The hooks above still run — the window closes on the
+     first score and this body resumes. */
+  if (data.unplayed) {
+    return (
+      <ReadyBody
+        data={data}
+        canEdit={canEdit}
+        principal={
+          <SchedulePanel
+            data={data}
+            canEdit={canEdit}
+            onSelect={onSelectMatch}
+            onEdit={onEditMatch}
+          />
+        }
+      />
+    );
+  }
 
   return (
     <>
@@ -225,6 +309,25 @@ export const BracketBody = ({
     const match = byId.get(id);
     if (match) handler(match);
   };
+
+  /* Same window, same cure — a bracket whose opening round has not been played
+     is a draw of TBDs beside a table of nothing. See `ReadyBody`. */
+  if (data.unplayed) {
+    return (
+      <ReadyBody
+        data={data}
+        canEdit={canEdit}
+        principal={
+          <BracketPanel
+            data={data}
+            canEdit={canEdit}
+            onSelect={dispatch(onSelectMatch)}
+            onEdit={dispatch(onEditMatch)}
+          />
+        }
+      />
+    );
+  }
 
   return (
     <>

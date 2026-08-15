@@ -49,6 +49,10 @@ export type MbMastheadBadge = MbMastheadCountBadge | MbMastheadLinesBadge;
 const isLines = (badge: MbMastheadBadge): badge is MbMastheadLinesBadge =>
   "lines" in badge;
 
+/** See `MastheadBadge`: the one coral frame is never spent on a count of nothing. */
+const isZeroCount = (badge: MbMastheadBadge): boolean =>
+  !isLines(badge) && badge.value === 0;
+
 export interface MastheadProps {
   /**
    * The one `<h1>` on the screen. A `ReactNode` so the caller supplies the
@@ -84,6 +88,30 @@ export interface MastheadProps {
  * The coral lockup. `border-[2px]` is one of the two marks the rule tiers
  * reserve 2px for (`globals.css`, "rule tiers"); it is not a structural rule
  * and must not be moved onto the accent tier.
+ *
+ * ------------------------------------------------- CORAL NEVER FRAMES A ZERO
+ *
+ * A count badge whose value is `0` is not rendered at all.
+ *
+ * The design language lists this frame among coral's jobs and it is the only
+ * place coral is used as a frame — which is exactly why it must not be spent
+ * on nothing. Measured on an empty account at 390: `/teams` painted a 60x50
+ * 2px coral box at (288.8, 77) holding a coral `0` over a navy `TEAMS`, and
+ * `/summaries` painted the same box around `0 RESULTS`. The loudest mark on a
+ * first-run screen was an alert-shaped frame around the absence the rest of
+ * the page was calmly explaining ("what this page becomes", "ways to add
+ * teams"). Coral's declared jobs are the accent, the CTA, the selection rail
+ * and the schedule spine; "count of nothing" is not among them.
+ *
+ * It is enforced here rather than at the two call sites because it is a
+ * property of the MARK, not of a route, and because `/` and `/competitions`
+ * already withhold their badges on first run — this makes the other two agree
+ * with them instead of each screen re-deciding. A caller that genuinely has a
+ * zero to state has the whole dateline and the panels to state it in.
+ *
+ * Only a literal numeric zero counts. `/quick-match`'s badge is the string
+ * `#1` and `/tools`'s is `4`; neither is affected, and a populated `/teams`
+ * still paints `8 TEAMS`.
  */
 const MastheadBadge = ({ badge }: { badge: MbMastheadBadge }) => (
   <div className="flex shrink-0 flex-col items-center border-[2px] border-mb-coral px-2.5 py-1 text-center">
@@ -171,7 +199,7 @@ export const MatchbookMasthead = ({
           {title}
         </h1>
 
-        {badge && <MastheadBadge badge={badge} />}
+        {badge && !isZeroCount(badge) && <MastheadBadge badge={badge} />}
         {status}
 
         {(dateLine || subLine) && (

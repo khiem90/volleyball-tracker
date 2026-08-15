@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { MbBadge } from "@/components/matchbook/Badge";
-import { MbButton } from "@/components/matchbook/Button";
+import { MbButton, MbButtonLink } from "@/components/matchbook/Button";
 import { MbDangerZone } from "@/components/matchbook/DangerZone";
 import { MbFinalStamp } from "@/components/matchbook/FinalStamp";
 import { MbIcon } from "@/components/matchbook/MbIcon";
@@ -188,8 +188,13 @@ export const StandingsPanel = ({
   <Panel
     title="Standings"
     meta={
+      /* The ENTRANT count, not the row count. `standings` is empty until a
+         match has been played (see the field's note in
+         `useMatchbookCompetitionDetail`), and reading the head off it printed
+         "0 teams" over a table that is empty for a reason that has nothing to
+         do with how many teams entered. */
       <span className="mb-kicker tabular-nums">
-        {data.standings.length} {pluralise("team", data.standings.length)}
+        {data.teamRefs.length} {pluralise("team", data.teamRefs.length)}
       </span>
     }
   >
@@ -311,7 +316,18 @@ export const SchedulePanel = ({
                 {round.id === data.currentRoundId ? (
                   <p className="mb-kicker flex items-center justify-between gap-2 border-b border-mb-navy bg-mb-navy px-3 py-1.5 tabular-nums text-mb-paper-bright!">
                     <span>{round.label}</span>
-                    <span>Now playing</span>
+                    {/* "Now playing" was printed on the marked round whatever
+                        its rows said. `currentRoundId` is the round in play OR
+                        the next one to be played — two states, one word — so on
+                        a competition that has just started it labelled four
+                        pending fixtures with no score as being under way. The
+                        band says which of the two it is, read off the rows it
+                        is sitting on. */}
+                    <span>
+                      {round.lines.some((line) => line.status === "live")
+                        ? "Now playing"
+                        : "Up next"}
+                    </span>
                   </p>
                 ) : (
                   <p className="mb-kicker border-b border-mb-rule bg-[var(--mb-band)] px-3 py-1.5 text-mb-navy tabular-nums">
@@ -803,6 +819,87 @@ export const DetailsPanel = ({
     </div>
   </Panel>
 );
+
+/* ----------------------------------------------------------------- kickoff */
+
+/**
+ * The state one second after Start, which had no composition of its own.
+ *
+ * Reproduced on the four-team round robin a first-time reader creates, at the
+ * instant the Start dialog closes — a screen whose every readout is zero:
+ *
+ *   STANDINGS      four rows, `=1 · P0 · W0 · L0 · PF0 · PA0 · PD0 · Pts0`
+ *   EVENT STATUS   MATCHES PLAYED 0 / 6 · 0% · LIVE NOW 0
+ *   OVERALL PROGRESS  0%
+ *   LIVE NOW       "No matches are live yet"
+ *   RESULTS        "No results exist yet"
+ *
+ * Measured: 32 printed zeros at 390px, 35 at 1440, and TWO equal-weight empty
+ * headlines at 1440 against a budget of one. The only control the chrome
+ * offered was the outline `End competition` in the masthead — on a competition
+ * that had played nothing, at the exact moment the reader had just committed
+ * to playing it. Their words about the state one step earlier were "I could
+ * not tell how to start my tournament from this screen"; the sequel to that
+ * screen answered "you started it" with a table of zeros and a way to end it.
+ *
+ * This panel is the one true thing that state has to say — the schedule now
+ * exists, here is the first fixture — and it carries the screen's single
+ * commit. Coral is free here and this is what it is for: nothing is live, so
+ * the LIVE job that owns the accent on this screen is not spending it (rubric
+ * 3.4), exactly as `PreviewPanel`'s coral Start is the draft's one commit.
+ */
+export const ReadyPanel = ({
+  data,
+  canEdit,
+}: {
+  data: MbCompetitionDetail;
+  canEdit: boolean;
+}) => {
+  const rounds = data.scheduleRounds.length;
+  const next = data.nextLine;
+
+  return (
+    <Panel title="Ready to Play" tone="navy" icon="quick">
+      <div className="flex flex-1 flex-col">
+        <p className="border-b border-mb-rule px-4 py-3 text-[0.85rem] leading-[1.5] tabular-nums">
+          The schedule is written: {data.counts.total} {data.matchWord.many} over{" "}
+          {rounds} {pluralise("round", rounds)}. Nothing has been played yet.
+        </p>
+
+        {next && (
+          <>
+            <p className="mb-kicker bg-[var(--mb-band)] px-3 py-1.5 text-mb-navy">
+              First {data.matchWord.one}
+            </p>
+            {/* Static type, not a control: the panel's own foot is the way in,
+                and two ways to open the same match inside one panel is the
+                duplicated-commit shape this screen was just cured of. */}
+            <MbMatchRow
+              label={next.label}
+              home={next.home}
+              away={next.away}
+              status="pending"
+              variant="schedule"
+            />
+          </>
+        )}
+
+        {canEdit && next && (
+          <div className="mt-auto border-t border-mb-navy p-4">
+            <MbButtonLink
+              href={`/match/${next.id}`}
+              variant="coral"
+              icon="volleyball"
+              fullWidth
+            >
+              Score first {data.matchWord.one}
+            </MbButtonLink>
+          </div>
+        )}
+      </div>
+    </Panel>
+  );
+};
 
 /* ------------------------------------------------------------------ draft */
 

@@ -157,8 +157,45 @@ export interface MbCompetitionDetail {
     total: number;
     pct: number;
   };
+  /**
+   * Empty until a match has actually been played.
+   *
+   * A ranking is a claim that the order means something, and after `rankTeams`
+   * has been handed a competition with no results the order means nothing: it
+   * answers a four-team league with four rows reading `=1 · P0 · W0 · L0 · PF0
+   * · PA0 · PD0 · Pts0`. The draft screen was cured of exactly this by
+   * branching on `status === "draft"` — but the property that makes the table
+   * meaningless is that NOTHING HAS BEEN PLAYED, not that nothing has been
+   * started, and a competition one second past Start has it too. Measured on
+   * the four-team round robin a first-time reader actually creates, at the
+   * instant the Start dialog closes: 32 printed zeros at 390px, 35 at 1440,
+   * over a table whose own caption calls it a standing.
+   *
+   * So the rule moves to the real condition and lives HERE, where every body
+   * inherits it, rather than in each panel that might forget.
+   */
   standings: MbStandingLine[];
   scheduleRounds: MbScheduleRound[];
+  /**
+   * The competition has started, has fixtures, and none of them has been
+   * played or is being played — the window between pressing Start and the
+   * first point of the first match.
+   *
+   * It is a state with its own composition, for the same reason a draft is:
+   * every readout the live console exists to carry (the table, the live board,
+   * the results, the completion meter) is at zero, and the one thing that is
+   * true — there are fixtures, here is the first — is the thing it did not
+   * say. See `ReadyBody` in `competition-detail/bodies.tsx`.
+   */
+  unplayed: boolean;
+  /**
+   * The fixture to play next: the earliest pending match with both sides
+   * resolved. `upcomingLines` is already sorted by round then position, so
+   * this is its head — declared rather than re-derived so the panel that
+   * offers "score the first match" and the schedule beneath it cannot disagree
+   * about which match that is.
+   */
+  nextLine: MbMatchLine | null;
   /**
    * The `id` of the round being played, or of the next one to be played — the
    * one round the schedule marks. Three identical `.mb-kicker` bands answered
@@ -495,6 +532,8 @@ export const useMatchbookCompetitionDetail = ({
       counts: { completed: 0, live: 0, pending: 0, total: 0, pct: 0 },
       standings: [],
       scheduleRounds: [],
+      unplayed: false,
+      nextLine: null,
       currentRoundId: null,
       liveLines: [],
       resultLines: [],
@@ -578,7 +617,9 @@ export const useMatchbookCompetitionDetail = ({
 
     /* -------------------------------------------------------- standings */
 
-    const standings: MbStandingLine[] = rankTeams(
+    /* No result, no ranking — see the field's own note. `rankTeams` is only
+       asked the question once there is something to answer it with. */
+    const standings: MbStandingLine[] = completed.length === 0 ? [] : rankTeams(
       competition.teamIds,
       matches,
       competition.config
@@ -964,6 +1005,12 @@ export const useMatchbookCompetitionDetail = ({
       },
       standings,
       scheduleRounds,
+      unplayed:
+        competition.status === "in_progress" &&
+        playable.length > 0 &&
+        completed.length === 0 &&
+        live.length === 0,
+      nextLine: upcomingLines[0] ?? null,
       currentRoundId,
       liveLines,
       resultLines,
