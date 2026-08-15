@@ -11,8 +11,12 @@ import { MbIcon } from "@/components/matchbook/MbIcon";
 import { MbMenu } from "@/components/matchbook/Menu";
 import { MbSelect, MbTextInput } from "@/components/matchbook/form";
 import { Crest, Panel, PanelEmpty, TeamMark } from "@/components/matchbook/Panel";
-import { MbPanelHeadLink } from "@/components/matchbook/panels";
-import { useMatchbookHistory } from "@/components/matchbook/useMatchbookHistory";
+import { MbLedgerPanel, MbPanelHeadLink } from "@/components/matchbook/panels";
+import {
+  mbArchiveContentsFor,
+  useMatchbookHistory,
+  type MbArchiveSection,
+} from "@/components/matchbook/useMatchbookHistory";
 
 /* ===========================================================================
    MATCH ARCHIVE
@@ -24,6 +28,45 @@ import { useMatchbookHistory } from "@/components/matchbook/useMatchbookHistory"
    which pin `min-height` to the control ladder rather than deriving a height
    from padding, and the ledger row's padding is set from the floor rather than
    from a guess.
+
+   --------------------------------------------------- the archive with nothing in it
+
+   Measured on a brand-new account at 390px this route was 1600px carrying SIX
+   display headlines — the worst screen in the build. Three things made it, and
+   only one of them was the headlines:
+
+     251px  a filter bar filtering a set of zero: two selects reading "All
+            Competitions" / "All Teams" over empty option lists, and a search
+            field over nothing to search.
+      48px  a masthead whose ONLY action was "Export CSV", `disabled`, because
+            there is nothing to export. The screen offered no move at all.
+     963px  six panels, each an empty state, each with its own display headline
+            and its own hung rule.
+
+   All three answer to the same reading: an archive is a record of things that
+   happened, and on this account nothing has. So it says that ONCE, on the
+   ledger — the object the whole screen is named for — and the other five
+   collapse into one ruled index that names what puts something in each of
+   them. The filter bar is not rendered, because a control that cannot change
+   what is on screen is furniture; and the masthead action becomes the one move
+   that fills an archive.
+
+   The collapse is `panels.tsx`'s, not a new one, and it arms at TWO exactly as
+   `/` and `/competitions` do — one mute panel among five populated ones is what
+   `PanelEmpty` is for. The ledger is exempt for the same reason `/competitions`
+   exempts its main panel: it is the principal object, its empty state names the
+   one thing to do next, and it is where a filter miss has to be reported.
+
+   `mbClosingSpan` is not used here and does not apply: this screen is not a
+   twelve-column auto-flow of panels but two COLUMN STACKS (7 + 5), so a
+   withheld panel shortens its column rather than stranding the next one beside
+   a hole. The index takes the right column's own 5, which is the same 7+5 the
+   first-run Overview sets.
+
+   Populated behaviour is untouched, measured not asserted: on the full fixture
+   `muteSections` is empty and `shared` is still loading, so `collapsed` is
+   false, the filter bar renders, "Export CSV" is the masthead action, and all
+   six panels sit in the two columns they always did.
    =========================================================================== */
 
 const SummaryStat = ({
@@ -68,6 +111,24 @@ export default function HistoryPage() {
 
   const report = data.report;
 
+  /* Shared reports come from Firestore, so the hook that owns the local archive
+     cannot decide this one. It counts as mute only once that load has actually
+     settled — withholding it while it is still loading would pull a panel out
+     from under the reader, which is the layout shift HF-3 names. */
+  const muteSections: MbArchiveSection[] =
+    !shared.isLoading && shared.summaries.length === 0
+      ? [...data.muteSections, "shared"]
+      : data.muteSections;
+
+  const collapsed = muteSections.length >= 2;
+  const kept = (key: MbArchiveSection) =>
+    !collapsed || !muteSections.includes(key);
+
+  /* Nothing has ever been recorded, so nothing can be filtered and nothing can
+     be exported. Both tests read the WHOLE archive, never the filtered count:
+     a filter that matches nothing must keep its own controls on screen. */
+  const hasArchive = data.totalResults > 0;
+
   return (
     <MatchbookShell
       active="/summaries"
@@ -82,20 +143,45 @@ export default function HistoryPage() {
         badge: { value: data.totalResults, label: "Results" },
         dateLine: "All-Time Archive",
         subLine: data.dateLine,
-        actions: [
-          {
-            label: "Export CSV",
-            icon: "export",
-            tone: "navy",
-            onClick: data.downloadCsv,
-            disabled: data.filteredCount === 0,
-          },
-        ],
+        /* The one action, and it is always performable. "Export CSV" on an
+           archive of nothing is a `disabled` button in the position a thumb
+           reaches first, on a screen that offered no other move; the move that
+           actually fills an archive is playing a match. Navy in both branches
+           — the rail already spends the screen's one coral fill (invariant
+           15), and `MB_DEFAULT_CTA` is Quick Match, so the empty branch's
+           masthead action and the rail key agree rather than compete. */
+        actions: hasArchive
+          ? [
+              {
+                label: "Export CSV",
+                icon: "export",
+                tone: "navy",
+                onClick: data.downloadCsv,
+                disabled: data.filteredCount === 0,
+              },
+            ]
+          : [
+              {
+                label: "Play Your First Match",
+                href: "/quick-match",
+                icon: "quick",
+                tone: "navy",
+              },
+            ],
       }}
     >
       {/* Filter bar. `items-end` on a row whose controls are now 48px keeps the
           three labels on one baseline; below `sm` each takes a full line rather
-          than shrinking a select to the width of its chevron. */}
+          than shrinking a select to the width of its chevron.
+
+          Withheld outright when the archive is empty. Measured at 390 it is
+          251px — three labelled 48px controls, stacked — and every one of them
+          filters a set of zero over an empty option list: the Competition
+          select had only "All Competitions" in it, the Team select only "All
+          Teams", and the search field nothing to search. A control that cannot
+          change what is on screen is furniture, and this was the single
+          largest object on the empty screen after the panels themselves. */}
+      {hasArchive && (
       <div className="mb-4 flex flex-wrap items-end gap-3 border-y border-mb-navy py-3">
         {/* `basis-full` below `sm`. Sharing the 358px content line with the
             Team select left this control 173px wide and its own value clipped
@@ -143,6 +229,7 @@ export default function HistoryPage() {
           />
         </div>
       </div>
+      )}
 
       <div className="mb-enter-grid grid grid-cols-1 gap-4 xl:grid-cols-12">
         {/* Left column */}
@@ -154,11 +241,32 @@ export default function HistoryPage() {
             }
           >
             {data.days.length === 0 ? (
-              <PanelEmpty
-                message="No results exist yet — finished matches will be recorded here."
-                actionLabel="Play a match"
-                href="/quick-match"
-              />
+              /* Two different nothings, and they were one message before.
+                 With an archive on the books an empty ledger means the FILTER
+                 matched nothing, and "finished matches will be recorded here"
+                 is then untrue and unactionable — the move is to clear the
+                 filter, so the block says that and offers the control that
+                 does it.
+
+                 With no archive at all it carries no action: the masthead
+                 already prints "Play Your First Match" at the top of the page
+                 in the position a thumb reaches first, and `MbStepsPanel`'s
+                 own note names printing it a second time 300px lower as how a
+                 screen ends up with twenty controls and no primary. */
+              hasArchive ? (
+                <PanelEmpty
+                  tone="notfound"
+                  message="No results match these filters — clear them to see the whole archive."
+                  actionLabel="Clear filters"
+                  onAction={() => {
+                    setCompetitionId("");
+                    setTeamId("");
+                    setQuery("");
+                  }}
+                />
+              ) : (
+                <PanelEmpty message="No results exist yet — every match you finish is filed here, newest first." />
+              )
             ) : (
               <div className="flex flex-col">
                 {data.days.map((day) => (
@@ -231,6 +339,7 @@ export default function HistoryPage() {
             )}
           </Panel>
 
+          {kept("report") && (
           <Panel title="Match Report">
             {!report ? (
               <PanelEmpty message="No match report exists yet — pick a result from the ledger to see its report." />
@@ -297,10 +406,12 @@ export default function HistoryPage() {
               </div>
             )}
           </Panel>
+          )}
         </div>
 
         {/* Right column */}
         <div className="flex flex-col gap-4 xl:col-span-5">
+          {kept("summary") && (
           <Panel title="Archive Summary" tone="navy" icon="chart">
             {data.summary.matches === 0 ? (
               <PanelEmpty message="No archive exists yet — stats appear once matches are recorded." />
@@ -325,7 +436,9 @@ export default function HistoryPage() {
               </div>
             )}
           </Panel>
+          )}
 
+          {kept("matchups") && (
           <Panel
             title="Top Matchups"
             meta={<span className="mb-kicker">By Games Played</span>}
@@ -367,13 +480,20 @@ export default function HistoryPage() {
               </div>
             )}
           </Panel>
+          )}
 
+          {kept("competitions") && (
           <Panel
             title="Recent Competitions"
             meta={<MbPanelHeadLink href="/competitions" label="View All" />}
           >
             {data.competitions.length === 0 ? (
-              <PanelEmpty message="No competitions exist yet." />
+              /* §5.7's copy rule is `No <things> exist yet — <what makes them
+                 appear>.` and this was the one shipped message on the screen
+                 with no second clause at all: a headline, a hung rule, and
+                 nothing under it. It now says what fills it, in the same words
+                 the contents index uses for the same row. */
+              <PanelEmpty message="No competitions exist yet — events you create are listed here, newest first." />
             ) : (
               <div className="flex flex-col divide-y divide-mb-rule">
                 {data.competitions.map((c) => (
@@ -399,7 +519,9 @@ export default function HistoryPage() {
               </div>
             )}
           </Panel>
+          )}
 
+          {kept("shared") && (
           <Panel title="Shared Reports">
             {shared.isLoading ? (
               <p className="p-4 text-center text-[0.8rem] text-mb-ink-muted">
@@ -454,6 +576,25 @@ export default function HistoryPage() {
               </div>
             )}
           </Panel>
+          )}
+
+          {/* The withheld panels, as one ruled index — the same object `/` and
+              `/competitions` print, cut to what is actually missing, so five
+              equal display headlines become zero and every promise survives.
+
+              Two titles for two states, exactly as `/` distinguishes them: an
+              archive that has never held anything is being told what fills it,
+              while an archive that is merely incomplete is being told what is
+              still outstanding. `wide` is not passed — the index sits in the
+              right column's own 5 of 12, where the even term/gloss split is
+              the measured-good one. */}
+          {collapsed && (
+            <MbLedgerPanel
+              title={hasArchive ? "Still to Come" : "What Fills This Archive"}
+              rows={mbArchiveContentsFor(muteSections)}
+              dense
+            />
+          )}
         </div>
       </div>
 

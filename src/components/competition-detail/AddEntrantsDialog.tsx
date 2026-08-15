@@ -8,6 +8,7 @@ import {
   MbDialogFooter,
 } from "@/components/matchbook/Dialog";
 import { MbSelectList } from "@/components/matchbook/SelectList";
+import { teamColorCss } from "@/lib/teamColor";
 import { TeamMark } from "@/components/matchbook/Panel";
 import { crestForTeam } from "@/components/matchbook/types";
 import { pluralise } from "@/lib/text";
@@ -97,7 +98,7 @@ export const AddEntrantsDialog = ({
             <TeamMark
               team={{ name: team.name, crest: crestForTeam(team.id, team.name) }}
               size="sm"
-              accent={team.color}
+              accent={teamColorCss(team.color)}
             />
           )}
         />

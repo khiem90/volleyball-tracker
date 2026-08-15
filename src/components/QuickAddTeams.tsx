@@ -14,10 +14,16 @@ import {
   MbNumberStepper,
   MbSwatchPicker,
   MB_FIELD_LABEL,
-  MB_SWATCH_PALETTE,
 } from "@/components/matchbook/form";
 import { crestForTeam } from "@/components/matchbook/types";
 import { TEAM_BULK_ADD_LABEL } from "@/components/dialogs/team-form/labels";
+import {
+  DEFAULT_TEAM_COLOR,
+  normalizeTeamColor,
+  teamColorCss,
+  teamColorName,
+  TEAM_COLOR_IDS,
+} from "@/lib/teamColor";
 
 /* ===========================================================================
    BULK TEAM CREATION
@@ -44,19 +50,31 @@ import { TEAM_BULK_ADD_LABEL } from "@/components/dialogs/team-form/labels";
    status colour at all (see `MB_SWATCH_PALETTE`), and the two mixed schemes
    are now split by weight — the darker inks against the lighter ones — which
    is a distinction that survives on a bracket printed in greyscale.
+
+   4. And the defect this file existed to cause: a scheme's `colors` were the
+      palette's CSS **expressions**, and `onAddTeams` handed them straight to
+      the reducer. Quick-adding five teams wrote
+
+        Team 3 :: color-mix(in oklab, var(--mb-navy) 55%, var(--mb-green))
+
+      into localStorage and into every share link made from it. A scheme now
+      carries ink **ids** (`"teal"`), which is what `PersistentTeam.color` is
+      for; `teamColorCss()` turns one into paint at the two places this file
+      paints. See `@/lib/teamColor`.
    =========================================================================== */
 
 const TEAM_COUNT_MIN = 2;
 const TEAM_COUNT_MAX = 16;
 
-const TOKEN = Object.fromEntries(
-  MB_SWATCH_PALETTE.map((swatch) => [swatch.label.toLowerCase(), swatch.value])
-) as Record<string, string>;
+/** The six ink ids, named. Destructured from the tuple so a scheme cannot
+ *  name an ink the palette does not have. */
+const [NAVY, TEAL, PLUM, ROSE, LILAC, OCHRE] = TEAM_COLOR_IDS;
 
 interface ColourScheme {
   id: string;
   name: string;
   description: string;
+  /** Ink ids, in the order teams take them. Never CSS. */
   colors: string[];
 }
 
@@ -65,31 +83,31 @@ const COLOUR_SCHEMES: ColourScheme[] = [
     id: "house",
     name: "House",
     description: "Every team ink, in order.",
-    colors: MB_SWATCH_PALETTE.map((swatch) => swatch.value),
+    colors: [...TEAM_COLOR_IDS],
   },
   {
     id: "deep",
     name: "Deep",
     description: "Navy, teal and plum — the three darkest inks.",
-    colors: [TOKEN.navy, TOKEN.teal, TOKEN.plum],
+    colors: [NAVY, TEAL, PLUM],
   },
   {
     id: "light",
     name: "Light",
     description: "Rose, lilac and ochre — the three lightest inks.",
-    colors: [TOKEN.rose, TOKEN.lilac, TOKEN.ochre],
+    colors: [ROSE, LILAC, OCHRE],
   },
   {
     id: "sides",
     name: "Two sides",
     description: "Alternating navy and rose, for head-to-head draws.",
-    colors: [TOKEN.navy, TOKEN.rose],
+    colors: [NAVY, ROSE],
   },
   {
     id: "mono",
     name: "Uniform",
     description: "Every team the same navy.",
-    colors: [TOKEN.navy],
+    colors: [NAVY],
   },
 ];
 
@@ -126,17 +144,24 @@ export const buildQuickAddPlan = (options: {
   count: number;
   start: number;
   naming: string;
+  /** Ink ids. Whatever goes in comes out — the plan is what gets stored. */
   colors: string[];
 }): QuickAddPlan[] => {
   const style =
     NAMING_STYLES.find((entry) => entry.id === options.naming) ?? NAMING_STYLES[0];
-  const palette = options.colors.length > 0 ? options.colors : [TOKEN.navy];
+  const palette =
+    options.colors.length > 0 ? options.colors : [DEFAULT_TEAM_COLOR];
 
   return Array.from({ length: Math.max(0, options.count) }, (_, index) => {
     const ordinal = options.start + index;
     return {
       name: `${style.prefix} ${style.letters ? columnLetters(ordinal) : ordinal}`,
-      color: palette[index % palette.length],
+      /* Keyed off the ORDINAL, not off the index within this batch. The sheet
+         promises "numbering continues from the teams you already have"; the
+         colour cycle has to continue with it, or a second quick-add of four
+         starts the House scheme over and Team 5 comes out navy beside Team 1.
+         With `start` at 1 this is exactly the old `index % length`. */
+      color: palette[(ordinal - 1) % palette.length],
     };
   });
 };
@@ -157,7 +182,9 @@ export const QuickAddTeams = ({
   const [teamCount, setTeamCount] = useState(4);
   const [scheme, setScheme] = useState(COLOUR_SCHEMES[0].id);
   const [naming, setNaming] = useState<string>(NAMING_STYLES[0].id);
-  const [customColor, setCustomColor] = useState(TOKEN.navy);
+  /* Stored form, like every other colour in the plan: an ink id, or a hex
+     once the picker's custom escape hatch is used. */
+  const [customColor, setCustomColor] = useState<string>(DEFAULT_TEAM_COLOR);
 
   /* Derived, never stored — see the note at the top of the file. */
   const start = existingTeamCount + 1;
@@ -300,7 +327,7 @@ export const QuickAddTeams = ({
                           <span
                             key={`${entry.id}-${index}`}
                             className="block h-4 w-4 rounded-[2px]"
-                            style={{ background: color }}
+                            style={{ background: teamColorCss(color) }}
                           />
                         ))}
                       </span>
@@ -320,8 +347,8 @@ export const QuickAddTeams = ({
           </ul>
           {scheme === "custom" && (
             <MbSwatchPicker
-              value={customColor}
-              onChange={setCustomColor}
+              value={teamColorCss(customColor) ?? ""}
+              onChange={(next) => setCustomColor(normalizeTeamColor(next))}
               allowCustom
               label="Team colour"
             />
@@ -349,10 +376,18 @@ export const QuickAddTeams = ({
               >
                 <TeamMark
                   team={{ name: entry.name, crest: crestForTeam(entry.name, entry.name) }}
-                  accent={entry.color}
+                  accent={teamColorCss(entry.color)}
                   size="sm"
                   className="min-w-0 flex-1"
                 />
+                {/* The ink, in words. The row distinguished five teams' colours
+                    by a 3px bar and nothing else, which is information carried
+                    by hue alone (invariant 13) and unreadable on the scheme the
+                    reader just chose. It is also the only place the mapping
+                    team → colour can be checked before the teams exist. */}
+                <span className="mb-kicker shrink-0">
+                  {teamColorName(entry.color)}
+                </span>
               </li>
             ))}
           </ul>

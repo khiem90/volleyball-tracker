@@ -23,6 +23,7 @@ import type {
   MbMatchLine,
 } from "@/components/matchbook/useMatchbookCompetitionDetail";
 import type { MbTeam } from "@/components/matchbook/types";
+import { teamColorCss } from "@/lib/teamColor";
 import type { Match, PersistentTeam } from "@/types/game";
 import { pluralise } from "@/lib/text";
 
@@ -849,7 +850,7 @@ export const EntrantsPanel = ({
               {i + 1}
             </span>
             <span className="min-w-0 flex-1 py-1.5">
-              <TeamMark team={refFor(team.id)} size="md" accent={team.color} />
+              <TeamMark team={refFor(team.id)} size="md" accent={teamColorCss(team.color)} />
             </span>
             {canEdit && (
               <MbIconButton

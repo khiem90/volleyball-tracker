@@ -2,6 +2,7 @@
 
 import { useCallback } from "react";
 import { useApp } from "./AppContext";
+import { teamColorCssOrDefault } from "@/lib/teamColor";
 
 /**
  * Hook for team-related operations.
@@ -30,7 +31,7 @@ export const useTeams = () => {
   const getTeamColor = useCallback(
     (teamId: string): string => {
       const team = teams.find((t) => t.id === teamId);
-      return team?.color || "#3b82f6";
+      return teamColorCssOrDefault(team?.color);
     },
     [teams]
   );

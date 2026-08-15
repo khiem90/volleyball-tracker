@@ -197,13 +197,18 @@ export interface MbSkeletonRouteSpec {
  *                 exactly those matches.
  *   competitions  `/competitions` — `useMatchbookCompete`'s `isFirstRun` is
  *                 `rows.length === 0`, and `rows` is `competitions` mapped.
- *   teams         `/teams` and `/quick-match`. Neither swaps its panel COUNT;
- *                 both collapse when the directory has nothing to list, and a
- *                 match cannot exist without teams, so this is the stricter
- *                 of the two conditions and never fires on an account that
- *                 has data to show.
+ *   teams         `/teams`. It now swaps its panel COUNT as well as its rows —
+ *                 six panels to two — because every panel on the directory is
+ *                 fed by a team or by that team's matches.
+ *   twoTeams      `/quick-match`. A fixture needs two sides to name, so this
+ *                 screen's collapse fires at ONE team as well as at none: the
+ *                 preview's crests are both ghosts and its "Start Scoring" is
+ *                 disabled either way. Keyed separately rather than folded into
+ *                 `teams` because `/teams` at one team is a working directory
+ *                 and must keep its full geometry — one signal for both would
+ *                 reserve the wrong page on one route or the other.
  */
-export type MbEmptySignal = "played" | "teams" | "competitions";
+export type MbEmptySignal = "played" | "teams" | "competitions" | "twoTeams";
 
 export interface MbRouteSkeleton {
   /** The account with data. Also the fallback whenever the account is unknown. */
@@ -268,27 +273,32 @@ export const MB_ROUTE_SKELETON: Record<string, MbRouteSkeleton> = {
         { span: 7, panels: [{ h: 960, xl: 594 }] },
         { span: 5, panels: [{ h: 169, head: false }, { h: 377, head: false }] },
         { span: 5, panels: [{ h: 700, xl: 525 }] },
-        { span: 4, panels: [{ h: 382, xl: 361 }] },
+        /* 382/361 -> 337/316: Upcoming Fixtures carried TWO links to
+           `/competitions`, worded differently, one in the head and one in a
+           footer. The footer is gone (`teamPanels.tsx`, ONE PANEL, ONE LINK)
+           and the panel is 45px shorter at both widths. */
+        { span: 4, panels: [{ h: 337, xl: 316 }] },
         { span: 3, panels: [{ h: 372 }] },
       ],
     },
-    /* Same six panels in the same five cells — this page keeps its shape and
-       only loses its rows. */
+    /* Two panels, not six. The empty directory used to keep the populated
+       page's whole shape and print five `display/stat-sm` shrugs into it; the
+       route now withholds all six mute panels and prints one ledger of what the
+       page becomes beside one of the three ways to add a team
+       (`src/app/teams/page.tsx`). Re-measured with `pw/mb-geom.mjs --empty`:
+       1543px -> 1005px at 390. */
     empty: {
       grid: "grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-12",
       lead: 134,
       leadXl: 70,
       cells: [
-        { span: 7, panels: [{ h: 153 }] },
-        { span: 5, panels: [{ h: 169, head: false }, { h: 153, head: false }] },
-        { span: 5, panels: [{ h: 174, xl: 153 }] },
-        { span: 4, panels: [{ h: 274, xl: 252 }] },
-        { span: 3, panels: [{ h: 252, xl: 273 }] },
+        { span: 7, panels: [{ h: 471, xl: 421 }] },
+        { span: 5, panels: [{ h: 229, xl: 213 }] },
       ],
     },
   },
   "/quick-match": {
-    emptySignal: "teams",
+    emptySignal: "twoTeams",
     full: {
       grid: "grid-cols-1 gap-4 xl:grid-cols-12",
       lead: 134,
@@ -300,15 +310,19 @@ export const MB_ROUTE_SKELETON: Record<string, MbRouteSkeleton> = {
         { span: 5, panels: [{ h: 153 }] },
       ],
     },
+    /* Two panels, not four. Below two teams the Scoreboard Preview is two grey
+       ghost crests over a disabled full-width "Start Scoring", and the two
+       strips under it have no rows at all; all three are withheld and named in
+       one index (`src/app/quick-match/page.tsx`). Re-measured with
+       `pw/mb-geom.mjs --empty`: 1195px -> 844px at 390, which is the viewport
+       itself — the phone no longer scrolls on this screen. */
     empty: {
       grid: "grid-cols-1 gap-4 xl:grid-cols-12",
       lead: 134,
       leadXl: 70,
       cells: [
         { span: 7, panels: [{ h: 192 }] },
-        { span: 5, panels: [{ h: 293, head: false }] },
-        { span: 7, panels: [{ h: 220, xl: 198 }] },
-        { span: 5, panels: [{ h: 153 }] },
+        { span: 5, panels: [{ h: 213, xl: 277 }] },
       ],
     },
   },
@@ -363,24 +377,32 @@ export const MB_ROUTE_SKELETON: Record<string, MbRouteSkeleton> = {
         },
       ],
     },
-    /* The filter bar ships on the empty page too, so the lead is unchanged and
-       only the ledger collapses — 1335 to 207, which was the single largest
-       reservation error in the app. */
+    /* Re-cut with the archive's zero state (Z7). The empty page is no longer
+       the populated one with its rows removed, so three things moved at once
+       and all three are re-measured, not adjusted:
+
+         lead   401 -> 134. The filter bar does NOT ship on the empty page any
+                more — three labelled 48px controls filtering a set of zero —
+                so the lead is the masthead alone, and this stops being the
+                tallest lead in the app.
+         7-col  [1335, 363] -> [153]. The ledger keeps its one empty state and
+                Match Report is withheld into the index.
+         5-col  four panels -> one. Archive Summary, Top Matchups, Recent
+                Competitions and Shared Reports collapse into the ruled
+                contents index, which is the 323px panel.
+
+       Model against the browser: 134 + 153 + 16 + 323 + 155 = 781px, and
+       `<main>` measures 724px inside a 844px document — the page is now
+       SHORTER than the viewport, so `documentElement.scrollHeight` floors at
+       844 and no longer reports the content height. Anything comparing this
+       spec to a document height has to account for that floor. */
     empty: {
       grid: "grid-cols-1 gap-4 xl:grid-cols-12",
-      lead: 401,
-      leadXl: 179,
+      lead: 134,
+      leadXl: 70,
       cells: [
-        { span: 7, panels: [{ h: 207 }, { h: 153 }] },
-        {
-          span: 5,
-          panels: [
-            { h: 153, head: false },
-            { h: 153 },
-            { h: 144, xl: 123 },
-            { h: 153 },
-          ],
-        },
+        { span: 7, panels: [{ h: 153 }] },
+        { span: 5, panels: [{ h: 323, xl: 277 }] },
       ],
     },
   },
@@ -393,7 +415,11 @@ export const MB_ROUTE_SKELETON: Record<string, MbRouteSkeleton> = {
       lead: 130,
       leadXl: 70,
       cells: [
-        { span: 12, panels: [{ h: 906, xl: 260 }] },
+        /* 906 -> 349 at 390 (Z8). The launcher's four destinations are ruled
+           rows below `sm` instead of four stacked poster cards; every card
+           declaration is behind `sm:`, so `xl` is still 260 and the desktop
+           reservation does not move. Re-measured, not scaled. */
+        { span: 12, panels: [{ h: 349, xl: 260 }] },
         { span: 7, panels: [{ h: 249, xl: 207 }] },
         { span: 5, panels: [{ h: 326, xl: 335, head: false }] },
       ],
@@ -487,6 +513,7 @@ const IS_EMPTY: Record<MbEmptySignal, (a: MbAccountShape) => boolean> = {
   played: (a) => a.played === 0,
   teams: (a) => a.teams === 0,
   competitions: (a) => a.competitions === 0,
+  twoTeams: (a) => a.teams < 2,
 };
 
 /** The one place `full` and `empty` are chosen between. Exported for the test. */

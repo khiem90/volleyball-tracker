@@ -1,5 +1,6 @@
 import { useMemo, useCallback } from "react";
 import { useApp } from "@/context/AppContext";
+import { teamColorCssOrDefault } from "@/lib/teamColor";
 
 export const useDashboardPage = () => {
   const { state } = useApp();
@@ -30,7 +31,8 @@ export const useDashboardPage = () => {
   );
 
   const getTeamColor = useCallback(
-    (teamId: string) => state.teams.find((t) => t.id === teamId)?.color || "#666",
+    (teamId: string) =>
+      teamColorCssOrDefault(state.teams.find((t) => t.id === teamId)?.color),
     [state.teams]
   );
 

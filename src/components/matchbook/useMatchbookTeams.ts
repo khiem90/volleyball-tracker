@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useApp } from "@/context/AppContext";
+import { pluralise } from "@/lib/text";
 import type { AppState } from "@/types/game";
 import {
   buildTeamTallies,
@@ -8,15 +9,43 @@ import {
   readinessStatus,
   recentForm,
 } from "./teamStats";
+import type { MbTeamReadinessRow, MbTeamsSection } from "./teamPanels";
 import {
   crestForTeam,
   type MbFormRow,
-  type MbReadinessRow,
   type MbScheduleItem,
   type MbTeam,
   type MbTeamRow,
   type MbTeamsData,
 } from "./types";
+
+/* ---------------------------------------------------------------------------
+   THE DIRECTORY VIEW
+
+   `MbTeamsData` lives in `types.ts`, which charter H3 reserves to W1, so the
+   fields the zero state needs extend it here rather than editing it. Nothing
+   that reads `MbTeamsData` changes shape; `readiness` is re-declared because
+   its row gains a state the three-word union in `types.ts` cannot spell (see
+   `teamStats.ts`, THE STATE A NEW TEAM IS IN).
+   --------------------------------------------------------------------------- */
+
+export interface MbTeamsView extends Omit<MbTeamsData, "readiness"> {
+  readiness: MbTeamReadinessRow[];
+  /**
+   * NO TEAM EXISTS — every panel on the screen is mute, so the route renders
+   * the first-run composition instead of six empty ones.
+   *
+   * Keyed on teams and not on matches, because this screen is ABOUT teams: one
+   * team with nothing played still fills the directory, the snapshot, the
+   * readiness line and the profile, and only the two match-fed panels stay
+   * quiet — which is what `muteSections` is for.
+   */
+  isFirstRun: boolean;
+  /** The panels with nothing to print, in the order the page prints them. */
+  muteSections: MbTeamsSection[];
+  /** The masthead kicker, which must not read "0 matches completed". */
+  subLine: string;
+}
 
 const shortDate = (ts?: number) =>
   ts
@@ -31,7 +60,7 @@ const shortTime = (ts?: number) =>
     ? new Date(ts).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
     : "TBD";
 
-const buildTeams = (state: AppState): MbTeamsData => {
+const buildTeams = (state: AppState): MbTeamsView => {
   const dateLine = new Date().toLocaleDateString("en-US", {
     weekday: "long",
     month: "long",
@@ -109,13 +138,18 @@ const buildTeams = (state: AppState): MbTeamsData => {
     { label: "Matches", value: String(state.matches.length) },
   ];
 
-  const readiness: MbReadinessRow[] = rows.map((row) => {
-    const percent = readinessPercent(tallies.get(row.id));
+  const readiness: MbTeamReadinessRow[] = rows.map((row) => {
+    const tally = tallies.get(row.id);
+    const played = tally?.played ?? 0;
+    const percent = readinessPercent(tally);
     return {
       team: row.team,
       percent,
+      played,
       form: row.form,
-      status: readinessStatus(percent),
+      /* Two arguments, always. The one-argument form cannot tell a team that has
+         played nothing from one that has lost everything — see `teamStats.ts`. */
+      status: readinessStatus(percent, played),
     };
   });
 
@@ -140,6 +174,18 @@ const buildTeams = (state: AppState): MbTeamsData => {
       };
     });
 
+  /* Which of the two match-fed panels has nothing to say. Read straight off the
+     arrays the panels render, one line each, so a panel cannot be listed as
+     mute while it is drawing rows or drawn empty while it is listed. */
+  const muteSections = (
+    [
+      ["fixtures", fixtures.length === 0],
+      ["form", recentFormRows.length === 0],
+    ] as const
+  )
+    .filter(([, mute]) => mute)
+    .map(([key]) => key);
+
   return {
     dateLine,
     matchesCompleted: completed.length,
@@ -149,10 +195,19 @@ const buildTeams = (state: AppState): MbTeamsData => {
     readiness,
     fixtures,
     recentForm: recentFormRows,
+    isFirstRun: state.teams.length === 0,
+    muteSections,
+    /* "0 matches completed" and "1 matches completed" were both live on this
+       masthead. The zero case is a sentence, not a count, and the plural above
+       zero goes through `pluralise` like every other count in the app. */
+    subLine:
+      completed.length === 0
+        ? "No matches recorded yet"
+        : `${completed.length} ${pluralise("match", completed.length)} completed`,
   };
 };
 
-export const useMatchbookTeams = (): MbTeamsData => {
+export const useMatchbookTeams = (): MbTeamsView => {
   const { state } = useApp();
   return useMemo(() => buildTeams(state), [state]);
 };

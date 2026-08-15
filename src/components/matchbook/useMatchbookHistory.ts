@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useApp } from "@/context/AppContext";
 import { exportMatchesCsv } from "@/lib/exportCsv";
 import type { Match } from "@/types/game";
+import type { MbLedgerRow } from "./panels";
 import { buildTeamTallies } from "./teamStats";
 import { toast } from "./Toast";
 import { createTeamRef } from "./useMatchbookCompetitionDetail";
@@ -48,6 +49,95 @@ export interface MbRecentCompetition {
   matches: number;
 }
 
+/* ===========================================================================
+   THE ARCHIVE'S OWN CONTENTS INDEX
+
+   Measured on a brand-new account at 390px, `/summaries` was 1600px of paper
+   carrying SIX `display/stat-sm` headlines in a column:
+
+     Results Ledger        "No results exist yet"
+     Match Report          "No match report exists yet"
+     Archive Summary       "No archive exists yet"
+     Top Matchups          "No matchups exist yet"
+     Recent Competitions   "No competitions exist yet"
+     Shared Reports        "No shared reports exist yet"
+
+   — one more than the eight-headline Overview that started this whole thread
+   had per pixel, plus a 251px filter bar whose three controls filter a set of
+   zero and a masthead whose single action ("Export CSV") is disabled.
+
+   The fix is the collapse `panels.tsx` already proved, not a new one: a panel
+   with nothing to say is withheld and named in one index instead. The index
+   table is here rather than in `panels.tsx` because `OVERVIEW_INDEX` names the
+   OVERVIEW's eight objects and the archive's six are different objects — one
+   file cannot own both without one screen borrowing the other's nouns. The
+   shape is deliberately identical (`key` / `term` / `gloss`, filtered in the
+   printed order) so the two tables read as one pattern, and `results` is the
+   one row both screens name, in the same words.
+
+   `gloss` is the DECK of the panel's own `PanelEmpty` message, not a second
+   sentence about the same thing — the same discipline `MB_OVERVIEW_CONTENTS`
+   states: a row here and an empty message on the panel are one promise written
+   once each.
+   =========================================================================== */
+
+export type MbArchiveSection =
+  | "ledger"
+  | "report"
+  | "summary"
+  | "matchups"
+  | "competitions"
+  | "shared";
+
+const ARCHIVE_INDEX: { key: MbArchiveSection; term: string; gloss: string }[] = [
+  {
+    key: "ledger",
+    term: "Results Ledger",
+    gloss: "Every finished match, newest first.",
+  },
+  {
+    key: "report",
+    term: "Match Report",
+    gloss: "Pick a result from the ledger to see its report.",
+  },
+  {
+    key: "summary",
+    term: "Archive Summary",
+    gloss: "Stats appear once matches are recorded.",
+  },
+  {
+    key: "matchups",
+    term: "Top Matchups",
+    gloss: "Rivalries build as teams replay each other.",
+  },
+  {
+    key: "competitions",
+    term: "Recent Competitions",
+    gloss: "Events you create are listed here, newest first.",
+  },
+  {
+    key: "shared",
+    term: "Shared Reports",
+    gloss: "End a session with sharing to save one.",
+  },
+];
+
+/**
+ * The index cut down to the panels that were actually withheld, in the order
+ * the populated screen prints them. Reading it back tells the reader exactly
+ * what the archive is still waiting for and nothing else.
+ *
+ * The archive twin of `mbContentsFor`. It is a separate function rather than a
+ * generic one because the two tables are two different sets of nouns; sharing
+ * the *shape* is the point, sharing the rows would be the drift.
+ */
+export const mbArchiveContentsFor = (
+  sections: readonly MbArchiveSection[]
+): MbLedgerRow[] =>
+  ARCHIVE_INDEX.filter((row) => sections.includes(row.key)).map(
+    ({ term, gloss }) => ({ term, gloss })
+  );
+
 export interface MbHistoryData {
   dateLine: string;
   totalResults: number;
@@ -64,6 +154,16 @@ export interface MbHistoryData {
     teams: { id: string; name: string }[];
   };
   downloadCsv: () => void;
+  /**
+   * The panels that cannot say anything, in printed order.
+   *
+   * Judged on the WHOLE archive, never on the current filter: a search that
+   * matches nothing must leave every panel standing so the reader can see what
+   * they filtered and undo it. `ledger` is deliberately absent from this list —
+   * it is the screen's principal object, the one place a filter miss is
+   * reported, and the single headline the rubric's anchor allows.
+   */
+  muteSections: MbArchiveSection[];
 }
 
 const shortDate = (ts?: number) =>
@@ -250,6 +350,18 @@ export const useMatchbookHistory = (filters: {
       }
     };
 
+    /* Each test is the panel's OWN render condition, read off the same value
+       the panel branches on — so a panel can never be withheld while it still
+       had something to print, and can never print an empty state the index has
+       already accounted for. `shared` is not decidable here: it comes from
+       Firestore through `useSummariesPage`, so the page appends it once that
+       hook has actually finished loading. */
+    const muteSections: MbArchiveSection[] = [];
+    if (completed.length === 0) muteSections.push("report");
+    if (summary.matches === 0) muteSections.push("summary");
+    if (matchups.length === 0) muteSections.push("matchups");
+    if (competitions.length === 0) muteSections.push("competitions");
+
     return {
       dateLine,
       totalResults: completed.length,
@@ -269,6 +381,7 @@ export const useMatchbookHistory = (filters: {
         teams: state.teams.map((t) => ({ id: t.id, name: t.name })),
       },
       downloadCsv,
+      muteSections,
     };
   }, [state, filters.competitionId, filters.teamId, filters.query, selectedId]);
 };

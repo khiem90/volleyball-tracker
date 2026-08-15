@@ -12,9 +12,16 @@ import { MbButton, MbButtonLink } from "@/components/matchbook/Button";
 import { MbSelect } from "@/components/matchbook/form";
 import { MbNotice } from "@/components/matchbook/Notice";
 import { Crest, FormLetters, Panel, PanelEmpty, TeamMark } from "@/components/matchbook/Panel";
-import { MbPanelHeadLink } from "@/components/matchbook/panels";
 import {
+  MB_XL_SPAN,
+  mbClosingSpan,
+  MbLedgerPanel,
+  MbPanelHeadLink,
+} from "@/components/matchbook/panels";
+import {
+  mbQuickMatchContentsFor,
   useMatchbookQuickMatch,
+  type MbQuickMatchSection,
   type MbTeamFormSummary,
 } from "@/components/matchbook/useMatchbookQuickMatch";
 import { crestForTeam } from "@/components/matchbook/types";
@@ -163,7 +170,6 @@ const ResultMark = ({ homeWon }: { homeWon: boolean }) => (
 export default function QuickMatchPage() {
   const router = useRouter();
   const { isGuest, isLoading } = useAuth();
-  const data = useMatchbookQuickMatch();
   const {
     availableTeams,
     awayTeamId,
@@ -177,6 +183,7 @@ export default function QuickMatchPage() {
     handleSwapTeams,
     homeTeamId,
   } = useQuickMatchPage();
+  const data = useMatchbookQuickMatch({ homeTeamId, awayTeamId });
 
   if (isLoading) {
     return <MbPageLoading active="/quick-match" />;
@@ -195,6 +202,34 @@ export default function QuickMatchPage() {
   const startScoring = isGuest ? () => router.push("/match/guest") : handleStartMatch;
   const startEnabled = isGuest || canStart;
 
+  /* A quick match needs two sides to name, and a signed-in account with fewer
+     than two teams cannot start one however loud the button is. The masthead
+     used to print a DISABLED coral "Start Match" here — the loudest control on
+     the screen, unusable, on the screen a new user reaches from the rail on
+     every other page. It now carries the move that IS possible, in navy,
+     derived from the count exactly as `/`'s primary is. */
+  const needsTeams = !isGuest && availableTeams.length < 2;
+
+  /* Arms at TWO, as `/` and `/competitions` do. On a new account both are mute
+     at once; on a populated one only Team Form is until both sides are picked,
+     and that single `PanelEmpty` is the rubric's anchor rather than a
+     compromise with it. Guests never render either panel, so the cut cannot
+     fire for them. */
+  const collapsed = !isGuest && data.muteSections.length >= 2;
+  const kept = (key: MbQuickMatchSection) =>
+    !collapsed || !data.muteSections.includes(key);
+
+  /* Setup (7) and Preview (5) close the first row between them, so withholding
+     the preview leaves the index closing it instead — 5 columns — and
+     withholding both strips with the preview present leaves a flush row, which
+     is what `mbClosingSpan` answers with a full row of its own. */
+  const keptSpans = [
+    7,
+    kept("preview") && 5,
+    kept("recent") && 7,
+    kept("form") && 5,
+  ].filter((span): span is number => span !== false);
+
   return (
     <MatchbookShell
       active="/quick-match"
@@ -211,19 +246,34 @@ export default function QuickMatchPage() {
           </>
         ),
         shortTitle: "Quick Match",
+        /* `#3`, not `3`. The badge is the ORDINAL of the match being set up and
+           it was printing a bare figure over the word MATCH, so a brand-new
+           account — nothing played, nothing scheduled — was headed `1 MATCH`.
+           A count and a position are different claims and only one of them has
+           a plural; the hash says which this is. */
         badge: isGuest
           ? undefined
-          : { value: data.nextMatchNumber, label: "Match" },
+          : { value: `#${data.nextMatchNumber}`, label: "Match" },
         dateLine: data.dateLine,
-        subLine: `${data.matchesCompleted} matches completed`,
+        subLine: data.subLine,
         actions: [
-          {
-            label: "Start Match",
-            icon: "quick",
-            tone: "coral",
-            onClick: startScoring,
-            disabled: !startEnabled,
-          },
+          needsTeams
+            ? {
+                label:
+                  availableTeams.length === 0
+                    ? "Add Your First Team"
+                    : "Add Another Team",
+                icon: "teams",
+                tone: "navy",
+                href: "/teams",
+              }
+            : {
+                label: "Start Match",
+                icon: "quick",
+                tone: "coral",
+                onClick: startScoring,
+                disabled: !startEnabled,
+              },
         ],
       }}
     >
@@ -331,7 +381,10 @@ export default function QuickMatchPage() {
           </Panel>
         </div>
 
-        {/* Scoreboard preview */}
+        {/* Scoreboard preview. Withheld below two teams: a scoreboard whose
+            sides have no names previews nothing, and its one control — a
+            full-width filled "Start Scoring" — cannot be pressed. */}
+        {kept("preview") && (
         <div className="xl:col-span-5">
           <Panel title="Scoreboard Preview" icon="live" tone="navy">
             <div className="flex flex-1 flex-col gap-4 p-5">
@@ -363,10 +416,12 @@ export default function QuickMatchPage() {
             </div>
           </Panel>
         </div>
+        )}
 
         {!isGuest && (
           <>
             {/* Recent quick matches */}
+            {kept("recent") && (
             <div className="xl:col-span-7">
               <Panel
                 title="Recent Quick Matches"
@@ -402,8 +457,10 @@ export default function QuickMatchPage() {
                 </div>
               </Panel>
             </div>
+            )}
 
             {/* Team form comparison */}
+            {kept("form") && (
             <div className="xl:col-span-5">
               <Panel
                 title="Team Form"
@@ -451,6 +508,22 @@ export default function QuickMatchPage() {
                 )}
               </Panel>
             </div>
+            )}
+
+            {/* The withheld strips, as one index that closes the last row
+                flush. Same object `/` and `/competitions` use, so the three
+                screens promise a list in one sentence each rather than in
+                three sets of words that can drift apart. */}
+            {collapsed && (
+              <div className={MB_XL_SPAN[mbClosingSpan(keptSpans)]}>
+                <MbLedgerPanel
+                  title="Still to Come"
+                  rows={mbQuickMatchContentsFor(data.muteSections)}
+                  dense
+                  wide
+                />
+              </div>
+            )}
           </>
         )}
       </div>

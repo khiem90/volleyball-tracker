@@ -1,11 +1,16 @@
 import Link from "next/link";
+import { teamColorCss, teamColorHex, teamColorName } from "@/lib/teamColor";
 import { MbIcon } from "./MbIcon";
 import { MbButton, MbButtonLink } from "./Button";
-import { MbPanelHeadLink } from "./panels";
+import { MbPanelHeadLink, type MbLedgerRow } from "./panels";
 import { MbTableScroll } from "./TableScroll";
 import { Crest, FormLetters, Panel, PanelEmpty, TeamMark } from "./Panel";
 import { MbTeamName } from "./TeamName";
-import { readinessColor, readinessInk } from "./teamStats";
+import {
+  readinessColor,
+  readinessInk,
+  type MbReadinessState,
+} from "./teamStats";
 import type {
   MbFormRow,
   MbReadinessRow,
@@ -13,6 +18,35 @@ import type {
   MbStatTotal,
   MbTeamRow,
 } from "./types";
+
+/**
+ * A readiness line that can say it has not played.
+ *
+ * `MbReadinessRow.status` is the three-word verdict union in `types.ts`, which
+ * charter H3 reserves to W1, so the fourth state is declared here beside the
+ * panel that renders it. `/`'s `ReadinessPanel` keeps the narrow row untouched.
+ */
+export interface MbTeamReadinessRow extends Omit<MbReadinessRow, "status"> {
+  /** Completed, non-bye matches. `0` is what makes the row NEW rather than 0%. */
+  played: number;
+  status: MbReadinessState;
+}
+
+/**
+ * The two panels on `/teams` that can have nothing to print once at least one
+ * team exists.
+ *
+ * The other four cannot, and a closed union is how that is stated rather than
+ * assumed: the Directory is the screen's principal object and always holds the
+ * team just added, Club Snapshot always has three figures, Team Profile always
+ * has the selected row, and Team Readiness has a line per team. With zero teams
+ * all six are mute, which is not a sparse screen but a different one.
+ *
+ * Declared beside the panels for the same reason `MbOverviewSection` is: a row
+ * in the index and a panel in the grid are the same promise written once each,
+ * and the file that owns one owns the other.
+ */
+export type MbTeamsSection = "fixtures" | "form";
 
 const SNAPSHOT_ICONS: Record<string, string> = {
   Wins: "compete",
@@ -207,8 +241,15 @@ export const TeamDirectoryPanel = ({
               {/* Was "Pts" over `${pointsFor}–${pointsAgainst}`. On `/` the
                   same header means the ranking total, so one word meant two
                   quantities across two screens. See the note in
-                  `panels.tsx`. */}
-              <th className="text-center">PF–PA</th>
+                  `panels.tsx`.
+
+                  `whitespace-nowrap` because an en dash is a BREAK OPPORTUNITY:
+                  at 390px this header wrapped to "PF–" over "PA", which is not
+                  a two-line header — it is two half-tokens, and the second one
+                  reads as a column of its own. The `<td>` under it has carried
+                  `whitespace-nowrap` all along, so the column's width is set by
+                  the widest `123–98` beneath and this adds none. */}
+              <th className="text-center whitespace-nowrap">PF–PA</th>
               <th className={REVEAL_NEXT}>Next Match</th>
               <th className="text-right">Status</th>
             </tr>
@@ -390,7 +431,28 @@ export const ClubSnapshotPanel = ({ stats }: { stats: MbStatTotal[] }) => (
 
 /* ----------------------------- Team readiness ----------------------------- */
 
-export const TeamReadinessPanel = ({ rows }: { rows: MbReadinessRow[] }) => (
+/* ---------------------------------------------------------------------------
+   THE ROW THAT HAS NOT PLAYED
+
+   Thirty seconds into a new account, having created exactly one team, this
+   panel's whole content was `RIVERSIDE ROCKETS  0%  ▬  NEEDS ATTN` — a coral
+   verdict, in the app's first piece of feedback on the user's first action.
+
+   `readinessStatus(percent, played)` supplies the honest word; the two marks
+   beside it have to agree with it or the row still reads as a failing one:
+
+     percent   `—`, not `0%`. A percent nobody has measured is not zero, and
+               the em dash is the same "no figure" mark the directory table and
+               the profile stats already print for an unplayed team.
+     meter     the track at zero, in `--mb-rule`. A coral bar of width 0 still
+               paints its 1px edge on some DPRs, and a red edge is exactly the
+               signal this row must not send.
+   --------------------------------------------------------------------------- */
+export const TeamReadinessPanel = ({
+  rows,
+}: {
+  rows: MbTeamReadinessRow[];
+}) => (
   <Panel title="Team Readiness" icon="chart" tone="navy">
     {rows.length === 0 ? (
       <PanelEmpty message="No readiness data exists yet — add teams and play matches." />
@@ -421,7 +483,7 @@ export const TeamReadinessPanel = ({ rows }: { rows: MbReadinessRow[] }) => (
                 <td>
                   <span className="flex items-center gap-2">
                     <span className="w-8 text-[0.78rem] font-semibold tabular-nums">
-                      {row.percent}%
+                      {row.played === 0 ? "—" : `${row.percent}%`}
                     </span>
                     {/* `.mb-meter`, not a hand-drawn twin of it (G22).
 
@@ -446,8 +508,12 @@ export const TeamReadinessPanel = ({ rows }: { rows: MbReadinessRow[] }) => (
                       className="mb-meter h-[7px]! w-24! shrink-0"
                       style={
                         {
-                          "--mb-meter-fill": row.percent / 100,
-                          "--mb-meter-color": readinessColor(row.percent),
+                          "--mb-meter-fill":
+                            row.played === 0 ? 0 : row.percent / 100,
+                          "--mb-meter-color": readinessColor(
+                            row.percent,
+                            row.played
+                          ),
                         } as React.CSSProperties
                       }
                     >
@@ -458,7 +524,7 @@ export const TeamReadinessPanel = ({ rows }: { rows: MbReadinessRow[] }) => (
                 {/* Bar takes the mark colour, word takes the ink twin. */}
                 <td
                   className="matchbook-display pr-3! text-right text-[0.66rem] font-bold"
-                  style={{ color: readinessInk(row.percent) }}
+                  style={{ color: readinessInk(row.percent, row.played) }}
                 >
                   {row.status}
                 </td>
@@ -530,12 +596,45 @@ export const TeamProfilePanel = ({
                       section; the shipped class is the tie-breaker under the
                       doc's own "the page wins" rule. Flagged in the return. */}
                   <span
-                    className="h-4 w-4 rounded-[2px] border border-mb-navy"
-                    style={{ background: row.color }}
+                    className="h-4 w-4 shrink-0 rounded-[2px] border border-mb-navy"
+                    style={{ background: teamColorCss(row.color) }}
                   />
-                  <span className="text-[0.72rem] font-medium uppercase tabular-nums">
-                    {row.color}
+                  {/* The NAME of the ink, not the stored value.
+                      `{row.color}` rendered here directly, and `.mb-code-chip`
+                      had nothing to do with it — this span's own `uppercase`
+                      is what put
+
+                        COLOR-MIX(IN OKLAB, VAR(--MB-PLUM) 65%, VAR(--MB-PAPER-BRIGHT))
+
+                      across two lines of a 390px phone under the word COLOUR.
+                      `teamColorName()` is the same answer `MbSwatchPicker`
+                      gives one sheet away ("SELECTED Lilac"), so the screen a
+                      colour is chosen on and the screen it is read back on now
+                      agree. `tabular-nums` went with the value it was aligning:
+                      a colour name is a word.
+
+                      A hand-mixed colour has no name, so it keeps its hex — in
+                      the `.mb-code-chip` the picker uses for exactly that, a
+                      reference value a person typed and can read back. */}
+                  {/* The step the raw value already had. A name is easier to
+                      read than a hex at any size, so this is not the place to
+                      spend height: the row is the same 0.72rem/medium it was,
+                      and the populated panel measures the same to the pixel. */}
+                  <span className="text-[0.72rem] font-medium">
+                    {teamColorName(row.color)}
                   </span>
+                  {/* Plain muted text, not the `.mb-code-chip` the picker's own
+                      readout uses for the same hex. The chip is a 26px box
+                      against a 19px line, and this identity column is the
+                      densest stack on the panel: measured at 390px it took the
+                      Colour row from 32.1px to 45.3px and the whole panel with
+                      it. The dialog can afford the chip on its own hint line;
+                      here the row stays one line at every width. */}
+                  {teamColorHex(row.color) && (
+                    <span className="text-[0.72rem] tabular-nums text-mb-ink-muted">
+                      {teamColorHex(row.color)}
+                    </span>
+                  )}
                 </span>
               </div>
             )}
@@ -641,6 +740,20 @@ export const TeamProfilePanel = ({
 
 /* ---------------------------- Upcoming fixtures --------------------------- */
 
+/* ---------------------------------------------------------------------------
+   ONE PANEL, ONE LINK
+
+   This panel carried TWO links to `/competitions`, worded differently: "View
+   Full Schedule" in the head and "View Full Fixture List" in the foot. A reader
+   comparing them has to assume they lead somewhere different, because that is
+   the only reason two labels would exist — and one panel promising two lists it
+   does not have is worse than the extra tap it was meant to save.
+
+   The head link survives, with the words `SchedulePanel` on `/` already uses
+   for the same object and the same destination, so the two screens name it
+   once between them. The footer goes; the list keeps `grow`, which is what was
+   filling the panel's stretched height, not the footer rule.
+   --------------------------------------------------------------------------- */
 export const UpcomingFixturesPanel = ({ items }: { items: MbScheduleItem[] }) => (
   <Panel
     title="Upcoming Fixtures"
@@ -722,12 +835,6 @@ export const UpcomingFixturesPanel = ({ items }: { items: MbScheduleItem[] }) =>
         ))}
       </div>
     )}
-    <div className="mt-auto border-t border-mb-rule px-4 text-center">
-      <Link href="/competitions" className="mb-panel-link min-h-11 w-full justify-center">
-        View Full Fixture List
-        <MbIcon id="chevron-right" size={11} />
-      </Link>
-    </div>
   </Panel>
 );
 
@@ -768,3 +875,128 @@ export const RecentFormPanel = ({ rows }: { rows: MbFormRow[] }) => (
     </div>
   </Panel>
 );
+
+/* ===========================================================================
+   THE ZERO STATE
+
+   Measured on a brand-new account at 390px, `/teams` was 1543px of paper
+   carrying FIVE `display/stat-sm` headlines — NO TEAMS EXIST YET · NO READINESS
+   DATA EXISTS YET · NO TEAM SELECTED YET · NO FIXTURES EXIST YET · NO FORM
+   EXISTS YET — over a Club Snapshot reading 0 WINS / 0 TEAMS / 0 MATCHES.
+
+   This is not an incidental screen. It is the destination of the one coral
+   control on the fixed Overview ("Add Your First Team"), so it is the SECOND
+   screen every new user sees: the previous round's cure and the disease it
+   cured were one tap apart.
+
+   The machinery is the one `/` and `/competitions` already prove, applied to
+   this screen's two conditions rather than restated:
+
+     no team at all      the six panels are all mute, so none of them renders.
+                         Two ledgers take their place — what a team's page
+                         becomes, and the three routes to a first team.
+     one team, nothing   only the two match-fed panels are mute. They are
+     played              withheld and named in one index that closes the row,
+                         exactly as the Overview withholds its own.
+
+   The first-run pair is deliberately NOT a steps panel. `/`'s first run is
+   already three numbered steps, and its step 01 is the button that lands the
+   reader here — arriving at a second numbered progression one tap later would
+   be the same object twice, which is the drift this round exists to end. What
+   the reader needs here is not the sequence again; it is what a team is worth
+   and how to make one.
+   =========================================================================== */
+
+/**
+ * What `/teams` becomes, in the order the populated screen prints it.
+ *
+ * The terms are the panel TITLES, verbatim, so a row and the panel head it
+ * promises cannot drift into two names for one object. "Team Readiness" is the
+ * one object `/` also indexes, and it is glossed here in the Overview's own
+ * words for the same reason.
+ */
+const TEAMS_INDEX: {
+  key: MbTeamsSection | "directory" | "snapshot" | "readiness" | "profile";
+  term: string;
+  gloss: string;
+  icon: string;
+}[] = [
+  {
+    key: "directory",
+    term: "Team Directory",
+    gloss: "Every team, with its record, its next fixture and its last five results.",
+    icon: "teams",
+  },
+  {
+    key: "snapshot",
+    term: "Club Snapshot",
+    gloss: "Wins, teams and matches across the whole club.",
+    icon: "chart",
+  },
+  {
+    key: "readiness",
+    term: "Team Readiness",
+    gloss: "Form and readiness, team by team.",
+    icon: "streak",
+  },
+  {
+    key: "profile",
+    term: "Team Profile",
+    gloss: "One team in full: colour, record, win rate and points.",
+    icon: "shield",
+  },
+  {
+    key: "fixtures",
+    term: "Upcoming Fixtures",
+    gloss: "Fixtures the format writes for you, once a competition is running.",
+    icon: "calendar",
+  },
+  {
+    key: "form",
+    term: "Recent Form",
+    gloss: "The last five results for each team, newest on the right.",
+    icon: "history",
+  },
+];
+
+/** The full index, for the screen that has nothing at all. */
+export const MB_TEAMS_CONTENTS: MbLedgerRow[] = TEAMS_INDEX.map(
+  ({ term, gloss, icon }) => ({ term, gloss, icon })
+);
+
+/**
+ * The index for a SPARSE screen: the same rows, cut to the panels that were
+ * actually withheld, in the same order, and taking the dense cut because it is
+ * a footnote to a working screen rather than the screen itself.
+ */
+export const mbTeamsContentsFor = (
+  sections: readonly MbTeamsSection[]
+): MbLedgerRow[] =>
+  TEAMS_INDEX.filter((row) =>
+    (sections as readonly string[]).includes(row.key)
+  ).map(({ term, gloss }) => ({ term, gloss }));
+
+/**
+ * The three routes to a first team.
+ *
+ * An index of PATHS, not a row of buttons. Two of the three are already the
+ * masthead's own actions and the masthead prints them at the top of the page
+ * where a thumb reaches first; printing them again 300px lower is how a screen
+ * ends up with twenty controls and no primary (`MbStepsPanel`, `panels.tsx`).
+ * The third is the one a first-time reader cannot discover from this screen at
+ * all, which is the whole reason the panel is worth its column.
+ */
+export const MB_TEAM_ADD_ROUTES: MbLedgerRow[] = [
+  {
+    term: "New Team",
+    gloss: "One at a time: a name and a colour. The crest is drawn from the name.",
+  },
+  {
+    term: "Quick Add",
+    gloss: "Type a list and add a whole roster in one go.",
+  },
+  {
+    term: "In the Wizard",
+    gloss: "Creating a competition can add its teams as you go.",
+  },
+];

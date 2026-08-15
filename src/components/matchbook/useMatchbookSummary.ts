@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { exportMatchesCsv } from "@/lib/exportCsv";
 import { rankTeams } from "@/lib/standings";
+import { teamColorCss } from "@/lib/teamColor";
 import { useSummaryPage, type MbSummaryStatus } from "@/hooks/useSummaryPage";
 import type { Match, PersistentTeam } from "@/types/game";
 import { FORMAT_META } from "./formatMeta";
@@ -199,7 +200,7 @@ export const useMatchbookSummary = (): MbSummaryData => {
        live screen it was generated from does. */
     const refFor = createTeamRef(teams);
     const nameOf = (id: string) => refFor(id).name;
-    const accentOf = (id: string) => teamById.get(id)?.color || undefined;
+    const accentOf = (id: string) => teamColorCss(teamById.get(id)?.color);
 
     /* Bye matches are skipped everywhere a result is counted — `rankTeams` and
        `buildTeamTallies` both already do it, and a walkover in the ledger
@@ -466,7 +467,7 @@ export const useMatchbookSummary = (): MbSummaryData => {
       entered: teams.map((team) => ({
         id: team.id,
         team: refFor(team.id),
-        accent: team.color || undefined,
+        accent: teamColorCss(team.color),
       })),
       stats,
       biggestWin,

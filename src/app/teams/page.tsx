@@ -12,14 +12,24 @@ import {
 import { QuickAddTeams } from "@/components/QuickAddTeams";
 import { MatchbookShell, MB_DEFAULT_CTA } from "@/components/matchbook/AppShell";
 import { MbPageLoading } from "@/components/matchbook/Loading";
+import { pluralise } from "@/lib/text";
 import { useMatchbookTeams } from "@/components/matchbook/useMatchbookTeams";
 import {
+  MB_XL_SPAN,
+  mbClosingSpan,
+  MbLedgerPanel,
+} from "@/components/matchbook/panels";
+import {
   ClubSnapshotPanel,
+  MB_TEAM_ADD_ROUTES,
+  MB_TEAMS_CONTENTS,
+  mbTeamsContentsFor,
   RecentFormPanel,
   TeamDirectoryPanel,
   TeamProfilePanel,
   TeamReadinessPanel,
   UpcomingFixturesPanel,
+  type MbTeamsSection,
 } from "@/components/matchbook/teamPanels";
 
 /* ===========================================================================
@@ -35,6 +45,27 @@ import {
    is the screen's own primary but it takes navy, because a directory's primary
    is not louder than the app's — and two coral fills on one screen is
    invariant 15's exact failure mode.
+
+   ------------------------------------------------------ the first thirty seconds
+
+   The Overview's one coral control reads "Add Your First Team" and it lands
+   HERE, so this is the second screen every new user sees. Measured on a new
+   account at 390px it was 1543px carrying five `display/stat-sm` headlines of
+   identical size and weight, over a Club Snapshot reading 0 / 0 / 0.
+
+   Two cuts, the same two `/` and `/competitions` already use:
+
+     `isFirstRun`   no team exists, so all six panels are mute. They are not
+                    rendered; two ledgers say what the page becomes and how to
+                    make a team. See `teamPanels.tsx`, THE ZERO STATE.
+     `collapsed`    at least one team exists, so the directory, the snapshot,
+                    the readiness table and the profile all have something to
+                    print — and only the two match-fed panels do not. They are
+                    withheld and named in one index that closes the row.
+
+   Populated behaviour is measured rather than asserted: on the full fixture
+   `muteSections` is empty at 390 and at 1440, `collapsed` is false, every span
+   resolves to the shipped value and all six panels render.
    =========================================================================== */
 
 export default function TeamsPage() {
@@ -79,6 +110,27 @@ export default function TeamsPage() {
     return <MbPageLoading active="/teams" />;
   }
 
+  /* Arms at TWO mute panels, never at one: a single empty panel beside five
+     populated ones is what a `PanelEmpty` is for, and the rubric's anchor is
+     <= 1 display headline on a screen. With one team and nothing played both
+     match-fed panels are mute at once, which is the exact case this exists
+     for — and with a fixture in the diary only Recent Form is, so the screen
+     keeps its one honest empty state. */
+  const collapsed = data.muteSections.length >= 2;
+  const kept = (key: MbTeamsSection) =>
+    !collapsed || !data.muteSections.includes(key);
+
+  /* Upcoming Fixtures (4) and Recent Form (3) close the second row against the
+     Team Profile (5). Withhold either and the row is left with a hole, so the
+     index takes whatever the last row still owes — 7 when both are gone. */
+  const keptSpans = [
+    7,
+    5,
+    5,
+    kept("fixtures") && 4,
+    kept("form") && 3,
+  ].filter((span): span is number => span !== false);
+
   return (
     <MatchbookShell
       active="/teams"
@@ -90,9 +142,17 @@ export default function TeamsPage() {
           </>
         ),
         shortTitle: "Teams",
-        badge: { value: data.teamCount, label: "Teams" },
+        /* `pluralise`, not a hardcoded "Teams". The badge under a fresh
+           account's one team read `1 TEAMS` — the first count the app shows a
+           new user, wrong in the one place a count is the whole content.
+           `pluralise("Team", 0)` is "Teams", which is what English does with
+           zero, so the empty screen is unchanged. */
+        badge: {
+          value: data.teamCount,
+          label: pluralise("Team", data.teamCount),
+        },
         dateLine: data.dateLine,
-        subLine: `${data.matchesCompleted} matches completed`,
+        subLine: data.subLine,
         actions: [
           {
             label: TEAM_CREATE_LABEL,
@@ -109,37 +169,91 @@ export default function TeamsPage() {
         ],
       }}
     >
-      <div className="mb-enter-grid grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-12">
-        <div className="md:col-span-2 xl:col-span-7">
-          <TeamDirectoryPanel
-            rows={filteredRows}
-            totalTeams={data.teamCount}
-            selectedId={effectiveId}
-            onSelect={setSelectedId}
-            search={search}
-            onSearchChange={setSearch}
-          />
-        </div>
-        <div className="md:col-span-2 xl:col-span-5 flex flex-col gap-4">
-          <ClubSnapshotPanel stats={data.snapshot} />
-          <div className="flex-1">
-            <TeamReadinessPanel rows={data.readiness} />
+      {data.isFirstRun ? (
+        /* ----------------------------------------------------- first run
+
+           Two panels, neither of them empty, and not one control between them:
+           the masthead already carries "New team" and "Quick Add" at the top of
+           the page where a thumb reaches first, and the ledger beside the index
+           names the third route the masthead cannot show. */
+        <div className="mb-enter-grid grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-12">
+          <div className="md:col-span-2 xl:col-span-7">
+            <MbLedgerPanel
+              title="What This Page Becomes"
+              rows={MB_TEAMS_CONTENTS}
+              meta={
+                <span className="mb-kicker tabular-nums">
+                  {MB_TEAMS_CONTENTS.length} Sections
+                </span>
+              }
+            />
+          </div>
+          <div className="md:col-span-2 xl:col-span-5">
+            <MbLedgerPanel
+              title="Ways to Add Teams"
+              rows={MB_TEAM_ADD_ROUTES}
+              meta={
+                <span className="mb-kicker tabular-nums">
+                  {MB_TEAM_ADD_ROUTES.length} Routes
+                </span>
+              }
+              dense
+            />
           </div>
         </div>
-        <div className="md:col-span-2 xl:col-span-5">
-          <TeamProfilePanel
-            row={selectedRow}
-            onEdit={() => selectedTeam && handleEditTeam(selectedTeam)}
-            onDelete={() => selectedTeam && setDeleteOpen(true)}
-          />
+      ) : (
+        <div className="mb-enter-grid grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-12">
+          <div className="md:col-span-2 xl:col-span-7">
+            <TeamDirectoryPanel
+              rows={filteredRows}
+              totalTeams={data.teamCount}
+              selectedId={effectiveId}
+              onSelect={setSelectedId}
+              search={search}
+              onSearchChange={setSearch}
+            />
+          </div>
+          <div className="md:col-span-2 xl:col-span-5 flex flex-col gap-4">
+            <ClubSnapshotPanel stats={data.snapshot} />
+            <div className="flex-1">
+              <TeamReadinessPanel rows={data.readiness} />
+            </div>
+          </div>
+          <div className="md:col-span-2 xl:col-span-5">
+            <TeamProfilePanel
+              row={selectedRow}
+              onEdit={() => selectedTeam && handleEditTeam(selectedTeam)}
+              onDelete={() => selectedTeam && setDeleteOpen(true)}
+            />
+          </div>
+          {kept("fixtures") && (
+            <div className="xl:col-span-4">
+              <UpcomingFixturesPanel items={data.fixtures} />
+            </div>
+          )}
+          {kept("form") && (
+            <div className="xl:col-span-3">
+              <RecentFormPanel rows={data.recentForm} />
+            </div>
+          )}
+          {/* The withheld panels, as one index that closes the last row flush.
+              Same rows and same words as the first-run index above, cut to what
+              is actually missing — so the promise survives and two equal
+              display headlines become zero. */}
+          {collapsed && (
+            <div
+              className={`md:col-span-2 ${MB_XL_SPAN[mbClosingSpan(keptSpans)]}`}
+            >
+              <MbLedgerPanel
+                title="Still to Come"
+                rows={mbTeamsContentsFor(data.muteSections)}
+                dense
+                wide
+              />
+            </div>
+          )}
         </div>
-        <div className="xl:col-span-4">
-          <UpcomingFixturesPanel items={data.fixtures} />
-        </div>
-        <div className="xl:col-span-3">
-          <RecentFormPanel rows={data.recentForm} />
-        </div>
-      </div>
+      )}
 
       {/* Create / edit team modal */}
       <TeamForm

@@ -46,10 +46,17 @@ export const TeamForm = ({ open, onOpenChange, team, onSubmit }: TeamFormProps) 
     () => state.teams.map((entry) => entry.name),
     [state.teams]
   );
+  /** Feeds the deterministic default colour — see `nextTeamColor`. */
+  const existingColors = useMemo(
+    () => state.teams.map((entry) => entry.color),
+    [state.teams]
+  );
 
   const {
     name,
-    color,
+    colorCss,
+    colorName,
+    colorHex,
     error,
     isEditing,
     duplicate,
@@ -63,6 +70,7 @@ export const TeamForm = ({ open, onOpenChange, team, onSubmit }: TeamFormProps) 
     open,
     team,
     existingNames,
+    existingColors,
     onSubmit,
     onClose: () => onOpenChange(false),
   });
@@ -128,14 +136,36 @@ export const TeamForm = ({ open, onOpenChange, team, onSubmit }: TeamFormProps) 
           <span className={MB_FIELD_LABEL.className} style={MB_FIELD_LABEL.style}>
             Team colour
           </span>
+          {/* The picker speaks CSS; the hook stores an id. `colorCss` is the
+              translation, so the chip that paints and the value that saves can
+              never be the same string again. */}
           <MbSwatchPicker
-            value={color}
+            value={colorCss ?? ""}
             onChange={handleColorSelect}
             allowCustom
             label="Team colour"
           />
         </div>
 
+        {/* THE PREVIEW AND THE READOUT NOW AGREE.
+
+            They did not. At rest the picker said `SELECTED Rose` and the
+            preview beside it drew a green shield with a gold star — the crest
+            art, which is fixed by the pack and has nothing to do with the
+            chosen ink (charter D-9: colour is a contained accent, it never
+            tints or selects the crest). The only rose on screen was a 3px bar
+            at the far left edge, which reads as part of the frame.
+
+            Two changes, no new colour anywhere:
+
+            1. The line under the mark NAMES the ink and says which 3px of the
+               preview it is. Same word as the picker's readout, one step
+               down the page.
+            2. The crest is derived from the NAME now (`crestForTeam`), so the
+               mark shown here is the mark the team will actually wear. It used
+               to hash `previewName` while the created team hashed its
+               generated id — a 7-in-8 chance that this preview was of a crest
+               nobody was going to get. */}
         <div className="flex flex-col gap-2 border-t border-mb-rule pt-4">
           <span className={MB_FIELD_LABEL.className} style={MB_FIELD_LABEL.style}>
             Preview
@@ -143,12 +173,29 @@ export const TeamForm = ({ open, onOpenChange, team, onSubmit }: TeamFormProps) 
           <div className="flex min-h-[44px] items-center gap-3">
             <TeamMark
               team={previewTeam}
-              accent={color}
+              accent={colorCss}
               size="lg"
               wrap
               className="min-w-0 flex-1"
             />
           </div>
+          {/* Two lines, not one sentence with a name embedded in it: at 390px
+              the row wraps, and a wrapped sentence that begins "is the bar…"
+              on its own line reads as a rendering fault. Each line here stands
+              up alone wherever it breaks. */}
+          <p className="mb-field-hint flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span
+              aria-hidden="true"
+              className="h-3 w-3 shrink-0 rounded-[2px] border border-mb-navy"
+              style={{ background: colorCss }}
+            />
+            <span className="font-semibold text-mb-navy">{colorName}</span>
+            {colorHex && <span className="mb-code-chip tabular-nums">{colorHex}</span>}
+            <span className="min-w-0">— the bar beside the crest.</span>
+          </p>
+          <p className="mb-field-hint">
+            The crest comes from the pack, chosen by name.
+          </p>
         </div>
       </MbDialogBody>
 

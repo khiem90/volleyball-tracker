@@ -5,6 +5,7 @@ import { useMatchPage } from "@/hooks/useMatchPage";
 import { useTerminology, capitalize } from "@/hooks/useTerminology";
 import { getRoundName, getTotalRounds } from "@/lib/singleElimination";
 import { getDoubleElimRoundName } from "@/lib/doubleElimination";
+import { teamColorCss } from "@/lib/teamColor";
 import { crestForTeam } from "./types";
 import type { MbConsoleSeries, MbConsoleSide } from "@/components/match/MatchConsole";
 import type { Competition, Match } from "@/types/game";
@@ -171,7 +172,7 @@ export const useMatchbookMatch = () => {
        whoever is not the winner of a decided match has lost it. */
     const home: MbConsoleSide = {
       team: { name: homeTeam.name, crest: crestForTeam(homeTeam.id, homeTeam.name) },
-      accent: homeTeam.color,
+      accent: teamColorCss(homeTeam.color),
       score: match.homeScore,
       leading: !isFinal && page.homeLeading,
       won: isFinal && match.winnerId === homeTeam.id,
@@ -180,7 +181,7 @@ export const useMatchbookMatch = () => {
     };
     const away: MbConsoleSide = {
       team: { name: awayTeam.name, crest: crestForTeam(awayTeam.id, awayTeam.name) },
-      accent: awayTeam.color,
+      accent: teamColorCss(awayTeam.color),
       score: match.awayScore,
       leading: !isFinal && page.awayLeading,
       won: isFinal && match.winnerId === awayTeam.id,

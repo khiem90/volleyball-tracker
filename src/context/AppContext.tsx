@@ -27,6 +27,37 @@ import {
   STORAGE_KEY,
   OLD_STORAGE_KEY,
 } from "./appReducer";
+import { normalizeTeamColor } from "@/lib/teamColor";
+
+/* ---------------------------------------------------------------------------
+   TEAM COLOURS, MIGRATED ON READ
+
+   Saved accounts hold what the app used to write: `var(--mb-navy)` from the
+   team sheet and, from Quick Add, whole CSS functions —
+
+     Team 3 :: color-mix(in oklab, var(--mb-navy) 55%, var(--mb-green))
+
+   `normalizeTeamColor` turns each of those into the ink it always meant
+   ("teal"), leaves a hand-mixed hex alone, and passes anything it does not
+   recognise through untouched — losing a colour would be worse than storing an
+   odd one. It runs once, here, on the way out of localStorage, and the save
+   effect below writes the migrated shape back on the next state change.
+
+   Nothing downstream depends on this having run: `teamColorCss` resolves a
+   legacy value too. This is what stops the old strings accumulating, not what
+   makes them safe.
+   --------------------------------------------------------------------------- */
+const migrateTeamColors = (parsed: AppState): AppState => {
+  const teams = parsed.teams ?? [];
+  let changed = false;
+  const migrated = teams.map((team) => {
+    const ink = normalizeTeamColor(team.color) || undefined;
+    if (ink === team.color) return team;
+    changed = true;
+    return { ...team, color: ink };
+  });
+  return changed ? { ...parsed, teams: migrated } : parsed;
+};
 
 // ============================================
 // Context
@@ -163,7 +194,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
 
       if (stored) {
         const parsed = JSON.parse(stored) as AppState;
-        dispatch({ type: "LOAD_STATE", state: parsed });
+        dispatch({ type: "LOAD_STATE", state: migrateTeamColors(parsed) });
       }
     } catch (error) {
       console.error("Failed to load state from localStorage:", error);
@@ -186,10 +217,16 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     (name: string, color?: string) => {
       if (isSharedMode && !canEdit) return;
 
+      /* The write guard. Every caller of `addTeam` — the team sheet, Quick
+         Add, the wizard — is expected to hand over a stored form already, but
+         this is the one funnel all of them pass through, so it is where the
+         rule is enforced rather than trusted. */
+      const ink = normalizeTeamColor(color) || undefined;
+
       const newTeam: PersistentTeam = {
         id: generateId(),
         name,
-        color,
+        color: ink,
         createdAt: Date.now(),
       };
 
@@ -197,7 +234,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         const newTeams = [...(session.teams || []), newTeam];
         syncAllData({ teams: newTeams });
       } else {
-        dispatch({ type: "ADD_TEAM", name, color });
+        dispatch({ type: "ADD_TEAM", name, color: ink });
       }
     },
     [isSharedMode, canEdit, session, syncAllData]
@@ -207,13 +244,15 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     (id: string, name: string, color?: string) => {
       if (isSharedMode && !canEdit) return;
 
+      const ink = normalizeTeamColor(color) || undefined;
+
       if (isSharedMode && session) {
         const newTeams = (session.teams || []).map((team) =>
-          team.id === id ? { ...team, name, color } : team
+          team.id === id ? { ...team, name, color: ink } : team
         );
         syncAllData({ teams: newTeams });
       } else {
-        dispatch({ type: "UPDATE_TEAM", id, name, color });
+        dispatch({ type: "UPDATE_TEAM", id, name, color: ink });
       }
     },
     [isSharedMode, canEdit, session, syncAllData]

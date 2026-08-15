@@ -14,6 +14,11 @@ import {
   type TextareaHTMLAttributes,
 } from "react";
 import {
+  TEAM_COLOR_CSS,
+  TEAM_COLOR_IDS,
+  TEAM_COLOR_LABEL,
+} from "@/lib/teamColor";
+import {
   MB_CONTROL_CELL,
   MB_CONTROL_HEIGHT,
   type MbCompositeSize,
@@ -823,26 +828,17 @@ export interface MbSwatch {
  *
  * A stored colour from the old eight still paints, and still reads out under a
  * human name (see `swatchName`) — it simply no longer shows as selected here.
+ *
+ * The six recipes themselves now live in `@/lib/teamColor`, beside the id each
+ * one is STORED as. They were duplicated here and in `QuickAddTeams`, and a
+ * team's saved colour was one of these expressions verbatim — which is how a
+ * `color-mix()` ended up in localStorage and, uppercased, on a team's profile.
+ * The picker offers what storage can name, and cannot drift from it.
  */
-export const MB_SWATCH_PALETTE: readonly MbSwatch[] = [
-  { value: "var(--mb-navy)", label: "Navy" },
-  /* Mixed toward `--mb-green`, not `--mb-teal`, and that is deliberate.
-     `--mb-teal` is the rank-1 rail, and teal and green are themselves only
-     ΔE 6.1 apart, so a navy/teal mix lands ΔE 9.2 from the idle grey. Pulling
-     through green and darkening lands 11.5 from the nearest reserved meaning
-     and 15.4 from win-green itself. */
-  { value: "color-mix(in oklab, var(--mb-navy) 55%, var(--mb-green))", label: "Teal" },
-  { value: "var(--mb-plum)", label: "Plum" },
-  { value: "color-mix(in oklab, var(--mb-plum) 50%, var(--mb-red))", label: "Rose" },
-  {
-    value: "color-mix(in oklab, var(--mb-plum) 65%, var(--mb-paper-bright))",
-    label: "Lilac",
-  },
-  {
-    value: "color-mix(in oklab, var(--mb-gold) 45%, var(--mb-ink-muted))",
-    label: "Ochre",
-  },
-];
+export const MB_SWATCH_PALETTE: readonly MbSwatch[] = TEAM_COLOR_IDS.map((id) => ({
+  value: TEAM_COLOR_CSS[id],
+  label: TEAM_COLOR_LABEL[id],
+}));
 
 const HEX_RE = /^#(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
 const TOKEN_RE = /^var\(\s*(--mb-[a-z0-9-]+)\s*\)$/i;

@@ -30,6 +30,7 @@ import {
   type WizardStep,
 } from "@/hooks/useNewCompetitionPage";
 import { pluralise } from "@/lib/text";
+import { teamColorCss } from "@/lib/teamColor";
 import type { CompetitionType } from "@/types/game";
 
 /* -------------------------------------------------------------- entry rows */
@@ -277,7 +278,7 @@ export const useMatchbookNewCompetition = (
       return {
         id: team.id,
         team: { name: team.name, crest: crestForTeam(team.id, team.name) },
-        accent: team.color,
+        accent: teamColorCss(team.color),
         enteredIn:
           events.length === 0
             ? "—"

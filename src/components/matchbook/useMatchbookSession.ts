@@ -62,6 +62,7 @@
 import { useMemo } from "react";
 import { rankTeams } from "@/lib/standings";
 import { getRoundName, getTotalRounds } from "@/lib/singleElimination";
+import { teamColorCss } from "@/lib/teamColor";
 import type { Match, PersistentTeam } from "@/types/game";
 import type { CompetitionType } from "@/types/game";
 import type { Session } from "@/types/session";
@@ -181,7 +182,7 @@ const plural = (n: number, one: string, many = `${one}s`) =>
  * team has no colour" into "this team's colour is grey" (invariant 8). No
  * colour means no bar; the crest already carries the identity.
  */
-const accentOf = (team?: PersistentTeam) => team?.color || undefined;
+const accentOf = (team?: PersistentTeam) => teamColorCss(team?.color);
 
 const seriesOf = (match: Match): MbScoreboardSeries | undefined => {
   const of = match.seriesLength ?? 1;
