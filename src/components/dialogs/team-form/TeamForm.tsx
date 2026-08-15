@@ -18,6 +18,7 @@ import {
 } from "@/components/matchbook/form";
 import { crestForTeam } from "@/components/matchbook/types";
 import type { PersistentTeam } from "@/types/game";
+import { CREST_PACK_SIZE, crestNameFor } from "./crest";
 import { TEAM_CREATE_LABEL } from "./labels";
 import { TEAM_NAME_MAX, useTeamForm } from "./useTeamForm";
 
@@ -193,8 +194,25 @@ export const TeamForm = ({ open, onOpenChange, team, onSubmit }: TeamFormProps) 
             {colorHex && <span className="mb-code-chip tabular-nums">{colorHex}</span>}
             <span className="min-w-0">— the bar beside the crest.</span>
           </p>
-          <p className="mb-field-hint">
-            The crest comes from the pack, chosen by name.
+          {/* WHAT DRIVES THE CREST, SAID EXACTLY (D2).
+
+              "The crest comes from the pack, chosen by name" is true and still
+              left the reader guessing: they pick Navy, a teal shield appears,
+              and nothing on screen says whether that is their badge, a
+              placeholder, or a fault. The pack is eight designs and the colour
+              is forbidden from choosing among them (charter D-9: a contained
+              accent, never a tint and never a selector), so the sheet has to
+              name the design and name what moves it.
+
+              It names the crest the team will actually wear — the same word for
+              the same art everywhere in the app — and says the two operative
+              facts in one line: rename to change it, the colour never will. */}
+          <p className="mb-field-hint tabular-nums">
+            <span className="font-semibold text-mb-navy">
+              {crestNameFor(previewName)}
+            </span>{" "}
+            — one of {CREST_PACK_SIZE} crests, chosen by the name. Rename to
+            change it; the colour never does.
           </p>
         </div>
       </MbDialogBody>

@@ -884,9 +884,51 @@ export const EntrantsPanel = ({
  * **1.00:1**, measured, i.e. the format blurb and the footer note rendered as
  * blank paper on every draft competition. Same false premise as the old
  * `NavyStat`: `Panel tone="navy"` inks the head, never the body.
+ *
+ * ------------------------------------------------ and then it said it twice
+ *
+ * The draft console rendered this panel and `DetailsPanel` in the same column,
+ * and both of them print `data.configLines`. Measured on a four-team round
+ * robin at 390px, the reader scrolled through:
+ *
+ *   SETUP           FORMAT · TEAMS ENTERED · MATCH FORMAT · POINTS · VENUE WORD
+ *                   y909 … y1126, caps, `MbStat`, one icon each
+ *   EVENT DETAILS   CREATED · FORMAT · TEAMS ENTERED · MATCH FORMAT · POINTS ·
+ *                   VENUE WORD
+ *                   y1376 … y1558, sentence case, THE SAME ICONS
+ *
+ * One payload, two casings, 250px apart — five labels verbatim identical and
+ * only `Created` unique to the second. `DetailsPanel` is still the right panel
+ * for the four bodies that do NOT show Setup (round robin and both brackets
+ * render it alone); on the draft screen it was pure repetition, so the one fact
+ * it held that this panel did not now rides in this panel's head, where a
+ * provenance line belongs, and `DraftBody` renders Setup alone.
  */
-export const SetupPanel = ({ data }: { data: MbCompetitionDetail }) => (
-  <Panel title="Setup" tone="navy" icon="settings">
+export const SetupPanel = ({
+  data,
+  createdDate,
+}: {
+  data: MbCompetitionDetail;
+  createdDate: string;
+}) => (
+  <Panel
+    title="Setup"
+    tone="navy"
+    icon="settings"
+    meta={
+      /* Not `.mb-kicker`: that class carries `--mb-ink-muted`, which is a navy
+         tint for cream and would sit on this head's navy ground. The head's own
+         `text-mb-paper-bright` is inherited instead, so only the type pair is
+         declared here — `display/status`, 0.66rem/700 at 0.1em, the step the
+         panel heads already use for a right-aligned count. */
+      <span
+        className="matchbook-display shrink-0 text-[0.66rem] font-bold tracking-[0.1em] tabular-nums"
+        suppressHydrationWarning
+      >
+        Created {createdDate}
+      </span>
+    }
+  >
     <div className="flex flex-1 flex-col gap-4 p-5">
       <p className="text-[0.85rem] leading-[1.5]">{data.formatBlurb}</p>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

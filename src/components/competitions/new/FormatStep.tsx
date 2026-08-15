@@ -47,6 +47,22 @@ import { FormatPreviewPanel } from "./FormatPreviewPanel";
    four words, and `FormatPreviewPanel` prints `FORMAT_META[format].blurb`
    verbatim as its first line the moment a format is chosen. The list is the
    comparison; the preview is the detail.
+
+   ------------------------------------------- and it is not there before that
+
+   The preview used to render on arrival too, drawing "NO FORMAT CHOSEN YET —
+   pick one to see the schedule it will generate" — an empty-state headline on
+   the one screen in the app that cannot have an empty state, because the five
+   things to choose are 150px above it and the panel head already says PICK
+   ONE. Measured at 390x844 it cost 153px of a document the sticky commit bar
+   was already covering the end of, and every pixel of it was an apology for a
+   question the user had been on the screen for four seconds.
+
+   So the panel arrives WITH the answer. Step 1 on arrival is the rail, the
+   five choices and the commit bar; choosing adds the preview under the list,
+   below the fold on a phone and beside nothing it displaces. `FormatStep` is
+   the only place that ever had a nullable format, which is why the guard lives
+   here and `FormatPreviewPanel` now takes a `CompetitionType`.
    =========================================================================== */
 
 export interface FormatStepProps {
@@ -84,12 +100,14 @@ export const FormatStep = ({
       </Panel>
     </div>
 
-    <div className="xl:col-span-12">
-      <FormatPreviewPanel
-        format={selectedFormat}
-        lines={previewLines}
-        basis={previewBasis}
-      />
-    </div>
+    {selectedFormat && (
+      <div className="xl:col-span-12">
+        <FormatPreviewPanel
+          format={selectedFormat}
+          lines={previewLines}
+          basis={previewBasis}
+        />
+      </div>
+    )}
   </>
 );

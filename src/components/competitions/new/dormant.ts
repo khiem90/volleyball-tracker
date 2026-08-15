@@ -49,3 +49,58 @@
 
 export const MB_DORMANT =
   "disabled:opacity-100! disabled:bg-mb-paper-bright! disabled:border-mb-rule! disabled:text-mb-ink-muted!";
+
+/* ===========================================================================
+   THE SAME TREATMENT FOR A CONTROL THAT IS *NOT* `disabled`
+
+   The wizard's commit control is deliberately never `disabled` — pressing a
+   blocked primary is what raises the "ONE THING FIRST" notice and moves focus
+   to it, and that recovery is the best thing on the screen. But the round
+   before this one paid for it by leaving the control at FULL COMMIT DRESS
+   while the line 24px above it said the opposite. Scripted at 390x844 on step
+   2 of a fresh walk-through:
+
+     status line   "Select at least 3 teams"
+     primary       background rgb(201,53,31)   opacity 1   disabled false
+                   aria-disabled null          172.95 x 56
+
+   A saturated coral fill is the loudest promise this system can make, and the
+   press does not keep it. That is not a disabled control drawn honestly; it is
+   an available control that is not available.
+
+   So the *shape* of the answer above applies here too — the state is DRAWN,
+   not dimmed — with one difference: every declaration is unconditional rather
+   than `disabled:`-scoped, because the button really is operable and the
+   `disabled:` variants would never fire. It is scoped instead to the bar's
+   last child, which is `MbActionBar`'s primary, so it can be handed to the bar
+   as a `className` from the route without reaching inside a component this
+   workstream does not own.
+
+   The result: paper ground, muted-but-legible label at `--mb-ink-muted`
+   (5.1:1 on paper), opacity 1, cursor and hit area untouched, and NO coral
+   anywhere in the bar until the gate is open. Coral returns the instant the
+   press will do what it says — which makes the fill mean something again, on
+   the one screen where it had stopped meaning anything.
+
+   ONE DEPARTURE FROM `MB_DORMANT`: the frame is `--mb-ink-muted`, not
+   `--mb-rule`. `--mb-rule` is `rgba(7,50,77,0.28)`, which composites over
+   `--mb-paper-bright` to `rgb(186,194,195)` and measures **1.58:1** — right
+   for a control that genuinely cannot be pressed, where the hairline is a
+   trace of something switched off, and wrong for this one, which CAN be
+   pressed and whose press is the entire recovery path. A commit control the
+   eye cannot find is a worse failure than a commit control that overpromises.
+   `--mb-ink-muted` puts the frame at the same 5.1:1 as the label, so the
+   control is unmistakably a control, unmistakably quieter than the live
+   secondary beside it, and unmistakably not making a coral promise.
+
+   HANDOFF: the accessibility tree still reports the control as enabled.
+   `aria-disabled="true"` is the correct annotation for "present, focusable,
+   not available yet, press me and I will tell you why", but `MbAction` has no
+   axis for it and `ActionBar.tsx` is owned by another workstream this round.
+   One optional `ariaDisabled` field on `MbAction`, forwarded by `BarAction`,
+   closes it. Until then the reason is carried by the bar's own status line
+   (in the bar, before the press) and by the gate notice (after it).
+   =========================================================================== */
+
+export const MB_GATE_DORMANT =
+  "[&>button:last-child]:bg-mb-paper-bright! [&>button:last-child]:border-mb-ink-muted! [&>button:last-child]:text-mb-ink-muted!";

@@ -4,7 +4,7 @@ import { rankTeams } from "@/lib/standings";
 import type { Competition, CompetitionType, Match } from "@/types/game";
 import type { MbStandingLine } from "./StandingsTable";
 import { buildTeamTallies, recentForm } from "./teamStats";
-import { createTeamRef } from "./useMatchbookCompetitionDetail";
+import { createTeamRef, mbDraftSummary } from "./useMatchbookCompetitionDetail";
 import type { MbOverviewSection } from "./panels";
 import { type MbTeam } from "./types";
 
@@ -82,6 +82,33 @@ export interface MbCompeteSelected {
   competition: Competition;
   typeLabel: string;
   isElimination: boolean;
+  /**
+   * `status === "draft"` — the competition exists, and nothing about it has
+   * happened yet.
+   *
+   * The console printed a draft as a competition with all its numbers at zero:
+   * `MATCHES COMPLETED 0 / 0`, `LIVE NOW 0`, and — measured on a four-team
+   * round robin — a standings table of FOUR rows reading `P0 W0 L0 PF0 PA0 PD0
+   * Pts0`, all tied at `=1`, with "No matches played yet" in every Form cell.
+   * None of that is a fact about the competition; it is the shape of a
+   * competition with the facts missing, and the reader's own words for it were
+   * "I could not tell how to start my tournament from this screen".
+   *
+   * So a draft narrows to a different composition rather than the same one
+   * with zeros in it: what it HAS (its entrants) and what Start will DO
+   * (`draftSummary`), with the way in named. `standings` and `bracket` are
+   * empty by construction here, so nothing downstream can print a zero row
+   * even if it forgets to check.
+   */
+  notStarted: boolean;
+  /** The entrant list in seed order — the one thing a draft genuinely has. */
+  entrants: MbTeam[];
+  /**
+   * "6 matches over 3 rounds." — the same sentence the setup console's own
+   * preview panel prints, from `mbDraftSummary`, so the two screens cannot
+   * promise different schedules for the same draft. Empty unless `notStarted`.
+   */
+  draftSummary: string;
   teamCount: number;
   matchTotal: number;
   matchesCompleted: number;
@@ -141,6 +168,12 @@ export interface MbCompeteData {
    */
   isFirstRun: boolean;
   deleteCompetition: (id: string) => void;
+  /**
+   * What this account holds, as one line: "6 events • 2 live • 1 draft • 3
+   * final". It is the masthead's sub-line, and it is there because the masthead
+   * no longer borrows the selected event's name — see the route file.
+   */
+  inventory: string;
   /**
    * Teams already on the books, capped for display. The one fact that decides
    * whether a competition can be created, printed on the screen that creates
@@ -228,10 +261,11 @@ export const useMatchbookCompete = (): MbCompeteData => {
       const isElimination =
         competition.type === "single_elimination" ||
         competition.type === "double_elimination";
+      const notStarted = competition.status === "draft";
 
       // Compact bracket built from real rounds (winners bracket only for DE).
       let bracket: MbBracketRound[] = [];
-      if (isElimination) {
+      if (isElimination && !notStarted) {
         const bracketMatches = matches.filter(
           (m) => !m.bracket || m.bracket === "winners" || m.bracket === "grand_finals"
         );
@@ -280,7 +314,10 @@ export const useMatchbookCompete = (): MbCompeteData => {
         [...completed].sort((a, b) => (b.completedAt ?? 0) - (a.completedAt ?? 0))
       );
 
-      const standings: MbStandingLine[] = isElimination
+      /* A draft has no fixtures, so it has no table. `rankTeams` answers a
+         four-team draft with four all-zero rows tied at rank 1 — a ranking of
+         nothing, printed as if it were a league position. */
+      const standings: MbStandingLine[] = isElimination || notStarted
         ? []
         : rankTeams(competition.teamIds, matches, competition.config).map((row) => ({
             teamId: row.teamId,
@@ -302,6 +339,9 @@ export const useMatchbookCompete = (): MbCompeteData => {
         competition,
         typeLabel: COMPETITION_TYPE_LABELS[competition.type],
         isElimination,
+        notStarted,
+        entrants: notStarted ? competition.teamIds.map(refFor) : [],
+        draftSummary: notStarted ? mbDraftSummary(competition) : "",
         teamCount: competition.teamIds.length,
         matchTotal: playable.length,
         matchesCompleted: completed.length,
@@ -366,6 +406,25 @@ export const useMatchbookCompete = (): MbCompeteData => {
       };
     }
 
+    /* "6 events • 2 live • 1 draft • 3 final". Only the states that exist are
+       named, so a single-draft account reads "1 event • 1 draft" rather than
+       two zeros. */
+    const tally = (status: MbCompetitionRow["status"]) =>
+      rows.filter((r) => r.status === status).length;
+    const inventory = [
+      `${rows.length} ${rows.length === 1 ? "event" : "events"}`,
+      ...(
+        [
+          ["in_progress", "live"],
+          ["draft", "draft"],
+          ["completed", "final"],
+        ] as const
+      )
+        .map(([status, word]) => [tally(status), word] as const)
+        .filter(([count]) => count > 0)
+        .map(([count, word]) => `${count} ${word}`),
+    ].join(" • ");
+
     return {
       dateLine,
       rows,
@@ -373,6 +432,7 @@ export const useMatchbookCompete = (): MbCompeteData => {
       setSelectedId: setManualSelectedId,
       selected,
       deleteCompetition,
+      inventory,
       isFirstRun: rows.length === 0,
       teams: state.teams.slice(0, TEAMS_SHOWN).map((team) => refFor(team.id)),
       teamCount: state.teams.length,

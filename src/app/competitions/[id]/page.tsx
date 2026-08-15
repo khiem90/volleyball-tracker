@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useCallback, useMemo, useState } from "react";
+import { useAuth } from "@/context/AuthContext";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useCompetitionDetailPage } from "@/hooks/useCompetitionDetailPage";
@@ -74,6 +75,7 @@ const TITLE_STOP_MAX = 22;
 
 export default function CompetitionDetailPage() {
   const { isLoading, isAuthenticated } = useRequireAuth();
+  const { isConfigured } = useAuth();
   const page = useCompetitionDetailPage();
   const online = useOnlineStatus();
   const [showAddTeams, setShowAddTeams] = useState(false);
@@ -128,28 +130,29 @@ export default function CompetitionDetailPage() {
    *                     happens: `EndCompetitionDialog` → `MbConfirm` →
    *                     `MbDestructiveButton`.
    *   `Start` on draft  rendered coral TWICE on one 1,129px page — here and in
-   *                     `PreviewPanel`'s footer. The footer keeps it: it sits
-   *                     directly under the preview of what Start will build,
-   *                     and on a phone it is in the bottom third where the
-   *                     thumb is (rubric 6.5). The masthead's copy goes navy.
+   *                     `PreviewPanel`'s footer. Repainting this one navy did
+   *                     not fix it, it disguised it: measured on a four-team
+   *                     draft at 390px the reader met "START COMPETITION" navy
+   *                     at y=159 and "START COMPETITION" coral at y=337 — the
+   *                     SAME WORDS, 178px apart, both in the first viewport,
+   *                     in two different colours (346px apart on a bracket
+   *                     draft, 915px at 1440). Two paints of one irreversible
+   *                     commit is a question — "which one is the real one?" —
+   *                     asked at the exact moment the reader is deciding
+   *                     whether to commit. There is ONE now, and it is the
+   *                     coral in `PreviewPanel`'s foot, because that button
+   *                     sits directly beneath the sentence describing what it
+   *                     will build. `DraftBody` leads with that panel at every
+   *                     width so the pair is on the first screen (measured
+   *                     after: y=289 at 390, y=197 at 1440, one button).
    *
    * Net: coral does ONE job on this screen's own chrome — live — against a
-   * ceiling of two (rubric 3.4).
+   * ceiling of two (rubric 3.4), and a draft masthead carries no action at all
+   * rather than a second copy of the screen's only commit.
    */
   const actions = useMemo<MbAction[]>(() => {
     if (!competition) return [];
-    if (competition.status === "draft") {
-      return page.canEdit
-        ? [
-            {
-              label: "Start competition",
-              tone: "navy",
-              icon: "quick",
-              onClick: () => page.setShowStartConfirm(true),
-            },
-          ]
-        : [];
-    }
+    if (competition.status === "draft") return [];
     if (competition.status === "in_progress") {
       if (!page.isSharedMode) {
         return page.canEdit
@@ -354,6 +357,13 @@ export default function CompetitionDetailPage() {
         competitionType={competition.type}
         playInMatchCount={getPlayInMatchCount(competition.teamIds.length)}
         matchWord={data.matchWord.one}
+        /* The auto-session effect's own guard, restated as a prop rather than
+           re-derived: `if (isSharedMode || !isConfigured) return`. Read from
+           `useAuth` here rather than threaded through `useCompetitionDetailPage`
+           so that hook's mutation surface stays exactly as the charter froze it
+           (W4 acceptance 1) — this is a read, and the dialog is the only thing
+           that needs it. */
+        willPublish={!page.isSharedMode && isConfigured}
         onStart={page.handleStartCompetition}
       />
 

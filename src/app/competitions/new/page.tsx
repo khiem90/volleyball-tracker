@@ -30,6 +30,7 @@ import { TeamsStep } from "@/components/competitions/new/TeamsStep";
 import { NameStep } from "@/components/competitions/new/NameStep";
 import { TeamForm } from "@/components/dialogs/team-form";
 import { QuickAddTeams } from "@/components/QuickAddTeams";
+import { MB_GATE_DORMANT } from "@/components/competitions/new/dormant";
 import { pluralise } from "@/lib/text";
 
 /* ===========================================================================
@@ -438,8 +439,18 @@ const NewCompetitionWizard = () => {
             what sends its last child to the far end of that height instead of
             leaving it stacked under the content. On a step taller than the
             viewport the margin resolves to 0 and nothing moves. */}
+        {/* `MB_GATE_DORMANT` is the other half of "the primary is never
+            disabled": the control stays operable so pressing it can raise the
+            gate notice, and it stops WEARING COMMIT DRESS while it cannot
+            commit. Measured on step 2 before this, with "Select at least 3
+            teams" in the status line 24px above: `background rgb(201,53,31)`,
+            `opacity 1`, `disabled false`. The recipe and the contrast figures
+            are in `competitions/new/dormant.ts`; `view.gateOpen` is the same
+            fact the status line is already stating in words. */}
         <MbActionBar
-          className="mb-enter mb-stagger-4 mt-auto bottom-[var(--mb-toast-offset,0px)]!"
+          className={`mb-enter mb-stagger-4 mt-auto bottom-[var(--mb-toast-offset,0px)]! ${
+            view.gateOpen ? "" : MB_GATE_DORMANT
+          }`}
           status={view.statusLine}
           /* Back from step 2 onward; Cancel on step 1, where there is nothing
              to go back to and the bar would otherwise carry a lone primary. */
@@ -508,14 +519,15 @@ const Bar = ({ h, w }: { h: string; w: string }) => (
  * panel 2 y 108→240 and w 473→669, panel 3 y 466→240, document 710→1024px; at
  * 390, 1016→1736px with a 670px panel displacement. Invariant 26 asks for the
  * FINAL geometry, and the final geometry here is a one-line rail strip over a
- * full-width choice panel over a full-width preview — not a row list in sight.
+ * full-width choice panel — not a row list in sight.
  *
  * The masthead is NOT drawn here any more: the route owns it, so during loading
  * it IS the real masthead and its geometry cannot differ from itself.
  *
  * The bones are the step-1 arrival state, because that is what a cold load
- * paints unless a draft says otherwise: five choice boxes in the same two-up
- * grid `FormatStep` uses, then the preview panel's ruled lines.
+ * paints unless a draft says otherwise: a rail strip over one panel of five
+ * ruled 56px choice rows, and nothing else. The preview panel is not drawn,
+ * because step 1 on arrival no longer has one.
  *
  * HANDOFF (W2): `MbPageLoading` has no shape axis — a `shape` prop, or a
  * `children` escape hatch for a route's own bones, would make this a call site
@@ -593,27 +605,13 @@ const WizardBones = () => {
           </div>
         </section>
 
-        <section className="mb-panel xl:col-span-12">
-          <header className="mb-panel-head">
-            <span className="flex h-6 w-[9rem] max-w-[60%] items-center">
-              <MbSkeleton w="100%" h="0.95rem" radius={2} />
-            </span>
-          </header>
-          {/* Two 52px rules under a 48px head is 153px — the height
-              `Format Preview` measures on arrival, where it carries its
-              "no format chosen yet" block rather than four ruled figures. */}
-          <div className="flex flex-col">
-            {[0, 1].map((i) => (
-              <div
-                key={i}
-                className="flex min-h-[52px] items-center justify-between gap-3 border-b border-mb-rule px-4 py-3 last:border-b-0"
-              >
-                <Bar h="h-[0.62rem]" w="w-[6rem]" />
-                <Bar h="h-[0.95rem]" w="w-[3rem]" />
-              </div>
-            ))}
-          </div>
-        </section>
+        {/* NO SECOND PANEL.
+            `Format Preview` used to be drawn here, because step 1 used to
+            render it on arrival carrying "NO FORMAT CHOSEN YET". It does not
+            any more — the panel arrives with the answer (`FormatStep`) — so
+            a second 153px silhouette here would be a skeleton standing in for
+            a panel the loaded page does not have, which is invariant 26 read
+            backwards. */}
       </div>
 
       {/* The commit bar is 82px of the final geometry at `sm` and above and
@@ -678,7 +676,18 @@ const WizardShell = ({ children }: { children: ReactNode }) => (
     variant="console"
     active="/competitions"
     cta={MB_DEFAULT_CTA}
-    back={{ href: "/competitions", label: "Competitions" }}
+    /* "Back", not "Competitions".
+       `MbTopStripBack.label` asks for "one short word" and this route was
+       passing twelve characters. The strip is a three-child flex row — a
+       `shrink-0` back control, a `flex-1 min-w-0 truncate` title and a
+       `shrink-0` account chip — so the title is the ONLY child that can
+       absorb a long neighbour, and it always loses first. Measured at 390px:
+       back 144px + account 112.94px + 16px padding + 16px of gaps left the
+       title 101.06px for a string needing 107px, and the wizard announced
+       itself as "NEW COMPETITI…". One word gives it 157px. The destination is
+       not lost — the bottom bar's Compete tab and the masthead's own back link
+       both still go there. */
+    back={{ href: "/competitions", label: "Back" }}
     masthead={{
       title: (
         <>

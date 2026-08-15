@@ -152,6 +152,31 @@ export const MbDialogBody = ({
  * the primary action lands in the thumb zone at full width (invariant 35).
  * From `sm` up they shrink back to their labels and sit right-aligned.
  * Only direct `<button>` children are affected — a status label keeps its size.
+ *
+ * `flex-auto`, NOT `flex-1`, and the difference is a clipped verb.
+ *
+ * `flex-1` is `flex: 1 1 0%` — a zero basis, so a flex line NEVER breaks: two
+ * controls always split the row down the middle however long their labels are,
+ * and `MbButton`'s label span (`min-w-0 truncate`) then eats the overflow.
+ * Measured at 390x844 on the start-competition confirm, whose footer is
+ * "Cancel" + "Start competition":
+ *
+ *   foot 388px · both buttons 174px · Start competition label 100 / 131 → −31px
+ *   rendered: "START COMPE…"
+ *
+ * A truncated verb on the control that commits a schedule is the one label in
+ * the system that must never be clipped, and it is the same defect `ActionBar`
+ * documents at its own `FLEX` constant and solved there with `flex-auto`
+ * (`flex: 1 1 auto`): the basis is the content, so a pair that cannot share a
+ * 390px row takes a line each and the label survives. This footer had kept the
+ * zero basis. Now both bottom-anchored control rows in the system break the
+ * same way for the same reason.
+ *
+ * `flex-wrap` is the other half: `.mb-dialog-foot` never declared one, so the
+ * line could not break at all and `flex-auto` items would have shrunk below
+ * their content and truncated anyway on a narrower phone. It declares none, so
+ * a utility carries it without an `!` — and it returns to `nowrap` at `sm`,
+ * where the buttons are `flex-none` and right-aligned.
  */
 export const MbDialogFooter = ({
   children,
@@ -161,7 +186,7 @@ export const MbDialogFooter = ({
   className?: string;
 }) => (
   <div
-    className={`mb-dialog-foot [&>button]:flex-1 sm:[&>button]:flex-none ${className}`}
+    className={`mb-dialog-foot flex-wrap sm:flex-nowrap [&>button]:flex-auto sm:[&>button]:flex-none ${className}`}
   >
     {children}
   </div>

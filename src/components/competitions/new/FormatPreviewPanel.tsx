@@ -29,7 +29,24 @@ import type { CompetitionType } from "@/types/game";
       format, so choosing one replays `.mb-enter` over the whole block — one
       settle, once per decision. The figures themselves never flip or spring
       (invariant 41); they arrive with the panel that explains them.
-   3. **It will not print a bare participle.** The head's right-hand label was
+   3. **It will not apologise for not having been asked yet.** The panel used
+      to render on step 1 before any format was chosen, and what it drew there
+      was `PanelEmpty` reading "NO FORMAT CHOSEN YET — pick one to see the
+      schedule it will generate": a display-step empty-state HEADLINE, on a
+      screen whose entire job is to make you choose, four inches under the five
+      choices themselves. An empty state earns its space when the reader cannot
+      act — there is nothing here, go make something. Here the reader can act,
+      the thing to act on is directly above, and the panel was restating the
+      panel head's own "PICK ONE" as a failure. Measured at 390x844 on arrival
+      it cost 153px of document, all of it below the fold, and on the run where
+      the gate notice pushed it down, 100% of the headline and 100% of the deck
+      sat under the sticky commit bar — an apology nobody could read.
+
+      So `format` is not nullable. The panel is not rendered at all until there
+      is something to preview (`FormatStep`), and it arrives WITH the answer,
+      as the reward for choosing. Step 3 always has a format, so nothing there
+      changes.
+   4. **It will not print a bare participle.** The head's right-hand label was
       `basis.source === "library" ? "Projected" : "Entered"`, and on an empty
       account `source` is `none` — so the head of a panel with nothing to count
       printed the orphan word "ENTERED", no figure, no noun, measured at
@@ -44,7 +61,8 @@ export const FormatPreviewPanel = ({
   lines,
   basis,
 }: {
-  format: CompetitionType | null;
+  /** Never null: the panel is not rendered until a format exists (note 3). */
+  format: CompetitionType;
   lines: MbPreviewLine[];
   basis: MbPreviewBasis;
 }) => (
@@ -53,15 +71,14 @@ export const FormatPreviewPanel = ({
     tone="navy"
     icon="bracket"
     meta={
-      format && basis.label ? (
+      basis.label ? (
         <span className="matchbook-display text-[0.66rem] font-bold tracking-[0.16em] text-mb-paper-bright tabular-nums">
           {basis.label}
         </span>
       ) : undefined
     }
   >
-    {format ? (
-      <div key={format} className="mb-enter">
+    <div key={format} className="mb-enter">
         <p className="border-b border-mb-rule px-4 py-3 text-[0.85rem] leading-[1.5] text-mb-ink-muted">
           {FORMAT_META[format].blurb}
         </p>
@@ -87,9 +104,6 @@ export const FormatPreviewPanel = ({
             </p>
           </>
         )}
-      </div>
-    ) : (
-      <PanelEmpty message="No format chosen yet — pick one to see the schedule it will generate." />
-    )}
+    </div>
   </Panel>
 );

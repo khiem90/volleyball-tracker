@@ -26,6 +26,40 @@ import type { CompetitionType, PersistentTeam } from "@/types/game";
    Be Generated" panel, where there is room for it; what is left here is the
    picker, rebuilt at 44px rows with a real checked mark rather than a
    colour-only "selected" tint (invariant 13).
+
+   ------------------------------------------------------ the undisclosed half
+
+   Reproduced clean on a fresh profile: before Start, `localStorage` held
+   `["tournament-tracker-state", "tournament-tracker-theme"]`. After Start it
+   held those plus **`tournament_tracker_session`** and
+   **`tournament-admin-tokens`** — and that is only the local half. Pressing
+   Start also runs `createSession()` (via the auto-session effect in
+   `useCompetitionDetailPage`), which mints a six-character share code and
+   writes the whole event — competition, teams and matches — to the `sessions`
+   collection, then saves an organiser token on the device so this browser can
+   keep scoring it. The dialog warned about the entrant list and said nothing
+   about any of that.
+
+   Two ways to close it: stop doing it, or say it. Saying it is right, and not
+   only because the effect is charter-locked (W4 acceptance 1) and lives outside
+   this component.
+
+     - It is the product. This app's loop is one person scoring on a phone while
+       everyone else watches on theirs; the share link IS the feature, and
+       `/session/[shareCode]` is a whole rendered surface built for it. Making
+       the organiser hunt for "Share live" after every start would cost the
+       common case to protect against a consequence that is desirable in it.
+     - The organiser key is not a nicety either — it is what lets the creator
+       score from a second device, and it can only be minted at creation.
+     - What was actually wrong was the silence. An upload is a disclosable act
+       whether or not it is wanted, and a confirm dialog that lists one
+       consequence and hides the other two teaches the reader that its list is
+       complete.
+
+   So the consequences are enumerated, one per row, in the order they bite —
+   and the publishing row only appears when publishing will really happen
+   (`willPublish`), because a dialog that promises a link on a build with no
+   Firebase configured is a new lie in place of the old omission.
    =========================================================================== */
 
 interface StartCompetitionDialogProps {
@@ -37,8 +71,35 @@ interface StartCompetitionDialogProps {
   competitionType?: CompetitionType;
   playInMatchCount?: number;
   matchWord?: string;
+  /**
+   * True when starting will really create the shared session — i.e. exactly the
+   * condition the auto-session effect tests: not already inside a shared
+   * session, and Firebase configured. False on a local-only build, where no
+   * link and no token are created and claiming otherwise would be its own
+   * defect.
+   */
+  willPublish?: boolean;
   onStart: (byeTeamIds?: string[]) => void;
 }
+
+/** One consequence of pressing Start, as a ruled row. */
+const Consequence = ({
+  icon,
+  title,
+  children,
+}: {
+  icon: string;
+  title: string;
+  children: React.ReactNode;
+}) => (
+  <li className="flex items-start gap-3 px-4 py-3">
+    <MbIcon id={icon} size={16} className="mt-0.5 shrink-0 text-mb-navy" />
+    <span className="min-w-0">
+      <span className="mb-kicker block">{title}</span>
+      <span className="mt-1 block text-[0.8rem] leading-[1.5]">{children}</span>
+    </span>
+  </li>
+);
 
 export const StartCompetitionDialog = ({
   open,
@@ -49,6 +110,7 @@ export const StartCompetitionDialog = ({
   competitionType,
   playInMatchCount = 0,
   matchWord = "match",
+  willPublish = false,
   onStart,
 }: StartCompetitionDialogProps) => {
   const isElimination =
@@ -90,6 +152,30 @@ export const StartCompetitionDialog = ({
     }
   };
 
+  /* The full list, in the order the consequences bite. It lives in the SAME
+     scroller as the picker rather than in a pinned block between body and
+     footer: `.mb-dialog-body` is the only `overflow-y: auto` in the dialog, and
+     a fixed block under an 8-row picker on a 390x844 phone would take its
+     height out of the scroller. */
+  const consequences = (
+    <ul className="flex flex-col divide-y divide-mb-rule border-t border-mb-rule">
+      <Consequence icon="calendar" title="The schedule is written">
+        Every fixture this format needs is generated now, and the competition
+        goes live.
+      </Consequence>
+      <Consequence icon="lock" title="The entrant list locks">
+        Teams cannot be added or removed once the schedule exists.
+      </Consequence>
+      {willPublish && (
+        <Consequence icon="share" title="A live link is created">
+          This event — its teams, schedule and scores — is published under a
+          six-character code so anyone you send the link to can follow it. An
+          organiser key is saved on this device so you can keep scoring from it.
+        </Consequence>
+      )}
+    </ul>
+  );
+
   return (
     <MbDialog
       open={open}
@@ -98,7 +184,9 @@ export const StartCompetitionDialog = ({
       icon="quick"
       kicker={typeLabel}
       size={showPicker ? "md" : "sm"}
-      description={`This generates the ${typeLabel.toLowerCase()} schedule for ${teamCount} teams and locks the entrant list.`}
+      description={`Starting a ${typeLabel.toLowerCase()} for ${teamCount} teams does ${
+        willPublish ? "three" : "two"
+      } things.`}
     >
       {showPicker ? (
         <MbDialogBody flush className="flex flex-col">
@@ -160,21 +248,25 @@ export const StartCompetitionDialog = ({
               </MbNotice>
             </div>
           )}
+
+          {consequences}
         </MbDialogBody>
       ) : (
-        <MbDialogBody>
-          <p className="text-[0.85rem] leading-[1.5] text-mb-ink-muted">
-            Teams cannot be added or removed once the schedule exists.
-          </p>
-        </MbDialogBody>
+        <MbDialogBody flush>{consequences}</MbDialogBody>
       )}
 
       <MbDialogFooter>
         <MbButton variant="outline-navy" size="lg" onClick={() => onOpenChange(false)}>
           Cancel
         </MbButton>
+        {/* "Start competition" measured **"START COMPE…"** in this footer at
+            390px: `.mb-dialog-foot` gives its two controls `flex: 1` below
+            `sm`, which is ~171px each, and the label plus its
+            glyph does not fit. The dialog's own title is the question this
+            button answers, so the verb alone is unambiguous — and it is the
+            one control on the screen that must never be misread. */}
         <MbButton variant="coral" size="lg" icon="quick" disabled={!ready} onClick={start}>
-          Start competition
+          Start now
         </MbButton>
       </MbDialogFooter>
     </MbDialog>

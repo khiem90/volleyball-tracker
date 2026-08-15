@@ -12,7 +12,10 @@ import {
 import { getChampionCount, getCurrentChampionStreak } from "@/lib/win2out";
 import { getSessionMatchCount } from "@/lib/twoMatchRotation";
 import { pluralise } from "@/lib/text";
-import { DEFAULT_COMPETITION_CONFIG } from "@/types/competition-config";
+import {
+  DEFAULT_COMPETITION_CONFIG,
+  DEFAULT_TERMINOLOGY,
+} from "@/types/competition-config";
 import type { Competition, Match, PersistentTeam } from "@/types/game";
 import { FORMAT_META, isEliminationFormat } from "./formatMeta";
 import { buildTeamTallies, recentForm } from "./teamStats";
@@ -216,6 +219,55 @@ const nextPowerOf2 = (n: number) => {
   let power = 1;
   while (power < n) power *= 2;
   return power;
+};
+
+/**
+ * What pressing Start will actually build, in one sentence.
+ *
+ * A pure function rather than a line inside this hook's `useMemo`, because TWO
+ * screens now print it. `/competitions` shows the selected event, and when that
+ * event is a draft it used to show a `MATCHES COMPLETED 0 / 0` meter and a
+ * standings table of four all-zero rows — facts about a competition that has no
+ * fixtures. What a draft actually has to say is what Start will generate, and
+ * the setup console already said it. Two screens saying it from two arithmetics
+ * is how "6 matches over 3 rounds" and "6 games over 3 rounds" drift apart, so
+ * there is one function and both call it.
+ *
+ * Terminology is read off the competition itself rather than through
+ * `useTerminology`, which is a hook and therefore cannot be called per row of a
+ * list. It is the same merge that hook performs.
+ */
+export const mbDraftSummary = (competition: Competition): string => {
+  const words = { ...DEFAULT_TERMINOLOGY, ...(competition.config?.terminology ?? {}) };
+  const teamCount = competition.teamIds.length;
+  const bracketSize = nextPowerOf2(Math.max(teamCount, 2));
+
+  if (competition.type === "round_robin") {
+    const perRound = Math.floor(teamCount / 2);
+    const rounds = teamCount % 2 === 0 ? teamCount - 1 : teamCount;
+    const total = perRound * rounds;
+    return `${total} ${pluralise(words.match, total)} over ${rounds} rounds.`;
+  }
+
+  /* Round counts come from the app's own tested generators, never from a second
+     arithmetic. `Math.log2(bracketSize) + 1` told an 8-team draft it would build
+     "4 winners rounds"; `getTotalWinnersRounds(8)` says 3. The double-
+     elimination total is `2n - 1` — every team but the champion loses twice,
+     plus the grand final. */
+  if (competition.type === "single_elimination") {
+    const total = bracketSize - 1;
+    return `${total} ${pluralise(words.match, total)} over ${getTotalRounds(teamCount)} rounds.`;
+  }
+  if (competition.type === "double_elimination") {
+    const total = Math.max(0, teamCount * 2 - 1);
+    return `Up to ${total} ${pluralise(words.match, total)}: a winners bracket over ${getTotalWinnersRounds(teamCount)} rounds, a losers bracket and a grand final.`;
+  }
+
+  const numCourts = competition.numberOfCourts ?? 1;
+  return `${numCourts} ${pluralise(words.venue, numCourts)} in play, ${Math.max(
+    0,
+    teamCount - numCourts * 2
+  )} teams in the queue.`;
 };
 
 /* --------------------------------------------------- shared pure builders */
@@ -852,11 +904,10 @@ export const useMatchbookCompetitionDetail = ({
     };
 
     if (competition.status === "draft") {
-      if (competition.type === "round_robin") {
-        const perRound = Math.floor(teamCount / 2);
-        const rounds = teamCount % 2 === 0 ? teamCount - 1 : teamCount;
-        draft.summary = `${perRound * rounds} ${pluralise(matchWord.one, perRound * rounds)} over ${rounds} rounds.`;
-      } else if (isElimination) {
+      /* One sentence, one source — `/competitions` prints the same string for
+         the same draft (see `mbDraftSummary`). */
+      draft.summary = mbDraftSummary(competition);
+      if (isElimination) {
         const order = seededOrder(bracketSize);
         const byes: { team: MbTeam; seed: number }[] = [];
         for (let i = 0; i < order.length; i += 2) {
@@ -880,21 +931,6 @@ export const useMatchbookCompetitionDetail = ({
         }
         draft.byes = byes;
         draft.playInTeamCount = byes.length > 0 ? teamCount - (bracketSize / 2) : 0;
-        /* Round counts come from the app's own tested generators, never from a
-           second arithmetic. `Math.log2(bracketSize) + 1` told an 8-team draft
-           it would build "4 winners rounds"; `getTotalWinnersRounds(8)` — which
-           this file already calls at :314 to LABEL those rounds — says 3, and
-           the setup console's whole job is telling the truth about what Start
-           will do. The double-elimination match total is `2n - 1` (every team
-           but the champion loses twice, plus the grand final). */
-        const deMatches = Math.max(0, teamCount * 2 - 1);
-        draft.summary =
-          competition.type === "single_elimination"
-            ? `${bracketSize - 1} ${pluralise(matchWord.one, bracketSize - 1)} over ${getTotalRounds(teamCount)} rounds.`
-            : `Up to ${deMatches} ${pluralise(matchWord.one, deMatches)}: a winners bracket over ${getTotalWinnersRounds(teamCount)} rounds, a losers bracket and a grand final.`;
-      } else {
-        const numCourts = competition.numberOfCourts ?? 1;
-        draft.summary = `${numCourts} ${pluralise(venue.one, numCourts)} in play, ${Math.max(0, teamCount - numCourts * 2)} teams in the queue.`;
       }
     }
 

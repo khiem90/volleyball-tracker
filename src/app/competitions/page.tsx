@@ -120,6 +120,28 @@ const STATUS_LABEL: Record<MbCompetitionRow["status"], string> = {
   completed: "Final",
 };
 
+/**
+ * What the event's own control is CALLED, per state.
+ *
+ * It was "Manage Event" in all three states and in both places it renders, and
+ * the reader's verdict on it was "the primary CTA is the vague MANAGE EVENT …
+ * I could not tell how to start my tournament from this screen". A draft, a
+ * live event and a finished one need three different things from the organiser
+ * — write the fixtures, score them, read them — and a button that names none of
+ * them is a button that has to be tried to be understood.
+ *
+ * One table, both call sites, so the masthead and the Event Details foot cannot
+ * disagree about what the destination is for.
+ */
+const EVENT_ACTION: Record<
+  MbCompetitionRow["status"],
+  { label: string; icon: string }
+> = {
+  draft: { label: "Set Up & Start", icon: "quick" },
+  in_progress: { label: "Score Matches", icon: "volleyball" },
+  completed: { label: "View Results", icon: "chart" },
+};
+
 const BracketBox = ({ cell }: { cell: MbBracketCell }) => {
   const side = (
     team: MbBracketCell["home"],
@@ -227,7 +249,90 @@ const StatusStat = ({
   </div>
 );
 
+/* ---------------------------------------------------------------------------
+   A DRAFT IS NOT A COMPETITION WITH ZEROS IN IT
+
+   Measured on the state a first-time reader actually reaches — one round robin,
+   four teams, created and not started — this screen printed:
+
+     TOURNAMENT STATUS   MATCHES COMPLETED 0 / 0 · TEAMS ENTERED 4 ·
+                         FORMAT Round Robin · LIVE NOW 0
+     STANDINGS           four rows, every one of them
+                         `=1 · P0 · W0 · L0 · PF0 · PA0 · PD0 · Pts0`,
+                         "No matches played yet" in every Form cell
+
+   Fourteen printed zeros at 390px, thirty at 1440. A completion meter for a
+   thing with nothing to complete, and a league table ranking four teams that
+   have never played — a table whose whole claim is that the order means
+   something. An earlier round of this programme already wrote down the rule ("a
+   0-0-0 table is worse than no table at all") and this screen still broke it.
+
+   These two panels are the draft's own composition. Between them they say the
+   three true things about a draft — it has not started, here is what starting
+   will build, here is who is entered — and nothing else on the screen repeats
+   them: the format and the scoring live in Event Details, the roster count
+   lives in this panel's own head.
+   --------------------------------------------------------------------------- */
+
+const NotStartedPanel = ({ selected }: { selected: MbCompeteSelected }) => (
+  <Panel title="Not Started Yet" tone="navy" icon="clock">
+    <div className="flex flex-1 flex-col gap-4 p-5">
+      <p className="text-[0.85rem] leading-[1.5]">
+        {selected.competition.name} has no fixtures. Nothing is scheduled, and no
+        result can exist until it is started.
+      </p>
+      <div className="border-t border-mb-rule pt-3">
+        <p className="mb-kicker">Starting will generate</p>
+        {/* The same sentence the setup console's own preview prints, from
+            `mbDraftSummary` — one arithmetic, so the two screens cannot promise
+            different schedules for the same draft. */}
+        <p className="mt-1 text-[0.85rem] font-semibold leading-[1.5] tabular-nums">
+          {selected.draftSummary}
+        </p>
+      </div>
+      <p className="mt-auto text-[0.78rem] leading-[1.5] text-mb-ink-muted">
+        Teams can still be added or removed until then.
+      </p>
+    </div>
+  </Panel>
+);
+
+const EntrantsPreviewPanel = ({ selected }: { selected: MbCompeteSelected }) => (
+  <Panel
+    title="Entrants"
+    meta={
+      <MbPanelHeadLink
+        href={`/competitions/${selected.competition.id}`}
+        label="Edit Entrants"
+      />
+    }
+  >
+    {selected.entrants.length === 0 ? (
+      <PanelEmpty message="No teams are entered yet — add teams before starting the competition." />
+    ) : (
+      <div className="flex flex-col divide-y divide-mb-rule">
+        {selected.entrants.map((team, i) => (
+          <div key={`${team.name}-${i}`} className="flex items-center gap-3 px-4 py-2.5">
+            {/* The screen's one rank-numeral step, the same 0.78rem/700 the
+                standings rank cell and the setup console's entrant list set.
+                In a draft the number is the SEED — the entry order every
+                bracket generator draws from. */}
+            <span className="matchbook-display w-6 shrink-0 text-[0.78rem] font-bold tabular-nums text-mb-ink-muted">
+              {i + 1}
+            </span>
+            <TeamMark team={team} size="md" />
+          </div>
+        ))}
+      </div>
+    )}
+  </Panel>
+);
+
 const MainPanel = ({ selected }: { selected: MbCompeteSelected }) => {
+  if (selected.notStarted) {
+    return <EntrantsPreviewPanel selected={selected} />;
+  }
+
   if (selected.isElimination) {
     return (
       <Panel
@@ -473,8 +578,11 @@ const EventConsole = ({
       </Panel>
     </div>
 
-    {/* Tournament status */}
+    {/* Tournament status — or, before there is any, what starting will do. */}
     <div className="xl:col-span-5">
+      {selected.notStarted ? (
+      <NotStartedPanel selected={selected} />
+      ) : (
       <Panel title="Tournament Status" tone="navy" icon="compete">
         <div className="grid flex-1 grid-cols-1 gap-4 p-5 sm:grid-cols-2">
           <StatusStat
@@ -508,6 +616,7 @@ const EventConsole = ({
           )}
         </div>
       </Panel>
+      )}
     </div>
 
     {/* Bracket / standings */}
@@ -679,16 +788,19 @@ const EventConsole = ({
               </p>
             </div>
           </div>
-          {/* Navy: this is the masthead's "Manage Event" a second time,
-              and the screen's one coral is already spent on the rail. */}
+          {/* Navy: this is the masthead's own event action a second time, and
+              the screen's one coral is already spent on the rail. It is named
+              from `EVENT_ACTION`, so the two copies cannot drift — and it is
+              what packs this column to the height of Upcoming Schedule and
+              Recent Results beside it (design language §3.3). */}
           <MbButtonLink
             href={`/competitions/${selected.competition.id}`}
             variant="navy"
-            icon="compete"
+            icon={EVENT_ACTION[selected.competition.status].icon}
             fullWidth
             className="mt-auto"
           >
-            Manage Event
+            {EVENT_ACTION[selected.competition.status].label}
           </MbButtonLink>
         </div>
       </Panel>
@@ -731,40 +843,49 @@ export default function CompetitionsPage() {
       /* The rail key IS this screen's primary action, so it keeps the coral and
          the masthead's action takes navy — one coral fill. */
       cta={{ href: "/competitions/new", label: "New Competition", icon: "plus" }}
+      /* -------------------------------------------------------------------
+         THE MASTHEAD NAMES THE ROUTE, NOT THE SELECTION
+
+         It used to take its `<h1>`, its status badge and its sub-line from
+         whichever event happened to be selected, so a reader who had created
+         exactly one competition arrived at a list screen whose masthead read
+         "THURSDAY LEAGUE / DRAFT" — the same lockup the competition's OWN
+         screen carries one tap away. Their words: "the list page adopts my
+         competition's name as its masthead". Two routes, one title, and the
+         only difference between them 400px down the page.
+
+         `AppShell` had already paid for this once from the other direction: its
+         focus effect notes that `shortTitle` "on `/competitions` is the SELECTED
+         EVENT'S NAME and therefore changes once, after the data resolves, with
+         no navigation at all", which used to land the route at scrollY 57 with
+         its own `<h1>` behind the mobile strip. A literal removes the cause
+         rather than the symptom.
+
+         So: the title is the console's, in both branches; the sub-line is the
+         account's own ledger ("6 events • 2 live • 1 draft • 3 final") rather
+         than the selection's numbers, which the panels below already print; and
+         the status badge is gone, because a `DRAFT` chip beside the word
+         "Compete." describes something the reader cannot see from there.
+         ------------------------------------------------------------------- */
       masthead={{
-        title: selected ? (
-          selected.competition.name
-        ) : (
+        title: (
           <>
             Compete<span className="text-mb-coral">.</span>
           </>
         ),
-        shortTitle: selected?.competition.name ?? "Compete",
-        status: selected ? (
-          <MbBadge
-            tone={STATUS_TONE[selected.competition.status]}
-            variant="framed"
-            size="md"
-          >
-            {STATUS_LABEL[selected.competition.status]}
-          </MbBadge>
-        ) : undefined,
-        subLine: selected
-          ? `${selected.teamCount} Teams • ${selected.matchTotal} Matches${
-              selected.courtCount ? ` • ${selected.courtCount} Courts` : ""
-            }`
-          : "No competitions yet",
+        shortTitle: "Compete",
+        subLine: selected ? data.inventory : "No competitions yet",
         /* Navy in both branches, because the rail already spends the screen's
-           one coral fill on this same destination (invariant 15). What changed
-           is that the empty branch HAS an action at all: it was `[]`, on the
-           screen whose whole job is creating a competition, and the rail that
-           was standing in for it is not rendered below `lg`. */
+           one coral fill on `New Competition` (invariant 15). The populated
+           branch names what the destination is FOR in this state — see
+           `EVENT_ACTION` — instead of the one word "Manage" that covered
+           writing a schedule, scoring a live event and reading a finished one. */
         actions: selected
           ? [
               {
-                label: "Manage Event",
+                label: EVENT_ACTION[selected.competition.status].label,
                 href: `/competitions/${selected.competition.id}`,
-                icon: "settings",
+                icon: EVENT_ACTION[selected.competition.status].icon,
                 tone: "navy",
               },
             ]

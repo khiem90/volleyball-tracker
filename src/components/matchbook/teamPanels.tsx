@@ -233,11 +233,30 @@ export const TeamDirectoryPanel = ({
         <table className="mb-table w-full border-collapse">
           <thead>
             <tr>
-              <th className="w-8 text-center">#</th>
+              {/* EVERY ALIGNMENT HERE CARRIES A `!`, AND HAS TO (D4).
+
+                  `.mb-table th { text-align: left }` is an unlayered rule at
+                  0,1,1; a Tailwind `text-center`/`text-right` utility is 0,1,0
+                  inside `@layer utilities`. It loses twice over — on layer and
+                  on specificity — so every one of these headers was painting
+                  LEFT while the column beneath it painted centre or right.
+                  Measured at 390 with the shipped fixture, before:
+
+                    #       head ink 25.0–31.8   value ink 30.2–35.8
+                    L       head ink 191.3–197.2 value ink 191.3–199.4
+                    PF–PA   head ink 215.4–248.9 value ink 215.4–271.0
+                    Status  head ink 287.0–325.4 value ink 334.0–365.0
+
+                  The last is the one the walker caught: 47px between the start
+                  of the word and the start of the figure it labels, inside a
+                  94px column — the header is not over its own column. Same
+                  trap as `.mb-search` and `MB_FIELD_LABEL`, both already
+                  documented in this file and in `form.tsx`. */}
+              <th className="w-8 text-center!">#</th>
               <th>Team</th>
               <th className={REVEAL_ENTERED}>Entered In</th>
-              <th className="text-center">W</th>
-              <th className="text-center">L</th>
+              <th className="text-center!">W</th>
+              <th className="text-center!">L</th>
               {/* Was "Pts" over `${pointsFor}–${pointsAgainst}`. On `/` the
                   same header means the ranking total, so one word meant two
                   quantities across two screens. See the note in
@@ -249,9 +268,29 @@ export const TeamDirectoryPanel = ({
                   reads as a column of its own. The `<td>` under it has carried
                   `whitespace-nowrap` all along, so the column's width is set by
                   the widest `123–98` beneath and this adds none. */}
-              <th className="text-center whitespace-nowrap">PF–PA</th>
+              <th className="text-center! whitespace-nowrap">PF–PA</th>
               <th className={REVEAL_NEXT}>Next Match</th>
-              <th className="text-right">Status</th>
+              {/* TWO VALUES, TWO NAMES.
+
+                  This cell holds the status word and, 22px under it, the last
+                  five results — one column, one header, and a team that has not
+                  played showing a bare "—" that nothing on the screen accounts
+                  for. A reader cannot tell whether the dash is a missing status,
+                  a missing figure, or a rendering fault.
+
+                  Splitting the column is what it looks like it wants and is
+                  wrong at 390: the run reserves 78px (`slots={5}`) and a second
+                  cell's padding is 16px more, which takes the table from 356 to
+                  ~416 in a 390 viewport — the overflow this file spent its
+                  breakpoint budget removing. So the HEADER splits instead. Each
+                  line names the value directly beneath it, the column keeps its
+                  94px, and the dash becomes what it always meant: no results in
+                  the last five. `FormLetters` already says the same thing to a
+                  screen reader ("No matches played yet"). */}
+              <th className="text-right!">
+                <span className="block">Status</span>
+                <span className="block">Last 5</span>
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -463,7 +502,10 @@ export const TeamReadinessPanel = ({
             <tr>
               <th className="pl-3!">Team</th>
               <th>Ready %</th>
-              <th className="pr-3! text-right">Status</th>
+              {/* `text-right!` for the same reason as the directory's headers:
+                  the unlayered `.mb-table th` rule outranks the utility, so
+                  this header was painting left over a right-aligned verdict. */}
+              <th className="pr-3! text-right!">Status</th>
             </tr>
           </thead>
           <tbody>
@@ -992,8 +1034,14 @@ export const MB_TEAM_ADD_ROUTES: MbLedgerRow[] = [
     gloss: "One at a time: a name and a colour. The crest is drawn from the name.",
   },
   {
+    /* The promise this row makes is now one the sheet keeps: it takes a pasted
+       list. It was written against a dialog that could only count ("Team 2,
+       Team 3, Team 4"), which sent an organiser holding eleven real names to
+       New Team eleven times — see D1 in `QuickAddTeams.tsx`. Both modes are
+       named here because the numbered block is still the right answer for a
+       draw with no roster yet. */
     term: "Quick Add",
-    gloss: "Type a list and add a whole roster in one go.",
+    gloss: "Paste a whole roster of names, or generate a numbered block.",
   },
   {
     term: "In the Wizard",

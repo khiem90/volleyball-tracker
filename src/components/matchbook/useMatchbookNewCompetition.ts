@@ -226,6 +226,21 @@ export interface MbNewCompetitionView {
    * is for.
    */
   statusLine: string;
+  /**
+   * Will pressing the primary do what its label says, right now?
+   *
+   * `statusLine` says what is stopping it; this is the same fact as a boolean,
+   * so the control itself can be DRAWN as unavailable instead of only being
+   * described as such. The route hands it to `MB_GATE_DORMANT` (see
+   * `competitions/new/dormant.ts` for the measurement and the recipe).
+   *
+   * It is not `NewCompetitionState.canAdvance`, and the difference is step 3:
+   * the wizard can always LEAVE step 3, so `canAdvance` is `true` there, but
+   * `handleCreate` refuses a blank name and focuses the field instead. From
+   * the commit bar's point of view a refusal is a refusal, so all three steps
+   * answer the same question here.
+   */
+  gateOpen: boolean;
   /* No `subLine`.
      It returned `format · n of m teams entered` for the masthead, and the step
      rail already prints both halves of that ("FORMAT / Round Robin",
@@ -457,8 +472,14 @@ export const useMatchbookNewCompetition = (
     previewBasis,
     formatLabel: selectedFormat ? FORMAT_META[selectedFormat].label : "",
     statusLine,
+    gateOpen:
+      step === "format"
+        ? Boolean(selectedFormat)
+        : step === "teams"
+          ? validation.valid
+          : wizard.competitionName.trim().length > 0,
     /**
-     * The primary NAMES ITS DESTINATION.
+     * The primary NAMES ITS DESTINATION, AND FITS ON ONE ROW WITH THE BACK.
      *
      * It read "Next", and measured 148px beside a 166px "Cancel" at 390px —
      * an 18px deficit that made the escape hatch the widest control in the
@@ -466,13 +487,33 @@ export const useMatchbookNewCompetition = (
      * (and should not), so the fix is the label: "Next: teams" is both wider
      * than "Cancel" and more useful than "Next", because a three-step wizard's
      * commit control should say where it goes.
+     *
+     * Step 3's label is a WIDTH DECISION as much as a copy one, and the
+     * arithmetic is why it is one word. `MbActionBar` sizes its controls
+     * `flex-auto` — basis auto, so a pair that cannot share a line wraps to a
+     * line each rather than truncating the commit verb, which is the right
+     * trade and is documented in that file. At 390px the row is 326px wide
+     * with a 12px gap, the secondary "Back" measures 129.05px, and a control's
+     * chrome (icon, gap, padding) measures 91.95px — so the primary's LABEL
+     * has 93px before the bar wraps:
+     *
+     *   "Create competition"   139px   →  wraps: bar 169px tall, 3 rows
+     *   "Create"                44px   →  one row: bar 106px tall, 2 rows
+     *
+     * The wrapped bar was the wizard's third distinct footer layout in three
+     * steps, and 63px of extra opaque chrome across the bottom of a 844px
+     * phone — on the step where the format preview is the last thing read
+     * before committing. "Create" is the verb, the object is the screen (a
+     * masthead reading NEW COMPETITION over a field labelled COMPETITION
+     * NAME), and the status line beside it already reads "Ready to create ·
+     * 8 teams". Nothing is lost and one layout serves all three steps.
      */
     primaryLabel:
       step === "format"
         ? "Next: teams"
         : step === "teams"
           ? "Next: details"
-          : "Create competition",
+          : "Create",
     seriesOptions,
     courtOptionList,
   };

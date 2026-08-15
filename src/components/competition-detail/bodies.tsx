@@ -314,70 +314,57 @@ export const DraftBody = ({
 }) => {
   const canStart = teams.length >= 2 && data.draft.summary.length > 0;
   return (
-  <>
-  <div className={GRID}>
-    {/* `order-2` below `xl`. On a phone the draft console leads with WHAT START
-        WILL BUILD — the panel the screen exists for, and the one carrying the
-        commit — then the roster it was built from, then the configuration,
-        then delete. Measured: the coral Start moves from **2.44x viewport
-        height** (2,056px down a 390px page, rubric 6.5 wants the bottom third)
-        to ~0.8x, with no sticky element and no overlay. The desktop grid needs
-        the DOM order it has (7+5, 7+5), so every override stops at `xl`. */}
-    <div className="order-2 xl:order-none xl:col-span-7">
-      <EntrantsPanel
-        teams={teams}
-        canEdit={canEdit}
-        onAdd={onAddTeams}
-        onRemove={onRemoveTeam}
-        refFor={data.refFor}
-      />
-    </div>
-    {/* Setup and the details readout stack beside the entrants list rather than
-        leaving the column short under it. */}
-    <div className="order-3 flex flex-col gap-4 xl:order-none xl:col-span-5">
-      <SetupPanel data={data} />
-      <DetailsPanel data={data} createdDate={data.createdDate} />
-    </div>
-    {/* A viewer has no danger zone, so the preview takes the whole row rather
-        than leaving 5 columns of paper beside it. */}
-    <div
-      className={`order-1 xl:order-none ${canEdit ? "xl:col-span-7" : "xl:col-span-12"}`}
-    >
-      <PreviewPanel
-        data={data}
-        canEdit={canEdit}
-        canStart={canStart}
-        onStart={onStart}
-      />
-    </div>
-    {canEdit && (
-      <div className="order-4 xl:order-none xl:col-span-5">
-        <DangerPanel
-          name={competition.name}
-          loading={deleting}
-          onDelete={onDelete}
+    <div className={GRID}>
+      {/* WHAT START WILL BUILD LEADS, at every width.
+          It was `order-1` below `xl` and DOM-third above it, so on a phone the
+          reader met the preview and its coral commit first and on a desktop met
+          the roster first, with the screen's only Start 935px down a 974px page
+          — below the fold at 900. Since the masthead's duplicate Start is gone
+          (see `competitions/[id]/page.tsx`) that button is the whole screen, so
+          it leads everywhere. Measured after, on a four-team round robin and an
+          eight-team bracket draft:
+
+            390x844   289 / 427   (was 337 / 475, under a second Start at 159)
+            1440x900  197 / 324   (was 889 / 935, i.e. off the first screen)
+
+          — inside the first viewport at both widths and both formats, with no
+          sticky element and no overlay. A viewer has no danger zone, so the
+          preview takes the whole row rather than leaving 5 columns of paper
+          beside it. */}
+      <div className={canEdit ? "xl:col-span-7" : "xl:col-span-12"}>
+        <PreviewPanel
+          data={data}
+          canEdit={canEdit}
+          canStart={canStart}
+          onStart={onStart}
         />
       </div>
-    )}
-  </div>
-
-  {/* The commit bar, phone only.
-      A draft competition is a setup screen whose whole purpose is one
-      irreversible commit, which is what `MbActionBar` is for (charter
-      Appendix B: the wizard's footer and the scoring rail are both this
-      component). Measured before it: the only coral Start on
-      `competition-de-draft@390` sat at **2.44x viewport height** — 2,056px
-      down a 390px-wide page — against rubric 6.5's bottom third. With the bar
-      it is pinned in the thumb zone at every scroll position.
-
-      `bottom-[var(--mb-toast-offset,0px)]!` is `competitions/new/page.tsx`'s
-      own idiom, not a new one: that variable is `MatchbookBottomBar`'s
-      published height, so the commit bar rides above the fixed tab bar
-      without restating either media query, and the `!` is required because
-      `.mb-action-bar { bottom: 0 }` is unlayered.
-
-      At `xl` the bar is hidden and `PreviewPanel`'s own footer carries the
-      commit, so exactly ONE coral Start renders at every width. */}
-  </>
+      {/* Setup alone, not Setup + Event Details. Both panels print
+          `data.configLines`; rendering the pair put FORMAT / TEAMS ENTERED /
+          MATCH FORMAT / POINTS / VENUE WORD on the screen twice, in caps and
+          then in sentence case, with the same icons — see `SetupPanel`, which
+          now carries the one fact only Event Details had. */}
+      <div className="xl:col-span-5">
+        <SetupPanel data={data} createdDate={data.createdDate} />
+      </div>
+      <div className="xl:col-span-7">
+        <EntrantsPanel
+          teams={teams}
+          canEdit={canEdit}
+          onAdd={onAddTeams}
+          onRemove={onRemoveTeam}
+          refFor={data.refFor}
+        />
+      </div>
+      {canEdit && (
+        <div className="xl:col-span-5">
+          <DangerPanel
+            name={competition.name}
+            loading={deleting}
+            onDelete={onDelete}
+          />
+        </div>
+      )}
+    </div>
   );
 };

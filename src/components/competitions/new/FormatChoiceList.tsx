@@ -30,9 +30,8 @@ import type { CompetitionType } from "@/types/game";
        size that fits a sentence. `aria-checked` replaces `aria-pressed`, so
        assistive tech is told this is one-of-five rather than five on/off
        switches.
-     - The mark is a **squared ballot box carrying an inset coral square** —
-       what the design language (§3.3) specifies for `.mb-radio` — never the
-       tick `MbSelectList` uses for its genuinely multi-select rows. Two
+     - The mark is a **ruled slot that fills in**, never a ballot box — see
+       `ChoiceSlot` below for the measurement that forced the change. Two
        different marks for two different questions, and neither is a circle,
        because 999px is reserved.
      - The mark sits **first in the row, against the name**, not floating in a
@@ -52,20 +51,54 @@ import type { CompetitionType } from "@/types/game";
    =========================================================================== */
 
 /**
- * The squared ballot box for a ONE-OF-N choice.
+ * THE CHOICE SLOT — a blank on a ruled line, and the answer written into it.
  *
- * `MbSelectList`'s `CheckFace` fills with coral and draws a tick; this fills
- * nothing and insets a coral square. Both are 18px boxes at radius 2, so they
- * are the same family — the mark inside is what says "one" or "many".
+ * The mark this replaces was a squared ballot box: 18x18, radius 2px, a navy
+ * frame, a paper ground, empty until chosen. `MbSelectList`'s `CheckFace` — the
+ * mark for the genuinely multi-select team directory two steps later — is
+ * **18x18, radius 2px, a navy frame, a paper ground, empty until chosen**.
+ * Scripted at 390x844 on the running app, unselected, they measured:
+ *
+ *   step 1 format mark   18 x 18   radius 2px   border 1px solid rgb(7,50,77)   bg rgb(255,250,241)
+ *   step 2 team mark     18 x 18   radius 2px   border 1px solid rgb(7,50,77)   bg rgb(255,250,241)
+ *
+ * Pixel-identical. One shape carrying two different questions in one flow, and
+ * the shape a sighted reader already knows means "tick as many as you like".
+ * `role="radio"` fixed this for assistive tech and could not fix it for eyes,
+ * and the "PICK ONE" caption in the panel head is a word arguing with a
+ * picture. The design language settles which one wins: nine badge tones draw
+ * nine different mark SHAPES precisely so that meaning is never carried by
+ * context alone, and "a desaturated screenshot is the honest test".
+ *
+ * So the box goes. What is left is the print form's own idiom for a
+ * one-of-N answer — a **blank on a ruled line**:
+ *
+ *   unselected   an 18px navy rule, and nothing above it
+ *   selected     the same rule with the blank filled in: an 18x11 navy block
+ *
+ * It cannot be read as a ballot box because it has no frame, and it cannot be
+ * read as a tick because it has no glyph. Desaturated, the two states are a
+ * hairline and a block, which is the widest gap two 18px marks can hold.
+ *
+ * NAVY, not coral. `globals.css` states the rule where `.mb-check:checked`
+ * lives — "THE 'ON' STATE IS INK, NOT ACCENT … a filled-in ballot box on
+ * printed stock is inked, not highlighted" — and the mark this replaces used
+ * `--mb-coral-deep`, which put a second coral job on the selected row beside
+ * the selection rail that is already coral and is already structural
+ * (invariant 15). Inking the mark returns the row to one coral job.
+ *
+ * HANDOFF: `.mb-radio` in `globals.css` still draws the squared ballot box
+ * this file just abandoned, with the same inset-square mark. Nothing renders
+ * it — the class has no call site in `src/` — but the next control that needs
+ * a one-of-N mark will find the collision waiting. It belongs in that file,
+ * which this workstream does not own this round.
  */
-const RadioFace = ({ checked }: { checked: boolean }) => (
+const ChoiceSlot = ({ checked }: { checked: boolean }) => (
   <span
     aria-hidden="true"
-    className="inline-grid h-[18px] w-[18px] shrink-0 place-content-center rounded-[2px] border-[1.5px] border-mb-navy bg-mb-paper-bright"
+    className="flex h-[18px] w-[18px] shrink-0 flex-col justify-end border-b-[3px] border-mb-navy"
   >
-    {checked && (
-      <span className="block h-[8px] w-[8px] rounded-[2px] bg-mb-coral-deep" />
-    )}
+    {checked && <span className="block h-[11px] w-full bg-mb-navy" />}
   </span>
 );
 
@@ -119,7 +152,7 @@ export const FormatChoiceList = ({
         /* The accent is a CONTAINED MARK — a 3px rail down the row's spine and
            nothing else (charter D-9). `--mb-gold` measures 2.15:1 on paper, so
            it may rule but never ink. Selection takes the rail to coral, which
-           is the third channel after the ballot mark and the inverted disc and
+           is the third channel after the filled slot and the inverted disc and
            the only one visible from across a room. */
         const style: CSSProperties = {};
         (style as Record<string, string>)["--mb-rail-color"] = selected
@@ -142,7 +175,7 @@ export const FormatChoiceList = ({
             style={style}
             className="mb-rail mb-row-hover flex min-h-[56px] w-full items-center gap-2.5 py-2.5 pr-3 pl-3.5 text-left"
           >
-            <RadioFace checked={selected} />
+            <ChoiceSlot checked={selected} />
 
             {/* `.mb-icon-disc` sets `border-color` and `color` from unlayered
                 CSS, which outranks every Tailwind colour utility, so the disc
