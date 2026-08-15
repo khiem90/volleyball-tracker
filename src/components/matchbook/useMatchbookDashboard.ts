@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useApp } from "@/context/AppContext";
 import { rankTeams } from "@/lib/standings";
+import { pluralise } from "@/lib/text";
 import type { AppState, Competition } from "@/types/game";
 import { createTeamRef } from "./useMatchbookCompetitionDetail";
 import type { MbStandingLine } from "./StandingsTable";
@@ -31,15 +32,28 @@ export interface MbDashboardAction {
 
 export interface MbDashboardView extends MbDashboardData {
   /**
-   * No match exists in any state — so standings, match of the day, live
-   * courts, schedule, bracket, results, readiness and leaders are ALL
-   * necessarily empty, and the screen renders the first-run composition
-   * instead of eight `PanelEmpty` blocks in a column.
+   * NOTHING HAS BEEN PLAYED YET — no completed match and none in progress.
    *
-   * Keyed on matches rather than on teams: a competition whose schedule has
-   * not been generated has nothing to report either, and a standings table of
-   * eight teams on `0 0 0` plus a "projected" bracket seeded from it is worse
-   * than no table at all.
+   * The Overview is a screen about RESULTS: seven of its eight panels can only
+   * be filled by one. Until a result exists the screen renders the first-run
+   * composition instead, because every one of those panels would otherwise
+   * print a `display/stat-sm` headline saying so, at the same size, one after
+   * another.
+   *
+   * The condition is not `matches.length === 0`, and that distinction was
+   * measured. A user who follows the three steps to the letter — add teams,
+   * create a round robin — lands back here the moment the generator writes the
+   * schedule, and at `matches.length === 1` the screen fell off the ledge it
+   * had just been cleared of: 2431px, eight panels, FIVE headlines (no match of
+   * the day · no live matches · no bracket · no results · no team leaders),
+   * over a standings table of two teams on `0 0 0`, which this file's own
+   * ranking notes call worse than no table at all.
+   *
+   * Keyed on results rather than on teams for the same reason: a competition
+   * whose schedule has not been generated has nothing to report either.
+   *
+   * A match IN PROGRESS ends it — Live Courts has something to say the instant
+   * one exists, and so does Match of the Day the instant one finishes.
    */
   isFirstRun: boolean;
   /** The three steps to a first match, with the live one marked. */
@@ -118,9 +132,10 @@ const shortTime = (ts?: number) =>
 
 const buildSteps = (
   teamCount: number,
-  competitionName: string | null
+  competitionName: string | null,
+  scheduled: number
 ): MbStartStep[] => {
-  /* Step 3 is never `done` in a first run: the moment a match exists the whole
+  /* Step 3 is never `done` in a first run: the moment a result exists the whole
      composition is replaced by the populated overview. */
   const done = [teamCount >= 2, competitionName !== null, false];
   const currentIndex = done.indexOf(false);
@@ -150,6 +165,13 @@ const buildSteps = (
       title: "Play the First Match",
       deck: "Every score you record lands on this page: standings, live courts, results and leaders.",
       state: stateOf(2),
+      /* The format has already written the fixtures — say so, so the step that
+         is waiting on the reader does not read as though nothing happened when
+         the generator has just done its work. */
+      note:
+        scheduled > 0
+          ? `${scheduled} ${pluralise("match", scheduled)} scheduled`
+          : undefined,
     },
   ];
 };
@@ -329,11 +351,18 @@ const buildDashboard = (state: AppState): MbDashboardView => {
   const teamCount = state.teams.length;
   const newest =
     [...state.competitions].sort((a, b) => b.createdAt - a.createdAt)[0] ?? null;
-  const isFirstRun = state.matches.length === 0;
+  const isFirstRun = completed.length === 0 && live.length === 0;
 
   /* The one action that is possible, in the order the data unlocks it. Every
      branch below was reachable on the shipped build and every one of them
-     printed "Record Result". */
+     printed "Record Result" — including the first, on an account with zero
+     teams and zero matches, which is the loudest control on the screen asking
+     for the result of a match that cannot exist.
+
+     The last branch is the one that grew with `isFirstRun`: with teams, a
+     competition and a generated schedule but nothing played, the move is to
+     OPEN that competition, which is where a fixture is started. "Record
+     Result" only becomes true once there is a result to sit beside. */
   const primaryAction: MbDashboardAction = !isFirstRun
     ? { label: "Record Result", href: "/competitions", icon: "plus" }
     : teamCount < 2
@@ -345,7 +374,7 @@ const buildDashboard = (state: AppState): MbDashboardView => {
       : newest === null
         ? { label: "Create a Competition", href: "/competitions/new", icon: "plus" }
         : {
-            label: "Open the Competition",
+            label: pending.length > 0 ? "Start the First Match" : "Open the Competition",
             href: `/competitions/${newest.id}`,
             icon: "compete",
           };
@@ -354,7 +383,7 @@ const buildDashboard = (state: AppState): MbDashboardView => {
     dateLine,
     matchesCompleted: completed.length,
     isFirstRun,
-    startSteps: buildSteps(teamCount, newest?.name ?? null),
+    startSteps: buildSteps(teamCount, newest?.name ?? null, pending.length),
     primaryAction,
     /* Quick Match is the app's own primary and it needs two teams to name the
        sides, so it becomes a real alternative exactly when it becomes possible
@@ -363,9 +392,13 @@ const buildDashboard = (state: AppState): MbDashboardView => {
       isFirstRun && teamCount >= 2
         ? { label: "Score a Quick Match", href: "/quick-match" }
         : null,
-    subLine: isFirstRun
-      ? "No matches recorded yet"
-      : `${completed.length} matches completed`,
+    /* Read off `completed` and not off `isFirstRun`, so the one state where the
+       two disagree — a match in progress, none finished — says "no matches
+       recorded yet" rather than "0 matches completed". */
+    subLine:
+      completed.length === 0
+        ? "No matches recorded yet"
+        : `${completed.length} ${pluralise("match", completed.length)} completed`,
     /* The name of the competition the table above actually belongs to — the
        panel used to be headed with one competition's name over a table built
        from every team and every match in the app. */

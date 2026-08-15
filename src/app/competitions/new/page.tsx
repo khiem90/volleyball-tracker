@@ -62,6 +62,17 @@ import { pluralise } from "@/lib/text";
       the primary is reachable without scrolling on a phone AND on a 1440
       desktop, and there is exactly one Create control on the screen rather
       than a masthead copy that has to be kept in step with it.
+
+      A sticky bar only sticks INSIDE ITS OWN CONTAINING BLOCK, so on a page
+      shorter than the viewport it has nothing to stick to and comes to rest
+      wherever the content happens to end. Measured on an empty account at
+      390x844 on step 2 — a directory panel holding one empty state — the
+      document was exactly 844px, the bar's bottom edge sat at y=637, and
+      **207px of blank cream** ran from there to the tab bar. The column now
+      publishes its own distance from the top of the document as
+      `--mb-wizard-top` and takes at least the rest of the viewport, so the
+      bar reaches the bottom on a short step and behaves identically on a long
+      one. See `useViewportFill`.
    3. The panel grid is KEYED on the step, so `.mb-enter-grid` replays its
       staggered settle on every advance. That is the step transition — the
       masthead, the rail and the bar are outside the key and do not move.
@@ -100,6 +111,84 @@ const STEP_HEADING_ID = "wizard-step-heading";
  */
 const WIZARD_RAIL_CLASS =
   "rounded-[4px] border-solid border-mb-navy bg-mb-paper-bright px-3 py-2";
+
+/**
+ * The wizard column reaches the bottom of the viewport, whatever is in it.
+ *
+ * `<main>` is a plain block inside the shell's flex column and does not
+ * stretch, so a step whose content is shorter than the screen ends early and
+ * the sticky commit bar comes to rest mid-screen (note 2). The height needed
+ * is `100svh − the bar's own bottom offset − the column's distance from the
+ * top of the document`, and only the last term is unknowable in CSS: it is the
+ * top strip, the main padding and the masthead, and it measured 149 / 145 /
+ * 88px at 390 / 834 / 1440. Encoding those three numbers would tie this route
+ * to the masthead's exact rendered height, which it does not own; measuring
+ * the node is one `getBoundingClientRect` that cannot go stale.
+ *
+ * The fallback in the class (`9.5rem` = 152px) is what the first paint uses
+ * before the effect runs — within 3px of the measured phone value, so there is
+ * no settle to see.
+ */
+const VIEWPORT_FILL =
+  "min-h-[calc(100svh_-_var(--mb-toast-offset,0px)_-_var(--mb-wizard-top,9.5rem))]";
+
+const useViewportFill = () => {
+  const ref = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+
+    /* The last value written. It is the loop guard as well as an optimisation:
+       writing `min-height` changes the body's height, which wakes the observer
+       below, and without this the two would drive each other. The top cannot
+       change as a result of the write — `min-height` only ever moves the
+       node's bottom edge — so a re-read that returns the same number ends the
+       cycle in one pass. */
+    let last = -1;
+    const apply = () => {
+      if (!node.isConnected) return;
+      /**
+       * The offsetParent chain, NOT `getBoundingClientRect`.
+       *
+       * `<main>` carries `.mb-enter`, whose keyframes open at
+       * `translateY(10px)`, so a rect read taken while the route's entrance is
+       * in flight is 10px too low — and it was, consistently, on the two
+       * viewports whose animation had not finished by the time the font
+       * promise resolved: the effect wrote 159px against a settled 149px at
+       * 390 and 98px against 88px at 1440, leaving a 10px band of cream under
+       * the bar. `offsetTop` is a layout position and no transform is in it.
+       */
+      let top = 0;
+      for (
+        let el: HTMLElement | null = node;
+        el;
+        el = el.offsetParent as HTMLElement | null
+      )
+        top += el.offsetTop;
+      if (top === last) return;
+      last = top;
+      node.style.setProperty("--mb-wizard-top", `${top}px`);
+    };
+
+    apply();
+    /* Measuring once on mount is not enough, and the failure is measurable:
+       the masthead is set in Oswald, and until the face loads it renders in
+       the fallback at a different height. Measured on the tablet viewport, a
+       mount-only read wrote 155px against a settled 145px — a 10px band of
+       cream under the bar that nothing later corrected. The font promise
+       covers the swap; the observer covers everything else (a masthead
+       dateline that rewraps, a notice appearing above the grid). */
+    void document.fonts?.ready.then(apply).catch(() => {});
+    const observer = new ResizeObserver(apply);
+    observer.observe(document.body);
+    window.addEventListener("resize", apply);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", apply);
+    };
+  }, []);
+  return ref;
+};
 
 /* --------------------------------------------------------------- notices */
 
@@ -225,21 +314,8 @@ const NewCompetitionWizard = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step]);
 
-  /**
-   * Steps 1 and 2 disable the primary, because the status line beside it names
-   * the gate ("Choose a format to continue", "Select at least 3 teams") and the
-   * gate is a selection the user can see. Step 3 does NOT: a blank name is a
-   * field-level error, so the button stays live and pressing it says what is
-   * missing and puts the caret in the field.
-   */
-  const canAdvance =
-    step === "format"
-      ? Boolean(selectedFormat)
-      : step === "teams"
-        ? wizard.validation.valid
-        : true;
-
   const submitting = wizard.submit.kind === "submitting";
+  const columnRef = useViewportFill();
 
   return (
     <>
@@ -248,7 +324,7 @@ const NewCompetitionWizard = () => {
       </h2>
       <p ref={liveRef} aria-live="polite" aria-atomic="true" className="sr-only" />
 
-      <div className="flex flex-col gap-4">
+      <div ref={columnRef} className={`flex flex-col gap-4 ${VIEWPORT_FILL}`}>
         <div
           className={`mb-enter ${WIZARD_RAIL_CLASS}`}
           style={{ borderWidth: "var(--mb-rule-edge)" }}
@@ -259,6 +335,27 @@ const NewCompetitionWizard = () => {
             onNavigate={(id) => wizard.goToStep(parseWizardStep(id))}
             label="Competition setup"
           />
+        </div>
+
+        {/* THE GATE'S REASON, beside the control that satisfies it.
+
+            `data-wizard-gate` and `tabIndex={-1}` are the contract
+            `useNewCompetitionPage.focusGate` looks for: pressing a primary that
+            cannot move focuses this wrapper, which on a phone also scrolls it
+            into view, and puts a screen reader's cursor on the notice that has
+            just appeared. Exactly one exists at a time because it lives above
+            the step grid rather than inside a step, and the first panel of
+            every step is the one holding the answer. */}
+        <div
+          data-wizard-gate
+          tabIndex={-1}
+          className="scroll-mt-4 outline-none empty:hidden"
+        >
+          {wizard.gateMessage ? (
+            <MbNotice tone="warn" title="One thing first">
+              {wizard.gateMessage}
+            </MbNotice>
+          ) : null}
         </div>
 
         {/* Keyed on the step: `.mb-enter-grid` replays per advance.
@@ -336,8 +433,13 @@ const NewCompetitionWizard = () => {
             `.mb-enter .mb-stagger-4` is the "slides up on first mount only"
             the brief asks of a sticky commit bar: it sits outside the step key,
             so it arrives once with the route and never moves again. */}
+        {/* `mt-auto` is the other half of `VIEWPORT_FILL`: the column is now
+            at least a viewport tall on a short step, and an auto top margin is
+            what sends its last child to the far end of that height instead of
+            leaving it stacked under the content. On a step taller than the
+            viewport the margin resolves to 0 and nothing moves. */}
         <MbActionBar
-          className="mb-enter mb-stagger-4 bottom-[var(--mb-toast-offset,0px)]!"
+          className="mb-enter mb-stagger-4 mt-auto bottom-[var(--mb-toast-offset,0px)]!"
           status={view.statusLine}
           /* Back from step 2 onward; Cancel on step 1, where there is nothing
              to go back to and the bar would otherwise carry a lone primary. */
@@ -346,11 +448,26 @@ const NewCompetitionWizard = () => {
               ? { label: "Back", icon: "chevron-left", onClick: wizard.handleBack }
               : { label: "Cancel", icon: "close", onClick: wizard.handleCancel }
           }
+          /* THE PRIMARY IS NEVER DISABLED, ON ANY STEP.
+             It was, on steps 1 and 2, and the treatment was the defect:
+             `disabled:opacity-40` over a filled coral ground measured
+             `rgb(201,53,31)` at `opacity: 0.4` — a washed-out pink that reads
+             as broken rather than as "not yet" — while the outlined Cancel
+             beside it stayed at full contrast. On the app's first-run screen
+             the healthiest-looking control in the commit bar was the way OUT
+             of the task.
+
+             Step 3 already solved this honestly and said so in a comment: keep
+             the control live, and make pressing it say what is missing and put
+             the user in front of it. `handleNext` now does that on the other
+             two — `gateMessage` above, focus moved to `[data-wizard-gate]` —
+             and the bar's status line still names the gate BEFORE the press.
+             `readOnly` is not a gate either: pressing Create as a viewer
+             raises `SubmitNotice`'s "You cannot create here". */
           primary={{
             label: submitting ? "Creating…" : view.primaryLabel,
             icon: step === "details" ? "check" : "chevron-right",
             onClick: step === "details" ? wizard.handleCreate : wizard.handleNext,
-            disabled: !canAdvance || wizard.readOnly,
             loading: submitting,
           }}
         />
@@ -404,12 +521,16 @@ const Bar = ({ h, w }: { h: string; w: string }) => (
  * `children` escape hatch for a route's own bones, would make this a call site
  * instead of a component.
  */
-const WizardBones = () => (
+const WizardBones = () => {
+  const columnRef = useViewportFill();
+  return (
   <div aria-busy="true">
     <span className="sr-only" role="status">
       Loading page content
     </span>
-    <div className="flex flex-col gap-4">
+    {/* The same fill as the live column, so the skeleton's commit bar sits
+        where the real one will and the swap moves nothing. */}
+    <div ref={columnRef} className={`flex flex-col gap-4 ${VIEWPORT_FILL}`}>
       {/* The rail strip at its real height: a numeral row over the label line,
           inside the same 8px padding box the live rail uses. */}
       <div
@@ -445,34 +566,28 @@ const WizardBones = () => (
               <MbSkeleton w="100%" h="0.62rem" radius={2} />
             </span>
           </header>
-          {/* Same grid, same gap, same card box as `FormatStep` — five choices
-              two-up with the odd one spanning — so the bones cannot drift from
-              the layout they stand in for. */}
-          {/* Every bar is a LINE BOX, not a glyph height — the same correction
-              `MbSkeletonPanel` documents for its panel head. A card measures
-              32 (p-4) + 44 disc + 10 + 19 title + 10 + description + 10 + 1
-              rule + 10 + 15 kicker + 2 border. With the description at one
-              line that is 170px, against the live card's measured 170; below
-              `sm` the blurb sets two lines, which is the one bar that changes
-              height rather than a second bar that would also add a 10px gap. */}
-          <div className="grid gap-3 p-4 sm:grid-cols-2">
+          {/* Five ruled 56px rows, the exact box `FormatChoiceList` draws, so
+              the bones cannot drift from the layout they stand in for. It was
+              a two-up grid of 170px cards, which is the shape the step had
+              before the chooser became a single-choice list — a skeleton
+              standing in for a control that no longer exists is worse than no
+              skeleton, because invariant 26 asks for the FINAL geometry.
+
+              Each row: 18px mark, 36px disc, then a name line over a summary
+              line at the live 0.95/0.72rem line boxes. */}
+          <div className="flex flex-col divide-y divide-mb-rule">
             {[0, 1, 2, 3, 4].map((i) => (
               <span
                 key={i}
-                className={`flex flex-col gap-2.5 rounded-[4px] border border-mb-rule p-4 pl-[1.15rem] ${
-                  i === 4 ? "sm:col-span-2" : ""
-                }`}
+                className="flex min-h-[56px] items-center gap-2.5 py-2.5 pr-3 pl-3.5"
               >
-                <Bar h="h-11" w="w-11" />
-                <Bar h="h-[19px]" w="w-[8rem]" />
-                <Bar h="h-[34px] sm:h-[17px]" w="w-[85%]" />
-                {/* No `mt-*`: the 10px above this rule is the column's own
-                    `gap-2.5`, exactly as it is in the live card. Adding a
-                    margin on top of the gap measured +10px per card — 31px of
-                    panel at 1440 and 50px at 390. */}
-                <span className="block border-t border-mb-rule pt-2.5">
-                  <Bar h="h-[15px]" w="w-[5rem]" />
+                <Bar h="h-[18px]" w="w-[18px]" />
+                <Bar h="h-9" w="w-9" />
+                <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <Bar h="h-[19px]" w="w-[7rem] max-w-full" />
+                  <Bar h="h-[14px]" w="w-[10rem] max-w-full" />
                 </span>
+                <Bar h="h-[0.62rem]" w="w-[3rem]" />
               </span>
             ))}
           </div>
@@ -507,7 +622,7 @@ const WizardBones = () => (
           bones was worth 82/106px of document height on its own, which is a
           scroll range that appears the instant the data lands. */}
       <div
-        className="mb-action-bar min-h-[calc(82px_+_var(--mb-safe-bottom))] flex-wrap bottom-[var(--mb-toast-offset,0px)]! max-sm:min-h-[calc(106px_+_var(--mb-safe-bottom))] sm:flex-nowrap"
+        className="mb-action-bar mt-auto min-h-[calc(82px_+_var(--mb-safe-bottom))] flex-wrap bottom-[var(--mb-toast-offset,0px)]! max-sm:min-h-[calc(106px_+_var(--mb-safe-bottom))] sm:flex-nowrap"
         aria-hidden="true"
       >
         <span className="min-w-0 flex-1">
@@ -520,7 +635,8 @@ const WizardBones = () => (
       </div>
     </div>
   </div>
-);
+  );
+};
 
 /* ------------------------------------------------------------------- route */
 

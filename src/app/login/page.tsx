@@ -3,10 +3,50 @@
 import { Suspense } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { MbButton } from "@/components/matchbook/Button";
+import { MbTextInput } from "@/components/matchbook/form";
 import { MbIcon } from "@/components/matchbook/MbIcon";
 import { crestPath } from "@/components/matchbook/types";
 import { useLoginPage } from "@/hooks/useLoginPage";
 import { LoginSkeleton } from "./LoginSkeleton";
+
+/* ===========================================================================
+   THE SIGN-IN SCREEN — it was hand-rolling the kit, and losing
+
+   /login is `blocked` in the screenshot harness (dev-preview auth signs the
+   preview user in, so the route redirects to `/` before anything can be
+   measured), which means no audit in this programme had ever run on it. With
+   the provider pinned to signed-out and the page measured at 1440, every
+   control on it was under the floor:
+
+     Continue with Google   418 x 38.78     .mb-btn, hand-written
+     Email  / Password      364 x 28.81     <input> inside a bare .mb-input
+     Sign In                418 x 38.78     .mb-btn, hand-written
+     Continue as Guest      426 x 38.78     .mb-btn, hand-written
+
+   Invariant 33 and rubric HF-2 put the floor at 44. The FIRST screen a new
+   user sees was the only screen in the app that failed it, on every control it
+   has, because the classes were written by hand rather than taken from the kit:
+
+     - `.mb-btn` carries no `min-height`. The ladder (44/48/56) is applied by
+       `MbButton`, INLINE, and Button.tsx says why: `.mb-btn`'s `padding` and
+       `.mb-btn-touch`'s `min-height` are UNLAYERED, so a Tailwind utility can
+       never outrank them. A hand-written `.mb-btn` therefore renders at its
+       type size — 38.78px — and no class the author adds can lift it.
+     - the same rule silently voided the `py-3 text-[0.9rem]` on the Sign In
+       button: `.mb-btn` sets `padding` and `font-size` unlayered, so both
+       utilities were inert and the "bigger" primary measured the same 38.78px
+       box as the two secondaries beside it.
+     - the fields were a bare `<div class="mb-input">` with a raw `<input>`
+       inside, so the input took its own line box (28.81px) and the shell took
+       whatever that plus its padding came to. `MbTextInput` is the component
+       that hands the whole interior to the input.
+
+   So the screen now uses `MbButton` and `MbTextInput` instead of restating
+   them. Sign In takes `lg` (56) — Button.tsx reserves that rung for "one-handed
+   thumb-reach targets that end a task", which is exactly what this is — and
+   everything else takes the 48 default.
+   =========================================================================== */
 
 const SHOWCASE_CRESTS = [
   { slug: "surge", name: "Surge" },
@@ -143,11 +183,11 @@ const LoginPageContent = () => {
                 </p>
               )}
 
-              <button
-                type="button"
+              <MbButton
+                variant="outline-navy"
+                fullWidth
                 onClick={handleGoogleSignIn}
                 disabled={isSubmitting}
-                className="mb-btn mb-btn-outline-navy w-full"
               >
                 <Image
                   src="/assets/matchbook/auth/google-g.svg"
@@ -156,7 +196,7 @@ const LoginPageContent = () => {
                   height={16}
                 />
                 Continue with Google
-              </button>
+              </MbButton>
 
               <div className="flex items-center gap-3">
                 <span className="h-px flex-1 bg-mb-rule" />
@@ -168,36 +208,36 @@ const LoginPageContent = () => {
                 <label htmlFor="login-email" className="mb-kicker mb-1 block">
                   Email
                 </label>
-                <div className="mb-input">
-                  <input
-                    id="login-email"
-                    type="email"
-                    placeholder="Email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    disabled={isSubmitting}
-                    autoComplete="email"
-                  />
-                  <MbIcon id="mail" size={16} className="shrink-0 text-mb-navy" />
-                </div>
+                <MbTextInput
+                  id="login-email"
+                  type="email"
+                  placeholder="Email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={isSubmitting}
+                  autoComplete="email"
+                  trailing={
+                    <MbIcon id="mail" size={16} className="shrink-0 text-mb-navy" />
+                  }
+                />
               </div>
 
               <div>
                 <label htmlFor="login-password" className="mb-kicker mb-1 block">
                   Password
                 </label>
-                <div className="mb-input">
-                  <input
-                    id="login-password"
-                    type="password"
-                    placeholder={isSignUp ? "Password (min 6 characters)" : "Password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    disabled={isSubmitting}
-                    autoComplete={isSignUp ? "new-password" : "current-password"}
-                  />
-                  <MbIcon id="lock" size={16} className="shrink-0 text-mb-navy" />
-                </div>
+                <MbTextInput
+                  id="login-password"
+                  type="password"
+                  placeholder={isSignUp ? "Password (min 6 characters)" : "Password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={isSubmitting}
+                  autoComplete={isSignUp ? "new-password" : "current-password"}
+                  trailing={
+                    <MbIcon id="lock" size={16} className="shrink-0 text-mb-navy" />
+                  }
+                />
                 {!isSignUp && (
                   <div className="mt-1 text-right">
                     <button
@@ -208,7 +248,7 @@ const LoginPageContent = () => {
                          text, and at 10.88px/700 `--mb-coral` measured 3.55:1
                          on paper-bright. The twin is 5.03:1. Same substitution
                          `.mb-panel-link:hover` already made in `globals.css`. */
-                      className="matchbook-display text-[0.68rem] font-bold tracking-[0.1em] text-mb-navy hover:text-mb-coral-deep"
+                      className="matchbook-display -my-[13.85px] inline-flex min-h-[44px] items-center text-[0.68rem] font-bold tracking-[0.1em] text-mb-navy hover:text-mb-coral-deep"
                     >
                       Forgot Password?
                     </button>
@@ -216,11 +256,13 @@ const LoginPageContent = () => {
                 )}
               </div>
 
-              <button
+              <MbButton
                 type="button"
                 onClick={handleEmailSubmit}
                 disabled={isSubmitting}
-                className="mb-btn mb-btn-coral w-full py-3 text-[0.9rem]"
+                variant="coral"
+                size="lg"
+                fullWidth
               >
                 <MbIcon id="login" size={16} />
                 {isSubmitting
@@ -228,7 +270,7 @@ const LoginPageContent = () => {
                   : isSignUp
                     ? "Create Account"
                     : "Sign In"}
-              </button>
+              </MbButton>
 
               <p className="matchbook-display text-center text-[0.72rem] font-semibold tracking-[0.1em] text-mb-navy">
                 {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
@@ -238,7 +280,7 @@ const LoginPageContent = () => {
                   /* 11.52px/700 — `--mb-coral` measured 3.55:1 here, the twin
                      5.03:1. This is the only way to reach sign-up, so it is
                      the last control on the screen that may be hard to read. */
-                  className="font-bold text-mb-coral-deep hover:underline"
+                  className="-my-[13.36px] inline-flex min-h-[44px] items-center font-bold text-mb-coral-deep hover:underline"
                 >
                   {isSignUp ? "Sign In" : "Sign Up"}
                 </button>
@@ -249,16 +291,17 @@ const LoginPageContent = () => {
           {/* Guest option */}
           <div className="mt-5 flex items-center gap-3">
             <MbIcon id="quick" size={22} className="shrink-0 text-mb-navy" />
-            <button
+            <MbButton
               type="button"
               onClick={handleContinueAsGuest}
-              className="mb-btn mb-btn-outline-navy w-full"
+              variant="outline-navy"
+              fullWidth
             >
               <span className="sm:hidden">Continue as Guest</span>
               <span className="hidden sm:inline">
                 Continue as Guest — Quick Match Only
               </span>
-            </button>
+            </MbButton>
           </div>
         </div>
       </div>

@@ -741,29 +741,96 @@ export interface MbSwatch {
 }
 
 /**
- * The house palette. Values are token references, not literals, so a stored
- * team colour keeps resolving through `--mb-*` wherever it is painted
- * (charter §4 invariant 10). `allowCustom` is the escape hatch that yields a
- * real hex.
+ * The team palette — six inks, and the reason there are six rather than eight.
+ *
+ * The eight it replaces were the house palette handed over whole, which put two
+ * defects in front of anyone naming a team.
+ *
+ * 1. **It sold colours the system had already spent.** Design language §1.2
+ *    fixes `--mb-gold` = Draft, `--mb-green` = win / final / active,
+ *    `--mb-red` = loss / live, `--mb-ink-muted` = idle, `--mb-teal` = the
+ *    rank-1 rail, `--mb-coral` = the app's one accent. Offer those as team
+ *    colours and a green accent bar lands beside a green W on the same form
+ *    guide: the reader has to work out which green is about the team and which
+ *    is about the result. Identity and status were being printed in one ink.
+ * 2. **Two of the eight were the same colour.** `--mb-coral` (#ee4b34) and
+ *    `--mb-red` (#cf3f32) sat stacked in the grid at ΔE 6.8 in OKLab. §1 of the
+ *    design language already says the pair "must never sit adjacent"; a
+ *    first-run reader simply could not tell the two swatches apart.
+ *
+ * So the palette is measured rather than assembled. Every ink is at least
+ * **ΔE 11.5** from every reserved meaning and at least **ΔE 12.6** from every
+ * other ink — 1.7x and 1.9x the coral/red distance that failed. Resolved
+ * against `--mb-paper` (#f7f0e4):
+ *
+ * | ink   | resolves to | vs paper | vs bright | nearest reserved meaning  |
+ * | ----- | ----------- | -------- | --------- | ------------------------- |
+ * | Navy  | `#07324d`   | 11.79    | 12.84     | idle grey       ΔE 22.2   |
+ * | Teal  | `#095857`   |  7.28    |  7.93     | idle grey       ΔE 11.5   |
+ * | Plum  | `#5a347d`   |  8.34    |  9.09     | idle grey       ΔE 16.7   |
+ * | Rose  | `#934161`   |  5.85    |  6.37     | CTA coral-deep  ΔE 12.8   |
+ * | Lilac | `#9077a7`   |  3.44    |  3.75     | idle grey       ΔE 12.0   |
+ * | Ochre | `#9a855e`   |  3.15    |  3.43     | Draft gold-ink  ΔE 12.4   |
+ *
+ * All six clear the 3:1 that WCAG 2.1 §1.4.11 asks of a bounded graphical
+ * object, which is the only role a team colour is ever given: a 3px bar beside
+ * the crest (charter D-9) and the 44px chip in this picker. None of them is
+ * ever text, so 4.5:1 is not the applicable floor.
+ *
+ * The values stay inside the token system — a literal hex would freeze the ink
+ * against a future paper stock (charter §4 invariant 10). Three are tokens
+ * outright; three are `color-mix()` over tokens, so they still move when the
+ * house palette moves. `allowCustom` remains the escape hatch for a club that
+ * owns its own colour.
+ *
+ * A stored colour from the old eight still paints, and still reads out under a
+ * human name (see `swatchName`) — it simply no longer shows as selected here.
  */
 export const MB_SWATCH_PALETTE: readonly MbSwatch[] = [
-  { value: "var(--mb-coral)", label: "Coral" },
   { value: "var(--mb-navy)", label: "Navy" },
-  { value: "var(--mb-teal)", label: "Teal" },
-  { value: "var(--mb-gold)", label: "Gold" },
+  /* Mixed toward `--mb-green`, not `--mb-teal`, and that is deliberate.
+     `--mb-teal` is the rank-1 rail, and teal and green are themselves only
+     ΔE 6.1 apart, so a navy/teal mix lands ΔE 9.2 from the idle grey. Pulling
+     through green and darkening lands 11.5 from the nearest reserved meaning
+     and 15.4 from win-green itself. */
+  { value: "color-mix(in oklab, var(--mb-navy) 55%, var(--mb-green))", label: "Teal" },
   { value: "var(--mb-plum)", label: "Plum" },
-  { value: "var(--mb-green)", label: "Green" },
-  { value: "var(--mb-red)", label: "Red" },
-  { value: "var(--mb-ink-muted)", label: "Slate" },
+  { value: "color-mix(in oklab, var(--mb-plum) 50%, var(--mb-red))", label: "Rose" },
+  {
+    value: "color-mix(in oklab, var(--mb-plum) 65%, var(--mb-paper-bright))",
+    label: "Lilac",
+  },
+  {
+    value: "color-mix(in oklab, var(--mb-gold) 45%, var(--mb-ink-muted))",
+    label: "Ochre",
+  },
 ];
 
 const HEX_RE = /^#(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
 const TOKEN_RE = /^var\(\s*(--mb-[a-z0-9-]+)\s*\)$/i;
 
-const swatchReadout = (value: string) => {
+/**
+ * What a person is told this colour is called.
+ *
+ * The row under the swatches used to print the **CSS custom property** —
+ * `--MB-GREEN`, uppercased by `.mb-code-chip`, to someone naming a volleyball
+ * team. A token name is an implementation detail: it is not a colour, it is not
+ * English, and it is the one string on that screen the reader cannot act on.
+ *
+ * So a palette entry answers with its own name; an off-palette token is turned
+ * back into words (`var(--mb-coral-deep)` → "Coral deep"), which covers both a
+ * caller passing its own token list and a team saved under the old palette; and
+ * only a literal hex is shown verbatim, because a hex is a colour a person
+ * chose and can read back.
+ */
+const swatchName = (value: string, palette: readonly MbSwatch[]): string => {
+  const named = palette.find((swatch) => swatch.value === value);
+  if (named) return named.label;
   if (HEX_RE.test(value)) return value.toUpperCase();
   const token = TOKEN_RE.exec(value);
-  return token ? token[1] : value;
+  if (!token) return "Custom";
+  const words = token[1].replace(/^--mb-/, "").replace(/-/g, " ");
+  return words.charAt(0).toUpperCase() + words.slice(1);
 };
 
 export const MbSwatchPicker = ({
@@ -785,15 +852,17 @@ export const MbSwatchPicker = ({
   const swatches: readonly MbSwatch[] =
     palette === "matchbook"
       ? MB_SWATCH_PALETTE
-      : palette.map((entry) => ({ value: entry, label: swatchReadout(entry) }));
+      : palette.map((entry) => ({
+          value: entry,
+          label: swatchName(entry, MB_SWATCH_PALETTE),
+        }));
 
   const refs = useRef<Array<HTMLButtonElement | null>>([]);
   const selectedIndex = swatches.findIndex((swatch) => swatch.value === value);
   const tabbable = selectedIndex >= 0 ? selectedIndex : 0;
-  const selected = selectedIndex >= 0 ? swatches[selectedIndex] : undefined;
-  const readout = swatchReadout(value);
-  const customHex =
-    allowCustom && selectedIndex < 0 && HEX_RE.test(value) ? value : undefined;
+  const isHex = HEX_RE.test(value);
+  const readout = isHex ? "Custom" : swatchName(value, swatches);
+  const customHex = allowCustom && selectedIndex < 0 && isHex ? value : undefined;
 
   const move = (index: number) => {
     refs.current[index]?.focus();
@@ -895,12 +964,20 @@ export const MbSwatchPicker = ({
           </label>
         )}
       </div>
-      <p className="flex flex-wrap items-center gap-2">
-        <span className="mb-kicker">Value</span>
-        <span className="mb-code-chip">{readout}</span>
-        {selected && selected.label !== readout && (
-          <span className="text-[0.72rem] text-mb-ink-muted">{selected.label}</span>
-        )}
+      {/* The one line under the grid, and it now names a colour.
+          `aria-live` because the options in this radiogroup *are* colour: a
+          reader moving through them with the arrow keys has nothing else to
+          go on, and the swatch's `aria-label` is only announced while it holds
+          focus. The hex is kept in a `.mb-code-chip` — a hex is a reference
+          value a person typed and can read back, which is exactly what that
+          chip is for; a token name never was. */}
+      <p
+        aria-live="polite"
+        className="flex flex-wrap items-center gap-2 text-[0.78rem] text-mb-ink-muted"
+      >
+        <span className="mb-kicker">Selected</span>
+        <span className="font-semibold text-mb-navy">{readout}</span>
+        {isHex && <span className="mb-code-chip">{value.toUpperCase()}</span>}
       </p>
     </div>
   );

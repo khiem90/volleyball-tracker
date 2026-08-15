@@ -1,6 +1,8 @@
 "use client";
 
+import { useId, useState } from "react";
 import { MbButton } from "@/components/matchbook/Button";
+import { MbIcon } from "@/components/matchbook/MbIcon";
 import { Panel } from "@/components/matchbook/Panel";
 import {
   MbField,
@@ -28,9 +30,34 @@ import type { CompetitionType } from "@/types/game";
       applies to every format (brief §2.4 defect 6).
    2. `venuePlural` is a real, editable field seeded from `pluralise()`. It was
       `venueName + "s"`, which produced "pitchs" and "boxs".
-   3. Nothing is behind a disclosure. The panel is five controls; the commit
-      bar is sticky, so hiding them buys no reach and costs a state where the
-      user cannot see what they configured (invariant 36).
+   3. It is CLOSED until asked for.
+
+   ---------------------------------------------------- why 3 reversed itself
+
+   This panel used to argue the opposite, in this comment, and the argument
+   was sound in isolation: the commit bar is sticky, so hiding controls buys
+   no reach, and a disclosure costs a state in which the user cannot see what
+   they configured.
+
+   What it did not account for is what the panel is a member of. Measured at
+   390x844 on the fixture library, step 3 of a wizard a user reaches within a
+   minute of creating their account was **2145px of form**, of which this panel
+   was 796px — expanded, by default, on first arrival, ending in a Singular /
+   Plural pair of text fields and the sentence "Reads as 'court 1' and
+   '2 courts'". A first-time user was being asked to settle noun pluralisation
+   before their first match had been scheduled.
+
+   None of it is defaulted wrongly: `DEFAULT_COMPETITION_CONFIG` already says
+   3 / 0 / 0, no ties, court / courts. So the whole panel is a set of answers
+   the app has already given correctly, presented at the same volume as the one
+   question only the user can answer — the name. Closed, it costs one row and
+   states what is inside; the head still reads DEFAULTS or CUSTOMISED, so the
+   one thing the old argument was protecting — being able to see that you
+   changed something — survives at a glance and without scrolling.
+
+   It opens itself when the settings are customised, which is what makes a
+   restored draft honest: a wizard that reloads with "CUSTOMISED" in the head
+   and the fields hidden would be asking the reader to take its word for it.
 
    ------------------------------------------------ why the points are ROWS
 
@@ -115,6 +142,18 @@ export const AdvancedSettingsPanel = ({
 }: AdvancedSettingsPanelProps) => {
   const { standingsPoints } = FORMAT_META[format].supports;
   const venue = settings.venueName.trim() || "court";
+  const bodyId = useId();
+
+  /* Lazy initialiser, not an effect: a restored draft that already carries
+     custom settings arrives open on the first paint rather than opening on
+     the second. After mount the disclosure is the user's — changing a value
+     cannot slam it shut, and reverting to the defaults cannot either. */
+  const [open, setOpen] = useState(() => customised);
+
+  /** What the closed row says is inside. One line, format-aware. */
+  const summary = standingsPoints
+    ? `Standings points, ties and ${venue} wording`
+    : `${venue.charAt(0).toUpperCase()}${venue.slice(1)} wording`;
 
   return (
     <Panel
@@ -127,116 +166,142 @@ export const AdvancedSettingsPanel = ({
         </span>
       }
     >
-      {standingsPoints ? (
-        <>
-          <div className="border-b border-mb-rule px-4 py-3">
-            <span
-              className={MB_FIELD_LABEL.className}
-              style={MB_FIELD_LABEL.style}
-            >
-              Standings points
+      {/* The disclosure is a row of the panel, not a control in its head: the
+          head is navy and already carries two things, and a 44px target inside
+          a 44px navy strip would have made it three. `mb-btn-touch` is the
+          floor, `mb-row-hover` the same press the ruled rows below it use. */}
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        aria-expanded={open}
+        aria-controls={bodyId}
+        className="mb-btn-touch mb-row-hover flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
+      >
+        <span className="flex min-w-0 flex-col gap-0.5">
+          <span className="mb-kicker">
+            {open ? "Hide advanced settings" : "Advanced settings"}
+          </span>
+          {!open && (
+            <span className="truncate text-[0.78rem] leading-snug text-mb-ink-muted">
+              {summary} — {customised ? "customised" : "left at the defaults"}
+            </span>
+          )}
+        </span>
+        <MbIcon id={open ? "collapse" : "expand"} size={12} className="shrink-0" />
+      </button>
+
+      <div id={bodyId} hidden={!open}>
+        {standingsPoints ? (
+          <>
+            <div className="border-y border-mb-rule px-4 py-3">
+              <span
+                className={MB_FIELD_LABEL.className}
+                style={MB_FIELD_LABEL.style}
+              >
+                Standings points
+              </span>
+              <p className="mt-1 text-[0.78rem] leading-snug text-mb-ink-muted">
+                Awarded per result when the table is calculated.
+              </p>
+            </div>
+
+            {/* Each stepper carries a VISIBLE label. `MbNumberStepper`'s own
+                `label` is an accessible name only — three bare figures reading
+                3 / 0 / 0 tell a sighted user nothing about which is which. */}
+            <PointsRow
+              id="points-win"
+              label="Win"
+              spoken="Points for a win"
+              value={settings.pointsForWin}
+              onChange={(value) => onChange({ pointsForWin: value })}
+            />
+            <PointsRow
+              id="points-tie"
+              label="Tie"
+              spoken="Points for a tie"
+              /* The one place this is said, and it is said beside the disabled
+                 control rather than as a fourth notice in the panel. */
+              hint={
+                settings.allowTies
+                  ? undefined
+                  : "Turn on Allow ties below to award points for a drawn match."
+              }
+              value={settings.pointsForTie}
+              onChange={(value) => onChange({ pointsForTie: value })}
+              disabled={!settings.allowTies}
+            />
+            <PointsRow
+              id="points-loss"
+              label="Loss"
+              spoken="Points for a loss"
+              value={settings.pointsForLoss}
+              onChange={(value) => onChange({ pointsForLoss: value })}
+            />
+
+            <div className="border-b border-mb-rule px-4 py-3">
+              <MbToggle
+                checked={settings.allowTies}
+                onChange={(checked) => onChange({ allowTies: checked })}
+                label="Allow ties"
+                hint="Enable if a match can end level."
+              />
+            </div>
+          </>
+        ) : (
+          <p className="border-y border-mb-rule px-4 py-3 text-[0.78rem] leading-snug text-mb-ink-muted">
+            {FORMAT_META[format].label} does not keep a standings table, so points
+            per result do not apply to it.
+          </p>
+        )}
+
+        <div className="flex flex-col gap-4 px-4 py-4">
+          <div>
+            <span className={MB_FIELD_LABEL.className} style={MB_FIELD_LABEL.style}>
+              Venue wording
             </span>
             <p className="mt-1 text-[0.78rem] leading-snug text-mb-ink-muted">
-              Awarded per result when the table is calculated.
+              Every screen that names a playing surface uses these two words.
             </p>
           </div>
-
-          {/* Each stepper carries a VISIBLE label. `MbNumberStepper`'s own
-              `label` is an accessible name only — three bare figures reading
-              3 / 0 / 0 tell a sighted user nothing about which is which. */}
-          <PointsRow
-            id="points-win"
-            label="Win"
-            spoken="Points for a win"
-            value={settings.pointsForWin}
-            onChange={(value) => onChange({ pointsForWin: value })}
-          />
-          <PointsRow
-            id="points-tie"
-            label="Tie"
-            spoken="Points for a tie"
-            /* The one place this is said, and it is said beside the disabled
-               control rather than as a fourth notice in the panel. */
-            hint={
-              settings.allowTies
-                ? undefined
-                : "Turn on Allow ties below to award points for a drawn match."
-            }
-            value={settings.pointsForTie}
-            onChange={(value) => onChange({ pointsForTie: value })}
-            disabled={!settings.allowTies}
-          />
-          <PointsRow
-            id="points-loss"
-            label="Loss"
-            spoken="Points for a loss"
-            value={settings.pointsForLoss}
-            onChange={(value) => onChange({ pointsForLoss: value })}
-          />
-
-          <div className="border-b border-mb-rule px-4 py-3">
-            <MbToggle
-              checked={settings.allowTies}
-              onChange={(checked) => onChange({ allowTies: checked })}
-              label="Allow ties"
-              hint="Enable if a match can end level."
-            />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <MbField label="Singular" htmlFor="venue-name">
+              <MbTextInput
+                id="venue-name"
+                value={settings.venueName}
+                placeholder="court"
+                maxLength={24}
+                onChange={(event) =>
+                  onChange({
+                    venueName: event.target.value,
+                    venuePlural: pluralise(event.target.value || "court"),
+                  })
+                }
+              />
+            </MbField>
+            <MbField label="Plural" htmlFor="venue-plural">
+              <MbTextInput
+                id="venue-plural"
+                value={settings.venuePlural}
+                placeholder={pluralise(venue)}
+                maxLength={28}
+                onChange={(event) => onChange({ venuePlural: event.target.value })}
+              />
+            </MbField>
           </div>
-        </>
-      ) : (
-        <p className="border-b border-mb-rule px-4 py-3 text-[0.78rem] leading-snug text-mb-ink-muted">
-          {FORMAT_META[format].label} does not keep a standings table, so points
-          per result do not apply to it.
-        </p>
-      )}
-
-      <div className="flex flex-col gap-4 px-4 py-4">
-        <div>
-          <span className={MB_FIELD_LABEL.className} style={MB_FIELD_LABEL.style}>
-            Venue wording
-          </span>
-          <p className="mt-1 text-[0.78rem] leading-snug text-mb-ink-muted">
-            Every screen that names a playing surface uses these two words.
+          <p className="text-[0.78rem] text-mb-ink-muted">
+            Reads as “{venue} 1” and “2 {settings.venuePlural.trim() || pluralise(venue)}”.
           </p>
+          <MbButton
+            variant="outline-navy"
+            size="sm"
+            icon="undo"
+            onClick={onReset}
+            disabled={!customised}
+            className="self-start"
+          >
+            Reset to defaults
+          </MbButton>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <MbField label="Singular" htmlFor="venue-name">
-            <MbTextInput
-              id="venue-name"
-              value={settings.venueName}
-              placeholder="court"
-              maxLength={24}
-              onChange={(event) =>
-                onChange({
-                  venueName: event.target.value,
-                  venuePlural: pluralise(event.target.value || "court"),
-                })
-              }
-            />
-          </MbField>
-          <MbField label="Plural" htmlFor="venue-plural">
-            <MbTextInput
-              id="venue-plural"
-              value={settings.venuePlural}
-              placeholder={pluralise(venue)}
-              maxLength={28}
-              onChange={(event) => onChange({ venuePlural: event.target.value })}
-            />
-          </MbField>
-        </div>
-        <p className="text-[0.78rem] text-mb-ink-muted">
-          Reads as “{venue} 1” and “2 {settings.venuePlural.trim() || pluralise(venue)}”.
-        </p>
-        <MbButton
-          variant="outline-navy"
-          size="sm"
-          icon="undo"
-          onClick={onReset}
-          disabled={!customised}
-          className="self-start"
-        >
-          Reset to defaults
-        </MbButton>
       </div>
     </Panel>
   );

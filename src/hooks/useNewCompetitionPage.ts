@@ -198,6 +198,13 @@ export const useNewCompetitionPage = () => {
 
   const [gateAskedAt, setGateAskedAt] = useState<WizardStep | null>(null);
 
+  /**
+   * Empty until the user presses a primary that cannot move, then the reason.
+   *
+   * Derived, never cleared by hand: `canAdvance` is in the expression, so the
+   * notice disappears the instant the gate is satisfied and cannot be left
+   * behind by a code path that forgot to reset it.
+   */
   const gateMessage =
     gateAskedAt !== step || canAdvance
       ? ""
@@ -434,6 +441,11 @@ export const useNewCompetitionPage = () => {
     handleNext,
     handleBack,
     handleCancel,
+
+    // the gate — `canAdvance` feeds the bar's status line (the reason BEFORE
+    // the press), `gateMessage` the notice inside the step (the reason after).
+    canAdvance,
+    gateMessage,
 
     // format
     selectedFormat,

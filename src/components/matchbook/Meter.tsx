@@ -27,6 +27,13 @@ export const MbMeter = ({
           </span>
         </div>
       )}
+      {/* G22 — the fill is a full-width bar SCALED on X, never a `width`.
+          `width` is a layout property, so animating it re-ran layout for the
+          bar's whole subtree on every frame; charter invariant 40 allows only
+          `transform` and `opacity`, which the compositor can run without
+          touching layout. `--mb-meter-fill` is unitless because `scaleX()`
+          takes a number, and `.mb-meter` owns the geometry — see the block in
+          `globals.css`. Nothing about the painted result changes. */}
       <span
         className="mb-meter"
         role="progressbar"
@@ -35,9 +42,14 @@ export const MbMeter = ({
         aria-valuemax={100}
         aria-valuenow={percent}
         aria-valuetext={`${percent}%`}
-        style={color ? ({ "--mb-meter-color": color } as React.CSSProperties) : undefined}
+        style={
+          {
+            "--mb-meter-fill": percent / 100,
+            ...(color ? { "--mb-meter-color": color } : {}),
+          } as React.CSSProperties
+        }
       >
-        <span style={{ width: `${percent}%` }} />
+        <span />
       </span>
     </div>
   );

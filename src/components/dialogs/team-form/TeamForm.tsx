@@ -10,13 +10,18 @@ import {
 } from "@/components/matchbook/Dialog";
 import { MbNotice } from "@/components/matchbook/Notice";
 import { TeamMark } from "@/components/matchbook/Panel";
-import { MbField, MbSwatchPicker, MbTextInput } from "@/components/matchbook/form";
+import {
+  MB_FIELD_LABEL,
+  MbField,
+  MbSwatchPicker,
+  MbTextInput,
+} from "@/components/matchbook/form";
 import { crestForTeam } from "@/components/matchbook/types";
 import type { PersistentTeam } from "@/types/game";
 import { TEAM_NAME_MAX, useTeamForm } from "./useTeamForm";
 
 /* ===========================================================================
-   CREATE / EDIT TEAM
+   NEW / EDIT TEAM
 
    The preview is the change worth naming: it used to be a gradient banner with
    a white initial on it — a mark the app renders nowhere else. It is now the
@@ -24,6 +29,28 @@ import { TEAM_NAME_MAX, useTeamForm } from "./useTeamForm";
    `/teams`, the wizard and every scoreboard will draw. The colour is a 3px bar
    beside the crest and nothing more (charter D-9).
    =========================================================================== */
+
+/**
+ * The one name this action answers to, exported so no caller has to retype it.
+ *
+ * It had three. The masthead key on `/teams` said **ADD TEAM**, the empty
+ * states said **CREATE A TEAM**, and the wizard's team step said "Create a
+ * team" until the first team existed and then silently became "Add team" — the
+ * same button, renamed ninety seconds into a first session, which is what a
+ * first-run reader hit.
+ *
+ * "New team" rather than either of them, for two reasons. **Add** is already
+ * spent: `AddEntrantsDialog` and the competition roster use "Add teams" to mean
+ * *enter teams that already exist into this competition*, which is a different
+ * action on the same nouns. And "Create a team" reads as a first-run
+ * instruction — it is odd wording on the twelfth team, which is precisely how
+ * the drift started. "New team" is true on the first and the fiftieth.
+ *
+ * The commit button inside the sheet stays a verb ("Create team"): a trigger
+ * names where it goes, a commit names what it does. What must never differ
+ * again is the trigger and the sheet it opens.
+ */
+export const TEAM_CREATE_LABEL = "New team";
 
 interface TeamFormProps {
   open: boolean;
@@ -70,7 +97,7 @@ export const TeamForm = ({ open, onOpenChange, team, onSubmit }: TeamFormProps) 
     <MbDialog
       open={open}
       onOpenChange={onOpenChange}
-      title={isEditing ? "Edit Team" : "Create Team"}
+      title={isEditing ? "Edit team" : TEAM_CREATE_LABEL}
       icon="teams"
       kicker="Team directory"
       size="md"
@@ -113,8 +140,15 @@ export const TeamForm = ({ open, onOpenChange, team, onSubmit }: TeamFormProps) 
           </MbNotice>
         )}
 
+        {/* `MB_FIELD_LABEL`, not `.mb-kicker`. Both blocks below are *fields* —
+            a colour choice and the row it produces — and a kicker is an eyebrow
+            (design language §2.2). Left as kickers they set the two lower
+            labels at 9.92px muted under a 13.6px navy "Team name", so the sheet
+            read as one field plus two captions. */}
         <div className="flex flex-col gap-2.5">
-          <span className="mb-kicker">Team colour</span>
+          <span className={MB_FIELD_LABEL.className} style={MB_FIELD_LABEL.style}>
+            Team colour
+          </span>
           <MbSwatchPicker
             value={color}
             onChange={handleColorSelect}
@@ -124,7 +158,9 @@ export const TeamForm = ({ open, onOpenChange, team, onSubmit }: TeamFormProps) 
         </div>
 
         <div className="flex flex-col gap-2 border-t border-mb-rule pt-4">
-          <span className="mb-kicker">Preview</span>
+          <span className={MB_FIELD_LABEL.className} style={MB_FIELD_LABEL.style}>
+            Preview
+          </span>
           <div className="flex min-h-[44px] items-center gap-3">
             <TeamMark
               team={previewTeam}

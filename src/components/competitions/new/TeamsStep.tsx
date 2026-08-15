@@ -35,6 +35,33 @@ import type { EntryValidation } from "@/hooks/useNewCompetitionPage";
    sticky commit bar carries the live gate ("Select at least 3 teams",
    "8 teams selected") in the one place that is on screen at every scroll
    position, which is what a commit bar is for.
+
+   ------------------------------------------ why the roster is DESKTOP ONLY
+
+   Because a phone was being shown the same eight teams twice, 600px apart.
+   Measured at 390x844 with the fixture library: TEAM DIRECTORY at y=263
+   (547px tall, eight ruled rows with ballot boxes), then ENTRY LIST at y=826
+   (441px tall) repeating the crest, the name and the record of whichever of
+   those eight rows had been ticked. Two columns of a 1440 layout, stacked
+   unchanged — which is what a phone does to `xl:col-span-7` + `xl:col-span-5`
+   when nobody decides what the second column means at 390px.
+
+   A second column is worth its space when it can sit BESIDE the first and be
+   read at the same time. Stacked, it is a list of the answers to a question
+   whose form is now off-screen. So the roster stays a genuine right rail from
+   `xl` up and is not rendered below it, and the three things a phone actually
+   needed out of that panel move into the directory itself:
+
+     - the count → `MbSelectList`'s own header row, which already reads
+       "3 of 8 selected" over the same filtered set;
+     - the gate → the commit bar's status line, plus the notice the route
+       raises when a blocked primary is pressed;
+     - the four controls → one ruled block under the list, which is where they
+       belong at every width anyway, because "select all" means "select what
+       the search is showing" and the search is here.
+
+   That is 441px of duplicated panel removed from the phone and one home for
+   the controls instead of two.
    =========================================================================== */
 
 /**
@@ -189,57 +216,20 @@ export const TeamsStep = ({
             label="Team directory"
             emptyMessage={`No teams match “${search.trim()}” — try a different search.`}
           />
-        </Panel>
-      </div>
 
-      <div className="xl:col-span-5">
-        <Panel
-          title="Entry List"
-          tone="navy"
-          icon="teams"
-          meta={
-            <span className="matchbook-display text-[0.66rem] font-bold tracking-[0.16em] text-mb-paper-bright">
-              {formatLabel}
-            </span>
-          }
-        >
-          <div className="flex items-end justify-between gap-3 border-b border-mb-rule px-4 py-3">
-            <div className="min-w-0">
-              <span className="mb-kicker block">Teams entered</span>
-              {/* `MbScoreNumeral`, not a hand-rolled `matchbook-display
-                  text-4xl`: it boxes every figure to 1ch so 9 → 10 repaints one
-                  glyph and reflows nothing, and it cross-fades the change over
-                  `--mb-dur-fast`. That cross-fade is the authored response to
-                  ticking a team — the one interaction this step exists for. */}
-              <MbScoreNumeral
-                value={entryIds.length}
-                size="compact"
-                digits={2}
-                align="start"
-                className="mt-0.5"
-              />
-            </div>
-            <span className="mb-kicker shrink-0 tabular-nums">
-              of {rows.length} in library
-            </span>
-          </div>
-
-          <div className="flex flex-col gap-3 border-b border-mb-rule px-4 py-3">
-            {validation.valid ? (
-              validation.byes > 0 ? (
-                <MbNotice tone="warn" icon="bracket" title="Bracket padding">
-                  {entryIds.length} teams entered, so the bracket of{" "}
-                  {validation.bracketSize} carries {validation.byes}{" "}
-                  {validation.byes === 1 ? "bye" : "byes"} in the first round.
-                </MbNotice>
-              ) : (
-                <MbNotice tone="success" title="Ready">
-                  {validation.message}.
-                </MbNotice>
-              )
-            ) : (
-              <MbNotice tone="info" title="Not enough teams">
-                {validation.message || "Choose a format first"}.
+          {/* The step's controls, at every width, under the list they act on.
+              They were in the entry-list panel, which meant "Select all"
+              lived 600px away from the search whose result it selects. */}
+          <div className="flex flex-col gap-3 border-t-[1.5px] border-mb-navy px-4 py-3">
+            {/* The ONLY notice on the step, and only when it carries something
+                the reader cannot already see. "8 teams selected" is the list
+                header and the bar's status line; a bracket's padding is
+                neither, and it changes what the competition will contain. */}
+            {validation.valid && validation.byes > 0 && (
+              <MbNotice tone="warn" icon="bracket" title="Bracket padding">
+                {entryIds.length} teams entered, so the bracket of{" "}
+                {validation.bracketSize} carries {validation.byes}{" "}
+                {validation.byes === 1 ? "bye" : "byes"} in the first round.
               </MbNotice>
             )}
 
@@ -294,6 +284,42 @@ export const TeamsStep = ({
                 Quick add
               </MbButton>
             </div>
+          </div>
+        </Panel>
+      </div>
+
+      {/* A right rail, and only a right rail: below `xl` this panel repeated
+          the directory 600px underneath itself (see the header note). */}
+      <div className="hidden xl:col-span-5 xl:block">
+        <Panel
+          title="Entry List"
+          tone="navy"
+          icon="teams"
+          meta={
+            <span className="matchbook-display text-[0.66rem] font-bold tracking-[0.16em] text-mb-paper-bright">
+              {formatLabel}
+            </span>
+          }
+        >
+          <div className="flex items-end justify-between gap-3 border-b border-mb-rule px-4 py-3">
+            <div className="min-w-0">
+              <span className="mb-kicker block">Teams entered</span>
+              {/* `MbScoreNumeral`, not a hand-rolled `matchbook-display
+                  text-4xl`: it boxes every figure to 1ch so 9 → 10 repaints one
+                  glyph and reflows nothing, and it cross-fades the change over
+                  `--mb-dur-fast`. That cross-fade is the authored response to
+                  ticking a team — the one interaction this step exists for. */}
+              <MbScoreNumeral
+                value={entryIds.length}
+                size="compact"
+                digits={2}
+                align="start"
+                className="mt-0.5"
+              />
+            </div>
+            <span className="mb-kicker shrink-0 tabular-nums">
+              of {rows.length} in library
+            </span>
           </div>
 
           {entryIds.length === 0 ? (

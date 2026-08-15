@@ -6,7 +6,6 @@ import { useState, type CSSProperties } from "react";
 import { MbDialogBody } from "./Dialog";
 import { MbIcon } from "./MbIcon";
 import { MbSheet } from "./Sheet";
-import { MbAccountChip } from "./AccountChip";
 import { useMbReducedMotion } from "./useMbReducedMotion";
 
 /* ===========================================================================
@@ -283,13 +282,28 @@ export const MatchbookBottomBar = ({ active }: { active?: string }) => {
         </ul>
       </nav>
 
+      {/* DESTINATIONS ONLY (G16).
+          It used to end with `MbAccountChip variant="rail"` — the crest, the
+          signed-in address and a full-width Sign out — while the top strip's
+          own `•••`, 740px above it on the same screen, opened a menu carrying
+          that same address and that same Sign out. Two unlabelled `•••` discs,
+          the same two rows behind both. The account now lives in exactly one
+          control per breakpoint (`AccountChip.tsx`), and this sheet is what its
+          title says: the destinations that did not fit in the bar.
+
+          `flush` + no `border-y` (G17). With the body's 1rem inset and a top
+          rule on the list, the sheet drew a rule 16px under the header's rule
+          with nothing between them — an empty ruled row above "TOOLS", which
+          reads as a row whose label failed to render. The rows now start at the
+          header's own rule and run edge to edge, which is the ledger idiom
+          `MbMenu` already uses and the reason `MbDialogBody` has `flush`. */}
       <MbSheet open={moreOpen} onOpenChange={setMoreOpen} title="More">
-        <MbDialogBody>
-          <ul className="divide-y divide-mb-rule border-y border-mb-rule">
+        <MbDialogBody flush>
+          <ul className="flex flex-col divide-y divide-mb-rule">
             {MB_NAV_MORE.map((item) => {
               const on = mbNavActive(here, item.href);
               return (
-                <li key={item.href}>
+                <li key={item.href} className="flex">
                   <Link
                     href={item.href}
                     className="mb-nav-item"
@@ -305,10 +319,6 @@ export const MatchbookBottomBar = ({ active }: { active?: string }) => {
               );
             })}
           </ul>
-
-          <div className="pt-4">
-            <MbAccountChip variant="rail" />
-          </div>
         </MbDialogBody>
       </MbSheet>
     </>

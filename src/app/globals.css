@@ -194,8 +194,30 @@
      coral 8% 4.12:1, navy 6% 4.15:1, navy 4% 4.30:1. Coral states are carried
      by rules and lifts, never by fills under coral ink. */
   --mb-band: rgba(7, 50, 77, 0.05); /* table day-group header band    */
-  --mb-rule-on-navy: rgba(255, 250, 241, 0.25);
-  --mb-tint-on-navy: rgba(255, 250, 241, 0.06);
+  /* THE ON-NAVY SET (G20). All three are --mb-paper-bright at an alpha, and
+     they are the ONLY three alphas of it the system may use. /login was
+     re-deriving them by hand — five literal `rgba(255,250,241,…)` values across
+     five nodes, two of which were the byte-identical twin of a token declared
+     right here — which is invariant 10's "zero hardcoded colours" and, worse,
+     means a change to the paper tone repaints the app everywhere except the one
+     screen a new user sees first.
+
+     0.75 is the third rung and is new: it is the SOFT INK, for a line that is
+     still text on navy but must sit under the full-strength paper beside it —
+     the "• Final" tag in the sample scoreline is the case /login already had,
+     spelled as a literal. Composited on --mb-navy and measured, the alphas run
+     0.25 → 2.12:1, 0.50 → 4.34:1, 0.60 → 5.58:1, 0.75 → 7.86:1, opaque →
+     12.84:1. So 0.75 clears 4.5:1 as body text at any size with room to spare,
+     and it is chosen rather than 0.6 because the softer value is only 1.1:1
+     clear of the floor — one paper-tone tweak from failing — while 0.75 still
+     reads as visibly secondary beside the opaque ink.
+
+     A fourth, fainter rung is deliberately refused: 0.5 measures 4.34:1 and is
+     already under the floor, so it could only ever be an accessibility trap
+     with a token's name on it. Text on navy is opaque or 0.75. */
+  --mb-rule-on-navy: rgba(255, 250, 241, 0.25); /* divider / boundary  */
+  --mb-tint-on-navy: rgba(255, 250, 241, 0.06); /* wash under content  */
+  --mb-ink-on-navy-soft: rgba(255, 250, 241, 0.75); /* secondary text  */
   --mb-panel-shadow: 0 8px 22px rgba(57, 41, 23, 0.08);
 
   /* --- rule tiers -------------------------------------------------------
@@ -236,6 +258,40 @@
   --mb-rule-edge: 1px;
   --mb-rule-accent: 3px;
   --mb-rule-anchor: 4px;
+
+  /* --- the gap vocabulary, in the unit it is measured in (G23) -----------
+     Design language §3.2 declares a SEVEN-value spacing set and every value in
+     it is a Tailwind step, i.e. a whole number of pixels: 3 (form squares), 4,
+     6, 8, 10, 12, 16, plus 24 for the masthead's outer column gap. A census of
+     the single-elimination detail found NINETEEN distinct gaps across two
+     viewports, and every extra one came from this file writing the same idea
+     in `rem`:
+
+       .mb-panel-link     0.2rem   3.2px      .mb-input / .mb-toast /
+       .mb-badge          0.3rem   4.8px        .mb-banner   0.6rem   9.6px
+       .mb-field          0.35rem  5.6px      .mb-nav-item   0.7rem  11.2px
+       .mb-search / .mb-tab / .mb-segmented > * / .mb-code-chip  0.4rem  6.4px
+       .mb-btn            0.45rem  7.2px
+
+     None of those seven values is on the ladder, none is reachable from a
+     Tailwind utility, and none is distinguishable BY EYE from the ladder value
+     it sits beside — 6.4px next to 6px is a coherence failure that only a
+     measurement finds, which is exactly the kind this programme keeps finding.
+
+     `rem` also makes the gap a FUNCTION OF THE TYPE SIZE, which is wrong for
+     this system twice over: the panel grid is already in whole px (`gap-4`), so
+     a user who raises their root size would slide the interior of every control
+     off the exterior spacing it is meant to align with; and it is what produced
+     the fractional values in the first place, since 16 × 0.45 is not an integer.
+
+     So gaps are written in px, the same way the radii are (see the note below
+     on why the radius vocabulary stays literal): the value in the file is the
+     value on the screen, at every root size, and it can never be redefined out
+     from under a component. Each site keeps the nearest ladder value to what it
+     rendered, so no control changes by more than 1.2px.
+
+     THE SET, after this pass: 1 (the .mb-segmented divider, which is a rule
+     rather than a gap), 4, 6, 8, 10, 12 — plus 3, 16 and 24 from markup. */
 
   /* --- the pill radius, named once (F7) ---------------------------------
      The system has TWO spellings of the same idea and they are not the same
@@ -695,7 +751,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
+  gap: 12px;
   padding: 0.65rem 1rem 0.55rem;
   border-bottom: var(--mb-rule-hairline) solid var(--mb-rule);
 }
@@ -707,7 +763,7 @@
   color: var(--mb-navy);
   display: inline-flex;
   align-items: center;
-  gap: 0.2rem;
+  gap: 4px; /* was 0.2rem = 3.2px — G23 */
   white-space: nowrap;
   /* The containing block for the hit pad below. Inert on its own. */
   position: relative;
@@ -792,7 +848,7 @@ button.mb-panel-link::after,
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.45rem;
+  gap: 8px; /* was 0.45rem = 7.2px — G23 */
   padding: 0.55rem 1.1rem;
   border-radius: 4px;
   border: var(--mb-rule-edge) solid transparent;
@@ -867,7 +923,7 @@ button.mb-panel-link::after,
 .mb-nav-item {
   display: flex;
   align-items: center;
-  gap: 0.7rem;
+  gap: 12px; /* was 0.7rem = 11.2px — G23 */
   padding: 0.55rem 1.25rem;
   font-family: var(--mb-display-font);
   font-size: 0.85rem;
@@ -968,7 +1024,7 @@ button.mb-panel-link::after,
 .mb-seed-box {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 8px;
   border: var(--mb-rule-edge) solid var(--mb-navy);
   border-radius: 3px;
   background: var(--mb-paper-bright);
@@ -1027,7 +1083,11 @@ button.mb-panel-link::after,
 .mb-search {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 6px; /* was 0.4rem = 6.4px — G23 */
+  /* The rung lives here, not at the call site. Three call sites each spelled
+     their own floor (`min-h-12`, `min-h-[44px]`, nothing) — see the G21 note
+     below the input rule. 44 is the floor; a caller may still raise it. */
+  min-height: 44px;
   border: var(--mb-rule-edge) solid var(--mb-navy);
   border-radius: 4px;
   background: var(--mb-paper-bright);
@@ -1043,6 +1103,51 @@ button.mb-panel-link::after,
   color: var(--mb-navy);
 }
 
+/* ---------------------------------------------------------------------------
+   THE FRAMED FIELD'S OWN HEIGHT (G21) — the 46px rung that was not a rung
+
+   `.mb-input` and `.mb-search` are frames around a target. The shell carries
+   the ladder rung (44 / 48 / 56) and the `<input>` inside it is stretched to
+   fill, so its used height came out at `rung − 2 × --mb-rule-edge`:
+
+     /teams     input[type=search]  144 x 46   inside a 48px label.mb-search
+     /summaries input[type=search]  666 x 46   inside a 48px div.mb-input,
+                select                  x 48     standing 12px to its left
+
+   46 is on no ladder. It is also the number the SWEEP sees, because an audit
+   enumerates `input`, not the `<div>` wrapped round it — so every framed field
+   in the system reported a control 2px short of the select beside it, its top
+   edge 1px low and its bottom edge 1px high. The system had already named the
+   discrepancy (`MB_CONTROL_CELL = MB_CONTROL_HEIGHT − 2`) rather than closed
+   it, which turned one ladder into two.
+
+   The fix is to stop charging the interior for the frame. A negative block
+   margin of exactly one edge lets the stretched child resolve to the shell's
+   BORDER-box height:
+
+     stretch height = content(46) − marginTop(−1) − marginBottom(−1) = 48
+
+   so the input's hit box is the frame, edge to edge — which is what a user who
+   taps the border of a search field already believes. Nothing moves: the margin
+   is symmetric, so a field whose input is centred rather than stretched is
+   unaffected, and the input's background is `transparent`, so the frame it now
+   overlaps still paints.
+
+   Why not the obvious alternatives:
+     - shell at rung + 2 (50/58): puts the FRAME off the ladder and misaligns it
+       with `.mb-select-native`, which is a single box and genuinely is its rung.
+     - `box-shadow: inset` instead of `border`: also works, and would let the
+       shell and cell be one number by construction — but it re-points the
+       `.mb-field[data-invalid]` and focus rules onto a different property and
+       changes what `outline-offset` measures from, for a result the eye cannot
+       tell from this one.
+   --------------------------------------------------------------------------- */
+.mb-input > input,
+.mb-search > input {
+  align-self: stretch;
+  margin-block: calc(-1 * var(--mb-rule-edge));
+}
+
 .mb-search input::placeholder {
   color: var(--mb-ink-muted);
 }
@@ -1050,7 +1155,13 @@ button.mb-panel-link::after,
 .mb-input {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 10px; /* was 0.6rem = 9.6px — G23 */
+  /* `md`, the rung `MbTextInput` already inlines at every call site it owns.
+     Declared here so the two hand-rolled `.mb-input` fields on /login — which
+     had no floor at all and sized to their own line box — are on the same
+     ladder, and so the negative block margin on the input below can never pull
+     an unstretched shell under its rung. */
+  min-height: 48px;
   border: var(--mb-rule-edge) solid var(--mb-navy);
   border-radius: 4px;
   background: var(--mb-paper-bright);
@@ -1424,7 +1535,28 @@ button.mb-panel-link::after,
   border-radius: 3px;
 }
 
-/* Rule-thin progress track. Not a rounded <Progress>. */
+/* ---------------------------------------------------------------------------
+   THE METER (G22) — rule-thin progress track. Not a rounded <Progress>.
+
+   The fill used to be `width: N%` with `transition: width`. That was the LAST
+   layout-animating property in the system, which charter invariant 40 forbids:
+   `width` is a LayoutUnit, so every frame of the transition ran layout, paint
+   and composite for the whole subtree, and a meter that sits in a table row —
+   which is where `TeamReadinessPanel` puts one per team — reflowed its row on
+   every tick. `transform` and `opacity` are the only two properties a
+   compositor can animate without touching layout, so the fill is a full-width
+   bar scaled on its X axis instead.
+
+   The fraction arrives as `--mb-meter-fill`, a UNITLESS number in 0–1, because
+   `scaleX()` takes a number and a `calc(N% / 100%)` round-trip is not portable.
+   `transform-origin: left` pins the growth to the reading edge, and the track's
+   own `overflow: hidden` still clips it, so nothing about the painted result
+   changes — only what the browser has to do to get there.
+
+   `will-change` is deliberately absent: a meter is not continuously animated
+   and a permanent compositor layer per row costs more than the one promotion
+   the transition triggers.
+   --------------------------------------------------------------------------- */
 .mb-meter {
   display: block;
   width: 100%;
@@ -1436,9 +1568,12 @@ button.mb-panel-link::after,
 
 .mb-meter > span {
   display: block;
+  width: 100%;
   height: 100%;
+  transform-origin: left center;
+  transform: scaleX(var(--mb-meter-fill, 0));
   background: var(--mb-meter-color, var(--mb-navy));
-  transition: width var(--mb-dur-base) var(--mb-ease-out);
+  transition: transform var(--mb-dur-base) var(--mb-ease-out);
 }
 
 /* ---------------------------------------------------------------------------
@@ -1475,7 +1610,7 @@ button.mb-panel-link::after,
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
+  gap: 12px;
   padding: 0.65rem 1rem 0.55rem;
   border-bottom: var(--mb-rule-hairline) solid var(--mb-rule);
 }
@@ -1502,7 +1637,7 @@ button.mb-panel-link::after,
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 0.5rem;
+  gap: 8px;
   padding: 0.75rem 1rem;
   padding-bottom: calc(0.75rem + var(--mb-safe-bottom));
   border-top: var(--mb-rule-edge) solid var(--mb-navy);
@@ -1543,7 +1678,7 @@ button.mb-panel-link::after,
 .mb-toast {
   display: flex;
   align-items: flex-start;
-  gap: 0.6rem;
+  gap: 10px; /* was 0.6rem = 9.6px — G23 */
   min-width: 0;
   background: var(--mb-paper-bright);
   border: var(--mb-rule-edge) solid var(--mb-navy);
@@ -1580,7 +1715,7 @@ button.mb-panel-link::after,
 .mb-badge {
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
+  gap: 4px; /* was 0.3rem = 4.8px — G23 */
   white-space: nowrap;
   font-family: var(--mb-display-font);
   font-weight: 700;
@@ -1649,7 +1784,7 @@ button.mb-panel-link::after,
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.4rem;
+  gap: 6px; /* was 0.4rem = 6.4px — G23 */
   min-height: 44px;
   padding: 0.5rem 1rem;
   margin-bottom: calc(-1 * var(--mb-rule-edge));
@@ -1697,7 +1832,7 @@ button.mb-panel-link::after,
 .mb-field {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 6px; /* was 0.35rem = 5.6px — G23 */
   min-width: 0;
 }
 
@@ -1909,7 +2044,7 @@ button.mb-panel-link::after,
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.4rem;
+  gap: 6px; /* was 0.4rem = 6.4px — G23 */
   min-width: 0;
   min-height: 44px;
   padding: 0.5rem 0.75rem;
@@ -1959,7 +2094,7 @@ button.mb-panel-link::after,
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.75rem;
+  gap: 12px;
   background: var(--mb-paper-bright);
   user-select: none;
   -webkit-user-select: none;
@@ -2068,7 +2203,7 @@ button.mb-panel-link::after,
   z-index: 20;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 12px;
   padding: 0.75rem 1rem;
   padding-bottom: calc(0.75rem + var(--mb-safe-bottom));
   border-top: var(--mb-rule-edge) solid var(--mb-navy);
@@ -2118,7 +2253,7 @@ button.mb-panel-link::after,
 .mb-code-chip {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 6px; /* was 0.4rem = 6.4px — G23 */
   padding: 0.25rem 0.5rem;
   border: var(--mb-rule-edge) solid var(--mb-navy);
   border-radius: 3px;
@@ -2132,7 +2267,7 @@ button.mb-panel-link::after,
 .mb-banner {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 10px; /* was 0.6rem = 9.6px — G23 */
   min-width: 0;
   padding: 0.55rem 0.8rem;
   background: var(--mb-paper-bright);
@@ -2152,7 +2287,7 @@ button.mb-panel-link::after,
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  gap: 0.75rem;
+  gap: 12px;
 }
 
 .mb-scoreline > * {
@@ -2212,7 +2347,7 @@ button.mb-panel-link::after,
   display: grid;
   grid-template-columns: 1fr;
   align-items: center;
-  gap: 0.75rem;
+  gap: 12px;
 }
 
 @container (min-width: 320px) {

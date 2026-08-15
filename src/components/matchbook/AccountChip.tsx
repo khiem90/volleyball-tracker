@@ -20,12 +20,31 @@ export type MbAccountChipVariant = "masthead" | "rail" | "compact";
    profile (shell brief W4).
 
    This component is the one place that owns the account: the address, the way
-   out, and the way in. It is rendered by the sidebar rail, by the masthead and
-   by the More sheet, and never re-implemented at a call site.
+   out, and the way in. It is rendered by the sidebar rail and by the masthead
+   or top strip, and never re-implemented at a call site.
 
    `variant="public"` shells must NOT render it — the public share routes cannot
    assume `AuthContext` has a user and must keep working with Firebase
    unconfigured (shell brief R6). `MatchbookShell` enforces that.
+
+   ------------------------------------------------- ONE ACCOUNT, ONE PLACE (G16)
+
+   It used to be rendered a THIRD time, inside `MatchbookBottomBar`'s More
+   sheet, and that produced the defect G16 records: on a phone the account was
+   an unlabelled `•••` disc in the top-right corner and the More sheet was an
+   unlabelled `•••` cell in the bottom-right corner, ~740px apart, drawn from
+   the same sprite glyph at the same size. A first-time user could not predict
+   which one held what — and both held the same two rows, because the sheet's
+   `variant="rail"` block repeated the address and Sign out that the top-right
+   menu already carried.
+
+   Two changes, and they are halves of one idea. The sheet now carries only
+   DESTINATIONS (`BottomBar.tsx`), and this file's phone control is WORDED —
+   the same `Account ⌄` trigger the desktop masthead already shows. So the two
+   corners now read "ACCOUNT ⌄" and "••• MORE": one identity, one overflow, no
+   shared rows and no shared glyph. Sign-out is reachable from exactly one
+   control at each breakpoint — the top strip below `lg`, the sidebar rail
+   above it — and never from two at once.
    =========================================================================== */
 
 /**
@@ -97,14 +116,11 @@ export const MbAccountChip = ({
         </div>
       );
     }
-    return (
-      <MbSkeleton
-        w={variant === "compact" ? 48 : 118}
-        h={48}
-        radius={4}
-        className={className}
-      />
-    );
+    /* One width for both worded variants, because they are now one control:
+       118px is what `Account ⌄` measures at `md`. The compact variant used to
+       reserve 48 here for the icon-only trigger it no longer renders, so the
+       top strip reflowed by 70px the moment auth resolved. */
+    return <MbSkeleton w={118} h={48} radius={4} className={className} />;
   }
 
   /* ------------------------------------------------------------------ rail */
@@ -155,27 +171,19 @@ export const MbAccountChip = ({
     );
   }
 
-  /* --------------------------------------------------------------- compact */
-  /* The 44px-floor control the top strip carries. A guest gets a destination
-     (an anchor, so middle-click and "open in new tab" work); a signed-in user
-     gets the same menu the masthead opens. */
-  if (variant === "compact") {
-    if (isGuest) {
-      return (
-        <MbButtonLink
-          href="/login"
-          variant="outline-navy"
-          icon="login"
-          title="Sign in"
-          aria-label="Sign in"
-          className={className}
-        />
-      );
-    }
-    return <MbMenu label="Account menu" items={menuItems(address, handleSignOut)} className={className} />;
-  }
+  /* ------------------------------------------------------ compact / masthead
+     One control, two call sites. `compact` is the top strip's spelling and
+     `masthead` is the desktop console's, and they render the same worded
+     trigger on purpose: an account is the same object at every width, and the
+     two variants diverging is what put an unlabelled `•••` on the phone in the
+     first place (G16). The names are kept so a call site still declares which
+     surface it is on, and so the type can grow apart again if a surface ever
+     earns a different treatment.
 
-  /* -------------------------------------------------------------- masthead */
+     A guest gets a destination (an anchor, so middle-click and "open in new
+     tab" work); a signed-in user gets the menu. Both are worded — "SIGN IN"
+     and "ACCOUNT ⌄" — because a bare glyph in a corner is a control whose only
+     documentation is a guess. */
   if (isGuest) {
     return (
       <MbButtonLink href="/login" variant="outline-navy" icon="login" className={className}>

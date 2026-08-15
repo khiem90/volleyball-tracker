@@ -34,8 +34,15 @@ import { crestForTeam } from "@/components/matchbook/types";
       "[" at 27. It carries past Z now.
 
    The eight colour presets were 64 literal hex values (invariant 10). They are
-   re-keyed onto the house palette; five named schemes plus a single-colour
-   custom, all resolving through `--mb-*`.
+   re-keyed onto the team palette in `form.tsx` — five named schemes plus a
+   single-colour custom, every one of them resolving through `--mb-*`.
+
+   Those schemes used to be sorted by temperature: "Warm" was coral, gold and
+   red, which is Draft, Loss and the app's own accent handed out as identity to
+   three teams in one click. The palette they draw from no longer contains a
+   status colour at all (see `MB_SWATCH_PALETTE`), and the two mixed schemes
+   are now split by weight — the darker inks against the lighter ones — which
+   is a distinction that survives on a bracket printed in greyscale.
    =========================================================================== */
 
 const TEAM_COUNT_MIN = 2;
@@ -56,26 +63,26 @@ const COLOUR_SCHEMES: ColourScheme[] = [
   {
     id: "house",
     name: "House",
-    description: "The full matchbook palette, in order.",
+    description: "All six team inks, in order.",
     colors: MB_SWATCH_PALETTE.map((swatch) => swatch.value),
   },
   {
-    id: "cool",
-    name: "Cool",
-    description: "Teal, navy, plum and slate.",
-    colors: [TOKEN.teal, TOKEN.navy, TOKEN.plum, TOKEN.slate],
+    id: "deep",
+    name: "Deep",
+    description: "Navy, teal and plum — the three darkest inks.",
+    colors: [TOKEN.navy, TOKEN.teal, TOKEN.plum],
   },
   {
-    id: "warm",
-    name: "Warm",
-    description: "Coral, gold and red.",
-    colors: [TOKEN.coral, TOKEN.gold, TOKEN.red],
+    id: "light",
+    name: "Light",
+    description: "Rose, lilac and ochre — the three lightest inks.",
+    colors: [TOKEN.rose, TOKEN.lilac, TOKEN.ochre],
   },
   {
     id: "sides",
     name: "Two sides",
-    description: "Alternating navy and coral, for head-to-head draws.",
-    colors: [TOKEN.navy, TOKEN.coral],
+    description: "Alternating navy and rose, for head-to-head draws.",
+    colors: [TOKEN.navy, TOKEN.rose],
   },
   {
     id: "mono",
@@ -149,7 +156,7 @@ export const QuickAddTeams = ({
   const [teamCount, setTeamCount] = useState(4);
   const [scheme, setScheme] = useState(COLOUR_SCHEMES[0].id);
   const [naming, setNaming] = useState<string>(NAMING_STYLES[0].id);
-  const [customColor, setCustomColor] = useState(TOKEN.coral);
+  const [customColor, setCustomColor] = useState(TOKEN.navy);
 
   /* Derived, never stored — see the note at the top of the file. */
   const start = existingTeamCount + 1;
@@ -176,7 +183,7 @@ export const QuickAddTeams = ({
     <MbDialog
       open={open}
       onOpenChange={onOpenChange}
-      title="Quick Add Teams"
+      title="Quick add teams"
       icon="import"
       kicker="Team directory"
       size="lg"
@@ -187,6 +194,16 @@ export const QuickAddTeams = ({
           <span className={MB_FIELD_LABEL.className} style={MB_FIELD_LABEL.style}>
             How many teams
           </span>
+          {/* No `initialFocus` here, and that is a decision rather than an
+              omission. The count is the first thing a reader changes, so the
+              stepper looks like the right landing place — but it is a text
+              input that selects its own contents on focus, so aiming the
+              dialog's opening focus at it raises the on-screen keyboard over
+              the sheet before the reader has read a word of it, and paints a
+              selection highlight over the figure. `TeamForm` can afford that
+              because typing the name IS the first action there; here the first
+              action is a ± key or a scheme row, both of which are one Tab
+              away. */}
           <MbNumberStepper
             label="Teams to create"
             value={teamCount}

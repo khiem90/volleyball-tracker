@@ -43,10 +43,213 @@
    one-and-a-half.
    =========================================================================== */
 
+import type { CSSProperties } from "react";
+import { usePathname } from "next/navigation";
 import { MatchbookShell, type MatchbookShellVariant } from "./AppShell";
 import { MbSkeleton } from "./Skeleton";
 import { MbEmptyState, type MbEmptyStateAction } from "./EmptyState";
 import type { PanelEmptyTone } from "./Panel";
+
+/* --------------------------------------------------------- reserved heights
+
+   A skeleton that is a third of the height of what replaces it is a layout
+   shift with extra steps (invariant 27). Measured before this table existed,
+   `MbPageLoading` drew the same five panels on every route and the document
+   grew when the data landed:
+
+       route          390x844                    1440x900
+       /              1593 -> 3164   +1571       900 -> 1318   +418
+       /teams         1593 -> 3333   +1740       900 -> 1249   +349
+       /competitions  1593 -> 2509    +916       900 -> 1344   +444
+       /summaries     1593 -> 3170   +1577       900 -> 1792   +892
+       /quick-match   1593 -> 1373    -220       900 ->  900     +0
+       /tools         1593 -> 1798    +205       900 ->  900     +0
+
+   — and on `/competitions` it drew five panels for seven real ones, in the
+   wrong spans, so nothing it reserved was even in the right column.
+
+   So each console route now declares the geometry it is about to become. The
+   numbers are MEASURED off the shipped page against the standard fixture at
+   390x844 and 1440x900 (`pw/mb-geom.mjs`), not estimated, and the table is
+   ordered exactly as the page's own grid children are — same spans, same
+   column grouping — so a panel's bones land where its content will.
+
+   ------------------------------------------------------ why the POPULATED page
+
+   A route's height depends on its data, and on `/` and `/competitions` so does
+   its PANEL COUNT (an empty account draws two panels where a populated one
+   draws eight). No fixed skeleton can be 0px against both. The table reserves
+   the POPULATED geometry, because the two residuals are not equally harmful:
+   reserve too little and the document GROWS, which pushes content down under a
+   finger that is already reaching for it; reserve too much and it SHRINKS,
+   which moves nothing the reader has touched — the page simply ends sooner.
+   A skeleton exists to hold space for arriving data, so holding the space that
+   data would need is also the honest reading of what it is for.
+
+   ------------------------------------------------------------------ upkeep
+
+   These are dimensions of OTHER components' output, so they rot when those
+   components change. `src/__tests__/shell/skeletonSpec.test.ts` pins the shape
+   (every console destination has a spec; every span is on the 12-col scale;
+   every reserved height is positive), which catches a deleted route but not a
+   re-cut panel. Re-run `pw/mb-geom.mjs` after any panel-level redesign. */
+
+/** One panel's bones. `h` is 390x844, `xl` is 1440x900; `xl` defaults to `h`. */
+export interface MbSkeletonPanelSpec {
+  h: number;
+  xl?: number;
+  /** `false` mirrors a real panel that renders no `.mb-panel-head`. */
+  head?: boolean;
+}
+
+/**
+ * One grid child: a column span and the panels stacked inside it.
+ *
+ * `3` is on the list because `/teams` ships a 5/4/3 row. Invariant 4 names
+ * 7/5, 4/4/4 and 12 as the scale, and this table is not the place to argue
+ * with a shipped page — a skeleton that drew 4/4/4 over a 5/4/3 row would put
+ * every bone in the wrong column to make a different file's point.
+ */
+export interface MbSkeletonCellSpec {
+  span: 3 | 4 | 5 | 7 | 12;
+  panels: MbSkeletonPanelSpec[];
+}
+
+export interface MbSkeletonRouteSpec {
+  /** The page's own grid classes, copied verbatim so the columns agree. */
+  grid: string;
+  /** Height from the top of `<main>`'s padding box to the first panel — the
+   *  masthead, plus any filter bar the page carries above its grid. */
+  lead: number;
+  leadXl: number;
+  cells: MbSkeletonCellSpec[];
+}
+
+/**
+ * Keyed by exact pathname. `active` is deliberately NOT consulted:
+ * `/tools/volleyball-rotations/my-formations` passes `active="/tools"` for the
+ * nav mark and is not remotely the shape of `/tools`, so a route that has not
+ * been measured falls through to the generic grid rather than borrowing a
+ * sibling's geometry.
+ */
+export const MB_ROUTE_SKELETON: Record<string, MbSkeletonRouteSpec> = {
+  "/": {
+    grid: "grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-12",
+    lead: 202,
+    leadXl: 68,
+    cells: [
+      { span: 7, panels: [{ h: 568, xl: 465 }] },
+      { span: 5, panels: [{ h: 238, head: false }] },
+      { span: 4, panels: [{ h: 249, xl: 228 }] },
+      { span: 4, panels: [{ h: 283, xl: 262 }] },
+      { span: 4, panels: [{ h: 337, xl: 316 }] },
+      { span: 4, panels: [{ h: 309, xl: 288 }] },
+      { span: 4, panels: [{ h: 419, xl: 398 }] },
+      { span: 4, panels: [{ h: 292 }] },
+    ],
+  },
+  "/teams": {
+    grid: "grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-12",
+    lead: 134,
+    leadXl: 70,
+    cells: [
+      { span: 7, panels: [{ h: 964, xl: 598 }] },
+      { span: 5, panels: [{ h: 169, head: false }, { h: 377, head: false }] },
+      { span: 5, panels: [{ h: 700, xl: 525 }] },
+      { span: 4, panels: [{ h: 382, xl: 361 }] },
+      { span: 3, panels: [{ h: 372 }] },
+    ],
+  },
+  "/quick-match": {
+    grid: "grid-cols-1 gap-4 xl:grid-cols-12",
+    lead: 134,
+    leadXl: 70,
+    cells: [
+      { span: 7, panels: [{ h: 330, xl: 301 }] },
+      { span: 5, panels: [{ h: 293, head: false }] },
+      { span: 7, panels: [{ h: 260, xl: 239 }] },
+      { span: 5, panels: [{ h: 153 }] },
+    ],
+  },
+  "/competitions": {
+    grid: "grid-cols-1 gap-4 xl:grid-cols-12",
+    lead: 148,
+    leadXl: 68,
+    cells: [
+      { span: 7, panels: [{ h: 465, xl: 430 }] },
+      { span: 5, panels: [{ h: 296, xl: 207, head: false }] },
+      { span: 7, panels: [{ h: 647, xl: 509 }] },
+      { span: 5, panels: [{ h: 117, xl: 96 }] },
+      { span: 4, panels: [{ h: 85 }] },
+      { span: 4, panels: [{ h: 237 }] },
+      { span: 4, panels: [{ h: 265 }] },
+    ],
+  },
+  "/summaries": {
+    /* The tallest lead in the app: this page puts a three-control filter bar
+       between its masthead and its grid, and on a phone those controls each
+       take their own line. */
+    grid: "grid-cols-1 gap-4 xl:grid-cols-12",
+    lead: 401,
+    leadXl: 179,
+    cells: [
+      { span: 7, panels: [{ h: 1335 }, { h: 363, xl: 222 }] },
+      {
+        span: 5,
+        panels: [
+          { h: 196, xl: 182, head: false },
+          { h: 253 },
+          { h: 274, xl: 253 },
+          { h: 112 },
+        ],
+      },
+    ],
+  },
+  "/tools": {
+    grid: "grid-cols-1 gap-4 xl:grid-cols-12",
+    lead: 130,
+    leadXl: 70,
+    cells: [
+      { span: 12, panels: [{ h: 906, xl: 260 }] },
+      { span: 7, panels: [{ h: 249, xl: 207 }] },
+      { span: 5, panels: [{ h: 326, xl: 335, head: false }] },
+    ],
+  },
+};
+
+/**
+ * The one place a reserved height is applied.
+ *
+ * It is a `<style>` element rather than two Tailwind arbitrary classes because
+ * the heights are DATA — a table of measured numbers — and Tailwind only
+ * compiles a utility whose literal text appears in a source file, so
+ * `h-[${spec.h}px]` would compile to nothing at all. Inline style cannot carry
+ * a media query, so the breakpoint lives here and the numbers arrive as custom
+ * properties. `globals.css` is W1-exclusive for the whole programme (charter
+ * H1), which is the same reason `BottomBar.tsx` declares its toast offset in a
+ * `<style>` of its own.
+ *
+ * 1280px is Tailwind's `xl`, which is the breakpoint every one of these grids
+ * switches its columns at.
+ */
+const RESERVED_CSS = `
+.mb-skel-fixed { height: var(--mb-skel-h); overflow: hidden; }
+@media (min-width: 1280px) { .mb-skel-fixed { height: var(--mb-skel-h-xl); } }
+`;
+
+/** A `.mb-panel-head`'s box, and one ruled `px-4 py-2.5` row. Both measured. */
+const HEAD_H = 43;
+const ROW_H = 49;
+
+/** Enough rows to fill the taller of the two reservations, and never a barcode. */
+const rowsFor = (spec: MbSkeletonPanelSpec): number => {
+  const tallest = Math.max(spec.h, spec.xl ?? spec.h);
+  const body = tallest - (spec.head === false ? 0 : HEAD_H);
+  return Math.min(30, Math.max(1, Math.round(body / ROW_H)));
+};
+
+const reserved = (h: number, xl?: number): CSSProperties =>
+  ({ "--mb-skel-h": `${h}px`, "--mb-skel-h-xl": `${xl ?? h}px` }) as CSSProperties;
 
 /* ------------------------------------------------------------------- bones */
 
@@ -89,8 +292,25 @@ const ROW_WIDTHS = ["w-[78%]", "w-[62%]", "w-[88%]", "w-[54%]", "w-[70%]"];
  * schedule, results and readiness panels alike, which is why one skeleton
  * stands in for all of them without lying about any.
  */
-export const MbSkeletonPanel = ({ rows = 4 }: { rows?: number }) => (
-  <section className="mb-panel" aria-hidden="true">
+export const MbSkeletonPanel = ({
+  rows = 4,
+  head = true,
+  style,
+  className = "",
+}: {
+  rows?: number;
+  /** `false` drops the `.mb-panel-head`, for panels that ship without one. */
+  head?: boolean;
+  /**
+   * Carries the reserved-height custom properties. Only honoured when
+   * `.mb-skel-fixed` is in `className` AND `RESERVED_CSS` is on the page —
+   * which `MbPageLoading` guarantees. Standalone callers pass neither and get
+   * a panel that sizes to its rows, exactly as before.
+   */
+  style?: CSSProperties;
+  className?: string;
+}) => (
+  <section className={`mb-panel ${className}`} style={style} aria-hidden="true">
     {/* The bars sit inside 24px SLOTS rather than being 24px themselves. A
         `.mb-panel-head` is sized by its title's line box, not by its glyph
         height, so a bar cut to the 0.95rem type step made the skeleton head
@@ -99,14 +319,16 @@ export const MbSkeletonPanel = ({ rows = 4 }: { rows?: number }) => (
         the bar keeps the type step. Measured at 1440: 44.19 against 42.98 —
         a 1.21px rounding difference rather than a visible step, and the rows
         below it are already exact (49 / 49 / 49 / 48 on both). */}
-    <header className="mb-panel-head">
-      <span className="flex h-6 w-[9rem] max-w-[60%] items-center">
-        <MbSkeleton w="100%" h="0.95rem" radius={2} />
-      </span>
-      <span className="flex h-6 w-[4.5rem] items-center">
-        <MbSkeleton w="100%" h="0.62rem" radius={2} />
-      </span>
-    </header>
+    {head && (
+      <header className="mb-panel-head">
+        <span className="flex h-6 w-[9rem] max-w-[60%] items-center">
+          <MbSkeleton w="100%" h="0.95rem" radius={2} />
+        </span>
+        <span className="flex h-6 w-[4.5rem] items-center">
+          <MbSkeleton w="100%" h="0.62rem" radius={2} />
+        </span>
+      </header>
+    )}
     <div className="flex flex-col">
       {Array.from({ length: rows }, (_, i) => (
         <div
@@ -127,13 +349,26 @@ export const MbSkeletonPanel = ({ rows = 4 }: { rows?: number }) => (
 );
 
 /**
- * Column spans, in the order the shipped console uses them: a 7/5 pair, then
+ * Column spans as whole class names, because Tailwind compiles a utility only
+ * when its literal text appears in a source file — `xl:col-span-${n}` compiles
+ * to nothing at all, which is a skeleton silently collapsing to one column.
+ */
+const SPAN_CLASS: Record<MbSkeletonCellSpec["span"], string> = {
+  3: "xl:col-span-3",
+  4: "xl:col-span-4",
+  5: "xl:col-span-5",
+  7: "xl:col-span-7",
+  12: "xl:col-span-12",
+};
+
+/**
+ * The fallback layout for a route with no measured spec: a 7/5 pair, then
  * 4/4/4 rows. Invariant 4 permits 7/5, 4/4/4 and 12 and nothing else, so this
  * is a lookup rather than an arithmetic layout — an off-scale span cannot be
  * expressed.
  */
-const span = (i: number): string =>
-  i === 0 ? "xl:col-span-7" : i === 1 ? "xl:col-span-5" : "xl:col-span-4";
+const genericSpan = (i: number): string =>
+  i === 0 ? SPAN_CLASS[7] : i === 1 ? SPAN_CLASS[5] : SPAN_CLASS[4];
 
 /**
  * The masthead's bones. Two-tone display line, the framed count badge, the
@@ -158,12 +393,62 @@ export const MbSkeletonMasthead = () => (
   </header>
 );
 
+/** The measured route's grid: its own columns, its own spans, its own heights. */
+const MeasuredGrid = ({ spec }: { spec: MbSkeletonRouteSpec }) => (
+  <>
+    {/* The masthead's bones inside the box the real masthead will fill. On
+        `/summaries` that box is 401px on a phone, because the page puts a
+        three-control filter bar under its title and each control takes its own
+        line there — reserving only the title would leave the ledger 250px
+        short of where it lands. */}
+    <div className="mb-skel-fixed" style={reserved(spec.lead, spec.leadXl)}>
+      <MbSkeletonMasthead />
+    </div>
+    <div className={`mb-enter-grid grid ${spec.grid}`}>
+      {spec.cells.map((cell, i) => (
+        <div key={i} className={`flex flex-col gap-4 ${SPAN_CLASS[cell.span]}`}>
+          {cell.panels.map((panel, j) => (
+            <MbSkeletonPanel
+              key={j}
+              rows={rowsFor(panel)}
+              head={panel.head !== false}
+              className="mb-skel-fixed"
+              style={reserved(panel.h, panel.xl)}
+            />
+          ))}
+        </div>
+      ))}
+    </div>
+  </>
+);
+
 /**
- * The loading state of a whole route.
+ * The fallback grid, for a route with no measured spec — the public share
+ * shells, the scoring console, `/dev/states`, and anything added since the
+ * table was last re-measured.
  *
  * `panels` defaults to 5 because 7/5 + 4/4/4 is exactly two full rows — the
  * first screenful — and a short final row would advertise a layout the real
  * page does not have. Callers wanting a fuller page should pass 2 + 3n.
+ */
+const GenericGrid = ({ panels }: { panels: number }) => (
+  <div className="mb-enter-grid grid grid-cols-1 gap-4 xl:grid-cols-12">
+    {Array.from({ length: Math.max(1, panels) }, (_, i) => (
+      <div key={i} className={genericSpan(i)}>
+        <MbSkeletonPanel rows={i === 0 ? 6 : 4} />
+      </div>
+    ))}
+  </div>
+);
+
+/**
+ * The loading state of a whole route.
+ *
+ * `panels` is the COUNT USED WHEN THE ROUTE IS UNMEASURED. A console route in
+ * `MB_ROUTE_SKELETON` draws its own panels, in its own spans, at its own
+ * heights, and ignores it — which is the whole point: `app/loading.tsx` cannot
+ * know that `/competitions` has seven panels and `/summaries` has six, and it
+ * should not have to. It passes a floor and the route supplies the truth.
  */
 export const MbPageLoading = ({
   variant = "console",
@@ -174,47 +459,58 @@ export const MbPageLoading = ({
   /** Route the shell should mark current. Omit and the shell reads the URL. */
   active?: string;
   panels?: number;
-}) => (
-  /* No `masthead` prop: a loading route has no title to put in one yet, so the
-     masthead's own bones are drawn below, inside `<main>`, where the real one
-     will land. Passing a placeholder title here would be a lie that then has
-     to be replaced, which is a second layout change on top of the first. */
-  <MatchbookShell variant={variant} active={active}>
-    {/* One polite announcement for the whole route. The skeleton itself is
-        aria-hidden, so a screen reader hears this once instead of crawling
-        forty empty boxes. It names WHAT is loading rather than saying
-        "Loading" into the void, which is the difference between a status and
-        a noise. */}
-    <span className="sr-only" role="status">
-      Loading page content
-    </span>
-    {/* `variant="focus"` gives `<main>` no padding — deliberately, because on a
-        real scoring route `children` is the element handed to the Fullscreen
-        API (shell R4). A skeleton is not that element, so it supplies the
-        gutter itself rather than sitting flush to the bezel.
+}) => {
+  /* The URL, never `active`. `active` is the nav-highlight hint and several
+     routes borrow a parent's — `/tools/volleyball-rotations/my-formations`
+     passes `active="/tools"` and looks nothing like `/tools`. Keying the
+     geometry off it would reserve a 906px toolkit panel for a formations list. */
+  const pathname = usePathname();
+  const spec = variant === "console" ? MB_ROUTE_SKELETON[pathname ?? ""] : undefined;
 
-        It also draws NO masthead there: on `focus` the navy `MbEventBar` IS
-        the masthead, and the shell has already drawn it above. */}
-    <div
-      aria-busy="true"
-      className={variant === "focus" ? "px-4 py-5 sm:px-6 lg:px-8" : ""}
-    >
-      {variant !== "focus" && <MbSkeletonMasthead />}
-      {/* `.mb-enter-grid` is the system's entrance vocabulary, and this is its
+  return (
+    /* No `masthead` prop: a loading route has no title to put in one yet, so the
+       masthead's own bones are drawn below, inside `<main>`, where the real one
+       will land. Passing a placeholder title here would be a lie that then has
+       to be replaced, which is a second layout change on top of the first. */
+    <MatchbookShell variant={variant} active={active}>
+      {spec && <style>{RESERVED_CSS}</style>}
+      {/* One polite announcement for the whole route. The skeleton itself is
+          aria-hidden, so a screen reader hears this once instead of crawling
+          forty empty boxes. It names WHAT is loading rather than saying
+          "Loading" into the void, which is the difference between a status and
+          a noise. */}
+      <span className="sr-only" role="status">
+        Loading page content
+      </span>
+      {/* `variant="focus"` gives `<main>` no padding — deliberately, because on a
+          real scoring route `children` is the element handed to the Fullscreen
+          API (shell R4). A skeleton is not that element, so it supplies the
+          gutter itself rather than sitting flush to the bezel.
+
+          It also draws NO masthead there: on `focus` the navy `MbEventBar` IS
+          the masthead, and the shell has already drawn it above.
+
+          `.mb-enter-grid` is the system's entrance vocabulary, and this is its
           first shipped consumer (register D-26). The panels arrive in reading
           order over 480ms — the skeleton is the one place a stagger is
           unambiguously honest, because there is no data whose order it could
           be misrepresenting. Removed outright under prefers-reduced-motion. */}
-      <div className="mb-enter-grid grid grid-cols-1 gap-4 xl:grid-cols-12">
-        {Array.from({ length: Math.max(1, panels) }, (_, i) => (
-          <div key={i} className={span(i)}>
-            <MbSkeletonPanel rows={i === 0 ? 6 : 4} />
-          </div>
-        ))}
+      <div
+        aria-busy="true"
+        className={variant === "focus" ? "px-4 py-5 sm:px-6 lg:px-8" : ""}
+      >
+        {spec ? (
+          <MeasuredGrid spec={spec} />
+        ) : (
+          <>
+            {variant !== "focus" && <MbSkeletonMasthead />}
+            <GenericGrid panels={panels} />
+          </>
+        )}
       </div>
-    </div>
-  </MatchbookShell>
-);
+    </MatchbookShell>
+  );
+};
 
 /* ------------------------------------------------------------- route states */
 

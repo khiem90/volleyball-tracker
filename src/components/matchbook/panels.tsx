@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { FORMAT_META, FORMAT_ORDER } from "./formatMeta";
 import { MbIcon } from "./MbIcon";
 import { MbTableScroll } from "./TableScroll";
 import { Crest, FormLetters, Panel, PanelEmpty, TeamMark } from "./Panel";
@@ -327,6 +328,26 @@ export const MB_OVERVIEW_CONTENTS: MbLedgerRow[] = [
 ];
 
 /**
+ * The five formats, in the wizard's own presentation order.
+ *
+ * This is what `/competitions` prints in place of seven mute panels. It is
+ * DERIVED from `FORMAT_META` rather than retyped: that module is the single
+ * source of truth charter H14 forbids a fourth copy of, and it already carries
+ * the label, the one-sentence blurb, the sprite id and the contained accent —
+ * which is also why no new colour mapping is invented here (invariant 16).
+ *
+ * Unlike `MB_OVERVIEW_CONTENTS` this is not a promise about what will appear.
+ * It is the choice the reader is about to make, which is why it takes the
+ * ledger's full cut — rail, glyph, sentence — rather than the dense one.
+ */
+export const MB_COMPETITION_FORMATS: MbLedgerRow[] = FORMAT_ORDER.map((type) => ({
+  term: FORMAT_META[type].label,
+  gloss: FORMAT_META[type].blurb,
+  icon: FORMAT_META[type].icon,
+  accent: FORMAT_META[type].accent,
+}));
+
+/**
  * The teams already on the books — the one fact that decides whether a
  * competition can be created at all, printed on the screen that creates one.
  * Real data rather than a promise, which is why this panel is not another
@@ -364,7 +385,12 @@ export const TeamsReadyPanel = ({
         )}
       </div>
     )}
-    <FooterLink href="/teams" label="Open the Team Directory" />
+    {/* The empty cut already carries an "Add teams" button to `/teams`, so the
+        footer would be the SAME destination a second time, 40px below it —
+        which is the shape of the defect this screen is being cleared of. The
+        footer belongs to the populated cut, where the panel is a preview of a
+        list and the link is how you see the rest of it. */}
+    {total > 0 && <FooterLink href="/teams" label="Open the Team Directory" />}
   </Panel>
 );
 

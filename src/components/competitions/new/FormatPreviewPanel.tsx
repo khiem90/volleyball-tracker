@@ -29,6 +29,14 @@ import type { CompetitionType } from "@/types/game";
       format, so choosing one replays `.mb-enter` over the whole block — one
       settle, once per decision. The figures themselves never flip or spring
       (invariant 41); they arrive with the panel that explains them.
+   3. **It will not print a bare participle.** The head's right-hand label was
+      `basis.source === "library" ? "Projected" : "Entered"`, and on an empty
+      account `source` is `none` — so the head of a panel with nothing to count
+      printed the orphan word "ENTERED", no figure, no noun, measured at
+      390x844 on a fresh account the moment a format was chosen. The label is
+      now `MbPreviewBasis.label`, which is a NUMBER AND A NOUN ("8 teams
+      entered", "12 teams projected") or the empty string when there is
+      nothing to label — in which case the head simply carries its title.
    =========================================================================== */
 
 export const FormatPreviewPanel = ({
@@ -45,9 +53,9 @@ export const FormatPreviewPanel = ({
     tone="navy"
     icon="bracket"
     meta={
-      format ? (
-        <span className="matchbook-display text-[0.66rem] font-bold tracking-[0.16em] text-mb-paper-bright">
-          {basis.source === "library" ? "Projected" : "Entered"}
+      format && basis.label ? (
+        <span className="matchbook-display text-[0.66rem] font-bold tracking-[0.16em] text-mb-paper-bright tabular-nums">
+          {basis.label}
         </span>
       ) : undefined
     }

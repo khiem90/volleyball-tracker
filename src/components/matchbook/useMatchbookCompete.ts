@@ -114,6 +114,14 @@ export interface MbCompeteData {
    * seven with no action at all.
    */
   selected: MbCompeteSelected | null;
+  /**
+   * `rows.length === 0` — no competition exists in any state, so every panel on
+   * the screen has nothing to print and the route renders the first-run
+   * composition instead. Declared alongside `selected` because the two are the
+   * same condition stated twice: `selected` is what NARROWS for the populated
+   * branch, this is what the branch is ABOUT.
+   */
+  isFirstRun: boolean;
   deleteCompetition: (id: string) => void;
   /**
    * Teams already on the books, capped for display. The one fact that decides
