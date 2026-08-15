@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { Panel } from "@/components/matchbook/Panel";
+import { useMbReducedMotion } from "@/components/matchbook/useMbReducedMotion";
 import type {
   MbFormatOption,
   MbPreviewBasis,
@@ -79,7 +81,51 @@ export const FormatStep = ({
   onSelectFormat,
   previewLines,
   previewBasis,
-}: FormatStepProps) => (
+}: FormatStepProps) => {
+  /* ---------------------------------------------------------------------
+     THE PREVIEW HAS TO BE SEEN TO BE THE REWARD.
+
+     The panel below arrives only once a format is chosen, and on a phone it
+     lands where the sticky commit bar floats: measured at 390x844, the panel's
+     blurb sat at y=657 with `.mb-action-bar` starting at y=681, so two of its
+     three sample points hit-tested to the bar. The user taps a format and the
+     sentence justifying that choice is sliced through its x-height.
+
+     So the panel is brought into view — but only on a genuine CHANGE, never on
+     mount. Returning to step 1 with a format already chosen must not move the
+     document, and an earlier round shipped exactly that bug: `MbTabs` called
+     `scrollIntoView` unconditionally on mount and put the first painted frame
+     709px (desktop) / 3300px (mobile) down the page with no user action.
+
+     It also only scrolls when the panel is genuinely obscured — if the choice
+     was made with the preview already fully clear of the bar, nothing moves.
+     --------------------------------------------------------------------- */
+  const previewRef = useRef<HTMLDivElement>(null);
+  const lastFormat = useRef<CompetitionType | null>(selectedFormat ?? null);
+  const reduced = useMbReducedMotion();
+
+  useEffect(() => {
+    const changed = selectedFormat !== lastFormat.current;
+    lastFormat.current = selectedFormat ?? null;
+    if (!changed || !selectedFormat) return;
+
+    const panel = previewRef.current;
+    if (!panel) return;
+
+    const bar = document.querySelector(".mb-action-bar");
+    const floor = bar
+      ? bar.getBoundingClientRect().top
+      : window.innerHeight;
+    const box = panel.getBoundingClientRect();
+    if (box.bottom <= floor && box.top >= 0) return; // already fully clear
+
+    panel.scrollIntoView({
+      behavior: reduced ? "auto" : "smooth",
+      block: "center",
+    });
+  }, [selectedFormat, reduced]);
+
+  return (
   <>
     <div className="xl:col-span-12">
       <Panel
@@ -101,7 +147,7 @@ export const FormatStep = ({
     </div>
 
     {selectedFormat && (
-      <div className="xl:col-span-12">
+      <div ref={previewRef} className="xl:col-span-12">
         <FormatPreviewPanel
           format={selectedFormat}
           lines={previewLines}
@@ -110,4 +156,5 @@ export const FormatStep = ({
       </div>
     )}
   </>
-);
+  );
+};
