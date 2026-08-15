@@ -5,6 +5,7 @@ import { MbButton } from "./Button";
 import { MbIconButton } from "./IconButton";
 import { MbScoreNumeral } from "./ScoreNumeral";
 import { Crest } from "./Panel";
+import { MbTeamName } from "./TeamName";
 import type { MbTeam } from "./types";
 
 /* ===========================================================================
@@ -87,9 +88,14 @@ const Side = ({
           tracking. The card used 0.02em here and the panel head above it uses
           0.05em, which is a size/weight pair carrying two trackings on one
           screen (rubric 1.3). */}
-      <p className="matchbook-display truncate text-[0.95rem] mb-track-title font-bold leading-tight">
-        {team.name}
-      </p>
+      {/* Not `truncate`. Measured in a 278px box on the win2out board, two
+          clubs sharing a prefix both painted "Wolverhampton Wanderers Athletic"
+          — on the live scoring card, where telling the two sides apart is the
+          entire job. `MbTeamName` keeps a distinguishing tail. */}
+      <MbTeamName
+        name={team.name}
+        className="matchbook-display text-[0.95rem] mb-track-title font-bold leading-tight"
+      />
       {sub && <p className="mb-kicker truncate tabular-nums">{sub}</p>}
     </div>
   </div>

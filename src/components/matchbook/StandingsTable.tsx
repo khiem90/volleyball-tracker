@@ -1,6 +1,7 @@
 "use client";
 
 import { Crest, FormLetters, TeamMark } from "./Panel";
+import { MbTeamName } from "./TeamName";
 import { MbTableScroll } from "./TableScroll";
 import type { MbFormResult, MbTeam } from "./types";
 
@@ -239,8 +240,20 @@ export const MbStandingsTable = ({
                 {line.sharesRank ? "=" : ""}
                 {line.rank}
               </th>
+              {/* The ceiling, not just the floor.
+                  `TeamMark` carries `min-w-0` — "I may shrink" — but in
+                  `table-layout: auto` the cell is sized to max-content, so the
+                  elision never fires and the scrollport cuts the string
+                  instead. Measured at 320 on a round robin: two clubs sharing
+                  a prefix both painted "Wolverhampton Wanderers Athleti",
+                  i.e. the table rendered two different teams identically on
+                  the one screen whose job is telling them apart.
+                  The cap goes on the CONTENT, never on the `<td>`: a max-width
+                  on a table cell is advisory and the auto layout ignores it. */}
               <td>
-                <TeamMark team={line.team} size={compact ? "sm" : "md"} />
+                <div className="max-w-[min(15rem,46vw)] min-w-0">
+                  <TeamMark team={line.team} size={compact ? "sm" : "md"} />
+                </div>
                 {/* The route to the columns the breakpoints take away.
                     P / PF / PA / PD are `display:none` below `sm`, and a
                     reader on a phone had no way to reach them at all — the
@@ -323,7 +336,7 @@ export const MbStandingsLeaderMark = ({ team }: { team: MbTeam }) => (
   <span className="inline-flex items-center gap-2">
     <Crest team={team} size={20} />
     <span className="matchbook-display truncate text-[0.82rem] mb-track-display font-bold">
-      {team.name}
+      <MbTeamName name={team.name} />
     </span>
   </span>
 );
