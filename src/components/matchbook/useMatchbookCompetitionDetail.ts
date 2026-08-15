@@ -716,11 +716,18 @@ export const useMatchbookCompetitionDetail = ({
           ? getCurrentChampionStreak(w2o, court.courtNumber)
           : 0;
       };
+      /* The sub-line carries a team's standing on this court — a live streak, or
+         crowns already won. A team with neither has nothing to say, and saying
+         "No crowns yet" for it put the same empty sentence under every team on
+         the board: measured 2 on a two-court game, which is the whole of the
+         empty-headline budget spent on a stat that is simply zero.
+         `MbCourtCard` renders the line only when it is truthy, so returning
+         undefined removes it rather than leaving a gap. */
       const subFor = (teamId: string) => {
         const streak = streakOf(teamId);
-        const crowns = getChampionCount(w2o, teamId);
         if (streak > 0) return `Streak ${streak} · crown on the next win`;
-        return crowns > 0 ? `Crowns ${crowns}` : "No crowns yet";
+        const crowns = getChampionCount(w2o, teamId);
+        return crowns > 0 ? `${crowns} ${pluralise("crown", crowns)}` : undefined;
       };
 
       activeMatches.forEach((match) => {
