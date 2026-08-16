@@ -65,7 +65,7 @@ export default function GlobalError({
                 {
                   label: "Reload the app",
                   icon: "overview",
-                  tone: "outline-navy",
+                  variant: "outline-navy",
                   onClick: () => location.assign("/"),
                 },
               ]}

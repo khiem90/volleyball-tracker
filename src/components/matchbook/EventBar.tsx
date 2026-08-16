@@ -104,7 +104,7 @@ export const MbEventBar = ({
           <MbIconButton
             icon="chevron-left"
             label={back.label}
-            tone="outline"
+            variant="outline"
             onClick={back.onClick}
             className="shrink-0"
             style={MB_ON_NAVY_CONTROL}

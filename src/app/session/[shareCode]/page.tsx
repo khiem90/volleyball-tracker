@@ -204,7 +204,7 @@ const SessionView = () => {
           <MbIconButton
             icon="share"
             label="Share this event"
-            tone="outline"
+            variant="outline"
             style={MB_ON_NAVY_CONTROL}
             onClick={() => page.setShowShare(true)}
           />

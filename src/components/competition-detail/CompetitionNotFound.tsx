@@ -20,7 +20,7 @@ export const CompetitionNotFound = () => (
       title="No competition exists at this address"
       body="It may have been deleted, or the link may be out of date. Everything else is unaffected."
       actions={[
-        { label: "Back to competitions", href: "/competitions", tone: "coral" },
+        { label: "Back to competitions", href: "/competitions", variant: "coral" },
         { label: "New competition", href: "/competitions/new" },
       ]}
     />

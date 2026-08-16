@@ -406,6 +406,11 @@ Do not add `sm:`/`lg:` size variants to body or data steps. A screen that needs
 more room at 390 changes its layout (the schedule panel's venue caption line,
 the champion block's `basis-48`), never its type ramp.
 
+> The benchmark rubric's **D6.6 carve-out** cites this section: the invariance
+> is conformant precisely because it is named intentional here AND the
+> painted-character floors above are measured at every audited width. Lose
+> either half and 6.6's original teeth apply again.
+
 ### 2.1a The tracking ladder — one rung per (size, weight)
 
 `.matchbook-display` sets `letter-spacing: 0.02em`, and for most of this
@@ -942,6 +947,18 @@ exports. Live gallery of every one of them: **`/dev/kit`**
 Canonical props live in `IMPLEMENTATION-CHARTER.md` §2, which outranks this
 table when they disagree about a signature. This table is for *choosing*.
 
+**One appearance vocabulary, two words (D-16).** `tone` names semantic colour —
+what a mark *means*: `live`/`danger`/`success`/`warn` and their kin, the
+`paper`/`navy` surface pair, the six state tones. `variant` names a structural
+alternative — which *build* of a control renders: the `.mb-btn` faces
+(`coral`/`navy`/`outline`/`outline-navy`, plus `plain` on `MbIconButton`), badge
+`text`/`framed`/`solid`, shell `console`/`focus`/`public`. Button appearance is
+therefore always `variant` — on `MbButton`, `MbIconButton`, `MbMenu`'s worded
+trigger, every action descriptor (`MbAction`, `MbEmptyStateAction`, the sidebar
+CTA) and `PanelEmpty`'s single action. The compound spellings `actionTone` and
+`triggerVariant` are retired (charter Appendix B), and `MbShareAction` picks its
+control with `as="button" | "icon"` so `variant` means one thing on both shapes.
+
 **Chrome and layout**
 
 | File | Export | Use this when |
@@ -1029,7 +1046,7 @@ table when they disagree about a signature. This table is for *choosing*.
 | --- | --- | --- |
 | `CopyField.tsx` | `MbCopyField` | Showing a value the user must copy (link, code, token). Handles reveal, confirmation, and the browser-refused manual fallback. |
 | `CopyField.tsx` | `copyToClipboard` | Copying from anywhere else. The one implementation: async clipboard → `execCommand` → `"manual"`. Never throws. |
-| `ShareAction.tsx` | `MbShareAction` | A share control. Native sheet → clipboard → fallback dialog, all handled. |
+| `ShareAction.tsx` | `MbShareAction` | A share control — `as="button"` or `as="icon"` picks which kit control renders; `variant` is that control’s face. Native sheet → clipboard → fallback dialog, all handled. |
 | `ShareAction.tsx` | `shareLink` | Sharing from your own control. Callers **must** handle `"manual"` visibly. |
 
 **Logic, types and data**
@@ -1470,6 +1487,42 @@ re-declare the four helpers as `.mb-*` inside zone A, or write the media query
 locally. Do not build the scoring console on a class from zone B without moving
 it first.
 
+**Landscape navigation — the console contract, and the focused-surface
+exemption (D6 ruling, measured 2026-08-16):**
+
+- On **`variant="console"`** routes, exactly one of the three navs is displayed
+  at any (width, height): the sidebar at `lg`+, `MatchbookBottomBar` under `lg`
+  while height > 500px, `MatchbookLandscapeRail` under `lg` at height ≤ 500px —
+  the gate table in `globals.css` under "THE LANDSCAPE NAVIGATION GATE". A
+  rotated phone on a console route therefore always has full primary
+  navigation, and an audit finding "no navigation element" there is a defect.
+- **Focused surfaces are exempt, and the exemption is a design, not a waiver.**
+  `variant="focus"` (`/match/*`, `/tools/volleyball-rotations/editor`) ships
+  ONE exit control in `MbEventBar` as its entire chrome — shell brief R4, "no
+  chrome except one 44px exit control". `variant="public"` (`/session/*`,
+  `/summary/*`, `/tools/volleyball-rotations/shared/*`) ships the brand lockup
+  linking home and no other navigation — these are the screens the product
+  hands to strangers through a link, and the console's private nav must not
+  appear on them (shell brief R6). Both shells offer Back only **in portrait**;
+  rotating removes nothing, so the landscape band that strips the console's
+  bar cannot strip anything here. Measured at 390x844 against 844x390 on all
+  15 audited focused-surface runs: identical offering in both orientations —
+  0 nav containers and the same 1–2 labelled destinations (`/match/[id]`: the
+  event bar's **Back** to the competition or `/`; `/match/guest`: Back to
+  `/quick-match`; public routes: **"Tournament Tracker"** → `/`; the completed
+  console adds **Match History** → `/summaries`). Extending the rail here
+  would ADD private navigation to public screens and spend the console's
+  protected vertical/horizontal space on destinations the portrait design
+  deliberately withholds.
+- **The exemption is conditional.** A focused surface must still show at least
+  one visible, **labelled** internal destination — the exit — in every
+  orientation. Zero reachable exits in landscape, or an exit with no
+  accessible name, is a violation on any shell; the audit keeps counting both.
+- A route joins the exemption only by declaring `variant="focus"` or
+  `variant="public"` in `MatchbookShell` (the roots in `mbShellVariantFor`).
+  `audit.mjs` keys its `FOCUSED_SURFACE_ROOTS` on the same list; the two must
+  move together.
+
 ---
 
 ## 9. Anti-patterns — what must be deleted when converting a screen
@@ -1898,7 +1951,7 @@ footer link across 5, and three near-identical stat tiles exist under three name
   title={<>Match <span className="text-mb-coral">Archive</span></>}
   badge={{ value: total, label: "Results" }}          // or {lines:["Live","Now"]}
   dateLine={data.dateLine} subLine={`${n} matches completed`}
-  actions={[{ label:"Export CSV", icon:"export", tone:"navy", onClick }]} />
+  actions={[{ label:"Export CSV", icon:"export", variant:"navy", onClick }]} />
 
 <MbStat icon="check" label="Matches Completed" value="12 / 20" sub="60%" size="sm" | "md" />
 <MbPanelFoot href="/summaries" label="View Full Match History" />

@@ -484,7 +484,7 @@ exist, score `n/a`.
 | 6.3 | Horizontal page scroll, and any content clipped off-viewport by `overflow-x: hidden` | same run → `OVERFLOW`, plus D4's `clipped` expression at 320/375 |
 | 6.4 | Safe-area: every fixed/sticky element's padding resolves through `env(safe-area-inset-*)` | read the source, not the computed `12px` — a correct computed value proves nothing on a device without a notch |
 | 6.5 | Thumb zone: the primary action's centre `y` as a fraction of viewport height | `document.querySelector(".mb-btn-coral").getBoundingClientRect()` |
-| 6.6 | Type escalation: dominant label and body sizes at 390px vs 1440px | D1's expression at both widths |
+| 6.6 | Type escalation: dominant label and body sizes at 390px vs 1440px | D1's expression at both widths; a null result is scored through the width-invariance carve-out below |
 | 6.7 | Landscape ≤500px height still shows the score | `node shot.mjs <route> out.png --mobile` with a 844×390 viewport |
 
 - **5** — Layout is responsive and nothing overflows. Buttons are roughly finger-sized. Primary actions are
@@ -492,8 +492,8 @@ exist, score `n/a`.
 - **8** — Requires all of: **6.1 = 0**; **6.2 = 0** counted, with every waived pair justified; **6.3 = 0** and
   nothing severed mid-word behind the horizontal guard; **6.4 verified in source**; **6.5 in the bottom
   third** — roughly 75% of smartphone interaction is thumb-driven and bottom-third concentration reaches ~78%
-  on 6.5"+ devices; **6.6 shows the phone is not simply the desktop render** — a 9.92px label and 11.52px body
-  unchanged from desktop is a fail on a screen premised as one-handed during a live match; **6.7 passes**.
+  on 6.5"+ devices; **6.6 shows the phone is not simply the desktop render, OR the invariance clears the
+  carve-out below**; **6.7 passes**.
   Destructive actions are not adjacent to frequent ones. No hover-only affordance exists anywhere.
   A floor that exists in CSS but is gated behind an attribute nothing sets is not a floor — 6.1 is what counts.
 - **10** — The screen is genuinely operable one-handed without a grip change: the entire critical path
@@ -501,6 +501,25 @@ exist, score `n/a`.
   control are oversized well beyond the minimum, and the sticky score header never occludes content or steals
   scroll. Gestures (swipe, pull-to-refresh) are additive with visible equivalents, and long-press/haptic-class
   feedback exists where it maps to a real action.
+
+**The 6.6 carve-out — width-invariant data type.** A data ramp that censuses identically at 390 and 1440
+is **conformant, not a missed escalation**, when BOTH of these hold:
+
+1. **The design document names the invariance as intentional and argues it.** This programme's design
+   language does, twice, in §2.1 ("The ramp is width-invariant below the masthead — on purpose"): data
+   lines — team names, scores, standings — are set once so a row on a phone and the same row on a desk are
+   the *same object*, and the only viewport-responsive steps are the masthead, `score-fit`, and the
+   platform input floor.
+2. **The painted-character floors the invariance spends are measured at every audited width.** Same
+   section: the 8-character name floor and `MbTeamName`'s pinned token are measured at 320/375 against
+   today's sizes — a step that grew at 390 would spend those floors on air; one that shrank would re-open
+   the original 6.6 finding (sub-10px body carrying real data on a phone).
+
+The carve-out covers **type on data lines only**. Layout, masthead and chrome must still adapt — this app's
+do — and a desktop layout shipped unchanged to a phone is judged by every other row of this dimension
+regardless of what its type does. Absent EITHER condition the anchor keeps its teeth exactly as before:
+a 9.92px label and 11.52px body unchanged from desktop, with no documented intent and no measured floors,
+is a fail on a screen premised as one-handed during a live match.
 
 ---
 

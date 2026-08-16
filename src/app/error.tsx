@@ -36,7 +36,7 @@ export default function RouteError({
         digest={error.digest}
         actions={[
           { label: "Try again", icon: "refresh", onClick: reset },
-          { label: "Back to overview", icon: "overview", href: "/", tone: "outline-navy" },
+          { label: "Back to overview", icon: "overview", href: "/", variant: "outline-navy" },
         ]}
       />
     </MatchbookShell>

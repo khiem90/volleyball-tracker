@@ -106,7 +106,7 @@ export default function GuestMatchPage() {
       onUndo={handleUndo}
       onEnd={handleOpenCompleteDialog}
       finalActions={{
-        secondary: { label: "Sign In", icon: "login", href: "/login?redirect=/quick-match", tone: "outline-navy" },
+        secondary: { label: "Sign In", icon: "login", href: "/login?redirect=/quick-match", variant: "outline-navy" },
         primary: { label: "Play Again", icon: "refresh", onClick: resetMatch },
       }}
     >

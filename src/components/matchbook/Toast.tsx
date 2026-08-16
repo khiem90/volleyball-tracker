@@ -212,7 +212,7 @@ export const MbToast = ({
         icon="close"
         label={dismissLabel}
         size="sm"
-        tone="plain"
+        variant="plain"
         onClick={onDismiss}
         className="-my-1 shrink-0"
       />

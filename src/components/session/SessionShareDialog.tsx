@@ -112,8 +112,8 @@ export const SessionShareDialog = ({
         Close
       </MbButton>
       <MbShareAction
-        variant="button"
-        tone="coral"
+        as="button"
+        variant="coral"
         size="lg"
         url={shareUrl}
         title={eventName}

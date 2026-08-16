@@ -4,7 +4,7 @@ import { forwardRef } from "react";
 import { MB_CONTROL_HEIGHT, type MbControlSize } from "./Button";
 import { MbIcon } from "./MbIcon";
 
-export type MbIconButtonTone = "plain" | "navy" | "coral" | "outline" | "outline-navy";
+export type MbIconButtonVariant = "plain" | "navy" | "coral" | "outline" | "outline-navy";
 
 /**
  * The full ladder from `Button.tsx` — the same three rungs, meaning the same
@@ -16,9 +16,9 @@ export type MbIconButtonSize = MbControlSize;
 /**
  * `plain` is the unadorned control the close affordance and masthead overflow
  * need: `.mb-btn` geometry, no fill, no rule, navy ink that goes coral on
- * hover. The four remaining tones are the `.mb-btn` variants unchanged.
+ * hover. The four remaining variants are the `.mb-btn` variants unchanged.
  */
-const TONE_CLASS: Record<MbIconButtonTone, string> = {
+const VARIANT_CLASS: Record<MbIconButtonVariant, string> = {
   plain:
     "border-transparent bg-transparent text-mb-navy hover:bg-[var(--mb-tint-2)] hover:text-mb-coral",
   navy: "mb-btn-navy",
@@ -61,7 +61,7 @@ export type MbIconButtonProps = {
   /** Becomes both `title` and `aria-label`. Required — this control has no text. */
   label: string;
   size?: MbIconButtonSize;
-  tone?: MbIconButtonTone;
+  variant?: MbIconButtonVariant;
 } & Omit<
   React.ButtonHTMLAttributes<HTMLButtonElement>,
   "title" | "aria-label" | "children"
@@ -78,7 +78,7 @@ export const MbIconButton = forwardRef<HTMLButtonElement, MbIconButtonProps>(
       icon,
       label,
       size = "md",
-      tone = "plain",
+      variant = "plain",
       className = "",
       type = "button",
       style,
@@ -91,7 +91,7 @@ export const MbIconButton = forwardRef<HTMLButtonElement, MbIconButtonProps>(
       type={type}
       title={label}
       aria-label={label}
-      className={`mb-btn mb-btn-touch ${TONE_CLASS[tone]} ${SIZE_CLASS[size]} disabled:cursor-not-allowed disabled:opacity-40 ${className}`}
+      className={`mb-btn mb-btn-touch ${VARIANT_CLASS[variant]} ${SIZE_CLASS[size]} disabled:cursor-not-allowed disabled:opacity-40 ${className}`}
       data-size={size}
       /* `.mb-btn-touch`'s unlayered `min-height:44px` is a floor, not the box:
          it loses to the definite `height` below at every rung, and matches it

@@ -193,19 +193,19 @@ export default function VolleyballRotationsPage() {
             ? {
                 label: selected.category === "custom" ? "Edit Formation" : "Open Editor",
                 icon: "edit",
-                tone: "coral",
+                variant: "coral",
                 href: editorHref,
               }
             : {
                 label: "Sign In To Save",
                 icon: "login",
-                tone: "coral",
+                variant: "coral",
                 href: "/login?redirect=/tools/volleyball-rotations",
               },
           {
             label: "My Formations",
             icon: "save",
-            tone: "navy",
+            variant: "navy",
             href: "/tools/volleyball-rotations/my-formations",
           },
         ],

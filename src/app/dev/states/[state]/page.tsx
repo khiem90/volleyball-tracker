@@ -124,7 +124,7 @@ export default function DevStatePage() {
             digest="1f3a9c04b7"
             actions={[
               { label: "Try again", icon: "refresh", onClick: () => location.reload() },
-              { label: "Back to overview", icon: "overview", href: "/", tone: "outline-navy" },
+              { label: "Back to overview", icon: "overview", href: "/", variant: "outline-navy" },
             ]}
           />
         </MatchbookShell>
@@ -141,7 +141,7 @@ export default function DevStatePage() {
                 label: "Browse competitions",
                 icon: "compete",
                 href: "/competitions",
-                tone: "outline-navy",
+                variant: "outline-navy",
               },
             ]}
           />
@@ -168,7 +168,7 @@ export default function DevStatePage() {
                 {
                   label: "Reload the app",
                   icon: "overview",
-                  tone: "outline-navy",
+                  variant: "outline-navy",
                   onClick: () => location.assign("/"),
                 },
               ]}

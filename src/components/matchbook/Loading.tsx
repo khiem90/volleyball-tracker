@@ -593,6 +593,130 @@ const Bar = ({
  */
 const ROW_WIDTHS = ["w-[78%]", "w-[62%]", "w-[88%]", "w-[54%]", "w-[70%]"];
 
+/* ------------------------------------------------------------ the boot gate
+
+   HF-3. `/summaries` swaps its whole composition on emptiness — filter bar,
+   ledger rows, panel collapse — and `AppContext` fills from `localStorage` in
+   a mount EFFECT, which runs after the browser has painted. So on a cold
+   document every account, however full, painted the EMPTY composition once,
+   and when the blob landed (~1.4s in dev) the filter bar mounted and pushed
+   the entire ledger grid 111px: buffered CLS 0.4048 at 1440, 0.8269 at 768,
+   against a 0.1 ceiling (invariant 27).
+
+   No React-side answer can fix that first paint: the SSR HTML has no
+   `localStorage`, and `useSyncExternalStore`'s post-hydration correction lands
+   AFTER the SSR frame has been on screen for the whole hydration window. The
+   only thing that runs before the first layout of a cold document is an inline
+   script, so that is what decides:
+
+     MbBootScript   executes AT PARSE, before anything below it lays out. It
+                    reads the same blob `readAccount` reads, applies the same
+                    `played` test `IS_EMPTY` applies, and marks
+                    `<html class="mb-boot-full">` — plus `--mb-boot-ledger`,
+                    the populated ledger's own height, row arithmetic below.
+     BOOT_CSS       two complementary gates. While the page is pre-boot it
+                    renders BOTH first-paint variants — the filter bar for a
+                    populated account, the ledger's empty state for a new one —
+                    and the class the script set picks one before either is
+                    ever painted. Both account types get their FINAL geometry
+                    on frame one; nothing moves when the data lands.
+     MbLedgerBones  the ledger's reservation: bone rows at the shipped row
+                    rhythm, clipped to `--mb-boot-ledger` so a three-match
+                    archive reserves three rows, not twenty-five.
+
+   The gate classes exist only while `useMatchbookHistory().hydrating` is true;
+   the stale `<html>` class after boot gates nothing. A client-side navigation
+   never sees any of this — `localReady` is already true, so the page renders
+   its real branches and the sniff is not even mounted. Storage unreadable
+   (private mode) leaves `full` set: unknown reserves the populated geometry,
+   the same fallback `mbSkeletonSpecFor` argues for above.
+
+   The numbers are MEASURED off the shipped populated ledger (pw/hf3-ledger-
+   geom.mjs): a one-line row is 44px from `sm` up, the two-line narrow cut is
+   79px below it, a day band is 31px, the "Showing 25 of N" footer 34px. */
+
+const BOOT_ROW_M = 79;
+const BOOT_ROW = 44;
+const BOOT_BAND = 31;
+const BOOT_NOTE = 34;
+
+const BOOT_SCRIPT = `(function () {
+  var full = true;
+  var h = "";
+  try {
+    var raw = localStorage.getItem(${JSON.stringify(STORAGE_KEY)});
+    if (raw === null) { full = false; }
+    else {
+      var st = JSON.parse(raw);
+      var ms = Array.isArray(st.matches) ? st.matches : [];
+      var done = [];
+      var live = 0;
+      for (var i = 0; i < ms.length; i++) {
+        var m = ms[i] || {};
+        if (m.status === "completed" && !m.isBye) done.push(m.completedAt || 0);
+        else if (m.status === "in_progress") live++;
+      }
+      full = done.length + live > 0;
+      if (done.length > 0) {
+        done.sort(function (a, b) { return b - a; });
+        var top = done.slice(0, 25);
+        var days = {};
+        for (var j = 0; j < top.length; j++) days[new Date(top[j]).toDateString()] = 1;
+        h = top.length * (window.innerWidth < 640 ? ${BOOT_ROW_M} : ${BOOT_ROW})
+          + Object.keys(days).length * ${BOOT_BAND}
+          + (done.length > 25 ? ${BOOT_NOTE} : 0) + "px";
+      }
+    }
+  } catch (e) {}
+  if (full) document.documentElement.classList.add("mb-boot-full");
+  if (h) document.documentElement.style.setProperty("--mb-boot-ledger", h);
+})();`;
+
+const BOOT_CSS = `
+html:not(.mb-boot-full) .mb-boot-full-only { display: none; }
+html.mb-boot-full .mb-boot-empty-only { display: none; }
+`;
+
+/**
+ * The sniff. Must be rendered BEFORE any `.mb-boot-full-only` /
+ * `.mb-boot-empty-only` element in document order — the script executes when
+ * the parser reaches it, so everything below it lays out with the account
+ * already known. Render it only while the page is pre-boot.
+ */
+export const MbBootSniff = () => (
+  <>
+    <script dangerouslySetInnerHTML={{ __html: BOOT_SCRIPT }} />
+    <style>{BOOT_CSS}</style>
+  </>
+);
+
+/**
+ * The populated ledger's first-paint reservation: bone rows at the ledger's
+ * own rhythm (time slot, matchup bar, right-ranged meta), clipped to the
+ * height the sniff computed. With the variable unset (storage unreadable) the
+ * bones run their natural height, which is the 25-row fallback.
+ */
+export const MbLedgerBones = () => (
+  <div
+    aria-hidden="true"
+    className="mb-boot-full-only overflow-hidden"
+    style={{ height: "var(--mb-boot-ledger, auto)" }}
+  >
+    {Array.from({ length: 25 }, (_, i) => (
+      <div
+        key={i}
+        className="grid h-[79px] grid-cols-[52px_minmax(0,1fr)_auto] items-center gap-2 border-b border-mb-rule px-4 sm:h-[44px]"
+      >
+        <Bar h="h-[0.66rem]" w="w-10" />
+        <span className="min-w-0">
+          <Bar h="h-[0.82rem]" w={ROW_WIDTHS[i % ROW_WIDTHS.length]} />
+        </span>
+        <Bar h="h-[0.66rem]" w="w-16" className="hidden lg:block" />
+      </div>
+    ))}
+  </div>
+);
+
 /**
  * One panel's bones at the shipped row rhythm: a `.mb-panel-head` with a title
  * and a meta figure, then ruled rows of `px-4 py-2.5` carrying a crest slot, a

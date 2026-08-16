@@ -25,7 +25,7 @@ export interface MbSidebarCta {
    * Without this the rail and the masthead each painted a coral fill and every
    * converted screen carried two primaries.
    */
-  tone?: MbButtonVariant;
+  variant?: MbButtonVariant;
 }
 
 /**
@@ -123,7 +123,7 @@ export const MatchbookSidebar = ({
       <div className="px-5 pt-5">
         <MbButtonLink
           href={cta.href}
-          variant={cta.tone ?? "coral"}
+          variant={cta.variant ?? "coral"}
           icon={cta.icon}
           fullWidth
         >

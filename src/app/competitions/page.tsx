@@ -935,7 +935,7 @@ export default function CompetitionsPage() {
                 label: EVENT_ACTION[selected.competition.status].label,
                 href: `/competitions/${selected.competition.id}`,
                 icon: EVENT_ACTION[selected.competition.status].icon,
-                tone: "navy",
+                variant: "navy",
               },
             ]
           : [
@@ -943,7 +943,7 @@ export default function CompetitionsPage() {
                 label: "Create Your First Competition",
                 href: "/competitions/new",
                 icon: "plus",
-                tone: "navy",
+                variant: "navy",
               },
             ],
       }}

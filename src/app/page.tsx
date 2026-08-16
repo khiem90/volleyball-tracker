@@ -140,7 +140,7 @@ export default function DashboardPage() {
         /* Derived, not declared. The label and the destination both move with
            the data, so the loudest control on the screen is never one the
            reader cannot perform. */
-        actions: [{ ...data.primaryAction, tone: "navy" }],
+        actions: [{ ...data.primaryAction, variant: "navy" }],
       }}
     >
       {/* ------------------------------------------------------- first run */}

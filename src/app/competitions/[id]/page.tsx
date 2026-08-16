@@ -120,10 +120,10 @@ export default function CompetitionDetailPage() {
    *                     even in navy it read as a 358x48 slab between the title
    *                     and the live score. It goes back to the outline it had
    *                     before the redesign.
-   *   `End competition` was `tone: "coral"` — a terminal, irreversible action
+   *   `End competition` was `variant: "coral"` — a terminal, irreversible action
    *                     painted as the house CTA. Charter §2.3 assigns it to
    *                     `MbDestructiveButton`, which `MbAction` cannot express
-   *                     (`MbActionTone = MbButtonVariant` has no danger
+   *                     (`MbActionVariant = MbButtonVariant` has no danger
    *                     member — register D-16). The quiet outline is the
    *                     nearest honest thing the bar can render, and the
    *                     destructive treatment lives where the commit actually
@@ -159,7 +159,7 @@ export default function CompetitionDetailPage() {
           ? [
               {
                 label: "Share live",
-                tone: "outline-navy",
+                variant: "outline-navy",
                 icon: "share",
                 onClick: () => page.setShowCreateSession(true),
               },
@@ -170,7 +170,7 @@ export default function CompetitionDetailPage() {
         ? [
             {
               label: "End competition",
-              tone: "outline-navy",
+              variant: "outline-navy",
               icon: "check",
               onClick: () => page.setShowEndConfirm(true),
             },
@@ -180,7 +180,7 @@ export default function CompetitionDetailPage() {
     return [
       {
         label: "Export results",
-        tone: "navy",
+        variant: "navy",
         icon: "export",
         onClick: exportResults,
       },
@@ -289,8 +289,8 @@ export default function CompetitionDetailPage() {
           )}
           <span className="ml-auto">
             <MbShareAction
-              variant="button"
-              tone="outline-navy"
+              as="button"
+              variant="outline-navy"
               size="sm"
               url={page.getShareUrl()}
               title={competition.name}

@@ -121,7 +121,7 @@ export const EditMatchDialog = ({
             icon="swap"
             label="Swap the home and away teams"
             size="md"
-            tone="outline-navy"
+            variant="outline-navy"
             onClick={handleSwapTeams}
             className="mb-1 shrink-0"
           />

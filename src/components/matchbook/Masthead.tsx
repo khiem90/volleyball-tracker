@@ -75,7 +75,7 @@ export interface MastheadProps {
   subLine?: ReactNode;
   /** A status mark beside the title — an `MbBadge`, an `MbLiveStatus`. */
   status?: ReactNode;
-  /** At most two, at most one `tone="coral"` (invariants 6 and 15). */
+  /** At most two, at most one `variant="coral"` (invariants 6 and 15). */
   actions?: MbAction[];
   /**
    * The account chip. `MatchbookShell` passes `false` for `variant="public"`,
@@ -138,7 +138,17 @@ const MastheadBadge = ({ badge }: { badge: MbMastheadBadge }) => (
         <span className="matchbook-display text-2xl mb-track-display font-bold leading-none text-mb-navy tabular-nums">
           {badge.value}
         </span>
-        <span className="matchbook-display text-[0.6rem] mb-track-badge font-bold text-mb-navy">
+        {/* `mt-1.5` separates the two FONT boxes, not the two inks. Oswald's
+            content area is ~1.5em, so under `leading-none` the value's box
+            bleeds 6px below its 24px line box — measured on `/quick-match`'s
+            `#5`: value box bottom y=113 against the label's box top y=107, a
+            26x6 intersection at 43% of the label's height, which the harness
+            rightly refuses to wave off as a graze. The inks never touched
+            (the bleed is the font's internal leading, empty for digits); the
+            margin makes the geometry say what the paint always did. 6px, not
+            4: at 4px the boxes still meet at the 2.0px noise floor and the
+            verdict rides on subpixel rounding. */}
+        <span className="matchbook-display mt-1.5 text-[0.6rem] mb-track-badge font-bold text-mb-navy">
           {badge.label}
         </span>
       </>
@@ -159,12 +169,12 @@ const MastheadBadge = ({ badge }: { badge: MbMastheadBadge }) => (
  * and a masthead's second action ("Quick Add", "Manage Event") is not redundant.
  */
 const MastheadAction = ({ action }: { action: MbAction }) => {
-  const tone = action.tone ?? "navy";
+  const variant = action.variant ?? "navy";
   const flex = "flex-auto sm:flex-initial";
 
   if (action.href && !action.disabled && !action.loading) {
     return (
-      <MbButtonLink href={action.href} variant={tone} icon={action.icon} className={flex}>
+      <MbButtonLink href={action.href} variant={variant} icon={action.icon} className={flex}>
         {action.label}
       </MbButtonLink>
     );
@@ -172,7 +182,7 @@ const MastheadAction = ({ action }: { action: MbAction }) => {
 
   return (
     <MbButton
-      variant={tone}
+      variant={variant}
       icon={action.icon}
       loading={action.loading}
       disabled={action.disabled}

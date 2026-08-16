@@ -8,6 +8,7 @@ import {
   useCallback,
   useMemo,
   useRef,
+  useState,
   type ReactNode,
 } from "react";
 import type {
@@ -64,6 +65,16 @@ const migrateTeamColors = (parsed: AppState): AppState => {
 // ============================================
 interface AppContextValue {
   state: AppState;
+  /**
+   * True once the localStorage blob has been read into `state` (or found
+   * absent). Until then `state` is `initialState` on EVERY account — an empty
+   * archive and a 47-match archive render identically for one commit — so a
+   * screen that swaps its composition on emptiness must not decide before this
+   * flips. `/summaries` reads it to hold its first-paint reservation (HF-3):
+   * deciding off `state` alone painted the empty composition on populated
+   * accounts, then pushed the whole ledger grid 111px when the data landed.
+   */
+  localReady: boolean;
   // Session info
   isSharedMode: boolean;
   canEdit: boolean;
@@ -171,8 +182,12 @@ export const AppProvider = ({ children }: AppProviderProps) => {
   }, [state.matches]);
 
   const hasLoadedLocalState = useRef(false);
+  const [localReady, setLocalReady] = useState(false);
 
   // Load state from localStorage on mount (with migration from old key)
+  /* eslint-disable react-hooks/set-state-in-effect -- `localReady` flips once,
+     in the same effect (and therefore the same commit) as the LOAD_STATE
+     dispatch, so consumers never see loaded data with the flag still false. */
   useEffect(() => {
     if (hasLoadedLocalState.current) return;
     hasLoadedLocalState.current = true;
@@ -199,7 +214,9 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     } catch (error) {
       console.error("Failed to load state from localStorage:", error);
     }
+    setLocalReady(true);
   }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Save state to localStorage whenever it changes (only for local mode)
   useEffect(() => {
@@ -1121,6 +1138,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
 
   const value: AppContextValue = {
     state,
+    localReady,
     isSharedMode,
     canEdit: isSharedMode ? canEdit : true,
     addTeam,

@@ -53,6 +53,19 @@ describe("the name floor", () => {
     expect(TAIL_CEILING).toContain("max-w-");
     expect(TAIL_CEILING).not.toContain("min-w-");
   });
+
+  it("marks a cut tail with its own ellipsis, never a silent clip (F6)", () => {
+    // `text-overflow` is inert under `overflow: clip`, so the first version
+    // hard-cut the tail mid-word: "WE… WANDERE" in the widest 1440 bracket
+    // cell, the head announcing its elision while the tail lied by omission.
+    // `hidden` + `ellipsis` paints "WE… WANDER…" instead.
+    expect(TAIL_CEILING).toContain("overflow-hidden");
+    expect(TAIL_CEILING).toContain("text-ellipsis");
+    expect(TAIL_CEILING).not.toContain("overflow-clip");
+    // And never `truncate`: its `white-space: nowrap` would collapse the
+    // joining space the tail carries via `whitespace-pre`.
+    expect(TAIL_CEILING).not.toContain("truncate");
+  });
 });
 
 describe("MbTeamName markup", () => {

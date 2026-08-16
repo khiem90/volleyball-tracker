@@ -25,7 +25,7 @@ export default function NotFound() {
             label: "Browse competitions",
             icon: "compete",
             href: "/competitions",
-            tone: "outline-navy",
+            variant: "outline-navy",
           },
         ]}
       />

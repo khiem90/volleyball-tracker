@@ -204,13 +204,13 @@ export default function MyFormationsPage() {
           {
             label: "New Formation",
             icon: "plus",
-            tone: "coral",
+            variant: "coral",
             href: "/tools/volleyball-rotations/editor",
           },
           {
             label: "Open Designer",
             icon: "court",
-            tone: "navy",
+            variant: "navy",
             href: "/tools/volleyball-rotations",
           },
         ],

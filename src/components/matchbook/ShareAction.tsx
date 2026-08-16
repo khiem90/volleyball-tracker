@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { MbButton, type MbButtonSize, type MbButtonVariant } from "./Button";
-import { MbIconButton, type MbIconButtonTone } from "./IconButton";
+import { MbIconButton, type MbIconButtonVariant } from "./IconButton";
 import { MbDialog, MbDialogBody } from "./Dialog";
 import { MbCopyField, copyToClipboard } from "./CopyField";
 import { MbNotice } from "./Notice";
@@ -87,26 +87,29 @@ interface ShareBase {
 }
 
 /**
- * `tone` and `size` are declared per shape, not once for both.
+ * `as` picks which kit control renders; `variant` and `size` are declared per
+ * shape, not once for both.
  *
- * One `tone?: MbIconButtonTone` used to cover the pair, which let
- * `variant="button" tone="plain"` typecheck and then quietly resolve to `navy`
+ * One face union used to cover the pair, which let
+ * `as="button" variant="plain"` typecheck and then quietly resolve to `navy`
  * because `plain` is not an `.mb-btn` variant — a prop the compiler accepted
  * and the component ignored. `size` had the mirror problem in the other
- * direction: it was accepted on `variant="icon"`, where nothing reads it.
+ * direction: it was accepted on `as="icon"`, where nothing reads it. The
+ * chooser is `as` (a render target, like the polymorphic idiom) so that
+ * `variant` can mean the same thing here as on the control it forwards to.
  */
 export type MbShareActionProps = ShareBase &
   (
     | {
-        variant: "button";
+        as: "button";
         /** `.mb-btn` variant. Defaults to `navy`. */
-        tone?: MbButtonVariant;
+        variant?: MbButtonVariant;
         size?: MbButtonSize;
       }
     | {
-        variant: "icon";
-        /** `MbIconButton` tone. Defaults to `plain`. */
-        tone?: MbIconButtonTone;
+        as: "icon";
+        /** `MbIconButton` variant. Defaults to `plain`. */
+        variant?: MbIconButtonVariant;
         size?: never;
       }
   );
@@ -159,20 +162,20 @@ export const MbShareAction = (props: MbShareActionProps) => {
 
   return (
     <span className={`inline-flex items-center ${className}`}>
-      {props.variant === "icon" ? (
+      {props.as === "icon" ? (
         <MbIconButton
           icon={status === "idle" ? "share" : "check"}
           /* The name never changes: the icon carries the visual confirmation
              and the live region carries the spoken one, so the control keeps
              one stable accessible name (WCAG 2.5.3). */
           label={label}
-          tone={props.tone ?? "plain"}
+          variant={props.variant ?? "plain"}
           disabled={disabled}
           onClick={handleShare}
         />
       ) : (
         <MbButton
-          variant={props.tone ?? "navy"}
+          variant={props.variant ?? "navy"}
           size={props.size ?? "md"}
           icon={status === "idle" ? "share" : "check"}
           disabled={disabled}

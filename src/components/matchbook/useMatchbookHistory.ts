@@ -139,6 +139,13 @@ export const mbArchiveContentsFor = (
   );
 
 export interface MbHistoryData {
+  /**
+   * True until the localStorage blob has landed in `AppContext`. While it is
+   * true every count below is a zero that means "unknown", not "empty" — the
+   * page must hold its first-paint reservation (the boot gate) rather than
+   * swap to the empty composition. See `MbBootSniff` in `Loading.tsx`.
+   */
+  hydrating: boolean;
   dateLine: string;
   totalResults: number;
   filteredCount: number;
@@ -176,7 +183,7 @@ export const useMatchbookHistory = (filters: {
   teamId: string;
   query: string;
 }): MbHistoryData => {
-  const { state } = useApp();
+  const { state, localReady } = useApp();
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   return useMemo(() => {
@@ -363,6 +370,7 @@ export const useMatchbookHistory = (filters: {
     if (competitions.length === 0) muteSections.push("competitions");
 
     return {
+      hydrating: !localReady,
       dateLine,
       totalResults: completed.length,
       filteredCount: filtered.length,
@@ -383,5 +391,5 @@ export const useMatchbookHistory = (filters: {
       downloadCsv,
       muteSections,
     };
-  }, [state, filters.competitionId, filters.teamId, filters.query, selectedId]);
+  }, [state, localReady, filters.competitionId, filters.teamId, filters.query, selectedId]);
 };

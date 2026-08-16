@@ -391,7 +391,7 @@ export const SessionFooter = ({
    *
    * They are here rather than behind an overflow menu in the navy strip, and
    * that is a decision about who this page is for. `MbMenu`'s icon trigger is
-   * `tone="plain"` — navy ink on a transparent ground — so on the navy strip it
+   * `variant="plain"` — navy ink on a transparent ground — so on the navy strip it
    * renders invisible, which is the trap `MbEventBar` documents for every
    * `.mb-btn` it hosts. Rather than override a kit component's ink from a call
    * site, the strip keeps ONE action (Share, the only one a stranger wants) and

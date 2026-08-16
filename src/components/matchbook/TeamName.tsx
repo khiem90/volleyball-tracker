@@ -88,9 +88,9 @@
    The order in which the two spans give is unchanged. The head is the flex item
    with `min-w-0`, so it absorbs every pixel of pressure first and the tail is
    untouched at every width where the head still has letters to spend. Only when
-   the box is narrower than the last word ALONE — "…" plus a clipped tail — does
-   the tail lose anything, and that case previously broke the whole document
-   instead.
+   the box is narrower than the last word ALONE does the tail lose anything —
+   and when it does, it says so with its own ellipsis ("WE… WANDER…"), never a
+   silent mid-word cut. That case previously broke the whole document instead.
    =========================================================================== */
 
 /* ===========================================================================
@@ -192,12 +192,27 @@ export const NAME_FLOOR = 8;
  *
  * A LITERAL class: Tailwind scans source text, so an interpolated
  * `max-w-[calc(100%-${n}ch)]` compiles to nothing and the ceiling would
- * silently never exist. `overflow-clip` and not `truncate`, because the head
- * beside it is already showing an ellipsis whenever this binds, and because
- * `truncate`'s `white-space: nowrap` would collapse the joining space the tail
- * carries.
+ * silently never exist.
+ *
+ * `overflow-hidden text-ellipsis`, and NOT either shorthand beside it:
+ *
+ *   - not `truncate`, because its `white-space: nowrap` would override the
+ *     `whitespace-pre` the tail relies on and collapse the joining space it
+ *     carries — `head + tail` would stop reconstructing the name verbatim.
+ *   - not `overflow-clip` (the first version), because `text-overflow` is
+ *     inert when `overflow` is `clip`: the tail hard-cut mid-word with no
+ *     signal any letters were missing. Measured in the widest 1440 bracket
+ *     cell, "Westhill Wanderers" painted "WE… WANDERE" — the head announced
+ *     its elision, the tail lied by omission (F6). With `hidden` + `ellipsis`
+ *     the same box paints "WE… WANDER…", and a cut tail is marked as cut the
+ *     same way a cut head always was.
+ *
+ * `hidden` here is the same trade `truncate` makes on the head span, so the
+ * pair is consistent; the OUTER box keeps `overflow-clip`, because it is the
+ * one whose automatic minimum size must be zero (see "the floor the tail set")
+ * and it has no ellipsis to paint.
  */
-export const TAIL_CEILING = "max-w-[calc(100%-4ch)] overflow-clip";
+export const TAIL_CEILING = "max-w-[calc(100%-4ch)] overflow-hidden text-ellipsis";
 
 /** Longest tail worth pinning, including its leading space. */
 const TAIL_MAX = 12;

@@ -199,7 +199,7 @@ export default function SharedFormationPage() {
           body={copy.body}
           actions={[
             ...(copy.retry
-              ? [{ label: "Try again", onClick: () => setAttempt((n) => n + 1), tone: "coral" as const }]
+              ? [{ label: "Try again", onClick: () => setAttempt((n) => n + 1), variant: "coral" as const }]
               : []),
             { label: "Open the rotation designer", href: "/tools/volleyball-rotations" },
           ]}
@@ -360,8 +360,8 @@ export default function SharedFormationPage() {
                 help="Anyone with the link can view this rotation. Editing stays with its owner."
               />
               <MbShareAction
-                variant="button"
-                tone="outline-navy"
+                as="button"
+                variant="outline-navy"
                 url={shareUrl}
                 title={formation.name}
                 text={`${formation.name} — a volleyball rotation on Tournament Tracker`}

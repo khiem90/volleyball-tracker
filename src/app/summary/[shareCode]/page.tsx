@@ -198,7 +198,7 @@ export default function SummaryPage() {
           body={failure.body(data.shareCode)}
           actions={[
             ...(failure.retry
-              ? [{ label: "Try again", onClick: data.retry, tone: "coral" as const }]
+              ? [{ label: "Try again", onClick: data.retry, variant: "coral" as const }]
               : []),
             { label: "Go to Tournament Tracker", href: "/" },
           ]}
@@ -230,7 +230,7 @@ export default function SummaryPage() {
           {
             label: "Share report",
             icon: "share",
-            tone: "coral",
+            variant: "coral",
             onClick: data.share,
           },
         ],

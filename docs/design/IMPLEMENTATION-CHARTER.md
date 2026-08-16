@@ -194,7 +194,7 @@ imported by path (no barrel — the existing kit has none).
 | Name | File | API | Consumers | Source | O / P |
 | --- | --- | --- | --- | --- | --- |
 | `MbButton` | `Button.tsx` | `{ variant: "coral"\|"navy"\|"outline"\|"outline-navy", size?: "sm"\|"md"\|"lg"\|"touch", icon?, iconRight?, loading?, fullWidth?, ...button }` — emits exactly `.mb-btn` + one variant class (design language §10); `size="touch"` and coarse pointers force `min-height:44px` | every screen | live-scoring | W1 / P1 |
-| `MbIconButton` | `IconButton.tsx` | `{ icon, label (required), size?: "md"\|"lg", tone? }` — renders `title` + `aria-label` from `label`, guarantees a 44×44 hit box | every screen | shell 11, GAP-14 | W1 / P1 |
+| `MbIconButton` | `IconButton.tsx` | `{ icon, label (required), size?: "md"\|"lg", variant? }` — renders `title` + `aria-label` from `label`, guarantees a 44×44 hit box | every screen | shell 11, GAP-14 | W1 / P1 |
 | `MbBadge` | `Badge.tsx` | `{ tone: "live"\|"draft"\|"final"\|"win"\|"loss"\|"neutral"\|"teal"\|"guest"\|"warn", variant?: "text"\|"framed"\|"solid", size?: "sm"\|"md", children }` — `tone="live"` renders `.mb-live-dot` + the word; `solid` only permitted for `live`/`final` | Compete, History, Teams, W4, W5, W6 | GAP-4, comp P3 (absorbs `MbChip`) | W1 / P1 |
 | `MbTabs` | `Tabs.tsx` | `{ value, onValueChange, items: {value,label,icon?,count?}[], urlKey?: string }` — hand-rolled `role="tablist"` + roving tabindex; **not** `@radix-ui/react-tabs` (deleted in P4) | W4 (format views), W5 (set/mode), W6 (mobile sections), W7 (designer) | GAP-5, comp P2 | W1 / P1 |
 | `MbSegmented` | `Segmented.tsx` | `{ value, onChange, name, options: {value,label,icon?}[], columns?: {base,sm}, size?: "sm"\|"md" (48px rows), fullWidth? }` — `role="radiogroup"`, arrow-key roving tabindex, **wraps instead of squeezing** | wizard ×4, W5 scoring mode, W7 serving/receiving | create 5.3 (absorbs tools `MbSegment`) | W1 / P1 |
@@ -902,3 +902,9 @@ Do not let these appear in code or review comments.
 `MbStickyActionBar`, `MbActionRail` → `MbActionBar` · `MbLoading` → `MbPageLoading` ·
 `MbEmpty` → extended `PanelEmpty` · `MbConfirm` is the only confirmation dialog (no `window.confirm`) ·
 `MbQrCode` → cut.
+`actionTone` (`PanelEmpty`), `triggerVariant` (`MbMenu`), and `tone` naming any `.mb-btn` face
+(`MbIconButton`, `MbAction`, `MbEmptyStateAction`, `MbSidebarCta`, `MbShareAction`) → `variant` ·
+`MbIconButtonTone` → `MbIconButtonVariant` · `MbActionTone` → `MbActionVariant` ·
+`MbEmptyStateActionTone` → `MbEmptyStateActionVariant` ·
+`MbShareAction variant="button"\|"icon"` (the control chooser) → `as="button"\|"icon"` —
+`tone` is semantic colour only, `variant` is the structural alternative (design language §4.2).

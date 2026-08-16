@@ -18,7 +18,7 @@ import { MbBadge, type MbBadgeTone } from "@/components/matchbook/Badge";
 import { MbTabs } from "@/components/matchbook/Tabs";
 import { MbSegmented } from "@/components/matchbook/Segmented";
 import type { MbButtonSize, MbButtonVariant } from "@/components/matchbook/Button";
-import type { MbIconButtonSize, MbIconButtonTone } from "@/components/matchbook/IconButton";
+import type { MbIconButtonSize, MbIconButtonVariant } from "@/components/matchbook/IconButton";
 // W1 / P1 — shared logic modules & Panel extensions
 import { MbIcon } from "@/components/matchbook/MbIcon";
 import { PanelEmpty, TeamMark } from "@/components/matchbook/Panel";
@@ -121,7 +121,7 @@ const BUTTON_SIZE_NOTE: Record<MbButtonSize, string> = {
   md: "48px · 17.6px pad · display/button (0.8rem) · 14px glyph — default",
   lg: "56px · 24px pad · 0.9rem · 16px glyph — the commit control",
 };
-const ICON_TONES: MbIconButtonTone[] = ["plain", "navy", "coral", "outline", "outline-navy"];
+const ICON_VARIANTS: MbIconButtonVariant[] = ["plain", "navy", "coral", "outline", "outline-navy"];
 const ICON_SIZES: MbIconButtonSize[] = ["sm", "md", "lg"];
 
 /** The same three rungs as MbButton, and now the same three numbers. */
@@ -280,13 +280,13 @@ const CoreControlsSection = () => {
             {ICON_SIZES.map((size) => (
               <KitBlock key={size} label={`size="${size}" — ${ICON_SIZE_NOTE[size]}`}>
                 <div className="flex flex-wrap items-center gap-3">
-                  {ICON_TONES.map((tone) => (
+                  {ICON_VARIANTS.map((variant) => (
                     <MbIconButton
-                      key={tone}
-                      tone={tone}
+                      key={variant}
+                      variant={variant}
                       size={size}
                       icon="close"
-                      label={`Close ${size} (${tone})`}
+                      label={`Close ${size} (${variant})`}
                     />
                   ))}
                 </div>
@@ -298,8 +298,8 @@ const CoreControlsSection = () => {
                 <MbButton variant="navy" icon="export">
                   Export CSV
                 </MbButton>
-                <MbIconButton icon="more" label="More export options" tone="outline-navy" />
-                <MbIconButton icon="print" label="Print" tone="outline-navy" />
+                <MbIconButton icon="more" label="More export options" variant="outline-navy" />
+                <MbIconButton icon="print" label="Print" variant="outline-navy" />
               </div>
               <p className="mt-3 text-[0.72rem] text-mb-ink-muted tabular-nums">
                 Both default to size=&quot;md&quot;, and size=&quot;md&quot; is 48px on both.
@@ -315,15 +315,15 @@ const CoreControlsSection = () => {
                 <MbIconButton icon="print" label="Print" />
                 <MbIconButton icon="expand" label="Expand" />
                 <MbIconButton icon="more" label="More actions" />
-                <MbIconButton icon="trash" label="Delete team" tone="outline" />
+                <MbIconButton icon="trash" label="Delete team" variant="outline" />
               </div>
             </KitBlock>
 
             <KitBlock label="Disabled">
               <div className="flex flex-wrap items-center gap-3">
                 <MbIconButton icon="undo" label="Undo point" disabled />
-                <MbIconButton icon="chevron-left" label="Previous round" tone="navy" disabled />
-                <MbIconButton icon="refresh" label="Retry" tone="outline-navy" disabled />
+                <MbIconButton icon="chevron-left" label="Previous round" variant="navy" disabled />
+                <MbIconButton icon="refresh" label="Retry" variant="outline-navy" disabled />
               </div>
               <p className="mt-3 text-[0.72rem] text-mb-ink-muted tabular-nums">
                 Every one carries both <code>title</code> and <code>aria-label</code> from the
@@ -342,11 +342,11 @@ const CoreControlsSection = () => {
                 </span>
               </div>
               <div className="mt-3 flex items-center gap-2">
-                <MbIconButton icon="chevron-left" label="Previous round" tone="outline-navy" />
+                <MbIconButton icon="chevron-left" label="Previous round" variant="outline-navy" />
                 <span className="matchbook-display flex-1 text-center text-[0.9rem] mb-track-display font-bold tabular-nums">
                   Round 3 of 7
                 </span>
-                <MbIconButton icon="chevron-right" label="Next round" tone="outline-navy" />
+                <MbIconButton icon="chevron-right" label="Next round" variant="outline-navy" />
               </div>
               <p className="mt-3 text-[0.72rem] text-mb-ink-muted tabular-nums">
                 8px between neighbours, 44px each — the two numbers the sweep checks.
@@ -1868,7 +1868,7 @@ const OverlaysAndFeedbackSection = () => {
       body: "The link may be out of date, or the organiser deleted it.",
       actions: [
         { label: "All competitions", icon: "chevron-left", href: "/competitions" },
-        { label: "Go home", href: "/", tone: "outline" },
+        { label: "Go home", href: "/", variant: "outline" },
       ],
     },
     {
@@ -1893,7 +1893,7 @@ const OverlaysAndFeedbackSection = () => {
       tone: "denied",
       title: "This session is private",
       body: "Ask the organiser for the share link, or sign in with the account that created it.",
-      actions: [{ label: "Sign in", icon: "login", href: "/login", tone: "navy" }],
+      actions: [{ label: "Sign in", icon: "login", href: "/login", variant: "navy" }],
     },
     {
       tone: "unconfigured",
@@ -2672,13 +2672,13 @@ const ScoreAndStatusSection = () => {
                   <MbIconButton
                     icon="minus"
                     label="Remove a point from Harbor Surge"
-                    tone="outline-navy"
+                    variant="outline-navy"
                     onClick={() => bumpHome(-1)}
                   />
                   <MbIconButton
                     icon="plus"
                     label="Add a point to Harbor Surge"
-                    tone="navy"
+                    variant="navy"
                     onClick={() => bumpHome(1)}
                   />
                 </div>
@@ -2686,13 +2686,13 @@ const ScoreAndStatusSection = () => {
                   <MbIconButton
                     icon="minus"
                     label="Remove a point from Riptide"
-                    tone="outline-navy"
+                    variant="outline-navy"
                     onClick={() => bumpAway(-1)}
                   />
                   <MbIconButton
                     icon="plus"
                     label="Add a point to Riptide"
-                    tone="navy"
+                    variant="navy"
                     onClick={() => bumpAway(1)}
                   />
                 </div>
@@ -2800,13 +2800,13 @@ const ScoreAndStatusSection = () => {
                 <MbIconButton
                   icon="minus"
                   label="Lower readiness by ten"
-                  tone="outline-navy"
+                  variant="outline-navy"
                   onClick={() => setMeter((v) => Math.max(0, v - 10))}
                 />
                 <MbIconButton
                   icon="plus"
                   label="Raise readiness by ten"
-                  tone="navy"
+                  variant="navy"
                   onClick={() => setMeter((v) => Math.min(100, v + 10))}
                 />
                 <span className="ml-1 text-[0.72rem] tabular-nums text-mb-ink-muted">
@@ -3250,13 +3250,13 @@ const ActionAndSharingSection = () => {
             icon="share"
             meta={<span className="mb-kicker">share → copy → dialog</span>}
           >
-            <ActionBlock label='variant="button" — tones'>
+            <ActionBlock label='as="button" — variants'>
               <div className="flex flex-wrap items-center gap-3">
-                {(["navy", "coral", "outline", "outline-navy"] as const).map((tone) => (
+                {(["navy", "coral", "outline", "outline-navy"] as const).map((variant) => (
                   <MbShareAction
-                    key={tone}
-                    variant="button"
-                    tone={tone}
+                    key={variant}
+                    as="button"
+                    variant={variant}
                     url={SHARE_URL}
                     title="Harbor Classic"
                     text="Follow the scores live."
@@ -3266,12 +3266,12 @@ const ActionAndSharingSection = () => {
               </div>
             </ActionBlock>
 
-            <ActionBlock label='variant="button" — sizes sm / md / lg'>
+            <ActionBlock label='as="button" — sizes sm / md / lg'>
               <div className="flex flex-wrap items-center gap-3">
                 {(["sm", "md", "lg"] as const).map((size) => (
                   <MbShareAction
                     key={size}
-                    variant="button"
+                    as="button"
                     size={size}
                     url={SHARE_URL}
                     title="Harbor Classic"
@@ -3282,13 +3282,13 @@ const ActionAndSharingSection = () => {
               </div>
             </ActionBlock>
 
-            <ActionBlock label='variant="icon" — 44px, name never changes'>
+            <ActionBlock label='as="icon" — 44px, name never changes'>
               <div className="flex flex-wrap items-center gap-3">
-                {(["plain", "navy", "outline-navy"] as const).map((tone) => (
+                {(["plain", "navy", "outline-navy"] as const).map((variant) => (
                   <MbShareAction
-                    key={tone}
-                    variant="icon"
-                    tone={tone}
+                    key={variant}
+                    as="icon"
+                    variant={variant}
                     url={SHARE_URL}
                     title="Harbor Classic"
                     text="Follow the scores live."
@@ -3301,7 +3301,7 @@ const ActionAndSharingSection = () => {
             <ActionBlock label="Custom label · disabled — nothing to share yet">
               <div className="flex flex-wrap items-center gap-3">
                 <MbShareAction
-                  variant="button"
+                  as="button"
                   label="Share live scores"
                   url={SHARE_URL}
                   title="Harbor Classic"
@@ -3309,13 +3309,13 @@ const ActionAndSharingSection = () => {
                   onResult={setOutcome}
                 />
                 <MbShareAction
-                  variant="button"
+                  as="button"
                   disabled
                   url=""
                   title="Harbor Classic"
                   text="Follow the scores live."
                 />
-                <MbShareAction variant="icon" disabled url="" title="Harbor Classic" text="" />
+                <MbShareAction as="icon" disabled url="" title="Harbor Classic" text="" />
               </div>
             </ActionBlock>
 
@@ -4418,7 +4418,7 @@ const ShellSection = () => {
                     subLine: "48 matches completed",
                     actions: [
                       { label: "Manage Event", icon: "settings", href: "#" },
-                      { label: "New Competition", icon: "plus", href: "#", tone: "coral" },
+                      { label: "New Competition", icon: "plus", href: "#", variant: "coral" },
                     ],
                   }}
                 >
@@ -4495,7 +4495,7 @@ const ShellSection = () => {
                 subLine="48 matches completed"
                 actions={[
                   { label: "Add Team", icon: "plus", onClick: () => {} },
-                  { label: "Quick Add", icon: "import", onClick: () => {}, tone: "outline" },
+                  { label: "Quick Add", icon: "import", onClick: () => {}, variant: "outline" },
                 ]}
               />
             </KitBlock>
@@ -4516,7 +4516,7 @@ const ShellSection = () => {
             <KitBlock label="A 62-character event name, no badge — wraps, never clips">
               <MatchbookMasthead
                 title="Riverside Winter Invitational Presented By The Harbor Club"
-                actions={[{ label: "Share Live", icon: "share", onClick: () => {}, tone: "coral" }]}
+                actions={[{ label: "Share Live", icon: "share", onClick: () => {}, variant: "coral" }]}
                 account={false}
               />
             </KitBlock>
@@ -4549,7 +4549,7 @@ const ShellSection = () => {
                   <MbIconButton
                     icon="share"
                     label="Share this event"
-                    tone="outline"
+                    variant="outline"
                     style={MB_ON_NAVY_CONTROL}
                   />
                 }
@@ -4996,7 +4996,7 @@ const FeedbackSection = () => {
                         label: "Back to overview",
                         icon: "overview",
                         href: "/",
-                        tone: "outline-navy",
+                        variant: "outline-navy",
                       },
                     ]}
                   />
@@ -5010,7 +5010,7 @@ const FeedbackSection = () => {
                         label: "Browse competitions",
                         icon: "compete",
                         href: "/competitions",
-                        tone: "outline-navy",
+                        variant: "outline-navy",
                       },
                     ]}
                   />
@@ -5024,7 +5024,7 @@ const FeedbackSection = () => {
                       {
                         label: "Reload the app",
                         icon: "overview",
-                        tone: "outline-navy",
+                        variant: "outline-navy",
                         onClick: () => {},
                       },
                     ]}

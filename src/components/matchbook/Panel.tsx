@@ -617,7 +617,7 @@ export const PanelEmpty = ({
   href,
   tone = "empty",
   icon,
-  actionTone = "outline-navy",
+  variant = "outline-navy",
   onAction,
 }: {
   message: string;
@@ -628,12 +628,12 @@ export const PanelEmpty = ({
   /** Sprite id overriding the tone's default mark. */
   icon?: string;
   /**
-   * Ink of the single action. Defaults to the quiet neutral outline, because a
-   * panel-level state is never the screen's primary job — invariant 15 gives
-   * coral one appearance per screen, and three empty panels used to spend it
-   * three times over. Coral is opt-in: `actionTone="coral"`.
+   * The single action's `.mb-btn` variant. Defaults to the quiet neutral
+   * outline, because a panel-level state is never the screen's primary job —
+   * invariant 15 gives coral one appearance per screen, and three empty panels
+   * used to spend it three times over. Coral is opt-in: `variant="coral"`.
    */
-  actionTone?: MbButtonVariant;
+  variant?: MbButtonVariant;
   /** Renders a real `<button>` instead of a link. Takes precedence over `href`. */
   onAction?: () => void;
 }) => {
@@ -650,14 +650,14 @@ export const PanelEmpty = ({
       action={
         actionLabel &&
         (onAction ? (
-          <MbButton variant={actionTone} size={size} onClick={onAction}>
+          <MbButton variant={variant} size={size} onClick={onAction}>
             {actionLabel}
           </MbButton>
         ) : href ? (
           /* A destination is a real anchor — it keeps middle-click, "open in new
              tab" and the status bar — and `MbButtonLink` draws it from the same
              three tables as the button above, so the two branches are one box. */
-          <MbButtonLink variant={actionTone} size={size} href={href}>
+          <MbButtonLink variant={variant} size={size} href={href}>
             {actionLabel}
           </MbButtonLink>
         ) : null)

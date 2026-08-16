@@ -157,13 +157,13 @@ export default function TeamsPage() {
           {
             label: TEAM_CREATE_LABEL,
             icon: "plus",
-            tone: "navy",
+            variant: "navy",
             onClick: handleCreateClick,
           },
           {
             label: TEAM_BULK_ADD_LABEL,
             icon: "import",
-            tone: "outline-navy",
+            variant: "outline-navy",
             onClick: handleQuickAddClick,
           },
         ],

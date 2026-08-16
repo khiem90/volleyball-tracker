@@ -347,14 +347,14 @@ export const MatchConsole = ({
         icon: "undo",
         onClick: onUndo,
         disabled: !canUndo,
-        tone: "outline-navy",
+        variant: "outline-navy",
       }}
       primary={{
         label: endLabel,
         icon: "check",
         onClick: onEnd,
         disabled: !canComplete,
-        tone: "coral",
+        variant: "coral",
       }}
     />
   );

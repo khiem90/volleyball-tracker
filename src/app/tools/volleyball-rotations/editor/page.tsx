@@ -416,11 +416,11 @@ const EditorWorkspace = ({ mode, existing, templateId }: WorkspaceProps) => {
                 : ""}
             </span>
           }
-          secondary={{ label: "Close", tone: "outline-navy", onClick: () => leave(exitHref) }}
+          secondary={{ label: "Close", variant: "outline-navy", onClick: () => leave(exitHref) }}
           primary={{
             label: mode === "edit" ? "Update Formation" : "Save Formation",
             icon: "save",
-            tone: "coral",
+            variant: "coral",
             loading: saving,
             onClick: () => void save(),
           }}
@@ -473,7 +473,7 @@ const EditorRoute = () => {
               {
                 label: "Sign in",
                 href: "/login?redirect=/tools/volleyball-rotations/editor",
-                tone: "coral",
+                variant: "coral",
               },
               { label: "Open the designer", href: "/tools/volleyball-rotations" },
             ]}
@@ -506,7 +506,7 @@ const EditorRoute = () => {
                 : "It may have been deleted, or the link may belong to another account."
             }
             actions={[
-              { label: "Open the archive", href: "/tools/volleyball-rotations/my-formations", tone: "coral" },
+              { label: "Open the archive", href: "/tools/volleyball-rotations/my-formations", variant: "coral" },
               { label: "Start a new formation", href: "/tools/volleyball-rotations/editor" },
             ]}
           />

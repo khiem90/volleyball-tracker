@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { MbActionTone } from "./ActionBar";
+import type { MbActionVariant } from "./ActionBar";
 import { MbButton, MbButtonLink } from "./Button";
 import { MB_STATE_SCALE, MbStateBlock, type PanelEmptyTone } from "./Panel";
 
@@ -11,11 +11,11 @@ import { MB_STATE_SCALE, MbStateBlock, type PanelEmptyTone } from "./Panel";
 export type MbEmptyStateTone = PanelEmptyTone;
 
 /**
- * `MbActionTone` verbatim, so `tone="outline"` means `.mb-btn-outline` here and
- * in `MbActionBar` alike. A second four-value union with a different meaning for
- * one of its members is exactly the drift the rubric penalises.
+ * `MbActionVariant` verbatim, so `variant="outline"` means `.mb-btn-outline`
+ * here and in `MbActionBar` alike. A second four-value union with a different
+ * meaning for one of its members is exactly the drift the rubric penalises.
  */
-export type MbEmptyStateActionTone = MbActionTone;
+export type MbEmptyStateActionVariant = MbActionVariant;
 
 export interface MbEmptyStateAction {
   label: string;
@@ -23,11 +23,11 @@ export interface MbEmptyStateAction {
   onClick?: () => void;
   /** Sprite icon id. */
   icon?: string;
-  tone?: MbEmptyStateActionTone;
+  variant?: MbEmptyStateActionVariant;
 }
 
 const ActionControl = ({ action, primary }: { action: MbEmptyStateAction; primary: boolean }) => {
-  const tone = action.tone ?? (primary ? "coral" : "outline-navy");
+  const variant = action.variant ?? (primary ? "coral" : "outline-navy");
   const size = MB_STATE_SCALE.route.button;
 
   /* A destination is an anchor, not a button — so it keeps middle-click, "open
@@ -36,14 +36,14 @@ const ActionControl = ({ action, primary }: { action: MbEmptyStateAction; primar
      the two branches below render one box in two tags. */
   if (action.href) {
     return (
-      <MbButtonLink variant={tone} size={size} icon={action.icon} href={action.href}>
+      <MbButtonLink variant={variant} size={size} icon={action.icon} href={action.href}>
         {action.label}
       </MbButtonLink>
     );
   }
 
   return (
-    <MbButton variant={tone} size={size} icon={action.icon} onClick={action.onClick}>
+    <MbButton variant={variant} size={size} icon={action.icon} onClick={action.onClick}>
       {action.label}
     </MbButton>
   );

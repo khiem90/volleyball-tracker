@@ -456,7 +456,7 @@ const Keys = ({
     <MbIconButton
       icon="minus"
       label={`Take a point off ${team.name}`}
-      tone="outline-navy"
+      variant="outline-navy"
       size="sm"
       onClick={() => onAdjust(-1)}
     />
@@ -468,7 +468,7 @@ const Keys = ({
         <MbIconButton
           icon="plus"
           label={`Add a point to ${team.name}`}
-          tone="outline-navy"
+          variant="outline-navy"
           size="sm"
           onClick={() => onAdjust(1)}
         />
@@ -752,7 +752,7 @@ export const MbScoreSide = ({
               <MbIconButton
                 icon="minus"
                 label={`Take a point off ${team.name}`}
-                tone="outline-navy"
+                variant="outline-navy"
                 size="sm"
                 onClick={() => onAdjust(-1)}
               />
@@ -770,7 +770,7 @@ export const MbScoreSide = ({
               <MbIconButton
                 icon="minus"
                 label={`Take a point off ${team.name}`}
-                tone="outline-navy"
+                variant="outline-navy"
                 size="sm"
                 onClick={() => onAdjust(-1)}
               />

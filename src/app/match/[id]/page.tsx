@@ -80,13 +80,13 @@ export default function MatchPage() {
               actions={[
                 { label: "Try again", icon: "refresh", onClick: () => window.location.reload() },
                 missingTeams
-                  ? { label: "Team Directory", href: "/teams", icon: "teams", tone: "outline-navy" }
-                  : { label: "Match History", href: "/summaries", icon: "history", tone: "outline-navy" },
+                  ? { label: "Team Directory", href: "/teams", icon: "teams", variant: "outline-navy" }
+                  : { label: "Match History", href: "/summaries", icon: "history", variant: "outline-navy" },
                 {
                   label: model.backHref === "/" ? "Overview" : "Competition",
                   href: model.backHref,
                   icon: "chevron-left",
-                  tone: "outline-navy",
+                  variant: "outline-navy",
                 },
               ]}
             />
@@ -126,7 +126,7 @@ export default function MatchPage() {
           label: "Match History",
           icon: "history",
           href: "/summaries",
-          tone: "outline-navy",
+          variant: "outline-navy",
         },
         primary: {
           label: model.backHref === "/" ? "Back to Overview" : "Back to Competition",

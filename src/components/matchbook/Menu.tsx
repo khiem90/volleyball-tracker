@@ -31,7 +31,7 @@ const OPEN_STATE = "data-[state=open]:bg-[var(--mb-tint-2)] data-[state=open]:te
  */
 export const MbMenu = ({
   trigger,
-  triggerVariant = "outline-navy",
+  variant = "outline-navy",
   label = "More actions",
   items,
   align = "end",
@@ -40,7 +40,7 @@ export const MbMenu = ({
   /**
    * The words of a *worded* trigger — text only; the disclosure chevron is
    * supplied. Omit it and the trigger is the 44x44 `more` disc
-   * (`MbIconButton tone="plain"`, not a copy of it). Never a node, so the
+   * (`MbIconButton variant="plain"`, not a copy of it). Never a node, so the
    * trigger can neither nest an interactive element nor smuggle in a block-level
    * glyph that would push the label onto its own line.
    */
@@ -52,7 +52,7 @@ export const MbMenu = ({
    * the plain treatment because a lone glyph in a row already reads as a
    * control.
    */
-  triggerVariant?: MbButtonVariant;
+  variant?: MbButtonVariant;
   /** Becomes `title` + `aria-label`. Must contain the trigger's visible words. */
   label?: string;
   items: MbMenuItem[];
@@ -73,12 +73,12 @@ export const MbMenu = ({
           <MbIconButton
             icon="more"
             label={label}
-            tone="plain"
+            variant="plain"
             className={`${OPEN_STATE} ${className}`}
           />
         ) : (
           <MbButton
-            variant={triggerVariant}
+            variant={variant}
             iconRight="chevron-down"
             title={label}
             aria-label={label}

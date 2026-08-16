@@ -195,7 +195,7 @@ export const MbAccountChip = ({
   return (
     <MbMenu
       trigger="Account"
-      triggerVariant="outline-navy"
+      variant="outline-navy"
       label="Account menu"
       items={menuItems(address, handleSignOut)}
       className={className}

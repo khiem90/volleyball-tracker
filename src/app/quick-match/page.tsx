@@ -8,7 +8,12 @@ import { useQuickMatchPage } from "@/hooks/useQuickMatchPage";
 import { MatchbookShell } from "@/components/matchbook/AppShell";
 import { MbPageLoading } from "@/components/matchbook/Loading";
 import { MbIcon } from "@/components/matchbook/MbIcon";
+import { MbActionBar, type MbAction } from "@/components/matchbook/ActionBar";
 import { MbButton, MbButtonLink } from "@/components/matchbook/Button";
+import {
+  MB_VIEWPORT_FILL,
+  useMbViewportFill,
+} from "@/components/matchbook/useViewportFill";
 import { MbSelect } from "@/components/matchbook/form";
 import { MbMatchupPair } from "@/components/matchbook/MatchRow";
 import { MbNotice } from "@/components/matchbook/Notice";
@@ -169,12 +174,24 @@ const ResultMark = ({ homeWon }: { homeWon: boolean }) => (
 /* ===========================================================================
    QUICK MATCH
 
-   Coral budget: the screen's primary is "Start Match", which is an `onClick`
-   and so can only live in the masthead. The rail key therefore takes
-   `outline-navy` and points at the team directory — a real destination rather
-   than the self-link the rail used to carry — and the in-panel "Start Scoring"
-   drops to navy, because it is the SAME action as the masthead's and two coral
-   fills for one verb is what invariant 15 exists to stop.
+   THE PRIMARY LIVES IN THE BOTTOM COMMIT BAR (design language §8). This
+   screen's whole job is one commit — Start Match — and the masthead put that
+   verb at 0.20 of the viewport height at 390x844: the top of the screen, on
+   the surface a thumb pays for the bottom of. §8 names the answer ("any
+   screen whose main job is a single repeated action puts that action in an
+   `MbActionBar`, not in the masthead") and this page now applies it the way
+   `/competitions/new` and the scoring console already do: one sticky bar,
+   riding `--mb-toast-offset` above the fixed tab bar, standing on the shared
+   `MB_VIEWPORT_FILL` column so it sits at the viewport bottom even on an
+   account too new to fill the screen. On an account with fewer than two teams
+   the SAME slot carries the move that IS possible — Add Your First / Another
+   Team, navy, `/teams` — exactly as the masthead variant it replaces did.
+
+   Coral budget: the bar's Start Match is the screen's one coral fill. The
+   rail key takes `outline-navy` and points at the team directory — a real
+   destination rather than the self-link the rail used to carry — and the
+   in-panel "Start Scoring" stays navy, because it is the SAME action as the
+   bar's and two coral fills for one verb is what invariant 15 exists to stop.
    =========================================================================== */
 
 export default function QuickMatchPage() {
@@ -194,6 +211,9 @@ export default function QuickMatchPage() {
     homeTeamId,
   } = useQuickMatchPage();
   const data = useMatchbookQuickMatch({ homeTeamId, awayTeamId });
+  /* Called before the loading gate: a hook after an early return is a hook
+     that mounts conditionally. */
+  const columnRef = useMbViewportFill();
 
   if (isLoading) {
     return <MbPageLoading active="/quick-match" />;
@@ -213,12 +233,34 @@ export default function QuickMatchPage() {
   const startEnabled = isGuest || canStart;
 
   /* A quick match needs two sides to name, and a signed-in account with fewer
-     than two teams cannot start one however loud the button is. The masthead
-     used to print a DISABLED coral "Start Match" here — the loudest control on
-     the screen, unusable, on the screen a new user reaches from the rail on
-     every other page. It now carries the move that IS possible, in navy,
-     derived from the count exactly as `/`'s primary is. */
+     than two teams cannot start one however loud the button is. The commit
+     bar used to inherit a DISABLED coral "Start Match" from the masthead on
+     exactly this account — the loudest control on the screen, unusable, on
+     the screen a new user reaches from the rail on every other page. The slot
+     instead carries the move that IS possible, in navy, derived from the
+     count exactly as `/`'s primary is. */
   const needsTeams = !isGuest && availableTeams.length < 2;
+
+  /* THE ONE COMMIT, in the bar's primary slot (§8). `disabled` rather than
+     the wizard's dormant-dress treatment is deliberate continuity: the
+     Scoreboard Preview's "Start Scoring" is the same verb in the same state
+     and prints "Select both teams to start scoring." beside it — the bar and
+     the panel must not disagree about whether the action is takeable. */
+  const primaryAction: MbAction = needsTeams
+    ? {
+        label:
+          availableTeams.length === 0 ? "Add Your First Team" : "Add Another Team",
+        icon: "teams",
+        variant: "navy",
+        href: "/teams",
+      }
+    : {
+        label: "Start Match",
+        icon: "quick",
+        variant: "coral",
+        onClick: startScoring,
+        disabled: !startEnabled,
+      };
 
   /* Arms at TWO, as `/` and `/competitions` do. On a new account both are mute
      at once; on a populated one only Team Form is until both sides are picked,
@@ -247,7 +289,7 @@ export default function QuickMatchPage() {
         href: isGuest ? "/login?redirect=/quick-match" : "/teams",
         label: isGuest ? "Sign In" : "Team Directory",
         icon: isGuest ? "login" : "teams",
-        tone: "outline-navy",
+        variant: "outline-navy",
       }}
       masthead={{
         title: (
@@ -266,27 +308,12 @@ export default function QuickMatchPage() {
           : { value: `#${data.nextMatchNumber}`, label: "Match" },
         dateLine: data.dateLine,
         subLine: data.subLine,
-        actions: [
-          needsTeams
-            ? {
-                label:
-                  availableTeams.length === 0
-                    ? "Add Your First Team"
-                    : "Add Another Team",
-                icon: "teams",
-                tone: "navy",
-                href: "/teams",
-              }
-            : {
-                label: "Start Match",
-                icon: "quick",
-                tone: "coral",
-                onClick: startScoring,
-                disabled: !startEnabled,
-              },
-        ],
+        /* No `actions`. The screen's one verb is in the commit bar below — a
+           masthead copy would be a second control for the same commit, kept in
+           step by hand, which is what the wizard's note 2 exists to stop. */
       }}
     >
+      <div ref={columnRef} className={`flex flex-col gap-4 ${MB_VIEWPORT_FILL}`}>
       <div className="mb-enter-grid grid grid-cols-1 gap-4 xl:grid-cols-12">
         {/* Match setup */}
         <div className="xl:col-span-7">
@@ -578,6 +605,21 @@ export default function QuickMatchPage() {
             )}
           </>
         )}
+      </div>
+
+      {/* THE COMMIT BAR (§8). Same recipe as the wizard's, and each piece is
+          load-bearing: `mt-auto` sends the bar to the end of the
+          viewport-fill column on a short page; the inline `bottom` rides the
+          bar above the fixed tab bar via the offset `MatchbookBottomBar`
+          publishes (57px under `lg`, 0 at `lg` and 0 in landscape), and the
+          `!` is required because `.mb-action-bar { bottom: 0 }` is unlayered
+          and outranks a plain utility. `mb-enter mb-stagger-4` is the "slides
+          up on first mount only" the brief asks of a sticky commit bar — it
+          sits outside `.mb-enter-grid`, so it arrives once with the route. */}
+      <MbActionBar
+        className="mb-enter mb-stagger-4 mt-auto bottom-[var(--mb-toast-offset,0px)]!"
+        primary={primaryAction}
+      />
       </div>
     </MatchbookShell>
   );

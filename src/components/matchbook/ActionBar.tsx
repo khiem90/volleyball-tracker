@@ -4,11 +4,11 @@ import type { CSSProperties, ReactNode } from "react";
 import { MbButton, MbButtonLink, type MbButtonVariant } from "./Button";
 
 /**
- * The bar's tones *are* the button's variants — one union, not a second
+ * The bar's action faces *are* the button's variants — one union, not a second
  * four-value union that happens to have the same members. Aliasing rather than
  * re-declaring is what stops the two drifting when a variant is added.
  */
-export type MbActionTone = MbButtonVariant;
+export type MbActionVariant = MbButtonVariant;
 
 export interface MbAction {
   label: string;
@@ -21,7 +21,7 @@ export interface MbAction {
   /** Busy: blocks activation, swaps the glyph, never animates. */
   loading?: boolean;
   /** Defaults to `coral` for `primary`, `outline-navy` for `secondary`. */
-  tone?: MbActionTone;
+  variant?: MbActionVariant;
 }
 
 /**
@@ -90,13 +90,13 @@ const FLEX = "flex-auto sm:flex-initial";
  * keyboard.
  */
 const BarAction = ({ action, primary }: { action: MbAction; primary: boolean }) => {
-  const tone = action.tone ?? (primary ? "coral" : "outline-navy");
+  const variant = action.variant ?? (primary ? "coral" : "outline-navy");
 
   if (action.href && !action.disabled && !action.loading) {
     return (
       <MbButtonLink
         href={action.href}
-        variant={tone}
+        variant={variant}
         size="lg"
         icon={action.icon}
         className={FLEX}
@@ -108,7 +108,7 @@ const BarAction = ({ action, primary }: { action: MbAction; primary: boolean }) 
 
   return (
     <MbButton
-      variant={tone}
+      variant={variant}
       size="lg"
       icon={action.icon}
       loading={action.loading}

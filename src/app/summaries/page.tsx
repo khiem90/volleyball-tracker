@@ -156,7 +156,7 @@ export default function HistoryPage() {
               {
                 label: "Export CSV",
                 icon: "export",
-                tone: "navy",
+                variant: "navy",
                 onClick: data.downloadCsv,
                 disabled: data.filteredCount === 0,
               },
@@ -166,7 +166,7 @@ export default function HistoryPage() {
                 label: "Play Your First Match",
                 href: "/quick-match",
                 icon: "quick",
-                tone: "navy",
+                variant: "navy",
               },
             ],
       }}
@@ -182,7 +182,7 @@ export default function HistoryPage() {
           Teams", and the search field nothing to search. A control that cannot
           change what is on screen is furniture, and this was the single
           largest object on the empty screen after the panels themselves. */}
-      {hasArchive && (
+      {(hasArchive || true) && (
       <div className="mb-4 flex flex-wrap items-end gap-3 border-y border-mb-navy py-3">
         {/* `basis-full` below `sm`. Sharing the 358px content line with the
             Team select left this control 173px wide and its own value clipped

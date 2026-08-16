@@ -3,10 +3,17 @@ import { MbIcon } from "./MbIcon";
 
 export type MbNoticeTone = "info" | "warn" | "danger" | "success";
 
+/* One mark per tone, no two shared (F7). `warn` keeps the exclamation
+   triangle — the caution glyph everywhere. `danger` takes `close`, the X:
+   the error convention, and the only mark in the 62-id sprite that reads
+   "this failed" rather than "mind this". They were both `warning` once,
+   which made the tone rule the ONLY difference between "heads up" and
+   role="alert" — a distinction the left rule alone cannot carry for a
+   colour-blind reader or a grayscale print. */
 const DEFAULT_ICON: Record<MbNoticeTone, string> = {
   info: "help",
   warn: "warning",
-  danger: "warning",
+  danger: "close",
   success: "check",
 };
 
