@@ -6,6 +6,8 @@ import { MbBadge } from "./Badge";
 import { MbFinalStamp } from "./FinalStamp";
 import {
   MbScoreNumeral,
+  mbEdgeShiftEm,
+  mbInkScale,
   type MbScoreNumeralAlign,
   type MbScoreNumeralSize,
 } from "./ScoreNumeral";
@@ -58,7 +60,11 @@ const SeriesPips = ({ wins, of }: { wins: number; of: number }) => (
  * and nothing beside it moves when the score changes; but the figures hug the
  * divider, which leaves that reserve open on the outside, and a rule cut to the
  * box would hang over blank paper — 49.5px of navy over a 16.5px "9" at the
- * compact step. `.mb-score-rule` reads the figure count off `--mb-figures`.
+ * compact step. `.mb-score-rule` reads the figure count off `--mb-figures` —
+ * scaled by `mbInkScale`, because the figures themselves now render at the
+ * digit-count ink scale (`ScoreNumeral.tsx`, C1) — and carries the same
+ * ink-centring `translate` the numeral does, so the mark stays on the ink it
+ * marks rather than on the cell geometry behind it.
  */
 const ScoreCell = ({
   value,
@@ -77,8 +83,10 @@ const ScoreCell = ({
       className={`mb-score-rule mb-numeral--${size}`}
       style={
         {
-          "--mb-figures": String(value).length,
+          "--mb-figures": (String(value).length * mbInkScale(String(value).length)).toFixed(3),
           "--mb-score-ink": lead ?? "transparent",
+          translate:
+            mbEdgeShiftEm(value, align) !== 0 ? `${mbEdgeShiftEm(value, align)}em` : undefined,
         } as React.CSSProperties
       }
     />

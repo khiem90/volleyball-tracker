@@ -233,7 +233,7 @@ const ActiveRule = ({ active, still }: { active: boolean; still: boolean }) => (
  */
 const CellLabel = ({ label, active }: { label: string; active: boolean }) => (
   <span
-    className={`matchbook-display block w-full truncate text-center text-[0.62rem] leading-none tracking-[0.08em] ${
+    className={`matchbook-display block w-full truncate text-center text-[0.62rem] leading-none mb-track-nav ${
       active ? "font-bold" : "font-semibold"
     }`}
   >

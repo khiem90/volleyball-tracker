@@ -453,9 +453,9 @@ export default function QuickMatchPage() {
               <div className="flex items-center gap-3">
                 <ScorePreviewSide summary={homeSummary} placeholder="Home team" />
                 <div className="flex items-center gap-2.5">
-                  <span className="matchbook-display text-6xl tracking-normal font-bold tabular-nums">0</span>
+                  <span className="matchbook-display text-6xl mb-track-numeral font-bold tabular-nums">0</span>
                   <span className="mb-score-box mb-track-title px-2">VS</span>
-                  <span className="matchbook-display text-6xl tracking-normal font-bold tabular-nums">0</span>
+                  <span className="matchbook-display text-6xl mb-track-numeral font-bold tabular-nums">0</span>
                 </div>
                 <ScorePreviewSide summary={awaySummary} placeholder="Away team" />
               </div>

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useApp } from "@/context/AppContext";
-import { rankTeams } from "@/lib/standings";
+import { rankTeamsWithMovement } from "@/lib/standings";
 import type { Competition, CompetitionType, Match } from "@/types/game";
 import type { MbStandingLine } from "./StandingsTable";
 import { buildTeamTallies, recentForm } from "./teamStats";
@@ -324,7 +324,7 @@ export const useMatchbookCompete = (): MbCompeteData => {
       const standings: MbStandingLine[] =
         isElimination || completed.length === 0
         ? []
-        : rankTeams(competition.teamIds, matches, competition.config).map((row) => ({
+        : rankTeamsWithMovement(competition.teamIds, matches, competition.config).map((row) => ({
             teamId: row.teamId,
             team: refFor(row.teamId),
             rank: row.rank,
@@ -338,6 +338,7 @@ export const useMatchbookCompete = (): MbCompeteData => {
             diff: row.pointsDiff,
             points: row.competitionPoints,
             form: recentForm(tallies.get(row.teamId)),
+            movement: row.movement,
           }));
 
       selected = {

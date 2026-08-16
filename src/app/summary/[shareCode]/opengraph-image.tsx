@@ -47,7 +47,7 @@ const crest = `data:image/svg+xml;base64,${Buffer.from(MB_OG_CREST_SVG).toString
 /** display/kicker, scaled for a card read at ~500px wide. */
 const kicker = (color: string) => ({
   fontSize: 22,
-  letterSpacing: "0.18em",
+  letterSpacing: "0.18em", // --mb-track-code (Satori takes no CSS custom properties)
   textTransform: "uppercase" as const,
   color,
 });
@@ -178,7 +178,7 @@ const OgImage = async ({ params }: { params: Promise<{ shareCode: string }> }) =
                 ...kicker(MB_OG_INK.navy),
                 flex: 1,
                 fontSize: 20,
-                letterSpacing: "0.12em",
+                letterSpacing: "0.12em", // --mb-track-head (Satori takes no CSS custom properties)
                 whiteSpace: "nowrap",
                 overflow: "hidden",
               }}
@@ -189,7 +189,7 @@ const OgImage = async ({ params }: { params: Promise<{ shareCode: string }> }) =
               style={{
                 ...kicker(MB_OG_INK.inkMuted),
                 fontSize: 20,
-                letterSpacing: "0.12em",
+                letterSpacing: "0.12em", // --mb-track-head (Satori takes no CSS custom properties)
                 whiteSpace: "nowrap",
                 marginLeft: 28,
               }}

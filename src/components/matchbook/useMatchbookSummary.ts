@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { exportMatchesCsv } from "@/lib/exportCsv";
-import { rankTeams } from "@/lib/standings";
+import { rankTeamsWithMovement } from "@/lib/standings";
 import { teamColorCss } from "@/lib/teamColor";
 import { useSummaryPage, type MbSummaryStatus } from "@/hooks/useSummaryPage";
 import type { Match, PersistentTeam } from "@/types/game";
@@ -243,7 +243,7 @@ export const useMatchbookSummary = (): MbSummaryData => {
       [...completed].sort((a, b) => (b.completedAt ?? 0) - (a.completedAt ?? 0))
     );
 
-    const ranked = rankTeams(teamIds, matches, competition?.config);
+    const ranked = rankTeamsWithMovement(teamIds, matches, competition?.config);
     const standings: MbStandingLine[] = ranked.map((line) => ({
       teamId: line.teamId,
       team: refFor(line.teamId),
@@ -258,6 +258,7 @@ export const useMatchbookSummary = (): MbSummaryData => {
       diff: line.pointsDiff,
       points: line.competitionPoints,
       form: recentForm(tallies.get(line.teamId)),
+      movement: line.movement,
     }));
 
     /* --------------------------------------------------------- champion */

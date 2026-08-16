@@ -245,11 +245,10 @@ export const CreateSessionDialog = ({
             <div className="flex flex-col gap-2">
               <span className="mb-kicker">Share code</span>
               <p
-                className="matchbook-display border-[1.5px] border-mb-navy bg-mb-paper-bright px-4 py-3 text-center text-2xl mb-track-display font-bold tabular-nums"
+                className="matchbook-display border-[1.5px] border-mb-navy bg-mb-paper-bright px-4 py-3 text-center text-2xl mb-track-code font-bold tabular-nums"
                 /* The code voice, matching `.mb-code-chip`'s 0.18em. It was
                    0.35em: a second tracking for the one relationship "a code a
                    reader has to read back", and past the ladder's top rung. */
-                style={{ letterSpacing: "0.18em" }}
               >
                 {created.shareCode}
               </p>

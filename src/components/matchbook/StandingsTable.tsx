@@ -1,5 +1,6 @@
 "use client";
 
+import { MbIcon } from "./MbIcon";
 import { Crest, FormLetters, TeamMark } from "./Panel";
 import { MbTeamName } from "./TeamName";
 import { MbTableScroll } from "./TableScroll";
@@ -51,6 +52,12 @@ export interface MbStandingLine {
   points: number;
   /** Most recent results, oldest first. */
   form: MbFormResult[];
+  /**
+   * Places gained (+) or lost (−) since the previous round, from
+   * `rankTeamsWithMovement`. `undefined` — no earlier round exists — renders
+   * NOTHING, so a first-round table carries no mark rather than a dash farm.
+   */
+  movement?: number;
 }
 
 export type MbStandingsColumn =
@@ -62,6 +69,7 @@ export type MbStandingsColumn =
   | "pointsAgainst"
   | "diff"
   | "points"
+  | "gap"
   | "form";
 
 export const MB_STANDINGS_COLUMNS: readonly MbStandingsColumn[] = [
@@ -72,6 +80,7 @@ export const MB_STANDINGS_COLUMNS: readonly MbStandingsColumn[] = [
   "pointsAgainst",
   "diff",
   "points",
+  "gap",
   "form",
 ];
 
@@ -122,6 +131,15 @@ const COLUMN: Record<MbStandingsColumn, ColumnSpec> = {
     strong: true,
   },
   points: { short: "Pts", full: "Competition points", reveal: "", strong: true },
+  /* The comparative column (rubric D4's "who threatens whom"): how many
+     competition points a row is off the top of the table. It reads DOWN from
+     the leader — "−3" is one win of the standard 3 — so the chase is a number
+     rather than a subtraction the reader performs per row. The leader's own
+     cell is EMPTY: it is not behind anything, and a "0"/dash would claim a
+     measure that does not exist for that row. Revealed at `sm` beside PD, so
+     the 320px column set (BUG-11) is untouched; below `sm` it rides the
+     kicker line with the other hidden measures. */
+  gap: { short: "Gap", full: "Points behind the leader", reveal: "hidden sm:table-cell" },
   form: { short: "Form", full: "Recent form", reveal: "hidden lg:table-cell" },
 };
 
@@ -134,18 +152,30 @@ const MOBILE_HIDDEN: readonly MbStandingsColumn[] = [
   "pointsFor",
   "pointsAgainst",
   "diff",
+  "gap",
 ];
 
 const mobileMeasures = (
   line: MbStandingLine,
-  columns: readonly MbStandingsColumn[]
+  columns: readonly MbStandingsColumn[],
+  leaderPoints: number
 ) =>
   columns
     .filter((column) => MOBILE_HIDDEN.includes(column))
-    .map((column) => `${COLUMN[column].short} ${measure(line, column)}`)
+    .map((column) => {
+      const value = measure(line, column, leaderPoints);
+      /* A null measure (the leader's own gap) contributes nothing — not a
+         labelled blank. */
+      return value === null ? null : `${COLUMN[column].short} ${value}`;
+    })
+    .filter((entry): entry is string => entry !== null)
     .join(" · ");
 
-const measure = (line: MbStandingLine, column: MbStandingsColumn) => {
+const measure = (
+  line: MbStandingLine,
+  column: MbStandingsColumn,
+  leaderPoints: number
+) => {
   switch (column) {
     case "played":
       return line.played;
@@ -163,9 +193,37 @@ const measure = (line: MbStandingLine, column: MbStandingsColumn) => {
       return signed(line.diff);
     case "points":
       return line.points;
+    case "gap":
+      /* Signed, matching PD's grammar, and joint leaders are all "the
+         leader" — rank 1 is what earns the empty cell, not row index 0. */
+      return line.rank === 1 ? null : signed(line.points - leaderPoints);
     case "form":
       return null;
   }
+};
+
+/**
+ * The rank-movement mark: the printed almanac's margin arrow. Direction is
+ * SHAPE (one chevron, rotated), never hue — both directions take the same
+ * muted ink, so a desaturated capture reads them identically to a colour one
+ * (invariant 13) — and the word lives in `sr-only` with the magnitude the
+ * glyph compresses. `movement === 0` and `movement === undefined` both render
+ * nothing: a held place needs no announcement, and a table with no previous
+ * round has no history to claim.
+ */
+const Movement = ({ movement }: { movement?: number }) => {
+  if (!movement) return null;
+  const up = movement > 0;
+  const places = Math.abs(movement);
+  return (
+    <span className="mt-0.5 flex justify-center text-mb-ink-muted">
+      <MbIcon id="chevron-down" size={9} className={up ? "rotate-180" : ""} />
+      <span className="sr-only">
+        {up ? "Up" : "Down"} {places} {places === 1 ? "place" : "places"} since
+        the previous round
+      </span>
+    </span>
+  );
 };
 
 export const MbStandingsTable = ({
@@ -188,7 +246,12 @@ export const MbStandingsTable = ({
   /** Draws the row's rail in coral instead of leaving it unmarked. */
   highlightTeamId?: string;
   className?: string;
-}) => (
+}) => {
+  /* The top of the table, for the GB column. Rows arrive already ranked, so
+     the first row's points are the leader's — including a joint lead, where
+     every rank-1 row holds the same total by definition of the sort. */
+  const leaderPoints = rows[0]?.points ?? 0;
+  return (
   <MbTableScroll unit="columns">
     <table
       className={`mb-table ${compact ? "mb-table-compact" : ""} w-full border-collapse ${className}`}
@@ -236,9 +299,17 @@ export const MbStandingsTable = ({
               >
                 {/* A joint rank is marked with the printed-table "=" rather
                     than repeating a bare number, so two 2nds do not read as a
-                    sorting bug. */}
-                {line.sharesRank ? "=" : ""}
-                {line.rank}
+                    sorting bug. The movement chevron stacks INSIDE this cell
+                    rather than taking a column of its own: the rank cell is
+                    already the row's position channel, and a tenth `<th>`
+                    would spend ~14px of the name column at 320 for a 9px
+                    glyph. Stacked, it costs the table nothing — the cell's
+                    content is 27px in a 50px row. */}
+                <span className="block leading-none">
+                  {line.sharesRank ? "=" : ""}
+                  {line.rank}
+                </span>
+                <Movement movement={line.movement} />
               </th>
               {/* The ceiling, not just the floor.
                   `TeamMark` carries `min-w-0` — "I may shrink" — but in
@@ -260,7 +331,7 @@ export const MbStandingsTable = ({
                     legend still named all seven. They ride the row itself
                     instead, which needs no scroller and no accordion. */}
                 <span className="mb-kicker mt-0.5 block tabular-nums sm:hidden">
-                  {mobileMeasures(line, columns)}
+                  {mobileMeasures(line, columns, leaderPoints)}
                 </span>
               </td>
               {columns.map((column) => {
@@ -289,9 +360,9 @@ export const MbStandingsTable = ({
                     key={column}
                     className={`text-center tabular-nums ${spec.reveal} ${
                       spec.strong ? "matchbook-display font-bold" : ""
-                    }`}
+                    } ${column === "gap" ? "text-mb-ink-muted" : ""}`}
                   >
-                    {measure(line, column)}
+                    {measure(line, column, leaderPoints)}
                   </td>
                 );
               })}
@@ -301,7 +372,8 @@ export const MbStandingsTable = ({
       </tbody>
     </table>
   </MbTableScroll>
-);
+  );
+};
 
 /**
  * The legend that used to be three coloured medal glyphs. It is a ruled footer

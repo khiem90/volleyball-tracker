@@ -337,12 +337,19 @@ const FIT_BOX =
  * hugging. Stacked is `width < 640 AND height > 520` — the exact complement of
  * the two conditions `MatchConsole` turns the grid to columns on.
  *
- * `!` on each because `ScoreNumeral` sets `text-align` and the anchor offset as
- * INLINE styles, which only `!important` outranks.
+ * `!` on each because `ScoreNumeral` positions the ink overlay and the
+ * rule-hugging `translate` as INLINE styles, which only `!important` outranks.
+ * The overlay (`.mb-numeral-ink`) re-centres with `left-0 right-0 mx-auto` —
+ * it is an absolute `max-content` box, so the auto margins split the reserve —
+ * and `translate-x-0` on the layer kills the ink-centring shift, which exists
+ * to balance a pair on a rule this layout does not have.
  */
 const STACKED_CENTRE =
   "[@media(max-width:639px)_and_(min-height:521px)]:justify-items-center " +
-  "[@media(max-width:639px)_and_(min-height:521px)]:[&_.mb-numeral]:text-center! " +
+  "[@media(max-width:639px)_and_(min-height:521px)]:[&_.mb-numeral]:translate-x-0! " +
+  "[@media(max-width:639px)_and_(min-height:521px)]:[&_.mb-numeral-ink]:left-0! " +
+  "[@media(max-width:639px)_and_(min-height:521px)]:[&_.mb-numeral-ink]:right-0! " +
+  "[@media(max-width:639px)_and_(min-height:521px)]:[&_.mb-numeral-ink]:mx-auto! " +
   "[@media(max-width:639px)_and_(min-height:521px)]:[&_.mb-score-rule]:right-auto! " +
   "[@media(max-width:639px)_and_(min-height:521px)]:[&_.mb-score-rule]:left-1/2! " +
   "[@media(max-width:639px)_and_(min-height:521px)]:[&_.mb-score-rule]:-translate-x-1/2!";

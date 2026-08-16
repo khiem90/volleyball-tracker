@@ -93,7 +93,7 @@ const HAIRLINE = { vectorEffect: "non-scaling-stroke" } as const;
 const EDGE_LABEL: CSSProperties = {
   fontSize: 13.6,
   fontWeight: 600,
-  letterSpacing: "0.16em",
+  letterSpacing: "var(--mb-track-kicker)",
   fill: "var(--mb-ink-muted)",
   fontVariantNumeric: "tabular-nums",
 };
@@ -104,7 +104,7 @@ const ZONE_NUMERAL: CSSProperties = {
   /* 0.01em, which is `display/masthead`'s tracking at the same 36px/700 the
      mobile `<h1>` renders at. Left at `.matchbook-display`'s 0.02em default it
      was a tracking collision with the page's own title (rubric 1.3). */
-  letterSpacing: "0.01em",
+  letterSpacing: "var(--mb-track-masthead)",
   fill: "var(--mb-court-line-strong)",
   fillOpacity: 0.1,
   fontVariantNumeric: "tabular-nums",

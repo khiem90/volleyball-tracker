@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   rankTeams,
+  rankTeamsWithMovement,
   tallyTeams,
   compareStandings,
   assignRanks,
@@ -407,5 +408,57 @@ describe('rankTeams vs the legacy calculateStandings', () => {
       legacy.map((row) => row.competitionPoints)
     );
     expect(ranked.map((row) => row.pointsDiff)).toEqual(legacy.map((row) => row.pointsDiff));
+  });
+});
+
+describe('rankTeamsWithMovement', () => {
+  /* Round 1: t0 and t1 win. Round 2: t3 beats t0, t1 beats t2 — so t0 falls,
+     t3 rises past t2, and t1 holds the top. */
+  const twoRounds = [
+    done('t0', 21, 10, 't1', { id: 'r1a', round: 1 }),
+    done('t2', 10, 21, 't3', { id: 'r1b', round: 1 }),
+    done('t0', 25, 5, 't2', { id: 'r2a', round: 2 }),
+    done('t1', 25, 5, 't3', { id: 'r2b', round: 2 }),
+  ];
+
+  it('reports no movement at all while only one round has results', () => {
+    const rows = rankTeamsWithMovement(teamIds(4), twoRounds.slice(0, 2));
+    expect(rows.every((row) => row.movement === undefined)).toBe(true);
+  });
+
+  it('reports no movement for an empty or unplayed schedule', () => {
+    expect(
+      rankTeamsWithMovement(teamIds(4), []).every((row) => row.movement === undefined)
+    ).toBe(true);
+  });
+
+  it('compares against the table as it stood before the latest round', () => {
+    const rows = rankTeamsWithMovement(teamIds(4), twoRounds);
+    const byTeam = Object.fromEntries(rows.map((row) => [row.teamId, row]));
+    /* After r1 the winners are level on every measure and share rank 1, the
+       losers share rank 3 (=1, =1, =3, =3 — the printed-table numbering).
+       After r2: t0 6pts, t1 3pts +9, t3 3pts −9, t2 0 → 1st/2nd/3rd/4th.
+       Movement is measured from the SHARED rank, exactly as the table printed
+       it: joint 1st falling to 3rd is −2, joint 3rd falling to 4th is −1. */
+    expect(byTeam.t0.movement).toBe(0);
+    expect(byTeam.t1.movement).toBe(1);
+    expect(byTeam.t3.movement).toBe(-2);
+    expect(byTeam.t2.movement).toBe(-1);
+  });
+
+  it('never counts a round that exists only as byes', () => {
+    const rows = rankTeamsWithMovement(teamIds(4), [
+      ...twoRounds.slice(0, 2),
+      done('t0', 1, 0, 't1', { id: 'bye', round: 2, isBye: true, winnerId: 't0' }),
+    ]);
+    expect(rows.every((row) => row.movement === undefined)).toBe(true);
+  });
+
+  it('ranks identically to rankTeams — movement is an annotation, not a re-sort', () => {
+    const plain = rankTeams(teamIds(4), twoRounds);
+    const moving = rankTeamsWithMovement(teamIds(4), twoRounds);
+    expect(moving.map(({ teamId, rank }) => ({ teamId, rank }))).toEqual(
+      plain.map(({ teamId, rank }) => ({ teamId, rank }))
+    );
   });
 });

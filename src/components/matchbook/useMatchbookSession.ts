@@ -60,7 +60,7 @@
    =========================================================================== */
 
 import { useMemo } from "react";
-import { rankTeams } from "@/lib/standings";
+import { rankTeamsWithMovement } from "@/lib/standings";
 import { getRoundName, getTotalRounds } from "@/lib/singleElimination";
 import { teamColorCss } from "@/lib/teamColor";
 import type { Match, PersistentTeam } from "@/types/game";
@@ -290,7 +290,7 @@ export const useMatchbookSession = ({
 
     const standings: MbStandingLine[] | null =
       competition && competition.type === "round_robin"
-        ? rankTeams(competition.teamIds, scoped, competition.config).map((row) => ({
+        ? rankTeamsWithMovement(competition.teamIds, scoped, competition.config).map((row) => ({
             teamId: row.teamId,
             team: refFor(row.teamId),
             rank: row.rank,
@@ -304,6 +304,7 @@ export const useMatchbookSession = ({
             diff: row.pointsDiff,
             points: row.competitionPoints,
             form: recentForm(tallies.get(row.teamId)),
+            movement: row.movement,
           }))
         : null;
 

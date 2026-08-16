@@ -215,6 +215,67 @@ export const rankTeams = (
 ): RankedStanding[] =>
   assignRanks(tallyTeams(teamIds, matches, config).sort(compareStandings));
 
+/** A ranked line that also knows which way it moved since the previous round. */
+export interface MovingStanding extends RankedStanding {
+  /**
+   * Places gained (positive) or lost (negative) against the table as it stood
+   * before the latest round with a counted result. `0` is "held its place".
+   * `undefined` means there is no earlier round to compare against — the
+   * consumer must render NOTHING for it, not a dash (a first-round table has
+   * no history, and a column of placeholders would claim it does).
+   */
+  movement?: number;
+}
+
+/**
+ * `rankTeams`, plus rank movement since the previous round.
+ *
+ * "Previous round" is the table computed with the latest round's counted
+ * matches excluded: `latest` is the highest `round` carrying at least one
+ * completed non-bye match between two listed teams — the same filter the tally
+ * itself applies, so a round that exists only as byes or fixtures cannot count
+ * as history. While `latest` is still in progress the movement reads "so far
+ * this round", which is what a live table should say.
+ *
+ * Movement is only computed when at least two distinct rounds have counted
+ * results. One round of results has no "previous table" — comparing against
+ * the all-zero dead heat would mark every team a riser or faller on the
+ * strength of nothing, which is exactly the noise the `undefined` contract
+ * above exists to prevent. (Double elimination reuses round numbers across its
+ * two brackets; standings tables are a round-robin object, so the collision is
+ * theoretical here, and a wrong-but-harmless comparison is the worst case.)
+ */
+export const rankTeamsWithMovement = (
+  teamIds: string[],
+  matches: Match[],
+  config?: Partial<CompetitionConfig>
+): MovingStanding[] => {
+  const ranked: MovingStanding[] = rankTeams(teamIds, matches, config);
+
+  const listed = new Set(teamIds);
+  const counted = matches.filter(
+    (match) =>
+      countsTowardStandings(match) &&
+      listed.has(match.homeTeamId) &&
+      listed.has(match.awayTeamId)
+  );
+  const rounds = new Set(counted.map((match) => match.round));
+  if (rounds.size < 2) return ranked;
+
+  const latest = Math.max(...rounds);
+  const before = rankTeams(
+    teamIds,
+    matches.filter((match) => match.round !== latest),
+    config
+  );
+  const previousRank = new Map(before.map((row) => [row.teamId, row.rank]));
+
+  return ranked.map((row) => ({
+    ...row,
+    movement: (previousRank.get(row.teamId) ?? row.rank) - row.rank,
+  }));
+};
+
 /*
  * ---------------------------------------------------------------------------
  * MIGRATION — how each caller repoints (not done here; W8 P2b / the screen

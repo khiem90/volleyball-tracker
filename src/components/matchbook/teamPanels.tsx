@@ -559,7 +559,12 @@ export const ClubSnapshotPanel = ({ stats }: { stats: MbStatTotal[] }) => (
           <span className="matchbook-display text-4xl mb-track-masthead font-bold leading-none tabular-nums">
             {stat.value}
           </span>
-          <span className="mb-kicker">{stat.label}</span>
+          {/* `mt-2`: at `leading-none` the 36px numeral's ink runs 53px — 8px
+              past its own box bottom — so at the stack's 4px gap it overran
+              the label's ink by a measured 5px, the worst of the audit's
+              teams-stat grazes (C6). 12px of box separation leaves 3px of
+              clear paper between the two ink boxes. */}
+          <span className="mb-kicker mt-2">{stat.label}</span>
         </div>
       ))}
     </div>
@@ -682,7 +687,11 @@ export const TeamReadinessPanel = ({
 const ProfileStat = ({ label, value }: { label: string; value: string }) => (
   <div className="flex flex-col items-center justify-center gap-1 border border-mb-rule px-2 py-2 text-center">
     <span className="mb-kicker">{label}</span>
-    <span className="matchbook-display text-2xl mb-track-display font-bold leading-none tabular-nums">
+    {/* `mt-1.5`: the 24px `leading-none` numeral's ink runs 36px, 6px past
+        its box on each side, so at 4px of gap the label's descenders and the
+        numeral's ascent ink overlapped by 1.12px (C6). 10px of separation
+        leaves ~4.9px clear. */}
+    <span className="matchbook-display mt-1.5 text-2xl mb-track-display font-bold leading-none tabular-nums">
       {value}
     </span>
   </div>
@@ -798,7 +807,10 @@ export const TeamProfilePanel = ({
                 pixel with the tier it actually paints. */}
             <div className="col-span-2 flex flex-col items-center justify-center gap-1 border border-mb-navy px-2 py-2">
               <span className="mb-kicker">Overall Record</span>
-              <span className="matchbook-display text-3xl mb-track-display font-bold leading-none tabular-nums">
+              {/* `mt-1.5` for the same measured reason as `ProfileStat`: at
+                  30px/`leading-none` the ink overlapped the kicker's by
+                  3.13px; 10px of separation leaves ~2.9px clear (C6). */}
+              <span className="matchbook-display mt-1.5 text-3xl mb-track-display font-bold leading-none tabular-nums">
                 {row.won} - {row.lost}
               </span>
             </div>
@@ -934,13 +946,18 @@ export const UpcomingFixturesPanel = ({ items }: { items: MbScheduleItem[] }) =>
              else in this row changes at any width. */
           <div
             key={i}
-            className="grid grow grid-cols-[42px_56px_minmax(0,1fr)] items-center gap-2 py-2 pl-3 pr-3"
+            /* `min-h-28` is the schedule-row pitch this panel's twin
+               (`SchedulePanel`, `panels.tsx`) sets for the dashboard's C5
+               baseline grid — one object, one row height across routes.
+               `mt-1.5` on the date line clears the day line's ink by 3px;
+               both are measured in the twin's own notes. */
+            className="grid min-h-28 grow grid-cols-[42px_56px_minmax(0,1fr)] items-center gap-2 py-2 pl-3 pr-3"
           >
             <div>
               <p className="matchbook-display text-[0.66rem] mb-track-status font-bold leading-tight">
                 {item.day}
               </p>
-              <p className="matchbook-display text-[0.66rem] mb-track-status font-bold leading-tight tabular-nums">
+              <p className="matchbook-display mt-1.5 text-[0.66rem] mb-track-status font-bold leading-tight tabular-nums">
                 {item.date}
               </p>
             </div>

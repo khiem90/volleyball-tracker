@@ -758,7 +758,17 @@ export const LiveCourtsPanel = ({ courts }: { courts: MbLiveCourt[] }) => (
             /* Three tracks, not five: the matchup is ONE cell now.
                `minmax(0,1fr)` on it because a bare `1fr` is `minmax(auto,1fr)`
                and the auto floor would let the pair push the row wide. */
-            className="grid grow grid-cols-[56px_minmax(0,1fr)_auto] items-center gap-2 px-3 py-3"
+            /* `min-h-28` is the dashboard's schedule-row pitch (C5). Live
+               Courts and Upcoming Schedule sit side by side from `md` up and
+               their natural rows resolved 104.88px and 108.61px — a 3.7px/row
+               drift, so the two ledgers' rules visibly detached one row down.
+               112px clears both naturals at every measured width (the taller
+               is 107.61 at 1440), `box-sizing: border-box` puts the divide
+               hairline INSIDE it, and `items-center` seats the content, so
+               every row in both panels paints exactly 112px and row N's rule
+               lands on the same y to the pixel. The same pitch is on
+               `UpcomingFixturesPanel` (`teamPanels.tsx`), this list's twin. */
+            className="grid min-h-28 grow grid-cols-[56px_minmax(0,1fr)_auto] items-center gap-2 px-3 py-3"
           >
             <div className="border-r border-mb-rule pr-2">
               <p className="matchbook-display text-[0.72rem] mb-track-link font-bold leading-tight">
@@ -834,7 +844,9 @@ export const SchedulePanel = ({ items }: { items: MbScheduleItem[] }) => (
         {items.map((item, i) => (
           <div
             key={i}
-            className="grid grow grid-cols-[42px_50px_minmax(0,1fr)] items-center gap-1 py-2 pl-2.5 pr-2.5"
+            /* `min-h-28`: the C5 schedule-row pitch — see the note on Live
+               Courts' row above. */
+            className="grid min-h-28 grow grid-cols-[42px_50px_minmax(0,1fr)] items-center gap-1 py-2 pl-2.5 pr-2.5"
           >
             {/* The date was once a second coral on this list, as a letterform:
                 10.24px/700 at 3.55:1 on `--mb-paper-bright`. Navy. */}
@@ -842,7 +854,13 @@ export const SchedulePanel = ({ items }: { items: MbScheduleItem[] }) => (
               <p className="matchbook-display text-[0.66rem] mb-track-status font-bold leading-tight">
                 {item.day}
               </p>
-              <p className="matchbook-display text-[0.66rem] mb-track-status font-bold leading-tight tabular-nums">
+              {/* `mt-1.5`: at `leading-tight` these two 10.56px lines sit in
+                  13.2px boxes while Oswald's ink runs ~16.2px, so the day's
+                  ink overlapped the date's by 3px — one of the audit's
+                  "Fri ↔ Jul 31" grazes. 6px of margin leaves 3px of clear
+                  paper between the ink boxes; the row's height is set by the
+                  112px pitch, so nothing else moves. */}
+              <p className="matchbook-display mt-1.5 text-[0.66rem] mb-track-status font-bold leading-tight tabular-nums">
                 {item.date}
               </p>
             </div>
@@ -1123,7 +1141,12 @@ export const LeadersPanel = ({
               {leader.team.name}
             </span>
             <span className="mb-kicker">{leader.stat}</span>
-            <span className="matchbook-display text-4xl mb-track-masthead font-bold tabular-nums">
+            {/* `mt-1.5`: Oswald's ink at text-4xl runs ~53px against a 40px
+                line box, so at the stack's 4px gap the numeral's ascent ink
+                overlapped the kicker's descenders by 2.12px (the audit's
+                "Points ↔ 351" graze). 10px of box separation leaves ~3.9px of
+                clear paper. */}
+            <span className="matchbook-display mt-1.5 text-4xl mb-track-masthead font-bold tabular-nums">
               {leader.value}
             </span>
           </div>

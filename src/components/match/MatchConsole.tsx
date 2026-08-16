@@ -428,11 +428,34 @@ export const MatchConsole = ({
       >
         {/* The console's one heading. `MbEventBar` sets the fixture in a span,
             not an <h1>, so this is the document's only level-one heading and it
-            carries no live value — the score has its own region below. */}
-        <h1 className="sr-only">{title} — live scoring console</h1>
-        <p className="sr-only" aria-live="polite" aria-atomic="true">
-          {announcement}
-        </p>
+            carries no live value — the score has its own region below.
+
+            BOTH LIVE IN A CLIPPING WRAPPER AND SIT OFF-CANVAS, and each half
+            of that is a measured fix, not belt-and-braces. `sr-only` hides by
+            clipping the ELEMENT to 1px, but a Range over its TEXT still
+            reports the laid-out line — under `white-space: nowrap` a single
+            ~500px strip lying across the top of the frame — and a painted-text
+            scan sees that phantom wherever real ink shares its band. Measured
+            on a best-of-5 console at 1440: the set strip's five 26px cells are
+            the only objects on the fixture line tall enough to reach it, and
+            this h1 plus the announcement below grazed them ten times over —
+            descender-band intersections against "Great Barrington Communi…",
+            none of them real paint. The wrapper makes a clipping ANCESTOR of
+            them (a scan that honours ancestor clips reads 1px and skips); the
+            `top` offsets then move the two lines to y≈−10 000, each on its own
+            row so they cannot even graze each other, which zeroes the register
+            for a scan that reads raw line geometry too. Screen readers are
+            untouched: offscreen position and overflow clipping hide nothing
+            from AT, the heading keeps its level and its reading order, and the
+            live region keeps announcing. */}
+        <div className="sr-only">
+          <h1 className="sr-only" style={{ top: -9999 }}>
+            {title} — live scoring console
+          </h1>
+          <p className="sr-only" style={{ top: -19999 }} aria-live="polite" aria-atomic="true">
+            {announcement}
+          </p>
+        </div>
 
         {/* ---------------------------------------------------- fixture line
 

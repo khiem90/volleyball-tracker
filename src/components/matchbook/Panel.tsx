@@ -301,7 +301,7 @@ export const TeamMark = ({
    sits 1.05px left of centre — 7% of the mark, five times across a form run.
    This is a MARK, not a word, and the ladder tracks words. */
 const FORM_CELL =
-  "matchbook-display inline-flex h-[14px] w-[14px] items-center justify-center rounded-[2px] border text-[0.6rem] tracking-normal font-bold";
+  "matchbook-display inline-flex h-[14px] w-[14px] items-center justify-center rounded-[2px] border text-[0.6rem] mb-track-numeral font-bold";
 
 const FORM_STYLE: Record<MbFormResult, CSSProperties> = {
   W: {

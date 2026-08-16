@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useApp } from "@/context/AppContext";
-import { rankTeams } from "@/lib/standings";
+import { rankTeamsWithMovement } from "@/lib/standings";
 import { pluralise } from "@/lib/text";
 import type { AppState, Competition } from "@/types/game";
 import { createTeamRef } from "./useMatchbookCompetitionDetail";
@@ -244,7 +244,7 @@ export const buildDashboard = (state: AppState): MbDashboardView => {
     : tallies;
 
   const ranked = league
-    ? rankTeams(league.teamIds, leagueMatches, league.config)
+    ? rankTeamsWithMovement(league.teamIds, leagueMatches, league.config)
     : [];
   const standings: MbStandingLine[] = ranked.slice(0, 6).map((row) => ({
     teamId: row.teamId,
@@ -260,6 +260,7 @@ export const buildDashboard = (state: AppState): MbDashboardView => {
     diff: row.pointsDiff,
     points: row.competitionPoints,
     form: recentForm(leagueTallies.get(row.teamId)),
+    movement: row.movement,
   }));
 
   const featuredMatch = completed[0];

@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { useTerminology } from "@/hooks/useTerminology";
-import { rankTeams } from "@/lib/standings";
+import { rankTeamsWithMovement } from "@/lib/standings";
 import { getRoundName, getTotalRounds } from "@/lib/singleElimination";
 import {
   getDoubleBracketStructure,
@@ -622,7 +622,7 @@ export const useMatchbookCompetitionDetail = ({
 
     /* No result, no ranking — see the field's own note. `rankTeams` is only
        asked the question once there is something to answer it with. */
-    const standings: MbStandingLine[] = completed.length === 0 ? [] : rankTeams(
+    const standings: MbStandingLine[] = completed.length === 0 ? [] : rankTeamsWithMovement(
       competition.teamIds,
       matches,
       competition.config
@@ -640,6 +640,7 @@ export const useMatchbookCompetitionDetail = ({
       diff: row.pointsDiff,
       points: row.competitionPoints,
       form: recentForm(tallies.get(row.teamId)),
+      movement: row.movement,
     }));
 
     /* --------------------------------------------------------- schedule */

@@ -218,8 +218,25 @@ export const MatchbookMasthead = ({
             wrap drops the last word onto its own line under a full first line
             ("VOLLEYBALL ROTATIONS" set 10 glyphs + 9 alone); balance evens the
             two lines so a wrapped masthead reads as a set block, not an
-            accident. */}
-        <h1 className="matchbook-display min-w-0 break-words text-balance text-4xl mb-track-masthead font-bold leading-none sm:text-5xl">
+            accident.
+
+            `[&>span]:whitespace-nowrap` is the AUTHORED WRAP JOINT (§2.1
+            "authored wraps"). A masthead title is a neutral segment plus one
+            emphasised <span> (§2.3), and this pins every break to the seam
+            BETWEEN them: neither segment may break internally, so the only
+            wrap a masthead can perform is the two-line lockup the design
+            chose, at the joint the caller wrote. Measured on the widest
+            shipped title at 375 (content column 343px): "TOURNAMENT
+            OVERVIEW" needs ~359px solid at text-4xl, so it MUST wrap below
+            414px — and with the seam pinned it sets 200.89 / 150.84
+            (last-line ratio 75.1%), the same stacked block at every width
+            from 320 to 413 rather than whatever the wrap algorithm finds.
+            The contract this buys: a title segment must set solid at 320
+            (288px ≈ 14 glyphs at text-4xl) — the longest shipped segment is
+            "DIRECTORY" at ~180px. No pixel moved at any audited width when
+            this landed; it forecloses the accidental mid-segment break, it
+            does not restyle today's render. */}
+        <h1 className="matchbook-display min-w-0 break-words text-balance text-4xl mb-track-masthead font-bold leading-none sm:text-5xl [&>span]:whitespace-nowrap">
           {title}
         </h1>
 

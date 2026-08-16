@@ -137,6 +137,53 @@
      valid if they ever move again. */
   --mb-display-font: var(--font-oswald, "Oswald"), "Arial Narrow", "Roboto Condensed", Impact, sans-serif;
 
+  /* ===================== THE TRACKING ROLES =====================
+     Twelve named voices, one token each — the census result the ladder
+     (§2.1a) promised: EVERY letter-spacing in the app resolves to one of
+     these names, zero anonymous values. Measured before this block existed:
+     the app painted exactly these twelve computed values (9 routes x 2
+     widths, all text-painting nodes) — the tokens change no pixel, they
+     make each value citeable. A declaration anywhere in this file writes
+     `var(--mb-track-…)`, never a literal; a call site writes the matching
+     `.mb-track-…` rung utility (declared at the end of `@layer components`),
+     never a `tracking-[…]`. One sentence of intent each:
+
+     masthead  the title lockup — em-tracking compounds at display sizes,
+               so the biggest voice is the tightest one.
+     display   the base display voice: row titles, team marks, stat figures.
+     link      the quiet verb — panel actions and footer links, one step
+               looser than base so a 0.72rem label stays a word.
+     title     the label that names a container: panel titles, select values.
+     button    the imperative — button labels at every cut (.mb-btn,
+               .mb-btn-lg, .mb-segmented, the skip link).
+     nav       wayfinding — sidebar, tabs, the bottom bar, the md badge:
+               labels a reader scans for, spread to be scannable.
+     status    the state word and the meta line: LIVE, FINAL, the masthead
+               date, badge words — a word read at a glance, not in a run.
+     head      the columnar head: table heads and day heads, spread wide
+               because a column label rules the strip under it.
+     kicker    the eyebrow — it labels the thing below it and is never read
+               as prose, so it carries the widest text spread.
+     code      the share code: glyphs a reader transcribes one at a time,
+               so they space one at a time.
+     badge     the stamp — single caption words treated as engraving (the
+               masthead badge caption, the FINAL stamp), maximum spread.
+     numeral   figures and marks: tracking pads AFTER the last glyph and
+               pushes a centred figure off its own centre, so figures are
+               authored `normal` — a number is not a word (§2.1a). */
+  --mb-track-masthead: 0.01em;
+  --mb-track-display: 0.02em;
+  --mb-track-link: 0.04em;
+  --mb-track-title: 0.05em;
+  --mb-track-button: 0.06em;
+  --mb-track-nav: 0.08em;
+  --mb-track-status: 0.1em;
+  --mb-track-head: 0.12em;
+  --mb-track-kicker: 0.16em;
+  --mb-track-code: 0.18em;
+  --mb-track-badge: 0.22em;
+  --mb-track-numeral: normal;
+
   /* --- contrast-safe variants (GAP-13/14, rubric §3.6) ------------------ */
   /* ===================== THE CORAL JOB LIST =====================
      Charter invariant 15: coral appears ONCE per screen as the primary job,
@@ -536,78 +583,97 @@
    --------------------------------------------------------------------------- */
 
 @layer components {
+  /* Every declaration below CITES a tracking role from `:root` — never a
+     literal. The nine same-(size,weight) spreads §2.1a used to sanction as
+     anonymous "component voices" are the same values they always were; what
+     changed is that each now names the role it rides, so the census reads
+     roles, not decimals. Where a class rides a role that is not its
+     namesake, the line says why. */
   .matchbook-display {
     text-transform: uppercase;
-    letter-spacing: 0.02em;
+    letter-spacing: var(--mb-track-display);
   }
 
   .mb-panel-link {
     text-transform: uppercase;
-    letter-spacing: 0.04em;
+    letter-spacing: var(--mb-track-link);
   }
 
   .mb-btn {
     text-transform: uppercase;
-    letter-spacing: 0.06em;
+    letter-spacing: var(--mb-track-button);
   }
 
   .mb-nav-item {
     text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing: var(--mb-track-nav);
   }
 
   .mb-kicker {
     text-transform: uppercase;
-    letter-spacing: 0.16em;
+    letter-spacing: var(--mb-track-kicker);
   }
 
+  /* head, not a private 0.12em: a day head is a column label for the strip
+     of rows under it — the same job as a table head, so the same voice. */
   .mb-table th {
     text-transform: uppercase;
-    letter-spacing: 0.12em;
+    letter-spacing: var(--mb-track-head);
   }
 
   .mb-select-native {
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: var(--mb-track-title);
   }
 
+  /* status: a badge word IS a status word in a frame — LIVE, DRAFT, FINAL.
+     The badge ROLE token (0.22em) belongs to the badge CAPTION (§2.1
+     display/badge-label), not to this class. */
   .mb-badge {
     text-transform: uppercase;
-    letter-spacing: 0.1em;
+    letter-spacing: var(--mb-track-status);
   }
 
+  /* The md cut steps down one rung (status -> nav), the same optical move
+     the masthead makes against the display base: bigger cut, tighter track. */
   .mb-badge[data-size="md"] {
-    letter-spacing: 0.08em;
+    letter-spacing: var(--mb-track-nav);
   }
 
+  /* nav: a tab is wayfinding laid horizontally. */
   .mb-tab {
     text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing: var(--mb-track-nav);
   }
 
+  /* button: each segment is a button-sized imperative. */
   .mb-segmented > * {
     text-transform: uppercase;
-    letter-spacing: 0.06em;
+    letter-spacing: var(--mb-track-button);
   }
 
+  /* badge: the FINAL stamp is a single engraved caption word — the same
+     voice as the masthead badge caption, at the same maximum spread. */
   .mb-stamp-final {
     text-transform: uppercase;
-    letter-spacing: 0.22em;
+    letter-spacing: var(--mb-track-badge);
   }
 
   .mb-code-chip {
     text-transform: uppercase;
-    letter-spacing: 0.18em;
+    letter-spacing: var(--mb-track-code);
   }
 
+  /* head: see .mb-table th — one job, one voice. */
   .mb-day-head {
     text-transform: uppercase;
-    letter-spacing: 0.12em;
+    letter-spacing: var(--mb-track-head);
   }
 
+  /* button: the skip link is a button when it is visible at all. */
   .mb-skip-link {
     text-transform: uppercase;
-    letter-spacing: 0.06em;
+    letter-spacing: var(--mb-track-button);
   }
 
   /* THE NUMERALS DECLARE `normal`, AND THAT IS A VALUE, NOT AN OMISSION (F8).
@@ -638,7 +704,7 @@
   .mb-score-box,
   .mb-stepper-value,
   .mb-numeral {
-    letter-spacing: normal;
+    letter-spacing: var(--mb-track-numeral);
   }
 
   /* -------------------------------------------------------------------------
@@ -673,17 +739,27 @@
      unlayered) so a Tailwind `tracking-*` utility still wins where an author
      genuinely needs an exception — the same contract this whole layer exists
      to restore.
+
+     One utility per ROLE TOKEN (`:root`, "the tracking roles") — twelve
+     names, and the census closes: every letter-spacing the app paints
+     resolves to one of them. `.mb-track-code` and `.mb-track-numeral`
+     complete the set so no call site is left holding a literal — the code
+     voice used to be reachable only through `.mb-code-chip`, and the
+     figures-and-marks rule only through `tracking-normal`, which names a
+     value, not the reason (§2.1a exception 1).
      ------------------------------------------------------------------------- */
-  .mb-track-masthead { letter-spacing: 0.01em; }  /* display/masthead        */
-  .mb-track-display  { letter-spacing: 0.02em; }  /* .matchbook-display base */
-  .mb-track-link     { letter-spacing: 0.04em; }  /* display/link            */
-  .mb-track-title    { letter-spacing: 0.05em; }  /* display/panel-title     */
-  .mb-track-button   { letter-spacing: 0.06em; }  /* display/button          */
-  .mb-track-nav      { letter-spacing: 0.08em; }  /* display/nav             */
-  .mb-track-status   { letter-spacing: 0.1em; }   /* display/status, /meta   */
-  .mb-track-head     { letter-spacing: 0.12em; }  /* display/table-head      */
-  .mb-track-kicker   { letter-spacing: 0.16em; }  /* display/kicker          */
-  .mb-track-badge    { letter-spacing: 0.22em; }  /* display/badge-label     */
+  .mb-track-masthead { letter-spacing: var(--mb-track-masthead); }
+  .mb-track-display  { letter-spacing: var(--mb-track-display); }
+  .mb-track-link     { letter-spacing: var(--mb-track-link); }
+  .mb-track-title    { letter-spacing: var(--mb-track-title); }
+  .mb-track-button   { letter-spacing: var(--mb-track-button); }
+  .mb-track-nav      { letter-spacing: var(--mb-track-nav); }
+  .mb-track-status   { letter-spacing: var(--mb-track-status); }
+  .mb-track-head     { letter-spacing: var(--mb-track-head); }
+  .mb-track-kicker   { letter-spacing: var(--mb-track-kicker); }
+  .mb-track-code     { letter-spacing: var(--mb-track-code); }
+  .mb-track-badge    { letter-spacing: var(--mb-track-badge); }
+  .mb-track-numeral  { letter-spacing: var(--mb-track-numeral); }
 }
 
 /* ---------------------------------------------------------------------------
@@ -986,6 +1062,32 @@ button.mb-panel-link::after,
   font-size: 0.62rem;
   font-weight: 600;
   color: var(--mb-ink-muted);
+  /* OPTICAL CORRECTION — the kicker hangs its side bearing (§2.1a).
+
+     Oswald caps carry a left side bearing of 0-0.06em depending on the
+     glyph. Measured by canvas TextMetrics (actualBoundingBoxLeft, weight
+     600, per 100px em): H 6, B/D/E/F/K/L/M/N/P/R/U 5, C/G/O/Q 4, S 3,
+     W/Z 2, A/V 1, T/X/Y 0 — median cap 4/100em, and the value is linear in
+     size (re-measured at 24/36/48px: 0.96/1.44/1.92px, all 0.04em). So a
+     display line at masthead sizes starts its ink ~2px inside its box while
+     the 9.92px kicker labelling it starts ~0.4px inside — the eyebrow and
+     the line it labels drift apart by whichever glyph the data starts with.
+
+     The kicker side is the one a constant can fix: at 9.92px the WHOLE
+     per-glyph spread is 0-0.6px, so hanging the median (-0.04em = -0.40px)
+     puts every kicker's ink on its box datum with a residual under 0.3px —
+     subpixel, glyph-independent. The display side is deliberately NOT hung:
+     at 48px the same spread is 0-2.9px, and a role constant would push a
+     T/X/Y-initial masthead (three of the seven shipped h1s) 1.9px PAST the
+     margin, a visible overhang bought for nothing. text-indent, not margin
+     or transform: no stacking context, no containing block, and boxes in
+     normal flow hold at 0.00px. The one measured side effect: text-indent
+     participates in INTRINSIC sizing, so a shrink-to-fit kicker's box
+     narrows by the indent (<=0.40px) and the standings legend strip, where
+     kicker cells stack inline, settles <=3.12px cumulative at 1440 - no
+     wrap change (max top delta 0.10px), no collision, verified per-element
+     across 9 routes x {375, 1440}. */
+  text-indent: -0.04em;
 }
 
 .mb-form-square {
@@ -1743,7 +1845,14 @@ button.mb-panel-link::after,
 
 .mb-toast[data-tone="info"] { --mb-toast-tone: var(--mb-navy); }
 .mb-toast[data-tone="success"] { --mb-toast-tone: var(--mb-green); }
-.mb-toast[data-tone="warning"] { --mb-toast-tone: var(--mb-gold); }
+/* gold-INK, not raw gold (D-21's second half). The warning tone is an
+   anchor-tier RAIL on paper-bright, and --mb-gold measures 2.15:1 there —
+   under the 3:1 non-text floor (WCAG 1.4.11) every other rail tone clears
+   (navy 12.84, green 4.28, red 4.58). --mb-gold-ink is 5.59:1 on
+   paper-bright / 5.13:1 on paper: same hue family, the same swap the badge
+   tones already made for draft/warn ink. Raw gold keeps its other jobs —
+   the badge FILL mark, team accents, on-navy uses — untouched. */
+.mb-toast[data-tone="warning"] { --mb-toast-tone: var(--mb-gold-ink); }
 .mb-toast[data-tone="danger"] { --mb-toast-tone: var(--mb-red); }
 
 /* ---------------------------------------------------------------------------
@@ -2331,7 +2440,10 @@ button.mb-panel-link::after,
 
 .mb-banner[data-tone="info"] { --mb-banner-tone: var(--mb-navy); }
 .mb-banner[data-tone="success"] { --mb-banner-tone: var(--mb-green); }
-.mb-banner[data-tone="warn"] { --mb-banner-tone: var(--mb-gold); }
+/* gold-INK — see .mb-toast[data-tone="warning"]: this rail is the register's
+   D-21 second half, --mb-gold at 2.15:1 on paper-bright against the 3:1
+   non-text floor. --mb-gold-ink measures 5.59:1 there. */
+.mb-banner[data-tone="warn"] { --mb-banner-tone: var(--mb-gold-ink); }
 .mb-banner[data-tone="danger"] { --mb-banner-tone: var(--mb-red); }
 
 /* Grid, never flex — the name cells must be able to shrink. */

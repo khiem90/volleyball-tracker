@@ -36,12 +36,14 @@ import {
 
    Both of those set the layout:
 
-     - The headline is the RESULT, full bleed, at the top. `MbScoreboardHero`
-       at `size="hero"` takes the whole 12-column row precisely so the wide
-       `1fr auto 1fr` cut clears its 620px container threshold and the box
-       score reads as a box score. In a 7-column panel it would fall to the
-       stacked phone cut on a 1440px screen, which is the correct behaviour of
-       that component and the wrong picture for this page.
+     - The headline is the CHAMPION, full bleed, at the top — one screen, one
+       primary rank device. The Full Time panel used to carry two: the 64px
+       crowned crest and, directly under it, the decider at `size="hero"`
+       whose scoreline is the 60px console step. Two hero-scale objects both
+       claiming to be the page's answer is the equal-weight failure the empty
+       states were cleared of, in the panel that exists to say who won. The
+       champion block keeps the hero scale; the decider now takes the compact
+       cut beside it, a supporting fact rather than a second headline.
      - Nothing is behind a tab. `@media print` in `globals.css` has existed
        since P0 and has never been exercised; a tabbed report prints one tab.
        Every section is mounted, in reading order, and the ledger's capped rows
@@ -264,13 +266,13 @@ export default function SummaryPage() {
                         254px; above it the row is unchanged. `break-words`
                         stays as the last resort it is meant to be — it only
                         breaks a word that cannot fit a line at all. */}
-                    <div className="min-w-0 flex-1 basis-48">
+                    <div className="min-w-0 flex-1 basis-60">
                       <p className="mb-kicker flex items-center gap-1.5">
                         <MbIcon id="crown" size={13} className="shrink-0" />
                         Champion
                       </p>
                       <p className="matchbook-display mt-1.5 break-words text-balance text-[1.875rem] mb-track-display font-bold leading-none">
-                        {champion.team.name}
+                        {champion.team.name.replace(/ (?=S+$)/, " ")}
                       </p>
                       {champion.accent && (
                         <span
@@ -312,13 +314,21 @@ export default function SummaryPage() {
                 {decider && (
                   <div className="border-t border-mb-navy px-4 py-4 sm:px-5">
                     <p className="mb-kicker mb-2.5">{decider.kicker}</p>
+                    {/* `compact`, not `hero` (C7). At `hero` this block set
+                        its scoreline at the 60px console step two inches under
+                        a 64px champion crest — two 60px-class rank devices on
+                        one screen, each claiming to be the page's answer. The
+                        champion block above IS the report's rank device (the
+                        crown, the crest, the name); the decider is its
+                        supporting fact and takes the same compact cut the
+                        session board gives co-equal courts. */}
                     <MbScoreboardHero
                       home={decider.entry.home}
                       away={decider.entry.away}
                       homeScore={decider.entry.homeScore}
                       awayScore={decider.entry.awayScore}
                       status="final"
-                      size="hero"
+                      size="compact"
                     />
                   </div>
                 )}
@@ -328,7 +338,14 @@ export default function SummaryPage() {
         </div>
 
         {/* -------------------------------------------------- final table */}
-        <div className="xl:col-span-7">
+        {/* 8 columns, not the Standouts row's 7. Measured at 1440 with the
+            club-name fixture, the full standings set (now carrying Gap) is
+            644.36px of table and a 7-column panel gives it a 596px scrollport
+            — 48px of the Form column behind a scroll edge on the one screen
+            whose job is the finished record. At 8/4 the port is ~682px and
+            the whole set paints at rest; By The Numbers is six label+value
+            rows and never needed the fifth column. */}
+        <div className="xl:col-span-8">
           <Panel
             title="Final Table"
             icon="chart"
@@ -370,7 +387,7 @@ export default function SummaryPage() {
         </div>
 
         {/* ----------------------------------------------- by the numbers */}
-        <div className="xl:col-span-5">
+        <div className="xl:col-span-4">
           <Panel title="By The Numbers" icon="clipboard">
             {/* A ruled COLUMN, not a 2x3 grid of floating tiles. The panel
                 stretches to the final table beside it — 8 entrants is 500px —

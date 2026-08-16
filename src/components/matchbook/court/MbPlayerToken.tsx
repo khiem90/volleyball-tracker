@@ -96,13 +96,13 @@ export interface MbPlayerTokenProps {
 const LETTERFORM: CSSProperties = {
   fontSize: 19.2,
   fontWeight: 700,
-  letterSpacing: "0.02em",
+  letterSpacing: "var(--mb-track-display)",
 };
 
 const CAPTION: CSSProperties = {
   fontSize: 11.52,
   fontWeight: 700,
-  letterSpacing: "0.1em",
+  letterSpacing: "var(--mb-track-status)",
   fill: "var(--mb-ink-muted)",
   fontVariantNumeric: "tabular-nums",
 };
@@ -420,7 +420,7 @@ export const MbRoleChip = ({
            centred letterform stays centred in a fixed disc — the same reason
            `globals.css` declares `letter-spacing: normal` on the numerals. */
         fontSize: size <= 26 ? "0.62rem" : "0.72rem",
-        letterSpacing: size <= 26 ? "0.08em" : "0.04em",
+        letterSpacing: size <= 26 ? "var(--mb-track-nav)" : "var(--mb-track-link)",
         textIndent: size <= 26 ? "0.08em" : "0.04em",
         borderWidth: 1,
         borderColor: style.borderColor,

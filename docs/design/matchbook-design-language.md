@@ -280,13 +280,14 @@ const oswald = Oswald({ variable: "--font-oswald", weight: ["400","500","600","7
 .matchbook-display {
   font-family: var(--mb-display-font);
   text-transform: uppercase;
-  letter-spacing: 0.02em;
+  letter-spacing: var(--mb-track-display); /* 0.02em — the display role */
 }
 ```
 
-Note `.matchbook-display` sets `letter-spacing: 0.02em`; every named step below
-**overrides** it with an explicit `tracking-[…]`. If you use `.matchbook-display`
-without a tracking class you get 0.02em, which is only correct for the masthead.
+Note `.matchbook-display` defaults to the `display` role (0.02em); every named
+step below **overrides** it with its own role's `.mb-track-*` utility (§2.1a —
+never a `tracking-[…]` literal). If you use `.matchbook-display` without a
+tracking class you get 0.02em, which is only correct for the base display voice.
 Oswald has only 400/500/600/700 — `font-bold` (700) is the ceiling; never write
 `font-extrabold`/`font-black` on display text.
 
@@ -299,7 +300,7 @@ snippet in code. Never introduce a size between two steps.
 
 | Name | Size | Weight | Tracking | Leading | Tailwind snippet | Where it ships |
 | --- | --- | --- | --- | --- | --- | --- |
-| `display/masthead` | `2.25rem` → `sm:3rem` | 700 | `0.01em` | `none` | `matchbook-display text-4xl font-bold leading-none tracking-[0.01em] sm:text-5xl` | The one `<h1>` per screen (6 identical call sites) |
+| `display/masthead` | `2.25rem` → `sm:3rem` | 700 | `0.01em` | `none` | `matchbook-display text-4xl mb-track-masthead font-bold leading-none sm:text-5xl` | The one `<h1>` per screen (6 identical call sites) |
 | `display/score-2xl` | `clamp(4rem, 18vw, 9rem)` | 700 | inherit | `0.9` | `.mb-numeral.mb-numeral--court` (baked) | The `size="court"` default. Overridden by `display/score-fit` wherever the numeral has a sized container — today that is every console call site |
 | `display/score-fit` | `min(100cqh, 58cqw, 16rem)` | 700 | `normal` | `0.9` | `[&_.mb-numeral--court]:text-[min(100cqh,58cqw,16rem)]!` on a `container-type: size` box holding only the numeral | The live scoring console (`ScoreSide.tsx`) |
 | `display/score-xl` | `3.75rem` | 700 | inherit | — | `matchbook-display text-6xl font-bold tabular-nums` | Quick-Match scoreboard preview |
@@ -308,18 +309,18 @@ snippet in code. Never introduce a size between two steps.
 | `display/stat-lg` | `1.875rem` | 700 | inherit | `none` | `matchbook-display text-3xl font-bold leading-none tabular-nums` | Overall Record W-L |
 | `display/stat-md` | `1.5rem` | 700 | inherit | `none` | `matchbook-display text-2xl font-bold leading-none tabular-nums` | Masthead badge count, profile team name |
 | `display/stat-sm` | `1.2rem` | 700 | inherit | `tight` | `matchbook-display text-[1.2rem] font-bold leading-tight tabular-nums` | `StatusStat` / `SummaryStat` values |
-| `display/panel-title` | `0.95rem` | 700 | `0.05em` | — | `matchbook-display text-[0.95rem] font-bold tracking-[0.05em]` | Every `<Panel>` header (baked into `Panel.tsx`) |
+| `display/panel-title` | `0.95rem` | 700 | `0.05em` | — | `matchbook-display text-[0.95rem] mb-track-title font-bold` | Every `<Panel>` header (baked into `Panel.tsx`) |
 | `display/row-title` | `0.9rem`–`0.78rem` | 700 | — | — | `matchbook-display text-[0.78rem] font-bold truncate` | List row primary label |
 | `display/team-mark` | `0.82rem` | 600 | — | — | baked into `TeamMark` | Team name beside a crest |
 | `display/button` | `0.8rem` | 600 | `0.06em` | — | baked into `.mb-btn` | All buttons |
 | `display/nav` | `0.85rem` | 600 | `0.08em` | — | baked into `.mb-nav-item` | Sidebar navigation |
 | `display/link` | `0.72rem` | 600 | `0.04em` | — | baked into `.mb-panel-link` | Panel actions, footer links |
-| `display/meta` | `0.74rem` | 700 | `0.1em` | — | `matchbook-display text-[0.74rem] font-bold tracking-[0.1em]` | Masthead date line |
+| `display/meta` | `0.74rem` | 700 | `0.1em` | — | `matchbook-display text-[0.74rem] mb-track-status font-bold` | Masthead date line |
 | `display/table-head` | `0.66rem` | 600 | `0.12em` | — | baked into `.mb-table th` | Table column labels |
-| `display/status` | `0.66rem` | 700 | `0.1em` | — | `matchbook-display text-[0.66rem] font-bold tracking-[0.1em]` | Status words (Live/Draft/Final/ACTIVE) |
+| `display/status` | `0.66rem` | 700 | `0.1em` | — | `matchbook-display text-[0.66rem] mb-track-status font-bold` | Status words (Live/Draft/Final/ACTIVE) |
 | `display/kicker` | `0.62rem` | 600 | `0.16em` | — | baked into `.mb-kicker` | Every eyebrow label |
 | `display/court-label` | `13.6` **SVG units** | 600 | `0.16em` | — | `EDGE_LABEL` in `MbCourt.tsx` | The court diagram's reference labels (NET, END LINE, 3 M, SERVING/RECEIVING, R#) |
-| `display/badge-label` | `0.6rem` | 700 | `0.22em`–`0.28em` | — | `matchbook-display text-[0.6rem] font-bold tracking-[0.22em]` | Masthead badge caption word |
+| `display/badge-label` | `0.6rem` | 700 | `0.22em` | — | `matchbook-display text-[0.6rem] mb-track-badge font-bold` | Masthead badge caption word |
 
 `display/score-fit` is the one step on this table measured in **container**
 units rather than viewport units or rems, and that is the whole reason it
@@ -364,6 +365,56 @@ computed-style census will read it as "13.6px" and it is not the same object as
 `body/sm`'s 13.6px, any more than `display/score-fit`'s `cqh` is a viewport
 size. The court's zone numerals are different — 36 units = `display/stat-xl`
 at `display/masthead`'s 0.01em, already on the table above.
+
+**The kicker hangs its side bearing — the one optical correction.** Oswald
+caps carry a left side bearing of 0–0.06em depending on the glyph. Measured by
+canvas `TextMetrics` (`actualBoundingBoxLeft`, per 100px em): H 6; B/D/E/F/K/
+L/M/N/P/R/U 5; C/G/O/Q 4; S 3; W/Z 2; A/V 1; **T/X/Y 0** — median cap
+0.04em. The bearing is em-proportional: re-measured at 24/36/48px it reads
+0/1/2px for C-600 against the linear 0.96/1.44/1.92 (the rasterizer
+quantizes canvas ink metrics to whole pixels; every reading sits within
+0.5px of the em-linear value, and T/X/Y read 0 at all three sizes). Two
+consequences, one per face size:
+
+- At **display sizes** the bearing is ~2px (48px x 0.04em = 1.9px), so a
+  masthead or stat line starts its ink up to 2.9px inside its box — by
+  whichever glyph the data happens to start with. This is **deliberately not
+  corrected**: a role-level `text-indent` would push the three T-initial
+  shipped h1s (T = 0 bearing) up to 1.9px PAST the margin, a visible overhang
+  bought for nothing. The big line's bearing is the face's own voice.
+- At **kicker size** (9.92px) the whole per-glyph spread is 0–0.6px, so one
+  constant fixes every kicker: `.mb-kicker` carries
+  `text-indent: -0.04em` (−0.40px, the median bearing), which puts the
+  eyebrow's ink on its box datum with a residual under 0.3px regardless of
+  first glyph. Measured across 9 routes x {375, 1440}: kickers sized by
+  their container hold their boxes at 0.00px delta; a shrink-to-fit kicker's
+  box narrows by the indent (≤0.40px, spec: `text-indent` participates in
+  intrinsic sizing), and the one place kicker cells stack inline — the
+  standings legend strip — settles ≤3.12px cumulative at 1440, with no
+  wrap change (max top delta 0.10px) and no collision. Flex-container
+  kickers (the icon-led `Champion` line) ignore `text-indent` by spec,
+  which is correct: their datum is the icon.
+
+**Authored wraps — a display line never wraps by accident.** Two masthead-size
+lines wrapped at 375 wherever the wrap algorithm chose. Both are authored now:
+
+- **The masthead h1** (`Masthead.tsx`): `[&>span]:whitespace-nowrap` pins
+  every break to the seam between the neutral segment and the emphasised
+  `<span>` (§2.3) — the only wrap a masthead can perform is the two-line
+  lockup at the joint the caller wrote. Measured at 375 (content 343px):
+  "TOURNAMENT OVERVIEW" needs ~359px solid at `text-4xl`, so it wraps at the
+  seam and balance sets 200.89/150.84 (75.1%) — a set block, identical from
+  320 to 413. A title segment must therefore set solid at 320 (~14 glyphs);
+  the longest shipped segment ("DIRECTORY") is ~180px.
+- **The summary champion name** (`summary/[shareCode]/page.tsx`): the rule —
+  nbsp-join the last two tokens so a club's terminal token (VC, FC) never
+  sets alone, and measure the block's `basis` so the shipped champion sets
+  **solid** at 375 instead of two-line ("MARLOW BLUES VC" is 240.67px solid
+  at `display/stat-lg`; a `basis-60` = 240px drops the block below the crest
+  at 375, where it gets the panel's full 309px, and keeps it beside the
+  crest from 390 up, where its 244px hold the name solid — measured at
+  320/375/390: one line at all three, against 110.64/121.75 two-line at 375
+  before). The measurement lives at the call site with the edit.
 
 **Body steps (Outfit, sentence case)**
 
@@ -420,21 +471,37 @@ that writes a size rarely remembers to write the tracking with it. Measured at
 named scale of 24**, and **22 (size, weight) pairs carrying two or more
 letter-spacings** — `15.2px/700` carried four, `11.52px/600` carried five.
 
-The rungs are **classes now, not decimals** — `globals.css` declares them last in
-`@layer components`, one per named step:
+The rungs are **named ROLES now, not decimals**. Each role is one token in
+`:root` (`--mb-track-*`), one utility class declared last in `@layer
+components` (`.mb-track-*`), and one sentence of intent. Every
+`letter-spacing` in `globals.css` writes `var(--mb-track-*)`; every call site
+writes the utility; the census result is that the app paints **exactly twelve
+letter-spacing values and all twelve have names** (measured: 9 routes x
+{375, 1440}, all text-painting nodes — `{normal, 0.01, 0.02, 0.04, 0.05,
+0.06, 0.08, 0.1, 0.12, 0.16, 0.18, 0.22}em`, nothing else).
 
-| Class | em | Named step |
-| --- | --- | --- |
-| `.mb-track-masthead` | `0.01` | `display/masthead`, `display/stat-xl` |
-| `.mb-track-display` | `0.02` | the `.matchbook-display` base — row titles, team marks, stat figures |
-| `.mb-track-link` | `0.04` | `display/link` |
-| `.mb-track-title` | `0.05` | `display/panel-title` |
-| `.mb-track-button` | `0.06` | `display/button` |
-| `.mb-track-nav` | `0.08` | `display/nav` |
-| `.mb-track-status` | `0.1` | `display/status`, `display/meta` |
-| `.mb-track-head` | `0.12` | `display/table-head` |
-| `.mb-track-kicker` | `0.16` | `display/kicker` |
-| `.mb-track-badge` | `0.22` | `display/badge-label` |
+| Role | em | Intent — one sentence | Consumers |
+| --- | --- | --- | --- |
+| `masthead` | `0.01` | The title lockup: em-tracking compounds at display sizes, so the biggest voice is the tightest one. | `display/masthead` h1s, `display/stat-xl`, the court zone numerals (SVG) |
+| `display` | `0.02` | The base display voice — row titles, team marks, stat figures. | `.matchbook-display` default; bare display spans |
+| `link` | `0.04` | The quiet verb: one step looser than base so a 0.72rem label stays a word. | `.mb-panel-link`, `display/link` |
+| `title` | `0.05` | The label that names a container. | `Panel.tsx` titles, `.mb-select-native`, the VS pips |
+| `button` | `0.06` | The imperative, at every cut. | `.mb-btn` (+ `-lg`), `.mb-segmented > *`, `.mb-skip-link` |
+| `nav` | `0.08` | Wayfinding — labels a reader scans for. | `.mb-nav-item`, `.mb-tab`, `.mb-badge[data-size="md"]`, `MatchbookBottomBar`'s label |
+| `status` | `0.1` | The state word and the meta line, read at a glance, not in a run. | `display/status`, `display/meta`, `.mb-badge` |
+| `head` | `0.12` | The columnar head: a label that rules the strip under it. | `.mb-table th`, `.mb-day-head` |
+| `kicker` | `0.16` | The eyebrow — it labels, it is never read as prose, so it carries the widest text spread. | `.mb-kicker`, `display/court-label` (SVG) |
+| `code` | `0.18` | The share code: glyphs a reader transcribes one at a time, so they space one at a time. | `.mb-code-chip`, the share-dialog code |
+| `badge` | `0.22` | The stamp: single caption words treated as engraving, maximum spread. | `display/badge-label`, `.mb-stamp-final` |
+| `numeral` | `normal` | Figures and marks: tracking pads after the LAST glyph and pushes a centred figure off centre — a number is not a word. | `.mb-score-box`, `.mb-stepper-value`, `.mb-numeral`, `FormLetters`, `MbPlayerToken` discs |
+
+A role may be carried by more than one class and painted at more than one
+size — a large button is still a button, a day head is still a head. That is
+the question the old "component voices" table left open, and the answer is
+**yes, the role keeps its tracking across its cuts**; what a role may never do
+is appear as a literal. Where a class rides a role that is not its namesake
+(`.mb-badge` on `status`, `.mb-stamp-final` on `badge`, the md badge on
+`nav`), the declaration in `globals.css` carries the one-line reason.
 
 **A (size, weight) pair gets exactly one rung.** Write the class, never a bare
 `tracking-[…]` — an arbitrary value is un-auditable, and nothing in review tells
@@ -460,22 +527,27 @@ Where a size splits on weight it is because an **unlayered** class in
 `globals.css` already owns one of the two and cannot be outranked from a call
 site. Those are facts about the stylesheet, not preferences.
 
-**Two exceptions, both measured, both `tracking-normal`:**
+**The two former "exceptions" are roles now — nothing is outside the set:**
 
-1. **Figures and marks, not words.** Tracking is added after the LAST glyph as
-   well as between glyphs, so a numeral or a single letterform centred in a fixed
-   reserve is pushed off its own centre by a whole letter-space. `globals.css`
-   already declares `letter-spacing: normal` for `.mb-score-box`,
-   `.mb-stepper-value` and `.mb-numeral`; `FormLetters`' 14px W/L cell and
-   `MbPlayerToken`'s role disc take the same rule at the call site. A W in a 14px
-   cell at the badge rung carries 2.11px of trailing air and sits 1.05px left of
-   centre — 7% of the mark, five times across a form run. The ladder tracks
-   **words**, and a number is not a word.
-2. **`MatchbookBottomBar`'s label.** Its cell is 53px at 320 and "OVERVIEW" is
-   47px natural at `0.62rem/0.08em`. The rung for 0.62rem/600 is `.mb-kicker`'s
-   0.16em, which adds 6.35px and truncates the app's primary navigation at the
-   narrowest supported width. The label keeps `tracking-[0.08em]`, written with
-   the measurement beside it.
+1. **Figures and marks, not words — the `numeral` role.** Tracking is added
+   after the LAST glyph as well as between glyphs, so a numeral or a single
+   letterform centred in a fixed reserve is pushed off its own centre by a
+   whole letter-space. A W in a 14px cell at the badge rung carries 2.11px of
+   trailing air and sits 1.05px left of centre — 7% of the mark, five times
+   across a form run. The ladder tracks **words**, and a number is not a
+   word. `globals.css` bakes the role into `.mb-score-box`,
+   `.mb-stepper-value` and `.mb-numeral`; a call site that needs it
+   (`FormLetters`' W/L cell, `MbPlayerToken`'s role disc, the Quick-Match
+   preview zeros) writes `.mb-track-numeral`, not `tracking-normal` — the
+   class names the reason, the utility only named the value.
+2. **`MatchbookBottomBar`'s label rides the `nav` role.** Its cell is 53px at
+   320 and "OVERVIEW" is 47px natural at `0.62rem/0.08em`; the kicker rung
+   (0.16em) would add 6.35px and truncate the app's primary navigation at the
+   narrowest supported width. That measurement used to sanction a
+   `tracking-[0.08em]` literal. The census closed it: the bottom bar is not a
+   kicker that happens to be short of room, it is **navigation**, and 0.08em
+   IS the nav role — the label writes `.mb-track-nav` and the exception
+   dissolves into the table above.
 
 **Where a size is set by an unlayered class, a `text-[…]` utility beside it is
 dead code.** `.mb-panel-link` (0.72), `.mb-btn` (0.8), `.mb-btn-lg` (0.9),
@@ -495,27 +567,31 @@ whatever the row happens to carry — which is how the same component rendered
 0.02em in one panel and 0.08em in another. Every display element carries its own
 rung (charter invariant 8), including the ones whose size comes from a parent.
 
-**What is left, and why — so the next sweep does not re-find it.** After this
-pass, 7 (size, weight) pairs at 1440 and 8 at 390 still carry two values. **None
-is a call-site choice**; every one is a component voice authored in
-`globals.css`, or one of the two exceptions above:
+**Where one (size, weight) pair hosts two roles — the census, closed.** After
+this pass, 7 pairs at 1440 and 8 at 390 carry two letter-spacing values. That
+is not residue any more: **every voice on both sides of every pair is a named
+role**, and the pair exists because two roles legitimately meet at one size.
+The old table sanctioned these as anonymous "component voices"; the question
+it left open — may a role keep its tracking across two sizes? — is answered
+**yes** (a large button is still a button; a code chip is still a code), and
+each former voice now resolves:
 
-| Pair | The two voices | Owner |
-| --- | --- | --- |
-| `0.74rem/700` | `display/meta` 0.1em vs `.mb-badge[data-size="md"]` 0.08em vs `.mb-stamp-final` 0.22em | `globals.css` |
-| `0.66rem/700` | `display/status` 0.1em vs `.mb-day-head` 0.12em | `globals.css` |
-| `0.85rem/700` | base 0.02em vs `.mb-code-chip` 0.18em (the code voice) | `globals.css` |
-| `0.9rem/600` | base 0.02em vs `.mb-btn-lg`'s label, which keeps `display/button`'s 0.06em at the `lg` rung | `globals.css` |
-| `0.95rem/700` | `display/panel-title` 0.05em vs `.mb-score-box` `normal` | numeral rule |
-| `1.875rem/700` | base 0.02em vs `.mb-numeral-digit` `normal` | numeral rule |
-| `0.6rem/700` | `display/badge-label` 0.22em vs `FormLetters`' mark `normal` | mark rule |
-| `0.62rem/600` *(mobile only)* | `.mb-kicker` 0.16em vs `MatchbookBottomBar` 0.08em | measured exception |
-| `0.85rem/600` *(census artifact)* | `.mb-nav-item` 0.08em vs `display/court-label` 0.16em — the latter is 13.6 **SVG units** in `MbCourt.tsx` that paint at 10.4–13.6px, not a rem step (§2.1) | drawing units |
+| Pair | The roles that meet there |
+| --- | --- |
+| `0.74rem/700` | `status` (`display/meta`) · `nav` (the md badge) · `badge` (`.mb-stamp-final`) |
+| `0.66rem/700` | `status` (`display/status`) · `head` (`.mb-day-head`) |
+| `0.85rem/700` | `display` (base) · `code` (`.mb-code-chip`) |
+| `0.9rem/600` | `display` (base) · `button` (`.mb-btn-lg` keeps the role at the lg cut) |
+| `0.95rem/700` | `title` (`display/panel-title`) · `numeral` (`.mb-score-box`) |
+| `1.875rem/700` | `display` (base) · `numeral` (`.mb-numeral-digit`) |
+| `0.6rem/700` | `badge` (`display/badge-label`) · `numeral` (`FormLetters`' mark) |
+| `0.62rem/600` *(mobile only)* | `kicker` (`.mb-kicker`) · `nav` (`MatchbookBottomBar`'s label) |
+| `0.85rem/600` *(census artifact)* | `nav` (`.mb-nav-item`) · `kicker` (`display/court-label` — 13.6 **SVG units** in `MbCourt.tsx` that paint at 10.4–13.6px, not a rem step, §2.1) |
 
-Closing the first four means deciding whether a **role** may keep its tracking
-across two sizes (a large button is still a button; a code chip is still a code).
-That is a design-language question with an owner, not a call-site cleanup — do
-not "fix" it by pushing a rung onto a component from outside.
+A sweep that finds a pair carrying a value **not** in the roles table has
+found a defect; a sweep that finds one of these nine pairs has found the
+design. Do not "fix" a pair by pushing one role's rung onto the other's
+component from outside.
 
 ### 2.2 When to use what
 
@@ -543,7 +619,7 @@ not "fix" it by pushing a rung onto a component from outside.
 The masthead is two-tone: neutral first word in navy, emphasised word in coral.
 
 ```tsx
-<h1 className="matchbook-display text-4xl font-bold leading-none tracking-[0.01em] sm:text-5xl">
+<h1 className="matchbook-display text-4xl mb-track-masthead font-bold leading-none sm:text-5xl">
   Match <span className="text-mb-coral">Archive</span>
 </h1>
 ```
@@ -601,7 +677,7 @@ One per screen, `mb-5` below it. Five slots, left to right:
 <header className="mb-5 flex flex-wrap items-center gap-x-6 gap-y-4">
   <div className="flex items-center gap-4">
     {/* 1. TITLE — display/masthead, two-tone */}
-    <h1 className="matchbook-display text-4xl font-bold leading-none tracking-[0.01em] sm:text-5xl">
+    <h1 className="matchbook-display text-4xl mb-track-masthead font-bold leading-none sm:text-5xl">
       Match <span className="text-mb-coral">Archive</span>
     </h1>
 
@@ -610,12 +686,12 @@ One per screen, `mb-5` below it. Five slots, left to right:
         the badge came off coral when the job census closed at three (§1.2a). */}
     <div className="flex flex-col items-center border-[2px] border-mb-navy px-2.5 py-1 text-mb-navy">
       <span className="matchbook-display text-2xl font-bold leading-none tabular-nums">{count}</span>
-      <span className="matchbook-display text-[0.6rem] font-bold tracking-[0.22em]">Results</span>
+      <span className="matchbook-display text-[0.6rem] mb-track-badge font-bold">Results</span>
     </div>
 
     {/* 3. DATELINE — hidden on mobile */}
     <div className="hidden sm:block">
-      <p className="matchbook-display text-[0.74rem] font-bold tracking-[0.1em]" suppressHydrationWarning>
+      <p className="matchbook-display text-[0.74rem] mb-track-status font-bold" suppressHydrationWarning>
         {dateLine}
       </p>
       <p className="mb-kicker">{n} matches completed</p>
@@ -632,7 +708,7 @@ One per screen, `mb-5` below it. Five slots, left to right:
       <span className="flex h-10 w-10 items-center justify-center rounded-full border-[1.5px] border-mb-navy bg-mb-paper-bright">
         <Image src="/assets/matchbook/brand/crest.svg" alt="" width={24} height={28} />
       </span>
-      <span className="matchbook-display text-[0.72rem] font-bold leading-tight tracking-[0.08em]">My<br />Account</span>
+      <span className="matchbook-display text-[0.72rem] mb-track-nav font-bold leading-tight">My<br />Account</span>
       <MbIcon id="chevron-down" size={13} className="text-mb-ink-muted" />
     </Link>
   </div>
@@ -874,7 +950,7 @@ modifier: `className="mb-panel h-auto!"` (the form panel in `src/app/login/page.
 | `.mb-kicker` | Eyebrow label above/beside a value or field. Already display+muted. | `<p className="mb-kicker">Next Match</p>` |
 | `.mb-form-square` | 11×11 W/L square in a form strip. Colour set inline. Use `FormSquares`. | `<span className="mb-form-square" style={{background:"var(--mb-green)"}} />` |
 | `.mb-live-dot` | 7px pulsing red dot. Always immediately followed by the word "Live". | `<span className="mb-live-dot" /><span className="matchbook-display text-[0.62rem] font-bold text-mb-red">Live</span>` |
-| `.mb-score-box` | Boxed single score in a dense row, or the literal "VS" pip. min-width 26px. | `<span className="mb-score-box">{homeScore}</span>` · `<span className="mb-score-box px-2 text-[0.7rem] tracking-[0.1em]">VS</span>` |
+| `.mb-score-box` | Boxed single score in a dense row, or the literal "VS" pip. min-width 26px. | `<span className="mb-score-box">{homeScore}</span>` · `<span className="mb-score-box mb-track-title px-2">VS</span>` |
 | `.mb-seed-box` | Bracket seed slot: seed number + crest + name. | `<div className="mb-seed-box">…</div>` |
 | `.mb-table` | Any tabular data. Head = display micro-caps on a 1.5px navy underline; rows = hairline. | `<table className="mb-table w-full border-collapse">` |
 | `.mb-table-compact` | `.mb-table` in a narrow panel: tighter x-padding + `white-space: nowrap`. | `<table className="mb-table mb-table-compact w-full border-collapse">` |
