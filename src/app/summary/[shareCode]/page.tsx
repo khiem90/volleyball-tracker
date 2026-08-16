@@ -272,7 +272,15 @@ export default function SummaryPage() {
                         Champion
                       </p>
                       <p className="matchbook-display mt-1.5 break-words text-balance text-[1.875rem] mb-track-display font-bold leading-none">
-                        {champion.team.name.replace(/ (?=S+$)/, " ")}
+                        {/* The terminal token is PINNED to the word before it
+                            — the replacement string is a literal U+00A0 — so
+                            `text-balance` can never strand a tail like "VC"
+                            as a one-word line under a 30px name. The regex
+                            shipped by the cut agent had lost its backslash
+                            (`(?=S+$)`: a space followed by capital S's), so
+                            the pin never fired; `(?=\S+$)` is the last space
+                            before the final token, which is what it meant. */}
+                        {champion.team.name.replace(/ (?=\S+$)/, " ")}
                       </p>
                       {champion.accent && (
                         <span

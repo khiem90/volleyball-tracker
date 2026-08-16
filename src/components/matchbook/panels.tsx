@@ -1009,7 +1009,13 @@ export const RecentResultsPanel = ({ results }: { results: MbRecentResult[] }) =
                which on this dashboard is where the panel is NARROWEST (three
                across), so it was taking a quarter of the row from the two
                names it captions. */
-            className="grid grow grid-cols-[44px_minmax(0,1fr)] items-center gap-2 py-2.5 pl-3 pr-3 xl:grid-cols-[44px_minmax(0,1fr)_64px]"
+            /* `min-h-[92px]`: two units of the 46px lattice this band shares
+               with Team Readiness beside it (C5). The natural row is 83px, so
+               ~4.5px of air lands each side of the centred content and every
+               rule in this ledger falls on a rule of the readiness table —
+               the same move Live Courts and Upcoming Schedule make one band
+               up at 112. See the readiness rows for the unit's derivation. */
+            className="grid min-h-[92px] grow grid-cols-[44px_minmax(0,1fr)] items-center gap-2 py-2.5 pl-3 pr-3 xl:grid-cols-[44px_minmax(0,1fr)_64px]"
             style={{ boxShadow: `inset 3px 0 0 ${r.accent}` }}
           >
             <p className="matchbook-display text-[0.66rem] mb-track-status font-bold leading-tight text-mb-ink-muted">
@@ -1058,9 +1064,26 @@ export const ReadinessPanel = ({ rows }: { rows: MbReadinessRow[] }) => (
       />
     ) : (
       <MbTableScroll>
+        {/* THE 46px LATTICE (C5) — the dashboard's third band, made to tick.
+
+            The second band already does: Live Courts and Upcoming Schedule
+            run one 112px pitch, so row N's rule lands on the same y in both
+            panels. This band's pair — Recent Results and this table — ran
+            83px rows against 45.72px rows from origins 30.72px apart, i.e.
+            no two rules in the two panels ever met.
+
+            One unit = 46px, the readiness row's own natural (45.72) rounded
+            to the next whole pixel, so forcing it moves nothing visible.
+            The header row takes one unit (from 30.72 — the ~15px it gains is
+            breathing room on the only muted-ink row of the table) and every
+            body row takes one; Recent Results beside it takes two (92px).
+            Both panels' bodies start at head + 4px, so the shared origin is
+            free, and results rule n coincides with readiness rule 2n−1.
+            A `<tr>` height is a CSS minimum, so a future taller cell
+            degrades the lattice rather than clipping. */}
         <table className="mb-table mb-table-compact w-full border-collapse">
           <thead>
-            <tr>
+            <tr className="h-[46px]">
               <th className="pl-3!">Team</th>
               <th>Ready %</th>
               <th>Form (Last 5)</th>
@@ -1069,7 +1092,7 @@ export const ReadinessPanel = ({ rows }: { rows: MbReadinessRow[] }) => (
           </thead>
           <tbody>
             {rows.map((row) => (
-              <tr key={row.team.name}>
+              <tr key={row.team.name} className="h-[46px]">
                 <td className="pl-3!">
                   <TeamMark team={row.team} size={20} />
                 </td>
