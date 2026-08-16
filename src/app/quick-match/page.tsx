@@ -10,8 +10,9 @@ import { MbPageLoading } from "@/components/matchbook/Loading";
 import { MbIcon } from "@/components/matchbook/MbIcon";
 import { MbButton, MbButtonLink } from "@/components/matchbook/Button";
 import { MbSelect } from "@/components/matchbook/form";
+import { MbMatchupPair } from "@/components/matchbook/MatchRow";
 import { MbNotice } from "@/components/matchbook/Notice";
-import { Crest, FormLetters, Panel, PanelEmpty, TeamMark } from "@/components/matchbook/Panel";
+import { Crest, FormLetters, Panel, PanelEmpty } from "@/components/matchbook/Panel";
 import {
   MB_XL_SPAN,
   mbClosingSpan,
@@ -24,6 +25,7 @@ import {
   type MbQuickMatchSection,
   type MbTeamFormSummary,
 } from "@/components/matchbook/useMatchbookQuickMatch";
+import { MbTeamName } from "@/components/matchbook/TeamName";
 import { crestForTeam } from "@/components/matchbook/types";
 import { TEAM_CREATE_LABEL } from "@/components/dialogs/team-form/labels";
 
@@ -86,17 +88,25 @@ const ScorePreviewSide = ({
   summary: MbTeamFormSummary | null;
   placeholder: string;
 }) => (
-  <div className="flex flex-1 flex-col items-center gap-1.5">
+  <div className="flex min-w-0 flex-1 flex-col items-center gap-1.5">
     {summary ? (
       <>
         <Crest team={summary.team} size={64} />
         {/* 0.95rem/700 is `display/panel-title`'s pair, and every `<Panel>`
             head on this screen declares 0.05em for it. Left undeclared this
             fell through to `.matchbook-display`'s 0.02em, so the pair carried
-            two trackings at once (rubric 1.3). */}
-        <span className="matchbook-display text-[0.95rem] mb-track-title font-bold">
-          {summary.team.name}
-        </span>
+            two trackings at once (rubric 1.3).
+
+            `MbTeamName`, not a raw span (L1). The span had neither `min-w-0`
+            nor any overflow control, so its min-content floor was its longest
+            word: the preview reserves 166px for two 60px numerals and a VS
+            pip, and at 320 that leaves 40px a side — which the raw span
+            answered by pushing the panel, not by eliding. The name now elides
+            from the middle inside whatever the stacked cut gives it. */}
+        <MbTeamName
+          name={summary.team.name}
+          className="matchbook-display max-w-full text-[0.95rem] mb-track-title font-bold"
+        />
         <span className="mb-kicker tabular-nums">({summary.record})</span>
       </>
     ) : (
@@ -320,42 +330,67 @@ export default function QuickMatchPage() {
               </div>
             ) : (
               <div className="flex flex-1 flex-col gap-4 p-5">
-                <div className="flex items-start gap-3 sm:gap-4">
-                  <TeamSelect
-                    label="Home Team"
-                    value={homeTeamId}
-                    disabledId={awayTeamId}
-                    teams={availableTeams}
-                    onChange={handleHomeTeamSelect}
-                  />
-                  {/* `mt-9` lines the key up with the two 48px selects beside
-                      it, not with the crests above them. `aria-label` because
-                      `title` alone names a control only for a mouse. */}
-                  <button
-                    type="button"
-                    title="Swap home and away teams"
-                    aria-label="Swap home and away teams"
-                    onClick={handleSwapTeams}
-                    className="mb-btn mb-btn-outline-navy mt-9 h-12 w-12 shrink-0 flex-col gap-0.5 p-0"
-                  >
-                    <MbIcon id="swap" size={16} />
-                    {/* `display/kicker` — 0.62rem/600/0.16em, the step every
-                        `.mb-kicker` on this screen already prints. 0.5rem was
-                        8px, the smallest type in the app and two steps below
-                        the scale's floor; it is not inked muted because this
-                        one sits inside a button and must take the button's
-                        ink through every state. */}
-                    <span className="matchbook-display text-[0.62rem] mb-track-kicker font-semibold">
-                      Swap
-                    </span>
-                  </button>
-                  <TeamSelect
-                    label="Away Team"
-                    value={awayTeamId}
-                    disabledId={homeTeamId}
-                    teams={availableTeams}
-                    onChange={handleAwayTeamSelect}
-                  />
+                {/* THE TWO PICKERS STACK (L1).
+
+                    Side by side, the row is two selects, a 48px key and two
+                    gaps. At 320 the panel gives it 246px, so each select is
+                    99px — 75px of text once `.mb-select-native`'s padding and
+                    its chevron are paid — and both painted "SELE…". The two
+                    controls that name the two sides of the match could not
+                    say either side's name, or the word asking for one.
+
+                    The threshold is the width at which a select can still
+                    paint `NAME_FLOOR` characters: 8 characters of Oswald at
+                    the 1rem mobile input floor is 66px, plus 24px of padding
+                    and ~20px of chevron reserve = 110px a side, plus the 48px
+                    key and two 12px gaps = 292. 380 is that with a real
+                    roster's headroom, and it keeps 320, 360, 390 and 414 all
+                    on the stacked cut where each select gets the full 246.
+
+                    Its own container, not the viewport: this panel is
+                    `xl:col-span-7`, so the same 1280px screen that gives it
+                    770px gives the Overview's equivalent 322px. */}
+                <div className="@container">
+                  <div className="flex flex-col items-stretch gap-3 @min-[380px]:flex-row @min-[380px]:items-start @min-[380px]:gap-4">
+                    <TeamSelect
+                      label="Home Team"
+                      value={homeTeamId}
+                      disabledId={awayTeamId}
+                      teams={availableTeams}
+                      onChange={handleHomeTeamSelect}
+                    />
+                    {/* `mt-9` lines the key up with the two 48px selects beside
+                        it, not with the crests above them — so it is scoped to
+                        the cut where there IS a beside. Stacked, the key is a
+                        centred divider between the two pickers and needs no
+                        offset. `aria-label` because `title` alone names a
+                        control only for a mouse. */}
+                    <button
+                      type="button"
+                      title="Swap home and away teams"
+                      aria-label="Swap home and away teams"
+                      onClick={handleSwapTeams}
+                      className="mb-btn mb-btn-outline-navy h-12 w-12 shrink-0 flex-col gap-0.5 self-center p-0 @min-[380px]:mt-9 @min-[380px]:self-start"
+                    >
+                      <MbIcon id="swap" size={16} />
+                      {/* `display/kicker` — 0.62rem/600/0.16em, the step every
+                          `.mb-kicker` on this screen already prints. 0.5rem was
+                          8px, the smallest type in the app and two steps below
+                          the scale's floor; it is not inked muted because this
+                          one sits inside a button and must take the button's
+                          ink through every state. */}
+                      <span className="matchbook-display text-[0.62rem] mb-track-kicker font-semibold">
+                        Swap
+                      </span>
+                    </button>
+                    <TeamSelect
+                      label="Away Team"
+                      value={awayTeamId}
+                      disabledId={homeTeamId}
+                      teams={availableTeams}
+                      onChange={handleAwayTeamSelect}
+                    />
+                  </div>
                 </div>
 
                 {/* `MbNotice`, not a hand-rolled red-framed <p>. The kit's
@@ -434,16 +469,33 @@ export default function QuickMatchPage() {
                     {data.recentQuickMatches.map((m, i) => (
                       <div
                         key={i}
-                        className="grid grid-cols-[44px_1fr_auto_1fr_14px] items-center gap-2 px-3 py-2.5"
+                        /* One cell for the matchup (L1). The five-track row
+                           gave each `1fr` 59px at 320 and painted " VC",
+                           " CC", "Nor Pan" and "West Wan" — two to seven
+                           characters against `NAME_FLOOR`'s eight, with
+                           "Beckton Blues VC" and "Marlow Blues VC"
+                           indistinguishable at " VC".
+
+                           `justify-self` had to go with it: a grid item with
+                           a `justify-self` other than `stretch` is sized by
+                           its MAX-CONTENT, so neither mark was ever eligible
+                           to truncate in the first place. `MbMatchupPair`
+                           mirrors the away side from its own container width
+                           instead, and stacks one team per line below it. */
+                        className="grid grid-cols-[44px_minmax(0,1fr)_14px] items-center gap-2 px-3 py-2.5"
                       >
                         <p className="matchbook-display text-[0.66rem] mb-track-status font-bold leading-tight tabular-nums text-mb-ink-muted">
                           {m.date}
                         </p>
-                        <TeamMark team={m.home} className="justify-self-start" />
-                        <span className="matchbook-display whitespace-nowrap text-[0.95rem] mb-track-title font-bold tabular-nums">
-                          {m.homeScore} – {m.awayScore}
-                        </span>
-                        <TeamMark team={m.away} reverse className="justify-self-end" />
+                        <MbMatchupPair
+                          home={m.home}
+                          away={m.away}
+                          homeScore={m.homeScore}
+                          awayScore={m.awayScore}
+                          homeWon={m.homeWon}
+                          awayWon={!m.homeWon}
+                          decided={m.homeScore !== m.awayScore}
+                        />
                         <ResultMark homeWon={m.homeWon} />
                       </div>
                     ))}

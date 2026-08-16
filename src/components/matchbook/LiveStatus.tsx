@@ -72,7 +72,7 @@ export const MbLiveStatus = ({
   const subInk = onNavy ? "text-mb-paper-bright" : "text-mb-ink-muted";
 
   return (
-    <div className={`flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1 ${className}`}>
+    <div className={`flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1.5 ${className}`}>
       <span className={`inline-flex min-w-0 items-center gap-1.5 ${ink}`}>
         {state.dot && <span className="mb-live-dot shrink-0" />}
         {state.icon && <MbIcon id={state.icon} size={13} className="shrink-0" />}

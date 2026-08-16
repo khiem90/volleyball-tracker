@@ -179,7 +179,7 @@ const CellSide = ({
 const FootWord = ({ cell }: { cell: MbBracketCellData }) => {
   if (cell.live) {
     return (
-      <span className="mb-kicker flex items-center gap-1 text-mb-navy">
+      <span className="mb-kicker flex items-center gap-1.5 text-mb-navy">
         <span className="mb-live-dot" />
         Live
       </span>
@@ -228,7 +228,7 @@ const BracketCellInner = ({
         showScore={showScore}
         placeholder={cell.bye ? "—" : "TBD"}
       />
-      <span className="flex h-6 items-center justify-between gap-1 border-t border-mb-rule px-2">
+      <span className="flex h-6 items-center justify-between gap-1.5 border-t border-mb-rule px-2">
         {cell.label ? (
           <span className="mb-kicker truncate tabular-nums">{cell.label}</span>
         ) : (

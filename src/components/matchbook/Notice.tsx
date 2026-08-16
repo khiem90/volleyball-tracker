@@ -38,7 +38,7 @@ export const MbNotice = ({
       /* self-start beats the class's align-items without competing with it. */
       className="mt-[2px] shrink-0 self-start"
     />
-    <div className="flex min-w-0 flex-col gap-1">
+    <div className="flex min-w-0 flex-col gap-[3px]">
       {title && (
         <span className="matchbook-display text-[0.78rem] mb-track-display font-bold">
           {title}

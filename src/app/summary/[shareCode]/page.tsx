@@ -247,7 +247,24 @@ export default function SummaryPage() {
                 {champion ? (
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-3 px-4 py-5 sm:px-5">
                     <Crest team={champion.team} size={64} />
-                    <div className="min-w-0 flex-1">
+                    {/* A BASIS, so the row wraps instead of squeezing (L2).
+
+                        `flex-wrap` was already here and could never fire: a
+                        `flex-1 min-w-0` item shrinks to nothing before it
+                        wraps, so the crest and the form run kept their widths
+                        and the name paid. Measured at 320 with an eight-club
+                        roster, the name held 76px at `display/stat-lg` (30px)
+                        and `break-words` cut "Marlow Blues VC" into four
+                        mid-word pieces — the champion's name, on the panel
+                        announcing the champion.
+
+                        192px is the width at which "Barrington", this roster's
+                        longest token at 30px, still sets whole. Below it the
+                        block takes its own line and gets the panel's full
+                        254px; above it the row is unchanged. `break-words`
+                        stays as the last resort it is meant to be — it only
+                        breaks a word that cannot fit a line at all. */}
+                    <div className="min-w-0 flex-1 basis-48">
                       <p className="mb-kicker flex items-center gap-1.5">
                         <MbIcon id="crown" size={13} className="shrink-0" />
                         Champion

@@ -118,7 +118,7 @@ export const MbStat = ({
       <div className="min-w-0">
         <p className="mb-kicker truncate">{label}</p>
         <p
-          className={`matchbook-display mt-1 font-bold leading-none tabular-nums ${VALUE[size]}`}
+          className={`matchbook-display mt-1 mb-track-display font-bold leading-none tabular-nums ${VALUE[size]}`}
         >
           {value}
           {sub && (

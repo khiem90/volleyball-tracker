@@ -102,7 +102,7 @@ export const MbStepRail = ({
               underline hugging a short label.
             */}
             <span
-              className={`flex min-w-0 flex-col items-start gap-0.5 pt-[3px] ${
+              className={`flex min-w-0 flex-col items-start gap-[3px] pt-[3px] ${
                 vertical ? "flex-1" : "w-full"
               }`}
             >

@@ -353,7 +353,7 @@ const LoginPageContent = () => {
           <div className="mx-auto mt-5 mb-8 h-px w-full bg-mb-rule-on-navy" />
 
           {/* Crest showcase */}
-          <div className="grid grid-cols-3 gap-x-6 gap-y-5">
+          <div className="grid grid-cols-3 gap-x-6 gap-y-4">
             {SHOWCASE_CRESTS.map((crest) => (
               <div key={crest.slug} className="flex flex-col items-center gap-2">
                 <Image

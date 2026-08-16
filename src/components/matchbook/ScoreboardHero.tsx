@@ -71,7 +71,7 @@ const ScoreCell = ({
   align: MbScoreNumeralAlign;
   lead: Lead;
 }) => (
-  <span className={`flex flex-col gap-1 ${CELL_ALIGN[align]}`}>
+  <span className={`flex flex-col gap-[3px] ${CELL_ALIGN[align]}`}>
     <span
       aria-hidden="true"
       className={`mb-score-rule mb-numeral--${size}`}

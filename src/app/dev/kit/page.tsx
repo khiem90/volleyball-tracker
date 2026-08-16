@@ -168,7 +168,7 @@ const CoreControlsSection = () => {
 
   return (
     <section id="w1-p1-core-controls" className="mt-10">
-      <header className="mb-5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b-[1.5px] border-mb-navy pb-2">
+      <header className="mb-5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1.5 border-b-[1.5px] border-mb-navy pb-2">
         <h2 className="matchbook-display text-2xl mb-track-display font-bold leading-none">
           Core <span className="text-mb-coral">Controls</span>
         </h2>
@@ -749,7 +749,7 @@ const LogicAndPanelSection = () => {
 
   return (
     <section id="w1-p1-logic-and-panel" className="mt-10">
-      <header className="mb-5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b-[1.5px] border-mb-navy pb-2">
+      <header className="mb-5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1.5 border-b-[1.5px] border-mb-navy pb-2">
         <h2 className="matchbook-display text-2xl mb-track-display font-bold leading-none">
           Shared <span className="text-mb-coral">Logic</span>
         </h2>
@@ -782,7 +782,7 @@ const LogicAndPanelSection = () => {
                     <MbIcon id={meta.icon} size={18} />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-0.5">
+                    <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-[3px]">
                       <span className="matchbook-display text-[0.9rem] mb-track-display font-bold">
                         {meta.label}
                       </span>
@@ -791,7 +791,7 @@ const LogicAndPanelSection = () => {
                       </span>
                     </div>
                     <p className="mt-1 text-[0.78rem] text-mb-ink-muted">{meta.blurb}</p>
-                    <div className="mt-2.5 flex flex-wrap gap-x-3.5 gap-y-1.5">
+                    <div className="mt-2.5 flex flex-wrap gap-x-3 gap-y-1.5">
                       <LogicFlag on={meta.supports.series} label="Series" />
                       <LogicFlag on={meta.supports.courts} label="Venues" />
                       <LogicFlag on={meta.supports.scoringMode} label="Scoring" />
@@ -972,7 +972,7 @@ const LogicAndPanelSection = () => {
               </span>
             }
           >
-            <div className="grid grid-cols-1 gap-x-6 gap-y-5 p-4 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="grid grid-cols-1 gap-x-6 gap-y-4 p-4 sm:grid-cols-2 xl:grid-cols-4">
               <LogicRow label="size sm / md / lg">
                 <div className="flex flex-col items-start gap-2.5">
                   <TeamMark team={LOGIC_TEAM} size="sm" />
@@ -1018,7 +1018,7 @@ const LogicAndPanelSection = () => {
               </LogicRow>
 
               <LogicRow label="orientation vertical">
-                <div className="flex items-start gap-5">
+                <div className="flex items-start gap-4">
                   <TeamMark team={LOGIC_TEAM} size="lg" orientation="vertical" />
                   <TeamMark
                     team={LOGIC_TEAM_AWAY}
@@ -1124,7 +1124,7 @@ const FormBlock = ({
   children: React.ReactNode;
 }) => (
   <div className="border-t border-mb-rule px-4 py-4 first:border-t-0">
-    <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+    <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1.5">
       <p className="mb-kicker">{label}</p>
       {note && (
         <p className="min-w-0 text-[0.72rem] tabular-nums text-mb-ink-muted">
@@ -1190,7 +1190,7 @@ const FormKitSection = () => {
 
   return (
     <section id="w1-p1-form-kit" className="mt-10">
-      <header className="mb-5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b-[1.5px] border-mb-navy pb-2">
+      <header className="mb-5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1.5 border-b-[1.5px] border-mb-navy pb-2">
         <h2 className="matchbook-display text-2xl mb-track-display font-bold leading-none">
           Form <span className="text-mb-coral">Kit</span>
         </h2>
@@ -1904,7 +1904,7 @@ const OverlaysAndFeedbackSection = () => {
 
   return (
     <section id="w1-p1-overlays-feedback" className="mt-10">
-      <header className="mb-5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b-[1.5px] border-mb-navy pb-2">
+      <header className="mb-5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1.5 border-b-[1.5px] border-mb-navy pb-2">
         <h2 className="matchbook-display text-2xl mb-track-display font-bold leading-none">
           Overlays &amp; <span className="text-mb-coral">Feedback</span>
         </h2>
@@ -2511,7 +2511,7 @@ const ScoreAndStatusSection = () => {
 
   return (
     <section id="w1-p1-score-and-status" className="mt-10">
-      <header className="mb-5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b-[1.5px] border-mb-navy pb-2">
+      <header className="mb-5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1.5 border-b-[1.5px] border-mb-navy pb-2">
         <h2 className="matchbook-display text-2xl mb-track-display font-bold leading-none">
           Score &amp; <span className="text-mb-coral">Status</span>
         </h2>
@@ -3094,7 +3094,7 @@ const ActionAndSharingSection = () => {
 
   return (
     <section id="w1-p1-action-sharing" className="mt-10">
-      <header className="mb-5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b-[1.5px] border-mb-navy pb-2">
+      <header className="mb-5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1.5 border-b-[1.5px] border-mb-navy pb-2">
         <h2 className="matchbook-display text-2xl mb-track-display font-bold leading-none">
           Action &amp; <span className="text-mb-coral">Sharing</span>
         </h2>
@@ -3526,7 +3526,7 @@ const KIT_QUEUE: KitQueueItem[] = [
 ];
 
 const renderKitQueue = (item: KitQueueItem) => (
-  <span className="flex min-w-0 flex-col gap-0.5">
+  <span className="flex min-w-0 flex-col gap-[3px]">
     <span className="matchbook-display line-clamp-2 text-[0.85rem] mb-track-display font-bold leading-tight tabular-nums">
       {item.fixture}
     </span>
@@ -3636,7 +3636,7 @@ const SelectionListsSection = () => {
 
   return (
     <section id="w1-p1-selection-lists" className="mt-10">
-      <header className="mb-5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b-[1.5px] border-mb-navy pb-2">
+      <header className="mb-5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1.5 border-b-[1.5px] border-mb-navy pb-2">
         <h2 className="matchbook-display text-2xl mb-track-display font-bold leading-none">
           Selection <span className="text-mb-coral">&amp; Lists</span>
         </h2>
@@ -3682,7 +3682,7 @@ const SelectionListsSection = () => {
               </div>
               <p className="mt-3 text-[0.72rem] text-mb-ink-muted">
                 Selected format:{" "}
-                <span className="matchbook-display font-bold text-mb-navy">
+                <span className="matchbook-display mb-track-link font-bold text-mb-navy">
                   {FORMAT_META[format].label}
                 </span>
               </p>
@@ -4143,7 +4143,7 @@ const P0UnclaimedSection = () => (
       Skip to content
     </a>
 
-    <header className="mb-5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b-[1px] border-mb-navy pb-2">
+    <header className="mb-5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1.5 border-b-[1px] border-mb-navy pb-2">
       <h2 className="matchbook-display text-2xl mb-track-display font-bold leading-none">
         P0 <span className="text-mb-coral">Unclaimed</span>
       </h2>
@@ -4370,7 +4370,7 @@ const ShellSection = () => {
 
   return (
     <section id="shell" className="mt-10">
-      <header className="mb-5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b-[1.5px] border-mb-navy pb-2">
+      <header className="mb-5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1.5 border-b-[1.5px] border-mb-navy pb-2">
         <h2 className="matchbook-display text-2xl mb-track-display font-bold leading-none">
           App <span className="text-mb-coral">Shell</span>
         </h2>
@@ -4701,7 +4701,7 @@ const FeedbackSection = () => {
 
   return (
     <section id="feedback" className="mt-10">
-      <header className="mb-5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b-[1.5px] border-mb-navy pb-2">
+      <header className="mb-5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1.5 border-b-[1.5px] border-mb-navy pb-2">
         <h2 className="matchbook-display text-2xl mb-track-display font-bold leading-none">
           Feedback <span className="text-mb-coral">Layer</span>
         </h2>

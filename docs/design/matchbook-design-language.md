@@ -253,7 +253,8 @@ snippet in code. Never introduce a size between two steps.
 | Name | Size | Weight | Tracking | Leading | Tailwind snippet | Where it ships |
 | --- | --- | --- | --- | --- | --- | --- |
 | `display/masthead` | `2.25rem` → `sm:3rem` | 700 | `0.01em` | `none` | `matchbook-display text-4xl font-bold leading-none tracking-[0.01em] sm:text-5xl` | The one `<h1>` per screen (6 identical call sites) |
-| `display/score-2xl` | `clamp(4rem, 18vw, 9rem)` | 700 | inherit | `0.9` | `.mb-numeral.mb-numeral--court` (baked) | Court View only, via `MbScoreNumeral size="court"` |
+| `display/score-2xl` | `clamp(4rem, 18vw, 9rem)` | 700 | inherit | `0.9` | `.mb-numeral.mb-numeral--court` (baked) | The `size="court"` default. Overridden by `display/score-fit` wherever the numeral has a sized container — today that is every console call site |
+| `display/score-fit` | `min(100cqh, 58cqw, 16rem)` | 700 | `normal` | `0.9` | `[&_.mb-numeral--court]:text-[min(100cqh,58cqw,16rem)]!` on a `container-type: size` box holding only the numeral | The live scoring console (`ScoreSide.tsx`) |
 | `display/score-xl` | `3.75rem` | 700 | inherit | — | `matchbook-display text-6xl font-bold tabular-nums` | Quick-Match scoreboard preview |
 | `display/score-lg` | `3rem` | 700 | inherit | — | `matchbook-display text-5xl font-bold tabular-nums` | Match of the Day, Match Report final score |
 | `display/stat-xl` | `2.25rem` | 700 | inherit | `none` | `matchbook-display text-4xl font-bold leading-none tabular-nums` | Leaders value, Club Snapshot value |
@@ -271,6 +272,37 @@ snippet in code. Never introduce a size between two steps.
 | `display/status` | `0.66rem` | 700 | `0.1em` | — | `matchbook-display text-[0.66rem] font-bold tracking-[0.1em]` | Status words (Live/Draft/Final/ACTIVE) |
 | `display/kicker` | `0.62rem` | 600 | `0.16em` | — | baked into `.mb-kicker` | Every eyebrow label |
 | `display/badge-label` | `0.6rem` | 700 | `0.22em`–`0.28em` | — | `matchbook-display text-[0.6rem] font-bold tracking-[0.22em]` | Masthead badge caption word |
+
+`display/score-fit` is the one step on this table measured in **container**
+units rather than viewport units or rems, and that is the whole reason it
+exists. A console numeral does not live in the viewport: it lives in a score row
+whose height is `column − head − foot` and whose width is
+`column − padding − the inline key`. Sized off `vh`/`vw` the two quantities
+diverge, and they diverged badly — at 320x568 the viewport was 568px tall while
+the row it had to fit was **0px**, and the live score was clipped out of
+existence on an iPhone SE. Three `!` overrides with six hand-fitted viewport
+coefficients had accumulated trying to close that gap, each correct at the
+viewports in its own table and wrong at the next one.
+
+Both coefficients are measured against the face, not chosen. Oswald 700, per
+100px of font-size (canvas `TextMetrics`): `fontBoundingBox` ascent 119 /
+descent 29, digit ink ascent 82 / descent 2, advance of "0" = 55.
+
+- **`100cqh`** — at `line-height: 0.9` the ink runs `0.08F..0.92F` down a `0.9F`
+  box, so centred in a row of height `R` it clears the row while `F ≤ 1.064R`.
+  100% of the container height takes 94% of that and leaves the rest to
+  subpixel rounding.
+- **`58cqw`** — the reserve is three figures at `1ch` = `1.65F`, *whatever the
+  value*: the width term must use the reserve and never the rendered digit
+  count, or the numeral would resize on 9→10 and reflow the scoreline it exists
+  to hold still. `F ≤ W/1.65 = 0.606W`; 58% takes 96% of that.
+- **`16rem`** — a ceiling, not a floor. There is deliberately **no floor**: a
+  floor larger than the container is precisely how the score became invisible,
+  so the container is the floor.
+
+The step therefore needs no breakpoints and has none. It is correct in
+portrait, in landscape, in Court View, and at whatever height the chrome around
+it grows to next.
 
 **Body steps (Outfit, sentence case)**
 
@@ -1665,10 +1697,16 @@ giant score numeral, no set-score strip, no serve indicator, no undo affordance.
              serving onScore={…} onUndo={…} />
 <MbSetStrip sets={[{home,away}, …]} current={2} />
 ```
-`.mb-score-side`: paper-bright, 1.5px navy divider between sides, score in a new
-`display/score-2xl` step (`clamp(4rem, 18vw, 9rem)`, 700, `tabular-nums`), crest +
-`display/stat-md` name above. Full height, `select-none`, press feedback = tint not
-scale. Landscape uses the existing `@media (max-height:500px)` helpers.
+`.mb-score-side`: paper-bright, 1.5px navy divider between sides, score at
+**`display/score-fit`** (`min(100cqh, 58cqw, 16rem)`, 700, `tabular-nums`) —
+`display/score-2xl` remains the `size="court"` default but is overridden here,
+because a viewport-sized numeral inside a column-sized box is what clipped the
+score off the console at 320. Crest + `display/stat-md` name above, stepping to
+`display/stat-sm` once the column itself is short. Full height, `select-none`,
+press feedback = tint not scale. **Which way things lie down** is the viewport's
+landscape query; **what the column can afford** (its foot, its crest step, its
+name step) is a container query on the column's own box — the two are different
+quantities and `ScoreSide.tsx` keeps them apart.
 
 ### GAP-8 — Loading and skeleton states are still old-theme
 > **PARTIAL.** `Skeleton.tsx` (`MbSkeleton`) + `.mb-skeleton` shipped —

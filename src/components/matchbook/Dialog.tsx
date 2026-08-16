@@ -275,7 +275,7 @@ export const MbDialog = ({
             }`}
           >
             <header className="mb-dialog-head">
-              <div className="flex min-w-0 flex-col gap-0.5">
+              <div className="flex min-w-0 flex-col gap-[3px]">
                 {kicker && (
                   <span
                     className="mb-kicker"

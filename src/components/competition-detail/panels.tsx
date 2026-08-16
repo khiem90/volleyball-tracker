@@ -10,6 +10,7 @@ import { MbIconButton } from "@/components/matchbook/IconButton";
 import { MbMeter } from "@/components/matchbook/Meter";
 import { MbStat, type MbStatTone } from "@/components/matchbook/Stat";
 import { MbTableScroll } from "@/components/matchbook/TableScroll";
+import { MbTeamName } from "@/components/matchbook/TeamName";
 import { Crest, Panel, PanelEmpty, TeamMark } from "@/components/matchbook/Panel";
 import { BracketRail } from "@/components/matchbook/BracketRail";
 import { MbCourtCard } from "@/components/matchbook/CourtCard";
@@ -148,15 +149,35 @@ export const ChampionPanel = ({ data }: { data: MbCompetitionDetail }) => {
         <PanelEmpty message="No champion exists yet — the last match decides it." />
       ) : (
         <div className="flex flex-1 flex-col gap-4 p-5">
-          <div className="flex min-w-0 items-center gap-4">
+          {/* THE STAMP DROPS BELOW THE FLOOR (L1).
+
+              Crest 56 + gap 16 + name + gap 16 + a 77px "Final" stamp is 165px
+              of fixed claim, and at 320 this panel's body is 246px — so the
+              name held 81px and `truncate` painted "Marlo" for "Marlow Blues
+              VC", five characters against `NAME_FLOOR`'s eight, on the panel
+              that exists to name the winner.
+
+              `flex-wrap` plus a BASIS, not `flex-wrap` alone: a `flex-1
+              min-w-0` item shrinks rather than wrapping, so the row would have
+              gone on squeezing the name for ever. 106px is eight characters of
+              `display/stat-md` (24px Oswald), so the line breaks exactly when
+              it can no longer hold the floor — 56 + 16 + 106 + 16 + 77 = 271
+              against 246 at 320 — and the stamp takes its own line while the
+              name grows to 174px. The stamp is the right thing to move: it is
+              a decoration repeating the word in the panel's own head. */}
+          <div className="flex min-w-0 flex-wrap items-center gap-4">
             <Crest team={data.winner} size={56} />
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0 flex-1 basis-[106px]">
               {/* Just "Winner". The competition name is the `<h1>` two rows up,
                   and repeating it wrapped this eyebrow onto two lines at 390. */}
               <p className="mb-kicker">Winner</p>
-              <p className="matchbook-display mt-1 truncate text-[1.5rem] mb-track-display font-bold leading-none">
-                {data.winner.name}
-              </p>
+              {/* `MbTeamName`, not `truncate`: end-truncation at this size made
+                  "Westhill Wanderers" and "Westhill Wanderers II" the same
+                  string, which on a champion panel names the wrong club. */}
+              <MbTeamName
+                name={data.winner.name}
+                className="matchbook-display mt-1 text-[1.5rem] mb-track-display font-bold leading-none"
+              />
               {record && (
                 <p className="matchbook-display mt-1.5 text-[0.74rem] mb-track-status font-bold tabular-nums">
                   {record}

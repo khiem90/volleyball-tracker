@@ -9,6 +9,7 @@ import { MbPageLoading } from "@/components/matchbook/Loading";
 import { MbIcon } from "@/components/matchbook/MbIcon";
 import { MbBadge, type MbBadgeTone } from "@/components/matchbook/Badge";
 import { MbMenu } from "@/components/matchbook/Menu";
+import { MbMatchupPair } from "@/components/matchbook/MatchRow";
 import { Crest, Panel, PanelEmpty, TeamMark } from "@/components/matchbook/Panel";
 import {
   MB_COMPETITION_FORMATS,
@@ -201,7 +202,7 @@ const BracketBox = ({ cell }: { cell: MbBracketCell }) => {
       {side(cell.home, cell.homeScore, cell.homeWon)}
       {side(cell.away, cell.awayScore, cell.awayWon, !cell.live && !cell.bye)}
       {cell.live && (
-        <div className="flex items-center justify-end gap-1 border-t border-mb-rule px-2 py-0.5">
+        <div className="flex items-center justify-end gap-1.5 border-t border-mb-rule px-2 py-0.5">
           <MbBadge tone="live">Live</MbBadge>
         </div>
       )}
@@ -348,7 +349,7 @@ const MainPanel = ({ selected }: { selected: MbCompeteSelected }) => {
         {selected.bracket.length === 0 ? (
           <PanelEmpty message="No bracket exists yet — start the competition to generate it." />
         ) : (
-          <div className="flex flex-1 items-stretch gap-5 overflow-x-auto p-4">
+          <div className="flex flex-1 items-stretch gap-4 overflow-x-auto p-4">
             {selected.bracket.map((round) => (
               <div key={round.label} className="flex flex-col gap-3">
                 <p className="mb-kicker tabular-nums">{round.label}</p>
@@ -651,29 +652,40 @@ const EventConsole = ({
             {selected.liveCourts.map((line, i) => (
               <div
                 key={i}
-                /* NO `justify-self`, and `minmax(0,1fr)` on the name
-                   tracks. A grid item with `justify-self` other than
-                   `stretch` is sized by its MAX-CONTENT, which is the
-                   whole name whatever the ellipsis does — `text-overflow`
-                   paints, it does not reduce an intrinsic contribution.
-                   Measured on the stress fixture at 320: this mark
-                   reported 291px inside a 320px viewport and pushed
-                   `body.scrollWidth` 50px past the document. `reverse` is
-                   what puts the away mark against the right edge; it
-                   never needed `justify-self` to do it. */
-                className="grid grid-cols-[52px_minmax(0,1fr)_auto_minmax(0,1fr)_auto] items-center gap-2 px-3 py-2.5"
+                /* THE MATCHUP IS ONE CELL (L1). It was five tracks —
+                   `[52px_minmax(0,1fr)_auto_minmax(0,1fr)_auto]` — with a
+                   `TeamMark` in each of the two `1fr`s, and at 320 that
+                   arithmetic leaves each identity 14.9px: measured on an
+                   eight-club roster this row painted
+
+                     [crest] AT  15 – 13  \II [crest]  ● LIVE
+
+                   i.e. "Kingsway Athletic" as AT and "Westhill Wanderers II"
+                   as \II, on the panel whose entire job is saying who is
+                   playing. Three tracks now, and `MbMatchupPair` gives each
+                   team its own line from its OWN container width — the same
+                   component and the same cut the Overview's Live Courts panel
+                   already uses, so the two screens that name the same object
+                   stop disagreeing about how to draw it.
+
+                   `decided={false}`: nothing is settled while the match is
+                   live, so neither side is muted as the loser. */
+                className="grid grid-cols-[52px_minmax(0,1fr)_auto] items-center gap-2 px-3 py-2.5"
               >
                 <p className="matchbook-display border-r border-mb-rule pr-2 text-[0.72rem] mb-track-link font-bold tabular-nums">
                   {line.court}
                 </p>
-                <TeamMark team={line.home} />
-                {/* Navy. A live score in coral measured 3.55:1 at
-                    15.2px/700 — and it is the one number on the row a
-                    reader must not have to work for. */}
-                <span className="matchbook-display whitespace-nowrap text-[0.95rem] mb-track-title font-bold tabular-nums">
-                  {line.homeScore} – {line.awayScore}
-                </span>
-                <TeamMark team={line.away} reverse />
+                {/* Navy figures, not coral. A live score in coral measured
+                    3.55:1 at 15.2px/700 — and it is the one number on the row
+                    a reader must not have to work for. `MbMatchupPair` inks
+                    them navy at every emphasis. */}
+                <MbMatchupPair
+                  home={line.home}
+                  away={line.away}
+                  homeScore={line.homeScore}
+                  awayScore={line.awayScore}
+                  decided={false}
+                />
                 <MbBadge tone="live">Live</MbBadge>
               </div>
             ))}
@@ -697,33 +709,26 @@ const EventConsole = ({
             {selected.schedule.map((line, i) => (
               <div
                 key={i}
-                className="grid grid-cols-[58px_1fr] items-center gap-2 py-2 pl-3 pr-3"
+                className="grid grid-cols-[58px_minmax(0,1fr)] items-center gap-2 py-2 pl-3 pr-3"
               >
                 {/* `display/status` — 0.66rem/700 at 0.1em, the tracking
                     `.mb-badge` already declares for that pair here. */}
                 <p className="matchbook-display text-[0.66rem] mb-track-status font-bold tabular-nums">
                   {line.label}
                 </p>
-                {/* `basis-0 flex-1` and `MbTeamName` on both sides. As
-                    authored, flex shrink is proportional to base size, so
-                    at 1440 "Wolverhampton Wanderers Athletic Club B" held
-                    181px and "Apex" opposite it was cut to 19px; and the
-                    181px it did hold end-truncated to the same string as
-                    the "…Club C" row above it (F15). Equal halves, and the
-                    last token survives inside each half. */}
-                <div className="flex min-w-0 items-center gap-1.5">
-                  <Crest team={line.home} size={18} />
-                  <MbTeamName
-                    name={line.home.name}
-                    className="matchbook-display basis-0 flex-1 text-[0.72rem] mb-track-link font-semibold"
-                  />
-                  <span className="text-[0.6rem] text-mb-ink-muted">vs</span>
-                  <Crest team={line.away} size={18} />
-                  <MbTeamName
-                    name={line.away.name}
-                    className="matchbook-display basis-0 flex-1 text-[0.72rem] mb-track-link font-semibold"
-                  />
-                </div>
+                {/* Equal halves of a cell too narrow for either half is a
+                    fair failure, not a fixed one: this row was
+                    `basis-0 flex-1` on both names, and at 320 that gave each
+                    side 57px and painted "Great… CC" against "Marl… VC" —
+                    six and seven characters, under the eight-character floor
+                    `NAME_FLOOR` sets, with the two clubs distinguished only
+                    by a two-letter suffix. `MbMatchupPair` puts one team per
+                    line below its own container's threshold and keeps the
+                    single line above it, which is the only shape that gives
+                    both names the floor at both widths. `1fr` becomes
+                    `minmax(0,1fr)` so the pair is sized by the track rather
+                    than the track by the pair. */}
+                <MbMatchupPair home={line.home} away={line.away} note="vs" size="sm" />
               </div>
             ))}
           </div>
@@ -743,20 +748,31 @@ const EventConsole = ({
             {selected.recent.map((line, i) => (
               <div
                 key={i}
-                /* Same `justify-self` / `minmax(0,1fr)` correction as the
-                   Live Courts row above. */
-                className="grid grid-cols-[44px_minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-1.5 px-3 py-2"
+                /* Same one-cell matchup as the Live Courts row above, for the
+                   same measurement: at 320 the two `1fr` tracks were 78px
+                   each and painted "Bec VC", "Mar VC", "Gre CC" and
+                   " Spikers" — five clubs reduced to their suffix, four of
+                   them below the floor. */
+                className="grid grid-cols-[44px_minmax(0,1fr)] items-center gap-1.5 px-3 py-2"
               >
                 {/* `display/status`. 0.64rem (10.24px) was between steps
                     and shipped five times on this screen. */}
                 <p className="matchbook-display text-[0.66rem] mb-track-status font-bold tabular-nums text-mb-ink-muted">
                   {line.label}
                 </p>
-                <TeamMark team={line.home} size={18} />
-                <span className="matchbook-display whitespace-nowrap text-[0.85rem] mb-track-display font-bold tabular-nums">
-                  {line.homeScore} – {line.awayScore}
-                </span>
-                <TeamMark team={line.away} size={18} reverse />
+                {/* `decided` only when the figures differ: `MbMatchLine`
+                    carries no winner, so a level result must mute neither
+                    side rather than guess one. */}
+                <MbMatchupPair
+                  home={line.home}
+                  away={line.away}
+                  homeScore={line.homeScore}
+                  awayScore={line.awayScore}
+                  homeWon={(line.homeScore ?? 0) > (line.awayScore ?? 0)}
+                  awayWon={(line.awayScore ?? 0) > (line.homeScore ?? 0)}
+                  decided={line.homeScore !== line.awayScore}
+                  size="sm"
+                />
               </div>
             ))}
           </div>

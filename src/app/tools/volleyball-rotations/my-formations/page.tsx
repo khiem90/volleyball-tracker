@@ -103,7 +103,7 @@ const RowSkeleton = () => (
 
 /** The offline warning, drawn inside the panel it describes. */
 const StaleStrip = ({ onRetry }: { onRetry: () => void }) => (
-  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-mb-rule px-4 py-2.5">
+  <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-mb-rule px-4 py-2.5">
     <span className="mb-kicker flex items-center gap-1.5 text-mb-gold-ink">
       <MbIcon id="wifi-off" size={13} />
       Offline

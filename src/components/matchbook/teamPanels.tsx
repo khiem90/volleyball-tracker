@@ -2,6 +2,7 @@ import Link from "next/link";
 import { teamColorCss, teamColorHex, teamColorName } from "@/lib/teamColor";
 import { MbIcon } from "./MbIcon";
 import { MbButton, MbButtonLink } from "./Button";
+import { MbMatchupPair } from "./MatchRow";
 import { MbPanelHeadLink, type MbLedgerRow } from "./panels";
 import { MbTableScroll } from "./TableScroll";
 import { Crest, FormLetters, Panel, PanelEmpty, TeamMark } from "./Panel";
@@ -91,25 +92,63 @@ const RANK_CELL = "matchbook-display text-center font-bold tabular-nums";
    L, PF–PA and the form guide all stay at every width, because those are what
    the directory is read FOR.
    --------------------------------------------------------------------------- */
-const REVEAL_ENTERED = "hidden md:table-cell";
-const REVEAL_NEXT = "hidden md:table-cell";
+/* ---------------------------------------------------------------------------
+   AND THE SAME COLUMNS AT DESKTOP (L3)
+
+   `md:` was the wrong axis. This table lives in a twelve-column grid cell, so
+   its scrollport does not track the viewport: measured with an eight-club
+   roster, the table is 847px wide at EVERY width, and the box it is given is
+
+     834   784   overflow +63
+     1024  740   overflow +107
+     1440  667   overflow +180
+     1366  624   overflow +223      the WORST case is the second-widest screen
+
+   `MbTableScroll` absorbs that as horizontal scroll, and the last two columns
+   before the edge are `Next Match` (249px) and the tail of `Team` — so at 1366
+   and 1440 the opponent name was cut by the SCROLLPORT rather than by its own
+   box. A scrollport cut carries no ellipsis, lands mid-word, and is invisible:
+   5 of 8 rows cut mid-word at 1440, and "Westhill Wanderers" and "Westhill
+   Wanderers II" both painted "Westhill Wand" — two teams, one string, with the
+   characters that separate them 74px past an edge most readers never move.
+
+   So the two widest columns are revealed at the width where they FIT, and the
+   width that decides is the panel's own. 465px is the table without them; each
+   threshold is that plus the columns up to it, measured, not estimated:
+
+     Entered In (133)   598
+     Next Match (249)   847
+
+   Below each, the value is not lost — it rides the team cell as a kicker line,
+   which is the route this file already built for the phone and which needs no
+   scroller and no accordion. What changes is that the route is now taken
+   whenever the column would not fit, instead of only under 768px.
+   --------------------------------------------------------------------------- */
+const REVEAL_ENTERED = "hidden @min-[598px]:table-cell";
+const REVEAL_NEXT = "hidden @min-[847px]:table-cell";
+
+/** The kicker line's mirror of each: shown exactly when its column is not. */
+const DIGEST_ENTERED = "@min-[598px]:hidden";
+const DIGEST_NEXT = "@min-[847px]:hidden";
 
 /**
- * The hidden columns as one line. Reads "Summer League +4 · Jul 31 vs Tide",
- * and drops each half rather than printing an empty separator when a team has
- * no competition or no fixture.
+ * One hidden column as one line. Reads "Summer League +4" or "Jul 31 vs Tide",
+ * and is `null` — so nothing is rendered at all, rather than an empty kicker —
+ * when the team has no competition or no fixture.
+ *
+ * Two calls rather than one joined string, because the two columns no longer
+ * disappear together: at 1366 `Entered In` is drawn and `Next Match` is not.
  */
-const rowDigest = (row: MbTeamRow): string => {
-  const entered =
-    row.competitions.length === 0
-      ? null
-      : row.competitions[0] +
-        (row.competitions.length > 1 ? ` +${row.competitions.length - 1}` : "");
-  const next = row.nextMatch
+const enteredDigest = (row: MbTeamRow): string | null =>
+  row.competitions.length === 0
+    ? null
+    : row.competitions[0] +
+      (row.competitions.length > 1 ? ` +${row.competitions.length - 1}` : "");
+
+const nextDigest = (row: MbTeamRow): string | null =>
+  row.nextMatch
     ? `${row.nextMatch.date} ${row.nextMatch.isHome ? "vs" : "@"} ${row.nextMatch.opponent.name}`
     : null;
-  return [entered, next].filter(Boolean).join(" · ");
-};
 
 /* ---------------------------------------------------------------------------
    THE NAME COLUMN'S CEILING (G18)
@@ -229,6 +268,12 @@ export const TeamDirectoryPanel = ({
     ) : rows.length === 0 ? (
       <PanelEmpty message={`No teams match “${search}”.`} />
     ) : (
+      /* The container for `REVEAL_ENTERED` / `REVEAL_NEXT`. It wraps the
+         SCROLLER rather than sitting on it: an `@container` query styles a
+         container's descendants and never the container itself, and the box
+         worth measuring is the width the panel gives the table, not the
+         `scrollWidth` the table then asks for. */
+      <div className="@container flex flex-1 flex-col">
       <MbTableScroll>
         <table className="mb-table w-full border-collapse">
           <thead>
@@ -369,10 +414,26 @@ export const TeamDirectoryPanel = ({
                           fixture — table 356 → 448.95, Team column 109.64 →
                           211, document 390 → 443. A ceiling on the max-content
                           side cannot undo a floor raised on the min-content
-                          side. */}
-                      <span className="mb-kicker mt-0.5 block tabular-nums md:hidden">
-                        {rowDigest(row)}
-                      </span>
+                          side.
+
+                          Two lines, not one joined string: the columns they
+                          stand in for no longer vanish together, so each has to
+                          be able to appear without the other (see the note on
+                          `REVEAL_ENTERED`). */}
+                      {enteredDigest(row) && (
+                        <span
+                          className={`mb-kicker mt-0.5 block tabular-nums ${DIGEST_ENTERED}`}
+                        >
+                          {enteredDigest(row)}
+                        </span>
+                      )}
+                      {nextDigest(row) && (
+                        <span
+                          className={`mb-kicker mt-0.5 block tabular-nums ${DIGEST_NEXT}`}
+                        >
+                          {nextDigest(row)}
+                        </span>
+                      )}
                     </span>
                   </td>
                   <td className={`text-[0.78rem] text-mb-ink-muted ${REVEAL_ENTERED}`}>
@@ -475,6 +536,7 @@ export const TeamDirectoryPanel = ({
           </tbody>
         </table>
       </MbTableScroll>
+      </div>
     )}
   </Panel>
 );
@@ -881,42 +943,28 @@ export const UpcomingFixturesPanel = ({ items }: { items: MbScheduleItem[] }) =>
               </p>
             </div>
             <p className="text-[0.72rem] font-semibold tabular-nums">{item.time}</p>
-            <div className="min-w-0">
-              {/* `basis-0 flex-1` on BOTH names, and `MbTeamName` on each —
-                  the same cell `SchedulePanel` already fixed in `panels.tsx`.
-                  This panel is that panel's twin and had neither, so one
-                  object still read two ways across two routes. Measured here
-                  with the long-name fixture, before:
+            <div className="flex min-w-0 flex-col gap-0.5">
+              {/* `basis-0 flex-1` on both names was the previous fix and it
+                  only made the failure FAIR. Two names, two crests and a "vs"
+                  in one line is 148px of track at 320 and 62px at 1366, so
+                  each name held 45px and 62px and painted, on an eight-club
+                  roster:
 
-                    1440  home box  14.4px ("Pe…")  away box 134.1px
-                    320   home box   5.9px ("…")    away box  55.2px
+                    320   "W", " CC", " VC"            1–2 characters
+                    1366  "Marlo VC", "Great  CC"      7
 
-                  Two failures, each of which alone loses a team's identity:
+                  Under `NAME_FLOOR`'s eight either way, and at 320 the row is
+                  a crest, a suffix and another crest. `MbMatchupPair` is the
+                  shipped answer and `SchedulePanel` on `/` — this panel's twin
+                  — already uses it, so the swap also stops one object reading
+                  two ways across two routes. It gives each team its own line
+                  below 336px of its OWN container and keeps the single line
+                  above it, and it carries the "vs" as the centre note.
 
-                  1. flex shrink is proportional to BASE size, so the long
-                     name kept its share and the short one paid for it — "Peak"
-                     was squeezed to 14px beside a 134px "Wolverhampton…",
-                     which paints as no name at all. An equal `basis-0` split
-                     gives each side the same half whatever the names measure.
-                  2. within that half, end-truncation made the two Wolverhampton
-                     sides the SAME STRING (F15): both painted
-                     "Wolverhampton Wandere…", as did "Northamptonshire Metr…"
-                     for Rovers and Reserves. `MbTeamName` pins the last token,
-                     so "…B"/"…C" and "…Rovers"/"…Reserves" still separate
-                     them. */}
-              <span className="flex items-center gap-1.5 min-w-0">
-                <Crest team={item.home} size={18} />
-                <MbTeamName
-                  name={item.home.name}
-                  className="matchbook-display basis-0 flex-1 text-[0.72rem] mb-track-link font-semibold"
-                />
-                <span className="px-0.5 text-[0.6rem] text-mb-ink-muted">vs</span>
-                <Crest team={item.away} size={18} />
-                <MbTeamName
-                  name={item.away.name}
-                  className="matchbook-display basis-0 flex-1 text-[0.72rem] mb-track-link font-semibold"
-                />
-              </span>
+                  The venue drops out of the name line and under it, which is
+                  the grammar Live Courts' set label and the Overview schedule's
+                  venue line already use. */}
+              <MbMatchupPair home={item.home} away={item.away} note="vs" size="sm" />
               <span className="block truncate text-[0.66rem] text-mb-ink-muted">
                 {item.venue}
               </span>
@@ -944,15 +992,30 @@ export const RecentFormPanel = ({ rows }: { rows: MbFormRow[] }) => (
     ) : (
       <div className="flex grow flex-col divide-y divide-mb-rule">
         {rows.map((row) => (
-          <div
-            key={row.team.name}
-            className="flex grow items-center justify-between gap-2 px-3 py-2.5"
-          >
-            <TeamMark team={row.team} size={22} className="min-w-0 flex-1" />
-            <FormLetters form={row.form} />
-            <span className="matchbook-display w-10 text-right text-[0.78rem] mb-track-display font-bold tabular-nums">
-              {row.record}
-            </span>
+          /* Three claims on one line — an identity, a five-letter form run and
+             a W–L record — and the identity is the only one that can give. At
+             1366 this panel is `xl:col-span-5` beside a 7, so the row is 233px
+             and the mark held 95 of it: "Marlow Blues VC" painted "Marlow",
+             "Beckton Blues VC" painted "Beckton", six and seven characters
+             against `NAME_FLOOR`'s eight, and the two Blues clubs separated by
+             one letter.
+
+             250 = 22 crest + 8 + 96 name + 8 + 78 form run + 8 + 40 record,
+             where 96 is `MB_MATCHUP_CUT`'s own `sm` name track. Below it the
+             measures drop to a second line and the name takes the whole width;
+             above it nothing moves. At 320 the row is 262px and stays on one
+             line — the phone was never the failure here, the twelve-column
+             desktop was. */
+          <div key={row.team.name} className="@container grow px-3 py-2.5">
+            <div className="flex flex-col gap-1.5 @min-[250px]:flex-row @min-[250px]:items-center @min-[250px]:justify-between @min-[250px]:gap-2">
+              <TeamMark team={row.team} size={22} className="min-w-0 @min-[250px]:flex-1" />
+              <span className="flex items-center justify-between gap-2 @min-[250px]:contents">
+                <FormLetters form={row.form} />
+                <span className="matchbook-display w-10 text-right text-[0.78rem] mb-track-display font-bold tabular-nums">
+                  {row.record}
+                </span>
+              </span>
+            </div>
           </div>
         ))}
       </div>

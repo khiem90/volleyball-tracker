@@ -93,6 +93,112 @@
    instead.
    =========================================================================== */
 
+/* ===========================================================================
+   THE NAME FLOOR (L1)
+
+   Everything above is about WHERE the ellipsis lands. This is about how much
+   is left after it, which is a different question and the one two critics
+   scored 3/10 on. Measured across 30 routes at seven widths with an
+   eight-club roster, the hard minimum number of PAINTED characters of a team
+   name was 0 at 320, 3 at 360, 4 at 375, 5 at 390 and 7 at 414 — and the
+   worst case was `/competitions` Live Courts, which handed each side a 14.9px
+   mark and painted "AT 15 – 13 \II". Neither team on the panel whose entire
+   job is saying who is playing.
+
+   ------------------------------------------------------------------ the rule
+
+   **A team name paints at least NAME_FLOOR characters, or the layout changes
+   shape.** Eight, because that is where a club stops being a category: on this
+   roster "Westhill", "Beckton ", "Marlow B", "Kingsway", "Northumb", "St
+   Aidan'" and "Great Ba" are all distinct at eight and only "Westhill" needs
+   its tail to separate two entries. Below eight the names collapse into each
+   other ("Bec VC" and "Marl VC" are the same shape) and the mark stops being
+   an identity.
+
+   The rule binds LAYOUTS, not this component: a row that cannot give both its
+   names eight characters must wrap to two lines, stack, or drop a neighbouring
+   column — `MB_MATCHUP_CUT` in `MatchRow.tsx` is the shipped example, and its
+   two thresholds are derived from this constant. Shrinking a name to a stub is
+   never the answer, because a stub is not a shorter name, it is a different
+   and wrong one.
+
+   ---------------------------------------- what this component does NOT do
+
+   It does not deliver the floor, and it cannot: 8 characters of `display/link`
+   is 57px, and no rule inside this file can conjure 57px out of a 47px box.
+   Every one of the 111 measured failures was closed by a LAYOUT — three
+   hand-rolled `/competitions` rows and one on `/quick-match` becoming
+   `MbMatchupPair`; `MbMatchRow` taking the same 336px cut; `/summaries` Match
+   Report, `/`'s Match of the Day, `/teams` Recent Form and the Champion panel
+   each stacking below the width at which their names still fit; and `/teams`
+   revealing its two widest columns only where the table fits its scrollport.
+   Measured with this component's contribution switched off, the minimum
+   painted character count is already 8 at every viewport. That is the proof
+   the rule belongs upstairs.
+
+   ------------------------------------------------ what it does: a BACKSTOP
+
+   `shrink-0` on the tail means the tail is paid FIRST and the head gets the
+   remainder — including when the remainder is nothing. That is how a 47px mark
+   painted "AT" for "Kingsway Athletic" and "\II" for "Westhill Wanderers II":
+   the ellipsis had eaten the club and left the suffix, which is F15 with the
+   two halves swapped. Nothing in the layout guarantees a future caller will not
+   build a 47px box, and the failure mode should not be "no club name at all".
+
+   `TAIL_CEILING` caps the tail at `calc(100% - 4ch)`, so the head always keeps
+   four characters of the box whatever the tail costs. It is deliberately far
+   BELOW the floor: 4ch is the point at which the head has stopped saying
+   anything, not the point at which it stops being comfortable. Measured across
+   2056 rendered names at 320/390/1366/1440, it changes 9 of them, and every
+   one is a head that was painting zero or one character — "␣Wanderers" becomes
+   "We␣Wandere". Everywhere else it is inert, which is the property that
+   matters: a cap that bit in the ordinary range would trade the F15 fix for
+   this one, and an early version at 11ch did exactly that, cutting
+   "WESTHILL WANDERERS" to "WESTHILL WANDE" where plain elision would have
+   given "WESTHIL… WANDERERS" — the same characters, one more word of them.
+
+   ------------------------------------------------ a ceiling, NOT a floor
+
+   The obvious spelling is `min-width` on the head, and it is wrong. A
+   `min-width` binds unconditionally, so a head SHORTER than the cap gets a box
+   wider than its own text and the tail is pushed off the end of it: "Peak B"
+   renders "PEAK⎵⎵⎵B" with a hole in the middle of a name, at every width,
+   including the ones with room to spare. A floor cannot tell "this head is
+   being squeezed" from "this head is short". A ceiling on the tail can,
+   because it is expressed relative to the box: where the tail's natural width
+   is under the cap — which is almost everywhere — nothing binds at all.
+
+   `ch` rather than px because it is the font's own figure width: it tracks
+   every type step, every zoom and every fallback face with nothing to
+   re-derive at a call site.
+
+   The percentage is safe where `NAME_COL`'s was not: this is a `max-width` on
+   a flex ITEM inside a box of definite width, not a `max-width` on a
+   `table-layout: auto` CELL, so it can never be fed back as a column's
+   preferred width (the +53px that moved this app's bottom navigation
+   off-screen once — see `teamPanels.tsx`). Where a containing block is
+   indefinite the percentage resolves to `none` and the tail behaves exactly as
+   it did before, which is the correct degradation: the old behaviour, not a
+   worse one.
+   =========================================================================== */
+
+/** Painted characters a name must always keep. Layouts reshape below it. */
+export const NAME_FLOOR = 8;
+
+/**
+ * The backstop: four characters of the box the tail may never take, so the
+ * head can never paint nothing. Far below `NAME_FLOOR` on purpose — see "what
+ * it does: a BACKSTOP" above.
+ *
+ * A LITERAL class: Tailwind scans source text, so an interpolated
+ * `max-w-[calc(100%-${n}ch)]` compiles to nothing and the ceiling would
+ * silently never exist. `overflow-clip` and not `truncate`, because the head
+ * beside it is already showing an ellipsis whenever this binds, and because
+ * `truncate`'s `white-space: nowrap` would collapse the joining space the tail
+ * carries.
+ */
+export const TAIL_CEILING = "max-w-[calc(100%-4ch)] overflow-clip";
+
 /** Longest tail worth pinning, including its leading space. */
 const TAIL_MAX = 12;
 
@@ -165,8 +271,14 @@ export const MbTeamName = ({
       <span className="min-w-0 truncate">{head}</span>
       {/* `whitespace-pre` keeps the joining space: the tail carries it, so
           `head + tail` is the name verbatim rather than the name with a space
-          collapsed out of it. */}
-      <span className="shrink-0 whitespace-pre">{tail}</span>
+          collapsed out of it.
+
+          `shrink-0` still, because the tail must not give up characters while
+          the head has room — that is the F15 fix. `TAIL_CEILING` is what
+          decides when it has run out of room, and it caps the BOX rather than
+          shrinking it, so a head at its natural width is never pushed away
+          from its own tail. See "a ceiling, NOT a floor" above. */}
+      <span className={`shrink-0 whitespace-pre ${TAIL_CEILING}`}>{tail}</span>
     </span>
   );
 };

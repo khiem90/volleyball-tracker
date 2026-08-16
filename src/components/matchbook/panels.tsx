@@ -615,36 +615,92 @@ export const MatchOfTheDayPanel = ({ match }: { match: MbFeaturedMatch | null })
             five of five cells hittable. The track minimum and the CONTENT
             minimum are two different floors and both had to go — see the note
             on the cell below for the second. */}
-        <div className="grid grid-cols-[minmax(0,1fr)_auto_auto_auto_minmax(0,1fr)] items-center gap-3 px-5 py-4">
-          {/* The W1 return's own closing sentence — "the names in these two
-              cells are still raw and still WRAP rather than elide" — is the
-              defect this closes. `minmax(0,1fr)` lets the TRACK shrink to zero;
-              it does not let the CONTENT, and a raw span's min-content floor is
-              its longest word. Measured at 320 with an eight-club roster,
-              "Eastfield Kestrels" laid out from x 272.6 to 328.2 and took
-              `documentElement.scrollWidth` to 328 against a 320 client width —
-              which, with `html { overflow-x: hidden }`, is the bottom nav
-              pushed off a viewport that cannot be scrolled to reach it.
+        {/* The W1 return's own closing sentence — "the names in these two
+            cells are still raw and still WRAP rather than elide" — is the
+            defect this closes. `minmax(0,1fr)` lets the TRACK shrink to zero;
+            it does not let the CONTENT, and a raw span's min-content floor is
+            its longest word. Measured at 320 with an eight-club roster,
+            "Eastfield Kestrels" laid out from x 272.6 to 328.2 and took
+            `documentElement.scrollWidth` to 328 against a 320 client width —
+            which, with `html { overflow-x: hidden }`, is the bottom nav
+            pushed off a viewport that cannot be scrolled to reach it.
 
-              `TeamMark orientation="vertical" wrap` is the system's own answer
-              and carries `[overflow-wrap:anywhere]`, which is the only wrap
-              value that also lowers min-content, plus `min-w-0` and the crest
-              at a named step. Invariant 21 wanted this cell to be a `TeamMark`
-              anyway; it was the last raw crest-and-name pair on the screen. */}
-          <TeamMark team={match.home} size={58} orientation="vertical" wrap />
-          <span className="matchbook-display text-5xl mb-track-masthead font-bold tabular-nums">
-            {match.homeScore}
-          </span>
-          {/* `.mb-score-box` sets `font-size: 0.95rem` UNLAYERED, so the
-              `text-[0.72rem]` this carried never applied — the pip has always
-              rendered at 0.95rem. `mb-track-title` is that step's rung, and it
-              is also what the other two VS pips (`/quick-match`) now use; the
-              three of them shipped at 0.1em, 0.05em and 0.05em. */}
-          <span className="mb-score-box mb-track-title px-2">VS</span>
-          <span className="matchbook-display text-5xl mb-track-masthead font-bold tabular-nums">
-            {match.awayScore}
-          </span>
-          <TeamMark team={match.away} size={58} orientation="vertical" wrap />
+            `TeamMark orientation="vertical" wrap` is the system's own answer
+            and carries `[overflow-wrap:anywhere]`, which is the only wrap
+            value that also lowers min-content, plus `min-w-0` and the crest
+            at a named step. Invariant 21 wanted this cell to be a `TeamMark`
+            anyway; it was the last raw crest-and-name pair on the screen.
+
+            ------------------------------------------------- the cut (L1/L2)
+
+            That stopped the overflow. It did not make the names READABLE,
+            because `anywhere` breaks a word rather than a layout and this row
+            asks it to break every time: five tracks, three of which are the
+            two `text-5xl` figures and a VS pip, is 198px of fixed centre on a
+            line that is 246px wide at 320. Measured with an eight-club roster:
+
+              320   34px per name  → 8 and 10 lines, mid-word on every break
+              360   54px           → 6 and 7 lines
+              390   69px           → 4 and 6 lines
+
+            34px is two characters of `display/team-mark`. A name broken into
+            two-character pieces is not a shorter name, it is a different one,
+            and `NAME_FLOOR` (`TeamName.tsx`) puts the answer in the layout
+            rather than in the wrap value: below the width where a name can
+            hold its longest WORD, the three parts stop sharing a line.
+
+            400 = 2 × 100 + 198, where 100px is "Northumberland" — the longest
+            unbreakable token this roster generates — at `display/team-mark`.
+            Above it every break is a space. Below it the row is three stacked
+            rows, home / figures / away, and each name gets the container's
+            whole width: 246px at 320, which sets the same 31-character name on
+            two whole-word lines.
+
+            The figures keep their own line rather than moving beside each
+            name: they are a `text-5xl` pair reading "25 VS 20", the one object
+            on this panel that is not an identity, and splitting them across
+            two rows would make the reader assemble the score from two places.
+
+            The container is the row's own wrapper, not the panel: an
+            `@container` query styles a container's DESCENDANTS and never the
+            container itself, so the grid whose tracks change cannot also be
+            the box being measured. */}
+        <div className="@container px-5 py-4">
+          <div className="grid grid-cols-[minmax(0,1fr)] items-center justify-items-center gap-3 @min-[400px]:grid-cols-[minmax(0,1fr)_auto_auto_auto_minmax(0,1fr)]">
+            <TeamMark
+              team={match.home}
+              size={58}
+              orientation="vertical"
+              wrap
+              className="w-full @min-[400px]:w-auto"
+            />
+            {/* One row of figures below the cut, three separate grid items
+                above it. `contents` is what lets the same markup be both: the
+                wrapper stops generating a box, so its three children become
+                grid items of the row itself. */}
+            <span className="flex items-center gap-3 @min-[400px]:contents">
+              <span className="matchbook-display text-5xl mb-track-masthead font-bold tabular-nums">
+                {match.homeScore}
+              </span>
+              {/* `.mb-score-box` sets `font-size: 0.95rem` UNLAYERED, so the
+                  `text-[0.72rem]` this carried never applied — the pip has
+                  always rendered at 0.95rem. `mb-track-title` is that step's
+                  rung, and it is also what the other two VS pips
+                  (`/quick-match`) now use; the three of them shipped at 0.1em,
+                  0.05em and 0.05em. */}
+              <span className="mb-score-box mb-track-title px-2">VS</span>
+              <span className="matchbook-display text-5xl mb-track-masthead font-bold tabular-nums">
+                {match.awayScore}
+              </span>
+            </span>
+            <TeamMark
+              team={match.away}
+              size={58}
+              orientation="vertical"
+              wrap
+              className="w-full @min-[400px]:w-auto"
+            />
+          </div>
         </div>
         {match.sets.length > 0 && (
           <div className="mx-4 border-t border-mb-rule">

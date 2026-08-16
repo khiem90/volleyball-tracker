@@ -595,7 +595,7 @@ const WizardBones = () => {
               >
                 <Bar h="h-[18px]" w="w-[18px]" />
                 <Bar h="h-9" w="w-9" />
-                <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                <span className="flex min-w-0 flex-1 flex-col gap-[3px]">
                   <Bar h="h-[19px]" w="w-[7rem] max-w-full" />
                   <Bar h="h-[14px]" w="w-[10rem] max-w-full" />
                 </span>

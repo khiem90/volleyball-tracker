@@ -7,7 +7,11 @@ import { useEffect, useRef, type ReactNode } from "react";
 import { MatchbookMasthead, type MastheadProps } from "./Masthead";
 import { MatchbookSidebar, type MbSidebarCta } from "./Sidebar";
 import { MatchbookTopStrip, type MbTopStripAction, type MbTopStripBack } from "./TopStrip";
-import { MatchbookBottomBar, mbActiveNavItem } from "./BottomBar";
+import {
+  MatchbookBottomBar,
+  MatchbookLandscapeRail,
+  mbActiveNavItem,
+} from "./BottomBar";
 import { MbEventBar } from "./EventBar";
 
 /* ===========================================================================
@@ -357,6 +361,15 @@ export const MatchbookShell = ({
 
       <div className="flex">
         <MatchbookSidebar active={here} cta={cta} />
+        {/* THE THIRD NAVIGATION, and the one that closes N1.
+            A sibling in the same flex row as the sidebar rather than a `fixed`
+            overlay: in normal flow it reserves its own 60px, so nothing needs a
+            matching `padding-left` that could drift away from it — the mistake
+            `CONSOLE_MAIN_PAD` below exists to work around for the bottom bar,
+            which has no choice because it is `fixed`. Exactly one of the three
+            navs is displayed at any (width, height); see the gate table in
+            `globals.css` under "THE LANDSCAPE NAVIGATION GATE". */}
+        <MatchbookLandscapeRail active={here} />
 
         <div className="flex min-w-0 flex-1 flex-col">
           <MatchbookTopStrip title={routeName} back={back} action={action} />

@@ -74,7 +74,7 @@ export const MbConfirm = ({
     <MbDialogBody className="flex flex-col gap-3">
       {subject && (
         <div
-          className={`flex flex-col gap-1 border-l-[3px] pl-3 ${
+          className={`flex flex-col gap-[3px] border-l-[3px] pl-3 ${
             destructive ? "border-mb-red" : "border-mb-navy"
           }`}
         >

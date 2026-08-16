@@ -504,14 +504,23 @@ export const MatchConsole = ({
 
         {/* Below `sm` every fact about the fixture gets this row to itself, at
             the full width of the card, because the strip above cannot hold the
-            competition's name AND a 106px Court View key inside 320px. It is
-            `sm:hidden`, and every landscape viewport is at least 640px wide, so
-            this row never appears in landscape and needs no height query of its
-            own. The competition truncates first because the stage, the date and
-            the series are each a handful of characters and are what the reader
-            cannot reconstruct from the navy strip. */}
+            competition's name AND a 106px Court View key inside 320px. The
+            competition truncates first because the stage, the date and the
+            series are each a handful of characters and are what the reader
+            cannot reconstruct from the navy strip.
+
+            IT IS ALSO HIDDEN IN LANDSCAPE, and it was not. This row used to
+            claim "every landscape viewport is at least 640px wide, so this row
+            never appears in landscape" — 568x320 is a landscape phone and is
+            568px wide, so it appeared, and it spent **28 of that device's 320
+            vertical pixels** restating what the navy strip directly above it
+            already said. Measured: it took the scoring column from 96.1px to
+            68.1px, a 29% cut to the only box on the screen that matters, on the
+            single most cramped viewport the console supports. */}
         {(kicker || stage || completedOn || series) && (
-          <div className="flex shrink-0 items-center gap-3 overflow-hidden border-b border-mb-rule px-3 py-1.5 sm:hidden">
+          <div
+            className={`flex shrink-0 items-center gap-3 overflow-hidden border-b border-mb-rule px-3 py-1.5 sm:hidden ${MB_SHORT.hide}`}
+          >
             {kicker && (
               <span className="mb-kicker min-w-0 truncate" title={kicker}>
                 {kicker}

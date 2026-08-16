@@ -85,6 +85,18 @@ export const MB_BOTTOM_BAR_CELL = 56;
 export const MB_BOTTOM_BAR_H = `calc(${MB_BOTTOM_BAR_CELL + 1}px + var(--mb-safe-bottom))`;
 
 /**
+ * The landscape rail's width. 60px, and the number is the caption's.
+ *
+ * `.mb-nav-item`'s 3px selection border plus 2 x 1.6px of inline padding leaves
+ * 53.8px of content, and "OVERVIEW" — the longest of the six labels — measures
+ * 47px at `CellLabel`'s step. The bottom bar proves the same caption fits a
+ * 53.3px cell at a 320px viewport, so 60px is that cell with room, not a guess.
+ * It costs 60 of the 568–896 horizontal px a landscape phone has spare and
+ * ZERO of the 320–414 vertical px the console contract protects.
+ */
+export const MB_LANDSCAPE_RAIL_W = 60;
+
+/**
  * The other half of `Toast.tsx`'s `MB_TOAST_OFFSET_VAR` contract: the float
  * stack sits bottom-centre and would land on top of this bar.
  *
@@ -134,6 +146,33 @@ const CELL_STYLE: CSSProperties = {
   borderLeftWidth: 0,
   position: "relative",
   width: "100%",
+};
+
+/**
+ * The same cell, stood on its end for `MatchbookLandscapeRail`.
+ *
+ * Two differences from `CELL_STYLE`, both consequences of the axis swap:
+ *   - `minHeight` is the bare 44px floor rather than 56. A rail cell is
+ *     `flex: 1` inside a viewport-tall column, so at the smallest landscape
+ *     phone (320px tall) six cells divide to 53.3px each and the floor is a
+ *     floor, not the height.
+ *   - `borderLeftWidth` is NOT zeroed. The bottom bar has to move the selection
+ *     mark to its top edge and draw it itself (`ActiveRule`); a left rail is the
+ *     orientation `.mb-nav-item` was written for, so `border-left-color:
+ *     var(--mb-coral)` on `[data-active="true"]` already draws it — one mark,
+ *     one width, no second implementation.
+ */
+const RAIL_CELL_STYLE: CSSProperties = {
+  flexDirection: "column",
+  justifyContent: "center",
+  alignItems: "center",
+  gap: "0.25rem",
+  padding: "0.3rem 0.1rem",
+  minHeight: 44,
+  fontSize: "inherit",
+  position: "relative",
+  width: "100%",
+  height: "100%",
 };
 
 /* --------------------------------------------------------------------- cell */
@@ -322,5 +361,136 @@ export const MatchbookBottomBar = ({ active }: { active?: string }) => {
         </MbDialogBody>
       </MbSheet>
     </>
+  );
+};
+
+/* --------------------------------------------------------------------- rail */
+
+/**
+ * THE LANDSCAPE RAIL (N1).
+ *
+ * ------------------------------------------------------------------ the hole
+ *
+ * `MatchbookBottomBar` is `lg:hidden` **and** `[@media(max-height:500px)]:hidden`,
+ * and `MatchbookSidebar` is `lg:` only. A landscape phone is under `lg` and
+ * under 500px tall, so it matched both gates and got neither navigation.
+ * Measured with a scripted visibility sweep — every `<nav>` and every anchor
+ * pointing at one of the six destinations, each rect intersected against every
+ * clipping ancestor and the viewport — at 568x320, 640x360, 667x375, 844x390
+ * and 896x414, on `/`, `/teams`, `/quick-match`, `/competitions`, `/summaries`,
+ * `/tools`, `/competitions/new`, two competition detail routes and
+ * `/tools/volleyball-rotations`:
+ *
+ *   **0 visible nav elements, 1 reachable destination** — `/`, via the 44x44
+ *   crest in the top strip, which carries no visible word. On the three routes
+ *   that pass a `back` the crest is replaced by the chevron, so the one
+ *   reachable destination is the parent list and `/` is unreachable too.
+ *
+ * That is invariant 38 ("nothing important is hidden behind a breakpoint —
+ * only redundant context") failing on the app's entire primary navigation, for
+ * the single gesture a user makes most: rotating the phone.
+ *
+ * ------------------------------------------------------------------ the rule
+ *
+ * Navigation is present on every `console` route at every viewport, and the
+ * axis it takes is decided by which axis has room:
+ *
+ *   width >= 1024px                    `MatchbookSidebar`, 218px. Unchanged.
+ *   width <  1024px, height >  500px   `MatchbookBottomBar`. Unchanged.
+ *   width <  1024px, height <= 500px   THIS — 60px on the left edge.
+ *
+ * `variant="focus"` — the fullscreen scoring console (`/match/*`) and the
+ * rotation editor — renders no navigation at all, at any size, and this does
+ * not change that: `MatchbookShell` returns from the `focus` branch before
+ * either nav exists. Invariant 39's landscape contract is about the SCORE, on a
+ * screen that has never rendered a nav, so the bottom bar's `max-height:500px`
+ * gate stays exactly as it is and the rail spends horizontal space instead —
+ * 60px out of the 568-896 a landscape phone has, and none of the 320-414 it
+ * does not.
+ *
+ * ------------------------------------------------------------- six, not 5+More
+ *
+ * The bar carries five destinations plus a More sheet because seven cells
+ * across 390px is 55px each and reads as a toolbar. That arithmetic is
+ * horizontal and does not survive the rotation: six cells down the SHORTEST
+ * landscape phone (320px, minus the safe insets) divide to 53.3px, over the
+ * 44px floor, so the sixth destination is simply in the rail. A sheet on a
+ * 320px-tall viewport would also be a 320px-tall dialog, which is the thing the
+ * height gate exists to avoid.
+ *
+ * `<nav><ul><li>` and a hairline between cells, for the same two reasons the
+ * bar states: it is the markup a screen reader expects, and six abutting
+ * interactive boxes at 0px separation need a measured divider rather than the
+ * 8px gap there is no room for.
+ */
+export const MatchbookLandscapeRail = ({ active }: { active?: string }) => {
+  const pathname = usePathname();
+  const here = active ?? pathname;
+
+  return (
+    /* `<nav>` is the OUTER element, unlike `MatchbookSidebar`'s `<aside> >
+       <nav>`. The rail carries destinations and nothing else — no brand, no
+       CTA, no account — so an `<aside>` around it would add a second,
+       unlabelled `complementary` landmark whose only child is the navigation
+       landmark a reader already has. The sidebar earns its `<aside>` because it
+       holds four different things. */
+    <nav
+      aria-label="Sections"
+      className="mb-landscape-rail mb-print-hide sticky top-0 max-h-screen min-h-screen shrink-0 flex-col overflow-y-auto border-r border-mb-navy bg-mb-paper"
+      style={{
+        /* The `edge` tier — "the BOUNDARY of a thing" — as the token, not as a
+           literal. The rule ladder in `globals.css` is explicit that nothing
+           may reintroduce a fractional rule, and `border-r-[1.5px]` (which is
+           what the bottom bar's top edge still uses) is one: it rasterised to
+           1px here anyway, so the literal was buying nothing. */
+        borderRightWidth: "var(--mb-rule-edge)",
+        /* The rail sits on the left edge, which in landscape-left is the NOTCH
+           edge — `env(safe-area-inset-left)` is 47px there and 0 everywhere
+           else. Padding the rail rather than the list moves the 3px selection
+           border out with the cells (invariant 34). `--mb-safe-left` is
+           declared beside `--mb-safe-top`/`--mb-safe-bottom` in `globals.css`;
+           it did not exist until a navigation moved to that edge. */
+        paddingLeft: "var(--mb-safe-left)",
+        paddingTop: "var(--mb-safe-top)",
+        paddingBottom: "var(--mb-safe-bottom)",
+        width: `calc(${MB_LANDSCAPE_RAIL_W}px + var(--mb-safe-left))`,
+        /* R7, same as the bar: the rail is stuck over horizontally scrolling
+           brackets and rotation rails. Containment keeps those scrolls off its
+           layer. */
+        contain: "layout paint",
+      }}
+    >
+      {/* `flex-1` everywhere and `min-h-0` NOWHERE, deliberately. A column flex
+          item's default `min-height: auto` refuses to shrink below its content,
+          so six cells divide the rail evenly while they fit (53.3px each at
+          320px tall, 68.2px at 414) and the rail's own `overflow-y-auto` takes
+          over if a viewport ever appears that cannot hold 6 x 44. With
+          `min-h-0` they would silently compress under the 44px floor instead —
+          which is the failure mode, not the fallback. */}
+      <ul className="flex flex-1 flex-col">
+        {MB_NAV_ALL.map((item, index) => {
+          const on = mbNavActive(here, item.href);
+          return (
+            <li
+              key={item.href}
+              className={`flex flex-1 ${
+                index === 0 ? "" : "border-t border-mb-rule"
+              }`}
+            >
+              <Link
+                href={item.href}
+                className="mb-nav-item"
+                style={RAIL_CELL_STYLE}
+                data-active={on}
+                aria-current={on ? "page" : undefined}
+              >
+                <MbIcon id={item.icon} size={20} className="shrink-0" />
+                <CellLabel label={item.label} active={on} />
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </nav>
   );
 };

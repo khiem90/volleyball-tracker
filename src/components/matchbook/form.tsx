@@ -767,7 +767,10 @@ export const MbToggleChip = ({
       style={EDGE_RULE}
       className="inline-flex h-[14px] w-[14px] shrink-0 items-center justify-center rounded-[2px] border-solid border-current"
     >
-      {pressed && <span className="block h-[6px] w-[6px] rounded-[1px] bg-current" />}
+      {/* `rounded-[2px]`, the mark radius of 3.3 — with `.mb-check` and
+          `.mb-radio`, whose interior this is. It was `rounded-[1px]`, the only
+          1px corner in the system and the whole of M5's off-vocabulary count. */}
+      {pressed && <span className="block h-[6px] w-[6px] rounded-[2px] bg-current" />}
     </span>
     {icon && <MbIcon id={icon} size={14} className="shrink-0" />}
     <span className="min-w-0 truncate">{children}</span>

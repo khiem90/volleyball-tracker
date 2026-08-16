@@ -378,6 +378,13 @@
   /* --- safe area (GAP-3) ------------------------------------------------ */
   --mb-safe-top: env(safe-area-inset-top, 0px);
   --mb-safe-bottom: env(safe-area-inset-bottom, 0px);
+  /* The horizontal pair. Zero in portrait and on every desktop, 47px on the
+     notch side of a landscape phone — which is exactly where
+     `MatchbookLandscapeRail` puts the app's only navigation, so invariant 34
+     ("fixed/sticky elements honour env(safe-area-inset-*)") needs both axes
+     now, not just top and bottom. */
+  --mb-safe-left: env(safe-area-inset-left, 0px);
+  --mb-safe-right: env(safe-area-inset-right, 0px);
 
   /* --- court diagram surface (tools) ------------------------------------
      The accent is TEAL, not coral. The court diagram is a reference drawing,
@@ -1437,6 +1444,43 @@ button.mb-panel-link::after,
 
 .mb-safe-bottom {
   padding-bottom: var(--mb-safe-bottom);
+}
+
+/* ---------------------------------------------------------------------------
+   THE LANDSCAPE NAVIGATION GATE (N1)
+
+   One declaration, because it is one rule and it must not be able to disagree
+   with itself. `MatchbookBottomBar` is `lg:hidden` and `[@media(max-height:
+   500px)]:hidden`; a landscape phone matches both, and `MatchbookSidebar` is
+   `lg:` only — so a rotated phone matched every hide and no show, and rendered
+   **0 visible nav elements** at 568x320, 640x360, 667x375, 844x390 and
+   896x414 on every console route.
+
+   `MatchbookLandscapeRail` fills exactly that gap and nothing else:
+
+     width >= 1024px                  sidebar          rail hidden
+     width <  1024px, height >  500px bottom bar       rail hidden
+     width <  1024px, height <= 500px THE RAIL         bar hidden (unchanged)
+
+   It lives here rather than as a Tailwind arbitrary variant for the reason
+   design language §7.3 gives: a two-condition media query belongs in zone A as
+   a named `.mb-*` rule, where the complement of the bar's gate can be read
+   against the bar's gate. `1023.98px` rather than `1023px` so a fractional
+   viewport width cannot fall between this and Tailwind's `lg` (64rem) and paint
+   neither.
+
+   `display` ONLY. Every other property is a utility on the element, so this
+   rule can never quietly out-rank one of them from outside a layer.
+   --------------------------------------------------------------------------- */
+
+.mb-landscape-rail {
+  display: none;
+}
+
+@media (max-height: 500px) and (max-width: 1023.98px) {
+  .mb-landscape-rail {
+    display: flex;
+  }
 }
 
 /* ---------------------------------------------------------------------------

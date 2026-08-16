@@ -61,7 +61,7 @@ export const LoginSkeleton = () => (
           <span className="flex-1">
             <MbSkeleton w="88%" h="2rem" radius={3} className="sm:h-[2.9rem]!" />
           </span>
-          <span className="flex flex-col items-center gap-1 border-[2px] border-mb-rule px-2.5 py-1">
+          <span className="flex flex-col items-center gap-[3px] border-[2px] border-mb-rule px-2.5 py-1">
             <MbSkeleton w="1.6rem" h="0.8rem" />
             <MbSkeleton w="2.6rem" h="0.8rem" />
           </span>

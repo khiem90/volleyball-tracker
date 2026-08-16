@@ -117,7 +117,7 @@ const ToolLink = ({ tool }: { tool: (typeof TOOLS)[number] }) => (
     <span className="mb-icon-disc h-9 w-9 sm:h-11 sm:w-11">
       <MbIcon id={tool.icon} size={20} />
     </span>
-    <span className="flex min-w-0 flex-col gap-0.5 sm:flex-1 sm:gap-2">
+    <span className="flex min-w-0 flex-col gap-[3px] sm:flex-1 sm:gap-2">
       {/* 0.05em, not 0.06em. This is 0.95rem/700 — the same pair as every
           `<Panel>` title on the screen, which declares `display/panel-title`'s
           0.05em. Two trackings on one size/weight pair is rubric 1.3, and

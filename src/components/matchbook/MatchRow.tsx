@@ -160,6 +160,11 @@ const Figures = ({ value }: { value: number }) => (
  * The score IS `MbScoreNumeral` everywhere it is the object rather than a row
  * measure: the live scoreboard, the court card and the match sheet.
  */
+/* The value is also written as a LITERAL into the row's wide-cut grid class
+   (`@min-[336px]:grid-cols-[minmax(0,1fr)_76px_minmax(0,1fr)]`), because a
+   container variant cannot come from an inline style and Tailwind compiles
+   nothing out of an interpolated class. This constant stays as the place the
+   76 is explained and as the export other measurements read; change both. */
 export const MB_SCORE_TRACK = 76;
 
 const Measure = ({
@@ -292,39 +297,72 @@ export const MbMatchRow = ({
 
           The centre track is a CONSTANT, not `auto`: with `auto` the two `1fr`
           name columns were sized from whatever the scoreline happened to
-          measure, so a digit landing mid-match resized both of them. */}
-      <span
-        className="grid min-w-0 flex-1 items-center gap-2"
-        style={{
-          gridTemplateColumns: `minmax(0,1fr) ${MB_SCORE_TRACK}px minmax(0,1fr)`,
-        }}
-      >
-        {home ? (
-          <span className="flex min-w-0 items-center gap-1.5">
-            {homeSeed !== undefined && <MbSeedBox value={homeSeed} />}
-            <TeamMark team={home} size="sm" className={markClass(homeWon)} />
-          </span>
-        ) : (
-          <EmptySide bye={bye} />
-        )}
-        <Measure
-          status={status}
-          bye={bye}
-          homeScore={homeScore}
-          awayScore={awayScore}
-          homeWon={homeWon}
-          awayWon={awayWon}
-        />
-        {away ? (
-          <span className="flex min-w-0 flex-row-reverse items-center gap-1.5">
-            {awaySeed !== undefined && <MbSeedBox value={awaySeed} />}
-            <TeamMark team={away} size="sm" reverse className={markClass(awayWon)} />
-          </span>
-        ) : (
-          <span className="flex justify-end">
+          measure, so a digit landing mid-match resized both of them.
+
+          ----------------------------------------------- the cut it now takes
+
+          A constant centre track is only half the guarantee. Three fixed
+          claims on the line — 76px of scoreline and two 18px crests — mean the
+          two names split whatever is left, and the arithmetic runs out long
+          before the viewport does. Measured on an eight-club roster:
+
+            /session/SUMMER  Next up, 1440   each side 91px, name head 47px
+                             painted "Marlo VC", "Great  CC" — 7 characters
+            /session/SUMMER  Latest results, 320                  6 characters
+
+          1440 is not a narrow-screen excuse; the panel is `xl:col-span-4` and
+          the row is 274px inside it whatever the screen is. So the row takes
+          the SAME cut, at the same 336px threshold and for the same measured
+          reason, that `MbMatchupPair` below takes: one column, one team per
+          line, the scoreline between them, and the away side un-mirrored so
+          both identities start at the same left edge.
+
+          336 = 2 × (18 crest + 6 gap + 96 name) + 76 centre + 16 gaps, where
+          96 is the track at which `display/link` still paints `NAME_FLOOR`
+          characters of a two-word club name plus its tail (`TeamName.tsx`).
+
+          The template is a literal class per cut, not the inline style it was:
+          Tailwind cannot compile a container variant out of `style`, and an
+          interpolated `@min-[${n}px]:` compiles to nothing at all — so
+          `MB_SCORE_TRACK`'s 76 is written into the class and the constant
+          stays as the single place the number is explained. */}
+      <span className="@container block min-w-0 flex-1">
+        <span className="grid min-w-0 grid-cols-[minmax(0,1fr)] items-center gap-x-2 gap-y-1.5 @min-[336px]:grid-cols-[minmax(0,1fr)_76px_minmax(0,1fr)]">
+          {home ? (
+            <span className="flex min-w-0 items-center gap-1.5">
+              {homeSeed !== undefined && <MbSeedBox value={homeSeed} />}
+              <TeamMark team={home} size="sm" className={markClass(homeWon)} />
+            </span>
+          ) : (
             <EmptySide bye={bye} />
-          </span>
-        )}
+          )}
+          <Measure
+            status={status}
+            bye={bye}
+            homeScore={homeScore}
+            awayScore={awayScore}
+            homeWon={homeWon}
+            awayWon={awayWon}
+          />
+          {/* `flex-row-reverse` is the MIRROR, and a mirror only means
+              anything opposite something. Below the cut the away side sits
+              under the home side rather than across from it, so it reads left
+              to right like every other row in the app. */}
+          {away ? (
+            <span className="flex min-w-0 items-center gap-1.5 @min-[336px]:flex-row-reverse">
+              {awaySeed !== undefined && <MbSeedBox value={awaySeed} />}
+              <TeamMark
+                team={away}
+                size="sm"
+                className={`@min-[336px]:flex-row-reverse ${markClass(awayWon)}`}
+              />
+            </span>
+          ) : (
+            <span className="flex @min-[336px]:justify-end">
+              <EmptySide bye={bye} />
+            </span>
+          )}
+        </span>
       </span>
     </span>
   );

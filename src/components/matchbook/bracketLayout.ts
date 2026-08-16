@@ -21,8 +21,16 @@ export const MB_CELL_W = 156;
 export const MB_CELL_H = 90;
 /** Vertical air between sibling cells in the same round. */
 export const MB_ROW_GAP = 14;
-/** Horizontal air between rounds. The elbow's vertical leg sits at its middle. */
-export const MB_COL_GAP = 40;
+/**
+ * Horizontal air between rounds. The elbow's vertical leg sits at its middle.
+ *
+ * 24, not 40: `BracketRail` spends this as a real flex gap
+ * (`style={{ gap: MB_COL_GAP }}`), so it was the app's only 40px gap and the
+ * top of 3.3's spacing census. 24 is the vocabulary's widest value — the one
+ * the masthead uses — and every other number in this file derives from this
+ * constant, so the connector elbows follow it without a second edit.
+ */
+export const MB_COL_GAP = 24;
 
 export interface MbBracketCellData {
   /** Stable id — the match id. Passed back to `onSelect` / `onEdit`. */

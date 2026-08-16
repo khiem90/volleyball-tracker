@@ -385,42 +385,84 @@ export default function HistoryPage() {
                     teams, so a second line beats losing characters (the same
                     call `MbScoreboardHero` makes). It also puts the name on
                     `display/team-mark`, 0.82rem, which is the named step the
-                    0.85rem was a drift off. */}
-                <div className="flex min-w-0 flex-1 items-center justify-center gap-4">
-                  <div className="flex min-w-0 flex-1 flex-col items-center gap-1.5">
-                    <TeamMark
-                      team={report.entry.home}
-                      size={56}
-                      orientation="vertical"
-                      wrap
-                      className="w-full"
-                    />
-                    <span className="mb-kicker tabular-nums">({report.homeRecord})</span>
-                  </div>
-                  <div className="shrink-0 text-center">
-                    {/* The tracking is declared, not inherited. `text-5xl`
-                        (48px) at 700 is also the masthead's `sm:` size, and the
-                        masthead declares 0.01em; this numeral was falling
-                        through to `.matchbook-display`'s 0.02em, so one
-                        size/weight pair carried two trackings (0.48px and
-                        0.96px) on this screen — rubric 1.3's exact failure. */}
-                    <p className="matchbook-display whitespace-nowrap text-5xl mb-track-masthead font-bold tabular-nums">
-                      {report.entry.homeScore} – {report.entry.awayScore}
-                    </p>
-                    <p className="mb-kicker mt-1">Final</p>
-                  </div>
-                  <div className="flex min-w-0 flex-1 flex-col items-center gap-1.5">
-                    <TeamMark
-                      team={report.entry.away}
-                      size={56}
-                      orientation="vertical"
-                      wrap
-                      className="w-full"
-                    />
-                    <span className="mb-kicker tabular-nums">({report.awayRecord})</span>
+                    0.85rem was a drift off.
+
+                    ------------------------------------------- the track (L2)
+
+                    `wrap` only beats an ellipsis while the line is wide enough
+                    to hold a WORD. Three items on one line — name, a 48px
+                    "25 – 20", name — and this half of the panel is itself one
+                    of two `flex-1` columns, so the names were sized last and
+                    got what was left:
+
+                      1440   54px per name, `[overflow-wrap:anywhere]` at
+                             13.12px → 6–7 lines with 2–3 mid-word breaks and a
+                             one-character last line
+                      1366   43px  → 7–8 lines
+                      320    30px  → NORT/HUM/BERL/AND/COAS/TAL/PANT/HERS
+
+                    A 54px track at 1440 is a layout bug and not a long-name
+                    problem, and it had two causes. The meta column beside this
+                    one is `flex-1` with no `min-w-0`, so its automatic minimum
+                    was the longest word in "All-time points — Northumberland
+                    Coastal Panthers: 412", and it took the width off its
+                    neighbour rather than eliding. And the scoreline itself had
+                    no cut: three items on one line is the wide shape, and
+                    below the width where a name still fits a word it has to
+                    stop being one line.
+
+                    380 = 2 × 105 + 145 + 24: 105px holds "Northumberland",
+                    the roster's longest unbreakable token, at
+                    `display/team-mark`; 145px is "25 – 20" at `text-5xl`; 24px
+                    is the two gaps. Above it every name breaks at spaces only.
+                    Below it the pair stacks — home, score, away, each on the
+                    container's full width — which at 320 is 246px and sets the
+                    same name on two whole-word lines.
+
+                    Its own container, not `sm:`: this panel is 625px wide at
+                    1440 and 718px at 768, and the half it hands the scoreline
+                    is under 380 in both. A media query would have to stack the
+                    wider one. */}
+                <div className="@container flex min-w-0 flex-1 flex-col justify-center">
+                  <div className="grid grid-cols-[minmax(0,1fr)] items-center justify-items-center gap-3 @min-[380px]:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] @min-[380px]:gap-4">
+                    <div className="flex w-full min-w-0 flex-col items-center gap-1.5">
+                      <TeamMark
+                        team={report.entry.home}
+                        size={56}
+                        orientation="vertical"
+                        wrap
+                        className="w-full"
+                      />
+                      <span className="mb-kicker tabular-nums">({report.homeRecord})</span>
+                    </div>
+                    <div className="shrink-0 text-center">
+                      {/* The tracking is declared, not inherited. `text-5xl`
+                          (48px) at 700 is also the masthead's `sm:` size, and the
+                          masthead declares 0.01em; this numeral was falling
+                          through to `.matchbook-display`'s 0.02em, so one
+                          size/weight pair carried two trackings (0.48px and
+                          0.96px) on this screen — rubric 1.3's exact failure. */}
+                      <p className="matchbook-display whitespace-nowrap text-5xl mb-track-masthead font-bold tabular-nums">
+                        {report.entry.homeScore} – {report.entry.awayScore}
+                      </p>
+                      <p className="mb-kicker mt-1">Final</p>
+                    </div>
+                    <div className="flex w-full min-w-0 flex-col items-center gap-1.5">
+                      <TeamMark
+                        team={report.entry.away}
+                        size={56}
+                        orientation="vertical"
+                        wrap
+                        className="w-full"
+                      />
+                      <span className="mb-kicker tabular-nums">({report.awayRecord})</span>
+                    </div>
                   </div>
                 </div>
-                <div className="flex flex-1 flex-col gap-2.5 border-t border-mb-rule pt-3 sm:border-l sm:border-t-0 sm:pl-5 sm:pt-0">
+                {/* `min-w-0`: without it this column's automatic minimum is its
+                    longest word and it takes the scoreline's width — see the
+                    note above. */}
+                <div className="flex min-w-0 flex-1 flex-col gap-2.5 border-t border-mb-rule pt-3 sm:border-l sm:border-t-0 sm:pl-5 sm:pt-0">
                   <div className="flex items-center gap-2.5">
                     <MbIcon id="calendar" size={15} className="shrink-0 text-mb-navy" />
                     <span className="text-[0.78rem] font-semibold tabular-nums">
