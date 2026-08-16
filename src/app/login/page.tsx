@@ -140,7 +140,7 @@ const LoginPageContent = () => {
                 `documentElement.scrollWidth` past the viewport. Every other
                 masthead in the app wraps (`min-w-0 break-words`); this one now
                 does too. */}
-            <h1 className="matchbook-display min-w-0 break-words text-4xl mb-track-masthead font-bold leading-none sm:text-5xl">
+            <h1 className="matchbook-display min-w-0 break-words text-balance text-4xl mb-track-masthead font-bold leading-none sm:text-5xl">
               {isSignUp ? (
                 <>
                   Join <span className="text-mb-coral">the Club</span>
@@ -151,13 +151,16 @@ const LoginPageContent = () => {
                 </>
               )}
             </h1>
-            {/* The FRAME is coral, the CAPTION is navy — register D-10, already
-                settled for `MatchbookMasthead` and reproduced here because this
-                badge is hand-rolled rather than drawn by that component. The
-                captions measured **3.26:1 at 12.8px/700**; navy is 11.79:1.
-                Coral job 3 scopes the accent to "the emphasised title word +
-                the 2px badge frame" — the frame, never the caption. */}
-            <div className="flex flex-col items-center border-[2px] border-mb-coral px-2.5 py-1 text-mb-navy">
+            {/* NAVY, frame and captions — reproduced here because this badge
+                is hand-rolled rather than drawn by `MatchbookMasthead`, and it
+                must match that component's move: the count badge came off
+                coral when the census closed at three declared jobs (primary
+                action, selection mark, masthead lockup). The badge's mark is
+                its 2px border weight — the only 2px border in the system
+                (§3.3) — so navy changes nothing in greyscale. The captions
+                were already navy (coral measured 3.26:1 at 12.8px/700,
+                register D-10). */}
+            <div className="flex flex-col items-center border-[2px] border-mb-navy px-2.5 py-1 text-mb-navy">
               <span className="matchbook-display text-[0.8rem] mb-track-button font-bold leading-tight">
                 All
               </span>
@@ -177,7 +180,7 @@ const LoginPageContent = () => {
             <div className="flex flex-col gap-4 p-5" onKeyDown={handleKeyDown}>
               {error && (
                 <p
-                  className="border-[1.5px] border-mb-red px-3 py-2 text-[0.8rem] font-medium text-mb-red"
+                  className="border-[1.5px] border-mb-red px-3 py-2 text-[0.85rem] text-mb-red"
                   role="alert"
                 >
                   {error}
@@ -191,7 +194,7 @@ const LoginPageContent = () => {
                   `--mb-red` measures 4.58:1 on bright. */}
               {notice && (
                 <p
-                  className="border-[1.5px] border-mb-green px-3 py-2 text-[0.8rem] font-medium text-mb-green-ink"
+                  className="border-[1.5px] border-mb-green px-3 py-2 text-[0.85rem] text-mb-green-ink"
                   role="status"
                 >
                   {notice}

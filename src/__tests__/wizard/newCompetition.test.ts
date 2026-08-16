@@ -71,10 +71,13 @@ describe("format -> controls matrix", () => {
     expect(hasAdvancedSettings("single_elimination")).toBe(false);
   });
 
-  it("gives every format a sprite mark and a token accent", () => {
+  it("gives every format a sprite mark and no colour key", () => {
     for (const type of FORMAT_ORDER) {
       expect(FORMAT_META[type].icon).toMatch(/^[a-z-]+$/);
-      expect(FORMAT_META[type].accent).toMatch(/^var\(--mb-[a-z-]+\)$/);
+      // Formats deliberately carry NO accent: the old per-format rails reused
+      // --mb-teal (rank-#1 rail) and --mb-gold (Draft) as a categorical key,
+      // double-booking locked semantic tokens (design language §1.2).
+      expect(FORMAT_META[type]).not.toHaveProperty("accent");
     }
   });
 });

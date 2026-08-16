@@ -377,9 +377,22 @@ export default function MyFormationsPage() {
         <div className="flex flex-col gap-4 xl:col-span-5">
           <Panel title="Start From">
             <div className="flex flex-col">
+              {/* `py-1.5`, not `py-2`, and the difference is the rung: at 8px
+                  of block padding the 40px disc summed to exactly 56, so the
+                  row's own `border-b` tipped its border box to 57 — one px off
+                  the authored 56. At 6px the content sums to 53 and the inline
+                  `minHeight` governs: a one-line row is 56, border included.
+                  (A row whose blurb wraps still grows past the rung — it is a
+                  content row above the floor, §3.3.) */}
               <Link
                 href="/tools/volleyball-rotations/editor"
-                className="mb-btn-touch mb-row-hover flex min-h-14 items-center gap-3 border-b border-mb-rule px-4 py-2"
+                className="mb-btn-touch mb-row-hover flex items-center gap-3 border-b border-mb-rule px-4 py-1.5"
+                /* Inline, not `min-h-14`: `.mb-btn-touch` declares `min-height`
+                   from OUTSIDE every cascade layer, so the Tailwind utility it
+                   sat next to never applied — the rung held only because the
+                   content happened to sum past it. Inline style outranks the
+                   unlayered rule, so 56 is now authored rather than luck. */
+                style={{ minHeight: 56 }}
               >
                 <span className="mb-icon-disc h-10 w-10">
                   <MbIcon id="court" size={18} />
@@ -401,7 +414,8 @@ export default function MyFormationsPage() {
                 <Link
                   key={template.id}
                   href={`/tools/volleyball-rotations/editor?template=${encodeURIComponent(template.id)}`}
-                  className="mb-btn-touch mb-row-hover flex min-h-14 items-center gap-3 border-b border-mb-rule px-4 py-2"
+                  className="mb-btn-touch mb-row-hover flex items-center gap-3 border-b border-mb-rule px-4 py-1.5"
+                  style={{ minHeight: 56 }}
                 >
                   <span className="mb-icon-disc h-10 w-10">
                     <MbIcon id="clipboard" size={18} />

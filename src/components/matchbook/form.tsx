@@ -358,22 +358,32 @@ const wrapValue = (n: number, min: number, max: number) => {
  * The ± keys, sized off the ladder rather than off `.mb-stepper button`'s own
  * 44/56px.
  *
- * This is the whole 46/58 fix. `.mb-stepper` is `align-items: stretch`, so the
- * shell used to be "whatever the keys are, plus my two edge rules" — 44+2 = 46
- * and 56+2 = 58, two numbers on nobody's ladder. Now the shell states the rung
- * and the keys take the interior, so the outer box is 48/56 and the keys are
- * 46/54 — still comfortably over the floor.
+ * This is the whole 46/58 fix, in two halves. `.mb-stepper` is
+ * `align-items: stretch`, so the shell used to be "whatever the keys are, plus
+ * my two edge rules" — 44+2 = 46 and 56+2 = 58, two numbers on nobody's
+ * ladder. The shell now states the rung and the keys take the interior — and
+ * the second half is G21's correction reaching the keys: charging them the
+ * frame's two edge rules made them 46/54, which is the number the D2 sweep
+ * sees, because an audit enumerates `button`, not the frame around it. So the
+ * keys take the `.mb-input > input` idiom instead — `min-height` of the FULL
+ * rung plus a negative block margin of exactly one edge. The flex line still
+ * resolves to `rung − 2` (outer size = 48 − 2×1), the shell still measures
+ * 48/56, and the key's own border box is 48/56, edge to edge with the frame it
+ * overlaps — whose paint survives, because `overflow: hidden` clips the key at
+ * the shell's padding box. Width keeps the honest `rung − 2`: the frame
+ * genuinely spends those columns, and no ladder measures widths.
  *
  * `style`, not a class: `.mb-stepper button` and
  * `.mb-stepper[data-size="lg"] button` both set `width`/`min-height` from
  * outside every cascade layer, so a Tailwind utility would need an
  * `!important` and a pair of hand-written literals to beat them. An inline
  * declaration outranks any author rule that is not `!important`, which lets
- * the number come from `MB_CONTROL_CELL` and stay there.
+ * the numbers come from the ladder tables and stay there.
  */
 const stepperKey = (size: MbCompositeSize): CSSProperties => ({
   width: MB_CONTROL_CELL[size],
-  minHeight: MB_CONTROL_CELL[size],
+  minHeight: MB_CONTROL_HEIGHT[size],
+  marginBlock: "calc(-1 * var(--mb-rule-edge))",
 });
 
 export const MbNumberStepper = ({
@@ -578,10 +588,16 @@ export const MbNumberStepper = ({
           onKeyDown={handleKeyDown}
           /* `self-stretch` takes the full interior height of the shell and
              `min-w-[44px]` the width, so the editable figure is itself a legal
-             target — `${chars}ch` only ever widens it for 3+ digit bounds. */
+             target — `${chars}ch` only ever widens it for 3+ digit bounds.
+             `marginBlock` is the `.mb-input > input` idiom (G21): stretched
+             between the shell's two edge rules the input resolved to
+             `rung − 2`, a height on no ladder; a negative block margin of
+             exactly one edge takes its border box to the rung itself, and the
+             shell's `overflow: hidden` clips the invisible overlap. */
           className="min-w-[44px] self-stretch border-0 bg-transparent p-0 text-center disabled:cursor-not-allowed"
           style={{
             width: `${chars}ch`,
+            marginBlock: "calc(-1 * var(--mb-rule-edge))",
             font: "inherit",
             fontVariantNumeric: "tabular-nums",
           }}
@@ -712,9 +728,14 @@ export const MbToggle = ({
           </span>
         )}
       </span>
+      {/* NAVY when on, matching `.mb-switch:checked` in `globals.css` and the
+          check/radio rule there ("the on state is ink, not accent"). The real
+          input is the invisible peer, so `:checked` never matches this span —
+          these overrides recreate the checked face, and they used to recreate
+          it in `--mb-coral-deep`, the one on-state the ink sweep missed. */}
       <span
         aria-hidden="true"
-        className="mb-switch pointer-events-none block peer-checked:border-mb-coral-deep! peer-checked:bg-mb-coral-deep! peer-checked:after:bg-mb-paper-bright! peer-checked:after:[transform:translateX(11px)]"
+        className="mb-switch pointer-events-none block peer-checked:border-mb-navy! peer-checked:bg-mb-navy! peer-checked:after:bg-mb-paper-bright! peer-checked:after:[transform:translateX(11px)]"
       />
     </label>
   );

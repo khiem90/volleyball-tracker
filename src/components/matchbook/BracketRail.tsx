@@ -21,11 +21,11 @@ import {
 } from "./bracketLayout";
 import type { MbTeam } from "./types";
 
-/** Section identity is a 3px inset rail, never a tinted heading. */
+/** Section identity is a 3px inset rail, never a tinted heading. Coral is
+    deliberately absent — see `MbBracketAccent` in `bracketLayout.ts`. */
 const ACCENT_VAR: Record<MbBracketAccent, string> = {
   teal: "var(--mb-teal)",
   gold: "var(--mb-gold)",
-  coral: "var(--mb-coral)",
   plum: "var(--mb-plum)",
 };
 
@@ -245,7 +245,9 @@ const BracketCellInner = ({
   const style = {
     width: MB_CELL_W,
     height: MB_CELL_H,
-    ...(cell.live ? { boxShadow: "inset 3px 0 0 var(--mb-coral)" } : null),
+    /* Red, not coral: §1.2 fixes live to `--mb-red`, matching the cell's own
+       live dot and word — the rail restates them, never replaces them. */
+    ...(cell.live ? { boxShadow: "inset 3px 0 0 var(--mb-red)" } : null),
   };
 
   if (!openable) {
@@ -303,8 +305,10 @@ export const BracketConnectors = ({ layout }: { layout: SectionLayout }) => {
           key={i}
           d={path.d}
           fill="none"
+          /* Live path = `--mb-red` (§1.2), and the doubled stroke width is
+             the non-colour channel that survives greyscale. */
           strokeWidth={path.live ? 2 : 1}
-          stroke={path.live ? "var(--mb-coral)" : "var(--mb-rule)"}
+          stroke={path.live ? "var(--mb-red)" : "var(--mb-rule)"}
         />
       ))}
     </svg>

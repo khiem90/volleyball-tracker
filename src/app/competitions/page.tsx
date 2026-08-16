@@ -442,6 +442,13 @@ const EventRow = ({
       onClick={onSelect}
       aria-pressed={selected}
       className="mb-btn-touch flex min-w-0 flex-col justify-center px-4 py-2 text-left"
+      /* The rung is `lg` (56), stated inline because `.mb-btn-touch`'s 44px
+         floor is unlayered and a Tailwind `min-h-14` would never apply. The
+         name line plus a one-line meta sums to 54.88, so without a rung the
+         row sat 0.88px under `lg` on every event — a height on no ladder,
+         four times per screen. 56 governs now; a meta line that wraps at 320
+         still grows the row, which is a content row above the floor (§3.3). */
+      style={{ minHeight: 56 }}
     >
       <span className="matchbook-display truncate text-[0.9rem] mb-track-display font-bold">
         {row.name}
@@ -702,10 +709,14 @@ const EventConsole = ({
         {selected.schedule.length === 0 ? (
           <PanelEmpty message="No upcoming matches exist yet." />
         ) : (
-          /* The coral on this list is the 2px spine (job 4). The round
-             label beside it was a second coral as a LETTERFORM — "Round 4"
-             at 10.56px/700, 3.55:1 — so it takes navy. */
-          <div className="ml-3 flex flex-col divide-y divide-mb-rule border-l-2 border-mb-coral">
+          /* Navy edge spine — the schedule spine came OFF coral's job list
+             when the census closed at three jobs; a timeline axis is
+             structure, not selection. Same §3.3 solid-navy edge as
+             `SchedulePanel` on `/`, so the object keeps one vocabulary
+             across routes. (The round label beside it was once a second
+             coral as a LETTERFORM — "Round 4" at 10.56px/700, 3.55:1 — it
+             stays navy.) */
+          <div className="ml-3 flex flex-col divide-y divide-mb-rule border-l-[1.5px] border-mb-navy">
             {selected.schedule.map((line, i) => (
               <div
                 key={i}

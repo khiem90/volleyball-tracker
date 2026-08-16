@@ -43,16 +43,19 @@ const RotateDiagram = () => (
     />
     <line x1="20" y1="16" x2="35" y2="16" stroke="currentColor" strokeWidth="3" />
 
-    {/* The turn */}
+    {/* The turn — navy, like the rest of the pictogram. The arrow was coral,
+        which spent the accent on an illustration: not the primary action, not
+        a selection, not the lockup (§1.2a). The curve and the arrowhead are
+        the emphasis; an instruction drawing in an almanac is ruled in ink. */}
     <path
       d="M62 26c12-9 24-9 36 0"
-      stroke="var(--mb-coral)"
+      stroke="currentColor"
       strokeWidth="3"
       strokeLinecap="round"
     />
     <path
       d="M92 20l7 6-8 5"
-      stroke="var(--mb-coral)"
+      stroke="currentColor"
       strokeWidth="3"
       strokeLinecap="round"
       strokeLinejoin="round"

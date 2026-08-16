@@ -165,7 +165,13 @@ export const MbTabs = ({
               {item.icon && <MbIcon id={item.icon} size={14} className="shrink-0" />}
               {item.label}
               {item.count !== undefined && (
-                <span className="text-[0.72rem] font-normal tabular-nums text-mb-ink-muted">
+                /* The count carries its OWN rung (charter invariant 8). Left
+                   bare it inherited `.mb-tab`'s 0.08em as a computed px, which
+                   at 0.72rem re-measured as a 0.094em tracking that exists on
+                   no ladder — and `font-normal` put weight 400 on a display
+                   face whose ladder starts at 600. 0.72rem/600 is
+                   `display/link`; muted ink keeps it secondary to the label. */
+                <span className="text-[0.72rem] mb-track-link font-semibold tabular-nums text-mb-ink-muted">
                   {item.count}
                 </span>
               )}

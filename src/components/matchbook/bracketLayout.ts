@@ -70,7 +70,14 @@ export interface MbBracketRound {
   current?: boolean;
 }
 
-export type MbBracketAccent = "teal" | "gold" | "coral" | "plum";
+/**
+ * `coral` is deliberately not on this list. Section identity is categorical,
+ * and coral's three declared jobs (primary action, selection mark, masthead
+ * lockup) do not include "Grand Finals" — the old coral section rail put a
+ * fourth coral meaning on every double-elimination screen. Plum is the one
+ * token §1.2 leaves without an interaction or status lock.
+ */
+export type MbBracketAccent = "teal" | "gold" | "plum";
 
 /** A labelled block of rounds. Single elimination has one; double has three. */
 export interface MbBracketSection {

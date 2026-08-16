@@ -269,7 +269,7 @@ export default function SummaryPage() {
                         <MbIcon id="crown" size={13} className="shrink-0" />
                         Champion
                       </p>
-                      <p className="matchbook-display mt-1.5 break-words text-[1.875rem] mb-track-display font-bold leading-none">
+                      <p className="matchbook-display mt-1.5 break-words text-balance text-[1.875rem] mb-track-display font-bold leading-none">
                         {champion.team.name}
                       </p>
                       {champion.accent && (
@@ -279,7 +279,7 @@ export default function SummaryPage() {
                           style={{ background: champion.accent }}
                         />
                       )}
-                      <p className="mt-2.5 text-[0.8rem] tabular-nums text-mb-ink-muted">
+                      <p className="mt-2.5 text-[0.85rem] tabular-nums text-mb-ink-muted">
                         {champion.basis}
                       </p>
                       <p className="matchbook-display mt-1 text-[0.82rem] mb-track-display font-bold tabular-nums">
@@ -353,10 +353,15 @@ export default function SummaryPage() {
               </div>
             ) : (
               <>
+                {/* No `highlightTeamId`. The coral highlight rail means "the
+                    row the reader chose" (§1.2, selection), and on a static
+                    share nothing is chosen — passing the champion here painted
+                    a coral "champion" rail, an off-list coral meaning, on top
+                    of the teal rank-#1 rail the same row already earns. The
+                    champion's celebration is the hero block above. */}
                 <MbStandingsTable
                   rows={data.standings}
                   caption={`${data.name} — final standings, ${data.formatLabel}`}
-                  highlightTeamId={champion?.teamId}
                 />
                 <MbStandingsLegend />
               </>
@@ -478,7 +483,7 @@ export default function SummaryPage() {
         <div className="mb-print-hide xl:col-span-5">
           <Panel title="Share &amp; Print" icon="share">
             <div className="flex flex-1 flex-col gap-3 p-4">
-              <p className="text-[0.8rem] leading-[1.5] text-mb-ink-muted">
+              <p className="text-[0.85rem] leading-[1.5] text-mb-ink-muted">
                 Anyone with this link can read the report. It grants no access
                 to the session it came from and carries no admin token — the
                 scoring controls stayed behind.

@@ -244,7 +244,7 @@ export default function ToolsPage() {
                 href="/login?redirect=/tools"
               />
             ) : formationsState === "loading" ? (
-              <p className="p-4 text-center text-[0.8rem] text-mb-ink-muted">
+              <p className="p-4 text-center text-[0.85rem] text-mb-ink-muted">
                 Loading saved formations…
               </p>
             ) : formationsState === "error" ? (
@@ -299,7 +299,7 @@ export default function ToolsPage() {
                 height={220}
                 className="h-auto w-full max-w-[360px]"
               />
-              <p className="text-center text-[0.74rem] leading-snug text-mb-ink-muted">
+              <p className="text-center text-[0.72rem] leading-snug text-mb-ink-muted">
                 Standard indoor court with rotation zones 1–6. Open the rotation
                 designer to place players and validate overlap rules against it.
               </p>

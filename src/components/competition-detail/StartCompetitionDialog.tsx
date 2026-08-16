@@ -96,7 +96,7 @@ const Consequence = ({
     <MbIcon id={icon} size={16} className="mt-0.5 shrink-0 text-mb-navy" />
     <span className="min-w-0">
       <span className="mb-kicker block">{title}</span>
-      <span className="mt-1 block text-[0.8rem] leading-[1.5]">{children}</span>
+      <span className="mt-1 block text-[0.85rem] leading-[1.5]">{children}</span>
     </span>
   </li>
 );

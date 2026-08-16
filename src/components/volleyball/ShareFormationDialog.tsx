@@ -119,7 +119,7 @@ export const ShareFormationDialog = ({
             </div>
           </>
         ) : (
-          <p className="text-[0.8rem] leading-[1.5] text-mb-ink-muted">
+          <p className="text-[0.85rem] leading-[1.5] text-mb-ink-muted">
             This formation is private. Creating a link lets anyone who has it
             view the formation and copy it into their own archive — it does not
             let them change yours.

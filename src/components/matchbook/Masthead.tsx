@@ -18,13 +18,15 @@ import type { MbAction } from "./ActionBar";
    This is that block, once. Two normalisations are deliberate and are the
    reason the extraction is worth doing rather than a straight copy:
 
-     1. The badge CAPTION is navy, not coral. `--mb-coral` measures 3.26:1 on
-        `--mb-paper` and the floor for text under 18.66px is 4.5:1, so a
-        0.6rem/700 coral caption is a live HF-6 on four shipped screens
-        (register D-10). The coral job list in `globals.css` already scopes job
-        3 to "the emphasised title word + the 2px badge frame" — the frame, not
-        the caption. The frame and the ≥24px value stay coral: at that size the
-        3:1 large-text floor applies and 3.26:1 clears it.
+     1. The badge is NAVY — frame, value and caption. The caption moved first
+        (`--mb-coral` measures 3.26:1 on `--mb-paper` against the 4.5:1 floor
+        for 0.6rem/700 text — register D-10); the frame and numeral followed
+        when the coral census closed at three declared jobs (primary action,
+        selection mark, masthead lockup) and "a framed count" was measured as
+        a fourth meaning. The badge's identity is its 2px border WEIGHT — the
+        only one in the system (§3.3) — not its hue, so it survives the move
+        unchanged in greyscale. Coral in the masthead is now exactly one
+        thing: the emphasised title word.
 
      2. Badge caption tracking is 0.22em everywhere (`display/badge-label`), and
         the value always sits above the caption.
@@ -49,7 +51,7 @@ export type MbMastheadBadge = MbMastheadCountBadge | MbMastheadLinesBadge;
 const isLines = (badge: MbMastheadBadge): badge is MbMastheadLinesBadge =>
   "lines" in badge;
 
-/** See `MastheadBadge`: the one coral frame is never spent on a count of nothing. */
+/** See `MastheadBadge`: the one 2px frame is never spent on a count of nothing. */
 const isZeroCount = (badge: MbMastheadBadge): boolean =>
   !isLines(badge) && badge.value === 0;
 
@@ -85,23 +87,30 @@ export interface MastheadProps {
 /* ------------------------------------------------------------------- badge */
 
 /**
- * The coral lockup. `border-[2px]` is one of the two marks the rule tiers
+ * The count lockup. `border-[2px]` is one of the two marks the rule tiers
  * reserve 2px for (`globals.css`, "rule tiers"); it is not a structural rule
  * and must not be moved onto the accent tier.
  *
- * ------------------------------------------------- CORAL NEVER FRAMES A ZERO
+ * NAVY, frame and numeral both. The badge was coral's fifth measured job —
+ * four consecutive verdicts counted "masthead count-badge rail + numeral" as
+ * its own meaning ("here is a framed number") against a two-job ceiling, and
+ * it is not the primary action, not a selection mark, and not the lockup's
+ * emphasised word. What makes this badge a badge was never the hue: it is the
+ * only 2px border in the system, and that WEIGHT is the mark (§3.3 reserves
+ * 2px for exactly this object). Navy keeps the weight, prints identically in
+ * greyscale, and takes the numeral from 3.26:1 to 11.79:1 on paper.
+ *
+ * -------------------------------------------------- NEVER FRAME A ZERO
  *
  * A count badge whose value is `0` is not rendered at all.
  *
- * The design language lists this frame among coral's jobs and it is the only
- * place coral is used as a frame — which is exactly why it must not be spent
- * on nothing. Measured on an empty account at 390: `/teams` painted a 60x50
- * 2px coral box at (288.8, 77) holding a coral `0` over a navy `TEAMS`, and
- * `/summaries` painted the same box around `0 RESULTS`. The loudest mark on a
- * first-run screen was an alert-shaped frame around the absence the rest of
- * the page was calmly explaining ("what this page becomes", "ways to add
- * teams"). Coral's declared jobs are the accent, the CTA, the selection rail
- * and the schedule spine; "count of nothing" is not among them.
+ * The 2px frame is the loudest border weight in the system — which is exactly
+ * why it must not be spent on nothing. Measured on an empty account at 390:
+ * `/teams` painted a 60x50 2px box at (288.8, 77) holding a `0` over `TEAMS`,
+ * and `/summaries` painted the same box around `0 RESULTS`. The loudest mark
+ * on a first-run screen was an alert-shaped frame around the absence the rest
+ * of the page was calmly explaining ("what this page becomes", "ways to add
+ * teams").
  *
  * It is enforced here rather than at the two call sites because it is a
  * property of the MARK, not of a route, and because `/` and `/competitions`
@@ -114,7 +123,7 @@ export interface MastheadProps {
  * still paints `8 TEAMS`.
  */
 const MastheadBadge = ({ badge }: { badge: MbMastheadBadge }) => (
-  <div className="flex shrink-0 flex-col items-center border-[2px] border-mb-coral px-2.5 py-1 text-center">
+  <div className="flex shrink-0 flex-col items-center border-[2px] border-mb-navy px-2.5 py-1 text-center">
     {isLines(badge) ? (
       badge.lines.map((line) => (
         <span
@@ -126,7 +135,7 @@ const MastheadBadge = ({ badge }: { badge: MbMastheadBadge }) => (
       ))
     ) : (
       <>
-        <span className="matchbook-display text-2xl mb-track-display font-bold leading-none text-mb-coral tabular-nums">
+        <span className="matchbook-display text-2xl mb-track-display font-bold leading-none text-mb-navy tabular-nums">
           {badge.value}
         </span>
         <span className="matchbook-display text-[0.6rem] mb-track-badge font-bold text-mb-navy">
@@ -194,8 +203,13 @@ export const MatchbookMasthead = ({
     <header className="mb-5 flex flex-wrap items-center gap-x-6 gap-y-4">
       <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2">
         {/* `break-words`, never `truncate`: a clipped event name is the one
-            string on the screen the reader cannot reconstruct (register D-20). */}
-        <h1 className="matchbook-display min-w-0 break-words text-4xl mb-track-masthead font-bold leading-none sm:text-5xl">
+            string on the screen the reader cannot reconstruct (register D-20).
+            `text-balance`, because at 375 a long title wraps and an unbalanced
+            wrap drops the last word onto its own line under a full first line
+            ("VOLLEYBALL ROTATIONS" set 10 glyphs + 9 alone); balance evens the
+            two lines so a wrapped masthead reads as a set block, not an
+            accident. */}
+        <h1 className="matchbook-display min-w-0 break-words text-balance text-4xl mb-track-masthead font-bold leading-none sm:text-5xl">
           {title}
         </h1>
 

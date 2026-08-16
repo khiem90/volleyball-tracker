@@ -58,13 +58,17 @@ export const MbCheckMark = ({ size = 7 }: { size?: number }) => (
   />
 );
 
+/* The on-state fills NAVY — "a filled-in ballot box on printed stock is
+   inked, not highlighted" (`globals.css`, `.mb-check:checked`). This face
+   used to fill `--mb-coral-deep`, which both contradicted that settled rule
+   and multiplied coral once per ticked row. */
 const CheckFace = ({ state }: { state: "on" | "off" | "mixed" }) => (
   <span
     aria-hidden="true"
     className={`inline-grid h-[18px] w-[18px] shrink-0 place-content-center rounded-[2px] border-[1.5px] ${
       state === "off"
         ? "border-mb-navy bg-mb-paper-bright"
-        : "border-mb-coral-deep bg-mb-coral-deep text-mb-paper-bright"
+        : "border-mb-navy bg-mb-navy text-mb-paper-bright"
     }`}
   >
     {state === "on" && <MbCheckMark />}

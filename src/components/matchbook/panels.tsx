@@ -246,9 +246,11 @@ export interface MbLedgerRow {
   /** Sprite id, drawn once beside the term. Ignored when `dense`. */
   icon?: string;
   /**
-   * A 3px contained rail — `FORMAT_META`'s own accent and nothing else, so no
-   * new colour mapping is invented (invariant 16, design language §1.2).
-   * Decorative: every row is already told apart by its word and its glyph.
+   * A 3px contained rail. Decorative: every row is already told apart by its
+   * word and its glyph, so the default is the neutral `--mb-rule` hairline.
+   * Pass a token only when the rail restates a meaning §1.2 already fixes to
+   * that token — a categorical key built from locked semantic tokens is the
+   * collision that got the format accents deleted (see `formatMeta.ts`).
    */
   accent?: string;
 }
@@ -466,9 +468,12 @@ export const MB_XL_SPAN: Record<number, string> = {
  *
  * This is what `/competitions` prints in place of seven mute panels. It is
  * DERIVED from `FORMAT_META` rather than retyped: that module is the single
- * source of truth charter H14 forbids a fourth copy of, and it already carries
- * the label, the one-sentence blurb, the sprite id and the contained accent —
- * which is also why no new colour mapping is invented here (invariant 16).
+ * source of truth charter H14 forbids a fourth copy of, and it carries the
+ * label, the one-sentence blurb and the sprite id. There is no colour column:
+ * the old per-format rails spent `--mb-teal` (locked to the rank-#1 rail) and
+ * `--mb-gold` (locked to Draft) as a categorical format key, which is the
+ * token double-booking rubric D3 counts by name. Rows take the neutral
+ * `--mb-rule` rail; identity is the glyph and the word.
  *
  * Unlike `MB_OVERVIEW_CONTENTS` this is not a promise about what will appear.
  * It is the choice the reader is about to make, which is why it takes the
@@ -478,7 +483,6 @@ export const MB_COMPETITION_FORMATS: MbLedgerRow[] = FORMAT_ORDER.map((type) => 
   term: FORMAT_META[type].label,
   gloss: FORMAT_META[type].blurb,
   icon: FORMAT_META[type].icon,
-  accent: FORMAT_META[type].accent,
 }));
 
 /**
@@ -723,7 +727,7 @@ export const MatchOfTheDayPanel = ({ match }: { match: MbFeaturedMatch | null })
           </div>
         )}
         <div className="mt-auto flex items-center justify-between border-t border-mb-navy px-4 py-2">
-          <span className="flex items-center gap-1.5 text-[0.72rem] font-medium">
+          <span className="flex items-center gap-1.5 text-[0.72rem] font-semibold">
             <MbIcon id="location" size={13} className="text-mb-navy" />
             <span className="matchbook-display mb-track-link">{match.venue}</span>
           </span>
@@ -784,7 +788,7 @@ export const LiveCourtsPanel = ({ courts }: { courts: MbLiveCourt[] }) => (
                 asked for, so a live 9 -> 10 still re-cuts nothing. The row now
                 sets its scoreline in the same figures as the Recent Results
                 row beside it and the archive ledger it links to. */}
-            <div className="flex min-w-0 flex-col gap-0.5">
+            <div className="flex min-w-0 flex-col gap-1">
               <MbMatchupPair
                 home={court.home}
                 away={court.away}
@@ -819,16 +823,21 @@ export const SchedulePanel = ({ items }: { items: MbScheduleItem[] }) => (
         href="/competitions/new"
       />
     ) : (
-      <div className="ml-3 flex grow flex-col divide-y divide-mb-rule border-l-2 border-mb-coral">
+      /* The spine is a NAVY EDGE now, not coral. "Schedule spine" was coral's
+         fourth declared job; the census closed at three (primary action,
+         selection mark, masthead lockup) and a timeline's left axis is
+         structure, not selection — printed almanac timelines are ruled in
+         ink. `border-l-[1.5px]` is the solid-navy edge idiom of §3.3 (renders
+         1px), darker than the translucent row rules crossing it, so the axis
+         reads in greyscale exactly as before. */
+      <div className="ml-3 flex grow flex-col divide-y divide-mb-rule border-l-[1.5px] border-mb-navy">
         {items.map((item, i) => (
           <div
             key={i}
             className="grid grow grid-cols-[42px_50px_minmax(0,1fr)] items-center gap-1 py-2 pl-2.5 pr-2.5"
           >
-            {/* The coral on this list is the 2px SPINE (coral job 4), which is
-                a mark. The date beside it was a second coral doing the same job
-                as a letterform: 10.24px/700 at 3.55:1 on `--mb-paper-bright`.
-                Navy, and the spine keeps the accent. */}
+            {/* The date was once a second coral on this list, as a letterform:
+                10.24px/700 at 3.55:1 on `--mb-paper-bright`. Navy. */}
             <div>
               <p className="matchbook-display text-[0.66rem] mb-track-status font-bold leading-tight">
                 {item.day}
@@ -838,7 +847,7 @@ export const SchedulePanel = ({ items }: { items: MbScheduleItem[] }) => (
               </p>
             </div>
             <p className="text-[0.72rem] font-semibold tabular-nums">{item.time}</p>
-            <div className="flex min-w-0 flex-col gap-0.5">
+            <div className="flex min-w-0 flex-col gap-1">
               {/* An EQUAL split of a cell that is 183px wide is still 91px a
                   side, and the previous fix — `basis-0 flex-1` on both names
                   so neither could hog the pair — only made the failure fair.
@@ -866,7 +875,7 @@ export const SchedulePanel = ({ items }: { items: MbScheduleItem[] }) => (
                   stops being hidden below `xl` (invariant 38 no longer has to
                   be argued for it), and it is the same row grammar as Live
                   Courts' set label directly above. */}
-              <span className="flex min-w-0 items-center gap-1 text-[0.62rem] text-mb-ink-muted">
+              <span className="flex min-w-0 items-center gap-1 text-[0.66rem] text-mb-ink-muted">
                 <MbIcon id="location" size={10} className="shrink-0" />
                 <span className="truncate">{item.venue}</span>
               </span>
@@ -949,7 +958,7 @@ export const BracketPanel = ({ bracket }: { bracket: MbBracket | null }) => (
               TBD
             </span>
           </div>
-          <p className="text-center text-[0.62rem] leading-snug text-mb-ink-muted">
+          <p className="text-center text-[0.66rem] leading-snug text-mb-ink-muted">
             {bracket.finalNote}
             <br />
             {bracket.finalVenue}
@@ -1048,7 +1057,7 @@ export const ReadinessPanel = ({ rows }: { rows: MbReadinessRow[] }) => (
                 </td>
                 <td>
                   <span className="flex items-center gap-1.5">
-                    <span className="w-7 text-[0.74rem] font-semibold tabular-nums">
+                    <span className="w-7 text-[0.72rem] font-semibold tabular-nums">
                       {row.percent}%
                     </span>
                     {/* `rounded-[2px]`, not `rounded-sm`: while the legacy

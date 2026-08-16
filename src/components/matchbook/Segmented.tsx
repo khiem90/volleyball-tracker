@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import { MB_CONTROL_CELL, type MbCompositeSize } from "./Button";
+import { MB_CONTROL_HEIGHT, type MbCompositeSize } from "./Button";
 import { MbIcon } from "./MbIcon";
 
 export interface MbSegmentedOption {
@@ -13,14 +13,18 @@ export interface MbSegmentedOption {
 
 /**
  * A framed composite, so `md` and `lg` only — `Button.tsx` has the derivation.
- * The short version: the group spends `--mb-rule-edge` top and bottom, so its
- * segments measure `rung − 2`. At `md` that is 46px and at `lg` 54px, both
- * clear of the 44px floor; at `sm` it would be 42px and the segments — which
- * are the actual targets — would be a rubric HF-2 hard fail.
+ * The short version: the interior WIDTH of a framed composite is `rung − 2`,
+ * and at `sm` it would be 42px — under the floor for the segments, which are
+ * the actual targets (rubric HF-2).
  *
- * This used to be `"sm" | "md"` measured on the *cell* (44 / 48), which meant
- * the group a caller lines up against a text field rendered 46 / 50 and never
- * matched anything.
+ * The cells' HEIGHT is the full rung — 48/56, the same number as the group —
+ * because the frame is drawn as an inset `outline`, which is paint rather than
+ * layout (see the group's inline style below). The segments therefore measure
+ * on the ladder in the D2 sweep, which enumerates cells, not groups. Before
+ * that correction the group's block borders charged the cells down to 46/54 —
+ * two numbers on no ladder — and before THAT this was `"sm" | "md"` measured
+ * on the *cell* (44 / 48), which meant the group a caller lines up against a
+ * text field rendered 46 / 50 and never matched anything.
  */
 export type MbSegmentedSize = MbCompositeSize;
 
@@ -105,7 +109,7 @@ export const MbSegmented = ({
     onChange(options[next].value);
   };
 
-  const cell = MB_CONTROL_CELL[size];
+  const cell = MB_CONTROL_HEIGHT[size];
 
   return (
     <div
@@ -117,26 +121,43 @@ export const MbSegmented = ({
       } ${className}`}
       style={{
         /**
-         * The wrap fix, and the reason a group can no longer render two cell
-         * heights at once.
+         * THE FRAME IS PAINT, NOT LAYOUT (the composite half of G21).
          *
-         * Measured before: `MbSegmented[data-size="md"]` with the options
-         * "North Pavilion Court" / "South Hall" laid out 54.38px and 48px
-         * segments in one control. Grid stretches items *within* a row, so
-         * the wrapping label grew its own row and the short label kept the
-         * `min-height`. Two heights, one control.
+         * `.mb-segmented`'s block borders used to charge the cells for the
+         * frame: group 48, cells 46 — and 46 is the number the D2 sweep sees,
+         * because an audit enumerates `role="radio"` buttons, not the group
+         * div around them (the rubric names "46/58" as the pair that fails
+         * the ladder twice). So the border comes off and the same 1px navy
+         * ring is drawn as an inset `outline`, which occupies zero layout and
+         * paints OVER the cells' outer edge — outlines render in the final
+         * paint phase (CSS 2.1 App. E), so the ring survives the cells'
+         * paper ground, and `overflow: hidden` still clips the square cell
+         * corners to the group's 4px radius. Cells now measure the rung
+         * itself: 48 at `md`, 56 at `lg`, group and cell one number at last.
+         * The 1px navy dividers are unchanged — they are the grid `gap` with
+         * the group's navy ground showing through, not borders.
          *
-         * `1fr` rows in an auto-height grid all resolve to the tallest row's
-         * base size (CSS Grid §12.7), so every row of one group is now the
-         * same height by construction, however many rows there are and
-         * whatever wraps. `minmax` keeps the ladder rung as the floor.
+         * gridAutoRows is the wrap fix, and the reason a group can no longer
+         * render two cell heights at once. Measured before:
+         * `MbSegmented[data-size="md"]` with the options "North Pavilion
+         * Court" / "South Hall" laid out 54.38px and 48px segments in one
+         * control. Grid stretches items *within* a row, so the wrapping label
+         * grew its own row and the short label kept the `min-height`. `1fr`
+         * rows in an auto-height grid all resolve to the tallest row's base
+         * size (CSS Grid §12.7), so every row of one group is the same height
+         * by construction, however many rows there are and whatever wraps.
+         * `minmax` keeps the ladder rung as the floor.
          *
-         * NOTE for whoever owns globals.css: `.mb-segmented > *` and
-         * `.mb-segmented[data-size="md"] > *` still declare `min-height`
-         * 44px/48px. Both are superseded by the inline `minHeight` on each
-         * cell below and can be deleted — this component is `.mb-segmented`'s
-         * only consumer.
+         * NOTE for whoever owns globals.css: `.mb-segmented` still declares
+         * the `border`, and `.mb-segmented > *` / the `[data-size]` variants
+         * still declare `min-height` 44px/48px. All are superseded by the
+         * inline declarations here (this component is `.mb-segmented`'s only
+         * consumer) and can be deleted; if the border is deleted, keep it as
+         * the outline written below.
          */
+        border: 0,
+        outline: "var(--mb-rule-edge) solid var(--mb-navy)",
+        outlineOffset: "calc(-1 * var(--mb-rule-edge))",
         gridAutoRows: `minmax(${cell}px, 1fr)`,
         ...style,
       }}
@@ -162,7 +183,7 @@ export const MbSegmented = ({
                half — important because that rule is unlayered and outranks any
                Tailwind utility that is not. It buys the second line of a
                wrapped label the room to sit inside the rung instead of pushing
-               past it: 2 lines x 16px + 8px padding = 40px, inside 46. Single
+               past it: 2 lines x 16px + 8px padding = 40px, inside 48. Single
                line cells do not move, because `minHeight` still governs and the
                flex centring is unchanged. */
             className="py-1!"

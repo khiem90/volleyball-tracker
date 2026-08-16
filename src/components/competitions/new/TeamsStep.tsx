@@ -79,7 +79,7 @@ import {
  * own `0.72rem` muted step, and disappear the moment the columns appear.
  */
 const renderPrimary = (row: MbEntryRow) => (
-  <span className="flex min-w-0 flex-1 flex-col justify-center gap-0.5">
+  <span className="flex min-w-0 flex-1 flex-col justify-center gap-1">
     <TeamMark team={row.team} accent={row.accent} size="sm" className="min-w-0" />
     <span className="truncate text-[0.72rem] leading-tight text-mb-ink-muted tabular-nums sm:hidden">
       {row.record} · {row.enteredIn}

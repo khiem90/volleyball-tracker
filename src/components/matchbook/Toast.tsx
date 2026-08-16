@@ -191,7 +191,7 @@ export const MbToast = ({
       className={`mt-[2px] shrink-0 self-start ${TONE_INK[tone]}`}
     />
     <div className="flex min-w-0 flex-1 flex-col gap-2">
-      <p className="min-w-0 text-[0.8rem] leading-[1.5]">{message}</p>
+      <p className="min-w-0 text-[0.85rem] leading-[1.5]">{message}</p>
       {action && (
         <div className="flex">
           <MbButton

@@ -118,7 +118,7 @@ const ScorePreviewSide = ({
           height={74}
           className="opacity-25 grayscale"
         />
-        <span className="text-[0.8rem] text-mb-ink-muted">{placeholder}</span>
+        <span className="text-[0.85rem] text-mb-ink-muted">{placeholder}</span>
       </>
     )}
   </div>
@@ -370,7 +370,7 @@ export default function QuickMatchPage() {
                       title="Swap home and away teams"
                       aria-label="Swap home and away teams"
                       onClick={handleSwapTeams}
-                      className="mb-btn mb-btn-outline-navy h-12 w-12 shrink-0 flex-col gap-0.5 self-center p-0 @min-[380px]:mt-9 @min-[380px]:self-start"
+                      className="mb-btn mb-btn-outline-navy h-12 w-12 shrink-0 flex-col gap-1 self-center p-0 @min-[380px]:mt-9 @min-[380px]:self-start"
                     >
                       <MbIcon id="swap" size={16} />
                       {/* `display/kicker` — 0.62rem/600/0.16em, the step every

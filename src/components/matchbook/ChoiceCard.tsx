@@ -87,7 +87,9 @@ export const MbChoiceCard = ({
           aria-hidden="true"
           className={`mt-1 inline-grid h-[18px] w-[18px] shrink-0 place-content-center rounded-[2px] border-[1.5px] ${
             selected
-              ? "border-mb-coral-deep bg-mb-coral-deep text-mb-paper-bright"
+              ? /* Inked, not highlighted — the `.mb-check:checked` rule. The
+                   coral on a selected card is the rail, and only the rail. */
+                "border-mb-navy bg-mb-navy text-mb-paper-bright"
               : disabled
                 ? "border-mb-rule"
                 : "border-mb-navy"

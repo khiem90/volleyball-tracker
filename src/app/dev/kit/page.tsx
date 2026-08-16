@@ -766,7 +766,7 @@ const LogicAndPanelSection = () => {
             icon="clipboard"
             meta={
               <span className="mb-kicker hidden tabular-nums sm:inline">
-                5 formats, 4 accents — the bracket pair shares one
+                5 formats, 0 colours — identity is the glyph and the word
               </span>
             }
           >
@@ -776,7 +776,7 @@ const LogicAndPanelSection = () => {
                 <div
                   key={type}
                   className="mb-rail mb-row-hover flex items-start gap-3 border-t border-mb-rule px-4 py-3.5 first:border-t-0"
-                  style={{ "--mb-rail-color": meta.accent } as React.CSSProperties}
+                  style={{ "--mb-rail-color": "var(--mb-rule)" } as React.CSSProperties}
                 >
                   <span className="mb-icon-disc mt-px h-9 w-9">
                     <MbIcon id={meta.icon} size={18} />
@@ -3665,7 +3665,6 @@ const SelectionListsSection = () => {
                     <MbChoiceCard
                       key={type}
                       icon={meta.icon}
-                      accent={meta.accent}
                       title={meta.label}
                       description={meta.blurb}
                       kicker={`${countOf(meta.minTeams, "team")} minimum`}

@@ -288,7 +288,21 @@ export default function HistoryPage() {
                     {day.entries.map((entry) => (
                       /* `mb-btn-touch` supplies the 44px floor the 0.5rem
                          padding could not: the row measured 38.6px, and there
-                         are twenty-five of them on a phone. */
+                         are twenty-five of them on a phone.
+
+                         `sm:py-1.5`, and the split is measured twice over. At
+                         8px of block padding a one-line row's content summed
+                         to exactly 44, so its own `border-b` tipped the
+                         border box to 45 — one px off the floor, on all
+                         twenty-five desktop rows; at 6px the content sums
+                         under 44 and `mb-btn-touch` governs, border included.
+                         Below `sm` the row is the two-line narrow cut — a
+                         content row above the floor (§3.3) at any padding —
+                         and it keeps `py-2`, because shaving it 4px slid the
+                         scroll-0 ledger 100px and parked a row's bottom edge
+                         7.2px above the fixed bottom bar: six counted SPACING
+                         pairs that did not exist before. The bar is mobile
+                         chrome, so the two fixes never meet. */
                       <button
                         key={entry.id}
                         type="button"
@@ -308,7 +322,7 @@ export default function HistoryPage() {
                            pairs in that row alone; 128 across the ledger at
                            390, 262 at 320, worst 64.6px, nothing clipping any
                            of it. `MbMatchupPair` carries the note. */
-                        className="mb-btn-touch mb-row-hover grid w-full cursor-pointer grid-cols-[52px_minmax(0,1fr)_auto] items-center gap-2 border-b border-mb-rule px-4 py-2 text-left"
+                        className="mb-btn-touch mb-row-hover grid w-full cursor-pointer grid-cols-[52px_minmax(0,1fr)_auto] items-center gap-2 border-b border-mb-rule px-4 py-2 text-left sm:py-1.5"
                         style={
                           entry.id === data.selectedId
                             ? { boxShadow: "inset 3px 0 0 var(--mb-coral)" }
@@ -586,10 +600,18 @@ export default function HistoryPage() {
             ) : (
               <div className="flex flex-col divide-y divide-mb-rule">
                 {data.competitions.map((c) => (
+                  /* The rung is `md` (48) and it is INLINE: `.mb-btn-touch`'s
+                     44px floor is unlayered, so a `min-h-12` utility would
+                     never apply — and without a stated rung the two-line
+                     content floated the rows to 50.56, with `divide-y`'s 1px
+                     tipping the non-last ones to 51.56. Two heights, neither
+                     on the ladder. `py-1.5` brings the content (34.6px) under
+                     the rung so 48 governs, dividers included. */
                   <Link
                     key={c.id}
                     href={`/competitions/${c.id}`}
-                    className="mb-btn-touch mb-row-hover grid grid-cols-[auto_1fr_auto] items-center gap-2.5 px-4 py-2"
+                    className="mb-btn-touch mb-row-hover grid grid-cols-[auto_1fr_auto] items-center gap-2.5 px-4 py-1.5"
+                    style={{ minHeight: 48 }}
                   >
                     {/* `--mb-gold` as a MARK measured 2.15:1 on paper-bright,
                         under the 3:1 floor a UI graphic needs. Navy. */}
@@ -613,7 +635,7 @@ export default function HistoryPage() {
           {kept("shared") && (
           <Panel title="Shared Reports">
             {shared.isLoading ? (
-              <p className="p-4 text-center text-[0.8rem] text-mb-ink-muted">
+              <p className="p-4 text-center text-[0.85rem] text-mb-ink-muted">
                 Loading shared reports…
               </p>
             ) : shared.summaries.length === 0 ? (

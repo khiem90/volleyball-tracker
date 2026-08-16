@@ -186,10 +186,10 @@ const RAIL_CELL_STYLE: CSSProperties = {
  * so it cannot move a letterform or trigger layout.
  *
  * `--mb-rule-accent` (3px), not the charter's "2px": the rule tiers in
- * `globals.css` reserve 2px for exactly two named marks (the masthead badge
- * lockup and the schedule spine) and put every active/selected mark on the 3px
- * accent tier — which is what `.mb-nav-item`'s left rail and `.mb-tab`'s
- * underline already use. One mark, three orientations, one width.
+ * `globals.css` reserve 2px for the masthead badge lockup alone (the schedule
+ * spine is a solid-navy EDGE now — §3.5) and put every active/selected mark on
+ * the 3px accent tier — which is what `.mb-nav-item`'s left rail and
+ * `.mb-tab`'s underline already use. One mark, three orientations, one width.
  */
 const ActiveRule = ({ active, still }: { active: boolean; still: boolean }) => (
   <span

@@ -634,7 +634,9 @@ export const QuickAddTeams = ({
                         aria-hidden="true"
                         className={`inline-grid h-[18px] w-[18px] shrink-0 place-content-center rounded-[2px] border-[1.5px] ${
                           active
-                            ? "border-mb-coral-deep bg-mb-coral-deep text-mb-paper-bright"
+                            ? /* Inked, not highlighted (`.mb-check:checked`);
+                                 the row's coral is the selection rail alone. */
+                              "border-mb-navy bg-mb-navy text-mb-paper-bright"
                             : "border-mb-navy"
                         }`}
                       >
@@ -705,7 +707,7 @@ export const QuickAddTeams = ({
           </div>
           {/* No nested scroller: the dialog body is the only one. */}
           {plan.length === 0 ? (
-            <p className="border-y border-mb-rule py-3 text-[0.8rem] text-mb-ink-muted">
+            <p className="border-y border-mb-rule py-3 text-[0.85rem] text-mb-ink-muted">
               Nothing to create yet — the teams you add will be listed here with
               the crest and the ink each one will wear.
             </p>

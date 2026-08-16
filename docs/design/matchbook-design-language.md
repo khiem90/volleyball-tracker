@@ -80,7 +80,7 @@ the `@theme inline` block above it, which generates `bg-mb-*`, `text-mb-*`,
 | `--mb-paper` | `#f7f0e4` | `bg-mb-paper` | The page stock. Applied once, by `.matchbook-surface`, on the outermost `<div>`. | Panel interiors, buttons, any element inside a panel. |
 | `--mb-paper-bright` | `#fffaf1` | `bg-mb-paper-bright` | Everything that sits *on* the stock: panel bodies, score boxes, seed boxes, inputs, selects, avatar discs. Also the ink colour on navy fills. | The page background (the two-tone paper/bright separation is what makes panels read as printed cards). |
 | `--mb-navy` | `#07324d` | `text-mb-navy` `bg-mb-navy` `border-mb-navy` | **The ink.** Default text colour, all structural borders, panel top rule, navy header bars, primary button fill. | Long body copy that should read as secondary — that's `--mb-ink-muted`. |
-| `--mb-coral` | `#ee4b34` | `text-mb-coral` `bg-mb-coral` `border-mb-coral` | **The one accent.** Active nav, masthead second word, masthead badge frame, primary CTA fill, selection rail, schedule spine, hover colour for links. | Body text at small sizes on paper (3.26:1 — large text only). Status semantics; it means "this is the app's accent", not "danger". |
+| `--mb-coral` | `#ee4b34` | `text-mb-coral` `bg-mb-coral` `border-mb-coral` | **The one accent — three declared jobs, closed list (§1.2):** the primary action (filled as `--mb-coral-deep`), the selection/current mark (active nav rail, tab underline, selected-row rail, current-step ring), and the masthead lockup (the emphasised title word; the wordmark's "Tracker" line in `--mb-coral-deep`). Plus transient hover accents on icon controls (never a resting state). | Body text at small sizes on paper (3.26:1 — large text only). Status semantics; it means "this is the app's accent", not "danger". A fourth job: the count badge is navy, the schedule spine is a navy edge, live rails are `--mb-red`, and no categorical key (formats, bracket sections) may use it. |
 | `--mb-teal` | `#148f89` | `text-mb-teal` | Rank-leader rail (row 1 of a table), "Shared" markers, first entry in the recent-results accent cycle. | Success — that's `--mb-green`. |
 | `--mb-gold` | `#e6a01f` | `text-mb-gold` | Icons **on navy** (`Panel tone="navy"` sets `text-mb-gold` on the head icon), Draft status, mid-tier readiness bars. | Text on paper. 1.97:1 — it **fails at any size**. See §1.3. |
 | `--mb-plum` | `#5a347d` | `text-mb-plum` | Fourth accent in the recent-results rail cycle. | Interactive elements. It has no interaction meaning. |
@@ -106,7 +106,7 @@ the value — a bare `rgba(...)` in new code is a review failure.
 | `--mb-tint-on-navy` | `rgba(255,250,241,0.06)` | Panel-bright tint on navy |
 | `--mb-panel-shadow` | `0 8px 22px rgba(57,41,23,0.08)` | The only shadow in the system |
 | `--mb-rule-hairline` / `-edge` / `-accent` / `-anchor` | `1px` / `1px` / `3px` / `4px` | The rule weights of §3.3, named. `-hairline` and `-edge` are **both 1px on purpose** — see §3.3, the 1 vs 1.5 step does not exist at render time. What separates a hairline from an edge is the *colour*: `--mb-rule` (translucent) against `--mb-navy` (solid). |
-| `--mb-focus` | `var(--mb-coral)` | The Matchbook focus ring (GAP-12) |
+| `--mb-focus` | `var(--mb-navy)` | The Matchbook focus ring (GAP-12). Navy, not coral — the coral ring collided with the selection rail; navy surfaces re-point it to `--mb-paper-bright` (the token is inherited). |
 | `--mb-dur-fast` / `-base` / `-slow` | `120ms` / `180ms` / `280ms` | Motion durations (GAP-11) |
 | `--mb-ease-out` / `--mb-ease-in-out` | `cubic-bezier(.2,.8,.3,1)` / `(.4,0,.2,1)` | Motion easings |
 | `--mb-stagger` | `40ms` | Per-panel entrance delay |
@@ -118,7 +118,10 @@ the value — a bare `rgba(...)` in new code is a review failure.
 Never invent a new mapping. These are the ones already shipped:
 
 ```
-Live / in progress   → --mb-red    (+ .mb-live-dot)
+Live / in progress   → --mb-red    (+ .mb-live-dot; includes the LIVE ROW RAIL —
+                                    a live row/cell rail is red, never coral,
+                                    and never the sole carrier: the dot and the
+                                    word ship with it)
 Draft / pending      → --mb-gold   (on-navy or as a border only)
 Final / complete     → --mb-green
 Win                  → --mb-green
@@ -129,13 +132,57 @@ Readiness ≥85 READY  → --mb-green
 Readiness ≥65 GOOD   → --mb-gold
 Readiness <65 ATTN   → --mb-red
 Rank #1 rail         → --mb-teal
-Selected row rail    → --mb-coral
+Selected / current   → --mb-coral  (one meaning, several orientations: row
+                                    rail, nav left rail, tab underline,
+                                    current-step ring, court-token ring,
+                                    reorder insertion rule)
 ```
 
 Canonical implementations (grep the name, not a line): `STATUS_STYLES` in
 `src/app/competitions/page.tsx`, `readinessColor()` in
 `src/components/matchbook/teamStats.ts`, `FORM_COLORS` in
 `src/components/matchbook/Panel.tsx`.
+
+#### 1.2a The coral job census — three jobs, closed list
+
+Coral (`--mb-coral` and its ink twin `--mb-coral-deep` count as ONE hue) does
+exactly three jobs, and a job is a **meaning**, not a call site:
+
+```
+1. THE PRIMARY ACTION    .mb-btn-coral fill (--mb-coral-deep), one per screen.
+2. THE SELECTION MARK    "this is the current one" — the rail/ring family
+                         listed under Selected/current above. One meaning in
+                         several orientations is one job.
+3. THE MASTHEAD LOCKUP   the emphasised title word (§2.3, ≥36px, --mb-coral)
+                         and the wordmark's "Tracker" line (--mb-coral-deep).
+                         The brand voice, once per screen, letterforms only.
+```
+
+The scoring console is the one scoped extension: there the current-mark takes
+the form of the `.mb-notch-coral` lead edge ("the score that just moved / the
+side ahead" — the console's only selection), and the console's census is jobs
+1 + 2 and nothing else.
+
+**What is deliberately NOT coral, and where each went** (this list is the
+reason the census holds — do not quietly re-book one):
+
+```
+masthead count badge      → navy frame + navy numeral (its mark is the 2px
+                            WEIGHT, the only 2px border — §3.3)
+live row/cell rails       → --mb-red (the live semantic; also, coral and red
+                            were sitting adjacent on live rows, which §1.1
+                            forbids)
+schedule/timeline spine   → solid-navy edge (structure is ruled in ink)
+scoreboard lead rule      → navy, live or final (the dot says "live", the
+                            rule says "ahead")
+check / radio / switch ON → navy ("inked, not highlighted")
+format colour key         → none (icon + label; see formatMeta.ts)
+bracket section key       → teal / gold / plum only (Grand Finals is plum)
+```
+
+Hover accents on icon controls are transient states of jobs 1–2, not a fourth
+job; they never appear in a static capture. The focus ring is navy
+(`--mb-focus`), not coral.
 
 ### 1.3 Contrast — measured, WCAG 2.1
 
@@ -271,6 +318,7 @@ snippet in code. Never introduce a size between two steps.
 | `display/table-head` | `0.66rem` | 600 | `0.12em` | — | baked into `.mb-table th` | Table column labels |
 | `display/status` | `0.66rem` | 700 | `0.1em` | — | `matchbook-display text-[0.66rem] font-bold tracking-[0.1em]` | Status words (Live/Draft/Final/ACTIVE) |
 | `display/kicker` | `0.62rem` | 600 | `0.16em` | — | baked into `.mb-kicker` | Every eyebrow label |
+| `display/court-label` | `13.6` **SVG units** | 600 | `0.16em` | — | `EDGE_LABEL` in `MbCourt.tsx` | The court diagram's reference labels (NET, END LINE, 3 M, SERVING/RECEIVING, R#) |
 | `display/badge-label` | `0.6rem` | 700 | `0.22em`–`0.28em` | — | `matchbook-display text-[0.6rem] font-bold tracking-[0.22em]` | Masthead badge caption word |
 
 `display/score-fit` is the one step on this table measured in **container**
@@ -304,13 +352,26 @@ The step therefore needs no breakpoints and has none. It is correct in
 portrait, in landscape, in Court View, and at whatever height the chrome around
 it grows to next.
 
+`display/court-label` is the one step measured in **drawing units**. The court
+SVG has a 464-unit viewBox and renders at 356–464px, so type authored inside it
+scales with the drawing: 13.6 SVG units paint at 10.4–13.6px, landing on the
+kicker's optical size at the phone widths where the court is smallest. The
+voice is the kicker's — weight 600, `0.16em`, muted ink — because the labels
+are eyebrows for the drawing (NET, END LINE, R3), not data on it. It was
+authored 700, a weight the kicker step never carries; that was a drift and was
+snapped. The size is NOT a rem step and must not be copied outside the SVG: a
+computed-style census will read it as "13.6px" and it is not the same object as
+`body/sm`'s 13.6px, any more than `display/score-fit`'s `cqh` is a viewport
+size. The court's zone numerals are different — 36 units = `display/stat-xl`
+at `display/masthead`'s 0.01em, already on the table above.
+
 **Body steps (Outfit, sentence case)**
 
 | Name | Size | Weight | Tailwind snippet | Where it ships |
 | --- | --- | --- | --- | --- |
 | `body/md` | `0.9rem` | 400 | baked into `.mb-input input` | Form fields |
 | `body/sm` | `0.85rem` | 400 | baked into `.mb-table td`; `text-[0.85rem]` | Table cells, `PanelEmpty` message, paragraph copy |
-| `body/xs` | `0.78rem` | 600 | `text-[0.78rem] font-semibold` | Detail values (Match Report meta) |
+| `body/xs` | `0.78rem` | 400/600 | `text-[0.78rem] font-semibold` | 600: detail values (Match Report meta, "Entered In"). 400: the deck sentence under a row title (tools cards) — same split `body/2xs` already carries |
 | `body/2xs` | `0.72rem` | 400/600 | `text-[0.72rem] text-mb-ink-muted` | Helper text, secondary row lines |
 | `body/3xs` | `0.66rem` | 400 | `text-[0.66rem] text-mb-ink-muted` | Sub-labels inside dense rows |
 | `body/input-floor` | `1rem` | 400 | `text-base! md:text-[0.9rem]!` | **Every text input, below `md` only** |
@@ -323,6 +384,27 @@ shift the reader did not ask for and cannot undo — so a field is `1rem` below
 `.mb-textarea`, `.mb-select-native` and `.mb-search input`, and nowhere else. The
 `!` is load-bearing — those four rules set `font-size` unlayered, and an
 unlayered declaration outranks every Tailwind utility (§2.1a).
+
+**The ramp is width-invariant below the masthead — on purpose.** A census at
+390 and a census at 1440 read the same sizes at the same counts (measured:
+`display/team-mark` at 13.12px, 184 elements, both widths), and the only steps
+that respond to the viewport are `display/masthead` (`text-4xl → sm:text-5xl`)
+and the two floors above (`score-fit` to its container, `input-floor` to the
+platform). This is a decision, not an omission, and it was taken twice:
+
+- An almanac's body type does not resize with the sheet; only the masthead is
+  display-scaled. Data lines — team names, scores, standings — are set once so
+  that a row on a phone and the same row on a desk are the *same object*.
+- Every truncation and painted-character floor in this programme (the 8-char
+  name floor, `MbTeamName`'s pinned last token) is measured at 320/375 against
+  today's sizes. A step that grew at 390 would spend those floors on air; one
+  that shrank would re-open the 6.6 finding ("the most frequent size at 390
+  carrying real data" — sub-10px body text on a phone, closed by snapping
+  `0.62rem` Outfit strays up to `body/3xs`).
+
+Do not add `sm:`/`lg:` size variants to body or data steps. A screen that needs
+more room at 390 changes its layout (the schedule panel's venue caption line,
+the champion block's `basis-48`), never its type ramp.
 
 ### 2.1a The tracking ladder — one rung per (size, weight)
 
@@ -396,7 +478,7 @@ dead code.** `.mb-panel-link` (0.72), `.mb-btn` (0.8), `.mb-btn-lg` (0.9),
 `.mb-table th` (0.66), `.mb-table td` (0.85), `.mb-badge` (0.66),
 `.mb-badge[data-size="md"]` (0.74), `.mb-tab` (0.85), `.mb-code-chip` (0.85),
 `.mb-day-head` (0.66), `.mb-stamp-final` (0.74), `.mb-skip-link` (0.8),
-`.mb-segmented > *` (0.8), `.mb-banner` (0.8), `.mb-search input` (0.78),
+`.mb-segmented > *` (0.8), `.mb-banner` (0.85), `.mb-search input` (0.78),
 `.mb-input input` / `.mb-textarea` (0.9), `.mb-select-native` (0.95),
 `.mb-field-hint` / `.mb-field-error` (0.72) and the three `.mb-numeral--*` all
 declare their own `font-size` outside every layer. Delete the utility; do not
@@ -423,6 +505,7 @@ is a call-site choice**; every one is a component voice authored in
 | `1.875rem/700` | base 0.02em vs `.mb-numeral-digit` `normal` | numeral rule |
 | `0.6rem/700` | `display/badge-label` 0.22em vs `FormLetters`' mark `normal` | mark rule |
 | `0.62rem/600` *(mobile only)* | `.mb-kicker` 0.16em vs `MatchbookBottomBar` 0.08em | measured exception |
+| `0.85rem/600` *(census artifact)* | `.mb-nav-item` 0.08em vs `display/court-label` 0.16em — the latter is 13.6 **SVG units** in `MbCourt.tsx` that paint at 10.4–13.6px, not a rem step (§2.1) | drawing units |
 
 Closing the first four means deciding whether a **role** may keep its tracking
 across two sizes (a large button is still a button; a code chip is still a code).
@@ -462,9 +545,9 @@ The masthead is two-tone: neutral first word in navy, emphasised word in coral.
 
 Shipped variants: `Team **Directory**`, `Quick **Match**`, `Match **Archive**`,
 `Tournament **Toolkit**`, `Welcome **Back**` / `Join **the Club**`,
-`Compete**.**` (coral full stop). `Tournament Overview` is all-navy because the
-Overview screen already carries a coral LIVE NOW badge. **One** coral element in
-the masthead title, maximum.
+`Compete**.**` (coral full stop), `Tournament **Overview**`. **One** coral
+element in the masthead title, maximum, and the title word is the ONLY coral in
+the masthead: the count badge is navy (§3.2).
 
 ---
 
@@ -517,8 +600,10 @@ One per screen, `mb-5` below it. Five slots, left to right:
       Match <span className="text-mb-coral">Archive</span>
     </h1>
 
-    {/* 2. BADGE — coral 2px frame; either a stacked word pair or count+caption */}
-    <div className="flex flex-col items-center border-[2px] border-mb-coral px-2.5 py-1 text-mb-coral">
+    {/* 2. BADGE — navy 2px frame; either a stacked word pair or count+caption.
+        The 2px WEIGHT is the mark (the only 2px border in the system, §3.3);
+        the badge came off coral when the job census closed at three (§1.2a). */}
+    <div className="flex flex-col items-center border-[2px] border-mb-navy px-2.5 py-1 text-mb-navy">
       <span className="matchbook-display text-2xl font-bold leading-none tabular-nums">{count}</span>
       <span className="matchbook-display text-[0.6rem] font-bold tracking-[0.22em]">Results</span>
     </div>
@@ -550,8 +635,9 @@ One per screen, `mb-5` below it. Five slots, left to right:
 ```
 
 Rules:
-- Badge frame is `border-[2px] border-mb-coral` — the **only** 2px border in the
-  system, and the only place coral is used as a frame.
+- Badge frame is `border-[2px] border-mb-navy` — the **only** 2px border in the
+  system. The weight is the badge's identity, which is why it survived the move
+  off coral unchanged in greyscale; coral is never used as a frame.
 - Any date/time string rendered from `new Date()` on the client must carry
   `suppressHydrationWarning` (the `data.dateLine` paragraph in `src/app/page.tsx` and `src/app/teams/page.tsx`).
 - The account chip's disc is `h-10 w-10 rounded-full` — the **only** circle in the
@@ -595,9 +681,62 @@ Rules:
 | Panel head padding | `0.65rem 1rem 0.55rem` (baked) |
 | Panel body, roomy | `p-4` or `p-5` |
 | Panel body, list row | `px-3 py-2` / `px-3 py-2.5` / `px-4 py-2` |
-| Panel footer strip | `px-4 py-2` |
+| Panel body, list row under a stated rung | `px-4 py-1.5` — see "the divider charge" below: block padding drops so the rung's `min-height`, not the type, sets the border box, and the rung absorbs `divide-y`'s 1px |
 | Inline icon↔text | `gap-1.5` / `gap-2` / `gap-2.5` / `gap-3` |
+| Stacked label — a line and its caption inside one row or stat tile | `gap-1` (4px). One value, and it is small on purpose: two text lines plus 4px is what still fits inside a 56px row beside a 36px disc; at `gap-1.5` the same stack sums past the rung. The same 4px is G23's compact icon↔text step, baked into `.mb-nav-item`, `.mb-badge` and `.mb-panel-link` in `globals.css` — one number, stated twice, and `gap-0.5` is not a member (its ten call sites were this relationship at a second value, now collapsed) |
+| Panel footer strip | `px-4 py-2` |
 | Form squares | `gap-[3px]` |
+| `.mb-segmented` divider | `1px` — recorded here because the census sees it as a gap. It is a **rule**, not a spacing step: the grid `gap` is the width of the navy ground showing through between paper cells, i.e. `--mb-rule-edge` drawn by layout instead of border. It joins no relationship above and nothing else may use a 1px gap |
+
+**Control heights — the ladder, the divider charge, and the named exemptions.**
+The ladder is `{44, 48, 56}` and lives in `Button.tsx`
+(`MB_CONTROL_HEIGHT`); a composite's interior cells now measure the rung
+itself, because the frame's block edges are paint rather than layout
+(`MbSegmented` draws its frame as an inset outline; `MbNumberStepper`'s keys
+and every framed `<input>` use the G21 negative-block-margin idiom). Two rules
+keep rows on it, and both are measured:
+
+- **The divider charge.** `min-height` is a border-box floor, so a row whose
+  content + padding sums to *exactly* its rung is tipped one pixel off it by
+  its own `border-b` or by `divide-y` — that single pixel was 45 on the
+  `/summaries` ledger (25 rows), 51.56 on its competition list, 57 in the
+  format chooser and 57 in the formation library, four screens with the same
+  disease. The fix is never a taller rung: drop the block padding one step
+  (`py-1.5`, named above) so content sits *under* the rung and `min-height`
+  absorbs the rule. A divider is part of the box, not on top of it.
+- **The floor is unlayered.** `.mb-btn-touch { min-height: 44px }` is declared
+  outside every cascade layer, so a Tailwind `min-h-12`/`min-h-14` beside it
+  is silently inert. A row that states a rung above the floor states it
+  **inline** (`style={{ minHeight: 48 }}`), which is the one thing that
+  outranks an unlayered rule without `!important`.
+
+Four **named exemptions** — boxes the D2 sweep reads that are not control
+heights, each a considered decision rather than a stray:
+
+1. **Invisible hit-extension geometry.** A transparent box that exists only to
+   enlarge a target is target geometry, not a control: `MbPlayerToken`'s
+   ≥52px hit disc (the charter's own floor for a court token — 52 is not a
+   rung and must not become one, because the *drawn* disc is SVG and the
+   overlay simply satisfies the charter's minimum), and `.mb-panel-link`'s
+   44×44 `::after` hit pad. Nothing invisible answers to the ladder.
+2. **Letterform links.** `.mb-panel-link`'s visible box is its ink
+   (≈17.3px of 0.72rem capitals). It is a printed almanac's "see page 12" —
+   a line of type, not a boxed control; its *control* geometry is the
+   invisible pad above, probed by the harness at the 44×44 square.
+3. **Content rows and tiles above the floor.** A ledger row, roster row,
+   format tile, scoreboard card or console tap column is sized by its data:
+   it meets the 44px floor (or a stated rung) and grows with a second line,
+   a wrapped meta, or the column it fills. Fixing these to a rung would
+   truncate data or pad an almanac with air. The floor is the contract; the
+   height is the content. (`textarea` is recorded in `form.tsx` as the one
+   *control* honestly off the ladder — it is measured in rows of text, not
+   rungs of thumb.)
+4. **The wordmark lockup.** The sidebar crest-and-wordmark anchor link is a
+   masthead object that happens to navigate, not a control.
+
+Everything interactive that is none of the above measures 44, 48 or 56 —
+the sweep in `zz-h.mjs`/`audit.mjs` reads the border boxes, and `/dev/kit`
+plus all thirty-one routes are the proof.
 
 **Radius vocabulary:** `4px` (`.mb-panel`, `.mb-btn`, `.mb-input`, `.mb-search`,
 `.mb-select-native`, `.mb-dialog`, `.mb-stepper`, `.mb-segmented`,
@@ -610,6 +749,17 @@ disc, an icon disc (`.mb-icon-disc`), and a colour swatch — plus the `live` an
 circle; it is a squared ballot box. **Anything ≥ `rounded-lg` is an
 anti-pattern.**
 
+One use stands outside that budget because it never paints: the **invisible
+hit disc** behind a court player token (`MbPlayerToken`, the ≥52px transparent
+target the charter requires). The four reservations ration *ink* — how many
+round marks a page may show — and a box with no ink spends none; its round is
+geometry, matching hit area to the round SVG disc under it so a corner tap
+neither misses the token nor poaches its neighbour. It must stay invisible
+(the moment it paints, it is a fifth round mark and a violation), and it takes
+the literal `rounded-[999px]`, never `rounded-full` — that utility compiles to
+`calc(infinity * 1px)` and would put a second spelling of the same round into
+the D2 radius census.
+
 **Border vocabulary** (tokenised — `--mb-rule-hairline` / `-edge` / `-accent` /
 `-anchor`):
 
@@ -619,7 +769,7 @@ anti-pattern.**
 | Real edge — panel body, boxes, inputs, tiles | `var(--mb-rule-edge) solid var(--mb-navy)` / `border-[1.5px] border-mb-navy` | **1px**, solid navy |
 | Accent rail — inset rail, active tab underline | `3px` | 3px |
 | Anchor edge — `.mb-panel` top, `.mb-dialog` top, `.mb-banner` / `.mb-toast` left | `4px` | 4px |
-| Masthead count badge — the one 2px border | `border-[2px] border-mb-coral` | 2px |
+| Masthead count badge — the one 2px border | `border-[2px] border-mb-navy` | 2px |
 
 > **Measured, and it corrects this document's own long-standing claim: there is
 > no 1.5px line in Matchbook, and there never was.** Chrome floors
@@ -692,8 +842,8 @@ modifier: `className="mb-panel h-auto!"` (the form panel in `src/app/login/page.
 | Column divider | `divide-x divide-mb-rule` | Stat triptychs (Leaders, Club Snapshot) |
 | Heavy | `border-t-[1.5px] border-mb-navy` | Panel footer summary strips, section splits inside a panel |
 | Heavy frame | `border-y-[1.5px] border-mb-navy` | The filter bar |
-| Coral spine | `ml-3 border-l-2 border-mb-coral` | Schedule/timeline lists only |
-| Accent rail | `style={{ boxShadow: "inset 3px 0 0 <color>" }}` | Rank #1 (`--mb-teal`), selected row (`--mb-coral`), result category (cycle) |
+| Timeline spine | `ml-3 border-l-[1.5px] border-mb-navy` | Schedule/timeline lists only — a solid-navy edge (was coral; a timeline axis is structure, not selection — §1.2a) |
+| Accent rail | `style={{ boxShadow: "inset 3px 0 0 <color>" }}` | Rank #1 (`--mb-teal`), selected row (`--mb-coral`), live row (`--mb-red`), result category (cycle) |
 | On-navy hairline | `border-[rgba(255,250,241,0.25)]` | Dividers inside a navy surface |
 | Inline separator | `<span className="h-px flex-1 bg-mb-rule" />` | "Or continue with email" style splitters |
 
@@ -709,7 +859,7 @@ modifier: `className="mb-panel h-auto!"` (the form panel in `src/app/login/page.
 | `.matchbook-display` | Any Oswald uppercase text not already covered by another `mb-*` class. Always pair with an explicit size + tracking. | `<span className="matchbook-display text-[0.78rem] font-bold">` |
 | `.mb-panel` | The boxed content card. Every content region on a Matchbook screen lives in one. | `<section className="mb-panel">` (prefer `<Panel>`) |
 | `.mb-panel-head` | Paper-tone panel header. Provided by `<Panel>`; hand-write only for a bespoke header. | `<header className="mb-panel-head">` |
-| `.mb-panel-link` | Small uppercase forward link: panel actions, footer links, "Open" affordances. Turns coral on hover. | `<Link className="mb-panel-link">Open <MbIcon id="chevron-right" size={11} /></Link>` |
+| `.mb-panel-link` | Small uppercase forward link: panel actions, footer links, "Open" affordances. Underlines on hover (navy ink — the coral hover ink was retired with the job census). | `<Link className="mb-panel-link">Open <MbIcon id="chevron-right" size={11} /></Link>` |
 | `.mb-btn` | Base for every button/link-button. Never used alone — always + a variant. | `<button className="mb-btn mb-btn-navy">` |
 | `.mb-btn-navy` | Secondary/structural action ("Manage Event", "Export CSV", "Add Team"). Highest contrast. | `<button className="mb-btn mb-btn-navy"><MbIcon id="plus" size={14} />Add Team</button>` |
 | `.mb-btn-coral` | The single primary CTA of a screen or panel. | `<Link className="mb-btn mb-btn-coral"><MbIcon id="quick" size={14} />Quick Match</Link>` |
@@ -763,7 +913,7 @@ geometry, and so nobody re-invents one under a new name.
 | `.mb-field`, `.mb-field-hint`, `.mb-field-error`, `[data-invalid]` | The label/hint/error triad around any control. | `MbField` |
 | `.mb-textarea` | Multi-line input at `.mb-input` geometry. | `MbTextArea` |
 | `.mb-check`, `.mb-radio` | Squared ballot boxes. `.mb-radio` is **not** a circle — §3.3 reserves 999px. | form controls |
-| `.mb-switch` | 28×16 track, radius 2px, coral-deep when on. | `MbToggle` |
+| `.mb-switch` | 28×16 track, radius 2px, navy when on ("inked, not highlighted" — §1.2a). | `MbToggle` |
 | `.mb-stepper`, `.mb-stepper button`, `.mb-stepper-value`, `[data-size="lg"]` | Bounded integer. Buttons are 44×44 (56 at `lg`). | `MbNumberStepper` |
 | `.mb-swatch`, `[data-size="touch"]`, `[data-selected]` | A colour chip. 24×24, or 44×44 as a real target. | `MbSwatchPicker` |
 | `.mb-console`, `.mb-console-column`, `.mb-notch-coral` | The full-bleed scoring surface: tap columns, press = tint not scale. | GAP-7 (W5) |
@@ -771,7 +921,7 @@ geometry, and so nobody re-invents one under a new name.
 | `.mb-scoreline` | Grid `1fr auto 1fr` with `min-width:0` cells. Never flex. | `MbScoreboardHero` |
 | `.mb-action-bar` | The fixed bottom commit bar. | `MbActionBar` |
 | `.mb-skeleton` | Static placeholder block. No shimmer. | `MbSkeleton` |
-| `.mb-stamp-final` | The rotated "Final" stamp. Ink is `--mb-coral-deep` (5.03:1), not `--mb-coral`. | `MbFinalStamp` |
+| `.mb-stamp-final` | The rotated "Final" stamp. Ink is `--mb-green-ink` — Final is green (§1.2); the coral-deep ink it once carried made one status two colours. | `MbFinalStamp` |
 | `.mb-code-chip` | A share code / token rendered as a boxed monospaced-feel chip. | `MbCopyField`, `MbSwatchPicker` |
 | `.mb-day-head` | The day-group band in a ledger table. | History |
 | `.mb-rule-vertical` | A 1.5px navy vertical hairline — the overflow-edge marker on a scroller. | `MbTabs` |
@@ -1039,7 +1189,7 @@ pass a raw `<Image>` with a square box.
 </span>
 ```
 
-Dot and word always ship together. The masthead variant is the coral 2px badge
+Dot and word always ship together. The masthead variant is the navy 2px badge
 reading `Live / Now` stacked.
 
 ### 5.6 Status badges
@@ -1074,7 +1224,7 @@ const STATUS_STYLES = {
 } as const;
 ```
 
-The masthead's framed count badge is a different object — `border-[2px]` coral
+The masthead's framed count badge is a different object — `border-[2px]` navy
 around a stacked value/caption pair — and stays hand-written until
 `MatchbookMasthead` lands (GAP-9).
 
@@ -1386,7 +1536,7 @@ A screen is **done** when every box is ticked.
 
 **Masthead**
 - [ ] Exactly one `<h1>` at `display/masthead`, two-tone with **one** coral span.
-- [ ] Coral `border-[2px]` badge with a count or a stacked word pair (optional but standard).
+- [ ] Navy `border-[2px]` badge with a count or a stacked word pair (optional but standard) — the title span is the masthead's only coral.
 - [ ] `hidden sm:block` dateline + `.mb-kicker` sub-line; client dates have `suppressHydrationWarning`.
 - [ ] `ml-auto` action cluster: ≤2 buttons, ≤1 coral, ≤1 navy.
 - [ ] Account chip (`hidden md:flex`) matching the shipped markup.
@@ -1580,7 +1730,8 @@ screen. Nothing in the repo reads `env(safe-area-inset-*)`.
 ```
 `.mb-bottom-bar`: fixed bottom, paper-bright, `border-top: 1.5px solid navy`,
 `padding-bottom: env(safe-area-inset-bottom)`, items `min-h-[44px]`, icon 20 +
-`display/badge-label` caption, active = coral icon + coral 2px **top** border.
+`display/badge-label` caption, active = navy ink + coral 3px **top** rule (the
+selection mark's tier — shipped ink is navy for HF-6, see `BottomBar.tsx`).
 Also add `viewport-fit: cover` to the viewport in `layout.tsx` and a
 `.mb-safe-bottom` utility.
 
@@ -1666,9 +1817,9 @@ team form need all of them.
 ```
 .mb-field            wrapper: .mb-kicker label + control + .mb-field-hint / .mb-field-error
 .mb-textarea         .mb-input geometry, min-height 5rem, resize-y
-.mb-check            14×14, 1.5px navy, radius 2px, coral fill + paper-bright check when on
-.mb-radio            14×14 circle, navy ring, coral dot
-.mb-switch           28×16 track, square-ish (radius 2px), navy off / coral on
+.mb-check            14×14, 1.5px navy, radius 2px, navy fill + paper-bright check when on
+.mb-radio            14×14 squared box, navy ring, navy mark (shipped inked, not coral)
+.mb-switch           28×16 track, square-ish (radius 2px), navy off / navy on
 .mb-stepper          [−] [display/stat-md tabular-nums] [+], each button 44×44
 .mb-swatch           24×24, 1.5px navy border, radius 2px  (replaces the inline swatch in TeamProfilePanel)
 ```
@@ -1792,9 +1943,12 @@ Plus `.mb-enter` (opacity + 6px rise at `--mb-dur-slow --mb-ease-out`) and
 `.mb-stagger-{1..6}` replacing the legacy `.stagger-*`.
 
 ### GAP-12 — Focus-visible is still the legacy red
-> **CLOSED — `--mb-focus: var(--mb-coral)` plus
+> **CLOSED — `--mb-focus` plus
 > `.matchbook-surface :focus-visible { outline: 2px solid var(--mb-focus);
-> outline-offset: 2px }`.** The proposal was extended: the same rule also covers
+> outline-offset: 2px }`.** The token shipped as coral and was later re-inked
+> **navy** (the coral ring collided with the selection rail — see the coral job
+> list in `globals.css`); navy grounds re-point it to `--mb-paper-bright`.
+> The proposal was extended: the same rule also covers
 > `.mb-dialog`, `.mb-sheet` and `.mb-toast`, because those portal **outside**
 > `.matchbook-surface` and would otherwise inherit the legacy red ring. The
 > legacy global rule is untouched and stays scoped to legacy screens.

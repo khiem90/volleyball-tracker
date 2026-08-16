@@ -84,10 +84,15 @@ const HAIRLINE = { vectorEffect: "non-scaling-stroke" } as const;
    also buys back 8 units of clearance between the numeral and the discs that
    stand on the centre line. */
 
-/** Reference labels, set at the kicker step and inked muted so they recede. */
+/** Reference labels — `display/court-label` (design language §2.1a exception 3).
+ *  The kicker VOICE (weight 600, 0.16em, muted ink) at 13.6 **SVG user units**,
+ *  not 13.6px: the viewBox is 464 wide and the court renders at 356-464px, so
+ *  the painted size is 10.4-13.6px — it lands on the kicker's optical size at
+ *  the phone widths where the court is smallest. It was authored 700, which the
+ *  kicker step never is; that was a drift, snapped to 600. */
 const EDGE_LABEL: CSSProperties = {
   fontSize: 13.6,
-  fontWeight: 700,
+  fontWeight: 600,
   letterSpacing: "0.16em",
   fill: "var(--mb-ink-muted)",
   fontVariantNumeric: "tabular-nums",

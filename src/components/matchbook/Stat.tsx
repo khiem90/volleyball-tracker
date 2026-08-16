@@ -32,8 +32,14 @@ const TONE_INK: Record<MbStatTone, string> = {
  *   teal   circle, 3px        a measure worth reading (capacity, in progress)
  *   green  circle, solid      the steady family's terminal state: complete
  *   gold   square, hairline   pending — something is waiting on someone
- *   coral  square, 3px        the accent: this is the thing to act on
- *   red    square, solid      the attention family's terminal state: blocked
+ *   coral  square, 3px        the accent: the thing to act on. No shipped
+ *                             call site — a live count is `red` (§1.2 fixes
+ *                             live to --mb-red), and coral's three declared
+ *                             jobs do not include a stat disc; the treatment
+ *                             stays defined so the ladder's geometry is
+ *                             complete in /dev/kit.
+ *   red    square, solid      the attention family's terminal states:
+ *                             live now / blocked — urgent, look here
  *
  * Solid is restricted to green and red because the glyph then sits in
  * paper-bright on the tone: 3.93:1 and 4.20:1, both over the 3:1 floor a UI

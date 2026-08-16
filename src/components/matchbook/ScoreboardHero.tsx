@@ -162,9 +162,14 @@ const ScoreboardRow = ({
  * every status, but printing 0–0 on a fixture that has not started asserts a
  * result that does not exist — the numbers are accepted and simply not shown.
  *
- * The leading side takes a 3px rule above its figures: coral while `live` — the
- * console's `.mb-notch-coral` ink — and navy once `final`. It is a second
- * channel for a fact the scores already state, so nothing depends on it.
+ * The leading side takes a 3px NAVY rule above its figures, live or final. It
+ * was coral while live, borrowing the console's `.mb-notch-coral` ink — but on
+ * every surface this hero reaches (session shares, summaries, live courts) that
+ * spent coral on a fourth meaning, "the side that leads", outside the three
+ * declared jobs; and liveness is already the red dot and the word beside the
+ * scores. One ink for one meaning: the rule says "ahead", the dot says "live".
+ * It is a second channel for a fact the scores already state, so nothing
+ * depends on it.
  */
 export const MbScoreboardHero = ({
   home,
@@ -202,8 +207,7 @@ export const MbScoreboardHero = ({
   const homeWins = series?.homeWins ?? 0;
   const awayWins = series?.awayWins ?? 0;
 
-  const leadFor = (leads: boolean): Lead =>
-    !leads ? null : status === "live" ? "var(--mb-coral)" : "var(--mb-navy)";
+  const leadFor = (leads: boolean): Lead => (!leads ? null : "var(--mb-navy)");
   const homeLead = leadFor(scored && homeScore > awayScore);
   const awayLead = leadFor(scored && awayScore > homeScore);
   const numeral: MbScoreNumeralSize = hero ? "console" : "compact";

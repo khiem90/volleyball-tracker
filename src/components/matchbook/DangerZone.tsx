@@ -165,7 +165,7 @@ export const MbDangerZone = ({
       <h3 className="matchbook-display mt-1.5 text-[0.9rem] mb-track-display font-bold">
         {title}
       </h3>
-      <p className="mt-1 text-[0.8rem] text-mb-ink-muted">{description}</p>
+      <p className="mt-1 text-[0.85rem] text-mb-ink-muted">{description}</p>
     </div>
 
     <div className="shrink-0">

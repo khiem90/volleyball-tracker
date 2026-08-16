@@ -2326,7 +2326,7 @@ button.mb-panel-link::after,
   border: var(--mb-rule-edge) solid var(--mb-banner-tone, var(--mb-navy));
   border-left-width: var(--mb-rule-anchor);
   border-radius: 4px;
-  font-size: 0.8rem;
+  font-size: 0.85rem; /* body/sm — 0.8rem was a latent off-ladder stray (type-census Y-round) */
 }
 
 .mb-banner[data-tone="info"] { --mb-banner-tone: var(--mb-navy); }

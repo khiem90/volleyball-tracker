@@ -107,12 +107,14 @@ export const EventStatusPanel = ({
           value={data.teamRefs.length}
         />
         <MbStat size="sm" icon={data.formatIcon} label="Format" value={data.typeLabel} />
-        {/* Coral here is the LIVE job — the same one the live row rail and the
-            live bracket elbow already carry — not a second one (rubric 3.4). */}
+        {/* RED is the live semantic (§1.2) — the same ink the live row rail,
+            the live bracket elbow and the live dot carry. This disc was coral,
+            which was a fourth coral meaning ("live count") on a screen whose
+            three declared jobs are already spent (rubric 3.4). */}
         <MbStat
           size="sm"
           icon="live"
-          tone={data.counts.live > 0 ? "coral" : "navy"}
+          tone={data.counts.live > 0 ? "red" : "navy"}
           label="Live now"
           value={data.counts.live}
         />
@@ -694,12 +696,16 @@ export const QueuePanel = ({
           <div
             key={line.teamId}
             className="grid grid-cols-[34px_minmax(0,1fr)_auto] items-center gap-2 px-3 py-2.5"
-            /* The team that plays next is the one fact this panel exists for,
-               so it takes the coral selection rail — the same mark the schedule
-               spine uses (coral job 2). */
+            /* The team that plays next is the one fact this panel exists for.
+               TEAL, the rank-#1 rail (§1.2): the queue is ranked by position
+               and this is its row 1 — the same mark the standings table puts
+               on its leader. Coral would be a fourth meaning ("up next") on a
+               screen whose coral is already spent on the primary action, the
+               selection rail and the masthead; the position numeral "1" and
+               the row's place at the top carry the fact in greyscale. */
             style={
               line.position === 1
-                ? { boxShadow: "inset 3px 0 0 var(--mb-coral)" }
+                ? { boxShadow: "inset 3px 0 0 var(--mb-teal)" }
                 : undefined
             }
           >

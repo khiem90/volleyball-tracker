@@ -119,7 +119,7 @@ export const ArrowsPanel = ({
     )}
 
     {arrows.length === 0 ? (
-      <p className="text-[0.74rem] leading-snug text-mb-ink-muted">
+      <p className="text-[0.72rem] leading-snug text-mb-ink-muted">
         No arrows exist on this frame yet — draw one to show where a player
         moves after serve contact.
       </p>
@@ -295,7 +295,7 @@ export const ValidationPanel = ({
                 {blocking ? "Blocking" : "Warning"}
                 {errorLine(error) ? ` · ${errorLine(error)}` : ""}
               </span>
-              <span className="block text-[0.74rem] leading-snug text-mb-ink-muted">
+              <span className="block text-[0.72rem] leading-snug text-mb-ink-muted">
                 {error.message}
               </span>
             </span>

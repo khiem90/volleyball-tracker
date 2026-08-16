@@ -478,7 +478,10 @@ export const buildDoubleBracket = (
     sections.push({
       id: "grand-finals",
       label: "Grand Finals",
-      accent: "coral",
+      /* Plum, not coral: a section key is categorical, and coral's declared
+         jobs (primary action / selection mark / masthead lockup) do not
+         include "the climax section". The label carries the identity. */
+      accent: "plum",
       rounds: [{ label: "Grand Finals", cells: [bracketCellFor(gf, refFor)] }],
     });
     if (gf.status === "completed" && gf.winnerId) {

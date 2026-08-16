@@ -162,7 +162,9 @@ const FormationCard = ({
               aria-hidden="true"
               className={`inline-grid h-[18px] w-[18px] shrink-0 place-content-center rounded-[2px] border-[1.5px] ${
                 selected
-                  ? "border-mb-coral-deep bg-mb-coral-deep text-mb-paper-bright"
+                  ? /* Inked, not highlighted (`.mb-check:checked`); the card's
+                       coral is the selection rail alone. */
+                    "border-mb-navy bg-mb-navy text-mb-paper-bright"
                   : "border-mb-navy"
               }`}
             >

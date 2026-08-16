@@ -51,12 +51,16 @@ export type MbButtonVariant = "coral" | "navy" | "outline" | "outline-navy";
    ------------------------------------------------- the composite corollary
 
    A control drawn as a *frame around cells* — `.mb-segmented`, `.mb-stepper` —
-   spends its own edge rule twice, once top and once bottom. Its interior cells
-   are therefore `rung − 2 × --mb-rule-edge`, which `MB_CONTROL_CELL` states
-   once so no component re-derives it.
+   spends its own edge rule twice, once top and once bottom. VERTICALLY the
+   frame no longer charges its interior for that: the cells resolve to the rung
+   itself and the frame's block edges are paint (an inset outline, a negative
+   block margin — see `MB_CONTROL_CELL` below and G21 in globals.css), so a
+   sweep that enumerates the cells reads 48/56, not 46/54. HORIZONTALLY the
+   frame still spends real columns, and `MB_CONTROL_CELL` states the interior
+   width once so no component re-derives it.
 
-   That single fact is why those two controls start at `md` and not at `sm`:
-   at `sm` their cells would measure 42px and break the 44px floor, and the
+   The floor argument survives the correction: a composite still starts at
+   `md`, not `sm`, because at `sm` the interior WIDTH would be 42px and the
    cells — the ± keys, the segments — are the real targets. `MbCompositeSize`
    makes that unrepresentable rather than a comment nobody reads.
    =========================================================================== */
@@ -74,9 +78,21 @@ export const MB_CONTROL_HEIGHT: Record<MbControlSize, number> = {
 export type MbCompositeSize = Exclude<MbControlSize, "sm">;
 
 /**
- * Interior cell height for a framed composite: the rung less the frame's own
+ * Interior cell WIDTH for a framed composite: the rung less the frame's own
  * two edge rules (`--mb-rule-edge`, which renders 1px — design language §3.3).
  * Both values clear the 44px floor; 42px, which `sm` would give, does not.
+ *
+ * WIDTH only, since the G21 correction ("the framed field's own height",
+ * globals.css) reached the composites: an interior cell's HEIGHT is now the
+ * full rung. The frame used to charge its interior for its own two edge rules,
+ * which put every segmented cell and stepper key at 46/54 — numbers on no
+ * ladder, and the numbers the D2 sweep sees, because an audit enumerates the
+ * `button`/`input`, not the frame around it. The interior now resolves to the
+ * rung itself (`MB_CONTROL_HEIGHT`) and the frame's edge is paint, not layout:
+ * `MbNumberStepper` gives its keys a negative block margin of exactly one edge
+ * (the `.mb-input > input` idiom), and `MbSegmented` draws its frame as an
+ * inset outline. Horizontally nothing is measured against the ladder and the
+ * frame still spends real columns, so the width keeps the honest derivation.
  */
 export const MB_CONTROL_CELL: Record<MbCompositeSize, number> = {
   md: MB_CONTROL_HEIGHT.md - 2,

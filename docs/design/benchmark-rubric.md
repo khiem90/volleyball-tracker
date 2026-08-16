@@ -344,8 +344,9 @@ rubric, and one of them is wrong — re-run rather than average.
   both as status and as decoration. Some hardcoded hex values sit alongside `var(--mb-*)`.
 - **8** — Requires all of: **3.1 = 0** (the only sanctioned literal is a user-chosen swatch value);
   **3.2 = 0** — no enabled text node under its floor, and coral-as-text is *checked*, not assumed, on every
-  screen it appears on; **3.3 = 0** — no enabled control's only boundary under 3:1; **3.4 ≤ 2**, coral doing
-  the primary action and/or the live state and nothing else; **3.5 passes**. Every semantic color has one
+  screen it appears on; **3.3 = 0** — no enabled control's only boundary under 3:1; **3.4 ≤ 3**, coral spending
+  only its three declared jobs (design language §1.2a: the primary action, the selection/current mark, the
+  masthead lockup) and nothing else — live is `--mb-red`, never coral; **3.5 passes**. Every semantic color has one
   meaning that holds across the whole app: `--mb-green` = win/positive, `--mb-red` = loss/live-urgent,
   `--mb-gold` = leader/first, `--mb-teal`/`--mb-plum` only as categorical team assignment — and a mark that
   means "leader" in one component and something else in another is a collision, counted in 3.4. Team colors,

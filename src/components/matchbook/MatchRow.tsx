@@ -369,9 +369,13 @@ export const MbMatchRow = ({
 
   return (
     /* The rail is the row's state channel and is drawn on the wrapper so it
-       reaches the full row height including the edit key: coral for live (the
-       schedule spine, coral job 4), teal for a finished result, nothing for a
-       fixture that has not been played. */
+       reaches the full row height including the edit key: RED for live —
+       §1.2 fixes live/in-progress to `--mb-red`, the same ink as the pulsing
+       dot and the word "Live" already inside the row, so one state is one hue
+       (the old coral rail also sat adjacent to that red dot, which §1.1
+       forbids outright). A muted tint for a finished result, nothing for a
+       fixture that has not been played. The rail is never the sole carrier:
+       the dot and the word survive greyscale on their own. */
     /* `py-1` and `gap-2` are measured, not decorative — the same note
        `competitions/page.tsx` carries on its own row. Without them the select
        button fills the row edge to edge, so two stacked rows put two 44px
@@ -388,7 +392,7 @@ export const MbMatchRow = ({
         bye
           ? undefined
           : status === "live"
-            ? { boxShadow: "inset 3px 0 0 var(--mb-coral)" }
+            ? { boxShadow: "inset 3px 0 0 var(--mb-red)" }
             : variant === "result"
               ? { boxShadow: "inset 3px 0 0 var(--mb-tint-3)" }
               : undefined

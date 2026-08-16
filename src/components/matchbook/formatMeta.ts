@@ -35,23 +35,20 @@ export interface FormatMetaEntry {
   /** Sprite id — render with `<MbIcon id={...} />`. Never a second icon library. */
   icon: string;
   /**
-   * Contained accent for this format: a rule, a bar or a rail — never a fill,
-   * a tint or a gradient (charter D-9).
+   * THERE IS DELIBERATELY NO COLOUR KEY FOR FORMATS.
    *
-   * Every value below is lifted verbatim from the shipped four-accent rail cycle
-   * (`useMatchbookDashboard.ts:19-24` — teal / gold / ink-muted / plum), so no
-   * new colour mapping is invented (design language §1.2). Three tokens are
-   * deliberately unavailable: `--mb-coral` is the selection rail and would
-   * collide with the wizard's own selected-card mark; `--mb-green` and
-   * `--mb-red` carry fixed win / live status meanings; `--mb-navy` is the
-   * structural border colour, so a navy rail is invisible against the 1.5px
-   * navy edge of the panel or choice card it sits inside.
-   *
-   * That leaves four values for five formats, so the two bracket formats share
-   * one. They are a family — `isEliminationFormat()` already treats them as one
-   * — and they are told apart by icon and label, never by colour alone.
+   * An earlier cut gave each format a rail colour lifted from the four-accent
+   * cycle (teal / plum / gold / ink-muted). That was a CATEGORICAL key built
+   * out of LOCKED semantic tokens: design language §1.2 fixes `--mb-teal` to
+   * the rank-#1 rail and `--mb-gold` to Draft, so the same hue meant "leader"
+   * in a standings table and "Round Robin" in the format list — the collision
+   * rubric D3 counts by name. No free hue exists in the closed palette, and
+   * the comment on the old field already conceded formats "are told apart by
+   * icon and label, never by colour alone" — so the key carried no information.
+   * Identity is the sprite + the label; rails around format rows are the
+   * neutral `--mb-rule` hairline, and selection (the one state a format row
+   * has) is the coral selection mark, same as every other row in the app.
    */
-  accent: string;
   /** Fewest teams the generator accepts. */
   minTeams: number;
   supports: FormatSupports;
@@ -62,7 +59,6 @@ export const FORMAT_META: Record<CompetitionType, FormatMetaEntry> = {
     label: "Round Robin",
     blurb: "Every team plays every other team once. Standings decide the winner.",
     icon: "refresh",
-    accent: "var(--mb-teal)",
     minTeams: 3,
     supports: {
       series: true,
@@ -75,7 +71,6 @@ export const FORMAT_META: Record<CompetitionType, FormatMetaEntry> = {
     label: "Single Elimination",
     blurb: "Lose once and you are out. The shortest route to a champion.",
     icon: "bracket",
-    accent: "var(--mb-plum)",
     minTeams: 2,
     supports: {
       series: true,
@@ -88,7 +83,6 @@ export const FORMAT_META: Record<CompetitionType, FormatMetaEntry> = {
     label: "Double Elimination",
     blurb: "Two losses eliminate a team. A first defeat drops into the second bracket.",
     icon: "grid",
-    accent: "var(--mb-plum)",
     minTeams: 4,
     supports: {
       series: true,
@@ -101,7 +95,6 @@ export const FORMAT_META: Record<CompetitionType, FormatMetaEntry> = {
     label: "Win 2 & Out",
     blurb: "The winner stays on. Two wins crowns a team and returns it to the queue.",
     icon: "crown",
-    accent: "var(--mb-gold)",
     minTeams: 3,
     supports: {
       series: false,
@@ -114,7 +107,6 @@ export const FORMAT_META: Record<CompetitionType, FormatMetaEntry> = {
     label: "2 Match Rotation",
     blurb: "Teams play two matches, then the queue rotates. Everyone gets equal time.",
     icon: "swap",
-    accent: "var(--mb-ink-muted)",
     minTeams: 3,
     supports: {
       series: false,

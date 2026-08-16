@@ -149,15 +149,17 @@ export const FormatChoiceList = ({
     >
       {options.map((option, index) => {
         const selected = option.type === value;
-        /* The accent is a CONTAINED MARK — a 3px rail down the row's spine and
-           nothing else (charter D-9). `--mb-gold` measures 2.15:1 on paper, so
-           it may rule but never ink. Selection takes the rail to coral, which
-           is the third channel after the filled slot and the inverted disc and
-           the only one visible from across a room. */
+        /* Unselected rows carry the neutral `--mb-rule` rail — formats have NO
+           colour key (see `formatMeta.ts`: the old per-format accents spent
+           teal and gold, both locked to other meanings in §1.2, as a
+           categorical key). Selection takes the rail to coral — the selection
+           mark, coral's declared structural job — which is the third channel
+           after the filled slot and the inverted disc and the only one visible
+           from across a room. */
         const style: CSSProperties = {};
         (style as Record<string, string>)["--mb-rail-color"] = selected
           ? "var(--mb-coral)"
-          : option.meta.accent;
+          : "var(--mb-rule)";
 
         return (
           <button
@@ -173,7 +175,13 @@ export const FormatChoiceList = ({
             onClick={() => onChange(option.type)}
             onKeyDown={(event) => handleKeyDown(event, index)}
             style={style}
-            className="mb-rail mb-row-hover flex min-h-[56px] w-full items-center gap-2.5 py-2.5 pr-3 pl-3.5 text-left"
+            /* `py-2`, not `py-2.5`, and the difference is the rung. At 10px of
+               block padding the 36px disc summed to exactly 56, so the rows
+               that also carry `divide-y`'s 1px rule rendered 57 — one px off
+               the authored `min-h-[56px]`, on four of five rows (the rubric's
+               D2 expression reads border boxes). At 8px the content sums to 53
+               and `min-height` governs: every row is 56, dividers included. */
+            className="mb-rail mb-row-hover flex min-h-[56px] w-full items-center gap-2.5 py-2 pr-3 pl-3.5 text-left"
           >
             <ChoiceSlot checked={selected} />
 
@@ -198,7 +206,7 @@ export const FormatChoiceList = ({
               <MbIcon id={option.meta.icon} size={16} />
             </span>
 
-            <span className="flex min-w-0 flex-1 flex-col justify-center gap-0.5">
+            <span className="flex min-w-0 flex-1 flex-col justify-center gap-1">
               <span className="matchbook-display truncate text-[0.95rem] mb-track-title leading-tight font-bold tabular-nums">
                 {option.meta.label}
               </span>

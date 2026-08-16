@@ -680,7 +680,7 @@ export const TeamReadinessPanel = ({
 /* ------------------------------- Team profile ----------------------------- */
 
 const ProfileStat = ({ label, value }: { label: string; value: string }) => (
-  <div className="flex flex-col items-center justify-center gap-0.5 border border-mb-rule px-2 py-2 text-center">
+  <div className="flex flex-col items-center justify-center gap-1 border border-mb-rule px-2 py-2 text-center">
     <span className="mb-kicker">{label}</span>
     <span className="matchbook-display text-2xl mb-track-display font-bold leading-none tabular-nums">
       {value}
@@ -756,11 +756,12 @@ export const TeamProfilePanel = ({
                       A hand-mixed colour has no name, so it keeps its hex — in
                       the `.mb-code-chip` the picker uses for exactly that, a
                       reference value a person typed and can read back. */}
-                  {/* The step the raw value already had. A name is easier to
-                      read than a hex at any size, so this is not the place to
-                      spend height: the row is the same 0.72rem/medium it was,
-                      and the populated panel measures the same to the pixel. */}
-                  <span className="text-[0.72rem] font-medium">
+                  {/* The step the raw value already had, snapped onto the body
+                      ladder: `body/2xs` names 400 and 600, and 500 was neither
+                      — 600 keeps the name emphasised against the muted hex
+                      beside it. A name is easier to read than a hex at any
+                      size, so this is not the place to spend height. */}
+                  <span className="text-[0.72rem] font-semibold">
                     {teamColorName(row.color)}
                   </span>
                   {/* Plain muted text, not the `.mb-code-chip` the picker's own
@@ -780,7 +781,7 @@ export const TeamProfilePanel = ({
             )}
             <div>
               <p className="mb-kicker">Entered In</p>
-              <p className="text-[0.8rem] font-medium">
+              <p className="text-[0.78rem] font-semibold">
                 {row.competitions.length === 0 ? (
                   <span className="text-mb-ink-muted">No competition yet</span>
                 ) : (
@@ -795,7 +796,7 @@ export const TeamProfilePanel = ({
             {/* Edge tier. `[1.5px]` was never rendering — Blink floors a used
                 border-width to whole CSS px at every DPR — so this is the same
                 pixel with the tier it actually paints. */}
-            <div className="col-span-2 flex flex-col items-center justify-center gap-0.5 border border-mb-navy px-2 py-2">
+            <div className="col-span-2 flex flex-col items-center justify-center gap-1 border border-mb-navy px-2 py-2">
               <span className="mb-kicker">Overall Record</span>
               <span className="matchbook-display text-3xl mb-track-display font-bold leading-none tabular-nums">
                 {row.won} - {row.lost}
@@ -832,13 +833,13 @@ export const TeamProfilePanel = ({
                 </p>
               </>
             ) : (
-              <p className="text-[0.8rem] text-mb-ink-muted">Not scheduled</p>
+              <p className="text-[0.85rem] text-mb-ink-muted">Not scheduled</p>
             )}
           </div>
           <div>
             <p className="mb-kicker">Recent Form</p>
             {row.form.length === 0 ? (
-              <p className="text-[0.8rem] text-mb-ink-muted">No matches played yet</p>
+              <p className="text-[0.85rem] text-mb-ink-muted">No matches played yet</p>
             ) : (
               /* No `slots`: this is not a column, so nothing has to be
                  reserved — the run is as wide as the matches played. */
@@ -906,17 +907,18 @@ export const UpcomingFixturesPanel = ({ items }: { items: MbScheduleItem[] }) =>
         href="/competitions/new"
       />
     ) : (
-      /* Coral moves from the DATE to the SPINE, which is the swap in both
-         directions: the date was a 10.24px/700 letterform at 3.55:1 (HF-6),
-         and the 2px left rule is coral job 4 — "the schedule spine" — where a
-         mark's 3:1 floor applies and 3.26:1 clears. `SchedulePanel` on `/`
-         already drew this list that way; this one did not, so the same object
-         had two vocabularies across two routes. */
+      /* Navy edge spine, matching `SchedulePanel` on `/` — one object, one
+         vocabulary across routes. The spine came OFF coral when the census
+         closed at three declared jobs (primary action, selection mark,
+         masthead lockup): a timeline's left axis is structure, and structure
+         is ruled in ink (§3.3's solid-navy edge). The date beside it stays
+         navy too — as a coral letterform it measured 10.24px/700 at 3.55:1
+         (HF-6). */
       /* `grow` on the list and on every row — see the void-band note in
          `panels.tsx`. This panel was the worst of the five: 166.3px of blank
          paper in a 525px box at 1440, because the Team Profile beside it sets
          the row height and five fixtures do not reach it. */
-      <div className="ml-3 flex grow flex-col divide-y divide-mb-rule border-l-2 border-mb-coral">
+      <div className="ml-3 flex grow flex-col divide-y divide-mb-rule border-l-[1.5px] border-mb-navy">
         {items.map((item, i) => (
           /* `minmax(0,1fr)`, not `1fr` (R2). A bare `1fr` is `minmax(auto,1fr)`
              and `auto` as a track MINIMUM is min-content — so this track could
@@ -943,7 +945,7 @@ export const UpcomingFixturesPanel = ({ items }: { items: MbScheduleItem[] }) =>
               </p>
             </div>
             <p className="text-[0.72rem] font-semibold tabular-nums">{item.time}</p>
-            <div className="flex min-w-0 flex-col gap-0.5">
+            <div className="flex min-w-0 flex-col gap-1">
               {/* `basis-0 flex-1` on both names was the previous fix and it
                   only made the failure FAIR. Two names, two crests and a "vs"
                   in one line is 148px of track at 320 and 62px at 1366, so

@@ -193,7 +193,7 @@ export const AdvancedSettingsPanel = ({
             "left at the defau…" — a disclosure summary that cannot finish its
             own sentence tells the reader less than no summary. Two lines that
             wrap cost 18px and clip nothing at 320px. */}
-        <span className="flex min-w-0 flex-col gap-0.5">
+        <span className="flex min-w-0 flex-col gap-1">
           <span className="mb-kicker">
             {open ? "Hide advanced settings" : "Show advanced settings"}
           </span>

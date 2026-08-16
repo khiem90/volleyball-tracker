@@ -183,8 +183,11 @@ export const SessionCounts = ({
         />
       </div>
       <div className="px-4 py-3.5">
+        {/* RED, not coral, while matches are on court: §1.2 fixes live to
+            `--mb-red`, the same ink as every live rail and dot. Coral here was
+            an off-list coral meaning on the public share screen. */}
         <MbStat
-          tone={ended ? "gold" : "coral"}
+          tone={ended ? "gold" : "red"}
           icon={ended ? "warning" : "live"}
           label={ended ? "Left unfinished" : "On court"}
           value={view.counts.live}

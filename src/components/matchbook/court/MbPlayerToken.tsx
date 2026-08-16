@@ -339,7 +339,14 @@ export const MbPlayerTarget = ({
          `calc(infinity * 1px)` and measures 3.35544e+07px, a second spelling of
          the same round in the D2 census. This one is a bare hit area, so it
          takes the literal rather than `.mb-icon-disc`, which would draw a navy
-         edge around an element that must stay invisible. */
+         edge around an element that must stay invisible.
+
+         Both numbers here are NAMED EXEMPTIONS in design language §3.3, not
+         strays: the round is outside the four-use ink budget because it never
+         paints (invisible hit-extension geometry), and the 52px box is target
+         geometry, not a control height — 52 is the charter's floor for a
+         court token, and it must not migrate onto the {44,48,56} ladder or
+         the ladder acquires a rung that exists for one screen. */
       className="mb-row-hover absolute rounded-[999px]"
       style={{
         ...position,

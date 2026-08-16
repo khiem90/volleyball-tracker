@@ -18,8 +18,10 @@ import type { Match, PersistentTeam } from "@/types/game";
  * final are now three labelled sections of one `BracketRail`, inside one
  * horizontal scroller instead of three (BUG-10).
  *
- * Section identity is carried by a 3px inset rail — teal, gold, coral — never
+ * Section identity is carried by a 3px inset rail — teal, gold, plum — never
  * by a tinted heading, so `text-blue-400` and `text-orange-400` are gone too.
+ * (Plum, not coral, for Grand Finals: coral's declared jobs do not include a
+ * categorical section key.)
  */
 export const DoubleBracket = ({
   matches,
