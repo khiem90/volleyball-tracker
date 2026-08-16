@@ -6,7 +6,13 @@ import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { useSummariesPage } from "@/hooks/useSummariesPage";
 import { DeleteConfirmDialog } from "@/components/shared";
 import { MatchbookShell, MB_DEFAULT_CTA } from "@/components/matchbook/AppShell";
-import { MbPageLoading } from "@/components/matchbook/Loading";
+import {
+  MB_ROUTE_SKELETON,
+  MbBootPanelBones,
+  MbBootSniff,
+  MbLedgerBones,
+  MbPageLoading,
+} from "@/components/matchbook/Loading";
 import { MbIcon } from "@/components/matchbook/MbIcon";
 import { MbMenu } from "@/components/matchbook/Menu";
 import { MbSelect, MbTextInput } from "@/components/matchbook/form";
@@ -130,6 +136,26 @@ export default function HistoryPage() {
      a filter that matches nothing must keep its own controls on screen. */
   const hasArchive = data.totalResults > 0;
 
+  /* ------------------------------------------------- the boot gate (HF-3)
+     Until the `localStorage` blob lands, every count above is a zero that
+     means "unknown", and rendering from it painted the EMPTY composition at
+     every cold load — the filter bar then mounted and the six panels swapped
+     in under it, a 0.85 buffered CLS at 768. While `hydrating`, this page
+     renders BOTH first-paint variants and `MbBootSniff`'s parse-time script
+     hides the wrong one before the first layout: the filter bar, ledger bones
+     and panel reservations for a populated account (`.mb-boot-full-only`),
+     the collapsed index for a brand-new one (`.mb-boot-empty-only`). The
+     reservations are the same measured numbers the route's skeleton table
+     carries, read from it rather than restated. */
+  const hydrating = data.hydrating;
+  const [skelLedgerCol, skelSideCol] = MB_ROUTE_SKELETON["/summaries"].full.cells;
+  const bootBones = {
+    report: skelLedgerCol.panels[1],
+    summary: skelSideCol.panels[0],
+    matchups: skelSideCol.panels[1],
+    competitions: skelSideCol.panels[2],
+  };
+
   return (
     <MatchbookShell
       active="/summaries"
@@ -171,6 +197,13 @@ export default function HistoryPage() {
             ],
       }}
     >
+      {/* The boot sniff, and it must stay ABOVE every `.mb-boot-*-only`
+          element: the script runs when the parser reaches it, so everything
+          below lays out with the account already known. Mounted only while
+          pre-boot — a client-side navigation renders the real branches and
+          none of this exists. */}
+      {hydrating && <MbBootSniff />}
+
       {/* Filter bar. `items-end` on a row whose controls are now 48px keeps the
           three labels on one baseline; below `sm` each takes a full line rather
           than shrinking a select to the width of its chevron.
@@ -181,9 +214,19 @@ export default function HistoryPage() {
           select had only "All Competitions" in it, the Team select only "All
           Teams", and the search field nothing to search. A control that cannot
           change what is on screen is furniture, and this was the single
-          largest object on the empty screen after the panels themselves. */}
-      {(hasArchive || true) && (
-      <div className="mb-4 flex flex-wrap items-end gap-3 border-y border-mb-navy py-3">
+          largest object on the empty screen after the panels themselves.
+
+          While `hydrating` it renders boot-gated instead (HF-3): a populated
+          account must have it IN THE FIRST PAINT — mounting it at ~1.4s pushed
+          the entire ledger grid 111px — and a brand-new one must never see it.
+          The controls are live but filter the not-yet-loaded archive, which is
+          the same thing they do for the first 300ms on any slow device. */}
+      {(hasArchive || hydrating) && (
+      <div
+        className={`mb-4 flex flex-wrap items-end gap-3 border-y border-mb-navy py-3${
+          hydrating ? " mb-boot-full-only" : ""
+        }`}
+      >
         {/* `basis-full` below `sm`. Sharing the 358px content line with the
             Team select left this control 173px wide and its own value clipped
             to "ALL COMPETITIO…" — and a real selection clips harder ("FRIDAY
@@ -265,6 +308,18 @@ export default function HistoryPage() {
                     setQuery("");
                   }}
                 />
+              ) : hydrating ? (
+                /* Pre-boot, both first paints at once: the populated ledger's
+                   bones at the height the sniff computed from the blob, and
+                   the first-run empty state. The injected rule shows exactly
+                   one, so neither account type sees anything move when the
+                   rows land (HF-3). */
+                <>
+                  <MbLedgerBones />
+                  <div className="mb-boot-empty-only">
+                    <PanelEmpty message="No results exist yet — every match you finish is filed here, newest first." />
+                  </div>
+                </>
               ) : (
                 <PanelEmpty message="No results exist yet — every match you finish is filed here, newest first." />
               )
@@ -380,7 +435,12 @@ export default function HistoryPage() {
             )}
           </Panel>
 
-          {kept("report") && (
+          {/* Each withheld-able panel slot pre-boot: a reservation at the
+              measured height for the populated account, nothing for the new
+              one — the collapse decides for real once the data lands. */}
+          {hydrating ? (
+            <MbBootPanelBones {...bootBones.report} />
+          ) : kept("report") && (
           <Panel title="Match Report">
             {!report ? (
               <PanelEmpty message="No match report exists yet — pick a result from the ledger to see its report." />
@@ -514,7 +574,9 @@ export default function HistoryPage() {
 
         {/* Right column */}
         <div className="flex flex-col gap-4 xl:col-span-5">
-          {kept("summary") && (
+          {hydrating ? (
+            <MbBootPanelBones {...bootBones.summary} />
+          ) : kept("summary") && (
           <Panel title="Archive Summary" tone="navy" icon="chart">
             {data.summary.matches === 0 ? (
               <PanelEmpty message="No archive exists yet — stats appear once matches are recorded." />
@@ -541,7 +603,9 @@ export default function HistoryPage() {
           </Panel>
           )}
 
-          {kept("matchups") && (
+          {hydrating ? (
+            <MbBootPanelBones {...bootBones.matchups} />
+          ) : kept("matchups") && (
           <Panel
             title="Top Matchups"
             meta={<span className="mb-kicker">By Games Played</span>}
@@ -585,7 +649,9 @@ export default function HistoryPage() {
           </Panel>
           )}
 
-          {kept("competitions") && (
+          {hydrating ? (
+            <MbBootPanelBones {...bootBones.competitions} />
+          ) : kept("competitions") && (
           <Panel
             title="Recent Competitions"
             meta={<MbPanelHeadLink href="/competitions" label="View All" />}
@@ -630,6 +696,39 @@ export default function HistoryPage() {
               </div>
             )}
           </Panel>
+          )}
+
+          {/* The withheld panels, as one ruled index — the same object `/` and
+              `/competitions` print, cut to what is actually missing, so five
+              equal display headlines become zero and every promise survives.
+
+              Two titles for two states, exactly as `/` distinguishes them: an
+              archive that has never held anything is being told what fills it,
+              while an archive that is merely incomplete is being told what is
+              still outstanding. `wide` is not passed — the index sits in the
+              right column's own 5 of 12, where the even term/gloss split is
+              the measured-good one.
+
+              ABOVE the Shared Reports panel, deliberately: the index stands in
+              for Archive Summary, Top Matchups and Recent Competitions, all of
+              which print above Shared Reports on the populated page — and the
+              order is also a measured CLS fix. Shared is the one panel that
+              settles LATE (Firestore), and while it loads it is not yet mute;
+              with the index below it, that settle withdrew the panel and
+              yanked the index up 117px on a brand-new phone screen (0.0737 at
+              390). With the index above, the settle only removes a node below
+              it and adds a row to an element whose start never moves. */}
+          {collapsed && (
+            /* Pre-boot the index is the EMPTY account's first paint, so it is
+               gated to that variant — a populated account gets the panel
+               reservations above instead, and neither ever sees the other. */
+            <div className={hydrating ? "mb-boot-empty-only" : "contents"}>
+              <MbLedgerPanel
+                title={hasArchive ? "Still to Come" : "What Fills This Archive"}
+                rows={mbArchiveContentsFor(muteSections)}
+                dense
+              />
+            </div>
           )}
 
           {kept("shared") && (
@@ -689,23 +788,6 @@ export default function HistoryPage() {
           </Panel>
           )}
 
-          {/* The withheld panels, as one ruled index — the same object `/` and
-              `/competitions` print, cut to what is actually missing, so five
-              equal display headlines become zero and every promise survives.
-
-              Two titles for two states, exactly as `/` distinguishes them: an
-              archive that has never held anything is being told what fills it,
-              while an archive that is merely incomplete is being told what is
-              still outstanding. `wide` is not passed — the index sits in the
-              right column's own 5 of 12, where the even term/gloss split is
-              the measured-good one. */}
-          {collapsed && (
-            <MbLedgerPanel
-              title={hasArchive ? "Still to Come" : "What Fills This Archive"}
-              rows={mbArchiveContentsFor(muteSections)}
-              dense
-            />
-          )}
         </div>
       </div>
 

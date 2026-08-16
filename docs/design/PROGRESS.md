@@ -153,17 +153,22 @@ round.
 
 | # | Finding | What was done |
 | --- | --- | --- |
-| F6 | **[D1/D4 dent]** `MbTeamName`'s pinned token hard-cut: in the widest 1440 bracket cell the head ellipsized but the tail clipped mid-word — "WE… WANDERE", the head announcing its elision while the tail lied by omission (`text-overflow` is inert under `overflow: clip`) | `TAIL_CEILING` in `TeamName.tsx` is now `max-w-[calc(100%-4ch)] overflow-hidden text-ellipsis`, so a cut tail marks itself: "WE… WANDER…". Pinned by a new case in `nameFloor.test.tsx`; the outer box keeps `overflow-clip` (the min-content-zero half, guarded by `horizontalGuard.test.ts`) |
+| F6 | **[D1/D4 dent]** `MbTeamName`'s pinned token hard-cut: in the widest 1440 bracket cell the head ellipsized but the tail clipped mid-word — "WE… WANDERE", the head announcing its elision while the tail lied by omission (`text-overflow` is inert under `overflow: clip`) | `TAIL_CEILING` in `TeamName.tsx` is now `max-w-[calc(100%-4ch)] overflow-hidden text-ellipsis`, so a cut tail marks itself: "WE… WANDER…". Pinned by a new case in `nameFloor.test.tsx`; the outer box keeps `overflow-clip` (the min-content-zero half, guarded by `horizontalGuard.test.ts`). **Re-measured after landing** (`pw/f6-bracket-census.json` vs the `nm-ceil4.json` baseline): mobile floors unchanged — min painted 13 at 320/360/375/390, 8 at 414, zero cases below 8. At 1366/1440 the two tightest `competition-se-live` cells (74–75px) pay the ellipsis glyph one letter: 8 painted name characters became 7 **plus a visible "…"** ("WE… WANDERE" silent cut → "WE… WANDER…" marked). Those 4 (viewport, route, element) rows below 8 are the fix the verdict ordered, not a floor regression — the next census diff should expect exactly them and nothing else |
 | F7 | **[D3 kit note]** `MbNotice` warn and danger shared one glyph (`DEFAULT_ICON.warn = DEFAULT_ICON.danger = "warning"`) — register D-21's HF-10 half | `danger` now defaults to `close` (the X — the only mark in the 62-id sprite that reads "this failed" rather than "mind this"); `warn` keeps the exclamation triangle. The other half of D-21 — the warn rail riding `--mb-gold` at 2.15:1 — is NOT closed by this and stays in the register |
 | F8 | **[ruling]** Rubric 6.6 ("type escalation 390 vs 1440") contradicted design-language §2.1's twice-argued width-invariant data ramp; the verdict ruled the rubric anchor should yield | `benchmark-rubric.md` D6.6 now carries a **carve-out**: width-invariant data type is conformant WHEN the document names it intentional AND the painted-character floors are measured at every width — both cited to §2.1, which now cross-references the carve-out back. The anchor keeps its teeth for apps without those two conditions. Register D-27 is discharged by this ruling |
 | F9 | **[hygiene]** This file did not record the 76/100 verdict or the remaining path | This entry |
 
 **The remaining path, as of this slice's close:** the verdict's enumerated list,
-minus F6–F9 above, is with the sibling slices of the current round. After the
-round: re-run `npx tsc --noEmit && npx eslint src && npx vitest run`, re-run the
-painted census on the bracket routes, verify both notice tones in `/dev/kit`,
-and then a **fresh full-rubric card** — 76 stands as FAIL until a scored card
-shows all ten dimensions ≥8 with zero hard fails.
+minus F6–F9 above, is with the sibling slices of the current round. This slice's
+own verifications were re-run at close against the running tree: `npx tsc
+--noEmit` clean, `npx eslint src` 0/0, `npx vitest run` **576/576 across 26
+files**; the bracket-route painted census re-run (F6 row above); both notice
+tones verified rendered in `/dev/kit` (`warn` → `#warning`, `danger` → `#close`,
+distinct — `pw/f67-verify.mjs`). Still owed after the sibling slices land: the
+same three commands on the merged tree, the `/summaries` filter-bar CLS
+re-measurement (the hard fail — NOT confirmed landed when this round resumed),
+the skeleton row reserves, and then a **fresh full-rubric card** — 76 stands as
+FAIL until a scored card shows all ten dimensions ≥8 with zero hard fails.
 
 ### The naive-walker verdict — one root cause, and it is the fixture
 

@@ -829,12 +829,13 @@ const heightOf = (lead: number, cells: number[][]): number =>
   GAP * (cells.length - 1) +
   SHELL_RESERVE;
 
-/** The document height this spec reserves at 390x844, in CSS px. */
+/** The document height this spec reserves at 390x844, in CSS px. The `tail`
+ *  is `/quick-match`'s below-grid action bar, gapped like any other box. */
 const phoneHeight = (spec: MbSkeletonRouteSpec): number =>
   heightOf(
     spec.lead,
     spec.cells.map((cell) => cell.panels.map((p) => p.h))
-  );
+  ) + (spec.tail !== undefined ? spec.tail + GAP : 0);
 
 /* ---------------------------------------------------------------------------
    THE FORMULA, PROVEN ONCE AND FROZEN
@@ -890,12 +891,14 @@ describe("the height model is calibrated", () => {
      against that would ask a page to be 844px tall, which is the opposite of
      what this file is for. */
   const MEASURED: [string, "full" | "empty", number][] = [
+    /* Re-measured 2026-08-16 with the whole table (F2/D7.2): `/teams`'s empty
+       composition and `/tools` both moved a few px in the round's re-cuts. */
     ["/", "empty", 1117],
     ["/competitions", "empty", 960],
-    ["/teams", "empty", 1005],
+    ["/teams", "empty", 990],
     ["/summaries", "empty", 844],
     ["/quick-match", "empty", 844],
-    ["/tools", "full", 1241],
+    ["/tools", "full", 1250],
   ];
 
   for (const [route, variant, measured] of MEASURED) {

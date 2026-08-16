@@ -181,6 +181,11 @@ export interface MbSkeletonRouteSpec {
    *  masthead, plus any filter bar the page carries above its grid. */
   lead: number;
   leadXl: number;
+  /** A full-width control band the page renders BELOW its grid —
+   *  `/quick-match`'s `MbActionBar` is the one shipped case. The measured box
+   *  height only; the grid gap above it is the skeleton's own `mt-4`. */
+  tail?: number;
+  tailXl?: number;
   cells: MbSkeletonCellSpec[];
 }
 
@@ -235,13 +240,13 @@ export const MB_ROUTE_SKELETON: Record<string, MbRouteSkeleton> = {
       leadXl: 68,
       cells: [
         { span: 7, panels: [{ h: 568, xl: 465 }] },
-        { span: 5, panels: [{ h: 238, head: false }] },
-        { span: 4, panels: [{ h: 249, xl: 228 }] },
-        { span: 4, panels: [{ h: 283, xl: 262 }] },
+        { span: 5, panels: [{ h: 404, xl: 278, head: false }] },
+        { span: 4, panels: [{ h: 325, xl: 304 }] },
+        { span: 4, panels: [{ h: 548, xl: 526 }] },
         { span: 4, panels: [{ h: 337, xl: 316 }] },
-        { span: 4, panels: [{ h: 309, xl: 288 }] },
-        { span: 4, panels: [{ h: 419, xl: 398 }] },
-        { span: 4, panels: [{ h: 292 }] },
+        { span: 4, panels: [{ h: 445, xl: 424 }] },
+        { span: 4, panels: [{ h: 447, xl: 425 }] },
+        { span: 4, panels: [{ h: 331 }] },
       ],
     },
     /* Two panels: the progression, then the ruled index of what the page
@@ -261,23 +266,17 @@ export const MB_ROUTE_SKELETON: Record<string, MbRouteSkeleton> = {
     emptySignal: "teams",
     full: {
       grid: "grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-12",
-      lead: 134,
-      leadXl: 70,
+      lead: 140,
+      leadXl: 76,
       cells: [
-        /* Re-measured 964/598 -> 960/594. The directory's head is now 64px
-           (it gained a second line); the 4px is that rule settling. NOTE for
-           whoever integrates this round: `teamPanels.tsx` was being edited by
-           another agent while this was measured, and this panel was seen at
-           750 mid-edit before settling back to 960 across three consecutive
-           runs. Re-run `pw/mb-geom.mjs` once that file is final. */
-        { span: 7, panels: [{ h: 960, xl: 594 }] },
-        { span: 5, panels: [{ h: 169, head: false }, { h: 377, head: false }] },
-        { span: 5, panels: [{ h: 700, xl: 525 }] },
-        /* 382/361 -> 337/316: Upcoming Fixtures carried TWO links to
-           `/competitions`, worded differently, one in the head and one in a
-           footer. The footer is gone (`teamPanels.tsx`, ONE PANEL, ONE LINK)
-           and the panel is 45px shorter at both widths. */
-        { span: 4, panels: [{ h: 337, xl: 316 }] },
+        /* Re-measured with `teamPanels.tsx` final: the directory settled at
+           961/798 (it gained rows at desktop), the profile at 728/531, and
+           Upcoming Fixtures at 611/590 — the earlier 337/316 was cut while
+           that panel was mid-edit and under-reserved it by 274px at 390. */
+        { span: 7, panels: [{ h: 961, xl: 798 }] },
+        { span: 5, panels: [{ h: 169, head: false }, { h: 405, xl: 377, head: false }] },
+        { span: 5, panels: [{ h: 728, xl: 531 }] },
+        { span: 4, panels: [{ h: 611, xl: 590 }] },
         { span: 3, panels: [{ h: 372 }] },
       ],
     },
@@ -289,8 +288,8 @@ export const MB_ROUTE_SKELETON: Record<string, MbRouteSkeleton> = {
        1543px -> 1005px at 390. */
     empty: {
       grid: "grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-12",
-      lead: 134,
-      leadXl: 70,
+      lead: 120,
+      leadXl: 68,
       cells: [
         { span: 7, panels: [{ h: 471, xl: 421 }] },
         { span: 5, panels: [{ h: 229, xl: 213 }] },
@@ -301,12 +300,17 @@ export const MB_ROUTE_SKELETON: Record<string, MbRouteSkeleton> = {
     emptySignal: "twoTeams",
     full: {
       grid: "grid-cols-1 gap-4 xl:grid-cols-12",
-      lead: 134,
-      leadXl: 70,
+      lead: 92,
+      leadXl: 76,
+      /* The route ends in `MbActionBar` (Start Scoring), below the grid. At
+         `xl` the bar's `mt-auto` parks it on the viewport bottom, so the tail
+         under-states the desktop document by the auto margin — which is air,
+         not a control, and off-screen air at that. */
+      tail: 82,
       cells: [
-        { span: 7, panels: [{ h: 330, xl: 301 }] },
-        { span: 5, panels: [{ h: 293, head: false }] },
-        { span: 7, panels: [{ h: 260, xl: 239 }] },
+        { span: 7, panels: [{ h: 543, xl: 301 }] },
+        { span: 5, panels: [{ h: 294, head: false }] },
+        { span: 7, panels: [{ h: 362, xl: 239 }] },
         { span: 5, panels: [{ h: 153 }] },
       ],
     },
@@ -318,8 +322,10 @@ export const MB_ROUTE_SKELETON: Record<string, MbRouteSkeleton> = {
        itself — the phone no longer scrolls on this screen. */
     empty: {
       grid: "grid-cols-1 gap-4 xl:grid-cols-12",
-      lead: 134,
-      leadXl: 70,
+      lead: 92,
+      leadXl: 76,
+      /* The bar ships on the empty route too — Start Scoring, disabled. */
+      tail: 82,
       cells: [
         { span: 7, panels: [{ h: 192 }] },
         { span: 5, panels: [{ h: 213, xl: 277 }] },
@@ -330,16 +336,16 @@ export const MB_ROUTE_SKELETON: Record<string, MbRouteSkeleton> = {
     emptySignal: "competitions",
     full: {
       grid: "grid-cols-1 gap-4 xl:grid-cols-12",
-      lead: 148,
+      lead: 120,
       leadXl: 68,
       cells: [
-        { span: 7, panels: [{ h: 465, xl: 430 }] },
+        { span: 7, panels: [{ h: 469, xl: 437 }] },
         { span: 5, panels: [{ h: 296, xl: 207, head: false }] },
         { span: 7, panels: [{ h: 647, xl: 509 }] },
-        { span: 5, panels: [{ h: 117, xl: 96 }] },
-        { span: 4, panels: [{ h: 85 }] },
-        { span: 4, panels: [{ h: 237 }] },
-        { span: 4, panels: [{ h: 265 }] },
+        { span: 5, panels: [{ h: 151, xl: 130 }] },
+        { span: 4, panels: [{ h: 136 }] },
+        { span: 4, panels: [{ h: 372 }] },
+        { span: 4, panels: [{ h: 226, xl: 205 }] },
       ],
     },
     /* The one route whose GRID also changes: with two panels the page pairs
@@ -360,18 +366,20 @@ export const MB_ROUTE_SKELETON: Record<string, MbRouteSkeleton> = {
     full: {
       /* The tallest lead in the app: this page puts a three-control filter bar
          between its masthead and its grid, and on a phone those controls each
-         take their own line. */
+         take their own line. The ledger is 2210 at 390 because the two-line
+         narrow row is 79px and there are twenty-five of them; from `sm` up the
+         one-line row is 44px and the same list is 1335. */
       grid: "grid-cols-1 gap-4 xl:grid-cols-12",
-      lead: 401,
-      leadXl: 179,
+      lead: 407,
+      leadXl: 185,
       cells: [
-        { span: 7, panels: [{ h: 1335 }, { h: 363, xl: 222 }] },
+        { span: 7, panels: [{ h: 2210, xl: 1335 }, { h: 595, xl: 403 }] },
         {
           span: 5,
           panels: [
             { h: 196, xl: 182, head: false },
-            { h: 253 },
-            { h: 274, xl: 253 },
+            { h: 269, xl: 253 },
+            { h: 261, xl: 240 },
             { h: 112 },
           ],
         },
@@ -381,7 +389,7 @@ export const MB_ROUTE_SKELETON: Record<string, MbRouteSkeleton> = {
        the populated one with its rows removed, so three things moved at once
        and all three are re-measured, not adjusted:
 
-         lead   401 -> 134. The filter bar does NOT ship on the empty page any
+         lead   407 -> 120. The filter bar does NOT ship on the empty page any
                 more — three labelled 48px controls filtering a set of zero —
                 so the lead is the masthead alone, and this stops being the
                 tallest lead in the app.
@@ -391,15 +399,15 @@ export const MB_ROUTE_SKELETON: Record<string, MbRouteSkeleton> = {
                 Competitions and Shared Reports collapse into the ruled
                 contents index, which is the 323px panel.
 
-       Model against the browser: 134 + 153 + 16 + 323 + 155 = 781px, and
-       `<main>` measures 724px inside a 844px document — the page is now
+       Model against the browser: 120 + 153 + 16 + 323 + 155 = 767px, and
+       `<main>` measures 709px inside a 844px document — the page is now
        SHORTER than the viewport, so `documentElement.scrollHeight` floors at
        844 and no longer reports the content height. Anything comparing this
        spec to a document height has to account for that floor. */
     empty: {
       grid: "grid-cols-1 gap-4 xl:grid-cols-12",
-      lead: 134,
-      leadXl: 70,
+      lead: 120,
+      leadXl: 68,
       cells: [
         { span: 7, panels: [{ h: 153 }] },
         { span: 5, panels: [{ h: 323, xl: 277 }] },
@@ -412,16 +420,16 @@ export const MB_ROUTE_SKELETON: Record<string, MbRouteSkeleton> = {
   "/tools": {
     full: {
       grid: "grid-cols-1 gap-4 xl:grid-cols-12",
-      lead: 130,
-      leadXl: 70,
+      lead: 136,
+      leadXl: 76,
       cells: [
-        /* 906 -> 349 at 390 (Z8). The launcher's four destinations are ruled
+        /* 906 -> 353 at 390 (Z8). The launcher's four destinations are ruled
            rows below `sm` instead of four stacked poster cards; every card
            declaration is behind `sm:`, so `xl` is still 260 and the desktop
            reservation does not move. Re-measured, not scaled. */
-        { span: 12, panels: [{ h: 349, xl: 260 }] },
+        { span: 12, panels: [{ h: 353, xl: 260 }] },
         { span: 7, panels: [{ h: 249, xl: 207 }] },
-        { span: 5, panels: [{ h: 326, xl: 335, head: false }] },
+        { span: 5, panels: [{ h: 325, xl: 334, head: false }] },
       ],
     },
   },
@@ -549,11 +557,14 @@ const RESERVED_CSS = `
 const HEAD_H = 43;
 const ROW_H = 49;
 
-/** Enough rows to fill the taller of the two reservations, and never a barcode. */
+/** Enough rows to fill the taller of the two reservations, and never a barcode.
+ *  The cap is 45 because the archive's ledger legitimately reserves 2210px of
+ *  79px rows at 390 — the old cap of 30 left 700px of blank paper inside a
+ *  fixed box that the rows were supposed to be filling. */
 const rowsFor = (spec: MbSkeletonPanelSpec): number => {
   const tallest = Math.max(spec.h, spec.xl ?? spec.h);
   const body = tallest - (spec.head === false ? 0 : HEAD_H);
-  return Math.min(30, Math.max(1, Math.round(body / ROW_H)));
+  return Math.min(45, Math.max(1, Math.round(body / ROW_H)));
 };
 
 const reserved = (h: number, xl?: number): CSSProperties =>
@@ -599,8 +610,8 @@ const ROW_WIDTHS = ["w-[78%]", "w-[62%]", "w-[88%]", "w-[54%]", "w-[70%]"];
    ledger rows, panel collapse — and `AppContext` fills from `localStorage` in
    a mount EFFECT, which runs after the browser has painted. So on a cold
    document every account, however full, painted the EMPTY composition once,
-   and when the blob landed (~1.4s in dev) the filter bar mounted and pushed
-   the entire ledger grid 111px: buffered CLS 0.4048 at 1440, 0.8269 at 768,
+   and when the blob landed (~1.4s in dev) the filter bar mounted and the six
+   panels swapped in under it: buffered CLS 0.4014 at 1440, 0.8543 at 768,
    against a 0.1 ceiling (invariant 27).
 
    No React-side answer can fix that first paint: the SSR HTML has no
@@ -609,25 +620,36 @@ const ROW_WIDTHS = ["w-[78%]", "w-[62%]", "w-[88%]", "w-[54%]", "w-[70%]"];
    only thing that runs before the first layout of a cold document is an inline
    script, so that is what decides:
 
-     MbBootScript   executes AT PARSE, before anything below it lays out. It
+     MbBootSniff    executes AT PARSE, before anything below it lays out. It
                     reads the same blob `readAccount` reads, applies the same
-                    `played` test `IS_EMPTY` applies, and marks
-                    `<html class="mb-boot-full">` — plus `--mb-boot-ledger`,
-                    the populated ledger's own height, row arithmetic below.
-     BOOT_CSS       two complementary gates. While the page is pre-boot it
-                    renders BOTH first-paint variants — the filter bar for a
-                    populated account, the ledger's empty state for a new one —
-                    and the class the script set picks one before either is
-                    ever painted. Both account types get their FINAL geometry
-                    on frame one; nothing moves when the data lands.
+                    `played` test `IS_EMPTY` applies, and INJECTS a `<style>`
+                    into `<head>` hiding whichever first-paint variant is not
+                    this account's — plus `--mb-boot-ledger` on `:root`, the
+                    populated ledger's own height, row arithmetic below. While
+                    the page is pre-boot it renders BOTH variants — the filter
+                    bar and full-geometry bones for a populated account, the
+                    collapsed index for a new one — and the injected rule picks
+                    one before either is ever painted. Both account types get
+                    their FINAL geometry on frame one; nothing moves when the
+                    data lands.
      MbLedgerBones  the ledger's reservation: bone rows at the shipped row
                     rhythm, clipped to `--mb-boot-ledger` so a three-match
                     archive reserves three rows, not twenty-five.
+     MbBootPanelBones
+                    a withheld panel's reservation, at the height the measured
+                    table above already carries for it.
+
+   An injected `<style>`, NOT a class on `<html>`: the `<html>` element is
+   React-rendered, and a class added to it before hydration is an attribute
+   mismatch React 19 reports as a dev console error — which the audit's
+   CONSOLE check counts. Head nodes the server did not send are the one thing
+   React 19's hydration explicitly tolerates (that is how third-party scripts
+   survive it), so the gate rides in on one of those instead.
 
    The gate classes exist only while `useMatchbookHistory().hydrating` is true;
-   the stale `<html>` class after boot gates nothing. A client-side navigation
-   never sees any of this — `localReady` is already true, so the page renders
-   its real branches and the sniff is not even mounted. Storage unreadable
+   the injected rule after boot gates nothing. A client-side navigation never
+   sees any of this — `localReady` is already true, so the page renders its
+   real branches and the sniff is not even mounted. Storage unreadable
    (private mode) leaves `full` set: unknown reserves the populated geometry,
    the same fallback `mbSkeletonSpecFor` argues for above.
 
@@ -668,26 +690,46 @@ const BOOT_SCRIPT = `(function () {
       }
     }
   } catch (e) {}
-  if (full) document.documentElement.classList.add("mb-boot-full");
-  if (h) document.documentElement.style.setProperty("--mb-boot-ledger", h);
+  try {
+    var s = document.createElement("style");
+    s.textContent =
+      (full ? ".mb-boot-empty-only{display:none}" : ".mb-boot-full-only{display:none}") +
+      (h ? ":root{--mb-boot-ledger:" + h + "}" : "");
+    document.head.appendChild(s);
+  } catch (e) {}
 })();`;
-
-const BOOT_CSS = `
-html:not(.mb-boot-full) .mb-boot-full-only { display: none; }
-html.mb-boot-full .mb-boot-empty-only { display: none; }
-`;
 
 /**
  * The sniff. Must be rendered BEFORE any `.mb-boot-full-only` /
  * `.mb-boot-empty-only` element in document order — the script executes when
  * the parser reaches it, so everything below it lays out with the account
- * already known. Render it only while the page is pre-boot.
+ * already known. Render it only while the page is pre-boot. The `<style>` here
+ * is `RESERVED_CSS`, because `MbBootPanelBones` reserves through the same
+ * `.mb-skel-fixed` contract `MbPageLoading` uses — the gating rule itself is
+ * the script's to inject.
  */
 export const MbBootSniff = () => (
   <>
     <script dangerouslySetInnerHTML={{ __html: BOOT_SCRIPT }} />
-    <style>{BOOT_CSS}</style>
+    <style>{RESERVED_CSS}</style>
   </>
+);
+
+/**
+ * A withheld panel's first-paint reservation: `MbSkeletonPanel` pinned to the
+ * height the route table measured for it, shown only while the boot sniff has
+ * ruled the account populated. `/summaries` renders these in the exact grid
+ * slots its report/summary/matchups/competitions panels will occupy, so a
+ * populated account's cold first paint is the full composition rather than
+ * the collapsed index — the panels then swap in at the same geometry.
+ */
+export const MbBootPanelBones = ({ h, xl, head = true }: MbSkeletonPanelSpec) => (
+  <MbSkeletonPanel
+    rows={rowsFor({ h, xl, head })}
+    head={head !== false}
+    className="mb-boot-full-only mb-skel-fixed"
+    style={reserved(h, xl)}
+  />
 );
 
 /**
@@ -851,6 +893,18 @@ const MeasuredGrid = ({ spec }: { spec: MbSkeletonRouteSpec }) => (
         </div>
       ))}
     </div>
+    {/* The post-grid band, where the route ships one. One full-width bone at
+        the band's own height: the real bar is a primary control strip, so the
+        skeleton says "a control lands here", not just blank paper. */}
+    {spec.tail !== undefined && (
+      <div
+        aria-hidden="true"
+        className="mb-skel-fixed mt-4"
+        style={reserved(spec.tail, spec.tailXl)}
+      >
+        <MbSkeleton w="100%" h="100%" radius={2} />
+      </div>
+    )}
   </>
 );
 
