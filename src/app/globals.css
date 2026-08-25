@@ -1609,9 +1609,12 @@ button.mb-panel-link::after,
 
    The pseudo-elements animate opacity here and the UA group animates
    transform plus the snapshot's width/height — those live in the
-   view-transition overlay, not the document, so document layout is untouched
-   (measured: an unrelated panel's rect is byte-identical before, during and
-   after the flight). Where the API does not exist (Firefox) the page calls
+   view-transition overlay, not the document, so the FLIGHT moves nothing
+   (measured at 1440: an unrelated panel's rect is byte-identical before,
+   during and after; measured at 390: the panels below the report rise
+   14.87px because the report's own content is 14.87px shorter, and that
+   movement is byte-identical with the API deleted — it is the selection's
+   reflow, which predates C12, not the transition's). Where the API does not exist (Firefox) the page calls
    `selectMatch` directly and this whole block is inert; under
    prefers-reduced-motion the page never starts a transition at all, and the
    reduced-motion block below pins the pseudo-elements dead as the backstop.

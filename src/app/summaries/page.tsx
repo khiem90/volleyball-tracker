@@ -88,7 +88,22 @@ import {
    destination once — viewport-entry, not the whole list, so a 25-row ledger
    costs nothing and the five rows a reader can see cost one RSC payload each.
    `saveData` opts the whole thing out: anticipation is a luxury, and a metered
-   connection did not ask for it. */
+   connection did not ask for it.
+
+   MEASURED against the production build (next start, Fast-3G-shape CDP
+   throttle + 4x CPU, 6 runs per arm): the gating is exact — at 390x844 with
+   both panels offscreen ZERO prefetches fire until scroll, then exactly the
+   5 visible rows' routes; with saveData nothing fires from this observer.
+   But the router does not CONSUME the warmed payload today: these
+   destinations are dynamic routes, Next 16's default `staleTimes.dynamic`
+   is 0, and on activation both arms re-fetch — click-to-paint medians
+   711ms prefetched vs 748ms cold (shared row), 369 vs 358 (competition
+   row); click-to-content 1704 vs 1725 and 1710 vs 1719. All within noise,
+   because this app is local-first: the transition is render-bound, not
+   fetch-bound, so the observer is insurance for a segment-cache future at a
+   cost of at most five one-shot requests, not a measured speedup. A
+   `staleTimes: { dynamic: 30 }` experiment (config outside this file) was
+   also measured and moved nothing. */
 const useMbVisiblePrefetch = () => {
   const router = useRouter();
   const io = useRef<IntersectionObserver | null>(null);
@@ -239,10 +254,18 @@ export default function HistoryPage() {
 
      `vtGen` guards the async cleanup: a second tap mid-flight supersedes the
      first transition (the API skips it), and the superseded `finished`
-     handler must not strip the names the newer transition just applied. */
+     handler must not strip the names the newer transition just applied. The
+     gate cuts the other way too — a superseded settle is a NO-OP, so the
+     newer flight strips the older one's residue itself before applying its
+     own names (measured before that strip existed: hero and row both carried
+     `mb-vt-score`, Chromium logged "Unexpected duplicate view-transition-name"
+     and aborted the capture with an invalid state). `vtRow` remembers the one
+     row a flight named, because a skipped flight's update callback — where
+     the row un-names itself — can still be pending when the next tap lands. */
   const heroScoreRef = useRef<HTMLParagraphElement | null>(null);
   const heroFinalRef = useRef<HTMLParagraphElement | null>(null);
   const reportPanelRef = useRef<HTMLDivElement | null>(null);
+  const vtRow = useRef<HTMLElement | null>(null);
   const vtGen = useRef(0);
 
   const openReport = (entryId: string, row: HTMLElement) => {
@@ -255,15 +278,21 @@ export default function HistoryPage() {
       return;
     }
     const gen = ++vtGen.current;
+    const strip = () => {
+      vtRow.current?.style.removeProperty("view-transition-name");
+      reportPanelRef.current?.style.removeProperty("view-transition-name");
+      heroScoreRef.current?.style.removeProperty("view-transition-name");
+      heroFinalRef.current?.style.removeProperty("view-transition-name");
+    };
+    strip(); // the superseded flight's residue, before any new name goes on
     const score = row.querySelector<HTMLElement>("[data-vt-score]");
     const panel = reportPanelRef.current;
+    vtRow.current = score;
     score?.style.setProperty("view-transition-name", "mb-vt-score");
     panel?.style.setProperty("view-transition-name", "mb-vt-report");
     const settle = () => {
       if (vtGen.current !== gen) return;
-      panel?.style.removeProperty("view-transition-name");
-      heroScoreRef.current?.style.removeProperty("view-transition-name");
-      heroFinalRef.current?.style.removeProperty("view-transition-name");
+      strip();
     };
     const vt = document.startViewTransition(() => {
       /* The name leaves the row in the same update that names the hero, so
@@ -271,9 +300,21 @@ export default function HistoryPage() {
          voids the whole transition. */
       score?.style.removeProperty("view-transition-name");
       flushSync(() => data.selectMatch(entryId));
+      /* A skipped flight still runs its callback — possibly AFTER the tap
+         that superseded it has already named the next row. Its selection
+         lands (the taps apply in order, so the last tap wins), but a
+         superseded callback must not name the hero: that is the second road
+         to the same duplicate-name abort the strip above closes. */
+      if (vtGen.current !== gen) return;
       heroScoreRef.current?.style.setProperty("view-transition-name", "mb-vt-score");
       heroFinalRef.current?.style.setProperty("view-transition-name", "mb-vt-accent");
     });
+    /* A second tap makes the UA skip this flight, and the skip surfaces as a
+       `ready` rejection — expected traffic under rapid input, not a fault.
+       Unhandled it reaches the console as a page error, which the audit's
+       CONSOLE column counts (measured: "Transition was skipped" / "aborted
+       because of invalid state" on a two-tap burst before this line). */
+    vt.ready.catch(() => {});
     vt.finished.then(settle, settle);
   };
 

@@ -316,7 +316,12 @@ export const MB_ROUTE_SKELETON: Record<string, MbRouteSkeleton> = {
       tail: 82,
       cells: [
         { span: 7, panels: [{ h: 543, xl: 301 }] },
-        { span: 5, panels: [{ h: 294, head: false }] },
+        /* 294 -> 222 (pw/mb-geom.mjs, dev 3100): the numeral hit-box re-cut
+           (ScoreNumeral, ed14ec1) shortened the scoreboard preview's ghost
+           numerals at both viewports. The only full-spec height the ceiling
+           wave moved after the wave-1 re-cut — every other cell re-measured
+           byte-identical. */
+        { span: 5, panels: [{ h: 222, head: false }] },
         { span: 7, panels: [{ h: 362, xl: 239 }] },
         { span: 5, panels: [{ h: 153 }] },
       ],
