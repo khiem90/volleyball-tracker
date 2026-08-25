@@ -813,3 +813,23 @@ At Gate 2, every row in §8.2 is either (a) closed and re-measured, with the num
 with a fresh measurement and an unchanged owner. A row that has been in this register for two consecutive
 gates without moving is escalated to the phase table in §3 as a blocking item — that is the whole mechanism
 that stops "later" from being permanent.
+
+---
+
+## FINAL STATE — ceiling round complete (2026-08-25, tree 0f466d8)
+
+**Verdict: PASS, 86/100 — all ten dimensions >=8, six at 9, zero hard fails.**
+Verdict history: 64 → 57/65/66 → four whole-app FAILs → 76 (six 8s, 1 HF) → **80 PASS** (76de95e)
+→ **86** (0f466d8, ceiling round: D1/D2/D4/D5/D7/D10 each 8→9; untouched D3/D6/D8/D9 held at 8).
+
+The critic's three "point at" moments: the numeral system (ink parity in an unmoving box, divider on
+ink, 99→100 moves nothing), the ledger→report view-transition flight, and the comparative standings
+over the 46px lattice.
+
+Non-blocking follow-ups if ever wanted: (a) vb-rotations/shared 8 counted text overlaps — three
+rounds unchanged, weakest surface in the app; (b) /summaries prod CLS 0.064 (shared-reports panel
+arrival); (c) register D-16 prop-name unification and D-22 focus-ring hue.
+
+Open pre-merge decisions (the user's): keep or strip NEXT_PUBLIC_DEV_PREVIEW_AUTH /
+NEXT_PUBLIC_DEV_PREVIEW_SESSION (production-dead by construction, verified in the prod build);
+merge to master or open a PR from claude/app-redesign-features-a65ea3.
