@@ -508,14 +508,6 @@ const ROUTES: RouteEntry[] = [
   },
 ];
 
-/**
- * `/dev/*` is the design kit and the state gallery. Both exist to render every
- * state at once — counting empty headlines there would be counting the ruler.
- * They are also kept out of the production build (`ca0d810`), so no reader can
- * reach one.
- */
-const OFF_THE_MAP = /^dev[\\/]/;
-
 const APP_DIR = join(process.cwd(), "src", "app");
 
 const pageFiles = (dir: string): string[] => {
@@ -536,15 +528,14 @@ const pageFiles = (dir: string): string[] => {
    =========================================================================== */
 
 describe("every route is on the map", () => {
-  const onDisk = pageFiles(APP_DIR).filter((file) => !OFF_THE_MAP.test(file));
+  const onDisk = pageFiles(APP_DIR);
   const mapped = new Set(ROUTES.map((r) => r.file));
 
   it("counts every page in the app", () => {
     const missing = onDisk.filter((file) => !mapped.has(file));
     expect(
       missing,
-      `these screens exist and are not counted — add them to ROUTES, or to ` +
-        `OFF_THE_MAP with the reason: ${missing.join(", ")}`
+      `these screens exist and are not counted — add them to ROUTES: ${missing.join(", ")}`
     ).toEqual([]);
   });
 

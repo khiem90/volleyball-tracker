@@ -1,95 +1,33 @@
 @import "tailwindcss";
-/* `tw-animate-css` is gone with P4. Its `animate-in` / `fade-in-0` /
-   `zoom-in-95` / `slide-in-from-*` utilities had exactly four consumers —
-   `ui/dialog`, `ui/sheet`, `ui/dropdown-menu` and `ui/tooltip` — and all four
-   were deleted. Matchbook's overlays animate from named `@keyframes` on
-   `.mb-dialog` / `.mb-sheet` / `.mb-toast` against the `--mb-dur-*` tokens. */
 
 /* ---------------------------------------------------------------------------
-   TYPEFACE PLUMBING — read this before touching layout.tsx
-
-   Both webfonts are next/font/google, which emits a CSS-module class carrying
-   `--font-outfit` / `--font-oswald`. That class MUST be on <html>.
-
-   Three tokens below resolve those variables inside `:root`, i.e. on <html>:
-     --font-sans           (@theme inline, just below)
-     --default-font-family (Tailwind derives it from --font-sans)
-     --mb-display-font     (the Matchbook block)
-
-   A custom property whose var() cannot resolve AT ITS DECLARATION SITE is
-   "guaranteed-invalid": it computes to nothing and every descendant inherits
-   that nothing, no matter how many elements further down define the missing
-   variable. So while the font classes sat on <body>, all three tokens were
-   dead at :root, `font-family: var(--mb-display-font)` was invalid at
-   computed-value time, and BOTH faces fell through to the ui-sans-serif
-   preflight stack — measured on every route: Oswald and Outfit had never once
-   rendered anywhere in the app.
-
-   The `var(--x, "Name")` fallbacks below are deliberate belt-and-braces: if the
-   variables ever go out of scope again the tokens stay VALID and degrade to the
-   plain family name (next/font registers the @font-face under exactly that
-   name), so the failure is a slightly different fallback rather than a silent
-   total loss of the display voice.
+   TYPEFACE PLUMBING — the next/font classes MUST be on <html>. The tokens
+   below resolve `--font-outfit` / `--font-oswald` inside `:root`, and a custom
+   property whose var() cannot resolve AT ITS DECLARATION SITE is
+   guaranteed-invalid: it computes to nothing and every descendant inherits
+   that nothing, however many elements further down define the variable. The
+   `var(--x, "Name")` fallbacks keep the tokens VALID if the variables ever go
+   out of scope — next/font registers the @font-face under exactly that name.
    --------------------------------------------------------------------------- */
 
 /* ---------------------------------------------------------------------------
-   THE UTILITY SURFACE (W2 / P4)
-
-   This block used to carry the whole shadcn token bridge as well —
-   `--color-background`, `--color-primary`, `--color-card`, `--color-border`,
-   `--color-muted`, `--color-destructive`, `--color-popover`, the five
-   `--color-chart-*`, the eight `--color-sidebar-*`, the four
-   `--color-team-*`, `--color-card-shadow`, and the seven `--radius-*` steps
-   derived from `--radius: 0.75rem`. Every one of them resolved into the
-   pre-Matchbook `:root` at the bottom of this file, which P4 deleted.
-
-   Removing the bridge is not cosmetic. In Tailwind v4 a utility EXISTS only
-   because a `--color-*` / `--radius-*` key is declared here, so `bg-primary`,
-   `bg-card`, `text-muted-foreground` and friends are now unresolvable class
-   names that generate no CSS at all. Before, a stray `bg-primary` — a
-   copy-paste from an old file, an autocomplete, a half-converted screen —
-   compiled cleanly, passed tsc, passed eslint, passed all 328 tests, and
-   shipped the old warm red to a user. That was the standing HF-4 risk in the
-   register (D-1): silent, not visible. It is now a no-op instead.
-
-   `--font-sans` stays: it is Matchbook plumbing, read by `body` and by
-   `.matchbook-surface` (see "Typeface plumbing" above). The `--color-mb-*`
-   keys stay because they are what generate `bg-mb-navy`, `text-mb-coral` and
-   the rest of the palette utilities.
-
-   The `--radius-*` steps are simply gone rather than restated: Tailwind's own
-   defaults (`rounded-sm` 4px, `rounded-md` 6px, `rounded-lg` 8px …) apply
-   again, and the Matchbook vocabulary is 4/3/2/999 written literally
-   (`rounded-[2px]`, `rounded-[4px]`) so a radius never depends on a scale that
-   can be redefined out from under it.
+   THE UTILITY SURFACE. There is deliberately no shadcn token bridge: in
+   Tailwind v4 a utility exists only because a `--color-*` / `--radius-*` key
+   is declared here, so a stray legacy `bg-primary` generates no CSS instead of
+   silently shipping an old colour. `--font-sans` stays (read by `body` and
+   `.matchbook-surface`); the `--color-mb-*` keys generate the palette
+   utilities. Radii are written literally (`rounded-[2px]` etc.) so a radius
+   never depends on a scale that can be redefined out from under it.
    --------------------------------------------------------------------------- */
 
 @theme inline {
   --font-sans: var(--font-outfit, "Outfit");
 
-  /* ---------------------------------------------------------------------
-     TAILWIND'S OWN MOTION DEFAULTS, REPOINTED AT THE TOKENS (F4)
-
-     Tailwind 4.1 ships `--default-transition-duration: 150ms` and
-     `--default-transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1)` in
-     its theme, and every bare `transition` / `transition-colors` /
-     `transition-opacity` written in JSX resolves through them. That is why
-     150ms was the DOMINANT duration in the system even after the `.mb-*`
-     recipes were tokenised: measured on `/` before this change, 25 of the 62
-     transitioning elements ran at 0.15s, and only some of them were the
-     `.mb-nav-item` literal below — the rest were markup utilities nobody
-     could see in this file.
-
-     Repointing the theme keys fixes every one of them at once, without a
-     single JSX edit, and it means a `transition-colors` written next year is
-     on the ladder by default rather than by discipline.
-
-     The easing is repointed to `--mb-ease-in-out`, whose value is BYTE
-     IDENTICAL to the Tailwind default it replaces — so this half is a pure
-     re-naming with no motion change; only the duration actually moves
-     (150ms -> 120ms), which is the defect being fixed. `duration-*` /
-     `ease-*` utilities still override per call site as before.
-     --------------------------------------------------------------------- */
+  /* Tailwind's own motion defaults, repointed at the tokens: every bare
+     `transition-*` utility written in JSX resolves through these, so future
+     markup is on the ladder by default. `--mb-ease-in-out` is byte-identical
+     to the Tailwind default it replaces; `duration-*` / `ease-*` utilities
+     still override per call site. */
   --default-transition-duration: var(--mb-dur-fast);
   --default-transition-timing-function: var(--mb-ease-in-out);
 
@@ -108,11 +46,8 @@
   --color-mb-red: var(--mb-red);
   --color-mb-ink-muted: var(--mb-ink-muted);
   --color-mb-rule: var(--mb-rule);
-  /* The on-navy set (G20). Declared in `:root` below with the contrast
-     measurements that pick the three alphas; exposed here as utilities because
-     the only way a screen could reach them before was to re-type the rgba by
-     hand, which is what /login did five times. `border-mb-rule-on-navy`,
-     `bg-mb-tint-on-navy` and `text-mb-ink-on-navy-soft` are now the spelling. */
+  /* The on-navy set, exposed as utilities — `border-mb-rule-on-navy`,
+     `bg-mb-tint-on-navy`, `text-mb-ink-on-navy-soft` are the spelling. */
   --color-mb-rule-on-navy: var(--mb-rule-on-navy);
   --color-mb-tint-on-navy: var(--mb-tint-on-navy);
   --color-mb-ink-on-navy-soft: var(--mb-ink-on-navy-soft);
@@ -133,44 +68,31 @@
   --mb-ink-muted: #5d6c70;
   --mb-rule: rgba(7, 50, 77, 0.28);
   /* Resolves only because the next/font classes are on <html> — see "Typeface
-     plumbing" at the top of this file. The "Oswald" fallback keeps this token
-     valid if they ever move again. */
+     plumbing" above. The "Oswald" fallback keeps this token valid. */
   --mb-display-font: var(--font-oswald, "Oswald"), "Arial Narrow", "Roboto Condensed", Impact, sans-serif;
 
   /* ===================== THE TRACKING ROLES =====================
-     Twelve named voices, one token each — the census result the ladder
-     (§2.1a) promised: EVERY letter-spacing in the app resolves to one of
-     these names, zero anonymous values. Measured before this block existed:
-     the app painted exactly these twelve computed values (9 routes x 2
-     widths, all text-painting nodes) — the tokens change no pixel, they
-     make each value citeable. A declaration anywhere in this file writes
+     Twelve named voices, one token each — every letter-spacing in the app
+     resolves to one of these names. A declaration in this file writes
      `var(--mb-track-…)`, never a literal; a call site writes the matching
-     `.mb-track-…` rung utility (declared at the end of `@layer components`),
-     never a `tracking-[…]`. One sentence of intent each:
+     `.mb-track-…` rung utility (end of `@layer components`), never a
+     `tracking-[…]`.
 
      masthead  the title lockup — em-tracking compounds at display sizes,
                so the biggest voice is the tightest one.
      display   the base display voice: row titles, team marks, stat figures.
-     link      the quiet verb — panel actions and footer links, one step
-               looser than base so a 0.72rem label stays a word.
+     link      the quiet verb — panel actions and footer links.
      title     the label that names a container: panel titles, select values.
-     button    the imperative — button labels at every cut (.mb-btn,
-               .mb-btn-lg, .mb-segmented, the skip link).
-     nav       wayfinding — sidebar, tabs, the bottom bar, the md badge:
-               labels a reader scans for, spread to be scannable.
-     status    the state word and the meta line: LIVE, FINAL, the masthead
-               date, badge words — a word read at a glance, not in a run.
-     head      the columnar head: table heads and day heads, spread wide
-               because a column label rules the strip under it.
-     kicker    the eyebrow — it labels the thing below it and is never read
-               as prose, so it carries the widest text spread.
-     code      the share code: glyphs a reader transcribes one at a time,
-               so they space one at a time.
-     badge     the stamp — single caption words treated as engraving (the
-               masthead badge caption, the FINAL stamp), maximum spread.
+     button    the imperative — button labels at every cut.
+     nav       wayfinding — sidebar, tabs, the bottom bar, the md badge.
+     status    the state word and the meta line: LIVE, FINAL, dates.
+     head      the columnar head: table heads and day heads.
+     kicker    the eyebrow — labels the thing below it, widest text spread.
+     code      the share code: glyphs transcribed one at a time.
+     badge     the stamp — single engraved caption words, maximum spread.
      numeral   figures and marks: tracking pads AFTER the last glyph and
                pushes a centred figure off its own centre, so figures are
-               authored `normal` — a number is not a word (§2.1a). */
+               authored `normal` — a number is not a word. */
   --mb-track-masthead: 0.01em;
   --mb-track-display: 0.02em;
   --mb-track-link: 0.04em;
@@ -184,272 +106,134 @@
   --mb-track-badge: 0.22em;
   --mb-track-numeral: normal;
 
-  /* --- contrast-safe variants (GAP-13/14, rubric §3.6) ------------------ */
   /* ===================== THE CORAL JOB LIST =====================
-     Charter invariant 15: coral appears ONCE per screen as the primary job,
-     plus its DECLARED structural jobs. It was measured doing 15+ of them, and
-     two pairs of those jobs meant opposite things in the same hue. The list is
-     now closed. Coral has FOUR jobs and nothing may add a fifth without
-     editing this comment:
+     The list is closed. Coral has FOUR jobs and nothing may add a fifth
+     without editing this comment:
 
        1. THE PRIMARY ACTION      .mb-btn-coral            fill, one per screen
        2. THE SELECTION RAIL      .mb-rail (default),      3px mark, one
                                   .mb-nav-item[data-active] left,   axis each
                                   .mb-tab[data-active] bottom
        3. THE MASTHEAD LOCKUP     the emphasised title word + the 2px badge
-                                  frame (design language §2.3 / §3.2, JSX)
+                                  frame (JSX)
        4. THE SCHEDULE SPINE      the 2px left rule on a schedule/timeline list
 
-     Jobs 2, 3 and 4 are exactly the three invariant 15 declares as structural.
-     Job 2 is ONE job in three orientations: nav rail, tab underline and row
-     rail are the same statement — "this is the selected one" — so they share
-     one colour legitimately.
+     Job 2 is ONE job in three orientations — nav rail, tab underline and row
+     rail are the same "this is the selected one".
 
-     What was taken OFF coral, and where each went:
-       focus ring          -> --mb-navy + inherited halo   (collided with job 2)
-       .mb-btn-outline     -> navy ink and rule            (collided with job 1)
-       .mb-panel-link:hover-> navy + underline             (letterform)
-       active nav/tab INK  -> --mb-navy / --mb-ink-muted   (2nd coral in one box)
-       checkbox/radio/switch on -> --mb-navy               (multiplied per form)
-       .mb-stamp-final     -> --mb-green-ink               (Final is green, §1.2)
-       leading notch       -> --mb-teal                    (leader is teal, §1.2)
-       --mb-court-accent   -> --mb-teal                    (a diagram, not a CTA)
-
-     THE CORAL RULE (unchanged). --mb-coral is a MARK colour and never a
-     letterform. Measured against the two paper surfaces it is 3.55:1 on
-     --mb-paper-bright and 3.26:1 on --mb-paper: over the 3:1 floor for a
-     border, rail, dot or underline, under the 4.5:1 floor for text below
-     18.66px — and no coral text in this system is above 18.66px.
-     --mb-coral-deep is the INK twin: 5.03:1 on --mb-paper-bright, 4.62:1 on
-     --mb-paper, and 5.23:1 for #fff on the fill. Same hue family, so at label
-     size it reads as the same colour. After this pass the ONLY coral
-     letterform left in the stylesheet is the masthead word (job 3, ≥36px, in
-     JSX); --mb-coral-deep survives as the .mb-btn-coral FILL, where white on it
-     is 5.23:1. */
+     THE CORAL RULE: --mb-coral is a MARK colour and never a letterform — over
+     the 3:1 floor for a border/rail/dot/underline, under the 4.5:1 floor for
+     text at label sizes. --mb-coral-deep is the INK twin and survives as the
+     .mb-btn-coral FILL; the only coral letterform is the masthead word
+     (job 3, ≥36px, in JSX). */
   --mb-coral-deep: #c9351f;
   /* Gold as ink on paper: 5.13:1 on --mb-paper. --mb-gold stays on-navy only. */
   --mb-gold-ink: #8a5c00;
-  /* Green as ink, built by the same method as --mb-coral-deep: the SMALLEST
-     darkening of --mb-green that clears 4.5:1 on both paper tones, so at label
-     size it still reads as the same green. Measured: 4.71:1 on --mb-paper,
-     5.13:1 on --mb-paper-bright, 5.33:1 for #fff on the fill (--mb-green itself
-     is 3.93 / 4.28 / 4.45 and fails all three). This exists so "Final" can be
-     GREEN everywhere — design language §1.2 maps Final/complete to --mb-green,
-     but .mb-stamp-final was coral-deep, which made one status two colours.
-     --mb-green stays the mark colour (badge rule, form square, meter fill);
-     --mb-green-ink is the letterform. */
+  /* The smallest darkening of --mb-green that clears 4.5:1 on both paper
+     tones, so "Final" can be green as a letterform. --mb-green stays the mark
+     colour (badge rule, form square, meter fill); --mb-green-ink is the ink. */
   --mb-green-ink: #137a54;
 
-  /* --- tints, bands and the one shadow (GAP-13) ------------------------- */
+  /* --- tints, bands and the one shadow ---------------------------------- */
   --mb-tint-1: rgba(7, 50, 77, 0.04); /* row hover                      */
   --mb-tint-2: rgba(7, 50, 77, 0.06); /* nav / outline-navy hover       */
   --mb-tint-3: rgba(7, 50, 77, 0.12); /* empty form square, meter track */
-  /* There is deliberately no coral tint. --mb-coral-deep clears 4.5:1 on bare
-     --mb-paper by 0.12, so any wash of any hue under it fails — measured:
-     coral 8% 4.12:1, navy 6% 4.15:1, navy 4% 4.30:1. Coral states are carried
+  /* There is deliberately no coral tint: --mb-coral-deep clears 4.5:1 on bare
+     --mb-paper by 0.12, so any wash under it fails. Coral states are carried
      by rules and lifts, never by fills under coral ink. */
   --mb-band: rgba(7, 50, 77, 0.05); /* table day-group header band    */
-  /* THE ON-NAVY SET (G20). All three are --mb-paper-bright at an alpha, and
-     they are the ONLY three alphas of it the system may use. /login was
-     re-deriving them by hand — five literal `rgba(255,250,241,…)` values across
-     five nodes, two of which were the byte-identical twin of a token declared
-     right here — which is invariant 10's "zero hardcoded colours" and, worse,
-     means a change to the paper tone repaints the app everywhere except the one
-     screen a new user sees first.
-
-     0.75 is the third rung and is new: it is the SOFT INK, for a line that is
-     still text on navy but must sit under the full-strength paper beside it —
-     the "• Final" tag in the sample scoreline is the case /login already had,
-     spelled as a literal. Composited on --mb-navy and measured, the alphas run
-     0.25 → 2.12:1, 0.50 → 4.34:1, 0.60 → 5.58:1, 0.75 → 7.86:1, opaque →
-     12.84:1. So 0.75 clears 4.5:1 as body text at any size with room to spare,
-     and it is chosen rather than 0.6 because the softer value is only 1.1:1
-     clear of the floor — one paper-tone tweak from failing — while 0.75 still
-     reads as visibly secondary beside the opaque ink.
-
-     A fourth, fainter rung is deliberately refused: 0.5 measures 4.34:1 and is
-     already under the floor, so it could only ever be an accessibility trap
-     with a token's name on it. Text on navy is opaque or 0.75. */
+  /* THE ON-NAVY SET: --mb-paper-bright at an alpha, and the ONLY three alphas
+     of it the system may use. A fourth, fainter text rung is deliberately
+     refused — 0.5 already measures under the 4.5:1 floor, so it could only be
+     an accessibility trap with a token's name on it. Text on navy is opaque
+     or 0.75. */
   --mb-rule-on-navy: rgba(255, 250, 241, 0.25); /* divider / boundary  */
   --mb-tint-on-navy: rgba(255, 250, 241, 0.06); /* wash under content  */
   --mb-ink-on-navy-soft: rgba(255, 250, 241, 0.75); /* secondary text  */
   --mb-panel-shadow: 0 8px 22px rgba(57, 41, 23, 0.08);
 
   /* --- rule tiers -------------------------------------------------------
-     The system used to claim a 1.5px structural tier. It never rendered:
-     Blink floors a used border-width to whole CSS pixels, so `border: 1.5px`
-     computes to 1px at deviceScaleFactor 1, 2 AND 3 (measured across
-     /dev/kit — identical tally at all three). Meanwhile `gap` and `width`
-     are LayoutUnits and DO honour 1.5px, which left .mb-segmented's dividers
-     heavier than every "structural" edge in the system: the hierarchy was
-     inverted.
-
-     So the tiers are redefined in values that survive rasterisation. At the
-     thin end they are separated by INK, not thickness — a 1px full-navy line
-     against a 1px 28%-navy line is a 13.3:1 mark beside a 2.2:1 one, which is
-     the difference the eye actually reads. Thickness only starts doing work at
-     the accent and anchor tiers, where it is unambiguous at every DPR.
+     Blink floors a used border-width to whole CSS pixels (a 1.5px border
+     paints 1px at every DPR), so the thin tiers are separated by INK, not
+     thickness:
 
        hairline  1px  --mb-rule   a divider INSIDE a thing (rows, panel head)
        edge      1px  --mb-navy   the BOUNDARY of a thing (panel, input, box)
        accent    3px  tone        active / selected marks (tab, nav, rail)
        anchor    4px  tone        the identity mark (panel top, toast left)
 
-     `hairline` and `edge` are both 1px today and that is measured, not
-     accidental — they are kept as two names because they say what the line IS
-     (a divider inside a thing vs the boundary of a thing), and a future
-     density change moves one without the other. Pick the tier by role; the ink
-     may still be softened at rest, as .mb-input does with --mb-rule until it
-     takes focus.
-
-     2px is NOT a tier. It survives in exactly two named marks — the masthead
-     badge lockup and the coral spine on schedule/timeline lists (design
-     language §3.5) — plus glyph strokes (the check in .mb-check and
-     MbCheckMark), which are drawings, not rules. Nothing else may use it.
-
-     Nothing in this file may reintroduce a fractional rule: it is either
-     invisible (a border) or off-hierarchy (a gap or a width). */
+     `hairline` and `edge` are both 1px today but stay two names — they say
+     what the line IS, and a future density change moves one without the
+     other. 2px is NOT a tier: it survives only in the masthead badge lockup,
+     the schedule spine, and glyph strokes (drawings, not rules). Nothing in
+     this file may reintroduce a fractional rule — it is either invisible (a
+     border) or off-hierarchy (a gap or a width). */
   --mb-rule-hairline: 1px;
   --mb-rule-edge: 1px;
   --mb-rule-accent: 3px;
   --mb-rule-anchor: 4px;
 
-  /* --- the gap vocabulary, in the unit it is measured in (G23) -----------
-     Design language §3.2 declares a SEVEN-value spacing set and every value in
-     it is a Tailwind step, i.e. a whole number of pixels: 3 (form squares), 4,
-     6, 8, 10, 12, 16, plus 24 for the masthead's outer column gap. A census of
-     the single-elimination detail found NINETEEN distinct gaps across two
-     viewports, and every extra one came from this file writing the same idea
-     in `rem`:
+  /* --- the gap vocabulary ------------------------------------------------
+     Gaps are written in px, never rem: rem makes a gap a function of the type
+     size (the panel grid is in whole px, so a raised root size would slide
+     control interiors off the exterior spacing) and produces fractional
+     values. The set: 1 (the .mb-segmented divider, a rule rather than a gap),
+     4, 6, 8, 10, 12 — plus 3, 16 and 24 from markup. */
 
-       .mb-panel-link     0.2rem   3.2px      .mb-input / .mb-toast /
-       .mb-badge          0.3rem   4.8px        .mb-banner   0.6rem   9.6px
-       .mb-field          0.35rem  5.6px      .mb-nav-item   0.7rem  11.2px
-       .mb-search / .mb-tab / .mb-segmented > * / .mb-code-chip  0.4rem  6.4px
-       .mb-btn            0.45rem  7.2px
-
-     None of those seven values is on the ladder, none is reachable from a
-     Tailwind utility, and none is distinguishable BY EYE from the ladder value
-     it sits beside — 6.4px next to 6px is a coherence failure that only a
-     measurement finds, which is exactly the kind this programme keeps finding.
-
-     `rem` also makes the gap a FUNCTION OF THE TYPE SIZE, which is wrong for
-     this system twice over: the panel grid is already in whole px (`gap-4`), so
-     a user who raises their root size would slide the interior of every control
-     off the exterior spacing it is meant to align with; and it is what produced
-     the fractional values in the first place, since 16 × 0.45 is not an integer.
-
-     So gaps are written in px, the same way the radii are (see the note below
-     on why the radius vocabulary stays literal): the value in the file is the
-     value on the screen, at every root size, and it can never be redefined out
-     from under a component. Each site keeps the nearest ladder value to what it
-     rendered, so no control changes by more than 1.2px.
-
-     THE SET, after this pass: 1 (the .mb-segmented divider, which is a rule
-     rather than a gap), 4, 6, 8, 10, 12 — plus 3, 16 and 24 from markup. */
-
-  /* --- the pill radius, named once (F7) ---------------------------------
-     The system has TWO spellings of the same idea and they are not the same
-     number. `999px` is the one design language 3.3 declares, and it is what
-     every `.mb-*` rule in this file writes — 89 nodes across 19 routes.
-     Tailwind v4's `rounded-full` is a static utility that compiles to
-     `calc(infinity * 1px)`, which computes to 3.35544e+07px — 63 nodes across
-     16 routes. Both LOOK like a pill on a 7px dot, so the split survived
-     review; it shows up the moment anything is measured, because a radius
-     census reports two values for one intent and neither can be told from the
-     other by eye.
-
-     `rounded-full` cannot be re-pointed: v4 hard-codes it rather than reading
-     a `--radius-*` theme key, so there is no token to override. The answer is
-     therefore a class the system owns. Authors write `.mb-round`; components
-     that draw their own geometry read `--mb-radius-round`.
-
-     999px rather than infinity is not arbitrary either — it is a real length,
-     so it composes in `calc()`, animates, and prints; `calc(infinity * 1px)`
-     does none of those reliably.
-
-     The radius vocabulary is otherwise deliberately literal (4/3/2 written as
-     `rounded-[4px]` etc, see the utility-surface note at the top of this file)
-     so it can never be redefined out from under a component. This token is the
-     exception because it is the one radius with a NAME rather than a value in
-     the spec — "the pill" — and because it is the one authors reach for a
-     Tailwind utility to express. */
+  /* --- the pill radius, named once ---------------------------------------
+     `rounded-full` compiles to `calc(infinity * 1px)` and cannot be
+     re-pointed (v4 hard-codes it), so the pill is a class the system owns:
+     authors write `.mb-round`; components that draw their own geometry read
+     `--mb-radius-round`. 999px rather than infinity because a real length
+     composes in `calc()`, animates, and prints. */
   --mb-radius-round: 999px;
 
-  /* --- focus (GAP-12) ---------------------------------------------------
-     FOCUS IS NOT CORAL. It used to be, and that put the focus ring and the
-     active-tab underline in the same hue with opposite meanings: a focused
-     INACTIVE tab grew a coral mark and read as the active one. Focus is a
-     transient "you are here on the keyboard"; coral is a persistent "this is
-     the selected thing". Two meanings cannot share a channel.
-
-     Focus is now the INK, which no other state uses as a ring. Measured:
-       --mb-navy on --mb-paper          11.79:1   (coral was 3.26:1)
-       --mb-navy on --mb-paper-bright   12.84:1   (coral was 3.55:1)
-     Both are the highest-contrast pairs in the system and clear the 3:1 UI
-     floor by ~4x, where coral cleared it by 0.26.
-
-     The one place a navy ring fails is a navy ground — inside .mb-segmented,
-     a navy dialog head, a `bg-mb-navy` panel head — where it measures 1.00:1.
-     So --mb-focus is INHERITED, and every navy surface in the system re-points
-     it to paper-bright (12.84:1 the other way). A new navy surface sets one
-     custom property; it does not restate a ring. */
+  /* --- focus --------------------------------------------------------------
+     FOCUS IS NOT CORAL: focus is a transient "you are here on the keyboard",
+     coral is a persistent "this is the selected thing", and two meanings
+     cannot share a channel. Focus is the ink. A navy ring fails on a navy
+     ground, so --mb-focus is INHERITED and every navy surface re-points it to
+     paper-bright — a new navy surface sets one custom property, not a ring. */
   --mb-focus: var(--mb-navy);
 
-  /* --- motion (GAP-11) -------------------------------------------------- */
+  /* --- motion ------------------------------------------------------------ */
   --mb-dur-fast: 120ms;
   --mb-dur-base: 180ms;
   --mb-dur-slow: 280ms;
   --mb-ease-out: cubic-bezier(0.2, 0.8, 0.3, 1);
   --mb-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
   --mb-stagger: 40ms;
-  /* The heartbeat. Deliberately NOT one of the three feedback steps above:
-     fast/base/slow are the bands a state change is allowed to occupy
-     (120-280ms), and a pulse that repeats forever is a different kind of
-     motion — an ambient rhythm, read in peripheral vision, which is why the
-     rubric's D5-10 anchor asks the live element to have "its own distinct
-     rhythm". It is a token rather than the literal `1.4s` it used to be so the
-     duration census resolves 100% to `--mb-dur-*` and so the one place the
-     system beats slowly is named, not buried in an animation shorthand. */
+  /* The heartbeat — deliberately not one of the three feedback steps above:
+     fast/base/slow are the bands a state change may occupy, and a repeating
+     pulse is ambient rhythm, a different kind of motion. */
   --mb-dur-pulse: 1400ms;
-  /* The entrance's three authored beats (C13). Chrome is the masthead riding
-     `<main>`'s own `.mb-enter` at 0ms; content is the panel grid, held two
-     stagger beats so the page's name is on screen before its first panel
-     moves; accent is the live marks, last, because a pulse that arrives
-     before the row it annotates is a claim with no referent. The values are
-     derived from the tokens above rather than restated: content = 2 beats,
-     accent = content + the full 5-beat stagger span, so re-tuning
+  /* The entrance's beats: content (the panel grid) holds two stagger beats so
+     the page's name lands before its first panel moves; accent (live marks)
+     arrives last — a pulse before the row it annotates is a claim with no
+     referent. Derived from the tokens rather than restated, so re-tuning
      `--mb-stagger` re-times the whole sequence coherently. */
   --mb-seq-content: calc(var(--mb-stagger) * 2);
   --mb-seq-accent: calc(var(--mb-seq-content) + var(--mb-stagger) * 5 + var(--mb-dur-fast));
 
   /* --- press (the click feel) -------------------------------------------
-     The ink a flush surface takes while it is held down. One tier past
-     --mb-tint-2 (the hover wash), so hover -> press is a visible step rather
-     than a guess. Measured on --mb-paper-bright: the composited ground is
-     #e6e6e1 and --mb-navy on it is 10.67:1, so no label loses contrast while
-     pressed. See "THE PRESS" further down for why this exists. */
+     The ink a flush surface takes while held down: one tier past --mb-tint-2
+     (the hover wash), so hover -> press is a visible step. See "THE PRESS"
+     further down. */
   --mb-tint-press: rgba(7, 50, 77, 0.1);
   --mb-press-shift: 1px;
 
-  /* --- safe area (GAP-3) ------------------------------------------------ */
+  /* --- safe area --------------------------------------------------------- */
   --mb-safe-top: env(safe-area-inset-top, 0px);
   --mb-safe-bottom: env(safe-area-inset-bottom, 0px);
-  /* The horizontal pair. Zero in portrait and on every desktop, 47px on the
-     notch side of a landscape phone — which is exactly where
-     `MatchbookLandscapeRail` puts the app's only navigation, so invariant 34
-     ("fixed/sticky elements honour env(safe-area-inset-*)") needs both axes
-     now, not just top and bottom. */
+  /* The horizontal pair: zero in portrait and on desktop, ~47px on the notch
+     side of a landscape phone — where `MatchbookLandscapeRail` puts the app's
+     only navigation. */
   --mb-safe-left: env(safe-area-inset-left, 0px);
   --mb-safe-right: env(safe-area-inset-right, 0px);
 
   /* --- court diagram surface (tools) ------------------------------------
-     The accent is TEAL, not coral. The court diagram is a reference drawing,
-     not a call to action, and a coral mark on it would spend the screen's one
-     coral on a diagram. Teal is the system's "a measure worth reading" tone
-     (§1.2 rank-leader rail) and is 3.80:1 on --mb-paper-bright, over the 3:1
-     floor a diagram line needs. Zero consumers today (W7 builds the court), so
-     this is a free re-point rather than a visual change. */
+     The accent is TEAL, not coral: the court diagram is a reference drawing,
+     not a call to action. */
   --mb-court-fill: var(--mb-paper-bright);
   --mb-court-line: var(--mb-rule);
   --mb-court-line-strong: var(--mb-navy);
@@ -481,38 +265,15 @@
 }
 
 /* ---------------------------------------------------------------------------
-   Text overflow (rubric §3.1 — horizontal page scroll is a hard fail)
-
-   Every primitive renders caller-supplied strings, and callers pass share URLs,
-   file paths, competition names and machine ids. None of them can be trusted to
-   contain a break opportunity, and no primitive should have to remember to
-   defend itself. So the defence lives here, once, and is inherited:
-
-     `overflow-wrap` is an inherited property, so one declaration on the surface
-     (and on each portalled overlay root, which renders OUTSIDE the surface)
-     reaches every descendant.
-
-   `break-word` is the safe default — it only breaks a word that cannot fit on a
-   line by itself, and it leaves intrinsic sizing alone, so no existing layout
-   moves. It is not enough on its own for a shrink-to-fit box (a column flex
-   item, an inline-flex chip): those size to min-content, and `break-word` does
-   not reduce min-content. `anywhere` does, so the shrink-to-fit carriers below
-   opt into it individually rather than the whole surface paying for it.
-
-   `anywhere` on the surface itself was tried and REJECTED: it reduces
-   min-content everywhere, which reflowed a shipped screen — /competitions at
-   390x844 went 6693 -> 6759 device px tall with 26.90% of pixels changed. P0
-   ships no visual change to shipped screens, so the blunt form is out.
-
-   The third ingredient is `min-width: 0`. A flex or grid item defaults to
-   `min-width: auto` = min-content, which sizes the item to its longest word
-   BEFORE the text ever gets the chance to break — that is what makes
-   `break-word` look like it is doing nothing. Measured on /dev/kit at 320px,
-   injecting an unbreakable 36-character name into every one of 1256 leaf text
-   nodes: `break-word` alone left 203 nodes able to push the page; adding the
-   prose unlock below took it to 195, and every one of the remainder is a
-   `<span>` flex item inside component markup, which is a component-level fix
-   (`min-w-0` on the span), not a global one.
+   Text overflow. Caller-supplied strings (URLs, machine ids) cannot be
+   trusted to contain a break opportunity, so the defence lives here once and
+   is inherited — on the surface AND on each portalled overlay root, which
+   renders outside it. `break-word` is the safe default: it leaves intrinsic
+   sizing alone, but does not reduce min-content, so shrink-to-fit carriers
+   opt into `anywhere` individually below (`anywhere` on the whole surface
+   reflows shipped screens). The third ingredient is `min-width: 0` — a
+   flex/grid item defaults to min-content, which sizes it to its longest word
+   before the text ever gets the chance to break.
    --------------------------------------------------------------------------- */
 
 .matchbook-surface,
@@ -536,13 +297,10 @@
   overflow-wrap: anywhere;
 }
 
-/* Both min-width rules are DEFAULTS, not overrides, so they live in @layer base
-   where any Tailwind `min-w-*` utility outranks them — an unlayered rule beats
-   every layered one regardless of specificity, which is exactly wrong for a
-   defensive floor. The same reasoning puts the type-voice defaults in
-   @layer components further down; the STRUCTURAL rules in this file stay
-   unlayered on purpose. `min-width: 0` is inert on a normal block, so neither
-   rule does anything except where an item is being sized to its longest word. */
+/* Both min-width rules are DEFAULTS, so they live in @layer base where any
+   Tailwind `min-w-*` utility outranks them (an unlayered rule would beat
+   every utility — exactly wrong for a defensive floor). The STRUCTURAL rules
+   in this file stay unlayered on purpose. */
 @layer base {
   .mb-panel-head > *,
   .mb-dialog-head > *,
@@ -566,39 +324,19 @@
 }
 
 /* ---------------------------------------------------------------------------
-   THE TYPE-VOICE LAYER (charter invariant 8)
-
-   Tailwind utilities live in `@layer utilities`. An UNLAYERED rule beats every
-   layered one regardless of specificity, so while these declarations sat
-   unlayered beside the rest of each class they silently ate every
-   `tracking-*` utility written against them. Measured before this block
-   existed: 163 of 195 tracking utilities on /dev/kit were dead, and on the six
-   shipped routes EVERY one was — a `.matchbook-display` asking for
-   `tracking-[0.08em]` at 11.84px rendered 0.237px instead of 0.947px, i.e. the
-   class default, not the requested value. Invariant 8 requires every display
-   element to carry a tracking class, so the named type scale was unapplied
-   essentially everywhere it was written.
-
-   The values here are DEFAULTS — the voice a Matchbook class has when the
-   author says nothing. Holding them in `@layer components` restores the normal
-   Tailwind contract (utility beats component class), so `tracking-[…]`,
-   `uppercase` and `normal-case` all work on any mb-* element and authors can
-   keep writing them.
-
-   Only `letter-spacing` and `text-transform` are relayered. The rest of each
-   class stays unlayered on purpose: those are structure (borders, padding,
-   colour), where a stray utility winning would be a bug, not a feature.
-   `font-family` likewise stays unlayered — the display face is identity, not a
-   default. Keep new type-voice declarations in THIS block, not in the class.
+   THE TYPE-VOICE LAYER. An unlayered rule beats every Tailwind utility, so
+   type-voice DEFAULTS (`letter-spacing`, `text-transform`) live in
+   `@layer components`, restoring the normal contract: a utility wins. Only
+   those two properties are relayered — the rest of each class is structure
+   (borders, padding, colour), where a stray utility winning would be a bug,
+   and `font-family` stays unlayered because the display face is identity, not
+   a default. Keep new type-voice declarations in THIS block, not in the class.
    --------------------------------------------------------------------------- */
 
 @layer components {
-  /* Every declaration below CITES a tracking role from `:root` — never a
-     literal. The nine same-(size,weight) spreads §2.1a used to sanction as
-     anonymous "component voices" are the same values they always were; what
-     changed is that each now names the role it rides, so the census reads
-     roles, not decimals. Where a class rides a role that is not its
-     namesake, the line says why. */
+  /* Every declaration below cites a tracking role from `:root` — never a
+     literal. Where a class rides a role that is not its namesake, the line
+     says why. */
   .matchbook-display {
     text-transform: uppercase;
     letter-spacing: var(--mb-track-display);
@@ -686,32 +424,13 @@
     letter-spacing: var(--mb-track-button);
   }
 
-  /* THE NUMERALS DECLARE `normal`, AND THAT IS A VALUE, NOT AN OMISSION (F8).
-
-     These three are the only classes in the file that set the display face and
-     did not appear in this layer. Every other display class above carries an
-     authored tracking; these carried whatever they inherited, because
-     `letter-spacing` is an inherited property and a score box or a stepper
-     value routinely sits inside a `.matchbook-display` container. That made
-     their tracking a property of where they were placed rather than of what
-     they are — the exact "default that is correct for nothing" D1-8 rejects,
-     one level down.
-
-     The authored value is `normal`, for a reason that is specific to figures:
-     tracking is added AFTER the last glyph as well as between glyphs, so a
-     centred numeral in a fixed reserve is pushed off its own centre by half a
-     letter-space, and `.mb-numeral-digit`'s `1ch` cells stop matching the
-     advance they were measured against (see the `.mb-numeral` note further
-     down — an N-figure value must be exactly N x 1ch wide or the score
-     reflows). Letterspaced figures are also simply wrong in a scoreboard: the
-     ladder tracks WORDS, and a number is not a word.
-
-     Declaring it here blocks inheritance and puts these three on the ladder as
-     an explicit step. No pixel moves today; what changes is that a display
-     container can no longer reach in and shift a score sideways. A later
-     `.mb-track-*` rung (or a Tailwind `tracking-*` utility) still wins per
-     call site — the "VS" pip is `.mb-score-box` with `.mb-track-title`,
-     because it is a word. */
+  /* The numerals declare `normal`, and that is a VALUE, not an omission:
+     `letter-spacing` inherits, so without it a display container could reach
+     in and shift a score sideways — tracking pads after the last glyph, so a
+     centred numeral in a fixed reserve is pushed off centre and
+     `.mb-numeral-digit`'s `1ch` cells stop matching the advance they were
+     measured against. A `.mb-track-*` rung or utility still wins per call
+     site — the "VS" pip takes `.mb-track-title` because it is a word. */
   .mb-score-box,
   .mb-stepper-value,
   .mb-numeral {
@@ -719,45 +438,12 @@
   }
 
   /* -------------------------------------------------------------------------
-     THE TRACKING LADDER (F8)
-
-     Every value above is a DEFAULT a class carries. The named type scale
-     (design language 2.1) also assigns a tracking to each display role that
-     has no class of its own — masthead, panel title, status word, meta line,
-     badge caption — and those are written at the call site as
-     `tracking-[0.05em]`, `tracking-[0.1em]`, `tracking-[0.22em]`. An arbitrary
-     value is un-auditable: nothing stops the next one being `[0.055em]`, and
-     nothing tells a reviewer whether `[0.1em]` is `display/status` or a guess.
-
-     That is what produces the collisions D1-1.3 counts — one (size, weight)
-     pair carrying two or more letter-spacings. Measured at 1440:
-
-       /summaries  48px/700     0.48px vs 0.96px
-                   = the masthead's `tracking-[0.01em]` against a bare
-                     `.matchbook-display` inheriting the 0.02em default above
-       /teams      13.6px/600   1.088px (.mb-nav-item, 0.08em)
-                                vs 0.272px (bare .matchbook-display, 0.02em)
-       /teams      13.6px/700   0.272px vs 0.544px
-       /teams      11.52px/600  0.4608px (.mb-panel-link) vs normal vs 0.2304px
-
-     Every one of those collisions is a call site that wrote a size without
-     writing the tracking that belongs to it. This block is the thing to point
-     them at: one class per named step, so the ladder is a closed vocabulary
-     that can be grepped and counted instead of an open field of decimals.
-
-     They are declared LAST in `@layer components` so a role class always beats
-     the class defaults above it, and they are in the components layer (not
-     unlayered) so a Tailwind `tracking-*` utility still wins where an author
-     genuinely needs an exception — the same contract this whole layer exists
-     to restore.
-
-     One utility per ROLE TOKEN (`:root`, "the tracking roles") — twelve
-     names, and the census closes: every letter-spacing the app paints
-     resolves to one of them. `.mb-track-code` and `.mb-track-numeral`
-     complete the set so no call site is left holding a literal — the code
-     voice used to be reachable only through `.mb-code-chip`, and the
-     figures-and-marks rule only through `tracking-normal`, which names a
-     value, not the reason (§2.1a exception 1).
+     THE TRACKING LADDER: one utility per role token, so the ladder is a
+     closed vocabulary that can be grepped instead of an open field of
+     decimals. Declared LAST in `@layer components` so a rung always beats the
+     class defaults above it, and in the components layer (not unlayered) so a
+     Tailwind `tracking-*` utility still wins where an author genuinely needs
+     an exception.
      ------------------------------------------------------------------------- */
   .mb-track-masthead { letter-spacing: var(--mb-track-masthead); }
   .mb-track-display  { letter-spacing: var(--mb-track-display); }
@@ -774,48 +460,12 @@
 }
 
 /* ---------------------------------------------------------------------------
-   THE PANEL SIZES TO ITS CONTENT (F5)
-
-   `.mb-panel` used to carry `height: 100%`, which made every panel fill the
-   grid row its neighbour set. A row is as tall as its tallest card, so a
-   one-line panel beside a nine-row table was stretched to the table's height
-   and spent the difference on blank paper-bright. Measured at 1440 before this
-   change, biggest single void per panel:
-
-     /competitions  Live Courts        357.97px trailing   87.4% of the panel dead
-     /competitions  Upcoming Schedule  190.69px trailing   81.8% dead
-     /competitions  Tournament Status  126.94px internal   69.7% dead
-     /summaries     Shared Reports     282.61px trailing   83.6% dead
-     /summaries     Archive Summary    220.33px trailing   72.7% dead
-     /              Match of the Day   167.45px internal   59.6% dead
-
-   ("Dead" is panel height minus the union of every band that paints ink — a
-   text run, an image, a control, a filled leaf. A stretched wrapper's own box
-   does not count as ink, which is the whole point.)
-
-   Three ways out were on the table. DISTRIBUTING the content — `justify-
-   content: space-between` on the body — was rejected: it spreads list rows
-   apart, and equal row rhythm is what makes a ledger scannable (D2), so it
-   trades a void for a worse defect. FILLING with a taller last row is the same
-   trade one level down. What is left is the honest one: the panel stops
-   claiming height it has nothing to put in.
-
-   So `height` is gone. The card is now exactly as tall as what it prints, and
-   the leftover height stays in the grid cell as PAPER — the page stock, with
-   its grain, which is what an almanac page does with a short column. The tall
-   panel in the row is untouched: it was setting the row height already, and
-   nothing about it changes.
-
+   THE PANEL SIZES TO ITS CONTENT — deliberately no `height: 100%`: a grid row
+   is as tall as its tallest card, and a stretched panel spends the difference
+   on blank paper. Leftover height stays in the grid cell as page stock.
    `display: flex; flex-direction: column` STAYS, and `mt-auto` with it: a
-   panel can still be taller than its content for a reason of its own (a
-   `min-h-*` from the call site, a body with `flex-1` and a `max-h` scroller),
-   and when it is, the footer strip still sits on the bottom edge. What no
-   longer happens is height arriving from a neighbour.
-
-   Two call sites depended on the old behaviour and both are now no-ops rather
-   than breakages: `login/page.tsx`'s `mb-panel h-auto!` escape hatch (§3.4)
-   and the `@media print` `height: auto` override further down. Neither is
-   removed here — they belong to other agents' files and they cost nothing.
+   panel can still be taller than its content for a reason of its own, and
+   the footer strip still sits on the bottom edge.
    --------------------------------------------------------------------------- */
 .mb-panel {
   background: var(--mb-paper-bright);
@@ -827,23 +477,13 @@
   flex-direction: column;
 }
 
-/* The other half of the same fix. Removing `height` is enough where the panel
-   sits inside a grid CELL (a `<div className="xl:col-span-5">` wrapper): the
-   cell still stretches, the panel inside it no longer does, and an empty cell
-   paints nothing. It is NOT enough where the panel IS the grid item — there
-   the default `align-self: stretch` re-imposes the row height on a box whose
-   `height` is auto, and the void comes straight back.
-
-   `align-self` is scoped to the grid child rather than declared on `.mb-panel`
-   itself, because on `.mb-panel` it would also apply inside the column-flex
-   stacking cells the layout uses (`<div className="flex flex-col gap-4">`),
-   where the cross axis is HORIZONTAL — a panel would shrink to the width of
-   its longest word. The parent-side rule cannot make that mistake: in a
-   `grid-cols-*` container the axis is always the block axis.
-
-   `:has(> .mb-panel)` covers the wrapper form and keeps the rule off cells
-   that hold something else — a `MbChoiceCard` grid, a tile row — where equal
-   heights are the design rather than an accident. */
+/* Where the panel IS the grid item, the default `align-self: stretch` would
+   re-impose the row height. Scoped to the grid child rather than declared on
+   `.mb-panel` itself: on the class it would also apply inside column-flex
+   stacking cells, where the cross axis is HORIZONTAL and a panel would shrink
+   to the width of its longest word. `:has(> .mb-panel)` covers the wrapper
+   form and keeps the rule off cells that hold something else, where equal
+   heights are the design. */
 .matchbook-surface [class*="grid-cols-"] > .mb-panel,
 .matchbook-surface [class*="grid-cols-"] > :has(> .mb-panel) {
   align-self: start;
@@ -865,58 +505,22 @@
   color: var(--mb-navy);
   display: inline-flex;
   align-items: center;
-  gap: 4px; /* was 0.2rem = 3.2px — G23 */
+  gap: 4px;
   white-space: nowrap;
   /* The containing block for the hit pad below. Inert on its own. */
   position: relative;
 }
 
 /* ---------------------------------------------------------------------------
-   THE PANEL LINK'S HIT PAD (F6)
-
-   `.mb-panel-link` renders 17.27px tall — measured at fine pointer on `/`,
-   `/teams`, `/competitions`, `/summaries`, `/tools` and `/quick-match`. It is
-   0.72rem/600 letterforms and nothing else, so its border box IS its ink. That
-   is rubric HF-2 (any interactive target under 44x44 of real hit area) on six
-   routes, and it slipped through two floors at once: it is an <a>, not a
-   <button>, so `.mb-btn`'s geometry never applied; and the blanket coarse-
-   pointer rule further down only arms under `[data-mb-touch="on"]`, which says
-   nothing about a mouse or a stylus. The brief is explicit — a real target at
-   EVERY pointer type.
-
-   Three shapes were considered:
-
-     min-height: 44px      Honest, but it is the head that pays. `.mb-panel-head`
-                           measures 42.98px today (padding 10.4/8.8 + a 22.78px
-                           title + the hairline); a 44px child takes it to
-                           64.2px, on every panel on every screen, and the head
-                           padding is a baked value other agents' components
-                           measure against (design language 3.4).
-     negative margins      44px box, ~18px of layout. Works, but the box then
-                           overhangs its neighbours by 13px in both directions
-                           and getBoundingClientRect reports the overhang, so
-                           the 8px-separation sweep starts failing on rows that
-                           are perfectly fine.
-     a hit pad             What is below. Generated content is painted and
-                           hit-tested AS ITS ORIGINATING ELEMENT, so
-                           `elementFromPoint` at the corners of the 44x44 square
-                           returns the link. Zero layout, zero ink, and the
-                           harness anticipates it by name: audit.mjs probes the
-                           square rather than the border box precisely "because
-                           a ::before/::after overlay is painted and hit-tested
-                           as its originating element".
-
-   Geometry: 44px tall, centred, and at least 44px wide (`max()` so a link
-   wider than 44px is never made wider — an absolutely positioned box counts
-   toward scrollable overflow, and the horizontal guard is a hard fail).
-   Vertical spill inside a panel head is ~1px each way: the head is 42.98px and
-   the pad is 44px, so it is very nearly the head itself.
-
-   Scoped to elements that are actually operable. `.mb-panel-link` is also used
-   as a MARK — the "Open Tool" line inside an `MbChoiceCard`, where the card is
-   the link and the span is decoration — and giving decoration a tap target
-   would be a lie in the other direction. `<a>` here means `a[href]`: a bare
-   anchor is not a target either.
+   THE PANEL LINK'S HIT PAD — generated content is painted and hit-tested AS
+   ITS ORIGINATING ELEMENT, so the ::after square gives the link a 44px target
+   with zero layout and zero ink (min-height would grow every panel head;
+   negative margins overhang neighbours and break separation measurement).
+   `max(100%, 44px)` so a link wider than 44px is never made wider — an
+   absolutely positioned box counts toward scrollable overflow. Scoped to
+   operable elements only: `.mb-panel-link` is also used as a MARK inside
+   `MbChoiceCard`, where the card is the link and the span is decoration, and
+   `a[href]` because a bare anchor is not a target either.
    --------------------------------------------------------------------------- */
 a[href].mb-panel-link::after,
 button.mb-panel-link::after,
@@ -931,12 +535,8 @@ button.mb-panel-link::after,
   transform: translate(-50%, -50%);
 }
 
-/* A link hover does not need a hue. Coral-deep here was a coral letterform
-   spent on a transient state, and it put a fifth coral on screens that already
-   carry six panel links. The print answer is the one every almanac uses: the
-   rule under the word. Ink stays navy at 12.84:1 (the deep-coral hover was
-   5.03:1), and the underline is a second channel, so the state survives
-   greyscale — which a colour-only hover never did. */
+/* A link hover does not need a hue: ink stays navy and the underline is a
+   second channel, so the state survives greyscale. */
 .mb-panel-link:hover {
   text-decoration: underline;
   text-underline-offset: 3px;
@@ -950,13 +550,12 @@ button.mb-panel-link::after,
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px; /* was 0.45rem = 7.2px — G23 */
+  gap: 8px;
   padding: 0.55rem 1.1rem;
   border-radius: 4px;
   border: var(--mb-rule-edge) solid transparent;
-  /* `transform` is here so the press RELEASE eases back (see "THE PRESS"); the
-     press itself zeroes the duration so it lands on the next frame. The literal
-     150ms this used to carry is now the --mb-dur-fast token. */
+  /* `transform` is here so the press RELEASE eases back (see "THE PRESS");
+     the press itself zeroes the duration so it lands on the next frame. */
   transition: filter var(--mb-dur-fast) var(--mb-ease-out),
     background-color var(--mb-dur-fast) var(--mb-ease-out),
     color var(--mb-dur-fast) var(--mb-ease-out),
@@ -970,32 +569,18 @@ button.mb-panel-link::after,
   color: var(--mb-paper-bright);
 }
 
-/* Fill is --mb-coral-deep, not --mb-coral: white on coral is 3.62:1 and .mb-btn
-   is 0.8rem/600, below the large-text threshold. Deep coral measures 5.23:1
-   (GAP-14, charter Appendix A D-20). Borders and accents keep --mb-coral. */
+/* Fill is --mb-coral-deep, not --mb-coral: white on coral fails 4.5:1 at
+   button-label size. Borders and accents keep --mb-coral. */
 .mb-btn-coral {
   background: var(--mb-coral-deep);
   color: #fff;
 }
 
-/* THE SECONDARY IS NOT IN THE PRIMARY'S HUE.
-   This class was coral-deep ink in a coral-deep frame, sitting 8px from
-   .mb-btn-coral in the same masthead (measured on /teams: "Quick Add" beside
-   the coral CTA). Two controls in one hue, one filled and one outlined, read as
-   ONE control in two states — so the screen appeared to offer a single action
-   that was somehow both on and off, and invariant 15's "coral once per screen"
-   was broken by the pair.
-
-   It is now navy, which is what its two shipped call sites always meant:
-   "Quick Add" (/teams) and "Create a team" (/quick-match) are constructive
-   secondaries, not destructive. The §4.1a doc example calling this the Delete
-   treatment is stale — destructive has its own component, MbDestructiveButton,
-   and destructive is RED there, never coral.
-
-   It differs from .mb-btn-outline-navy by its GROUND, which is the real
-   distinction between the two: this one is transparent and lets the paper (or
-   a panel, or a navy head) show through; that one brings its own paper-bright
-   card. Ink measures 11.79:1 on paper and 12.84:1 on bright either way. */
+/* The secondary is not in the primary's hue — an outlined coral beside the
+   filled coral CTA reads as one control in two states. It differs from
+   .mb-btn-outline-navy by its GROUND: this one is transparent and lets the
+   paper (or a navy head) show through; that one brings its own paper-bright
+   card. */
 .mb-btn-outline {
   border-color: var(--mb-navy);
   color: var(--mb-navy);
@@ -1025,23 +610,15 @@ button.mb-panel-link::after,
 .mb-nav-item {
   display: flex;
   align-items: center;
-  gap: 12px; /* was 0.7rem = 11.2px — G23 */
+  gap: 12px;
   padding: 0.55rem 1.25rem;
   font-family: var(--mb-display-font);
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--mb-navy);
   border-left: var(--mb-rule-accent) solid transparent;
-  /* THE LAST LITERAL DURATION IN THE SYSTEM (F4).
-     This line read `0.15s ease, 0.15s ease` and it was the single most
-     rendered duration in the app — 24 elements on `/`, 25 on `/teams`, 49 on
-     the single-elimination detail — because the sidebar is on every
-     authenticated screen and every nav row carries it. A dominant duration
-     that is not a token is the exact failure D5-8 names ("a dominant 150ms
-     that is not a token fails this, however tidy it looks").
-     `ease` went with it: the system has two easings and neither is the UA
-     keyword. Fast + ease-out matches `.mb-btn`, which is the other control a
-     finger lands on most. */
+  /* Fast + ease-out matches `.mb-btn`, the other control a finger lands on
+     most. */
   transition: background-color var(--mb-dur-fast) var(--mb-ease-out),
     color var(--mb-dur-fast) var(--mb-ease-out);
   touch-action: manipulation;
@@ -1051,17 +628,10 @@ button.mb-panel-link::after,
   background: var(--mb-tint-2);
 }
 
-/* The active row keeps the coral RAIL — that is coral job 2, the selection mark
-   — and gives back the coral INK. A coral-deep label 3px from a coral rail put
-   two corals inside one 44px box, which is the collision invariant 15 exists to
-   stop; and the rail alone already says "selected" at a distance, which is what
-   a rail is for.
-   Ink goes to navy: 12.84:1 on the lifted ground against the deep coral's
-   5.03:1. The row still LIFTS to paper-bright, and now the lift is a real
-   second channel rather than a contrast workaround — rail + lift + ink weight
-   are three readings of "current", so the state survives greyscale.
-   This rule sits after `.mb-nav-item:hover` at equal specificity, so it also
-   wins while the active row is hovered. */
+/* The active row keeps the coral RAIL (coral job 2) and navy ink — rail +
+   lift + ink weight are three readings of "current", so the state survives
+   greyscale. This rule sits after `.mb-nav-item:hover` at equal specificity,
+   so it also wins while the active row is hovered. */
 .mb-nav-item[data-active="true"] {
   color: var(--mb-navy);
   border-left-color: var(--mb-coral);
@@ -1073,31 +643,12 @@ button.mb-panel-link::after,
   font-size: 0.62rem;
   font-weight: 600;
   color: var(--mb-ink-muted);
-  /* OPTICAL CORRECTION — the kicker hangs its side bearing (§2.1a).
-
-     Oswald caps carry a left side bearing of 0-0.06em depending on the
-     glyph. Measured by canvas TextMetrics (actualBoundingBoxLeft, weight
-     600, per 100px em): H 6, B/D/E/F/K/L/M/N/P/R/U 5, C/G/O/Q 4, S 3,
-     W/Z 2, A/V 1, T/X/Y 0 — median cap 4/100em, and the value is linear in
-     size (re-measured at 24/36/48px: 0.96/1.44/1.92px, all 0.04em). So a
-     display line at masthead sizes starts its ink ~2px inside its box while
-     the 9.92px kicker labelling it starts ~0.4px inside — the eyebrow and
-     the line it labels drift apart by whichever glyph the data starts with.
-
-     The kicker side is the one a constant can fix: at 9.92px the WHOLE
-     per-glyph spread is 0-0.6px, so hanging the median (-0.04em = -0.40px)
-     puts every kicker's ink on its box datum with a residual under 0.3px —
-     subpixel, glyph-independent. The display side is deliberately NOT hung:
-     at 48px the same spread is 0-2.9px, and a role constant would push a
-     T/X/Y-initial masthead (three of the seven shipped h1s) 1.9px PAST the
-     margin, a visible overhang bought for nothing. text-indent, not margin
-     or transform: no stacking context, no containing block, and boxes in
-     normal flow hold at 0.00px. The one measured side effect: text-indent
-     participates in INTRINSIC sizing, so a shrink-to-fit kicker's box
-     narrows by the indent (<=0.40px) and the standings legend strip, where
-     kicker cells stack inline, settles <=3.12px cumulative at 1440 - no
-     wrap change (max top delta 0.10px), no collision, verified per-element
-     across 9 routes x {375, 1440}. */
+  /* Optical correction — the kicker hangs Oswald's median cap side bearing
+     (-0.04em) so its ink sits on the box datum beside the display line it
+     labels. The display side is deliberately NOT hung: at display sizes the
+     per-glyph spread is large enough that a constant would push some initials
+     visibly past the margin. `text-indent`, not margin or transform: no
+     stacking context, no containing block, and boxes in normal flow hold. */
   text-indent: -0.04em;
 }
 
@@ -1367,16 +918,11 @@ button.mb-panel-link::after,
   outline-offset: 2px;
 }
 
-/* THE RING GOES INSIDE A CLIPPING CONTAINER.
-   .mb-tabs is `overflow-x: auto` and .mb-segmented / .mb-stepper are
-   `overflow: hidden`, so a ring drawn 2px OUTSIDE a cell loses its top and
-   bottom strokes to the clip and survives as two vertical bars — which, in a
-   tab strip, read as the dividers between tabs rather than as focus. Measured
-   on the tab strip: only the left and right strokes reached the raster.
-   Inset by the same 2px it is drawn entirely within the cell's own ground, so
-   it is never clipped and never lands on a neighbouring cell's colour. Every
-   cell in all three is at least 44px tall, so the ring clears the label.
-   These come after the base rule at equal specificity, so order carries them. */
+/* The ring goes INSIDE a clipping container: .mb-tabs is `overflow-x: auto`
+   and .mb-segmented / .mb-stepper are `overflow: hidden`, so a ring drawn
+   outside a cell loses its top and bottom strokes to the clip and reads as
+   tab dividers. Inset, it is never clipped. These come after the base rule at
+   equal specificity, so order carries them. */
 .mb-tabs :focus-visible,
 .mb-segmented :focus-visible,
 .mb-stepper :focus-visible {
@@ -1384,48 +930,18 @@ button.mb-panel-link::after,
 }
 
 /* ---------------------------------------------------------------------------
-   THE PRESS (C5) — what a Matchbook control does while it is held
+   THE PRESS — two recipes, never scale (scaling a printed rectangle shrinks
+   its rules and type, the one thing ink on paper cannot do):
 
-   Before this block the entire stylesheet contained exactly one pressed state,
-   `.mb-console-column:active`, and `.mb-btn` transitioned `filter,
-   background-color, color` with no `:active` rule at all — so the primary
-   control of the whole system had no response to being pressed. On touch, where
-   there is no hover, that meant a button gave NO feedback between the tap and
-   the navigation.
+     RAISED things (button, tile, swatch, segmented cell, stepper key) sit ON
+     the stock, so they sink INTO it by --mb-press-shift — one edge-rule width.
+     FLUSH things (nav row, tab, list row, scoring column) ARE the page plane
+     and cannot sink; they ink instead, one tier past hover.
 
-   The system is printed card stock on paper, and that dictates two recipes, not
-   one. `scale(0.98)` on everything is rejected: scaling a printed rectangle
-   makes its rules and type shrink, which is the one thing ink on paper cannot
-   do.
-
-     RAISED things — a button, a tile, a swatch, a segmented cell, a stepper
-     key. They sit ON the stock, so they go INTO it: --mb-press-shift (1px) of
-     translateY. 1px is chosen because it is the smallest movement that is
-     unambiguous at DPR 1, and because it is the thickness of the edge rule the
-     control is drawn with, so the control appears to sink by exactly one line.
-
-     FLUSH things — a nav row, a tab, a table/list row, a scoring column. They
-     ARE the page plane and cannot sink. They ink instead: the wash steps from
-     --mb-tint-2 (hover) to --mb-tint-press, which is a press you can feel on a
-     surface that cannot move.
-
-   The detail that makes it feel physical rather than mushy is the asymmetry:
-   the press lands in ZERO time and the release eases back over --mb-dur-fast.
-   `transition-duration: 0s` inside `:active` is what buys that — the state is
-   painted on the next frame with no interpolation, then the base rule's
-   transition runs on the way out. Transitioning both directions is what makes
-   most CSS presses feel like syrup.
-
-   Only transform and background-color animate (invariant 40). No shadow, no
-   scale, no filter — `filter: brightness()` cannot express "pressed" on a
-   transparent control, which is most of them.
-
-   Specificity note: the legacy theme further down this file carries a global
-   `button:active:not(:disabled) { transform: scale(0.98) }` at (0,2,1). Every
-   rule below is written with `:not(:disabled)` so it lands at (0,3,0) or higher
-   and outranks it deliberately rather than by accident. That legacy rule is
-   zone C and is W2/P4's to delete; until then it only reaches bare <button>
-   elements carrying no mb-* class.
+   The press lands in ZERO time (`transition-duration: 0s` inside `:active`)
+   and the release eases back through the base rule's transition — that
+   asymmetry is what keeps it from feeling like syrup. Only transform and
+   background-color animate.
    --------------------------------------------------------------------------- */
 
 /* `.mb-tile` and `.mb-swatch` carry no transition of their own; the other three
@@ -1448,13 +964,9 @@ button.mb-panel-link::after,
 }
 
 /* FLUSH — ink one tier past hover, instantly, and do NOT move.
-   `transform: none` is the deliberate answer to the legacy theme's global
-   `button:active { transform: scale(0.98) }`. Measured before this line: a
-   `.mb-tab` is a <button>, so it inherited that scale and shrank its own
-   letterforms and its 3px underline on every tap — the one thing printed ink
-   cannot do — and it kept doing it under prefers-reduced-motion, because the
-   legacy clamp only shortens durations and never cancels a transform. A flush
-   surface is the page plane; the page plane does not scale. */
+   `transform: none` guards against any global `button:active` scale reaching
+   these: a flush surface is the page plane, and the page plane does not
+   scale. */
 .mb-nav-item:active:not(:disabled),
 .mb-tab:active:not(:disabled),
 .mb-row-hover:active:not(:disabled),
@@ -1474,54 +986,13 @@ button.mb-panel-link::after,
 }
 
 /* ---------------------------------------------------------------------------
-   ENTRANCE (C6, GAP-11, C13) — how a screen arrives, in three authored beats
-
-   opacity 0 -> 1 with a 10px rise over --mb-dur-slow on --mb-ease-out. The rise
-   was 6px and read as a flicker rather than an arrival at panel scale; 10px is
-   roughly a third of a panel head's height, which is enough to see the card
-   settle onto the stock without anything visibly sliding. Only opacity and
-   transform animate (invariant 40), there is no scale, no overshoot and no
-   spring (invariant 41).
-
-   The order is AUTHORED, not uniform (C13): chrome -> content -> accent.
-
-     chrome   0ms      `<main>.mb-enter` — the masthead names the page first.
-     content  80ms     the grid's panels, in reading order, one 40ms beat
-                       apart. The two-beat hold is what makes the masthead
-                       READ as leading rather than merely co-arriving.
-     accent   400ms    the live dots, last — a pulse that lands before the row
-                       it annotates is a claim with no referent. Opacity only,
-                       120ms, so the whole page is resolved when the last
-                       panel is: --mb-seq-content + 5 x --mb-stagger +
-                       --mb-dur-slow = 560ms, and the accent fade ends inside
-                       that same envelope (400 + 120 = 520ms).
-
-   HOW TO APPLY IT — one of two ways, never a third:
-
-     1. `.mb-enter-grid` on the GRID CONTAINER. Every direct child animates and
-        the stagger is derived from :nth-child, so the page writes one class:
-
-          <div className="mb-enter-grid grid grid-cols-1 gap-4 xl:grid-cols-12">
-            <div className="xl:col-span-7"><StandingsPanel … /></div>
-            …
-          </div>
-
-        This is the form to reach for. Invariant 42 caps the stagger at 6, and
-        here the cap is structural: children 7+ inherit child 6's delay instead
-        of extending the sequence, so a 12-panel grid still finishes in 560ms.
-
-     2. `.mb-enter` + `.mb-stagger-N` by hand, for the rare case where the
-        animating elements are not siblings of one container.
-
-   WHERE IT MUST NOT GO (invariant 42, and the reason the cap exists): table
-   rows, list rows, bracket cells, standings lines, schedule items. Those are
-   DATA. Staggering data implies the rows arrived in that order, which is a
-   claim about the data that is not true, and it delays the reader's access to
-   the last row for no information gained. `.mb-enter-grid` is a grid-container
-   class specifically so it is awkward to misuse this way.
-
-   Under prefers-reduced-motion the entrance is removed outright — see the
-   reduced-motion block at the end of the Matchbook zone.
+   ENTRANCE — chrome -> content -> accent. Apply ONE of two ways:
+   `.mb-enter-grid` on the grid container (stagger derived from :nth-child,
+   capped structurally at 6 so a 12-panel grid still finishes in 560ms), or
+   `.mb-enter` + `.mb-stagger-N` by hand where the animating elements are not
+   siblings. It must NOT go on data — table rows, list rows, bracket cells:
+   staggering data implies the rows arrived in that order. Removed outright
+   under prefers-reduced-motion (see the reduced-motion block).
    --------------------------------------------------------------------------- */
 
 @keyframes mb-enter {
@@ -1547,29 +1018,21 @@ button.mb-panel-link::after,
 .mb-stagger-5 { animation-delay: calc(var(--mb-stagger) * 5); }
 .mb-stagger-6 { animation-delay: calc(var(--mb-stagger) * 6); }
 
-/* The content beat (C13). Every child holds for `--mb-seq-content` — two
-   stagger beats — so the chrome above it demonstrably leads, then the panels
-   arrive in reading order 40ms apart. On a KEYED grid replay (the wizard
-   advancing a step) the same 80ms hold applies; measured beside the step
-   rail's instant ink it reads as the next page being dealt, not as lag. */
+/* The content beat: every child holds for `--mb-seq-content` so the chrome
+   above it demonstrably leads, then the panels arrive in reading order. */
 .mb-enter-grid > *:nth-child(1) { animation-delay: var(--mb-seq-content); }
 .mb-enter-grid > *:nth-child(2) { animation-delay: calc(var(--mb-seq-content) + var(--mb-stagger) * 1); }
 .mb-enter-grid > *:nth-child(3) { animation-delay: calc(var(--mb-seq-content) + var(--mb-stagger) * 2); }
 .mb-enter-grid > *:nth-child(4) { animation-delay: calc(var(--mb-seq-content) + var(--mb-stagger) * 3); }
 .mb-enter-grid > *:nth-child(5) { animation-delay: calc(var(--mb-seq-content) + var(--mb-stagger) * 4); }
-/* The cap. Child 6 and everything after it share one delay, so the sequence is
-   six steps long however many panels the grid holds (invariant 42). */
+/* The cap: child 6 and everything after it share one delay, so the sequence
+   is six steps long however many panels the grid holds. */
 .mb-enter-grid > *:nth-child(n + 6) { animation-delay: calc(var(--mb-seq-content) + var(--mb-stagger) * 5); }
 
-/* The accent beat (C13): live dots arrive LAST, and only inside an entrance
-   context — `:where()` keeps specificity at (0,1,0) so the reduced-motion
-   block's own `.mb-live-dot { animation: none }` further down still wins the
-   tie by order. The fade is opacity only (invariant 40) and `both`-filled, so
-   the dot is simply absent until its beat; the infinite pulse then starts
-   from full ink. A dot that mounts LATE (rows landing after boot) counts its
-   delay from its own mount, which keeps it inside the same arrival grammar
-   instead of popping. Dots outside an entering `<main>` — the event bar, an
-   open dialog — are untouched. */
+/* The accent beat: live dots arrive LAST, and only inside an entrance
+   context. `:where()` keeps specificity at (0,1,0) so the reduced-motion
+   block's `.mb-live-dot { animation: none }` further down still wins the tie
+   by order. `both`-filled, so the dot is simply absent until its beat. */
 @keyframes mb-accent-in {
   from {
     opacity: 0;
@@ -1583,43 +1046,18 @@ button.mb-panel-link::after,
 }
 
 /* ---------------------------------------------------------------------------
-   LIST-TO-DETAIL CONTINUITY (C12) — the same-document view transition
-
-   `/summaries` taps a ledger row and the row's scoreline becomes the Match
-   Report's headline figure. The names are applied TRANSIENTLY by the page
-   (set at click, moved in the update callback, removed on `finished`), so no
-   element carries `view-transition-name` at rest — a standing name creates a
-   stacking context and captures a group on every unrelated transition, and
-   this app has no reason to pay either cost outside the one gesture.
-
-   Three named parts, sequenced chrome -> content -> accent, same grammar as
-   the entrance:
-
-     mb-vt-report  chrome   the report panel's frame, a plain cross-fade over
-                            --mb-dur-base. It finishes first (180ms): the
-                            stock is on the table before the figure lands.
-     mb-vt-score   content  the tapped row's scoreline -> the report hero.
-                            The UA-generated group animation carries it over
-                            --mb-dur-slow (280ms); its old/new images
-                            cross-fade on the same clock.
-     mb-vt-accent  accent   the "Final" kicker under the hero, opacity-in
-                            LAST: delay --mb-seq-content + --mb-dur-base,
-                            done at 260 + 120 = 380ms, inside the content
-                            beat's own 280ms + the UA's finish frame.
-
-   The pseudo-elements animate opacity here and the UA group animates
-   transform plus the snapshot's width/height — those live in the
-   view-transition overlay, not the document, so the FLIGHT moves nothing
-   (measured at 1440: an unrelated panel's rect is byte-identical before,
-   during and after; measured at 390: the panels below the report rise
-   14.87px because the report's own content is 14.87px shorter, and that
-   movement is byte-identical with the API deleted — it is the selection's
-   reflow, which predates C12, not the transition's). Where the API does not exist (Firefox) the page calls
-   `selectMatch` directly and this whole block is inert; under
-   prefers-reduced-motion the page never starts a transition at all, and the
-   reduced-motion block below pins the pseudo-elements dead as the backstop.
-   Each pseudo-element selector stands alone so an engine that cannot parse
-   `::view-transition-*` drops one rule, not a list.
+   LIST-TO-DETAIL CONTINUITY — the same-document view transition on
+   `/summaries` (row scoreline -> report hero). The names are applied
+   TRANSIENTLY by the page (set at click, removed on `finished`): a standing
+   `view-transition-name` creates a stacking context and captures a group on
+   every unrelated transition. Three parts — mb-vt-report (chrome cross-fade),
+   mb-vt-score (the UA group carries the figure), mb-vt-accent (the "Final"
+   kicker, opacity-in last). Where the API does not exist the page calls
+   `selectMatch` directly and this block is inert; under
+   prefers-reduced-motion the page never starts a transition, with the
+   reduced-motion block below as backstop. Each pseudo-element selector stands
+   alone so an engine that cannot parse `::view-transition-*` drops one rule,
+   not a list.
    --------------------------------------------------------------------------- */
 
 @keyframes mb-vt-in {
@@ -1668,7 +1106,7 @@ button.mb-panel-link::after,
 }
 
 /* ---------------------------------------------------------------------------
-   Safe area (GAP-3)
+   Safe area
    --------------------------------------------------------------------------- */
 
 .mb-safe-top {
@@ -1680,30 +1118,17 @@ button.mb-panel-link::after,
 }
 
 /* ---------------------------------------------------------------------------
-   THE LANDSCAPE NAVIGATION GATE (N1)
-
-   One declaration, because it is one rule and it must not be able to disagree
-   with itself. `MatchbookBottomBar` is `lg:hidden` and `[@media(max-height:
-   500px)]:hidden`; a landscape phone matches both, and `MatchbookSidebar` is
-   `lg:` only — so a rotated phone matched every hide and no show, and rendered
-   **0 visible nav elements** at 568x320, 640x360, 667x375, 844x390 and
-   896x414 on every console route.
-
-   `MatchbookLandscapeRail` fills exactly that gap and nothing else:
+   THE LANDSCAPE NAVIGATION GATE — the exact complement of the bottom bar's
+   hiding gates, so a rotated phone always has one nav:
 
      width >= 1024px                  sidebar          rail hidden
      width <  1024px, height >  500px bottom bar       rail hidden
-     width <  1024px, height <= 500px THE RAIL         bar hidden (unchanged)
+     width <  1024px, height <= 500px THE RAIL         bar hidden
 
-   It lives here rather than as a Tailwind arbitrary variant for the reason
-   design language §7.3 gives: a two-condition media query belongs in zone A as
-   a named `.mb-*` rule, where the complement of the bar's gate can be read
-   against the bar's gate. `1023.98px` rather than `1023px` so a fractional
-   viewport width cannot fall between this and Tailwind's `lg` (64rem) and paint
-   neither.
-
-   `display` ONLY. Every other property is a utility on the element, so this
-   rule can never quietly out-rank one of them from outside a layer.
+   `1023.98px` rather than `1023px` so a fractional viewport width cannot fall
+   between this and Tailwind's `lg` and paint neither. `display` ONLY — every
+   other property is a utility on the element, so this unlayered rule can
+   never quietly out-rank one of them.
    --------------------------------------------------------------------------- */
 
 .mb-landscape-rail {
@@ -1717,18 +1142,9 @@ button.mb-panel-link::after,
 }
 
 /* ---------------------------------------------------------------------------
-   Touch targets (GAP-14)
-
-   `.mb-btn-lg` and `.mb-btn-touch` are unconditional, so `MbButton size="lg"` /
-   `size="touch"` and `MbIconButton` meet the 44px floor from P1 onward.
-
-   The blanket coarse-pointer floor below is armed by `data-mb-touch="on"` on
-   `<html>`. W2 sets it in the one P2 commit that also drops `maximumScale`,
-   sets `viewport-fit: cover` and pads every fixed/sticky element — charter H6
-   requires those to land together. It is not armed in P0 because the shipped
-   `.mb-btn` is 38.8px and `.mb-panel-link` 17.3px at 390x844, so arming it here
-   would reflow all six shipped mobile routes and break the P0 contract
-   ("no visual change to shipped screens", charter §1.2 / W1 acceptance 1).
+   Touch targets. `.mb-btn-lg` and `.mb-btn-touch` are unconditional; the
+   blanket coarse-pointer floor below is armed by `data-mb-touch="on"` on
+   `<html>`.
    --------------------------------------------------------------------------- */
 
 .mb-btn-lg {
@@ -1752,7 +1168,7 @@ button.mb-panel-link::after,
 }
 
 /* ---------------------------------------------------------------------------
-   Promoted inline recipes (GAP-10)
+   Promoted inline recipes
    --------------------------------------------------------------------------- */
 
 .mb-row-hover {
@@ -1774,35 +1190,14 @@ button.mb-panel-link::after,
 }
 
 /* ---------------------------------------------------------------------------
-   THE ICON MARK (C4) — geometry here, SHAPE as a named channel
-
-   Measured on /dev/kit: 23 elements carry `.mb-icon-disc` and 4 of them render
-   at `border-radius: 3px`. A class called "disc" was drawing a square roughly
-   one time in six.
-
-   The squares are not a bug. `MbStat` binds its six tones to a two-axis mark —
-   shape (circle = a steady measure, square = wants attention) crossed with
-   weight (hairline / 3px / solid) — precisely so six tones are six readings in
-   a desaturated capture instead of six identical discs, which is charter
-   invariant 13. Removing the squares would break that; the greyscale channel
-   has to stay.
-
-   What was wrong is that the shape lived in an inline `style` in Stat.tsx,
-   fighting an unlayered `border-radius: 999px` it happened to outrank, under a
-   class name that asserted the opposite. So the shape is now a first-class,
-   named property of the mark:
+   THE ICON MARK — geometry here, SHAPE as a named channel (circle = a steady
+   measure, box = wants attention; the shape axis is what keeps six tones
+   distinct in greyscale):
 
      .mb-icon-mark                    geometry, default disc
-     .mb-icon-mark[data-shape="disc"] 999px — a steady measure
-     .mb-icon-mark[data-shape="box"]  3px   — wants attention
+     .mb-icon-mark[data-shape="box"]  3px
 
-   `.mb-icon-disc` is kept as an exact alias of the disc shape, which is what
-   its five call sites mean; §3.3 reserves 999px for the live dot, the account
-   disc, an icon disc and a swatch, and every genuine disc here is one of those.
-   HANDOFF: `Stat.tsx` should drop `borderRadius` from `markStyle()` and render
-   `className="mb-icon-mark" data-shape={shape === "circle" ? "disc" : "box"}`.
-   Until it does, its inline radius still wins and the rendering is unchanged —
-   this block is additive and breaks nothing.
+   `.mb-icon-disc` is kept as an exact alias of the disc shape.
    --------------------------------------------------------------------------- */
 
 .mb-icon-mark,
@@ -1821,26 +1216,13 @@ button.mb-panel-link::after,
 }
 
 /* ---------------------------------------------------------------------------
-   THE METER (G22) — rule-thin progress track. Not a rounded <Progress>.
-
-   The fill used to be `width: N%` with `transition: width`. That was the LAST
-   layout-animating property in the system, which charter invariant 40 forbids:
-   `width` is a LayoutUnit, so every frame of the transition ran layout, paint
-   and composite for the whole subtree, and a meter that sits in a table row —
-   which is where `TeamReadinessPanel` puts one per team — reflowed its row on
-   every tick. `transform` and `opacity` are the only two properties a
-   compositor can animate without touching layout, so the fill is a full-width
-   bar scaled on its X axis instead.
-
-   The fraction arrives as `--mb-meter-fill`, a UNITLESS number in 0–1, because
-   `scaleX()` takes a number and a `calc(N% / 100%)` round-trip is not portable.
-   `transform-origin: left` pins the growth to the reading edge, and the track's
-   own `overflow: hidden` still clips it, so nothing about the painted result
-   changes — only what the browser has to do to get there.
-
-   `will-change` is deliberately absent: a meter is not continuously animated
-   and a permanent compositor layer per row costs more than the one promotion
-   the transition triggers.
+   THE METER — rule-thin progress track. The fill is a full-width bar scaled
+   on its X axis, never an animated `width` (a layout-animating property
+   reflows the row on every tick). The fraction arrives as `--mb-meter-fill`,
+   a UNITLESS 0-1 number, because `scaleX()` takes a number and a
+   `calc(N% / 100%)` round-trip is not portable. `will-change` is deliberately
+   absent: a permanent compositor layer per row costs more than the one
+   promotion the transition triggers.
    --------------------------------------------------------------------------- */
 .mb-meter {
   display: block;
@@ -1862,7 +1244,7 @@ button.mb-panel-link::after,
 }
 
 /* ---------------------------------------------------------------------------
-   Dialogs and sheets (GAP-1)
+   Dialogs and sheets
    Navy wash, never a blur. Radius 4px, 4px navy top border, one panel shadow.
    --------------------------------------------------------------------------- */
 
@@ -2060,9 +1442,7 @@ button.mb-panel-link::after,
 }
 
 /* ---------------------------------------------------------------------------
-   Tabs (GAP-5)
-   The horizontal mirror of .mb-nav-item: coral-deep label + a bright coral 3px
-   bottom border.
+   Tabs — the horizontal mirror of .mb-nav-item.
    --------------------------------------------------------------------------- */
 
 .mb-tabs {
@@ -2076,7 +1456,7 @@ button.mb-panel-link::after,
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px; /* was 0.4rem = 6.4px — G23 */
+  gap: 6px;
   min-height: 44px;
   padding: 0.5rem 1rem;
   margin-bottom: calc(-1 * var(--mb-rule-edge));
@@ -2084,12 +1464,8 @@ button.mb-panel-link::after,
   font-family: var(--mb-display-font);
   font-size: 0.85rem;
   font-weight: 600;
-  /* Inactive tabs are MUTED, not navy. With the coral ink gone from the active
-     tab (see below), ink weight is what separates the two states at a glance
-     and the 3px rail is what confirms it. Muting the inactive side rather than
-     bolding the active one keeps both labels at 600, so switching tabs cannot
-     reflow the strip. --mb-ink-muted is 4.82:1 on paper and 5.25:1 on bright:
-     AA at any size, so a resting tab is never hard to read. */
+  /* Inactive tabs are MUTED, not bold-vs-regular: muting the inactive side
+     keeps both labels at 600, so switching tabs cannot reflow the strip. */
   color: var(--mb-ink-muted);
   border-bottom: var(--mb-rule-accent) solid transparent;
   transition: color var(--mb-dur-base) var(--mb-ease-in-out),
@@ -2104,21 +1480,16 @@ button.mb-panel-link::after,
 }
 
 /* Same split as .mb-nav-item: the 3px underline is the coral (job 2, the
-   selection rail in its horizontal orientation); the label is the ink.
-   The coral-deep label this used to carry is what made a FOCUSED INACTIVE tab
-   indistinguishable from the active one — focus was also coral, so tabbing
-   along the strip appeared to change the selection. Focus is navy now and the
-   active mark is coral, so the two states can no longer be confused. */
+   selection rail in its horizontal orientation); the label is the ink. */
 .mb-tab[data-active="true"] {
   color: var(--mb-navy);
   border-bottom-color: var(--mb-coral);
 }
 
 /* ---------------------------------------------------------------------------
-   Form controls (GAP-6)
-   Radii stay 4/3/2px — the radio is a squared ballot box carrying an inset
-   coral mark, because §3.3 reserves 999px for the live dot, account disc,
-   icon discs and colour swatches.
+   Form controls
+   Radii stay 4/3/2px — the radio is a squared ballot box: 999px is reserved
+   for the live dot, account disc, icon discs and colour swatches.
    --------------------------------------------------------------------------- */
 
 .mb-field {
@@ -2176,15 +1547,9 @@ button.mb-panel-link::after,
     border-color var(--mb-dur-fast) var(--mb-ease-out);
 }
 
-/* THE "ON" STATE IS INK, NOT ACCENT.
-   Checked boxes, selected radios and live switches were coral-deep. A settings
-   panel or a filter sheet renders a dozen of them at once, which made "on" the
-   single biggest multiplier of coral on any screen — invariant 15 allows coral
-   once, and a form could put fourteen of it on the page.
-   Navy is also the truer metaphor: a filled-in ballot box on printed stock is
-   inked, not highlighted. The mark inside stays paper-bright at 12.84:1 (it was
-   4.7:1 on coral-deep), so the tick and the knob are now the highest-contrast
-   marks in the form rather than the lowest. */
+/* The "on" state is INK, not accent: a form renders a dozen at once, and
+   coral is allowed once per screen. A filled-in ballot box on printed stock
+   is inked, not highlighted. */
 .mb-check:checked {
   background: var(--mb-navy);
   border-color: var(--mb-navy);
@@ -2318,11 +1683,10 @@ button.mb-panel-link::after,
   box-shadow: inset 0 0 0 2px var(--mb-paper-bright), inset 0 0 0 4px var(--mb-navy);
 }
 
-/* Wraps instead of squeezing; the navy background shows through the gaps as the
-   dividing rules, so a wrapped second row is still ruled correctly. The gap is
-   the edge tier — `gap` is a LayoutUnit and honoured fractional, so at 1.5px it
-   was painting HEAVIER than every border in the system it was meant to sit
-   under. Holding it to --mb-rule-edge puts the hierarchy back the right way up. */
+/* Wraps instead of squeezing; the navy background shows through the gaps as
+   the dividing rules, so a wrapped second row is still ruled correctly. The
+   gap is held to --mb-rule-edge — `gap` is a LayoutUnit and honours fractional
+   values, so anything wider paints heavier than the borders it sits under. */
 .mb-segmented {
   display: grid;
   gap: var(--mb-rule-edge);
@@ -2336,7 +1700,7 @@ button.mb-panel-link::after,
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px; /* was 0.4rem = 6.4px — G23 */
+  gap: 6px;
   min-width: 0;
   min-height: 44px;
   padding: 0.5rem 0.75rem;
@@ -2362,7 +1726,7 @@ button.mb-panel-link::after,
 }
 
 /* ---------------------------------------------------------------------------
-   Scoring console (GAP-7)
+   Scoring console
    --------------------------------------------------------------------------- */
 
 .mb-console {
@@ -2395,22 +1759,10 @@ button.mb-panel-link::after,
   transition: background-color var(--mb-dur-fast) var(--mb-ease-out);
 }
 
-/* The press lives in "THE PRESS" above, with the rest of the family. This class
-   was the only pressed state in the entire stylesheet; it is now one of eight,
-   and it moved up so the tap column inks at --mb-tint-press like every other
-   flush surface instead of at --mb-tint-1, which is the row-HOVER wash and was
-   a weaker press than a hover elsewhere in the system. */
+/* The press lives in "THE PRESS" above, with the rest of the flush family. */
 
-/* THE LEADER NOTCH IS TEAL, AND THE CLASS SAYS SO.
-   Design language §1.2 already maps "rank #1" to --mb-teal, and a standings
-   table draws exactly that: a teal rail on row one. The scoring console drew
-   the same fact — who is ahead — in coral, so "leading" was teal in a table and
-   coral on a scoreboard, and coral simultaneously meant "the primary action".
-   Teal now carries leading in both places.
-   The class was also named for its colour, which is why it could drift: renamed
-   to .mb-notch-lead, after the job. Measured zero consumers in src/ at the time
-   of the rename (the console is W5/P3a and unbuilt), so nothing breaks.
-   --mb-teal is 3.80:1 on --mb-paper-bright, over the 3:1 floor for a 3px mark. */
+/* The leader notch is TEAL: "rank #1 / leading" is teal everywhere (the
+   standings rail draws the same fact), and coral means the primary action. */
 .mb-console-column[data-leading="true"],
 .mb-notch-lead {
   box-shadow: inset 0 var(--mb-rule-accent) 0 var(--mb-teal);

@@ -1,12 +1,7 @@
 "use client";
 
-/* ===========================================================================
-   THE CREATE-COMPETITION STATE MACHINE
-
-   This file owns wizard state, draft persistence and the one mutation
-   (`createCompetition`). It contains no JSX and no icons — `FORMAT_META` owns
-   those now (charter H14), which is why it is a `.ts`.
-   =========================================================================== */
+/* The create-competition state machine: wizard state, draft persistence, and
+   the one mutation. No JSX — `FORMAT_META` owns icons, hence a `.ts`. */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -33,12 +28,8 @@ import {
 
 /* -------------------------------------------------------------- the rules */
 
-/**
- * Everything the wizard *decides* lives in `./rules` — a module with no React,
- * no router and no context import, so the format matrix, the bye arithmetic,
- * the court clamp and the `isCustomised` predicate are testable without
- * mounting anything. Re-exported here so call sites have one import.
- */
+/* Everything the wizard *decides* lives in `rules` (React-free, testable
+   without mounting); re-exported so call sites have one import. */
 export * from "@/components/competitions/new/rules";
 
 /* -------------------------------------------------------------- draft store */
@@ -165,30 +156,9 @@ export const useNewCompetitionPage = () => {
 
   /* ----------------------------------------------------------- the gate */
 
-  /**
-   * THE PRIMARY IS NEVER DISABLED, ON ANY STEP.
-   *
-   * It used to be, on steps 1 and 2, and the treatment was the defect: a
-   * `disabled` `MbButton variant="coral"` is `disabled:opacity-40` over a
-   * filled coral ground, which measured `rgb(201,53,31)` at `opacity: 0.4` —
-   * a washed-out pink that reads as broken rather than as "not yet". Beside it
-   * sat a full-contrast outlined "Cancel" measuring 166px against the
-   * primary's 148px, so on the app's first-run screen the loudest, widest
-   * control in the commit bar was the way OUT of the task.
-   *
-   * Step 3 already solved this the honest way and said so in a comment: keep
-   * the control live, and make pressing it say what is missing and put the
-   * user in front of it. This extends that to the other two. The gate is now:
-   *
-   *   - `canAdvance` still exists — the bar's status line reads from it
-   *     ("Choose a format to continue") so the reason is on screen BEFORE the
-   *     press, not only after it.
-   *   - Pressing a blocked primary sets `gateAskedAt`, which renders a notice
-   *     at the top of the panel that owns the gate, and moves focus to that
-   *     panel (`[data-wizard-gate]`), which scrolls it into view on a phone.
-   *   - The notice disappears the instant the gate is satisfied, because it is
-   *     derived from `canAdvance` rather than cleared by hand.
-   */
+  /* The primary is never disabled: `canAdvance` feeds the status line (the
+     reason BEFORE the press); pressing a blocked primary sets `gateAskedAt`,
+     which raises the gate notice and moves focus to `[data-wizard-gate]`. */
   const canAdvance =
     step === "format"
       ? Boolean(selectedFormat)
@@ -198,13 +168,8 @@ export const useNewCompetitionPage = () => {
 
   const [gateAskedAt, setGateAskedAt] = useState<WizardStep | null>(null);
 
-  /**
-   * Empty until the user presses a primary that cannot move, then the reason.
-   *
-   * Derived, never cleared by hand: `canAdvance` is in the expression, so the
-   * notice disappears the instant the gate is satisfied and cannot be left
-   * behind by a code path that forgot to reset it.
-   */
+  /* Derived, never cleared by hand — `canAdvance` is in the expression, so
+     the notice vanishes the instant the gate is satisfied. */
   const gateMessage =
     gateAskedAt !== step || canAdvance
       ? ""
@@ -214,15 +179,8 @@ export const useNewCompetitionPage = () => {
           ? "There are no teams in this account yet. Create some below and they are entered automatically."
           : `${validation.message || "Select the teams that will take part"} before you can continue.`;
 
-  /**
-   * Focus the panel that owns the gate.
-   *
-   * `[data-wizard-gate]` is a `tabIndex={-1}` wrapper rendered by whichever
-   * step is on screen — exactly one exists at a time — so this needs no
-   * knowledge of either step's internals, and moving focus there both scrolls
-   * it into view and puts a screen reader's cursor on the notice that has just
-   * appeared inside it.
-   */
+  /* `[data-wizard-gate]` is a tabIndex={-1} wrapper; exactly one exists at a
+     time, so this needs no knowledge of a step's internals. */
   const focusGate = useCallback(() => {
     if (typeof document === "undefined") return;
     document.querySelector<HTMLElement>("[data-wizard-gate]")?.focus();
@@ -330,15 +288,9 @@ export const useNewCompetitionPage = () => {
 
   /* --------------------------------------------------------------- submit */
 
-  /**
-   * `createCompetition` returns an id that is only correct in shared mode — in
-   * local mode `appReducer` mints its own inside the reducer and the returned
-   * one is thrown away (`AppContext.tsx` vs `appReducer.ts` `CREATE_COMPETITION`).
-   * `AppContext` is W8's file, so the wizard identifies its own creation by
-   * diffing the competition list instead of trusting the return value. That
-   * works in both modes and is what lets the flow land on the competition
-   * rather than on the list.
-   */
+  /* `createCompetition`'s returned id is only correct in shared mode — local
+     mode's reducer mints its own — so the wizard identifies its creation by
+     diffing the competition list, which works in both modes. */
   const pending = useRef<{ before: Set<string>; fallbackId: string } | null>(null);
 
   const handleCreate = useCallback(() => {
@@ -347,11 +299,8 @@ export const useNewCompetitionPage = () => {
     const trimmedName = competitionName.trim();
     if (!trimmedName) {
       setNameError("Give the competition a name before creating it");
-      /* The commit control stays ENABLED on the details step precisely so this
-         branch is reachable: the old wizard disabled it on a blank name, which
-         left `nameError` dead except through the Enter key and gave the user a
-         greyed-out button with no stated reason. Focus follows the message so
-         the fix is one keystroke away. */
+      /* The commit control stays enabled so this branch is reachable; focus
+         follows the message. */
       if (typeof document !== "undefined") {
         document.getElementById("competition-name")?.focus();
       }

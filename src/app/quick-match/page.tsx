@@ -36,13 +36,6 @@ import { TEAM_CREATE_LABEL } from "@/components/dialogs/team-form/labels";
 
 /* ------------------------- Small building blocks ------------------------- */
 
-/**
- * `MbSelect`, not a bare `.mb-select-native`. The hand-rolled control measured
- * 42.4px tall at 390px — under the 44px floor invariant 33 sets — and carried
- * its own absolutely-positioned chevron, which is the third copy of a chevron
- * the kit component already draws. `MbSelect size="md"` is 48px and pins its
- * own `min-height`, so the field cannot drift under the floor again.
- */
 const TeamSelect = ({
   label,
   value,
@@ -97,17 +90,8 @@ const ScorePreviewSide = ({
     {summary ? (
       <>
         <Crest team={summary.team} size={64} />
-        {/* 0.95rem/700 is `display/panel-title`'s pair, and every `<Panel>`
-            head on this screen declares 0.05em for it. Left undeclared this
-            fell through to `.matchbook-display`'s 0.02em, so the pair carried
-            two trackings at once (rubric 1.3).
-
-            `MbTeamName`, not a raw span (L1). The span had neither `min-w-0`
-            nor any overflow control, so its min-content floor was its longest
-            word: the preview reserves 166px for two 60px numerals and a VS
-            pip, and at 320 that leaves 40px a side — which the raw span
-            answered by pushing the panel, not by eliding. The name now elides
-            from the middle inside whatever the stacked cut gives it. */}
+        {/* `MbTeamName`, not a raw span — a raw span's min-content floor is
+            its longest word, and it pushes the panel instead of eliding. */}
         <MbTeamName
           name={summary.team.name}
           className="matchbook-display max-w-full text-[0.95rem] mb-track-title font-bold"
@@ -145,15 +129,8 @@ const FormStatRow = ({
   </div>
 );
 
-/**
- * The result mark on a finished quick match. It used to be a 10px coloured
- * disc with a `title` — information carried by hue alone (HF-10) whose only
- * other channel was a tooltip no touch device can open (HF-12).
- *
- * Now it is the badge system's own win/loss vocabulary: a FILLED square for a
- * home win, a HOLLOW one for an away win, so the state survives a greyscale
- * capture, plus a real sentence for a screen reader. Same 11px footprint.
- */
+/* Result mark: a FILLED square for a home win, a HOLLOW one for an away win —
+   the state survives greyscale — plus a real sentence for a screen reader. */
 const ResultMark = ({ homeWon }: { homeWon: boolean }) => (
   <span className="justify-self-end">
     <span className="sr-only">{homeWon ? "Home team won" : "Away team won"}</span>
@@ -171,35 +148,11 @@ const ResultMark = ({ homeWon }: { homeWon: boolean }) => (
 
 /* --------------------------------- Page ---------------------------------- */
 
-/* ===========================================================================
-   QUICK MATCH
-
-   THE PRIMARY LIVES IN THE BOTTOM COMMIT BAR (design language §8). This
-   screen's whole job is one commit — Start Match — and the masthead put that
-   verb at 0.20 of the viewport height at 390x844: the top of the screen, on
-   the surface a thumb pays for the bottom of. §8 names the answer ("any
-   screen whose main job is a single repeated action puts that action in an
-   `MbActionBar`, not in the masthead") and this page now applies it the way
-   `/competitions/new` and the scoring console already do: one sticky bar,
-   riding `--mb-toast-offset` above the fixed tab bar, standing on the shared
-   `MB_VIEWPORT_FILL` column so it sits at the viewport bottom even on an
-   account too new to fill the screen. On an account with fewer than two teams
-   the SAME slot carries the move that IS possible — Add Your First / Another
-   Team, navy, `/teams` — exactly as the masthead variant it replaces did.
-
-   Coral budget: the bar's Start Match is the screen's one coral fill. The
-   rail key takes `outline-navy` and points at the team directory — a real
-   destination rather than the self-link the rail used to carry.
-
-   THE VERB EXISTS ONCE (C17). The Scoreboard Preview used to carry its own
-   full-width navy "Start Scoring" — the same commit as the bar's Start Match,
-   dressed differently, kept in step by hand, and disabled or enabled in two
-   places at once. §8 gives a single-commit screen ONE commit control and the
-   bar owns it; the preview is now purely the preview (what the scoreboard
-   will look like), and the sentence that used to justify the second button —
-   "select both teams" — stays beside the preview as prose, naming the bar's
-   verb rather than a departed twin's.
-   =========================================================================== */
+/* QUICK MATCH. The screen's one commit (Start Match) lives in the sticky
+   bottom bar, standing on the shared viewport-fill column; on an account with
+   fewer than two teams the same slot carries the move that IS possible. The
+   bar's Start is the screen's one coral fill, and the verb exists ONCE — the
+   preview panel carries no control. */
 
 export default function QuickMatchPage() {
   const router = useRouter();
@@ -239,20 +192,10 @@ export default function QuickMatchPage() {
   const startScoring = isGuest ? () => router.push("/match/guest") : handleStartMatch;
   const startEnabled = isGuest || canStart;
 
-  /* A quick match needs two sides to name, and a signed-in account with fewer
-     than two teams cannot start one however loud the button is. The commit
-     bar used to inherit a DISABLED coral "Start Match" from the masthead on
-     exactly this account — the loudest control on the screen, unusable, on
-     the screen a new user reaches from the rail on every other page. The slot
-     instead carries the move that IS possible, in navy, derived from the
-     count exactly as `/`'s primary is. */
+  /* Under two teams the bar carries the move that IS possible, never a
+     disabled coral Start. */
   const needsTeams = !isGuest && availableTeams.length < 2;
 
-  /* THE ONE COMMIT, in the bar's primary slot (§8) — and since C17 the ONLY
-     control carrying this verb on the screen. While it is disabled the
-     Scoreboard Preview prints "Select both teams to start the match." beside
-     the two empty pickers, so the reason the bar is quiet is stated where the
-     fix is made. */
   const primaryAction: MbAction = needsTeams
     ? {
         label:
@@ -269,19 +212,14 @@ export default function QuickMatchPage() {
         disabled: !startEnabled,
       };
 
-  /* Arms at TWO, as `/` and `/competitions` do. On a new account both are mute
-     at once; on a populated one only Team Form is until both sides are picked,
-     and that single `PanelEmpty` is the rubric's anchor rather than a
-     compromise with it. Guests never render either panel, so the cut cannot
-     fire for them. */
+  /* Arms at two, as `/` and `/competitions` do; guests never render either
+     panel, so the cut cannot fire for them. */
   const collapsed = !isGuest && data.muteSections.length >= 2;
   const kept = (key: MbQuickMatchSection) =>
     !collapsed || !data.muteSections.includes(key);
 
-  /* Setup (7) and Preview (5) close the first row between them, so withholding
-     the preview leaves the index closing it instead — 5 columns — and
-     withholding both strips with the preview present leaves a flush row, which
-     is what `mbClosingSpan` answers with a full row of its own. */
+  /* Withholding the preview leaves the index closing the first row instead —
+     `mbClosingSpan` answers a flush row with a full row of its own. */
   const keptSpans = [
     7,
     kept("preview") && 5,
@@ -305,19 +243,14 @@ export default function QuickMatchPage() {
           </>
         ),
         shortTitle: "Quick Match",
-        /* `#3`, not `3`. The badge is the ORDINAL of the match being set up and
-           it was printing a bare figure over the word MATCH, so a brand-new
-           account — nothing played, nothing scheduled — was headed `1 MATCH`.
-           A count and a position are different claims and only one of them has
-           a plural; the hash says which this is. */
+        /* `#3`, not `3` — the badge is an ordinal, not a count, and the hash
+           says which. */
         badge: isGuest
           ? undefined
           : { value: `#${data.nextMatchNumber}`, label: "Match" },
         dateLine: data.dateLine,
         subLine: data.subLine,
-        /* No `actions`. The screen's one verb is in the commit bar below — a
-           masthead copy would be a second control for the same commit, kept in
-           step by hand, which is what the wizard's note 2 exists to stop. */
+        /* No `actions` — the screen's one verb is in the commit bar below. */
       }}
     >
       <div ref={columnRef} className={`flex flex-col gap-4 ${MB_VIEWPORT_FILL}`}>
@@ -364,26 +297,10 @@ export default function QuickMatchPage() {
               </div>
             ) : (
               <div className="flex flex-1 flex-col gap-4 p-5">
-                {/* THE TWO PICKERS STACK (L1).
-
-                    Side by side, the row is two selects, a 48px key and two
-                    gaps. At 320 the panel gives it 246px, so each select is
-                    99px — 75px of text once `.mb-select-native`'s padding and
-                    its chevron are paid — and both painted "SELE…". The two
-                    controls that name the two sides of the match could not
-                    say either side's name, or the word asking for one.
-
-                    The threshold is the width at which a select can still
-                    paint `NAME_FLOOR` characters: 8 characters of Oswald at
-                    the 1rem mobile input floor is 66px, plus 24px of padding
-                    and ~20px of chevron reserve = 110px a side, plus the 48px
-                    key and two 12px gaps = 292. 380 is that with a real
-                    roster's headroom, and it keeps 320, 360, 390 and 414 all
-                    on the stacked cut where each select gets the full 246.
-
-                    Its own container, not the viewport: this panel is
-                    `xl:col-span-7`, so the same 1280px screen that gives it
-                    770px gives the Overview's equivalent 322px. */}
+                {/* The pickers stack below a 380px container width — the
+                    point where a select can still paint eight characters
+                    beside the swap key. A container query, not the viewport:
+                    the panel's own width decides. */}
                 <div className="@container">
                   <div className="flex flex-col items-stretch gap-3 @min-[380px]:flex-row @min-[380px]:items-start @min-[380px]:gap-4">
                     <TeamSelect
@@ -393,12 +310,9 @@ export default function QuickMatchPage() {
                       teams={availableTeams}
                       onChange={handleHomeTeamSelect}
                     />
-                    {/* `mt-9` lines the key up with the two 48px selects beside
-                        it, not with the crests above them — so it is scoped to
-                        the cut where there IS a beside. Stacked, the key is a
-                        centred divider between the two pickers and needs no
-                        offset. `aria-label` because `title` alone names a
-                        control only for a mouse. */}
+                    {/* `mt-9` lines the key up with the selects, scoped to the
+                        side-by-side cut. `aria-label` because `title` alone
+                        names a control only for a mouse. */}
                     <button
                       type="button"
                       title="Swap home and away teams"

@@ -73,16 +73,9 @@ export const Crest = ({ team, size = 26 }: { team: MbTeam; size?: number }) => (
 /** Named crest steps. Numeric sizes stay supported — `md` is the historic default. */
 export type TeamMarkSize = "sm" | "md" | "lg";
 
-/* Each step carries its TRACKING as well as its size, and that is the single
-   highest-count fix in the type sweep. `TeamMark` composes
-   `matchbook-display font-semibold ${nameClass}` — the size arrives from here
-   while the class string is written there, so no call site ever declared the
-   rung and every team name in the app fell through to `.matchbook-display`'s
-   0.02em default. Measured at 1440 that was 358 rendered nodes reading 0.02em
-   at 0.72rem/600 against `.mb-panel-link`'s 0.04em at the same step — the
-   largest single (size, weight) tracking collision on the screen, from one
-   two-line map. `sm` is 0.72rem, whose rung `.mb-panel-link` pins to 0.04em;
-   `md` and `lg` are 0.82/0.9rem, whose rung is the 0.02em base. */
+/* Each step carries its TRACKING as well as its size, so every team name in
+   the app lands on the rung for its size instead of falling through to
+   `.matchbook-display`'s default. */
 const TEAM_MARK_STEPS: Record<TeamMarkSize, { crest: number; name: string }> = {
   sm: { crest: 18, name: "text-[0.72rem] mb-track-link" },
   md: { crest: 24, name: "text-[0.82rem] mb-track-display" },
@@ -90,63 +83,21 @@ const TEAM_MARK_STEPS: Record<TeamMarkSize, { crest: number; name: string }> = {
 };
 
 /**
- * How the name behaves when the column is narrower than the name.
- *
- * The single-line default is `MbTeamName`, not `truncate`. Both paint one line
- * with one ellipsis; `MbTeamName` puts the ellipsis in the MIDDLE so the last
- * token survives. That is the F15 fix and it belongs here rather than at three
- * call sites: measured at 1440 on `/competitions/s-se-13`, end-truncation
- * rendered "Wolverhampton Wanderers Athletic Club B" and "…Club C" as the same
- * string in the bracket (93px box), the schedule row (188px) and the standings
- * cell (162px) — three surfaces on which two different teams were one team.
- *
- * `wrap` stays for the places that are *about* the identity — the scoreboard —
- * where a taller block beats any ellipsis at all: "Northwest Kalamazoo
- * Thunderhawks Academy" and "Northside Community Volleyball Association" share
- * no trailing token, so no elision saves them and only the full name does.
- *
+ * The single-line default is `MbTeamName`, not `truncate`: it puts the
+ * ellipsis in the MIDDLE so the last token survives — end-truncation renders
+ * "…Club B" and "…Club C" as the same string. `wrap` stays for surfaces that
+ * are ABOUT the identity (the scoreboard), where only the full name works.
  * `anywhere`, not `break-word`: only `anywhere` also shrinks min-content, and
- * these names sit in `1fr` grid cells that are sized by their longest word.
+ * these names sit in `1fr` grid cells sized by their longest word.
  */
 const WRAP_NAME = "[overflow-wrap:anywhere]";
 
-/* ---------------------------------------------------------------------------
-   THE MARK'S OWN CEILING (R2)
-
-   `min-w-0` says "I may shrink". It does not say "I may not be wider than my
-   box", and those are different promises — `min-width` sets a FLOOR, and the
-   thing that was breaking pages is a CEILING that nobody had written.
-
-   A `truncate` box's min-content size is its whole string: `white-space:
-   nowrap` is unbreakable and no `overflow` value lowers a block's intrinsic
-   size. So `MbTeamName`'s min-content is the full name, and a mark that is
-   `justify-self: start` / `end` in a grid area is sized `fit-content` =
-   `min(max-content, max(MIN-CONTENT, area))` — which for a long name is
-   min-content, i.e. the whole name, whatever the area says. Measured on
-   `/quick-match` at 320 with a 39-character roster:
-
-     Recent Quick Matches row  grid area 59.6px, TeamMark 280.9px
-                               (min-content 280.9, so fit-content never bit)
-     row                       286px wide, 361px of content
-     document                  documentElement.scrollWidth 378 vs 320
-     bottom nav                stretched to 378: 0px of the 57px bar visible,
-                               all five cells failing `elementFromPoint`
-
-   `max-w-full` is the ceiling. Percentages resolve against the containing
-   block, which is the grid area or the flex line the mark was handed, so the
-   used width is clamped to the box even when the intrinsic floor is not — and
-   the elision inside then has a reason to fire. Measured after, same viewport
-   and roster: 320 vs 320, bar 57px, five of five cells hittable.
-
-   It belongs HERE and not at the call sites, because "a team mark is never
-   wider than the box it is given" is a property of the mark. The three call
-   sites that hit this — `/quick-match`'s results row, `/`'s scoreline, the
-   directory — had each been patched separately and a fourth was one long name
-   away.
-
-   It is inert wherever the mark already fits, which is every width above a
-   phone: `max-width` only ever removes pixels a box was not entitled to.
-   --------------------------------------------------------------------------- */
+/* The mark's own ceiling. `min-w-0` only sets a floor; a `truncate` box's
+   min-content is its whole string (`nowrap` is unbreakable), so a
+   `justify-self` mark in a grid area sizes to the full name whatever the area
+   says — wide enough to stretch the document and push the bottom nav off
+   screen. `max-w-full` clamps the used width to the containing block, giving
+   the elision a reason to fire; inert wherever the mark already fits. */
 const MARK_CEILING = "max-w-full";
 
 export const TeamMark = ({
@@ -250,56 +201,18 @@ export const TeamMark = ({
 };
 
 /* ---------------------------------------------------------------------------
-   THE FORM GUIDE
-
-   ONE device, because there was never a second thing to say. The app used to
-   draw a W/L run two ways: `FormSquares`, an 11x11 block with no letterform,
-   and `FormLetters`. Measured on the running app:
-
-     FormSquares  W `--mb-green`      relative luminance 0.186
-                  L `--mb-red`                           0.171   → 1.07:1
-     FormLetters  W `--mb-green-ink`                     0.147
-                  L `--mb-red`                           0.171   → 1.12:1
-
-   1.07:1 is one flat grey. The square carried no letter, no border difference
-   and no `title`, so on a desaturated capture of `/teams` the whole Status
-   column read as an identical run of blocks — invariant 13, and the most
-   repeated status device in the app. The letters cut was barely better: the
-   two grounds are 1.12:1 apart, so a 9.28px letterform was the entire second
-   channel.
-
-   A result now differs THREE ways at once, none of them hue:
-
-     FILL vs VOID   W is a solid cell, L a ruled outline on bright paper. The
-                    two grounds are 0.147 vs 0.960 — 5.13:1 — so the run reads
-                    as a rhythm of dark and light blocks in greyscale, scanned
-                    rather than read. That is the property `FormSquares`
-                    claimed and never had, and it is the same filled/hollow
-                    vocabulary `ResultMark` on `/quick-match` already ships.
-     LETTERFORM     W and L, at the 9.28px/700 the letters cut already set.
-     WORDS          an `sr-only` sentence naming the run in order, because a
-                    strip of one-letter spans is not a sentence to a screen
-                    reader — it is read out "W L L W W".
-
-   Ink is measured against the ground it is actually on, not the page behind
-   it: `--mb-paper-bright` on `--mb-green-ink` is 5.13:1, `--mb-red` on
-   `--mb-paper-bright` is 4.58:1. Both clear the 4.5:1 floor this size demands,
-   and the L cell states its own ground rather than inheriting it, because on
-   `--mb-paper` the same red would measure 4.20:1 and fail.
-
-   Both cells carry a 1px border — the W's is its own fill — so the two states
-   are the same 14x14 box and a W→L swap moves nothing.
+   THE FORM GUIDE — one device. A result differs three ways at once, none hue:
+   FILL vs VOID (W solid, L ruled outline — survives greyscale), the W/L
+   letterform, and an sr-only sentence naming the run in order (a strip of
+   one-letter spans reads out "W L L W W"). The L cell states its own ground
+   rather than inheriting it: the same red fails 4.5:1 on `--mb-paper`. Both
+   cells carry a 1px border — the W's is its own fill — so the two states are
+   the same 14x14 box and a W→L swap moves nothing.
    --------------------------------------------------------------------------- */
 
-/* `display/badge-label`'s SIZE (0.6rem — it was 0.58rem, which is not a step)
-   but not its tracking, and that is the numeral rule one level down.
-   `globals.css` declares `letter-spacing: normal` on `.mb-score-box`,
-   `.mb-stepper-value` and `.mb-numeral` because tracking is added after the
-   LAST glyph as well as between glyphs, so a single centred character in a
-   fixed reserve is pushed off its own centre by the whole letter-space. A W in
-   a 14px cell at the badge rung's 0.22em carries 2.11px of trailing air and
-   sits 1.05px left of centre — 7% of the mark, five times across a form run.
-   This is a MARK, not a word, and the ladder tracks words. */
+/* Badge size but numeral (normal) tracking: tracking is added after the LAST
+   glyph too, so a single centred character in a fixed reserve is pushed off
+   its own centre by the whole letter-space. This is a mark, not a word. */
 const FORM_CELL =
   "matchbook-display inline-flex h-[14px] w-[14px] items-center justify-center rounded-[2px] border text-[0.6rem] mb-track-numeral font-bold";
 
@@ -329,11 +242,7 @@ export const FormLetters = ({
   /**
    * Reserve the width of `slots` results so a table column keeps one width
    * whatever the run length. A *reservation*, not padding: an unplayed match
-   * draws nothing at all. `FormSquares` used to paint `slots` blank cells, and
-   * its default was eight against a `recentForm()` that returns at most five —
-   * three permanently dead cells in every row of every form column in the app.
-   * Runs are right-ranged inside the reservation, which is what
-   * `MbStandingsTable` already does with its own 78px box (= `slots={5}`).
+   * draws nothing at all, and runs are right-ranged inside it.
    */
   slots?: number;
 }) => (
@@ -361,19 +270,13 @@ export const FormLetters = ({
 );
 
 /**
- * @deprecated There is no separate square cut any more — this IS `FormLetters`,
- * and every call site in `panels.tsx` / `teamPanels.tsx` now says so. The alias
- * survives for one caller outside this slice,
- * `components/competitions/new/TeamsStep.tsx`, which passes `slots={5}` and
- * gets the identical render. Fold it in when that file is next opened.
+ * @deprecated This IS `FormLetters`. The alias survives for one caller,
+ * `components/competitions/new/TeamsStep.tsx`; fold it in when that file is
+ * next opened.
  */
 export const FormSquares = FormLetters;
 
-/**
- * In-panel state tones. `MbEmptyState` covers the page-level equivalent;
- * `PanelError` / `PanelOffline` / `PanelDenied` are retired in favour of these
- * (charter D-7, Appendix B).
- */
+/** In-panel state tones. `MbEmptyState` covers the page-level equivalent. */
 export type PanelEmptyTone =
   | "empty"
   | "notfound"
@@ -396,13 +299,10 @@ export interface MbStateToneMeta {
 }
 
 /**
- * One tone table for both scales. `MbEmptyState` imports this table rather than
- * restating it, so the page-level and in-panel cuts of a state cannot drift into
- * two different glyphs or two different words for one concept.
- *
- * `empty` stays iconless and unlabelled — design language §5.7 keeps ordinary
- * empty states plain. The five failure tones name themselves in words and mark
- * themselves with a glyph, so the state never rests on colour alone.
+ * One tone table for both scales — `MbEmptyState` imports it rather than
+ * restating it, so the two cuts of a state cannot drift. `empty` stays
+ * iconless and unlabelled; the failure tones name themselves in words and a
+ * glyph, so a state never rests on colour alone.
  */
 export const MB_STATE_TONES: Record<PanelEmptyTone, MbStateToneMeta> = {
   empty: { icon: null, word: null, ink: "text-mb-navy" },
@@ -411,47 +311,28 @@ export const MB_STATE_TONES: Record<PanelEmptyTone, MbStateToneMeta> = {
   offline: { icon: "wifi-off", word: "Offline", ink: "text-mb-gold-ink" },
   denied: { icon: "lock", word: "No access", ink: "text-mb-navy" },
   unconfigured: { icon: "settings", word: "Not set up", ink: "text-mb-ink-muted" },
-  /* `stale` is `offline`'s sibling, not a fifth failure: the data EXISTS and is
-     merely not fresh. It shares the gold "degraded, not broken" ink and takes
-     the refresh glyph — the same mark `MbLiveStatus` gives `reconnecting` — so
-     one reader sees one symbol for "the feed, not the record, is the problem".
-     Used by `PanelStale` (data survives, greyed under a dated band) and by a
-     `PanelEmpty` whose refresh failed with nothing cached to keep showing. */
+  /* `stale` is `offline`'s sibling, not a fifth failure: the data EXISTS and
+     is merely not fresh. Gold "degraded, not broken" ink, and the same refresh
+     glyph `MbLiveStatus` gives `reconnecting`. */
   stale: { icon: "refresh", word: "Couldn't refresh", ink: "text-mb-gold-ink" },
 };
 
 /**
  * The shipped copy rule is `No <things> exist yet — <what makes them appear>.`
- * (design language §5.7), so the em dash is already an editorial break: the
- * clause before it names the state, the clause after it explains it. Splitting
- * there turns every one of the ~35 shipped messages into a display headline and
- * a deck **without one call site changing**.
- *
- * Past `HEADLINE_MAX_CHARS` the lead is prose, not a headline, and keeps the
- * whole string as copy. 60 is measured, not guessed: the display step runs
- * ~22 characters per line in a `xl:col-span-4` panel body (419px of inner
- * width), so 60 is the last length that still sets in three lines. It clears
- * the longest shipped lead (`Saved formations could not be loaded right now`,
- * 45) and the filter miss (`No teams match “northside community volleyball”`,
- * 47) while still refusing a 156-character error sentence with no break in it.
+ * so the em dash is already an editorial break: splitting there turns every
+ * shipped message into a display headline and a deck without one call site
+ * changing. Past `HEADLINE_MAX_CHARS` the lead is prose, not a headline, and
+ * keeps the whole string as copy; 60 is the last length that still sets in
+ * three display lines in a 4-col panel body.
  */
 const HEADLINE_MAX_CHARS = 60;
 
 /**
- * Opens the deck as a sentence.
- *
- * The split promotes a *subordinate clause* to a standalone paragraph, and the
- * shipped copy was written to follow an em dash, so every one of the ~35
- * messages arrives lower-case: the deck read "add your first team to start the
- * directory." under its own headline, six times on /teams and six on
- * /competitions. Once it is set as its own block it is its own sentence and
- * takes a capital.
- *
- * It walks to the first *cased* character rather than touching index 0, so a
- * deck that opens on a quote (`No teams match “northside…” — try a different
- * search.`) or a bracket still capitalises the word and not the punctuation,
- * and a deck that already opens on a capital — a product name — is returned
- * untouched.
+ * Opens the deck as a sentence: the split promotes a subordinate clause to a
+ * standalone paragraph, so it arrives lower-case and takes a capital. Walks to
+ * the first *cased* character rather than touching index 0, so a deck opening
+ * on a quote or bracket capitalises the word, and one already opening on a
+ * capital is returned untouched.
  */
 const openSentence = (deck: string): string => {
   for (let i = 0; i < deck.length; i += 1) {
@@ -492,22 +373,17 @@ interface MbStateScaleSpec {
   rule: string;
   /** Deck step and measure. */
   deck: string;
-  /**
-   * Eyebrow glyph, in px. The same number at both scales **on purpose** —
-   * design language §5.7 gives the two cuts two numbers on the display line,
-   * the rule and the action, and on nothing else, so the eyebrow is one object
-   * drawn once.
-   */
+  /** Eyebrow glyph, in px. The same number at both scales on purpose — the
+   *  eyebrow is one object drawn once. */
   glyph: number;
   /** Step of the single action. */
   button: MbButtonSize;
 }
 
 /**
- * §5.7's size table, as code. This is the *entire* difference between a
- * route-level state and a panel-level one — everything else is `MbStateBlock`
- * below, rendered from the same JSX for both. If the two cuts are ever to drift
- * again, they have to drift here, in eight lines, in view of each other.
+ * The *entire* difference between a route-level state and a panel-level one —
+ * everything else is `MbStateBlock` below, rendered from the same JSX for
+ * both. If the two cuts drift, they drift here, in view of each other.
  */
 export const MB_STATE_SCALE: Record<MbStateScale, MbStateScaleSpec> = {
   panel: {
@@ -529,17 +405,10 @@ export const MB_STATE_SCALE: Record<MbStateScale, MbStateScaleSpec> = {
 };
 
 /**
- * The one state language, drawn once. `PanelEmpty` and `MbEmptyState` are both
- * thin wrappers over this: they differ in the props they accept (a message
- * string and one action vs a title, a deck and an action list) and in which row
- * of `MB_STATE_SCALE` they pass, and in nothing that is visible.
- *
- * Anatomy, top to bottom, every part ranged **left**:
- * eyebrow (glyph + word) · display line · hung rule · deck · action.
- *
- * It is deliberately *not* a centred glyph-in-a-circle over centred text: that
- * is the layout the rubric's §3 hard-fail 5 names outright ("would look
- * identical for a CRM"), and it is what `PanelEmpty` drew before P1.
+ * The one state language, drawn once — `PanelEmpty` and `MbEmptyState` are
+ * both thin wrappers over this. Anatomy, top to bottom, every part ranged
+ * left: eyebrow (glyph + word) · display line · hung rule · deck · action.
+ * Deliberately not a centred glyph-in-a-circle over centred text.
  */
 export const MbStateBlock = ({
   scale,
@@ -567,17 +436,12 @@ export const MbStateBlock = ({
      sentence over 60 characters. */
   const named = Boolean(mark || state.word || headline);
 
-  /* `overflow-wrap: anywhere`, inherited by the headline and the deck.
-     `globals.css` already grants exactly this through `.mb-panel[data-tone] p`,
-     but that selector needs the `data-tone` to sit on the `.mb-panel` itself,
-     which only happens at route scale — `MbEmptyState` owns its sheet, whereas
-     `PanelEmpty` is nested inside somebody else's plain `Panel`. Measured at
-     390px with one 52-character unbroken token in both cuts: the route block
-     stayed at its 340px container, the panel block scrolled to 391px. Declaring
-     it here fixes the panel cut and makes the two behave identically, which is
-     the point of there being one block. `anywhere` rather than `break-word`
-     because only `anywhere` also shrinks min-content, and this block is a flex
-     item that is sized by its longest word. */
+  /* `overflow-wrap: anywhere`, declared here rather than relying on
+     `.mb-panel[data-tone] p`: that selector needs `data-tone` on the panel
+     itself, which only happens at route scale — declaring it here makes both
+     cuts behave identically. `anywhere` rather than `break-word` because only
+     `anywhere` also shrinks min-content, and this block is a flex item sized
+     by its longest word. */
   return (
     <div
       className={`flex flex-1 flex-col items-start justify-center text-left [overflow-wrap:anywhere] ${step.block}`}
@@ -588,14 +452,10 @@ export const MbStateBlock = ({
           {state.word && <span className="truncate">{state.word}</span>}
         </span>
       )}
-      {/* `text-balance`, because the hung rule below is what makes an orphan
-          expensive here: the rule closes the naming zone, so when the display
-          line drops its last word alone the 40px rule sits under a single word
-          instead of under a block. Measured at 1440: "No upcoming matches exist
-          yet" set 4 words + 1 and "No match of the day exists yet" set 6 + 1.
-          Balance is the right tool rather than a `<wbr>` or a nbsp because the
-          copy is passed in by ~35 call sites and none of them can be edited
-          from here. */}
+      {/* `text-balance`: the hung rule closes the naming zone, so an orphaned
+          last word leaves the rule sitting under a single word. Balance rather
+          than a `<wbr>`/nbsp because the copy comes from ~35 call sites none
+          of which can be edited from here. */}
       {headline && (
         <p
           className={`matchbook-display text-balance mb-track-display font-bold leading-tight ${step.display}`}
@@ -604,10 +464,9 @@ export const MbStateBlock = ({
         </p>
       )}
       {named && <span className={`block h-px bg-mb-navy ${step.rule}`} />}
-      {/* A `<p>`, not a `<div>`, even though `deck` is a `ReactNode`: it is the
-          element `globals.css` targets for the same wrap defence, and callers
-          pass phrasing content (a sentence, sometimes with a `<span>` around a
-          count). Block-level children would be invalid nesting here. */}
+      {/* A `<p>`, not a `<div>`: it is the element `globals.css` targets for
+          the wrap defence, and callers pass phrasing content — block-level
+          children would be invalid nesting here. */}
       {deck && <p className={`text-mb-ink-muted ${step.deck}`}>{deck}</p>}
       {action}
     </div>
@@ -637,9 +496,8 @@ export const PanelEmpty = ({
   icon?: string;
   /**
    * The single action's `.mb-btn` variant. Defaults to the quiet neutral
-   * outline, because a panel-level state is never the screen's primary job —
-   * invariant 15 gives coral one appearance per screen, and three empty panels
-   * used to spend it three times over. Coral is opt-in: `variant="coral"`.
+   * outline — coral gets one appearance per screen and a panel-level state is
+   * never the screen's primary job. Coral is opt-in: `variant="coral"`.
    */
   variant?: MbButtonVariant;
   /** Renders a real `<button>` instead of a link. Takes precedence over `href`. */
@@ -662,9 +520,8 @@ export const PanelEmpty = ({
             {actionLabel}
           </MbButton>
         ) : href ? (
-          /* A destination is a real anchor — it keeps middle-click, "open in new
-             tab" and the status bar — and `MbButtonLink` draws it from the same
-             three tables as the button above, so the two branches are one box. */
+          /* A destination is a real anchor — middle-click, "open in new tab",
+             the status bar — drawn from the same tables as the button above. */
           <MbButtonLink variant={variant} size={size} href={href}>
             {actionLabel}
           </MbButtonLink>
@@ -675,32 +532,14 @@ export const PanelEmpty = ({
 };
 
 /* ---------------------------------------------------------------------------
-   THE STALE PANEL (C15) — a refresh failed, the last data did not
-
-   One panel's fetch failing used to be indistinguishable from that panel being
-   EMPTY: `useSummariesPage` caught the rejection, logged it, and left its rows
-   at `[]`, so a Firestore outage rendered "No shared reports exist yet" — a
-   lie, and an all-or-nothing one, on a screen where the other five panels had
-   loaded fine from local state. The share routes already solved this for the
-   whole page (`SessionStaleBanner`: state what the numbers ARE — the last ones
-   received — and do not remove them). This is that same sentence at panel
-   scale, so one failed feed degrades ONE panel and the screen stays alive.
-
-   Anatomy: a ruled band naming the state + the clock time of the data below,
-   then the last known rows on the DULLER paper with hue removed. The state is
-   DRAWN, not dimmed — the dormant-treatment lesson (`competitions/new/
-   dormant.ts`): an opacity wash pushes `--mb-ink-muted` copy under the 4.5:1
-   floor (measured: 5.25:1 at α=1, 4.26:1 at α=0.9 on paper-bright), so opacity
-   is not used at all. `--mb-paper` keeps the worst ink in the body at 4.82:1
-   and `grayscale` strips hue without touching luminance, which is exactly the
-   greyscale-survival rule every status mark in the kit is built on.
-
-   The band's noun set is `MB_STATE_TONES.stale` — same word, same glyph, same
-   ink as the no-data cut (`PanelEmpty tone="stale"`), so the with-cache and
-   without-cache renderings of one failure are one vocabulary.
-
-   No animation. A band that appears with fresh render output is a state, not
-   an event; nothing here needs a reduced-motion branch because nothing moves.
+   THE STALE PANEL — a refresh failed, the last data did not. A ruled band
+   names the state and the clock time, then the last known rows sit on the
+   duller paper with hue removed. The state is DRAWN, not dimmed: an opacity
+   wash pushes muted ink under the 4.5:1 floor, so `--mb-paper` + `grayscale`
+   degrade without touching luminance. The band's noun set is
+   `MB_STATE_TONES.stale`, so the with-cache and without-cache renderings of
+   one failure are one vocabulary. No animation: a band that appears with
+   fresh render output is a state, not an event.
    --------------------------------------------------------------------------- */
 
 /** "2:14 PM" — the same clock cut `shortTime` prints on every schedule row. */

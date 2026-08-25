@@ -27,43 +27,26 @@ import {
 import { MbIcon } from "./MbIcon";
 
 /* ---------------------------------------------------------------------------
-   Matchbook form kit (charter §2.3 "Controls", GAP-6).
+   Matchbook form kit. Every control is a thin typed wrapper over the classes
+   already in globals.css — .mb-field, .mb-input, .mb-textarea,
+   .mb-select-native, .mb-stepper, .mb-switch, .mb-swatch. Nothing here invents
+   styling. Notes that repeat below:
 
-   Every control is a thin typed wrapper over the classes already in
-   globals.css — .mb-field, .mb-input, .mb-textarea, .mb-select-native,
-   .mb-stepper, .mb-switch, .mb-swatch. Nothing here invents styling.
-
-   Four implementation notes that repeat below:
-
-   1. `text-base! md:text-[0.9rem]!` — the 16px-on-mobile idiom that stops iOS
-      from zooming on focus, dropping to `body/md` above `md`. The `!` is
-      load-bearing: `.mb-input input`, `.mb-textarea` and `.mb-select-native`
-      live outside any cascade layer, and unlayered rules outrank every
-      Tailwind utility (which ship inside `@layer utilities`) no matter the
-      specificity or source order.
-
-      It was `md:text-sm!` = 14px, against the 14.4px `body/md` that
-      `.mb-input input` itself declares and that every field NOT wrapped by
-      this file therefore rendered. Two field text sizes coexisted 0.4px
-      apart, which is too close to read as a distinction and too far to be
-      one size. `0.9rem` is the named step; `text-sm` is a Tailwind default
-      that happens to be nearby.
+   1. `text-base! md:text-[0.9rem]!` — 16px on mobile stops iOS zooming on
+      focus, dropping to `body/md` above `md`. The `!` is load-bearing:
+      `.mb-input input`, `.mb-textarea` and `.mb-select-native` are UNLAYERED
+      rules, which outrank every Tailwind utility regardless of specificity.
    2. Heights come from the one ladder in `Button.tsx` — `MB_CONTROL_HEIGHT`
       for a plain control, `MB_CONTROL_CELL` for the interior of a framed
-      composite. None of the .mb-* classes set a height, so the component is
-      the only place a rung can live.
-   3. Charter §4.33 is a hard fail measured by a scripted `getBoundingClientRect`
-      sweep over `button,a,input,select,textarea,[role=button],[tabindex]`. That
-      sweep reads the *control's own* box, not the box of the label wrapping it,
-      so every `<input>` here is stretched to fill its shell rather than left at
-      its ~19px line box. Where that is impossible without repainting a .mb-*
-      recipe (the switch), the real input becomes the full-row hit target and
-      the visual track moves to an `aria-hidden` sibling.
-   4. Border widths are `--mb-rule-edge`, never a `1.5px` literal. The literal
-      renders 1px anyway (design language §3.3 measured it), so writing the
-      token loses nothing and stops the kit carrying a number that does not
-      exist. Set through `style` rather than `border-[…]` so there is no
-      arbitrary-value type ambiguity between a width and a colour.
+      composite. No .mb-* class sets a height.
+   3. Hit-target audits measure the *control's own* box, not the label wrapping
+      it, so every `<input>` here is stretched to fill its shell. Where that is
+      impossible without repainting a recipe (the switch), the real input
+      becomes the full-row hit target and the visual track moves to an
+      `aria-hidden` sibling.
+   4. Border widths are `--mb-rule-edge`, never a literal, set through `style`
+      rather than `border-[…]` so there is no arbitrary-value ambiguity
+      between a width and a colour.
    --------------------------------------------------------------------------- */
 
 /** Every framed edge in this file. One object, so they cannot drift apart. */
@@ -75,33 +58,10 @@ const mergeIds = (...ids: Array<string | undefined | false>) =>
 /* -------------------------------------------------------------- form label */
 
 /**
- * The one form-label treatment, shared by `MbField` and `MbCopyField`.
- *
- * It used to be `.mb-kicker` — 0.62rem / 9.92px, 0.16em, `--mb-ink-muted`.
- * Three measured problems with that on a phone:
- *
- * 1. It lost to its own helper text. `.mb-field-hint` is 0.72rem / 11.52px, so
- *    the *name* of the field rendered 1.6px smaller than the sentence
- *    explaining it — the hierarchy was upside down.
- * 2. `layout.tsx` sets `maximumScale: 1, userScalable: false`, so a reader who
- *    cannot make out 9.92px cannot pinch to rescue it. The design language's
- *    own mobile rule (§8, last line) says the 0.6–0.66rem steps "must never
- *    carry information that isn't repeated at a larger size" — a field label is
- *    never repeated.
- * 3. `.mb-kicker` is defined as an *eyebrow* (§2.2: "never a heading"), and it
- *    is what the dev gallery uses for its own annotations. A field's name and a
- *    caption about the field were the same type.
- *
- * The replacement is `display/nav` (§2.1: 0.85rem / 600 / 0.08em) in navy —
- * the step `MbToggle` already uses for its own control label a few lines down,
- * so the two labels in a form now agree. 13.6px navy on paper is 11.79:1 AAA.
- *
- * The rung is the class `mb-track-nav`, not an inline `letterSpacing`. It used
- * to have to be inline: `.matchbook-display` set `letter-spacing: 0.02em` from
- * an UNLAYERED rule, and every Tailwind `tracking-*` utility ships inside
- * `@layer utilities`, which loses to unlayered CSS regardless of specificity.
- * That declaration now lives in `@layer components` (globals.css), so both the
- * utility and the rung win and the workaround is gone.
+ * The one form-label treatment, shared by `MbField`, `MbCopyField` and
+ * `MbToggle` — `display/nav` in navy, sized above its own hint text. The
+ * tracking is the class `mb-track-nav`, not inline: `.matchbook-display`'s
+ * `letter-spacing` lives in `@layer components`, so the class can win.
  */
 export const MB_FIELD_LABEL: { className: string } = {
   className: "matchbook-display text-[0.85rem] mb-track-nav font-semibold text-mb-navy",
@@ -204,15 +164,10 @@ export const MbTextInput = ({
   /** Adornment rendered after the field — a unit, a counter, a small button. */
   trailing?: ReactNode;
   /**
-   * Ladder rung of the field box: `md` (48px, the default and what every
-   * shipped field already was) or `lg` (56px) beside a commit control.
-   *
-   * `sm` is absent for the same reason it is absent from `MbSegmented` and
-   * `MbNumberStepper`: `.mb-input` is a frame around a target, the frame
-   * spends `--mb-rule-edge` twice, and a 44px shell would leave the `<input>`
-   * itself at 42px — under the floor the §4.33 sweep measures. The field had
-   * no size axis at all before, which is half of why a wizard row could not be
-   * made to line up.
+   * Ladder rung of the field box: `md` (48px) or `lg` (56px). `sm` is absent:
+   * `.mb-input` is a frame around a target, the frame spends `--mb-rule-edge`
+   * twice, and a 44px shell would leave the `<input>` itself at 42px — under
+   * the hit-target floor.
    */
   size?: MbCompositeSize;
   className?: string;
@@ -228,9 +183,8 @@ export const MbTextInput = ({
         <MbIcon id={icon} size={16} className="shrink-0 text-mb-ink-muted" />
       )}
       {/* `py-0!` on the shell + `self-stretch` here hands the whole interior to
-          the input, so its own hit box is `MB_CONTROL_CELL[size]` — 46px at
-          `md`, 54px at `lg`, both clear of the 44px floor. The shell keeps its
-          0.8rem horizontal padding, so nothing moves optically. */}
+          the input, so its own hit box is `MB_CONTROL_CELL[size]`; the shell
+          keeps its horizontal padding, so nothing moves optically. */}
       <input
         {...input}
         id={id ?? field?.id}
@@ -265,11 +219,8 @@ export const MbTextArea = ({
       required={textarea.required ?? field?.required}
       aria-describedby={mergeIds(field?.describedBy, ariaDescribedBy)}
       aria-invalid={field?.invalid || undefined}
-      /* No size axis, and deliberately so: a textarea is measured in rows, not
-         in rungs. Its `min-height: 5rem` is two lines plus the frame, which is
-         a different unit of meaning to "the height a control has to be so a
-         thumb can hit it". It is the one control in the kit that is honestly
-         off the ladder. */
+      /* No size axis, deliberately: a textarea is measured in rows, not rungs —
+         the one control in the kit that is honestly off the ladder. */
       className={`mb-textarea text-base! md:text-[0.9rem]! disabled:cursor-not-allowed disabled:opacity-60 ${className}`}
     />
   );
@@ -297,10 +248,8 @@ export const MbSelect = ({
   /** Rendered as a leading empty-valued option. */
   placeholder?: string;
   /**
-   * Ladder rung, and here it is the **full** ladder including `sm`: unlike
-   * `.mb-input`, `.mb-select-native` is not a frame around a target — the
-   * bordered element *is* the `<select>`, so its box and its hit box are the
-   * same 44/48/56.
+   * Full ladder including `sm`: unlike `.mb-input`, the bordered element *is*
+   * the `<select>`, so its box and its hit box are the same 44/48/56.
    */
   size?: MbControlSize;
   className?: string;
@@ -317,13 +266,9 @@ export const MbSelect = ({
         aria-invalid={field?.invalid || undefined}
         data-size={size}
         style={{ minHeight: MB_CONTROL_HEIGHT[size] }}
-        /* `tabular-nums` because select labels routinely carry a measure —
-           "Court 2", "Round 11", "21 points" — and §4.9 wants those figures on
-           the same rhythm as every other numeral.
-
-           `0.95rem` is `display/panel-title`, which is also what
-           `.mb-select-native` itself declares — this restates the step at the
-           `md` breakpoint rather than introducing one. */
+        /* `tabular-nums` because select labels routinely carry a measure
+           ("Court 2", "Round 11"). `0.95rem` restates `.mb-select-native`'s
+           own step at the `md` breakpoint rather than introducing one. */
         className="mb-select-native truncate text-base! tabular-nums disabled:cursor-not-allowed md:text-[0.95rem]!"
       >
         {placeholder && <option value="">{placeholder}</option>}
@@ -355,30 +300,13 @@ const wrapValue = (n: number, min: number, max: number) => {
 };
 
 /**
- * The ± keys, sized off the ladder rather than off `.mb-stepper button`'s own
- * 44/56px.
- *
- * This is the whole 46/58 fix, in two halves. `.mb-stepper` is
- * `align-items: stretch`, so the shell used to be "whatever the keys are, plus
- * my two edge rules" — 44+2 = 46 and 56+2 = 58, two numbers on nobody's
- * ladder. The shell now states the rung and the keys take the interior — and
- * the second half is G21's correction reaching the keys: charging them the
- * frame's two edge rules made them 46/54, which is the number the D2 sweep
- * sees, because an audit enumerates `button`, not the frame around it. So the
- * keys take the `.mb-input > input` idiom instead — `min-height` of the FULL
- * rung plus a negative block margin of exactly one edge. The flex line still
- * resolves to `rung − 2` (outer size = 48 − 2×1), the shell still measures
- * 48/56, and the key's own border box is 48/56, edge to edge with the frame it
- * overlaps — whose paint survives, because `overflow: hidden` clips the key at
- * the shell's padding box. Width keeps the honest `rung − 2`: the frame
- * genuinely spends those columns, and no ladder measures widths.
- *
- * `style`, not a class: `.mb-stepper button` and
- * `.mb-stepper[data-size="lg"] button` both set `width`/`min-height` from
- * outside every cascade layer, so a Tailwind utility would need an
- * `!important` and a pair of hand-written literals to beat them. An inline
- * declaration outranks any author rule that is not `!important`, which lets
- * the numbers come from the ladder tables and stay there.
+ * The ± keys. The shell states the rung and the keys take the interior:
+ * `min-height` of the FULL rung plus a negative block margin of exactly one
+ * edge, so the key's own border box is 48/56 (hit-target audits measure the
+ * `button`, not the frame around it) while the flex line still resolves to
+ * `rung − 2` and the shell's `overflow: hidden` clips the invisible overlap.
+ * `style`, not a class: `.mb-stepper button` sets `width`/`min-height` in
+ * unlayered CSS, and an inline declaration outranks it without `!important`.
  */
 const stepperKey = (size: MbCompositeSize): CSSProperties => ({
   width: MB_CONTROL_CELL[size],
@@ -415,12 +343,8 @@ export const MbNumberStepper = ({
   /** Accessible name; also builds the −/+ button labels. */
   label: string;
   /**
-   * Ladder rung of the **shell**: `md` = 48px, `lg` = 56px. It was `"sm" |
-   * "lg"` and measured 46 / 58, because the rung was being applied to the ±
-   * keys and the shell then added its own two edge rules on top.
-   *
-   * No `sm`: see `MbCompositeSize` in `Button.tsx`. A 44px shell leaves 42px
-   * keys, and the keys are the targets.
+   * Ladder rung of the **shell**: `md` = 48px, `lg` = 56px. No `sm`: a 44px
+   * shell leaves 42px keys, and the keys are the targets.
    */
   size?: MbCompositeSize;
   id?: string;
@@ -471,26 +395,14 @@ export const MbNumberStepper = ({
   };
 
   /**
-   * Where focus goes when the key you are pressing is about to disable itself.
-   *
-   * Measured in the quick-add sheet at 390px: stepping the count up to its
-   * maximum left `document.activeElement` on `<body>` — the pressed key had
-   * become `disabled` under the finger, and a focused disabled button drops
-   * focus to the document. Inside a modal that is the worst rung on the
-   * ladder: the reader is silently outside the dialog they are still looking
-   * at, and a screen reader loses the sheet's context mid-task. (Radix's focus
-   * scope pulls the next Tab back in, so the trap itself holds — this is the
-   * gap between the two keystrokes.)
-   *
-   * The opposite key takes it. It is 46px away, it is guaranteed live the
-   * moment its partner dies, and it is the only control the user can now want:
-   * having hit the ceiling, the next press is downward. The value input is the
-   * other candidate and is rejected — it selects its own contents on focus and
-   * raises the on-screen keyboard over the sheet, which is exactly the
-   * disruption `QuickAddTeams` avoids by declining `initialFocus`.
-   *
-   * Only when the key is *actually* focused, so a mouse press that never took
-   * focus does not move it either.
+   * When the pressed key is about to disable itself, focus hands off to the
+   * opposite key: a focused disabled button drops focus to `<body>`, which
+   * inside a modal silently exits the dialog for a screen reader. The opposite
+   * key is guaranteed live the moment its partner dies and is the only control
+   * the user can now want. Not the value input — it selects its contents on
+   * focus and raises the on-screen keyboard over the sheet. Only when the key
+   * is *actually* focused, so a mouse press that never took focus does not
+   * move it.
    */
   const handOffFocus = (delta: number, next: number) => {
     if (wrap) return;
@@ -539,10 +451,9 @@ export const MbNumberStepper = ({
     <div
       className={`mb-stepper self-start ${disabled ? "opacity-60" : ""} ${className}`}
       data-size={size}
-      /* The rung lands on the shell — the box a caller lines a text field up
-         against — and the keys take the interior via STEPPER_KEY. `data-size`
-         is kept because `.mb-stepper[data-size="lg"] .mb-stepper-value` is
-         what steps the numeral's own font size. */
+      /* The rung lands on the shell; `data-size` is kept because
+         `.mb-stepper[data-size="lg"] .mb-stepper-value` steps the numeral's
+         own font size. */
       style={{ minHeight: MB_CONTROL_HEIGHT[size] }}
     >
       <button
@@ -586,14 +497,11 @@ export const MbNumberStepper = ({
             commit(clampValue(value, min, max));
           }}
           onKeyDown={handleKeyDown}
-          /* `self-stretch` takes the full interior height of the shell and
-             `min-w-[44px]` the width, so the editable figure is itself a legal
-             target — `${chars}ch` only ever widens it for 3+ digit bounds.
-             `marginBlock` is the `.mb-input > input` idiom (G21): stretched
-             between the shell's two edge rules the input resolved to
-             `rung − 2`, a height on no ladder; a negative block margin of
-             exactly one edge takes its border box to the rung itself, and the
-             shell's `overflow: hidden` clips the invisible overlap. */
+          /* `self-stretch` + `min-w-[44px]` make the editable figure itself a
+             legal target — `${chars}ch` only ever widens it. The negative
+             `marginBlock` of one edge takes its border box from `rung − 2` to
+             the rung itself; the shell's `overflow: hidden` clips the
+             invisible overlap. */
           className="min-w-[44px] self-stretch border-0 bg-transparent p-0 text-center disabled:cursor-not-allowed"
           style={{
             width: `${chars}ch`,
@@ -604,13 +512,9 @@ export const MbNumberStepper = ({
         />
         {unit && (
           <span
-            /* `display/link`, rung and all — `mb-track-link` carries the
-               0.04em that used to be inline here, for the reason
-               `MB_FIELD_LABEL` documents.
-
-               `leading-none` so a one-word unit cannot add a half-line to the
-               shell and take it back off the rung, and `self-center` so it
-               sits on the figure's optical centre rather than stretching. */
+            /* `leading-none` so a one-word unit cannot add a half-line to the
+               shell and take it back off the rung; `self-center` so it sits on
+               the figure's optical centre rather than stretching. */
             className="matchbook-display shrink-0 self-center text-[0.72rem] mb-track-link font-semibold leading-none text-mb-ink-muted"
           >
             {unit}
@@ -661,31 +565,22 @@ export const MbToggle = ({
   const hintId = hint ? `${inputId}-toggle-hint` : undefined;
 
   /**
-   * The charter asks for the whole row to be the hit target, and the §4.33
-   * sweep measures the input itself — a 28x16 `.mb-switch` input fails it
-   * even when a label makes the row clickable. So the real control is stretched
-   * over the row and made invisible, and the track becomes an `aria-hidden`
-   * sibling carrying `.mb-switch` for its geometry. Only the three `:checked`
-   * declarations are restated here (via `peer-checked`), because a sibling
-   * cannot read the input's `:checked`; the `!` is the same unlayered-vs-layered
-   * problem noted at the top of the file. Focus-visible now outlines the entire
-   * row, which is an honest picture of what is clickable.
-   *
-   * The row takes the full ladder — it is unframed, so the stretched input's
-   * box and the row's box are the same number — and defaults to `md` like
-   * every other standalone control. It was pinned at 44px, which put a boolean
-   * field 4px shorter than the text field above it in the same column.
+   * Hit-target audits measure the input itself — a 28x16 `.mb-switch` input
+   * fails even when a label makes the row clickable. So the real control is
+   * stretched invisibly over the row, and the track becomes an `aria-hidden`
+   * sibling carrying `.mb-switch` for its geometry. The `:checked` face is
+   * restated via `peer-checked` because a sibling cannot read `:checked`; the
+   * `!` is the unlayered-vs-layered problem noted at the top of the file.
+   * Focus-visible outlines the whole row — an honest picture of what is
+   * clickable. The row takes the full ladder: it is unframed, so the stretched
+   * input's box and the row's box are the same number.
    */
   return (
     <label
       style={{ minHeight: MB_CONTROL_HEIGHT[size] }}
       data-size={size}
-      /* `py-1.5` with the `leading-tight` below, not `py-2` at the inherited
-         1.5: a toggle carrying a hint measured 55.66px — two lines of text at
-         1.5 leading plus 16px of padding — so a hinted toggle and a plain one
-         were different controls, and 55.66 sits 0.34px off the `lg` rung,
-         which reads as a mistake rather than a size. Both variants now resolve
-         inside the rung (45.4px of content at most) and `minHeight` governs. */
+      /* `py-1.5` with the `leading-tight` below, so a hinted toggle still
+         resolves inside the rung and `minHeight` governs. */
       className={`mb-row-hover relative flex items-center justify-between gap-3 rounded-[4px] px-1 py-1.5 ${
         disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"
       } ${className}`}
@@ -702,20 +597,10 @@ export const MbToggle = ({
         className="peer absolute inset-0 m-0 h-full w-full cursor-[inherit] appearance-none rounded-[4px] opacity-0"
       />
       {/* `leading-tight` here rather than on either child, so the label and the
-          hint cannot drift apart. It is a leading, not a type step —
-          `MB_FIELD_LABEL` declares no line-height, so this adds to the shared
-          treatment instead of overriding part of it. */}
+          hint cannot drift apart (`MB_FIELD_LABEL` declares no line-height). */}
       <span className="pointer-events-none min-w-0 leading-tight">
-        {/* The same `MB_FIELD_LABEL` as `MbField` and `MbCopyField`, not a
-            hand-rolled copy of it. Written out it once *looked* identical and
-            measured 0.272px here against 1.088px on a text field's label,
-            because a tracking utility was a layered rule and
-            `.matchbook-display` set `letter-spacing: 0.02em` unlayered. That
-            declaration is in `@layer components` now and the rung is the class
-            `mb-track-nav`, so the trap is gone — but the constant stays: a
-            switch's label and a text field's label sit in the same column of
-            the same form and resolve to one treatment because they are one
-            string, not two that agree today. */}
+        {/* The same `MB_FIELD_LABEL` as `MbField` — one string, not two
+            treatments that merely agree today. */}
         <span
           id={labelId}
           className={`${MB_FIELD_LABEL.className} block`}
@@ -728,11 +613,9 @@ export const MbToggle = ({
           </span>
         )}
       </span>
-      {/* NAVY when on, matching `.mb-switch:checked` in `globals.css` and the
-          check/radio rule there ("the on state is ink, not accent"). The real
-          input is the invisible peer, so `:checked` never matches this span —
-          these overrides recreate the checked face, and they used to recreate
-          it in `--mb-coral-deep`, the one on-state the ink sweep missed. */}
+      {/* Navy when on, matching `.mb-switch:checked` ("the on state is ink,
+          not accent"). The real input is the invisible peer, so `:checked`
+          never matches this span — these overrides recreate the checked face. */}
       <span
         aria-hidden="true"
         className="mb-switch pointer-events-none block peer-checked:border-mb-navy! peer-checked:bg-mb-navy! peer-checked:after:bg-mb-paper-bright! peer-checked:after:[transform:translateX(11px)]"
@@ -759,9 +642,7 @@ export const MbToggleChip = ({
   children: ReactNode;
   /**
    * Full ladder — this is a `.mb-btn`, so it takes the same rungs as
-   * `MbButton` and its `md` is the same 48px. `sm` is the rung for a filter
-   * chip packed into a dense toolbar, which is the case this control was
-   * silently pinned to before it had a size axis at all.
+   * `MbButton`; `sm` is the rung for a filter chip in a dense toolbar.
    */
   size?: MbControlSize;
   disabled?: boolean;
@@ -774,23 +655,21 @@ export const MbToggleChip = ({
     onClick={() => onPressedChange(!pressed)}
     data-size={size}
     style={{ minHeight: MB_CONTROL_HEIGHT[size] }}
-    /* `opacity-40`, not 60: this is a `.mb-btn`, and the whole button family
-       shares one disabled reading (design language §4.3, `MbButton`). */
+    /* `opacity-40`, not 60: the whole `.mb-btn` family shares one disabled
+       reading. */
     className={`mb-btn mb-btn-touch max-w-full ${
       pressed ? "mb-btn-navy" : "mb-btn-outline-navy"
     } ${disabled ? "cursor-not-allowed opacity-40" : ""} ${className}`}
   >
     {/* Second channel: a ballot box carrying an inset square when pressed —
-        the same mark `.mb-radio:checked` draws, so the chip reads on/off in
-        greyscale without nesting a circled glyph inside a 14px box. */}
+        the same mark `.mb-radio:checked` draws — so on/off reads in greyscale. */}
     <span
       aria-hidden="true"
       style={EDGE_RULE}
       className="inline-flex h-[14px] w-[14px] shrink-0 items-center justify-center rounded-[2px] border-solid border-current"
     >
-      {/* `rounded-[2px]`, the mark radius of 3.3 — with `.mb-check` and
-          `.mb-radio`, whose interior this is. It was `rounded-[1px]`, the only
-          1px corner in the system and the whole of M5's off-vocabulary count. */}
+      {/* `rounded-[2px]` matches the mark radius of `.mb-check`/`.mb-radio`,
+          whose interior this is. */}
       {pressed && <span className="block h-[6px] w-[6px] rounded-[2px] bg-current" />}
     </span>
     {icon && <MbIcon id={icon} size={14} className="shrink-0" />}
@@ -806,56 +685,16 @@ export interface MbSwatch {
 }
 
 /**
- * The team palette — six inks, and the reason there are six rather than eight.
- *
- * The eight it replaces were the house palette handed over whole, which put two
- * defects in front of anyone naming a team.
- *
- * 1. **It sold colours the system had already spent.** Design language §1.2
- *    fixes `--mb-gold` = Draft, `--mb-green` = win / final / active,
- *    `--mb-red` = loss / live, `--mb-ink-muted` = idle, `--mb-teal` = the
- *    rank-1 rail, `--mb-coral` = the app's one accent. Offer those as team
- *    colours and a green accent bar lands beside a green W on the same form
- *    guide: the reader has to work out which green is about the team and which
- *    is about the result. Identity and status were being printed in one ink.
- * 2. **Two of the eight were the same colour.** `--mb-coral` (#ee4b34) and
- *    `--mb-red` (#cf3f32) sat stacked in the grid at ΔE 6.8 in OKLab. §1 of the
- *    design language already says the pair "must never sit adjacent"; a
- *    first-run reader simply could not tell the two swatches apart.
- *
- * So the palette is measured rather than assembled. Every ink is at least
- * **ΔE 11.5** from every reserved meaning and at least **ΔE 12.6** from every
- * other ink — 1.7x and 1.9x the coral/red distance that failed. Resolved
- * against `--mb-paper` (#f7f0e4):
- *
- * | ink   | resolves to | vs paper | vs bright | nearest reserved meaning  |
- * | ----- | ----------- | -------- | --------- | ------------------------- |
- * | Navy  | `#07324d`   | 11.79    | 12.84     | idle grey       ΔE 22.2   |
- * | Teal  | `#095857`   |  7.28    |  7.93     | idle grey       ΔE 11.5   |
- * | Plum  | `#5a347d`   |  8.34    |  9.09     | idle grey       ΔE 16.7   |
- * | Rose  | `#934161`   |  5.85    |  6.37     | CTA coral-deep  ΔE 12.8   |
- * | Lilac | `#9077a7`   |  3.44    |  3.75     | idle grey       ΔE 12.0   |
- * | Ochre | `#9a855e`   |  3.15    |  3.43     | Draft gold-ink  ΔE 12.4   |
- *
- * All six clear the 3:1 that WCAG 2.1 §1.4.11 asks of a bounded graphical
- * object, which is the only role a team colour is ever given: a 3px bar beside
- * the crest (charter D-9) and the 44px chip in this picker. None of them is
- * ever text, so 4.5:1 is not the applicable floor.
- *
- * The values stay inside the token system — a literal hex would freeze the ink
- * against a future paper stock (charter §4 invariant 10). Three are tokens
- * outright; three are `color-mix()` over tokens, so they still move when the
- * house palette moves. `allowCustom` remains the escape hatch for a club that
- * owns its own colour.
- *
- * A stored colour from the old eight still paints, and still reads out under a
- * human name (see `swatchName`) — it simply no longer shows as selected here.
- *
- * The six recipes themselves now live in `@/lib/teamColor`, beside the id each
- * one is STORED as. They were duplicated here and in `QuickAddTeams`, and a
- * team's saved colour was one of these expressions verbatim — which is how a
- * `color-mix()` ended up in localStorage and, uppercased, on a team's profile.
- * The picker offers what storage can name, and cannot drift from it.
+ * The team palette: six inks, none of them a colour the system has already
+ * spent on a meaning (win green, live red, Draft gold, rank teal, accent
+ * coral), each measurably distinct from the others and from every reserved
+ * ink, and all clearing 3:1 non-text contrast — the only role a team colour is
+ * ever given is a bounded graphical object, never text. The values stay inside
+ * the token system (tokens or `color-mix()` over tokens) so they move with the
+ * house palette. The recipes live in `@/lib/teamColor` beside the id each one
+ * is STORED as — duplicating them here is how a `color-mix()` once ended up in
+ * localStorage. A colour stored under the old palette still paints and reads
+ * out under a human name (`swatchName`); it simply no longer shows as selected.
  */
 export const MB_SWATCH_PALETTE: readonly MbSwatch[] = TEAM_COLOR_IDS.map((id) => ({
   value: TEAM_COLOR_CSS[id],
@@ -866,18 +705,11 @@ const HEX_RE = /^#(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
 const TOKEN_RE = /^var\(\s*(--mb-[a-z0-9-]+)\s*\)$/i;
 
 /**
- * What a person is told this colour is called.
- *
- * The row under the swatches used to print the **CSS custom property** —
- * `--MB-GREEN`, uppercased by `.mb-code-chip`, to someone naming a volleyball
- * team. A token name is an implementation detail: it is not a colour, it is not
- * English, and it is the one string on that screen the reader cannot act on.
- *
- * So a palette entry answers with its own name; an off-palette token is turned
- * back into words (`var(--mb-coral-deep)` → "Coral deep"), which covers both a
- * caller passing its own token list and a team saved under the old palette; and
- * only a literal hex is shown verbatim, because a hex is a colour a person
- * chose and can read back.
+ * What a person is told this colour is called — never a CSS custom-property
+ * name. A palette entry answers with its own label; an off-palette token is
+ * turned back into words (`var(--mb-coral-deep)` → "Coral deep"); only a
+ * literal hex is shown verbatim, because a hex is a colour a person chose and
+ * can read back.
  */
 const swatchName = (value: string, palette: readonly MbSwatch[]): string => {
   const named = palette.find((swatch) => swatch.value === value);
@@ -949,13 +781,9 @@ export const MbSwatchPicker = ({
   return (
     <div className={`flex flex-col gap-2.5 ${className}`}>
       {/* 10px, not 8px: the custom-colour input reaches one edge rule back over
-          its own border, and §4.33 wants ≥8px of clear water between targets.
-
-          The swatches themselves are `.mb-swatch[data-size="touch"]` = 44px =
-          the ladder's `sm` rung, which is the right rung for a target that
-          only ever appears inside a group of its own kind. `data-size="touch"`
-          is the CSS class's own selector, not a ladder name — it stays as it
-          is until globals.css renames it. */}
+          its own border, and targets need ≥8px of clear water. The swatches are
+          `.mb-swatch[data-size="touch"]` = 44px; "touch" is the CSS class's own
+          selector, not a ladder name. */}
       <div
         className="flex flex-wrap items-center gap-2.5"
         role="radiogroup"
@@ -1020,13 +848,9 @@ export const MbSwatchPicker = ({
           </label>
         )}
       </div>
-      {/* The one line under the grid, and it now names a colour.
-          `aria-live` because the options in this radiogroup *are* colour: a
-          reader moving through them with the arrow keys has nothing else to
-          go on, and the swatch's `aria-label` is only announced while it holds
-          focus. The hex is kept in a `.mb-code-chip` — a hex is a reference
-          value a person typed and can read back, which is exactly what that
-          chip is for; a token name never was. */}
+      {/* `aria-live` because the options in this radiogroup *are* colour: a
+          reader arrowing through them has nothing else to go on, and the
+          swatch's `aria-label` only announces while it holds focus. */}
       <p
         aria-live="polite"
         className="flex flex-wrap items-center gap-2 text-[0.78rem] text-mb-ink-muted"
@@ -1090,26 +914,13 @@ export const MbTagInput = ({
 
   return (
     <div className={`flex flex-col gap-1.5 ${className}`}>
-      {/* `py-0!` hands the shell's whole interior to the chip row.
-
-          It was `py-[2px]!`, which measured 50px with one row of chips —
-          44px chip + 4px padding + 2 edge rules — so a tag field sat 2px
-          proud of every other field on the page the moment it held a tag, and
-          landed on no rung at all. At `py-0!` the shell's `minHeight` governs
-          when it is empty or holds one row (48px, with the 44px chips centred
-          in the 46px interior), and only genuinely wrapped rows grow it. A
-          multi-row field is off the ladder for the same honest reason a
-          textarea is.
-
-          The gaps are overridden because the chip is now two keys, not one
-          box (see below). `.mb-input` sets `gap: 0.6rem` (9.6px) unlayered, so
-          the override has to be important.
-
-          Column 16px / row 10px against the 10px *inside* a chip. 24px was
-          tried, to buy a 2.4x proximity ratio, and rejected on measurement: at
-          390px it stops two chips fitting on one row, so a 2-tag field grew
-          from 60px to 114px. Grouping is carried by weight instead of by
-          distance — see the remove key below — which costs no height. */}
+      {/* `py-0!` hands the shell's whole interior to the chip row, so the
+          shell's `minHeight` governs when empty or holding one row and only
+          genuinely wrapped rows grow it (multi-row is off the ladder for the
+          same honest reason a textarea is). The gap overrides must be
+          important — `.mb-input` sets `gap` unlayered. Column 16px / row 10px
+          and no wider: a larger gap stops two chips fitting per row at 390px;
+          grouping is carried by weight instead (see the remove key below). */}
       <div
         data-size={size}
         style={{ minHeight: MB_CONTROL_HEIGHT[size] }}
@@ -1130,25 +941,13 @@ export const MbTagInput = ({
                   *item* this span is blockified and truncates properly. */}
               <span className="min-w-0 truncate">{tag}</span>
             </span>
-            {/* Its own 44px key, 10px of paper in front of it, but drawn as a
-                bare mark rather than a second box.
-
-                Sharing the tag's box put an unconfirmed, un-undoable delete
-                0px from the word and inside the same border, so the whole
-                100–130px chip read as one pressable object of which 44px
-                destroyed it. Splitting it out fixed that but, given a border,
-                introduced a second problem: a two-tag row became four outlined
-                boxes at 10/16/10px, and 1.6x is not enough distance for
-                proximity alone to say which × belongs to which tag.
-
-                So the pair is grouped by weight, not distance. Exactly one box
-                per tag — the navy-edged face — and the remove key is an
-                unboxed mark at rest, which reads as an appendage of the box it
-                trails rather than a peer of it. The 44px target and the 8px
-                floor are untouched; only the paint changed. The border and
-                tint arrive on hover/focus, so the target is confirmed the
-                moment a pointer is on it, and `:focus-visible` still puts the
-                house ring around the real 44px box for keyboard users. */}
+            {/* Its own 44px key, drawn as a bare mark rather than a second box:
+                exactly one box per tag, and the unboxed × reads as an
+                appendage of the box it trails rather than a peer of it (an
+                un-undoable delete must not share the tag's pressable box).
+                Border and tint arrive on hover/focus so the target confirms
+                under a pointer; `:focus-visible` still rings the real 44px
+                box. */}
             <button
               type="button"
               title={`Remove ${tag}`}

@@ -27,9 +27,8 @@ const APP = join(process.cwd(), "src", "app");
 /** Route paths, with dynamic segments filled in by a plausible sample. */
 const SAMPLE: Record<string, string> = {
   "[shareCode]": "SUMMER",
-  "[shareId]": "mbPreview1",
+  "[shareId]": "aBcDeFgH12",
   "[id]": "m-rrf-001",
-  "[state]": "error",
 };
 
 const walk = (dir: string): string[] =>
@@ -47,14 +46,7 @@ const routeOf = (file: string) =>
     .map((seg) => SAMPLE[seg] ?? seg)
     .join("/");
 
-/**
- * `/dev/kit` and `/dev/states/*` are the harness galleries: they render all
- * three shells side by side on purpose, so "one variant per route" is not a
- * claim about them. They are also `NODE_ENV !== "production"` only.
- */
-const PAGES = walk(APP)
-  .filter((f) => f.endsWith(`${sep}page.tsx`))
-  .filter((f) => !relative(APP, f).startsWith(`dev${sep}`));
+const PAGES = walk(APP).filter((f) => f.endsWith(`${sep}page.tsx`));
 
 describe("mbShellVariantFor", () => {
   it("puts every public share surface on the public shell", () => {

@@ -99,10 +99,7 @@ type UseFormationEditorReturn = {
   loadDraft: () => boolean;
   clearDraft: () => void;
   hasDraft: boolean;
-  /**
-   * When the draft was last written, so the 30 s autosave is legible instead of
-   * invisible. Rendered `tabular-nums` beside the Save action.
-   */
+  /** When the draft was last written — makes the 30s autosave visible. */
   draftSavedAt: number | null;
 
   // Export
@@ -187,16 +184,8 @@ export const useFormationEditor = (
     return false;
   });
 
-  /**
-   * Lazily initialised, and this is a real bug fix rather than a tidy-up.
-   *
-   * `useRef(getInitialData())` evaluates its argument on EVERY render and
-   * throws the result away after the first. `getInitialData` ends in
-   * `cloneFormationData`, which is `JSON.parse(JSON.stringify(...))` over 12
-   * frames x 7 roles plus arrows — so a full deep clone ran on every drag
-   * frame, every keystroke in the name field and every rotation switch, for
-   * nothing. Under a finger at 60 Hz that is 60 discarded clones a second.
-   */
+  /* Lazily initialised: `useRef(getInitialData())` would run a full deep
+     clone on every render and discard it — 60 clones/s under a drag. */
   const initialDataRef = useRef<FormationData | null>(null);
   if (initialDataRef.current === null) {
     initialDataRef.current = getInitialData();
@@ -217,18 +206,9 @@ export const useFormationEditor = (
     setCurrentRotation((prev) => (prev === 1 ? 6 : ((prev - 1) as RotationNumber)));
   }, []);
 
-  /**
-   * Replace ONE frame by copying the path down to it and sharing every other
-   * frame by reference.
-   *
-   * The old code deep-cloned all twelve frames per committed drag frame — up to
-   * sixty times a second — and, worse, gave `formationData` a fresh identity
-   * every time, which forced all four validation passes (`validateFormation`,
-   * `getBlockingErrors`, `getOverlapWarnings`, `isFormationValid`) to re-run
-   * over the whole corpus on every one of those frames. This touches three
-   * objects. The eleven untouched frames keep their identity, so a future
-   * memoised consumer can rely on it.
-   */
+  /* Replace ONE frame, sharing every other frame by reference — the eleven
+     untouched frames must keep their identity so memoised consumers (and the
+     four validation passes) do not re-run per drag frame. */
   const writeFrame = useCallback(
     (mutate: (frame: RotationFrame) => RotationFrame) => {
       setFormationData((prev) => {
@@ -414,17 +394,10 @@ export const useFormationEditor = (
     return () => clearInterval(interval);
   }, [hasUnsavedChanges, saveDraft]);
 
-  /**
-   * Get formation data for saving, with the libero spot MATERIALISED.
-   *
-   * `frame.roleSpots.L || frame.roleSpots[backRowMB]` appears in three separate
-   * renderers, and it is a read-time patch over a write-time hole: a formation
-   * built from a template that never placed `L` has no `L` spot at all, so
-   * `FormationEditorCourt` early-returned before the fallback and the libero
-   * could not take a movement arrow. Writing `L` on save (charter W7 decision)
-   * closes it at the source; the read-side fallback stays for documents saved
-   * before this shipped.
-   */
+  /* Materialise the libero spot on save: a formation built from a template
+     that never placed `L` has no `L` spot at all. The read-side
+     `roleSpots.L || roleSpots[backRowMB]` fallback stays for documents saved
+     before this shipped. */
   const getFormationForSave = useCallback(() => {
     const materialised: FormationData = { serving: {}, receiving: {} } as FormationData;
     (["serving", "receiving"] as const).forEach((frameMode) => {

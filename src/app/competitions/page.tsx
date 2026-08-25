@@ -34,78 +34,12 @@ import {
   type MbCompetitionRow,
 } from "@/components/matchbook/useMatchbookCompete";
 
-/* ===========================================================================
-   COMPETE CONSOLE
-
-   Three defects the critics measured here, all of them the same mistake:
-   a status was being carried by a hue on a letterform.
-
-     "Draft"  --mb-gold  10.56px/700  2.15:1   (floor 4.5)
-     "Live"   --mb-red   14.4px/700   4.20:1
-     "Final"  --mb-green 14.4px/700   3.93:1
-
-   The fix is not three darker hexes — it is `MbBadge`, which already solved
-   this: the letterforms are navy (11.79:1 on paper, 12.84:1 in a panel) and
-   the tone rides a MARK instead, one shape per tone, so the status survives a
-   greyscale capture as well as the contrast floor. The local STATUS_STYLES
-   table is gone; a status is a badge tone now, in one place.
-
-   -------------------------------------------- the screen with nothing on it
-
-   Measured on a brand-new account at 390px, this route was 4551px of paper
-   carrying SEVEN panels that each said the same thing in a different noun:
-
-     All Events            "No competitions exist yet"      button
-     Tournament Status     "No competition exists yet"      no button
-     Championship Bracket  "No bracket exists yet"          button
-     Live Courts           "No live matches exist yet"      no button
-     Upcoming Schedule     "No upcoming matches exist yet"  no button
-     Recent Results        "No results exist yet"           no button
-     Event Details         "No competition exists yet"      no button
-
-   Seven `display/stat-sm` headlines of identical size and weight; "no
-   competition exists yet" printed TWICE and separated from the third by an
-   invisible plural; four of the seven with nothing to press, while the
-   identically-named panels on `/` all offered an action. And the masthead — on
-   the screen whose entire job is creating a competition — carried ZERO
-   buttons. The create action hid as a 121px outline button inside two panel
-   bodies. The rail's coral CTA is that action too, but the rail is not
-   rendered below `lg`, so on a phone the only way in was 400px down the page.
-
-   `EventConsole` and `FirstRunConsole` below are the two compositions this
-   screen actually has. The empty one is not the populated one with the data
-   removed: two panels, both with something true to say — the five formats the
-   reader is about to choose between, and the teams already on the books, which
-   is the one fact that decides whether the wizard has anything to schedule —
-   and ONE action, in the masthead, where a thumb reaches first.
-
-   ------------------------------------------------- and the state just after
-
-   That fixed the screen with NO competition on it. The screen with a competition
-   and nothing played had the same disease and reached it sooner, because a
-   competition exists here before a match does. Measured at 390px, on the
-   competition the wizard has just written:
-
-     created, no schedule   1802px   three empty headlines
-     schedule generated     1740px   two
-     first match live       1744px   two
-     first result           1733px   two
-
-   So `EventConsole` withholds a strip that has nothing to print and names it in
-   one index instead, from two upward — the same object, the same rows and the
-   same sentences the Overview uses, so the two screens cannot promise "Live
-   Courts" in two different sets of words.
-
-   The main panel is deliberately exempt. It is the screen's principal object
-   and its empty state names the one thing to do next; capping the screen at
-   that single headline is the rubric's anchor, not a compromise with it.
-
-   Populated behaviour is untouched, measured not asserted: on the full fixture
-   `muteSections` is empty, so every panel renders as it did in the same
-   twelve-column spans, and each keeps its own empty state for the states a real
-   competition can still reach. What is gone is seven of them, or three of them,
-   being empty at once, for one reason, with no way out of it.
-   =========================================================================== */
+/* COMPETE CONSOLE. A status is a badge tone (MbBadge), never a hue on a
+   letterform. `EventConsole` and `FirstRunConsole` are the screen's two
+   compositions — the empty one is its own design, not the populated one with
+   the data removed. `EventConsole` withholds strips that have nothing to
+   print (`muteSections`) and names them in one index instead; the main panel
+   is exempt, since its empty state names the one thing to do next. */
 
 /** in_progress / draft / completed as the badge system already names them. */
 const STATUS_TONE: Record<MbCompetitionRow["status"], MbBadgeTone> = {
@@ -120,21 +54,9 @@ const STATUS_LABEL: Record<MbCompetitionRow["status"], string> = {
   completed: "Final",
 };
 
-/**
- * What the event's own control is CALLED, per state.
- *
- * It was "Manage Event" in all three states and in both places it renders, and
- * the reader's verdict on it was "the primary CTA is the vague MANAGE EVENT …
- * I could not tell how to start my tournament from this screen". A draft, a
- * live event and a finished one need three different things from the organiser
- * — write the fixtures, score them, read them — and a button that names none of
- * them is a button that has to be tried to be understood.
- *
- * One table, ONE call site. It used to have two — the masthead and the Event
- * Details foot — which is how the screen ended up printing the same words, the
- * same glyph and the same destination twice in one viewport; see the note on
- * that panel below.
- */
+/* What the event's own control is called, per state. One table, ONE call
+   site — a second call site prints the same words and destination twice in
+   one viewport. */
 const EVENT_ACTION: Record<
   MbCompetitionRow["status"],
   { label: string; icon: string }
@@ -251,30 +173,10 @@ const StatusStat = ({
   </div>
 );
 
-/* ---------------------------------------------------------------------------
-   A DRAFT IS NOT A COMPETITION WITH ZEROS IN IT
-
-   Measured on the state a first-time reader actually reaches — one round robin,
-   four teams, created and not started — this screen printed:
-
-     TOURNAMENT STATUS   MATCHES COMPLETED 0 / 0 · TEAMS ENTERED 4 ·
-                         FORMAT Round Robin · LIVE NOW 0
-     STANDINGS           four rows, every one of them
-                         `=1 · P0 · W0 · L0 · PF0 · PA0 · PD0 · Pts0`,
-                         "No matches played yet" in every Form cell
-
-   Fourteen printed zeros at 390px, thirty at 1440. A completion meter for a
-   thing with nothing to complete, and a league table ranking four teams that
-   have never played — a table whose whole claim is that the order means
-   something. An earlier round of this programme already wrote down the rule ("a
-   0-0-0 table is worse than no table at all") and this screen still broke it.
-
-   These two panels are the draft's own composition. Between them they say the
-   three true things about a draft — it has not started, here is what starting
-   will build, here is who is entered — and nothing else on the screen repeats
-   them: the format and the scoring live in Event Details, the roster count
-   lives in this panel's own head.
-   --------------------------------------------------------------------------- */
+/* A draft is not a competition with zeros in it. These two panels are the
+   draft's own composition — it has not started, here is what starting will
+   build, here is who is entered — and nothing else on the screen repeats
+   them. */
 
 const NotStartedPanel = ({ selected }: { selected: MbCompeteSelected }) => (
   <Panel title="Not Started Yet" tone="navy" icon="clock">
@@ -379,14 +281,7 @@ const MainPanel = ({ selected }: { selected: MbCompeteSelected }) => {
       {selected.standings.length === 0 ? (
         <PanelEmpty message="No standings exist yet — play matches to build the table." />
       ) : (
-        /* This was the app's fourth standings table and its only one ranked by
-           a measure it did not print: `W L Pct PF PA PD`, no Pts, no Form, no
-           legend, rank read off the map index. Measured against the SAME
-           league on `/competitions/s-rr-28`, it showed two teams on `.667` and
-           three on `.500` in an order the detail screen explained with 13/12
-           and 10/10/9 competition points — so a reader who saw both screens
-           could not reconcile them (F14). It is the one component now, with
-           the one column order and the legend that names every abbreviation.
+        /* The one standings component, one column order, one legend —
            `compact` keeps the row height this narrow column had. */
         <>
           <MbStandingsTable
@@ -401,21 +296,9 @@ const MainPanel = ({ selected }: { selected: MbCompeteSelected }) => {
   );
 };
 
-/**
- * One event in the list. Rebuilt around three findings on the shipped row:
- *
- *   - the row was a `<div onClick>`, so selecting an event was impossible from
- *     a keyboard (HF-15). It is a `<button>` now, and the whole name block is
- *     its label.
- *   - `Open` measured 40.5 x 44 and the delete key 14 x 14 — two of the twelve
- *     sub-44 targets `audit.mjs` counted on this route (HF-2).
- *   - the delete key sat 12px from `Open`, the highest-frequency control in the
- *     row (HF-14).
- *
- * All three answer to the same move: the row's own actions collapse into one
- * 48px `MbMenu` disc, where Open and Delete are menu items with room between
- * them and the destructive one is toned and named in full.
- */
+/* One event in the list. The row is a real <button> (keyboard-selectable) and
+   its actions collapse into one 48px MbMenu disc, with the destructive item
+   toned and named in full. */
 const EventRow = ({
   row,
   selected,
@@ -429,10 +312,7 @@ const EventRow = ({
   onOpen: () => void;
   onDelete: () => void;
 }) => (
-  /* `py-1` is measured, not decorative. Without it the row is 55.4px, the 48px
-     menu disc fills all but 7.4px of it, and consecutive discs land under the
-     8px separation floor — six stacked 48px targets with 7px between them is
-     the mis-tap the floor exists to prevent. */
+  /* `py-1` keeps consecutive rows' 48px menu discs >=8px apart. */
   <div
     className="mb-row-hover grid grid-cols-[1fr_auto_auto] items-center gap-2 py-1 pr-2"
     style={selected ? { boxShadow: "inset 3px 0 0 var(--mb-coral)" } : undefined}
@@ -442,26 +322,15 @@ const EventRow = ({
       onClick={onSelect}
       aria-pressed={selected}
       className="mb-btn-touch flex min-w-0 flex-col justify-center px-4 py-2 text-left"
-      /* The rung is `lg` (56), stated inline because `.mb-btn-touch`'s 44px
-         floor is unlayered and a Tailwind `min-h-14` would never apply. The
-         name line plus a one-line meta sums to 54.88, so without a rung the
-         row sat 0.88px under `lg` on every event — a height on no ladder,
-         four times per screen. 56 governs now; a meta line that wraps at 320
-         still grows the row, which is a content row above the floor (§3.3). */
+      /* Inline because `.mb-btn-touch`'s 44px floor is unlayered — a Tailwind
+         `min-h-14` would never apply. */
       style={{ minHeight: 56 }}
     >
       <span className="matchbook-display truncate text-[0.9rem] mb-track-display font-bold">
         {row.name}
       </span>
-      {/* `body/2xs`, and it WRAPS. `truncate` cost this line 12px at 390 —
-          "Double Elimination • 8 teams • 0/0 matches" lost the word "matches"
-          on the width where it is the only description of the event. A meta
-          line is prose, not a label, so it takes a second line rather than an
-          ellipsis; the row's height already floats on `mb-btn-touch`. */}
-      {/* A draft has no fixtures, so it has no ratio: "0/0 matches" is two
-          zeros standing in for the one fact that is true about it. Same rule
-          the panels below now follow — a number that only exists because the
-          shape expects one is not a number. */}
+      {/* Wraps, never truncates — a meta line is prose. A draft has no
+          fixtures, so it prints "not started", never "0/0 matches". */}
       <span className="text-[0.72rem] tabular-nums text-mb-ink-muted">
         {row.typeLabel} • {row.teamCount} teams •{" "}
         {row.status === "draft"
@@ -487,20 +356,9 @@ const EventRow = ({
   </div>
 );
 
-/* ---------------------------------------------------------------------------
-   THE ZERO STATE
-
-   Two panels, and neither of them is an empty one. `MB_COMPETITION_FORMATS` is
-   derived from `FORMAT_META`, so the five rows are the same five the wizard
-   itself offers, with the same blurbs and the same contained accents.
-
-   `TeamsReadyPanel` is the only object on the screen that CAN be empty, and on
-   a brand-new account it is — one `PanelEmpty`, with an action, which is
-   invariant 25 doing its job rather than seven of them shouting in unison.
-   The wizard quick-adds teams as you go, so this is a head start and not a
-   gate; the copy says so, and the masthead action stays performable either
-   way.
-   --------------------------------------------------------------------------- */
+/* The zero state: two panels, neither an empty one. `MB_COMPETITION_FORMATS`
+   derives from `FORMAT_META`, so the five rows match the wizard's own.
+   `TeamsReadyPanel` is the only object here that can be empty. */
 const FirstRunConsole = ({
   teams,
   teamCount,
@@ -549,10 +407,9 @@ const EventConsole = ({
   onOpen: (id: string) => void;
   onDelete: (id: string) => void;
 }) => {
-  /* Arms at two, exactly as the Overview does and for the same reason: one
-     mute strip beside four populated panels is what a `PanelEmpty` is for.
-     On the full fixture `muteSections` is empty, so every span below resolves
-     to the composition that shipped. */
+  /* Arms at two: one mute strip beside four populated panels is what a
+     `PanelEmpty` is for. On a full fixture `muteSections` is empty and every
+     span resolves to the standard composition. */
   const collapsed = selected.muteSections.length >= 2;
   const kept = (key: MbOverviewSection) =>
     !collapsed || !selected.muteSections.includes(key);
@@ -659,33 +516,15 @@ const EventConsole = ({
             {selected.liveCourts.map((line, i) => (
               <div
                 key={i}
-                /* THE MATCHUP IS ONE CELL (L1). It was five tracks —
-                   `[52px_minmax(0,1fr)_auto_minmax(0,1fr)_auto]` — with a
-                   `TeamMark` in each of the two `1fr`s, and at 320 that
-                   arithmetic leaves each identity 14.9px: measured on an
-                   eight-club roster this row painted
-
-                     [crest] AT  15 – 13  \II [crest]  ● LIVE
-
-                   i.e. "Kingsway Athletic" as AT and "Westhill Wanderers II"
-                   as \II, on the panel whose entire job is saying who is
-                   playing. Three tracks now, and `MbMatchupPair` gives each
-                   team its own line from its OWN container width — the same
-                   component and the same cut the Overview's Live Courts panel
-                   already uses, so the two screens that name the same object
-                   stop disagreeing about how to draw it.
-
-                   `decided={false}`: nothing is settled while the match is
-                   live, so neither side is muted as the loser. */
+                /* The matchup is ONE cell: `MbMatchupPair` gives each team a
+                   line from its own container width instead of splitting the
+                   row into starving 1fr tracks. `decided={false}` — neither
+                   side mutes while live. */
                 className="grid grid-cols-[52px_minmax(0,1fr)_auto] items-center gap-2 px-3 py-2.5"
               >
                 <p className="matchbook-display border-r border-mb-rule pr-2 text-[0.72rem] mb-track-link font-bold tabular-nums">
                   {line.court}
                 </p>
-                {/* Navy figures, not coral. A live score in coral measured
-                    3.55:1 at 15.2px/700 — and it is the one number on the row
-                    a reader must not have to work for. `MbMatchupPair` inks
-                    them navy at every emphasis. */}
                 <MbMatchupPair
                   home={line.home}
                   away={line.away}
@@ -709,13 +548,8 @@ const EventConsole = ({
         {selected.schedule.length === 0 ? (
           <PanelEmpty message="No upcoming matches exist yet." />
         ) : (
-          /* Navy edge spine — the schedule spine came OFF coral's job list
-             when the census closed at three jobs; a timeline axis is
-             structure, not selection. Same §3.3 solid-navy edge as
-             `SchedulePanel` on `/`, so the object keeps one vocabulary
-             across routes. (The round label beside it was once a second
-             coral as a LETTERFORM — "Round 4" at 10.56px/700, 3.55:1 — it
-             stays navy.) */
+          /* Navy edge spine — a timeline axis is structure, not selection;
+             same solid-navy edge as `SchedulePanel` on `/`. */
           <div className="ml-3 flex flex-col divide-y divide-mb-rule border-l-[1.5px] border-mb-navy">
             {selected.schedule.map((line, i) => (
               <div
@@ -759,15 +593,9 @@ const EventConsole = ({
             {selected.recent.map((line, i) => (
               <div
                 key={i}
-                /* Same one-cell matchup as the Live Courts row above, for the
-                   same measurement: at 320 the two `1fr` tracks were 78px
-                   each and painted "Bec VC", "Mar VC", "Gre CC" and
-                   " Spikers" — five clubs reduced to their suffix, four of
-                   them below the floor. */
+                /* Same one-cell matchup as the Live Courts row above. */
                 className="grid grid-cols-[44px_minmax(0,1fr)] items-center gap-1.5 px-3 py-2"
               >
-                {/* `display/status`. 0.64rem (10.24px) was between steps
-                    and shipped five times on this screen. */}
                 <p className="matchbook-display text-[0.66rem] mb-track-status font-bold tabular-nums text-mb-ink-muted">
                   {line.label}
                 </p>
@@ -794,26 +622,9 @@ const EventConsole = ({
 
     {/* Event details */}
     <div className="xl:col-span-4">
-      {/* -------------------------------------------------------------------
-          ONE PRIMARY, ONE CONTROL — the list screen's own copy of F2
-
-          This panel's foot carried a filled navy `MbButtonLink` reading
-          `EVENT_ACTION[status].label` — the SAME words, the same glyph, the
-          same destination and the same tone as the masthead action built from
-          the same table 700px above it. On the state a first-time reader
-          reaches (one draft, one event) both were in the first viewport at
-          once: measured at 1440x900, "SET UP & START" at y=61 and "SET UP &
-          START" at y=776. That is the defect the detail screen was cured of —
-          "two identical START COMPETITION buttons about 350px apart … one
-          primary action deserves one control" — reproduced on the list.
-
-          The masthead keeps it: it is the shell's action slot, it is on screen
-          at every width without a scroll, and it is what answers "how do I
-          start my tournament from this screen". What the panel gets instead is
-          the affordance its four neighbours already use — a head link, quiet,
-          named for the destination rather than for the commit, so the two can
-          no longer read as two copies of one button.
-          ------------------------------------------------------------------- */}
+      {/* One primary, one control: the masthead owns `EVENT_ACTION`; this
+          panel gets a quiet head link named for the destination, so the two
+          cannot read as copies of one button. */}
       <Panel
         title="Event Details"
         meta={
@@ -855,10 +666,8 @@ const EventConsole = ({
       </Panel>
     </div>
 
-    {/* The withheld strips, as one index that closes the last row flush. Same
-        object and same rows the Overview uses, so the two screens promise Live
-        Courts, Upcoming Schedule and Recent Results in one sentence each rather
-        than in two sets of words that can drift apart. */}
+    {/* The withheld strips as one index, same object and rows the Overview
+        uses so the two screens cannot drift apart. */}
     {collapsed && (
       <div className={MB_XL_SPAN[mbClosingSpan(keptSpans)]}>
         <MbLedgerPanel
@@ -892,30 +701,10 @@ export default function CompetitionsPage() {
       /* The rail key IS this screen's primary action, so it keeps the coral and
          the masthead's action takes navy — one coral fill. */
       cta={{ href: "/competitions/new", label: "New Competition", icon: "plus" }}
-      /* -------------------------------------------------------------------
-         THE MASTHEAD NAMES THE ROUTE, NOT THE SELECTION
-
-         It used to take its `<h1>`, its status badge and its sub-line from
-         whichever event happened to be selected, so a reader who had created
-         exactly one competition arrived at a list screen whose masthead read
-         "THURSDAY LEAGUE / DRAFT" — the same lockup the competition's OWN
-         screen carries one tap away. Their words: "the list page adopts my
-         competition's name as its masthead". Two routes, one title, and the
-         only difference between them 400px down the page.
-
-         `AppShell` had already paid for this once from the other direction: its
-         focus effect notes that `shortTitle` "on `/competitions` is the SELECTED
-         EVENT'S NAME and therefore changes once, after the data resolves, with
-         no navigation at all", which used to land the route at scrollY 57 with
-         its own `<h1>` behind the mobile strip. A literal removes the cause
-         rather than the symptom.
-
-         So: the title is the console's, in both branches; the sub-line is the
-         account's own ledger ("6 events • 2 live • 1 draft • 3 final") rather
-         than the selection's numbers, which the panels below already print; and
-         the status badge is gone, because a `DRAFT` chip beside the word
-         "Compete." describes something the reader cannot see from there.
-         ------------------------------------------------------------------- */
+      /* The masthead names the ROUTE, not the selection — a selection-derived
+         title duplicates the event's own screen and changes after data
+         resolves with no navigation, which also broke the shell's focus
+         handling. */
       masthead={{
         title: (
           <>
@@ -924,11 +713,8 @@ export default function CompetitionsPage() {
         ),
         shortTitle: "Compete",
         subLine: selected ? data.inventory : "No competitions yet",
-        /* Navy in both branches, because the rail already spends the screen's
-           one coral fill on `New Competition` (invariant 15). The populated
-           branch names what the destination is FOR in this state — see
-           `EVENT_ACTION` — instead of the one word "Manage" that covered
-           writing a schedule, scoring a live event and reading a finished one. */
+        /* Navy in both branches — the rail already spends the screen's one
+           coral fill on `New Competition`. */
         actions: selected
           ? [
               {

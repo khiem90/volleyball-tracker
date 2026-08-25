@@ -37,94 +37,31 @@ import { QuickAddTeams } from "@/components/QuickAddTeams";
 import { MB_GATE_DORMANT } from "@/components/competitions/new/dormant";
 import { pluralise } from "@/lib/text";
 
-/* ===========================================================================
-   NEW COMPETITION — the app's first-run experience
+/* NEW COMPETITION wizard. Structural constraints:
 
-   Layout only (invariant 23). Everything the screen knows comes from
-   `useNewCompetitionPage` (state + the one mutation) and
-   `useMatchbookNewCompetition` (shape).
-
-   Six structural decisions live here rather than in a step:
-
-   1. ONE `MatchbookShell`, mounted by the ROUTE and never swapped. The
-      skeleton and the wizard are its children, not two shells in sequence.
-      Why, measured: the shell moves focus to `<main>` on a route change and
-      guards that with a `settled` ref set on the first effect run. The guard
-      does not survive React re-connecting a subtree's passive effects — the
-      captured stack read `useRouteChange.useEffect → commitHookEffectListMount
-      → reconnectPassiveEffects` — so a route that mounts a loading shell and
-      then a second, different shell fires the "you navigated" focus move on a
-      COLD LOAD. Measured on the two-shell tree: `document.activeElement` was
-      `MAIN#mb-main` from +633ms, and the first Tab press returned the masthead
-      Account chip instead of `.mb-skip-link`, on the one route in the app
-      where that was true (`/competitions`, `/teams` and `/quick-match` all
-      arrive on `BODY` and return the skip link first). With one shell the
-      effect runs once, the guard holds, and the route matches its siblings.
-      `/competitions` never showed the defect because its auth gate resolves
-      synchronously in dev-preview, so its `MbPageLoading` shell never renders;
-      this route's hydration gate guarantees the second mount.
-   2. ONE commit bar, at every width. `MbActionBar` is `position: sticky`, so
-      the primary is reachable without scrolling on a phone AND on a 1440
-      desktop, and there is exactly one Create control on the screen rather
-      than a masthead copy that has to be kept in step with it.
-
-      A sticky bar only sticks INSIDE ITS OWN CONTAINING BLOCK, so on a page
-      shorter than the viewport it has nothing to stick to and comes to rest
-      wherever the content happens to end. Measured on an empty account at
-      390x844 on step 2 — a directory panel holding one empty state — the
-      document was exactly 844px, the bar's bottom edge sat at y=637, and
-      **207px of blank cream** ran from there to the tab bar. The column now
-      publishes its own distance from the top of the document as
-      `--mb-fill-top` and takes at least the rest of the viewport, so the
-      bar reaches the bottom on a short step and behaves identically on a long
-      one. See `matchbook/useViewportFill.ts`.
-   3. The panel grid is KEYED on the step, so `.mb-enter-grid` replays its
-      staggered settle on every advance. That is the step transition — the
-      masthead, the rail and the bar are outside the key and do not move.
-   4. The step heading is a visually-hidden `<h2>` that takes focus on every
-      step change, and the same sentence is announced through one polite live
-      region. A wizard that changes under a screen-reader user without saying
-      so is unusable, and `MatchbookShell`'s own announcer keys on `pathname`,
-      which a query-string step change never touches.
-   5. The team dialogs are mounted HERE, not inside the teams step, so opening
-      "Add team" from the empty state and from the entry panel is one code
-      path and the dialog survives the list re-rendering underneath it.
-   6. THE STEP NUMBER IS STATED EXACTLY ONCE, in the rail. It used to be
-      stated four times in one viewport — a masthead badge reading "1 / STEP",
-      a masthead dateline "CHOOSE A FORMAT — STEP 1 OF 3", the rail, and the
-      action-bar status "Step 1 of 3 · Choose a format to continue". One datum
-      through four instruments, and the loudest of them (a boxed coral badge)
-      carried the least. Now the three instruments each answer a different
-      question: the masthead says *what you are drawing from*, the rail says
-      *where you are*, the bar says *what is stopping you*.
-   =========================================================================== */
+   1. ONE `MatchbookShell`, mounted by the route and never swapped: the shell's
+      route-change focus move is guarded by a first-run ref, and that guard
+      does not survive React re-connecting a subtree's passive effects — a
+      loading shell followed by a second shell fires the "you navigated" focus
+      move on a cold load.
+   2. One sticky commit bar. Sticky only sticks inside its containing block,
+      so the column takes at least the viewport height (useViewportFill) or
+      the bar comes to rest mid-page on a short step.
+   3. The panel grid is keyed on the step so `.mb-enter-grid` replays per
+      advance; masthead, rail and bar sit outside the key.
+   4. The sr-only step `<h2>` takes focus on each advance and the same line is
+      announced via a live region — the shell's own announcer keys on
+      `pathname`, which a query-string step change never touches.
+   5. The team dialogs mount here, not inside the teams step, so they survive
+      the list re-rendering underneath them. */
 
 const STEP_HEADING_ID = "wizard-step-heading";
 
-/**
- * The rail's shell.
- *
- * It was a full `Panel` titled "Progress" — a panel head, an icon, a 4px navy
- * top border and 24px of body padding wrapped around three words, measured at
- * 175px of desktop and 320px of an 844px phone viewport to restate a number the
- * action bar was already restating. A rail is navigation chrome, not a data
- * panel, so it is drawn as chrome: one edge rule, one 4px radius, no head.
- *
- * `borderWidth` is inline rather than `border-[1.5px]` for the reason
- * `form.tsx` documents — the width belongs to the `--mb-rule-*` tier, and the
- * literal renders 1px anyway.
- */
+/* `borderWidth` is inline rather than `border-[1.5px]`: the width belongs to
+   the `--mb-rule-*` tier, and the literal renders 1px anyway (see form.tsx). */
 const WIZARD_RAIL_CLASS =
   "rounded-[4px] border-solid border-mb-navy bg-mb-paper-bright px-3 py-2";
 
-/**
- * The wizard column reaches the bottom of the viewport, whatever is in it —
- * `MB_VIEWPORT_FILL` + `useMbViewportFill`, the shared floor every sticky
- * `MbActionBar` stands on. The machinery (and the 390/834/1440 measurements
- * that shaped it) started life in this file and moved to
- * `matchbook/useViewportFill.ts` when `/quick-match` grew the same commit bar;
- * note 2 above and the docblocks there are the same story.
- */
 const VIEWPORT_FILL = MB_VIEWPORT_FILL;
 const useViewportFill = useMbViewportFill;
 
@@ -192,15 +129,9 @@ const NewCompetitionWizard = () => {
 
   const { step, stepIndex, selectedFormat, teams, handleSelectAll } = wizard;
 
-  /**
-   * A team created from inside the wizard is entered automatically.
-   *
-   * Without this the empty state is a dead end: the old flow inserted a
-   * colourless "Team N", left it unselected, and the Next button stayed
-   * disabled with no explanation (brief §2.4 defect 7). The ids are diffed
-   * rather than threaded back through the dialog, because bulk add returns
-   * nothing and both paths have to behave the same.
-   */
+  /* A team created from inside the wizard is entered automatically. The ids
+     are diffed rather than threaded back through the dialog, because bulk add
+     returns nothing and both paths must behave the same. */
   const enterNewTeams = useRef(false);
   const knownTeamIds = useRef<Set<string> | null>(null);
   useEffect(() => {
@@ -228,19 +159,9 @@ const NewCompetitionWizard = () => {
 
   const heading = `${wizardStepHeading(step)} — step ${stepIndex + 1} of 3`;
 
-  /**
-   * Focus moves ON AN ADVANCE, and only on an advance.
-   *
-   * This was a `settled` boolean ref that flipped on the first effect run —
-   * the same shape as the shell defect in note 1, and it failed the same way:
-   * `document.activeElement` was `H2#wizard-step-heading` (an `sr-only`,
-   * `tabIndex={-1}` node) from +800ms on a cold load, and the first Tab press
-   * landed on the third format card.
-   *
-   * Comparing against the previous STEP is immune to a re-run, because the
-   * guard is a value a second invocation cannot distinguish from the first: on
-   * mount `prevStep.current === step`, whichever pass runs.
-   */
+  /* Focus moves on an advance only. Guard by comparing the previous STEP, not
+     a first-run flag — a flag does not survive effect re-runs, but on mount
+     `prevStep.current === step` whichever pass runs. */
   const prevStep = useRef(step);
   useEffect(() => {
     if (prevStep.current === step) return;
@@ -275,15 +196,9 @@ const NewCompetitionWizard = () => {
           />
         </div>
 
-        {/* THE GATE'S REASON, beside the control that satisfies it.
-
-            `data-wizard-gate` and `tabIndex={-1}` are the contract
-            `useNewCompetitionPage.focusGate` looks for: pressing a primary that
-            cannot move focuses this wrapper, which on a phone also scrolls it
-            into view, and puts a screen reader's cursor on the notice that has
-            just appeared. Exactly one exists at a time because it lives above
-            the step grid rather than inside a step, and the first panel of
-            every step is the one holding the answer. */}
+        {/* `data-wizard-gate` + `tabIndex={-1}` is the contract
+            `useNewCompetitionPage.focusGate` looks for: pressing a primary
+            that cannot move focuses (and scrolls to) this wrapper. */}
         <div
           data-wizard-gate
           tabIndex={-1}
@@ -297,11 +212,7 @@ const NewCompetitionWizard = () => {
         </div>
 
         {/* Keyed on the step: `.mb-enter-grid` replays per advance.
-
-            `xl:items-start` rather than the default stretch. The two columns of
-            a wizard step are never the same length — a directory against a
-            roster — and `.mb-panel` is `height: 100%`, so stretching produced a
-            900px panel holding three lines of text. */}
+            `xl:items-start`, not stretch — `.mb-panel` is `height: 100%`. */}
         <div
           key={step}
           className="mb-enter-grid grid grid-cols-1 gap-4 xl:grid-cols-12 xl:items-start"
@@ -362,56 +273,27 @@ const NewCompetitionWizard = () => {
 
         <SubmitNotice wizard={wizard} />
 
-        {/* `--mb-toast-offset` is `MatchbookBottomBar`'s own published height —
-            57px below `lg`, 0 at `lg` and 0 in landscape — so the commit bar
-            rides above the fixed tab bar without this file restating either
-            media query. The `!` is required: `.mb-action-bar { bottom: 0 }` is
-            unlayered and outranks a plain utility.
-
-            `.mb-enter .mb-stagger-4` is the "slides up on first mount only"
-            the brief asks of a sticky commit bar: it sits outside the step key,
-            so it arrives once with the route and never moves again. */}
-        {/* `mt-auto` is the other half of `VIEWPORT_FILL`: the column is now
-            at least a viewport tall on a short step, and an auto top margin is
-            what sends its last child to the far end of that height instead of
-            leaving it stacked under the content. On a step taller than the
-            viewport the margin resolves to 0 and nothing moves. */}
-        {/* `MB_GATE_DORMANT` is the other half of "the primary is never
-            disabled": the control stays operable so pressing it can raise the
-            gate notice, and it stops WEARING COMMIT DRESS while it cannot
-            commit. Measured on step 2 before this, with "Select at least 3
-            teams" in the status line 24px above: `background rgb(201,53,31)`,
-            `opacity 1`, `disabled false`. The recipe and the contrast figures
-            are in `competitions/new/dormant.ts`; `view.gateOpen` is the same
-            fact the status line is already stating in words. */}
+        {/* `--mb-toast-offset` is the tab bar's own published height, so the
+            commit bar rides above it without restating its media queries. The
+            `!` is required: `.mb-action-bar { bottom: 0 }` is unlayered and
+            outranks a plain utility. `mt-auto` pairs with VIEWPORT_FILL to
+            send the bar to the bottom of a short step. `MB_GATE_DORMANT`
+            keeps the primary operable while gated but out of commit dress
+            (recipe in `competitions/new/dormant.ts`). */}
         <MbActionBar
           className={`mb-enter mb-stagger-4 mt-auto bottom-[var(--mb-toast-offset,0px)]! ${
             view.gateOpen ? "" : MB_GATE_DORMANT
           }`}
           status={view.statusLine}
-          /* Back from step 2 onward; Cancel on step 1, where there is nothing
-             to go back to and the bar would otherwise carry a lone primary. */
+          /* Back from step 2 onward; Cancel on step 1. */
           secondary={
             stepIndex > 0
               ? { label: "Back", icon: "chevron-left", onClick: wizard.handleBack }
               : { label: "Cancel", icon: "close", onClick: wizard.handleCancel }
           }
-          /* THE PRIMARY IS NEVER DISABLED, ON ANY STEP.
-             It was, on steps 1 and 2, and the treatment was the defect:
-             `disabled:opacity-40` over a filled coral ground measured
-             `rgb(201,53,31)` at `opacity: 0.4` — a washed-out pink that reads
-             as broken rather than as "not yet" — while the outlined Cancel
-             beside it stayed at full contrast. On the app's first-run screen
-             the healthiest-looking control in the commit bar was the way OUT
-             of the task.
-
-             Step 3 already solved this honestly and said so in a comment: keep
-             the control live, and make pressing it say what is missing and put
-             the user in front of it. `handleNext` now does that on the other
-             two — `gateMessage` above, focus moved to `[data-wizard-gate]` —
-             and the bar's status line still names the gate BEFORE the press.
-             `readOnly` is not a gate either: pressing Create as a viewer
-             raises `SubmitNotice`'s "You cannot create here". */
+          /* The primary is never disabled: pressing it while gated raises
+             `gateMessage` and moves focus to `[data-wizard-gate]`. `readOnly`
+             is not a gate either — Create as a viewer raises SubmitNotice. */
           primary={{
             label: submitting ? "Creating…" : view.primaryLabel,
             icon: step === "details" ? "check" : "chevron-right",
@@ -447,29 +329,9 @@ const Bar = ({ h, w }: { h: string; w: string }) => (
   </span>
 );
 
-/**
- * The wizard's own silhouette, drawn inside the real shell.
- *
- * `MbPageLoading panels={3}` was standing in for this and it draws the shape of
- * `/competitions`: ruled row-list panels in a 7/5 + 4 grid. Measured
- * skeleton → loaded at 1440 on that tree: panel 1 y 108→90 and h 342→134,
- * panel 2 y 108→240 and w 473→669, panel 3 y 466→240, document 710→1024px; at
- * 390, 1016→1736px with a 670px panel displacement. Invariant 26 asks for the
- * FINAL geometry, and the final geometry here is a one-line rail strip over a
- * full-width choice panel — not a row list in sight.
- *
- * The masthead is NOT drawn here any more: the route owns it, so during loading
- * it IS the real masthead and its geometry cannot differ from itself.
- *
- * The bones are the step-1 arrival state, because that is what a cold load
- * paints unless a draft says otherwise: a rail strip over one panel of five
- * ruled 56px choice rows, and nothing else. The preview panel is not drawn,
- * because step 1 on arrival no longer has one.
- *
- * HANDOFF (W2): `MbPageLoading` has no shape axis — a `shape` prop, or a
- * `children` escape hatch for a route's own bones, would make this a call site
- * instead of a component.
- */
+/* The wizard's skeleton, drawn to the FINAL geometry of the step-1 arrival
+   state: a rail strip over one panel of five ruled 56px choice rows. The
+   masthead is not drawn — the route owns the real one. */
 const WizardBones = () => {
   const columnRef = useViewportFill();
   return (
@@ -490,8 +352,6 @@ const WizardBones = () => {
         <div className="flex items-start gap-3">
           {[0, 1, 2].map((i) => (
             <span key={i} className="flex flex-1 flex-col gap-2">
-              {/* 42 + 8 + 11.84 = 61.84 inside a 16px padding box and a 2px
-                  rule: 79.84 against the live rail's measured 80. */}
               <Bar h="h-[42px]" w="w-[34px]" />
               <Bar h="h-[0.74rem]" w="w-[3.5rem]" />
             </span>
@@ -499,9 +359,8 @@ const WizardBones = () => {
         </div>
       </div>
 
-      {/* `aria-hidden` on the bones themselves: the `role="status"` line above
-          is the whole announcement, and a screen reader crawling forty empty
-          boxes is the defect a skeleton is supposed to avoid. */}
+      {/* `aria-hidden` on the bones — the `role="status"` line above is the
+          whole announcement. */}
       <div
         className="grid grid-cols-1 gap-4 xl:grid-cols-12 xl:items-start"
         aria-hidden="true"
@@ -515,15 +374,8 @@ const WizardBones = () => {
               <MbSkeleton w="100%" h="0.62rem" radius={2} />
             </span>
           </header>
-          {/* Five ruled 56px rows, the exact box `FormatChoiceList` draws, so
-              the bones cannot drift from the layout they stand in for. It was
-              a two-up grid of 170px cards, which is the shape the step had
-              before the chooser became a single-choice list — a skeleton
-              standing in for a control that no longer exists is worse than no
-              skeleton, because invariant 26 asks for the FINAL geometry.
-
-              Each row: 18px mark, 36px disc, then a name line over a summary
-              line at the live 0.95/0.72rem line boxes. */}
+          {/* Five ruled 56px rows — the exact box `FormatChoiceList` draws, so
+              the bones cannot drift from the layout they stand in for. */}
           <div className="flex flex-col divide-y divide-mb-rule">
             {[0, 1, 2, 3, 4].map((i) => (
               <span
@@ -542,20 +394,13 @@ const WizardBones = () => {
           </div>
         </section>
 
-        {/* NO SECOND PANEL.
-            `Format Preview` used to be drawn here, because step 1 used to
-            render it on arrival carrying "NO FORMAT CHOSEN YET". It does not
-            any more — the panel arrives with the answer (`FormatStep`) — so
-            a second 153px silhouette here would be a skeleton standing in for
-            a panel the loaded page does not have, which is invariant 26 read
-            backwards. */}
+        {/* No second panel: step 1 no longer renders Format Preview on
+            arrival, and a skeleton must not stand in for a panel the loaded
+            page does not have. */}
       </div>
 
-      {/* The commit bar is 82px of the final geometry at `sm` and above and
-          106px below it — `MB_ACTION_BAR_H` / `MB_ACTION_BAR_H_STACKED`, the
-          two heights `ActionBar.tsx` pins itself to. Leaving it out of the
-          bones was worth 82/106px of document height on its own, which is a
-          scroll range that appears the instant the data lands. */}
+      {/* The commit bar at the two heights `ActionBar.tsx` pins itself to —
+          leaving it out of the bones shifts the document when data lands. */}
       <div
         className="mb-action-bar mt-auto min-h-[calc(82px_+_var(--mb-safe-bottom))] flex-wrap bottom-[var(--mb-toast-offset,0px)]! max-sm:min-h-[calc(106px_+_var(--mb-safe-bottom))] sm:flex-nowrap"
         aria-hidden="true"
@@ -592,16 +437,8 @@ const useHydrated = (): boolean =>
     () => false
   );
 
-/**
- * The masthead's context line — the one fact that is true at every step.
- *
- * It used to be `format · n of m teams entered`, which the rail already states
- * twice over ("FORMAT / Round Robin", "TEAMS / 8 selected"): a fifth
- * restatement of the wizard's own progress in a viewport that had four. The
- * library size is what the wizard DRAWS FROM rather than what it is doing, it
- * needs no wizard state, and that is what lets the masthead be hoisted above
- * the step machine (note 1).
- */
+/* Needs no wizard state, which is what lets the masthead sit above the step
+   machine. */
 const LibraryLine = () => {
   const { state } = useApp();
   const count = state.teams.length;
@@ -613,17 +450,8 @@ const WizardShell = ({ children }: { children: ReactNode }) => (
     variant="console"
     active="/competitions"
     cta={MB_DEFAULT_CTA}
-    /* "Back", not "Competitions".
-       `MbTopStripBack.label` asks for "one short word" and this route was
-       passing twelve characters. The strip is a three-child flex row — a
-       `shrink-0` back control, a `flex-1 min-w-0 truncate` title and a
-       `shrink-0` account chip — so the title is the ONLY child that can
-       absorb a long neighbour, and it always loses first. Measured at 390px:
-       back 144px + account 112.94px + 16px padding + 16px of gaps left the
-       title 101.06px for a string needing 107px, and the wizard announced
-       itself as "NEW COMPETITI…". One word gives it 157px. The destination is
-       not lost — the bottom bar's Compete tab and the masthead's own back link
-       both still go there. */
+    /* One short word: the strip's title is the only flexible child and always
+       loses width to a long back label first. */
     back={{ href: "/competitions", label: "Back" }}
     masthead={{
       title: (
@@ -632,15 +460,6 @@ const WizardShell = ({ children }: { children: ReactNode }) => (
         </>
       ),
       shortTitle: "New competition",
-      /* No badge and no actions.
-         The badge was a coral-framed "1 / STEP" lockup that read as "one step",
-         duplicated the rail, and added a sixth coral job to a screen whose
-         rubric ceiling is two. The Cancel action was the widest control above
-         the fold at 390px — `MastheadAction` is `flex-auto` below `sm`, so a
-         lone escape hatch stretched to 358px and outweighed every real choice
-         on the screen. Cancel now sits in the commit bar on step 1, where the
-         bar has no Back to carry; from steps 2 and 3 the rail walks back, and
-         the mobile top strip's "Competitions" link is unchanged. */
       dateLine: <LibraryLine />,
     }}
   >

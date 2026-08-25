@@ -21,29 +21,12 @@ import type {
   MbTeam,
 } from "./types";
 
-/* ---------------------------------------------------------------------------
-   THE 44px FLOOR ON A PANEL LINK
-
-   `.mb-panel-link` renders 17.3px tall. `globals.css` gives it a 44px floor,
-   but only inside `@media (pointer: coarse)` — so every panel link in the app
-   is a 17.3px target for a mouse, and invariant 33 / HF-2 are not scoped to
-   pointer type. Measured on the converted routes at 1440: 11 such links on
-   `/`, 3 on `/teams`, 2 on `/quick-match`.
-
-   Two shapes, because a header link and a footer link are different objects:
-
-   `MB_PANEL_LINK_HIT` — a `::before` overlay that reaches 44px without
-   changing the box. A pseudo-element is hit-tested as its originating element,
-   so the tap area grows and the panel head does not: the alternative,
-   `min-h-11` on the link, adds ~22px to every panel head on the screen for a
-   control that is already legible. `inset-x-0` keeps the expander inside the
-   link's own column, so it cannot reach across the head and swallow a click
-   meant for the title.
-
-   `MbPanelFooterLink` — the footer CTA is the full width of the panel and is
-   the row a thumb actually goes for, so it takes a real 44px box rather than an
-   invisible one.
-   --------------------------------------------------------------------------- */
+/* The 44px floor on a panel link, in two shapes. `MB_PANEL_LINK_HIT` is a
+   `::before` overlay that reaches 44px without changing the box (a
+   pseudo-element is hit-tested as its originating element); `inset-x-0` keeps
+   the expander inside the link's own column so it cannot swallow a click meant
+   for the title. The footer link is full-width and the row a thumb goes for,
+   so it takes a real 44px box instead. */
 export const MB_PANEL_LINK_HIT =
   "relative before:absolute before:inset-x-0 before:-inset-y-[14px] before:content-['']";
 
@@ -64,80 +47,24 @@ const FooterLink = ({ href, label }: { href: string; label: string }) => (
   </div>
 );
 
-/* ---------------------------------------------------------------------------
-   THE VOID BAND ABOVE A FOOTER LINK
-
-   `.mb-panel` is a flex column and its grid row stretches it to the tallest
-   panel beside it. A panel whose body is a ruled list had NOTHING in it that
-   grows, so the stretch landed in one lump: `mt-auto` threw the footer link to
-   the bottom edge and left a band of blank paper between the last rule and the
-   footer rule. Measured at 1440 before this change:
-
-     /      Recent Results     109.5px void in a 397.5px panel   (28%)
-     /      Live Courts         87.8px void in a 315.5px panel   (28%)
-     /      Upcoming Schedule   53.3px void in a 315.5px panel   (17%)
-     /teams Upcoming Fixtures  166.3px void in a 525px panel     (32%)
-     /teams Recent Form        153.1px void in a 525px panel     (29%)
-
-   The panels that did NOT void — Team Leaders, Championship Bracket, Event
-   Details — all had a `flex-1` child, so the fix is the same one they already
-   use, pushed one level down: the list grows, and the rows share what it gains.
-   A ledger's rules divide the page it is printed on, not just the ink on it, so
-   five fixtures set at even intervals down the column read as a set list rather
-   than as a short list with a hole under it.
-
-   `grow` and not `flex-1`, on purpose. `flex-1` is `flex: 1 1 0%`, and a zero
-   basis in an AUTO-height column makes the container's intrinsic height (row
-   count x tallest row) — every row would inflate to the tallest one on a panel
-   that is not being stretched at all. `grow` leaves the basis at `auto`, so
-   with no free space to hand out these classes change nothing, which is what
-   keeps them correct whichever way `.mb-panel`'s own height resolves.
-
-   Written as a plain `grow` on each list and each row rather than as a shared
-   constant: it is one Tailwind word, and a constant aliasing one word would
-   hide which elements carry it.
-   --------------------------------------------------------------------------- */
-
-/* `RANK_CELL` is gone with the hand-rolled standings table it existed for.
-   `MbStandingsTable` sets the rank column itself, and it reads `rank` /
-   `sharesRank` off the row rather than the map index, so a joint 2nd renders
-   as "=2" on two rows and the next team as 4th. */
+/* The void band above a footer link: `.mb-panel` is a flex column stretched to
+   the tallest panel beside it, so a body with nothing that grows leaves a lump
+   of blank paper above the footer. The lists and rows below carry `grow` so
+   the rows share the stretch and the rules divide the whole column. `grow` and
+   not `flex-1` on purpose: `flex-1`'s zero basis in an AUTO-height column
+   inflates every row to the tallest one on a panel that is not being stretched
+   at all; `grow` leaves the basis at `auto`, so with no free space these
+   classes change nothing. */
 
 /* ===========================================================================
-   THE ZERO STATE
+   THE ZERO STATE — a screen with nothing to report is not eight empty panels,
+   it is ONE screen with a different job:
 
-   Measured on a brand-new account at 390px, `/` was 2540px of paper carrying
-   EIGHT consecutive panels — No standings · No match of the day · No live
-   matches · No upcoming matches · No bracket · No results · No teams · No team
-   leaders — every one of them a `display/stat-sm` headline of the same size and
-   weight, every one with its own hung rule, and twenty controls between them.
-   The one filled button on the screen read "Record Result", on an account with
-   zero teams and zero matches.
-
-   That is not an empty state. It is a populated page with the data removed, and
-   it is the first thirty seconds every user of this product has.
-
-   Three components below replace it. None of them is an "empty state" in the
-   §5.7 sense, because a screen with nothing to report is not eight empty
-   objects — it is ONE screen with a different job:
-
-     `MbStepsPanel`   the progression, numbered, with the live step marked by
-                      the coral selection rail (coral's declared structural job,
-                      invariant 15) and a word, so the mark survives greyscale.
-     `MbLedgerPanel`  a ruled index. It is what the seven mute panels collapse
-                      into: term + what makes it appear, at `display/row-title`
-                      over `body/2xs`, so SEVEN equal display headlines become
-                      ZERO and the promise is still on the page.
-
-   Invariant 25 is intact, not waived: it binds "every list, table, bracket and
-   panel that CAN be empty", and neither of these can be — the steps are always
-   three and the index is always its own rows. The panels that would have been
-   empty are not rendered at all, which is the one thing eight `PanelEmpty`
-   blocks in a column can never be talked into.
-
-   Invariant 52 is the reason for the shapes: a numbered ledger and a contents
-   index are the two most editorial objects a programme has. Neither is a
-   centred lone card, and neither would survive being pasted into a CRM.
+     `MbStepsPanel`   the numbered progression, with the live step marked by
+                      the coral selection rail and a word (survives greyscale).
+     `MbLedgerPanel`  a ruled index — what the mute panels collapse into:
+                      term + what makes it appear. The panels that would have
+                      been empty are not rendered at all.
    =========================================================================== */
 
 export type MbStepState = "done" | "current" | "todo";
@@ -165,14 +92,9 @@ const STEP_WORD: Record<MbStepState, string | null> = {
 };
 
 /**
- * The numbered progression.
- *
- * It carries no button of its own. On a first-run screen exactly one action is
- * possible, the masthead already prints it at the top of the page in the
- * position a thumb reaches first, and printing it a second time 300px lower —
- * which is what `/competitions` did with its create action, twice, in panel
- * bodies — is how a screen ends up with twenty controls and no primary.
- * `footer` is for a genuinely DIFFERENT path, never a second copy of the first.
+ * The numbered progression. It carries no button of its own: the masthead
+ * already prints the one possible action, and `footer` is for a genuinely
+ * DIFFERENT path, never a second copy of the first.
  */
 export const MbStepsPanel = ({
   title,
@@ -194,8 +116,7 @@ export const MbStepsPanel = ({
             key={step.n}
             aria-current={current ? "step" : undefined}
             className="grid grow grid-cols-[2rem_minmax(0,1fr)] items-start gap-x-3 px-4 py-4"
-            /* The same 3px coral inset `EventRow` uses for the selected event —
-               one selection mark, one orientation, one width. */
+            /* The same 3px coral inset `EventRow` uses for the selected event. */
             style={current ? { boxShadow: "inset 3px 0 0 var(--mb-coral)" } : undefined}
           >
             <span
@@ -246,11 +167,10 @@ export interface MbLedgerRow {
   /** Sprite id, drawn once beside the term. Ignored when `dense`. */
   icon?: string;
   /**
-   * A 3px contained rail. Decorative: every row is already told apart by its
-   * word and its glyph, so the default is the neutral `--mb-rule` hairline.
-   * Pass a token only when the rail restates a meaning §1.2 already fixes to
-   * that token — a categorical key built from locked semantic tokens is the
-   * collision that got the format accents deleted (see `formatMeta.ts`).
+   * A 3px contained rail. Decorative — the default is the neutral hairline.
+   * Pass a token only when the rail restates a meaning already fixed to that
+   * token; a categorical key built from semantic tokens is the collision that
+   * got the format accents deleted (see `formatMeta.ts`).
    */
   accent?: string;
 }
@@ -275,17 +195,11 @@ export const MbLedgerPanel = ({
   meta?: React.ReactNode;
   dense?: boolean;
   /**
-   * The dense cut splits its width evenly, which is right in a five- or
-   * eight-column panel and wrong across the whole page: measured at 1440 with
-   * the index closing a flush row, "Live Courts" and the sentence explaining it
-   * sat 780px apart and stopped reading as one row. `wide` caps the term column
-   * so the gloss stays beside the word it glosses however wide the panel is.
-   *
-   * A prop AND a breakpoint: the prop says which panel is the wide one (the
-   * first-run index at five columns never is), and `xl:` is where the twelve
-   * column grid it sits in actually exists. Below `xl` the panel is one column
-   * on a phone, where the even split is already measured good — capping the
-   * term track there would leave the gloss nothing to sit in.
+   * `wide` caps the term column so the gloss stays beside the word it glosses
+   * however wide the panel is — an even split across a whole page puts them
+   * 780px apart. A prop AND a breakpoint: the prop says which panel is the
+   * wide one, and `xl:` is where the twelve-column grid actually exists;
+   * below it the even split is right.
    */
   wide?: boolean;
 }) => (
@@ -331,53 +245,19 @@ export const MbLedgerPanel = ({
 );
 
 /* ===========================================================================
-   THE SPARSE STATE — the same cliff, one step further down the funnel
-
-   The zero state above is measured and fixed. Driving a REAL progression
-   through the running app — nothing, one team, two teams, a competition, a
-   generated schedule, a match in progress, a match finished — showed that it
-   only moved the cliff rather than removing it. At 390px:
-
-     nothing            1117px   0 empty headlines
-     one team           1139px   0
-     two teams          1184px   0
-     competition made   1205px   0
-     schedule written   1227px   0
-     FIRST MATCH LIVE   2527px   FIVE
-     first result       2494px   THREE
-
-   The sixth row is the same defect the zero state was condemned for, and it
-   arrives about ninety seconds later: the reader follows the three steps to
-   the letter, taps the one button the screen offers, and is dropped onto no
-   match of the day · no upcoming matches · no bracket · no results · no team
-   leaders — five `display/stat-sm` headlines of identical size and weight,
-   three of which (bracket, results, leaders) cannot possibly say anything on a
-   two-team account with one match in progress, over a live court that CAN.
-
-   `isFirstRun` cannot be widened to cover it. The instant a match is live the
-   screen has something real to report, and the steps panel would be hiding the
-   score the reader just started. The right object is not a different screen —
-   it is the SAME collapse the zero state already uses, applied per panel:
-
-     a panel with nothing to say is not rendered,
-     and the index below names what will fill it.
-
-   The rubric's anchor is <= 1 display headline on a screen, so the collapse
-   arms at TWO. One mute panel among seven populated ones is what §5.7 empty
-   states are FOR, and firing the machinery for it would replace an honest
-   empty panel with a row in a list — worse, not better. Measured on the full
-   fixture: zero mute panels at 390 and at 1440, so on a populated screen none
-   of this renders at all.
+   THE SPARSE STATE — the same collapse the zero state uses, applied per
+   panel: a panel with nothing to say is not rendered, and the index below
+   names what will fill it. `isFirstRun` cannot be widened to cover this: the
+   instant a match is live the screen has something real to report, and the
+   steps panel would hide the score. The collapse arms at TWO mute panels —
+   one mute panel among populated ones is what an ordinary empty state is for.
    =========================================================================== */
 
 /**
  * The objects the Overview prints, in the order it prints them.
- *
- * `/competitions` names three of the same eight — Live Courts, Upcoming
- * Schedule and Recent Results are the same objects with the same conditions —
- * so it draws its index from this table rather than restating it. Two screens
- * promising the same thing in two different sentences is precisely the drift
- * that put "no competition exists yet" on one screen twice.
+ * `/competitions` names three of the same eight, so it draws its index from
+ * this table rather than restating it — two screens promising the same thing
+ * in two sentences is exactly the drift this table prevents.
  */
 export type MbOverviewSection =
   | "standings"
@@ -406,10 +286,7 @@ const OVERVIEW_INDEX: {
 
 /**
  * What the Overview becomes, in the order the populated screen prints it.
- *
- * It lives beside the panels it describes so the two cannot drift: a row here
- * and a `PanelEmpty` message in the same file are the same promise written
- * once each, and the file that owns one owns the other.
+ * Lives beside the panels it describes so the two cannot drift.
  */
 export const MB_OVERVIEW_CONTENTS: MbLedgerRow[] = OVERVIEW_INDEX.map(
   ({ term, gloss }) => ({ term, gloss })
@@ -428,17 +305,11 @@ export const mbContentsFor = (
   );
 
 /**
- * The span that closes the last row of a 12-column auto-flow grid.
- *
- * Withholding panels breaks a tiling that was only ever exact by arithmetic —
- * the Overview's 7+5+4+4+4+4+4+4 is three flush rows, and dropping any one of
- * them leaves the index stranded beside a hole. This walks the kept spans the
- * way `grid-auto-flow: row` does (an item that does not fit starts a new row)
- * and returns what is left of the final one, so the index closes it flush.
- *
- * Under four columns there is no panel worth drawing in the remainder, so the
- * index takes a full row of its own instead — which is also the answer when
- * the last row is already flush.
+ * The span that closes the last row of a 12-column auto-flow grid, so the
+ * index sits flush when panels are withheld. Walks the kept spans the way
+ * `grid-auto-flow: row` does and returns what is left of the final row; under
+ * four columns (or when the row is already flush) the index takes a full row
+ * of its own.
  */
 export const mbClosingSpan = (spans: readonly number[]): number => {
   let used = 0;
@@ -464,20 +335,12 @@ export const MB_XL_SPAN: Record<number, string> = {
 };
 
 /**
- * The five formats, in the wizard's own presentation order.
- *
- * This is what `/competitions` prints in place of seven mute panels. It is
- * DERIVED from `FORMAT_META` rather than retyped: that module is the single
- * source of truth charter H14 forbids a fourth copy of, and it carries the
- * label, the one-sentence blurb and the sprite id. There is no colour column:
- * the old per-format rails spent `--mb-teal` (locked to the rank-#1 rail) and
- * `--mb-gold` (locked to Draft) as a categorical format key, which is the
- * token double-booking rubric D3 counts by name. Rows take the neutral
- * `--mb-rule` rail; identity is the glyph and the word.
- *
- * Unlike `MB_OVERVIEW_CONTENTS` this is not a promise about what will appear.
- * It is the choice the reader is about to make, which is why it takes the
- * ledger's full cut — rail, glyph, sentence — rather than the dense one.
+ * The five formats, in the wizard's own presentation order — DERIVED from
+ * `FORMAT_META`, never retyped. No colour column: per-format rails spent
+ * semantic tokens as a categorical key, so rows take the neutral rail and
+ * identity is the glyph and the word. This is the choice the reader is about
+ * to make, which is why it takes the ledger's full cut rather than the dense
+ * one.
  */
 export const MB_COMPETITION_FORMATS: MbLedgerRow[] = FORMAT_ORDER.map((type) => ({
   term: FORMAT_META[type].label,
@@ -523,11 +386,9 @@ export const TeamsReadyPanel = ({
         )}
       </div>
     )}
-    {/* The empty cut already carries an "Add teams" button to `/teams`, so the
-        footer would be the SAME destination a second time, 40px below it —
-        which is the shape of the defect this screen is being cleared of. The
-        footer belongs to the populated cut, where the panel is a preview of a
-        list and the link is how you see the rest of it. */}
+    {/* The empty cut already carries an "Add teams" button to `/teams`; the
+        footer belongs to the populated cut only, where the panel is a preview
+        and the link is how you see the rest. */}
     {total > 0 && <FooterLink href="/teams" label="Open the Team Directory" />}
   </Panel>
 );
@@ -535,16 +396,9 @@ export const TeamsReadyPanel = ({
 /* ------------------------------- Standings ------------------------------- */
 
 /**
- * The overview's league table.
- *
- * It used to be a hand-rolled `<table>` with its own column set — P, W, L, a
- * combined `PF–PA` cell, Pts, Form, no PD, no legend, and a rank read off the
- * map index so joint positions could not be shown. That was the FOURTH
- * standings vocabulary in the app and the ranking behind it was a third
- * measure again (F14). It is `MbStandingsTable` now: the same component,
- * the same canonical column order and the same `rankTeams()` ordering that
- * `/competitions/[id]`, `/session/[code]` and `/summary/[code]` render, with
- * the legend that names every abbreviation on screen.
+ * The overview's league table: `MbStandingsTable`, the same component, column
+ * order and `rankTeams()` ordering every other standings surface renders,
+ * with the legend that names every abbreviation on screen.
  */
 export const StandingsPanel = ({
   title,
@@ -594,81 +448,27 @@ export const MatchOfTheDayPanel = ({ match }: { match: MbFeaturedMatch | null })
           <p className="matchbook-display text-[0.72rem] mb-track-link font-semibold">
             {match.division}
           </p>
-          {/* Navy, not coral. 12.8px/700 coral on `--mb-paper-bright` measured
-              3.55:1 against a 4.5:1 floor, and a kick-off time is data, not a
-              call to action — coral's job list has no entry for it. */}
+          {/* Navy, not coral: coral fails the 4.5:1 text floor at this size,
+              and a kick-off time is data, not a call to action. */}
           <p className="matchbook-display text-[0.8rem] mb-track-button font-bold tabular-nums">
             {match.time}
           </p>
         </div>
-        {/* `minmax(0,1fr)`, not `1fr` (R2). A bare `1fr` is `minmax(auto,1fr)`,
-            and `auto` as a track MINIMUM is min-content — so each name column's
-            floor was the longest word in a club name, whatever the viewport
-            said. Measured on `/` at 320 with an ordinary roster ("Oakfield
-            Panthers", "Stonebridge Saints"), before:
+        {/* `minmax(0,1fr)`, never `1fr`: a bare `1fr` is `minmax(auto,1fr)` and
+            `auto` as a track MINIMUM is min-content, so each name column's
+            floor becomes the longest word in a club name — wide enough to
+            stretch the document and push the fixed bottom nav off screen.
 
-              scoreline row  321px of content in a 286px track
-              document       documentElement.scrollWidth 338 vs 320
-              bottom nav     stretched to 338 (it is `fixed inset-x-0`), and
-                             under mobile emulation the layout viewport grows
-                             with it: 9px of the 57px bar visible, all five
-                             cells failing `elementFromPoint`
-
-            The three `auto` score columns are untouched, so at every width where
-            the row already fitted nothing moves. After: 320 vs 320, bar 57px,
-            five of five cells hittable. The track minimum and the CONTENT
-            minimum are two different floors and both had to go — see the note
-            on the cell below for the second. */}
-        {/* The W1 return's own closing sentence — "the names in these two
-            cells are still raw and still WRAP rather than elide" — is the
-            defect this closes. `minmax(0,1fr)` lets the TRACK shrink to zero;
-            it does not let the CONTENT, and a raw span's min-content floor is
-            its longest word. Measured at 320 with an eight-club roster,
-            "Eastfield Kestrels" laid out from x 272.6 to 328.2 and took
-            `documentElement.scrollWidth` to 328 against a 320 client width —
-            which, with `html { overflow-x: hidden }`, is the bottom nav
-            pushed off a viewport that cannot be scrolled to reach it.
-
-            `TeamMark orientation="vertical" wrap` is the system's own answer
-            and carries `[overflow-wrap:anywhere]`, which is the only wrap
-            value that also lowers min-content, plus `min-w-0` and the crest
-            at a named step. Invariant 21 wanted this cell to be a `TeamMark`
-            anyway; it was the last raw crest-and-name pair on the screen.
-
-            ------------------------------------------------- the cut (L1/L2)
-
-            That stopped the overflow. It did not make the names READABLE,
-            because `anywhere` breaks a word rather than a layout and this row
-            asks it to break every time: five tracks, three of which are the
-            two `text-5xl` figures and a VS pip, is 198px of fixed centre on a
-            line that is 246px wide at 320. Measured with an eight-club roster:
-
-              320   34px per name  → 8 and 10 lines, mid-word on every break
-              360   54px           → 6 and 7 lines
-              390   69px           → 4 and 6 lines
-
-            34px is two characters of `display/team-mark`. A name broken into
-            two-character pieces is not a shorter name, it is a different one,
-            and `NAME_FLOOR` (`TeamName.tsx`) puts the answer in the layout
-            rather than in the wrap value: below the width where a name can
-            hold its longest WORD, the three parts stop sharing a line.
-
-            400 = 2 × 100 + 198, where 100px is "Northumberland" — the longest
-            unbreakable token this roster generates — at `display/team-mark`.
-            Above it every break is a space. Below it the row is three stacked
-            rows, home / figures / away, and each name gets the container's
-            whole width: 246px at 320, which sets the same 31-character name on
-            two whole-word lines.
-
-            The figures keep their own line rather than moving beside each
-            name: they are a `text-5xl` pair reading "25 VS 20", the one object
-            on this panel that is not an identity, and splitting them across
-            two rows would make the reader assemble the score from two places.
-
-            The container is the row's own wrapper, not the panel: an
-            `@container` query styles a container's DESCENDANTS and never the
-            container itself, so the grid whose tracks change cannot also be
-            the box being measured. */}
+            Below 400px of container the row stacks to home / figures / away:
+            `anywhere` breaks a word rather than a layout, and with 198px of
+            fixed centre a 320px line leaves 34px per name — two characters a
+            line. 400 = 2 x 100 + 198, where 100px holds the longest
+            unbreakable roster token at this step. The figures keep their own
+            line: they are the one object here that is not an identity, and
+            splitting them across two rows makes the reader assemble the score
+            from two places. The container is the row's own wrapper, not the
+            panel — an `@container` query styles a container's DESCENDANTS,
+            so the grid whose tracks change cannot also be the box measured. */}
         <div className="@container px-5 py-4">
           <div className="grid grid-cols-[minmax(0,1fr)] items-center justify-items-center gap-3 @min-[400px]:grid-cols-[minmax(0,1fr)_auto_auto_auto_minmax(0,1fr)]">
             <TeamMark
@@ -678,20 +478,16 @@ export const MatchOfTheDayPanel = ({ match }: { match: MbFeaturedMatch | null })
               wrap
               className="w-full @min-[400px]:w-auto"
             />
-            {/* One row of figures below the cut, three separate grid items
-                above it. `contents` is what lets the same markup be both: the
-                wrapper stops generating a box, so its three children become
-                grid items of the row itself. */}
+            {/* One row of figures below the cut, three grid items above it:
+                `contents` stops the wrapper generating a box, so its children
+                become grid items of the row itself. */}
             <span className="flex items-center gap-3 @min-[400px]:contents">
               <span className="matchbook-display text-5xl mb-track-masthead font-bold tabular-nums">
                 {match.homeScore}
               </span>
-              {/* `.mb-score-box` sets `font-size: 0.95rem` UNLAYERED, so the
-                  `text-[0.72rem]` this carried never applied — the pip has
-                  always rendered at 0.95rem. `mb-track-title` is that step's
-                  rung, and it is also what the other two VS pips
-                  (`/quick-match`) now use; the three of them shipped at 0.1em,
-                  0.05em and 0.05em. */}
+              {/* `.mb-score-box` sets `font-size` UNLAYERED, so a text-size
+                  utility here is inert; `mb-track-title` is that step's rung,
+                  shared with the other VS pips. */}
               <span className="mb-score-box mb-track-title px-2">VS</span>
               <span className="matchbook-display text-5xl mb-track-masthead font-bold tabular-nums">
                 {match.awayScore}
@@ -755,19 +551,11 @@ export const LiveCourtsPanel = ({ courts }: { courts: MbLiveCourt[] }) => (
         {courts.map((court, i) => (
           <div
             key={i}
-            /* Three tracks, not five: the matchup is ONE cell now.
-               `minmax(0,1fr)` on it because a bare `1fr` is `minmax(auto,1fr)`
-               and the auto floor would let the pair push the row wide. */
-            /* `min-h-28` is the dashboard's schedule-row pitch (C5). Live
-               Courts and Upcoming Schedule sit side by side from `md` up and
-               their natural rows resolved 104.88px and 108.61px — a 3.7px/row
-               drift, so the two ledgers' rules visibly detached one row down.
-               112px clears both naturals at every measured width (the taller
-               is 107.61 at 1440), `box-sizing: border-box` puts the divide
-               hairline INSIDE it, and `items-center` seats the content, so
-               every row in both panels paints exactly 112px and row N's rule
-               lands on the same y to the pixel. The same pitch is on
-               `UpcomingFixturesPanel` (`teamPanels.tsx`), this list's twin. */
+            /* `minmax(0,1fr)` because a bare `1fr`'s auto floor would let the
+               pair push the row wide. `min-h-28` is the dashboard's shared
+               112px schedule-row pitch: Live Courts and Upcoming Schedule sit
+               side by side, and one pitch keeps row N's rule on the same y in
+               both. The same pitch is on `UpcomingFixturesPanel`. */
             className="grid min-h-28 grow grid-cols-[56px_minmax(0,1fr)_auto] items-center gap-2 px-3 py-3"
           >
             <div className="border-r border-mb-rule pr-2">
@@ -776,28 +564,12 @@ export const LiveCourtsPanel = ({ courts }: { courts: MbLiveCourt[] }) => (
               </p>
               <p className="text-[0.66rem] text-mb-ink-muted">{court.time}</p>
             </div>
-            {/* The `justify-self` fix stopped the two names painting over the
-                scoreline, but what it left was the other half of the same
-                defect: with a real club roster the name tracks measured 46.3
-                and 49px at 1440, and "Riverside", "Eastfield" and "Ashford"
-                all painted at 0px of their 52–58px heads. A four-of-twelve
-                panel cannot hold two identities and a scoreline on one line,
-                so `MbMatchupPair` gives each team its own line below 376px of
-                container and keeps the mirrored scoreline above it.
-
-                `setLabel` moves out of the centre and under the pair. It was
-                captioning the score from inside the track the names were
-                fighting for — "THIRTEEN TEAM CUP" set that track to 95px, wider
-                than the scoreline it captions — and it is row meta, not part
-                of the measure.
-
-                The two `.mb-score-box` frames go with it. A box is 26px wide
-                before a figure is in it, twice, in the cell the names could not
-                afford; and the pair's own two-figure reserve plus
-                `.mb-numeral-digit` gives the constant width the box was being
-                asked for, so a live 9 -> 10 still re-cuts nothing. The row now
-                sets its scoreline in the same figures as the Recent Results
-                row beside it and the archive ledger it links to. */}
+            {/* A four-of-twelve panel cannot hold two identities and a
+                scoreline on one line, so `MbMatchupPair` gives each team its
+                own line below 376px of container. `setLabel` sits under the
+                pair — it is row meta, not part of the measure — and the
+                pair's own two-figure reserve keeps a live 9 -> 10 from
+                re-cutting anything. */}
             <div className="flex min-w-0 flex-col gap-1">
               <MbMatchupPair
                 home={court.home}
@@ -833,66 +605,34 @@ export const SchedulePanel = ({ items }: { items: MbScheduleItem[] }) => (
         href="/competitions/new"
       />
     ) : (
-      /* The spine is a NAVY EDGE now, not coral. "Schedule spine" was coral's
-         fourth declared job; the census closed at three (primary action,
-         selection mark, masthead lockup) and a timeline's left axis is
-         structure, not selection — printed almanac timelines are ruled in
-         ink. `border-l-[1.5px]` is the solid-navy edge idiom of §3.3 (renders
-         1px), darker than the translucent row rules crossing it, so the axis
-         reads in greyscale exactly as before. */
+      /* The spine is a navy edge, not coral: a timeline's left axis is
+         structure, not selection, and coral's job list closed at three. */
       <div className="ml-3 flex grow flex-col divide-y divide-mb-rule border-l-[1.5px] border-mb-navy">
         {items.map((item, i) => (
           <div
             key={i}
-            /* `min-h-28`: the C5 schedule-row pitch — see the note on Live
-               Courts' row above. */
+            /* `min-h-28`: the shared schedule-row pitch — see Live Courts. */
             className="grid min-h-28 grow grid-cols-[42px_50px_minmax(0,1fr)] items-center gap-1 py-2 pl-2.5 pr-2.5"
           >
-            {/* The date was once a second coral on this list, as a letterform:
-                10.24px/700 at 3.55:1 on `--mb-paper-bright`. Navy. */}
             <div>
               <p className="matchbook-display text-[0.66rem] mb-track-status font-bold leading-tight">
                 {item.day}
               </p>
-              {/* `mt-1.5`: at `leading-tight` these two 10.56px lines sit in
-                  13.2px boxes while Oswald's ink runs ~16.2px, so the day's
-                  ink overlapped the date's by 3px — one of the audit's
-                  "Fri ↔ Jul 31" grazes. 6px of margin leaves 3px of clear
-                  paper between the ink boxes; the row's height is set by the
-                  112px pitch, so nothing else moves. */}
+              {/* `mt-1.5`: at `leading-tight` Oswald's ink overruns its line
+                  box, so without the margin the day's ink grazes the date's. */}
               <p className="matchbook-display mt-1.5 text-[0.66rem] mb-track-status font-bold leading-tight tabular-nums">
                 {item.date}
               </p>
             </div>
             <p className="text-[0.72rem] font-semibold tabular-nums">{item.time}</p>
             <div className="flex min-w-0 flex-col gap-1">
-              {/* An EQUAL split of a cell that is 183px wide is still 91px a
-                  side, and the previous fix — `basis-0 flex-1` on both names
-                  so neither could hog the pair — only made the failure fair.
-                  Measured at 1440 with a real club roster, each name held a
-                  48.2px box: "Westhill" painted 0px of 46, "Northside" 0.1px
-                  of 54, "Kingsway" 7px of 50. `MbTeamName` pins the last token
-                  and elides from the middle, so what survived was the tail
-                  alone — "Kingsway Rovers" and "Riverside Rovers" both read
-                  "… ROVERS", two clubs one string, on the screen that shows
-                  both at once.
-
-                  No split of one line fixes that, because one line is the
-                  problem: a two-word club name sets in 107.5px at this step
-                  and this panel is `xl:col-span-4`. `MbMatchupPair` reflows to
-                  one line per team from its own container width, which is the
-                  only width that knows. */}
+              {/* No split of one line fits two club names in a 4-col panel —
+                  one line is the problem — so `MbMatchupPair` reflows to one
+                  line per team from its own container width. */}
               <MbMatchupPair home={item.home} away={item.away} note="vs" size="sm" />
-              {/* The venue drops OUT of the name line and under it.
-                  It was `hidden xl:flex max-w-[72px]`, revealed at exactly the
-                  breakpoint where this panel becomes `xl:col-span-4` and is at
-                  its narrowest — so 78px of a 186px cell went to the venue at
-                  1280 and the two names it captions were left 82px between
-                  them, which painted "Harrowgate" at 18.2px of its 48. As a
-                  caption line it costs the names nothing at any width, it
-                  stops being hidden below `xl` (invariant 38 no longer has to
-                  be argued for it), and it is the same row grammar as Live
-                  Courts' set label directly above. */}
+              {/* The venue is a caption line under the pair, not a column in
+                  the name line: there it costs the names nothing at any
+                  width, and it matches Live Courts' set-label grammar. */}
               <span className="flex min-w-0 items-center gap-1 text-[0.66rem] text-mb-ink-muted">
                 <MbIcon id="location" size={10} className="shrink-0" />
                 <span className="truncate">{item.venue}</span>
@@ -918,24 +658,12 @@ export const BracketPanel = ({ bracket }: { bracket: MbBracket | null }) => (
       />
     ) : (
       /* Stacked when the panel is narrow, the printed draw when it is not —
-         and the panel's OWN width decides, not the viewport, because the two
-         disagree: this panel is 322px wide at a 1280px viewport (`xl` turns
-         the grid into twelve columns and takes it to `col-span-4`) and 720px
-         at 768px, where the grid is still one column. A media query would have
-         to stack the wide case and spread the narrow one.
-
-         The 118px Final block and its two connectors are 146px of the content
-         line, and the seed row pays all of it: measured with an eight-club
-         roster, the semifinal names held a 36.4px box at 320 and a 70.4px box
-         at 1280, painting heads of 0–25.7px against naturals of 49–70 — so
-         "Westhill Wanderers" and any other Wanderers were the same string. At
-         320px of content line the seed name gets 96px, which is the same
-         floor `MbMatchupPair` sets, and every roster name sets whole.
-
-         The padding sits on the CONTAINER and the cut on its child: a
-         container query styles a container's descendants and never the
-         container itself, so 320 here is the content line the draw actually
-         gets rather than the panel's outer box. */
+         and the panel's OWN width decides, not the viewport: this panel is
+         narrower at 1280 (col-span-4) than at 768 (one column), so a media
+         query would stack the wide case and spread the narrow one. The
+         padding sits on the CONTAINER and the cut on its child: a container
+         query styles descendants, never the container itself, so 320 is the
+         content line the draw actually gets. */
       <div className="@container flex flex-1 flex-col px-4 py-4">
       <div className="flex flex-1 flex-col gap-4 @min-[320px]:flex-row @min-[320px]:items-center @min-[320px]:gap-0">
         <div className="flex flex-col gap-4 flex-1 min-w-0">
@@ -956,10 +684,8 @@ export const BracketPanel = ({ bracket }: { bracket: MbBracket | null }) => (
                   </div>
                 ))}
               </div>
-              {/* Edge tier, 1px. The `[1.5px]` these four rules used to carry
-                  never rendered — Blink floors a used border-width to whole CSS
-                  pixels, so it painted 1px at DPR 1, 2 and 3 while claiming a
-                  tier the system does not have. Same pixels, honest source. */}
+              {/* Edge tier, 1px — Blink floors a used border-width to whole
+                  CSS pixels, so a fractional value here would lie. */}
               <div className="w-3 shrink-0 self-stretch my-3 border-y border-r border-mb-navy" />
             </div>
           ))}
@@ -1004,35 +730,17 @@ export const RecentResultsPanel = ({ results }: { results: MbRecentResult[] }) =
         {results.map((r, i) => (
           <div
             key={i}
-            /* Two tracks below `xl`, three at `xl`, and the matchup is ONE
-               cell. The venue column stayed at 64: it is revealed at `xl`,
-               which on this dashboard is where the panel is NARROWEST (three
-               across), so it was taking a quarter of the row from the two
-               names it captions. */
             /* `min-h-[92px]`: two units of the 46px lattice this band shares
-               with Team Readiness beside it (C5). The natural row is 83px, so
-               ~4.5px of air lands each side of the centred content and every
-               rule in this ledger falls on a rule of the readiness table —
-               the same move Live Courts and Upcoming Schedule make one band
-               up at 112. See the readiness rows for the unit's derivation. */
+               with Team Readiness beside it, so every rule in this ledger
+               falls on a rule of the readiness table. */
             className="grid min-h-[92px] grow grid-cols-[44px_minmax(0,1fr)] items-center gap-2 py-2.5 pl-3 pr-3 xl:grid-cols-[44px_minmax(0,1fr)_64px]"
             style={{ boxShadow: `inset 3px 0 0 ${r.accent}` }}
           >
             <p className="matchbook-display text-[0.66rem] mb-track-status font-bold leading-tight text-mb-ink-muted">
               {r.date}
             </p>
-            {/* The `justify-self` fix stopped the names printing over the
-                scoreline; it did not give them anywhere to go. Measured at
-                1440 with a club roster, the eight names in this panel held
-                47.6–48.8px boxes and six of them painted a head of 0–1.9px
-                against naturals of 52–62 — "Eastfield Kestrels" and "Ashford
-                Athletic" both reduced to their tail. `MbMatchupPair` reflows
-                to one line per team below 376px of container, which is every
-                width this `xl:col-span-4` panel has ever had.
-
-                0.95rem -> 0.9rem on the figures: the pair sets one scoreline
-                step for the dashboard, the archive ledger and the live board,
-                and 0.9rem is the step two of the three already used. */}
+            {/* `MbMatchupPair` reflows to one line per team below 376px of
+                container — every width this `xl:col-span-4` panel has. */}
             <MbMatchupPair
               home={r.home}
               away={r.away}
@@ -1064,23 +772,10 @@ export const ReadinessPanel = ({ rows }: { rows: MbReadinessRow[] }) => (
       />
     ) : (
       <MbTableScroll>
-        {/* THE 46px LATTICE (C5) — the dashboard's third band, made to tick.
-
-            The second band already does: Live Courts and Upcoming Schedule
-            run one 112px pitch, so row N's rule lands on the same y in both
-            panels. This band's pair — Recent Results and this table — ran
-            83px rows against 45.72px rows from origins 30.72px apart, i.e.
-            no two rules in the two panels ever met.
-
-            One unit = 46px, the readiness row's own natural (45.72) rounded
-            to the next whole pixel, so forcing it moves nothing visible.
-            The header row takes one unit (from 30.72 — the ~15px it gains is
-            breathing room on the only muted-ink row of the table) and every
-            body row takes one; Recent Results beside it takes two (92px).
-            Both panels' bodies start at head + 4px, so the shared origin is
-            free, and results rule n coincides with readiness rule 2n−1.
-            A `<tr>` height is a CSS minimum, so a future taller cell
-            degrades the lattice rather than clipping. */}
+        {/* The 46px lattice: one unit per row here, two per Recent Results row
+            beside it (92px), so the two panels' rules coincide. A `<tr>`
+            height is a CSS minimum, so a future taller cell degrades the
+            lattice rather than clipping. */}
         <table className="mb-table mb-table-compact w-full border-collapse">
           <thead>
             <tr className="h-[46px]">
@@ -1101,12 +796,7 @@ export const ReadinessPanel = ({ rows }: { rows: MbReadinessRow[] }) => (
                     <span className="w-7 text-[0.72rem] font-semibold tabular-nums">
                       {row.percent}%
                     </span>
-                    {/* `rounded-[2px]`, not `rounded-sm`: while the legacy
-                        `:root` lived, `--radius-sm` was `calc(0.75rem - 4px)`
-                        and this 7px bar rendered an 8px radius — off the
-                        4/3/2/999 vocabulary (invariant 24) and inherited from
-                        the pre-Matchbook system rather than chosen. 2px is
-                        what `.mb-meter` itself uses. */}
+                    {/* `rounded-[2px]`, matching `.mb-meter`. */}
                     <span className="h-[7px] w-12 overflow-hidden rounded-[2px] bg-[var(--mb-tint-3)]">
                       <span
                         className="block h-full"
@@ -1121,8 +811,8 @@ export const ReadinessPanel = ({ rows }: { rows: MbReadinessRow[] }) => (
                 <td>
                   <FormLetters form={row.form} />
                 </td>
-                {/* Ink, not mark: see `readinessInk`. The bar above keeps the
-                    bright tone; the word takes the twin that clears 4.5:1. */}
+                {/* The bar keeps the bright tone; the word takes the ink twin
+                    that clears 4.5:1 (`readinessInk`). */}
                 <td
                   className="matchbook-display pr-3! text-right mb-track-display font-bold"
                   style={{ color: readinessInk(row.percent) }}
@@ -1164,11 +854,8 @@ export const LeadersPanel = ({
               {leader.team.name}
             </span>
             <span className="mb-kicker">{leader.stat}</span>
-            {/* `mt-1.5`: Oswald's ink at text-4xl runs ~53px against a 40px
-                line box, so at the stack's 4px gap the numeral's ascent ink
-                overlapped the kicker's descenders by 2.12px (the audit's
-                "Points ↔ 351" graze). 10px of box separation leaves ~3.9px of
-                clear paper. */}
+            {/* `mt-1.5`: Oswald's ink at text-4xl overruns its line box, so
+                without it the numeral's ascent grazes the kicker above. */}
             <span className="matchbook-display mt-1.5 text-4xl mb-track-masthead font-bold tabular-nums">
               {leader.value}
             </span>

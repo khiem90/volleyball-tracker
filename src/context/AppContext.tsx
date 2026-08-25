@@ -19,7 +19,6 @@ import type {
   CompetitionType,
   MatchStatus,
 } from "@/types/game";
-// Note: PersistentTeam, CompetitionType, MatchStatus are used in callback signatures
 import { useSession } from "./SessionContext";
 import {
   appReducer,
@@ -30,24 +29,11 @@ import {
 } from "./appReducer";
 import { normalizeTeamColor } from "@/lib/teamColor";
 
-/* ---------------------------------------------------------------------------
-   TEAM COLOURS, MIGRATED ON READ
-
-   Saved accounts hold what the app used to write: `var(--mb-navy)` from the
-   team sheet and, from Quick Add, whole CSS functions —
-
-     Team 3 :: color-mix(in oklab, var(--mb-navy) 55%, var(--mb-green))
-
-   `normalizeTeamColor` turns each of those into the ink it always meant
-   ("teal"), leaves a hand-mixed hex alone, and passes anything it does not
-   recognise through untouched — losing a colour would be worse than storing an
-   odd one. It runs once, here, on the way out of localStorage, and the save
-   effect below writes the migrated shape back on the next state change.
-
-   Nothing downstream depends on this having run: `teamColorCss` resolves a
-   legacy value too. This is what stops the old strings accumulating, not what
-   makes them safe.
-   --------------------------------------------------------------------------- */
+/* Team colours migrated on read: saved accounts hold legacy CSS expressions;
+   `normalizeTeamColor` maps each to the ink it meant and the save effect
+   writes the migrated shape back. Nothing downstream depends on this having
+   run — `teamColorCss` resolves legacy values too; this only stops the old
+   strings accumulating. */
 const migrateTeamColors = (parsed: AppState): AppState => {
   const teams = parsed.teams ?? [];
   let changed = false;
@@ -67,12 +53,9 @@ interface AppContextValue {
   state: AppState;
   /**
    * True once the localStorage blob has been read into `state` (or found
-   * absent). Until then `state` is `initialState` on EVERY account — an empty
-   * archive and a 47-match archive render identically for one commit — so a
-   * screen that swaps its composition on emptiness must not decide before this
-   * flips. `/summaries` reads it to hold its first-paint reservation (HF-3):
-   * deciding off `state` alone painted the empty composition on populated
-   * accounts, then pushed the whole ledger grid 111px when the data landed.
+   * absent). Until then `state` is `initialState` on EVERY account, so a
+   * screen that swaps its composition on emptiness must not decide before
+   * this flips.
    */
   localReady: boolean;
   // Session info
@@ -234,10 +217,8 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     (name: string, color?: string) => {
       if (isSharedMode && !canEdit) return;
 
-      /* The write guard. Every caller of `addTeam` — the team sheet, Quick
-         Add, the wizard — is expected to hand over a stored form already, but
-         this is the one funnel all of them pass through, so it is where the
-         rule is enforced rather than trusted. */
+      /* The write guard — the one funnel every caller passes through, so the
+         stored-form rule is enforced here rather than trusted. */
       const ink = normalizeTeamColor(color) || undefined;
 
       const newTeam: PersistentTeam = {

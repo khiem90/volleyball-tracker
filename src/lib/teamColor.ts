@@ -1,45 +1,13 @@
-/* ===========================================================================
-   WHAT A TEAM COLOUR IS
+/* A team colour is a name from a closed set, or a hex a person typed — never
+   a CSS expression, and `PersistentTeam.color` may not hold one again (stored
+   expressions cannot be named, compared, or migrated). Storage holds the id;
+   paint resolves it through `TEAM_COLOR_CSS`, the one copy of the recipes.
 
-   It is **a name from a closed set, or a hex a person typed.** It is not a CSS
-   expression, and `PersistentTeam.color` may not hold one again.
+   The contract: `normalizeTeamColor` on the way IN, `teamColorCss` before any
+   `style`, `teamColorName` before any text node. Painting a stored value raw
+   shows CSS-keyword `navy` (not this navy) or nothing at all. */
 
-   The bug this file closes: Quick Add wrote
-
-       Team 3 :: color-mix(in oklab, var(--mb-navy) 55%, var(--mb-green))
-
-   into localStorage, from where it round-trips through share links. A stored
-   CSS function cannot be named ("what colour is Team 3?"), cannot be compared
-   (two teams are the same colour only if two expressions are byte-identical),
-   and cannot be migrated (the string carries no idea of which ink was meant,
-   only of how that ink was mixed on the day it was picked). It also freezes a
-   recipe: `color-mix(… var(--mb-green))` is a promise about a token that the
-   team palette itself no longer offers as an ink.
-
-   So storage holds `"teal"`. Paint resolves it through `TEAM_COLOR_CSS`, which
-   is the one place the recipe lives and the only place it can be re-tuned. The
-   stored value stays a token *name*, so charter invariant 10 holds — nothing
-   here is a hex except a colour a person chose by hand, and that one is their
-   data, not the design system's.
-
-   Three functions is the whole contract:
-
-   | `normalizeTeamColor` | on the way IN  — what gets written to storage      |
-   | `teamColorCss`       | on the way to PAINT — never used as text          |
-   | `teamColorName`      | on the way to a READER — never used as CSS        |
-
-   `PersistentTeam.color` must pass through `teamColorCss()` before it can
-   reach a `style`, and through `teamColorName()` before it can reach a text
-   node. Painting a stored value raw shows `navy` (a CSS keyword that is not
-   this navy) or nothing at all; printing one raw is the defect the team
-   profile shipped.
-   =========================================================================== */
-
-/**
- * The six inks, in palette order. The ids are the labels lowercased, which is
- * what `QuickAddTeams` was already using as its internal key — this file just
- * makes that key the thing that gets stored.
- */
+/** The six inks, in palette order. Ids are the labels lowercased. */
 export const TEAM_COLOR_IDS = [
   "navy",
   "teal",
@@ -54,12 +22,7 @@ export type TeamColorId = (typeof TEAM_COLOR_IDS)[number];
 /**
  * The recipes, and the only copy of them. `MB_SWATCH_PALETTE` in
  * `matchbook/form.tsx` is built from this map, so the picker cannot offer an
- * ink that storage cannot name.
- *
- * Every value resolves through `--mb-*` (invariant 10) and every one of them
- * is measured at ≥ΔE 11.5 from every reserved meaning and ≥ΔE 12.6 from every
- * other ink — the table in `form.tsx` documents that work and still governs
- * *why* these six. This map governs *what* they are.
+ * ink that storage cannot name. Every value resolves through `--mb-*`.
  */
 export const TEAM_COLOR_CSS: Record<TeamColorId, string> = {
   navy: "var(--mb-navy)",
@@ -80,10 +43,7 @@ export const TEAM_COLOR_LABEL: Record<TeamColorId, string> = {
   ochre: "Ochre",
 };
 
-/**
- * The first ink of the palette, and the colour a team gets when nothing else
- * decides. Not a random pick — see `nextTeamColor`.
- */
+/** The colour a team gets when nothing else decides — see `nextTeamColor`. */
 export const DEFAULT_TEAM_COLOR: TeamColorId = "navy";
 
 const HEX_RE = /^#(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
@@ -91,17 +51,9 @@ const TOKEN_RE = /^var\(\s*(--mb-[a-z0-9-]+)\s*\)$/i;
 
 /**
  * Every value the app has ever written into `PersistentTeam.color`, mapped to
- * the ink that survives.
- *
- * Rows 1–6 are the shipped palette expressions — the literal strings sitting in
- * saved teams right now, including the two Quick Add wrote for Team 3 and
- * Team 5. Rows 7+ are the eight house tokens the palette offered before it was
- * re-measured; each lands on the surviving ink nearest it, so a team saved as
- * coral reads out as Rose rather than as a token name.
- *
- * A value that is not in this table is left exactly as it was found. A hand
- * mixed colour is the user's data and is never rewritten — it simply reads out
- * under its own hex.
+ * the ink that survives (saved teams still hold these literal strings). A
+ * value not in this table is left exactly as found — a hand-mixed colour is
+ * the user's data and is never rewritten.
  */
 const LEGACY_TEAM_COLORS: Record<string, TeamColorId> = {
   [TEAM_COLOR_CSS.navy]: "navy",
@@ -125,16 +77,10 @@ const isTeamColorId = (value: string): value is TeamColorId =>
   (TEAM_COLOR_IDS as readonly string[]).includes(value);
 
 /**
- * What gets written to storage.
- *
- * A palette ink becomes its id; a legacy expression becomes the id it always
- * meant; a hex is kept, lowercased, so two spellings of one colour compare
- * equal; anything else is passed through untouched rather than discarded,
- * because losing a colour is worse than storing an odd one.
- *
- * Empty in, empty out: `PersistentTeam.color` is optional, and "this team has
- * no colour" has to stay expressible — it is what makes the mark render with
- * no bar instead of with a default one.
+ * What gets written to storage. A palette ink becomes its id; a legacy
+ * expression the id it meant; a hex is kept lowercased so spellings compare
+ * equal; anything else passes through untouched. Empty in, empty out —
+ * "no colour" must stay expressible (it renders as no bar, not a default).
  */
 export const normalizeTeamColor = (raw?: string | null): string => {
   const value = (raw ?? "").trim();
@@ -155,22 +101,13 @@ export const teamColorCss = (raw?: string | null): string | undefined => {
   return isTeamColorId(value) ? TEAM_COLOR_CSS[value] : value;
 };
 
-/**
- * Same, for the two readers that must always have an ink: a fallback that is
- * the palette's first colour rather than an off-palette literal. It replaces
- * the `"#3b82f6"` and `"#666"` defaults that three hooks were carrying.
- */
+/** Same, for readers that must always have an ink. */
 export const teamColorCssOrDefault = (raw?: string | null): string =>
   teamColorCss(raw) ?? TEAM_COLOR_CSS[DEFAULT_TEAM_COLOR];
 
 /**
- * What a person is told. Never a CSS expression, never a token name.
- *
- * The team profile printed `row.color` directly, so a phone showed
- * `COLOR-MIX(IN OKLAB, VAR(--MB-PLUM) 65%, VAR(--MB-PAPER-BRIGHT))` on two
- * lines where the word "Lilac" belonged. An off-palette token still gets turned
- * back into words — the same treatment `swatchName()` gives it in the picker —
- * so no branch of this function can emit `var(` or `color-mix(`.
+ * What a person is told. No branch of this function may emit `var(` or
+ * `color-mix(` — an off-palette token is turned back into words.
  */
 export const teamColorName = (raw?: string | null): string => {
   const value = normalizeTeamColor(raw);
@@ -190,18 +127,9 @@ export const teamColorHex = (raw?: string | null): string | undefined => {
 };
 
 /**
- * The colour a NEW team is given.
- *
- * It was `TEAM_ACCENTS[Math.floor(Math.random() * TEAM_ACCENTS.length)]`:
- * opening the dialog three times offered Rose, then Plum, then Navy, for the
- * same team, before a character had been typed. A dice roll is the wrong shape
- * for an identity — it cannot be predicted, cannot be tested, and gives the
- * second team a 1-in-6 chance of being confusable with the first.
- *
- * The least-used ink wins, ties broken by palette order, so an empty account
- * walks Navy → Teal → Plum → Rose → Lilac → Ochre and only then repeats. Six
- * teams in, no two share a colour; and the answer is a pure function of the
- * roster, which is what makes the dialog testable.
+ * The colour a new team is given: the least-used ink, ties broken by palette
+ * order — deterministic in the roster (testable), and six teams in no two
+ * share a colour.
  */
 export const nextTeamColor = (
   taken: ReadonlyArray<string | undefined | null>
