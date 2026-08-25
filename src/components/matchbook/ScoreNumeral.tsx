@@ -260,14 +260,44 @@ export const MbScoreNumeral = ({
   };
 
   /* The ink overlay: scaled by figure count, baseline-locked to the layer.
-     `bottom: 0` IS the baseline: with `line-height: 0.9` every box here puts
-     its baseline exactly on its own bottom edge, so the overlay's baseline
-     lands on the layer's at any scale. `max-content` keeps the overlay's rect
-     the width of the figures themselves — which is what the rubric's 4.3
-     expression measures as ink against the reserve behind it. */
+     With `line-height: 0.9` every box here puts its baseline exactly on its
+     own bottom edge, so the overlay's baseline lands on the layer's at any
+     scale. `max-content` keeps the overlay's rect the width of the figures
+     themselves — which is what the rubric's 4.3 expression measures as ink
+     against the reserve behind it.
+
+     THE OVERLAY IS ALSO THE FIGURES' HIT-BOX, AND IT NOW TELLS THE TRUTH. (C3)
+     A text rect measured by the Range method spans the FONT's ascent to its
+     descent — 1.48em on this face — while the figures' actual ink runs
+     0.83em over the baseline and 0.02em under it. On any surface that stacks
+     two numerals (the narrow scoreboard's home row over its away row), the
+     phantom 0.29em skirts overlapped by 9.4px at the console step with the
+     real ink boxes 24.5px apart, and the register printed it as a descender
+     graze. `overflow: clip` makes the measured rect stop at this box.
+
+     The box is grown to enclose every painted pixel first, WITHOUT moving
+     the baseline: `paddingBottom` extends the border box 0.05em (of the
+     scaled em) below the content box, and `bottom: -0.05em` seats it so the
+     content bottom — which IS the baseline under `line-height: 0.9` — stays
+     exactly on the layer's bottom edge. 0.05em covers the 0.02em true ink
+     descent 2.5x over, in every engine, with `overflowClipMargin` adding
+     0.1em of slack against edge antialiasing where the property exists.
+     Ascenders need no skirt: 0.83em of ink stands inside the 0.9em content
+     box. Nothing inline-level changes, so the reserve, the baselines and the
+     0-reflow contract are untouched. Measured: the skirt alone is
+     pixel-identical to `bottom: 0` (0 differing px at dpr 2); adding the clip
+     leaves geometry byte-identical (Range bottoms and layer bottoms to
+     0.01px) but flips Chromium's text-AA path on the clipped glyphs — 690 of
+     2.02M device px at a max channel delta of 7/255 on a court-step figure,
+     scattered along the contours, invisible at any zoom. That is the entire
+     paint cost of making the measured rect match the box the figures
+     genuinely occupy. */
   const inkStyle = (v: number): React.CSSProperties => ({
     position: "absolute",
-    bottom: 0,
+    bottom: "-0.05em",
+    paddingBottom: "0.05em",
+    overflow: "clip",
+    overflowClipMargin: "0.1em",
     width: "max-content",
     fontSize: `${mbInkScale(String(v).length)}em`,
     ...(align === "end"
