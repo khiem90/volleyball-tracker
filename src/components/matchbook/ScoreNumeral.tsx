@@ -93,7 +93,7 @@ const RESERVED_DIGITS = 3;
    so the layer's height, the reserve and every neighbour are untouched: a
    digit-count change cross-fades between two overlays and reflows 0.00px.
    =========================================================================== */
-const INK_SCALE = [1, 1.12, 0.8, 0.72] as const;
+const INK_SCALE = [1, 1.12, 0.78, 0.72] as const;
 
 /** The ink scale for a rendered figure count. 4+ figures keep the 3-figure step. */
 export const mbInkScale = (figures: number): number =>

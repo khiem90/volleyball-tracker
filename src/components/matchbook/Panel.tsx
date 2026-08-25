@@ -380,7 +380,8 @@ export type PanelEmptyTone =
   | "error"
   | "offline"
   | "denied"
-  | "unconfigured";
+  | "unconfigured"
+  | "stale";
 
 export interface MbStateToneMeta {
   /** Sprite id, or `null` when the state carries no mark. */
@@ -410,6 +411,13 @@ export const MB_STATE_TONES: Record<PanelEmptyTone, MbStateToneMeta> = {
   offline: { icon: "wifi-off", word: "Offline", ink: "text-mb-gold-ink" },
   denied: { icon: "lock", word: "No access", ink: "text-mb-navy" },
   unconfigured: { icon: "settings", word: "Not set up", ink: "text-mb-ink-muted" },
+  /* `stale` is `offline`'s sibling, not a fifth failure: the data EXISTS and is
+     merely not fresh. It shares the gold "degraded, not broken" ink and takes
+     the refresh glyph — the same mark `MbLiveStatus` gives `reconnecting` — so
+     one reader sees one symbol for "the feed, not the record, is the problem".
+     Used by `PanelStale` (data survives, greyed under a dated band) and by a
+     `PanelEmpty` whose refresh failed with nothing cached to keep showing. */
+  stale: { icon: "refresh", word: "Couldn't refresh", ink: "text-mb-gold-ink" },
 };
 
 /**
@@ -663,5 +671,91 @@ export const PanelEmpty = ({
         ) : null)
       }
     />
+  );
+};
+
+/* ---------------------------------------------------------------------------
+   THE STALE PANEL (C15) — a refresh failed, the last data did not
+
+   One panel's fetch failing used to be indistinguishable from that panel being
+   EMPTY: `useSummariesPage` caught the rejection, logged it, and left its rows
+   at `[]`, so a Firestore outage rendered "No shared reports exist yet" — a
+   lie, and an all-or-nothing one, on a screen where the other five panels had
+   loaded fine from local state. The share routes already solved this for the
+   whole page (`SessionStaleBanner`: state what the numbers ARE — the last ones
+   received — and do not remove them). This is that same sentence at panel
+   scale, so one failed feed degrades ONE panel and the screen stays alive.
+
+   Anatomy: a ruled band naming the state + the clock time of the data below,
+   then the last known rows on the DULLER paper with hue removed. The state is
+   DRAWN, not dimmed — the dormant-treatment lesson (`competitions/new/
+   dormant.ts`): an opacity wash pushes `--mb-ink-muted` copy under the 4.5:1
+   floor (measured: 5.25:1 at α=1, 4.26:1 at α=0.9 on paper-bright), so opacity
+   is not used at all. `--mb-paper` keeps the worst ink in the body at 4.82:1
+   and `grayscale` strips hue without touching luminance, which is exactly the
+   greyscale-survival rule every status mark in the kit is built on.
+
+   The band's noun set is `MB_STATE_TONES.stale` — same word, same glyph, same
+   ink as the no-data cut (`PanelEmpty tone="stale"`), so the with-cache and
+   without-cache renderings of one failure are one vocabulary.
+
+   No animation. A band that appears with fresh render output is a state, not
+   an event; nothing here needs a reduced-motion branch because nothing moves.
+   --------------------------------------------------------------------------- */
+
+/** "2:14 PM" — the same clock cut `shortTime` prints on every schedule row. */
+export const mbStaleClock = (at: number): string =>
+  new Date(at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+
+export const PanelStale = ({
+  asOf,
+  offline = false,
+  onRetry,
+  children,
+}: {
+  /** Epoch millis the data below was last fetched. Null prints no clock. */
+  asOf: number | null;
+  /** True when the cause is "no network" rather than "the fetch faulted". */
+  offline?: boolean;
+  onRetry?: () => void;
+  children: ReactNode;
+}) => {
+  const state = MB_STATE_TONES.stale;
+  return (
+    <div className="flex flex-1 flex-col">
+      <div
+        role="status"
+        className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 border-b border-mb-rule px-4 py-2"
+      >
+        <span className="sr-only">
+          {offline
+            ? "You are offline — showing the reports this device last received"
+            : "Shared data could not be refreshed — showing what was last received"}
+          {asOf ? ` at ${mbStaleClock(asOf)}.` : "."}
+        </span>
+        <span aria-hidden="true" className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2.5 gap-y-1">
+          <span className="flex items-center gap-1.5">
+            <MbIcon
+              id={offline ? "wifi-off" : state.icon ?? "refresh"}
+              size={13}
+              className={`shrink-0 ${state.ink}`}
+            />
+            <span className="mb-kicker">{offline ? "Offline" : state.word}</span>
+          </span>
+          {asOf && (
+            <span className="text-[0.72rem] text-mb-ink-muted tabular-nums">
+              Showing {mbStaleClock(asOf)}
+            </span>
+          )}
+        </span>
+        {onRetry && (
+          <MbButton variant="outline-navy" size="sm" icon="refresh" onClick={onRetry}>
+            Retry
+          </MbButton>
+        )}
+      </div>
+      {/* The last known data, under glass: duller ground, no hue, full ink. */}
+      <div className="flex flex-1 flex-col bg-mb-paper grayscale">{children}</div>
+    </div>
   );
 };

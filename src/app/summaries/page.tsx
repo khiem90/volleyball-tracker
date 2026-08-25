@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { useSummariesPage } from "@/hooks/useSummariesPage";
 import { DeleteConfirmDialog } from "@/components/shared";
@@ -17,7 +19,8 @@ import { MbIcon } from "@/components/matchbook/MbIcon";
 import { MbMenu } from "@/components/matchbook/Menu";
 import { MbSelect, MbTextInput } from "@/components/matchbook/form";
 import { MbMatchupPair } from "@/components/matchbook/MatchRow";
-import { Crest, Panel, PanelEmpty, TeamMark } from "@/components/matchbook/Panel";
+import { Crest, Panel, PanelEmpty, PanelStale, TeamMark } from "@/components/matchbook/Panel";
+import { useLiveConnection } from "@/hooks/useLiveConnection";
 import { MbLedgerPanel, MbPanelHeadLink } from "@/components/matchbook/panels";
 import {
   mbArchiveContentsFor,
@@ -76,6 +79,48 @@ import {
    six panels sit in the two columns they always did.
    =========================================================================== */
 
+/* ------------------------------------------------- anticipation (C14)
+
+   The router's own `<Link>` prefetch covers the Recent Competitions rows in a
+   production build, but the Shared Reports rows navigate through a menu
+   `onSelect`, which no `<Link>` ever sees. One IntersectionObserver watches
+   whichever rows are actually on screen and asks the router for that row's
+   destination once — viewport-entry, not the whole list, so a 25-row ledger
+   costs nothing and the five rows a reader can see cost one RSC payload each.
+   `saveData` opts the whole thing out: anticipation is a luxury, and a metered
+   connection did not ask for it. */
+const useMbVisiblePrefetch = () => {
+  const router = useRouter();
+  const io = useRef<IntersectionObserver | null>(null);
+  const fetched = useRef<Set<string>>(new Set());
+
+  useEffect(() => () => io.current?.disconnect(), []);
+
+  return useCallback(
+    (href: string) => (node: HTMLElement | null) => {
+      if (!node || fetched.current.has(href)) return;
+      if (typeof IntersectionObserver === "undefined") return;
+      const nav = navigator as Navigator & { connection?: { saveData?: boolean } };
+      if (nav.connection?.saveData) return;
+      io.current ??= new IntersectionObserver((entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          const target = entry.target as HTMLElement;
+          const dest = target.dataset.mbPrefetch;
+          if (dest && !fetched.current.has(dest)) {
+            fetched.current.add(dest);
+            router.prefetch(dest);
+          }
+          io.current?.unobserve(target);
+        }
+      });
+      node.dataset.mbPrefetch = href;
+      io.current.observe(node);
+    },
+    [router]
+  );
+};
+
 const SummaryStat = ({
   icon,
   label,
@@ -104,6 +149,69 @@ const SummaryStat = ({
   </div>
 );
 
+/**
+ * The Shared Reports rows, extracted so the fresh and the stale (C15) branches
+ * render ONE list rather than two copies that can drift. Purely presentational
+ * — every fact and every handler still comes from `useSummariesPage`.
+ */
+const SharedReportRows = ({
+  shared,
+}: {
+  shared: ReturnType<typeof useSummariesPage>;
+}) => {
+  /* C14: these rows navigate through a menu `onSelect`, which no `<Link>`
+     ever prefetches — the observer asks the router for each visible row's
+     report route once, on viewport entry. */
+  const prefetchOnSight = useMbVisiblePrefetch();
+  return (
+  <div className="flex flex-col divide-y divide-mb-rule">
+    {shared.summaries.map((s) => (
+      /* Three 14px icon keys in a row — one of them destructive and
+         8px from the other two — collapse into one 48px menu. That
+         is HF-2 and HF-14 answered by the same control, and it is
+         the same row grammar as the compete console's event list. */
+      <div
+        key={s.id}
+        ref={prefetchOnSight(`/summary/${s.shareCode}`)}
+        className="mb-row-hover grid grid-cols-[auto_1fr_auto] items-center gap-2.5 px-4 py-2"
+      >
+        <MbIcon id="clipboard" size={15} className="text-mb-navy" />
+        <span className="min-w-0">
+          <span className="matchbook-display block truncate text-[0.78rem] mb-track-display font-bold">
+            {s.name}
+          </span>
+          <span className="block text-[0.66rem] tabular-nums text-mb-ink-muted">
+            {shared.formatDate(s.endedAt)}
+          </span>
+        </span>
+        <MbMenu
+          label={`Actions for ${s.name}`}
+          items={[
+            {
+              label: "Open report",
+              icon: "chevron-right",
+              onSelect: () => shared.handleOpenSummary(s.shareCode),
+            },
+            {
+              label:
+                shared.copiedId === s.id ? "Link copied" : "Copy share link",
+              icon: shared.copiedId === s.id ? "check" : "share",
+              onSelect: () => shared.handleCopyLink(s),
+            },
+            {
+              label: "Delete shared report",
+              icon: "warning",
+              tone: "danger",
+              onSelect: () => shared.setDeleteTarget(s),
+            },
+          ]}
+        />
+      </div>
+    ))}
+  </div>
+  );
+};
+
 export default function HistoryPage() {
   const { isLoading: authLoading, isAuthenticated } = useRequireAuth();
   const [competitionId, setCompetitionId] = useState("");
@@ -111,6 +219,85 @@ export default function HistoryPage() {
   const [query, setQuery] = useState("");
   const data = useMatchbookHistory({ competitionId, teamId, query });
   const shared = useSummariesPage();
+  const prefetchOnSight = useMbVisiblePrefetch();
+
+  /* ----------------------------------------- list-to-detail continuity (C12)
+
+     Tapping a ledger row grows its scoreline into the Match Report panel via
+     the same-document View Transitions API. All three `view-transition-name`s
+     are TRANSIENT: applied at click, moved to the report's hero inside the
+     update callback, removed when the transition settles — so at rest no
+     element carries a name, no extra stacking contexts exist, and the DOM is
+     byte-identical to the pre-C12 page. Three gates, in order:
+
+       same row      re-selecting the open report is a no-op, not a flight
+       reduced motion  never starts a transition — the tap lands its end state
+                     on the next frame, which the audit's two-frame sampler
+                     must read as MOTION 0
+       no API        Firefox et al. take the plain `selectMatch`, same as
+                     every build before this one
+
+     `vtGen` guards the async cleanup: a second tap mid-flight supersedes the
+     first transition (the API skips it), and the superseded `finished`
+     handler must not strip the names the newer transition just applied. */
+  const heroScoreRef = useRef<HTMLParagraphElement | null>(null);
+  const heroFinalRef = useRef<HTMLParagraphElement | null>(null);
+  const reportPanelRef = useRef<HTMLDivElement | null>(null);
+  const vtGen = useRef(0);
+
+  const openReport = (entryId: string, row: HTMLElement) => {
+    if (entryId === data.selectedId) return;
+    if (
+      typeof document.startViewTransition !== "function" ||
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
+      data.selectMatch(entryId);
+      return;
+    }
+    const gen = ++vtGen.current;
+    const score = row.querySelector<HTMLElement>("[data-vt-score]");
+    const panel = reportPanelRef.current;
+    score?.style.setProperty("view-transition-name", "mb-vt-score");
+    panel?.style.setProperty("view-transition-name", "mb-vt-report");
+    const settle = () => {
+      if (vtGen.current !== gen) return;
+      panel?.style.removeProperty("view-transition-name");
+      heroScoreRef.current?.style.removeProperty("view-transition-name");
+      heroFinalRef.current?.style.removeProperty("view-transition-name");
+    };
+    const vt = document.startViewTransition(() => {
+      /* The name leaves the row in the same update that names the hero, so
+         `mb-vt-score` is never on two elements at once — a duplicate name
+         voids the whole transition. */
+      score?.style.removeProperty("view-transition-name");
+      flushSync(() => data.selectMatch(entryId));
+      heroScoreRef.current?.style.setProperty("view-transition-name", "mb-vt-score");
+      heroFinalRef.current?.style.setProperty("view-transition-name", "mb-vt-accent");
+    });
+    vt.finished.then(settle, settle);
+  };
+
+  /* ------------------------------------------------ the degraded panel (C15)
+
+     Shared Reports is the ONE panel on this screen that crosses a network, so
+     it is the one panel that can fail while the other five load. Its failure
+     used to render as the empty state — a lie — and `useSummariesPage` now
+     reports `faulted` plus the fetch time of whatever it can still show.
+
+     The staleness CLASSIFICATION is not re-derived here: `useLiveConnection`
+     is the same hook the share routes' status pill runs on, fed the same three
+     facts (a settled subscription, the payload's arrival version, a fault),
+     and its offline-outranks-faulted precedence decides which sentence the
+     band prints. `tick: false` — no age counter is rendered, so no interval
+     runs and a clock tick cannot re-render the archive. */
+  const sharedFeed = useLiveConnection({
+    subscribed: !shared.isLoading,
+    version: shared.fetchedAt ?? undefined,
+    faulted: shared.faulted,
+    tick: false,
+  });
+  const sharedDegraded = !shared.isLoading && shared.faulted;
+  const sharedOffline = sharedFeed.status === "offline";
 
   if (authLoading || !isAuthenticated) {
     return <MbPageLoading active="/summaries" />;
@@ -121,9 +308,12 @@ export default function HistoryPage() {
   /* Shared reports come from Firestore, so the hook that owns the local archive
      cannot decide this one. It counts as mute only once that load has actually
      settled — withholding it while it is still loading would pull a panel out
-     from under the reader, which is the layout shift HF-3 names. */
+     from under the reader, which is the layout shift HF-3 names. A FAULTED
+     load never counts as mute (C15): a failed feed is not "nothing to show",
+     and folding it into the index would report an outage as an empty account.
+     The panel stands and says what actually happened instead. */
   const muteSections: MbArchiveSection[] =
-    !shared.isLoading && shared.summaries.length === 0
+    !shared.isLoading && !shared.faulted && shared.summaries.length === 0
       ? [...data.muteSections, "shared"]
       : data.muteSections;
 
@@ -361,7 +551,7 @@ export default function HistoryPage() {
                       <button
                         key={entry.id}
                         type="button"
-                        onClick={() => data.selectMatch(entry.id)}
+                        onClick={(e) => openReport(entry.id, e.currentTarget)}
                         aria-pressed={entry.id === data.selectedId}
                         /* `minmax(0,1fr)` for the matchup, and the matchup is
                            ONE cell now rather than three.
@@ -396,6 +586,12 @@ export default function HistoryPage() {
                             768 up, and 1440 gives it 407 — and drops to one
                             line per team below that, where the same line was
                             painting the score through both names. */}
+                        {/* The C12 flight's departure gate: `openReport` names
+                            this wrapper at click time and un-names it in the
+                            same update that names the report hero. A data
+                            hook, not a class — it exists to be found, not to
+                            be styled. */}
+                        <span data-vt-score className="block min-w-0">
                         <MbMatchupPair
                           home={entry.home}
                           away={entry.away}
@@ -411,6 +607,7 @@ export default function HistoryPage() {
                           decided={entry.homeScore !== entry.awayScore}
                           size="md"
                         />
+                        </span>
                         {/* `w-24` was under-provisioned at desktop: the D4
                             truncation census measured 16px lost on "Friday
                             Night Win 2 & Out" at 1440, in a column that had a
@@ -441,6 +638,11 @@ export default function HistoryPage() {
           {hydrating ? (
             <MbBootPanelBones {...bootBones.report} />
           ) : kept("report") && (
+          /* The C12 flight's arrival chrome. A plain block wrapper rather than
+             a name on the Panel itself: `Panel` forwards no ref, and the
+             wrapper is a box the transition can name transiently without the
+             panel component learning anything about view transitions. */
+          <div ref={reportPanelRef}>
           <Panel title="Match Report">
             {!report ? (
               <PanelEmpty message="No match report exists yet — pick a result from the ledger to see its report." />
@@ -516,10 +718,17 @@ export default function HistoryPage() {
                           through to `.matchbook-display`'s 0.02em, so one
                           size/weight pair carried two trackings (0.48px and
                           0.96px) on this screen — rubric 1.3's exact failure. */}
-                      <p className="matchbook-display whitespace-nowrap text-5xl mb-track-masthead font-bold tabular-nums">
+                      <p
+                        ref={heroScoreRef}
+                        className="matchbook-display whitespace-nowrap text-5xl mb-track-masthead font-bold tabular-nums"
+                      >
                         {report.entry.homeScore} – {report.entry.awayScore}
                       </p>
-                      <p className="mb-kicker mt-1">Final</p>
+                      {/* The C12 accent: named `mb-vt-accent` for the flight's
+                          last beat, then un-named when it settles. */}
+                      <p ref={heroFinalRef} className="mb-kicker mt-1">
+                        Final
+                      </p>
                     </div>
                     <div className="flex w-full min-w-0 flex-col items-center gap-1.5">
                       <TeamMark
@@ -569,6 +778,7 @@ export default function HistoryPage() {
               </div>
             )}
           </Panel>
+          </div>
           )}
         </div>
 
@@ -675,6 +885,12 @@ export default function HistoryPage() {
                      the rung so 48 governs, dividers included. */
                   <Link
                     key={c.id}
+                    /* C14: `<Link>` already viewport-prefetches in production,
+                       but only to the nearest loading boundary for a dynamic
+                       route — the explicit `router.prefetch` on sight warms
+                       the full payload, and the shared-report rows (menu
+                       navigations, no `<Link>`) ride the same observer. */
+                    ref={prefetchOnSight(`/competitions/${c.id}`)}
                     href={`/competitions/${c.id}`}
                     className="mb-btn-touch mb-row-hover grid grid-cols-[auto_1fr_auto] items-center gap-2.5 px-4 py-1.5"
                     style={{ minHeight: 48 }}
@@ -737,53 +953,34 @@ export default function HistoryPage() {
               <p className="p-4 text-center text-[0.85rem] text-mb-ink-muted">
                 Loading shared reports…
               </p>
+            ) : sharedDegraded && shared.summaries.length === 0 ? (
+              /* The fetch failed and nothing is cached to keep showing. The
+                 failed cut of the SAME `stale` vocabulary the with-data band
+                 uses — never the plain empty state, which would report an
+                 outage as an empty account (C15). The deck names the blast
+                 radius out loud: one panel, not the screen. */
+              <PanelEmpty
+                tone="stale"
+                icon={sharedOffline ? "wifi-off" : undefined}
+                message="Shared reports could not be loaded right now — the rest of the archive is unaffected."
+                actionLabel="Retry"
+                onAction={shared.retry}
+              />
             ) : shared.summaries.length === 0 ? (
               <PanelEmpty message="No shared reports exist yet — end a session with sharing to save one." />
+            ) : sharedDegraded ? (
+              /* The refresh failed but a previous load is cached: last known
+                 rows, greyed under the dated band, still openable — a report's
+                 own route re-fetches independently, so stale is not dead. */
+              <PanelStale
+                asOf={shared.fetchedAt}
+                offline={sharedOffline}
+                onRetry={shared.retry}
+              >
+                <SharedReportRows shared={shared} />
+              </PanelStale>
             ) : (
-              <div className="flex flex-col divide-y divide-mb-rule">
-                {shared.summaries.map((s) => (
-                  /* Three 14px icon keys in a row — one of them destructive and
-                     8px from the other two — collapse into one 48px menu. That
-                     is HF-2 and HF-14 answered by the same control, and it is
-                     the same row grammar as the compete console's event list. */
-                  <div
-                    key={s.id}
-                    className="mb-row-hover grid grid-cols-[auto_1fr_auto] items-center gap-2.5 px-4 py-2"
-                  >
-                    <MbIcon id="clipboard" size={15} className="text-mb-navy" />
-                    <span className="min-w-0">
-                      <span className="matchbook-display block truncate text-[0.78rem] mb-track-display font-bold">
-                        {s.name}
-                      </span>
-                      <span className="block text-[0.66rem] tabular-nums text-mb-ink-muted">
-                        {shared.formatDate(s.endedAt)}
-                      </span>
-                    </span>
-                    <MbMenu
-                      label={`Actions for ${s.name}`}
-                      items={[
-                        {
-                          label: "Open report",
-                          icon: "chevron-right",
-                          onSelect: () => shared.handleOpenSummary(s.shareCode),
-                        },
-                        {
-                          label:
-                            shared.copiedId === s.id ? "Link copied" : "Copy share link",
-                          icon: shared.copiedId === s.id ? "check" : "share",
-                          onSelect: () => shared.handleCopyLink(s),
-                        },
-                        {
-                          label: "Delete shared report",
-                          icon: "warning",
-                          tone: "danger",
-                          onSelect: () => shared.setDeleteTarget(s),
-                        },
-                      ]}
-                    />
-                  </div>
-                ))}
-              </div>
+              <SharedReportRows shared={shared} />
             )}
           </Panel>
           )}

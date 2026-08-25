@@ -172,9 +172,20 @@ const COL_TIGHT = {
    */
   nameReserve:
     "[@media(min-height:521px)]:[@container_mb-col_(max-height:360px)]:min-h-[2.52rem]",
-  /** The inner gutter, at a third of the size, beside a third-size figure. */
-  gutterEnd: "[@container_mb-col_(max-height:360px)]:pe-4",
-  gutterStart: "[@container_mb-col_(max-height:360px)]:ps-4",
+  /** The inner gutter, at a third of the size, beside a third-size figure.
+   *
+   * STACKED PORTRAIT TAKES IT BACK OUT, with `!` so the at-rule emission order
+   * cannot decide. The gutter exists to open paper against the vertical rule
+   * the two figures hug — stacked, that rule is horizontal and the asymmetric
+   * padding (home `pe-4`, away `ps-4`, base `px-3`) skewed the two fit boxes
+   * 4px apart: ink centres measured x=219 (home) v x=223 (away) at 390x844,
+   * on the one layout whose whole argument (`KEY_STACKED`) is that both
+   * figures land on one vertical. Symmetric `pe-3`/`ps-3` restores the base
+   * padding exactly there; landscape and `sm` side-by-side keep the gutter. */
+  gutterEnd:
+    "[@container_mb-col_(max-height:360px)]:pe-4 [@media(max-width:639px)_and_(min-height:521px)]:pe-3!",
+  gutterStart:
+    "[@container_mb-col_(max-height:360px)]:ps-4 [@media(max-width:639px)_and_(min-height:521px)]:ps-3!",
   /** Separation between the inline key and the fit box. */
   gap: "[@container_mb-col_(max-height:360px)]:gap-2",
 } as const;

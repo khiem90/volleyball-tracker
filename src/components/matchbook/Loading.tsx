@@ -241,12 +241,18 @@ export const MB_ROUTE_SKELETON: Record<string, MbRouteSkeleton> = {
       cells: [
         { span: 7, panels: [{ h: 568, xl: 465 }] },
         { span: 5, panels: [{ h: 404, xl: 278, head: false }] },
-        { span: 4, panels: [{ h: 325, xl: 304 }] },
-        { span: 4, panels: [{ h: 548, xl: 526 }] },
+        /* Re-cut after the ceiling wave's standings/movement work (pw/
+           mb-geom.mjs, dev 3100): Live Courts 325/304 -> 338/317, Upcoming
+           Schedule 548/526 -> 562/541, Recent Results 445/424 -> 482/461
+           (its rows carry the movement marks now), Team Readiness 447/425 ->
+           464/443, Team Leaders 331 -> 337. Standings and the progression
+           column did not move. */
+        { span: 4, panels: [{ h: 338, xl: 317 }] },
+        { span: 4, panels: [{ h: 562, xl: 541 }] },
         { span: 4, panels: [{ h: 337, xl: 316 }] },
-        { span: 4, panels: [{ h: 445, xl: 424 }] },
-        { span: 4, panels: [{ h: 447, xl: 425 }] },
-        { span: 4, panels: [{ h: 331 }] },
+        { span: 4, panels: [{ h: 482, xl: 461 }] },
+        { span: 4, panels: [{ h: 464, xl: 443 }] },
+        { span: 4, panels: [{ h: 337 }] },
       ],
     },
     /* Two panels: the progression, then the ruled index of what the page
@@ -269,14 +275,15 @@ export const MB_ROUTE_SKELETON: Record<string, MbRouteSkeleton> = {
       lead: 140,
       leadXl: 76,
       cells: [
-        /* Re-measured with `teamPanels.tsx` final: the directory settled at
-           961/798 (it gained rows at desktop), the profile at 728/531, and
-           Upcoming Fixtures at 611/590 — the earlier 337/316 was cut while
-           that panel was mid-edit and under-reserved it by 274px at 390. */
+        /* Re-measured with `teamPanels.tsx` final, then re-cut again after
+           the ceiling wave (pw/mb-geom.mjs, dev 3100): the directory holds at
+           961/798, the roster strip 169 -> 177, the profile 728/531 ->
+           746/549, Upcoming Fixtures 611/590 -> 629/608. Recent Form holds
+           at 372. */
         { span: 7, panels: [{ h: 961, xl: 798 }] },
-        { span: 5, panels: [{ h: 169, head: false }, { h: 405, xl: 377, head: false }] },
-        { span: 5, panels: [{ h: 728, xl: 531 }] },
-        { span: 4, panels: [{ h: 611, xl: 590 }] },
+        { span: 5, panels: [{ h: 177, head: false }, { h: 405, xl: 377, head: false }] },
+        { span: 5, panels: [{ h: 746, xl: 549 }] },
+        { span: 4, panels: [{ h: 629, xl: 608 }] },
         { span: 3, panels: [{ h: 372 }] },
       ],
     },

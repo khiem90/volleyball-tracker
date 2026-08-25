@@ -9,6 +9,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useApp } from "@/context/AppContext";
 import { useSession } from "@/context/SessionContext";
 import { useScoreHistory } from "@/hooks/useScoreHistory";
+import { useScoreRollbackToast } from "@/hooks/useScoreRollbackToast";
 import { advanceWinner } from "@/lib/singleElimination";
 import { calculateStandings } from "@/lib/roundRobin";
 import { processMatchResult } from "@/lib/win2out";
@@ -159,12 +160,18 @@ export const useMatchPage = () => {
     [match, matchId, updateMatchScore, canEdit, bumpScore]
   );
 
+  const announceRollback = useScoreRollbackToast();
+
   const handleUndo = useCallback(() => {
     if (!match || !canEdit || match.status === "completed") return;
+    /* The tip BEFORE the undo, read off the context (the rendered truth), so
+       the strip can say which way the correction went (C16). */
+    const previous = { home: match.homeScore, away: match.awayScore };
     const target = undoScore();
     if (!target) return;
     updateMatchScore(matchId, target.home, target.away);
-  }, [match, matchId, updateMatchScore, canEdit, undoScore]);
+    announceRollback(previous, target);
+  }, [match, matchId, updateMatchScore, canEdit, undoScore, announceRollback]);
 
   /* --------------------------------------------------------- series info */
 

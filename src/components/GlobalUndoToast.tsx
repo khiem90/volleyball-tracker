@@ -6,11 +6,12 @@ import {
   useState,
   useCallback,
   useEffect,
+  useRef,
   type ReactNode,
 } from "react";
 import { UndoToast } from "@/components/UndoToast";
 import { MbOfflineBanner } from "@/components/matchbook/Offline";
-import { ToastHost } from "@/components/matchbook/Toast";
+import { ToastHost, dismissToast, toast } from "@/components/matchbook/Toast";
 import { useApp } from "@/context/AppContext";
 import { generateUndoId } from "@/lib/undo";
 import type { UndoEntry, UndoContextValue } from "@/types/undo";
@@ -26,6 +27,10 @@ export const GlobalUndoToast = ({ children }: GlobalUndoToastProps) => {
   const { updateMatch, updateCompetition, deleteMatch } = useApp();
   const [undoStack, setUndoStack] = useState<UndoEntry[]>([]);
   const [isUndoing, setIsUndoing] = useState(false);
+  /* The one live rollback acknowledgment (C16). A second undo retracts the
+     previous strip before speaking, so five Ctrl+Zs read as one strip whose
+     sentence updates rather than a five-high stack of stale confirmations. */
+  const ackToastId = useRef<string | null>(null);
 
   const stackSize = undoStack.length;
   const currentEntry = undoStack.length > 0 ? undoStack[0] : null;
@@ -84,6 +89,25 @@ export const GlobalUndoToast = ({ children }: GlobalUndoToastProps) => {
 
       // Pop the current entry from the stack
       setUndoStack((prev) => prev.slice(1));
+
+      /* ----------------------------------------------------------------
+         THE VISIBLE ROLLBACK (C16). SKIN, after the restore: the three-step
+         order above and the stack semantics are the byte-frozen contract
+         (H9) and nothing here touches them — this only SAYS what they just
+         did. Without it the only evidence an undo fired was the strip
+         disappearing, which is indistinguishable from dismissing it; with a
+         match snapshot the sentence carries the exact score the numerals
+         cross-faded back to, so the toast and the flash describe one event.
+         `–` between figures, as every scoreline in the app prints.
+         ---------------------------------------------------------------- */
+      if (ackToastId.current) dismissToast(ackToastId.current);
+      ackToastId.current = toast({
+        tone: "info",
+        icon: "undo",
+        message: snapshot.match
+          ? `"${currentEntry.description}" undone — score back to ${snapshot.match.homeScore}–${snapshot.match.awayScore}`
+          : `"${currentEntry.description}" undone`,
+      });
     } catch (error) {
       console.error("Undo failed:", error);
     } finally {

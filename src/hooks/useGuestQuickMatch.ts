@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { GUEST_HOME_TEAM, GUEST_AWAY_TEAM } from "@/constants/guestTeams";
 import { useScoreHistory } from "@/hooks/useScoreHistory";
+import { useScoreRollbackToast } from "@/hooks/useScoreRollbackToast";
 import type { PersistentTeam } from "@/types/game";
 
 /* ===========================================================================
@@ -70,10 +71,17 @@ export const useGuestQuickMatch = () => {
     [history, status]
   );
 
+  const announceRollback = useScoreRollbackToast();
+
   const handleUndo = useCallback(() => {
     if (status === "completed") return;
-    history.undo();
-  }, [history, status]);
+    /* Tip before the step back, so the strip can say which way it went (C16).
+       Same sentence, same slot, same one-strip rule as the signed-in console —
+       `useScoreRollbackToast` is the single definition of all three. */
+    const previous = history.tip;
+    const target = history.undo();
+    if (target) announceRollback(previous, target);
+  }, [history, status, announceRollback]);
 
   const handleOpenCompleteDialog = useCallback(() => {
     if (status === "completed") return;

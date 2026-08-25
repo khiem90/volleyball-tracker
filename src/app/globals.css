@@ -412,6 +412,16 @@
      duration census resolves 100% to `--mb-dur-*` and so the one place the
      system beats slowly is named, not buried in an animation shorthand. */
   --mb-dur-pulse: 1400ms;
+  /* The entrance's three authored beats (C13). Chrome is the masthead riding
+     `<main>`'s own `.mb-enter` at 0ms; content is the panel grid, held two
+     stagger beats so the page's name is on screen before its first panel
+     moves; accent is the live marks, last, because a pulse that arrives
+     before the row it annotates is a claim with no referent. The values are
+     derived from the tokens above rather than restated: content = 2 beats,
+     accent = content + the full 5-beat stagger span, so re-tuning
+     `--mb-stagger` re-times the whole sequence coherently. */
+  --mb-seq-content: calc(var(--mb-stagger) * 2);
+  --mb-seq-accent: calc(var(--mb-seq-content) + var(--mb-stagger) * 5 + var(--mb-dur-fast));
 
   /* --- press (the click feel) -------------------------------------------
      The ink a flush surface takes while it is held down. One tier past
@@ -698,9 +708,10 @@
 
      Declaring it here blocks inheritance and puts these three on the ladder as
      an explicit step. No pixel moves today; what changes is that a display
-     container can no longer reach in and shift a score sideways. Tailwind
-     `tracking-*` still wins per call site — the "VS" pip is `.mb-score-box`
-     with `tracking-[0.1em]`, and it is a word. */
+     container can no longer reach in and shift a score sideways. A later
+     `.mb-track-*` rung (or a Tailwind `tracking-*` utility) still wins per
+     call site — the "VS" pip is `.mb-score-box` with `.mb-track-title`,
+     because it is a word. */
   .mb-score-box,
   .mb-stepper-value,
   .mb-numeral {
@@ -1463,15 +1474,27 @@ button.mb-panel-link::after,
 }
 
 /* ---------------------------------------------------------------------------
-   ENTRANCE (C6, GAP-11) — how a screen arrives
+   ENTRANCE (C6, GAP-11, C13) — how a screen arrives, in three authored beats
 
    opacity 0 -> 1 with a 10px rise over --mb-dur-slow on --mb-ease-out. The rise
    was 6px and read as a flicker rather than an arrival at panel scale; 10px is
    roughly a third of a panel head's height, which is enough to see the card
    settle onto the stock without anything visibly sliding. Only opacity and
    transform animate (invariant 40), there is no scale, no overshoot and no
-   spring (invariant 41), and the whole grid is resolved in
-   --mb-dur-slow + 5 x --mb-stagger = 480ms.
+   spring (invariant 41).
+
+   The order is AUTHORED, not uniform (C13): chrome -> content -> accent.
+
+     chrome   0ms      `<main>.mb-enter` — the masthead names the page first.
+     content  80ms     the grid's panels, in reading order, one 40ms beat
+                       apart. The two-beat hold is what makes the masthead
+                       READ as leading rather than merely co-arriving.
+     accent   400ms    the live dots, last — a pulse that lands before the row
+                       it annotates is a claim with no referent. Opacity only,
+                       120ms, so the whole page is resolved when the last
+                       panel is: --mb-seq-content + 5 x --mb-stagger +
+                       --mb-dur-slow = 560ms, and the accent fade ends inside
+                       that same envelope (400 + 120 = 520ms).
 
    HOW TO APPLY IT — one of two ways, never a third:
 
@@ -1485,7 +1508,7 @@ button.mb-panel-link::after,
 
         This is the form to reach for. Invariant 42 caps the stagger at 6, and
         here the cap is structural: children 7+ inherit child 6's delay instead
-        of extending the sequence, so a 12-panel grid still finishes in 480ms.
+        of extending the sequence, so a 12-panel grid still finishes in 560ms.
 
      2. `.mb-enter` + `.mb-stagger-N` by hand, for the rare case where the
         animating elements are not siblings of one container.
@@ -1524,17 +1547,122 @@ button.mb-panel-link::after,
 .mb-stagger-5 { animation-delay: calc(var(--mb-stagger) * 5); }
 .mb-stagger-6 { animation-delay: calc(var(--mb-stagger) * 6); }
 
-/* The first panel leads with no delay — a page that hesitates before its first
-   card feels slow, and the stagger only has to separate the cards from each
-   other, not from the navigation. */
-.mb-enter-grid > *:nth-child(1) { animation-delay: 0ms; }
-.mb-enter-grid > *:nth-child(2) { animation-delay: calc(var(--mb-stagger) * 1); }
-.mb-enter-grid > *:nth-child(3) { animation-delay: calc(var(--mb-stagger) * 2); }
-.mb-enter-grid > *:nth-child(4) { animation-delay: calc(var(--mb-stagger) * 3); }
-.mb-enter-grid > *:nth-child(5) { animation-delay: calc(var(--mb-stagger) * 4); }
+/* The content beat (C13). Every child holds for `--mb-seq-content` — two
+   stagger beats — so the chrome above it demonstrably leads, then the panels
+   arrive in reading order 40ms apart. On a KEYED grid replay (the wizard
+   advancing a step) the same 80ms hold applies; measured beside the step
+   rail's instant ink it reads as the next page being dealt, not as lag. */
+.mb-enter-grid > *:nth-child(1) { animation-delay: var(--mb-seq-content); }
+.mb-enter-grid > *:nth-child(2) { animation-delay: calc(var(--mb-seq-content) + var(--mb-stagger) * 1); }
+.mb-enter-grid > *:nth-child(3) { animation-delay: calc(var(--mb-seq-content) + var(--mb-stagger) * 2); }
+.mb-enter-grid > *:nth-child(4) { animation-delay: calc(var(--mb-seq-content) + var(--mb-stagger) * 3); }
+.mb-enter-grid > *:nth-child(5) { animation-delay: calc(var(--mb-seq-content) + var(--mb-stagger) * 4); }
 /* The cap. Child 6 and everything after it share one delay, so the sequence is
    six steps long however many panels the grid holds (invariant 42). */
-.mb-enter-grid > *:nth-child(n + 6) { animation-delay: calc(var(--mb-stagger) * 5); }
+.mb-enter-grid > *:nth-child(n + 6) { animation-delay: calc(var(--mb-seq-content) + var(--mb-stagger) * 5); }
+
+/* The accent beat (C13): live dots arrive LAST, and only inside an entrance
+   context — `:where()` keeps specificity at (0,1,0) so the reduced-motion
+   block's own `.mb-live-dot { animation: none }` further down still wins the
+   tie by order. The fade is opacity only (invariant 40) and `both`-filled, so
+   the dot is simply absent until its beat; the infinite pulse then starts
+   from full ink. A dot that mounts LATE (rows landing after boot) counts its
+   delay from its own mount, which keeps it inside the same arrival grammar
+   instead of popping. Dots outside an entering `<main>` — the event bar, an
+   open dialog — are untouched. */
+@keyframes mb-accent-in {
+  from {
+    opacity: 0;
+  }
+}
+
+:where(.mb-enter, .mb-enter-grid) .mb-live-dot {
+  animation:
+    mb-accent-in var(--mb-dur-fast) var(--mb-ease-out) var(--mb-seq-accent) both,
+    mb-pulse var(--mb-dur-pulse) var(--mb-ease-in-out) calc(var(--mb-seq-accent) + var(--mb-dur-fast)) infinite;
+}
+
+/* ---------------------------------------------------------------------------
+   LIST-TO-DETAIL CONTINUITY (C12) — the same-document view transition
+
+   `/summaries` taps a ledger row and the row's scoreline becomes the Match
+   Report's headline figure. The names are applied TRANSIENTLY by the page
+   (set at click, moved in the update callback, removed on `finished`), so no
+   element carries `view-transition-name` at rest — a standing name creates a
+   stacking context and captures a group on every unrelated transition, and
+   this app has no reason to pay either cost outside the one gesture.
+
+   Three named parts, sequenced chrome -> content -> accent, same grammar as
+   the entrance:
+
+     mb-vt-report  chrome   the report panel's frame, a plain cross-fade over
+                            --mb-dur-base. It finishes first (180ms): the
+                            stock is on the table before the figure lands.
+     mb-vt-score   content  the tapped row's scoreline -> the report hero.
+                            The UA-generated group animation carries it over
+                            --mb-dur-slow (280ms); its old/new images
+                            cross-fade on the same clock.
+     mb-vt-accent  accent   the "Final" kicker under the hero, opacity-in
+                            LAST: delay --mb-seq-content + --mb-dur-base,
+                            done at 260 + 120 = 380ms, inside the content
+                            beat's own 280ms + the UA's finish frame.
+
+   The pseudo-elements animate opacity here and the UA group animates
+   transform plus the snapshot's width/height — those live in the
+   view-transition overlay, not the document, so document layout is untouched
+   (measured: an unrelated panel's rect is byte-identical before, during and
+   after the flight). Where the API does not exist (Firefox) the page calls
+   `selectMatch` directly and this whole block is inert; under
+   prefers-reduced-motion the page never starts a transition at all, and the
+   reduced-motion block below pins the pseudo-elements dead as the backstop.
+   Each pseudo-element selector stands alone so an engine that cannot parse
+   `::view-transition-*` drops one rule, not a list.
+   --------------------------------------------------------------------------- */
+
+@keyframes mb-vt-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes mb-vt-out {
+  to {
+    opacity: 0;
+  }
+}
+
+::view-transition-group(mb-vt-report) {
+  animation-duration: var(--mb-dur-base);
+  animation-timing-function: var(--mb-ease-out);
+}
+
+::view-transition-old(mb-vt-report) {
+  animation: mb-vt-out var(--mb-dur-base) var(--mb-ease-out) both;
+}
+
+::view-transition-new(mb-vt-report) {
+  animation: mb-vt-in var(--mb-dur-base) var(--mb-ease-out) both;
+}
+
+::view-transition-group(mb-vt-score) {
+  animation-duration: var(--mb-dur-slow);
+  animation-timing-function: var(--mb-ease-out);
+}
+
+::view-transition-old(mb-vt-score) {
+  animation: mb-vt-out var(--mb-dur-slow) var(--mb-ease-out) both;
+}
+
+::view-transition-new(mb-vt-score) {
+  animation: mb-vt-in var(--mb-dur-slow) var(--mb-ease-out) both;
+}
+
+/* The accent enters only — there is deliberately no old accent: the previous
+   report's kicker leaves inside the chrome's own cross-fade. */
+::view-transition-new(mb-vt-accent) {
+  animation: mb-vt-in var(--mb-dur-fast) var(--mb-ease-out)
+    calc(var(--mb-seq-content) + var(--mb-dur-base)) both;
+}
 
 /* ---------------------------------------------------------------------------
    Safe area (GAP-3)
@@ -2592,6 +2720,26 @@ button.mb-panel-link::after,
   .mb-live-dot {
     animation: none;
     opacity: 1;
+  }
+
+  /* The C12 view transition is never STARTED under reduced motion — the page
+     feature-gates on the same media query before calling
+     `startViewTransition` — so these rules are the backstop, not the
+     mechanism. They pin every view-transition pseudo-element dead, including
+     the UA-generated group flight, in case any future call site forgets the
+     gate. One selector per rule: an engine without the pseudo drops one rule,
+     not its neighbours. */
+  ::view-transition-group(*) {
+    animation: none !important;
+  }
+  ::view-transition-image-pair(*) {
+    animation: none !important;
+  }
+  ::view-transition-old(*) {
+    animation: none !important;
+  }
+  ::view-transition-new(*) {
+    animation: none !important;
   }
 
   /* The press keeps its ink and loses its movement. */

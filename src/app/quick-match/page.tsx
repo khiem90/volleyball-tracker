@@ -189,9 +189,16 @@ const ResultMark = ({ homeWon }: { homeWon: boolean }) => (
 
    Coral budget: the bar's Start Match is the screen's one coral fill. The
    rail key takes `outline-navy` and points at the team directory — a real
-   destination rather than the self-link the rail used to carry — and the
-   in-panel "Start Scoring" stays navy, because it is the SAME action as the
-   bar's and two coral fills for one verb is what invariant 15 exists to stop.
+   destination rather than the self-link the rail used to carry.
+
+   THE VERB EXISTS ONCE (C17). The Scoreboard Preview used to carry its own
+   full-width navy "Start Scoring" — the same commit as the bar's Start Match,
+   dressed differently, kept in step by hand, and disabled or enabled in two
+   places at once. §8 gives a single-commit screen ONE commit control and the
+   bar owns it; the preview is now purely the preview (what the scoreboard
+   will look like), and the sentence that used to justify the second button —
+   "select both teams" — stays beside the preview as prose, naming the bar's
+   verb rather than a departed twin's.
    =========================================================================== */
 
 export default function QuickMatchPage() {
@@ -241,11 +248,11 @@ export default function QuickMatchPage() {
      count exactly as `/`'s primary is. */
   const needsTeams = !isGuest && availableTeams.length < 2;
 
-  /* THE ONE COMMIT, in the bar's primary slot (§8). `disabled` rather than
-     the wizard's dormant-dress treatment is deliberate continuity: the
-     Scoreboard Preview's "Start Scoring" is the same verb in the same state
-     and prints "Select both teams to start scoring." beside it — the bar and
-     the panel must not disagree about whether the action is takeable. */
+  /* THE ONE COMMIT, in the bar's primary slot (§8) — and since C17 the ONLY
+     control carrying this verb on the screen. While it is disabled the
+     Scoreboard Preview prints "Select both teams to start the match." beside
+     the two empty pickers, so the reason the bar is quiet is stated where the
+     fix is made. */
   const primaryAction: MbAction = needsTeams
     ? {
         label:
@@ -444,13 +451,17 @@ export default function QuickMatchPage() {
         </div>
 
         {/* Scoreboard preview. Withheld below two teams: a scoreboard whose
-            sides have no names previews nothing, and its one control — a
-            full-width filled "Start Scoring" — cannot be pressed. */}
+            sides have no names previews nothing. Since C17 the panel carries
+            NO control at all — its "Start Scoring" was the bar's Start Match
+            in a second dress, so the screen said one verb twice and disabled
+            it twice. The panel now only shows what the board will look like;
+            while the bar's commit is dormant, one sentence here says what
+            arms it, in the bar's own words. */}
         {kept("preview") && (
         <div className="xl:col-span-5">
           <Panel title="Scoreboard Preview" icon="live" tone="navy">
             <div className="flex flex-1 flex-col gap-4 p-5">
-              <div className="flex items-center gap-3">
+              <div className="flex flex-1 items-center gap-3">
                 <ScorePreviewSide summary={homeSummary} placeholder="Home team" />
                 <div className="flex items-center gap-2.5">
                   <span className="matchbook-display text-6xl mb-track-numeral font-bold tabular-nums">0</span>
@@ -459,20 +470,9 @@ export default function QuickMatchPage() {
                 </div>
                 <ScorePreviewSide summary={awaySummary} placeholder="Away team" />
               </div>
-              <MbButton
-                variant="navy"
-                size="lg"
-                icon="quick"
-                fullWidth
-                disabled={!startEnabled}
-                onClick={startScoring}
-                className="mt-auto"
-              >
-                Start Scoring
-              </MbButton>
               {!startEnabled && !isGuest && (
-                <p className="text-center text-[0.72rem] text-mb-ink-muted">
-                  Select both teams to start scoring.
+                <p className="mt-auto text-center text-[0.72rem] text-mb-ink-muted">
+                  Select both teams to start the match.
                 </p>
               )}
             </div>

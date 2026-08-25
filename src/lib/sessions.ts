@@ -104,6 +104,29 @@ const DEV_PREVIEW_SESSION =
   process.env.NODE_ENV !== "production" &&
   process.env.NEXT_PUBLIC_DEV_PREVIEW_SESSION === "1";
 
+/**
+ * Preview-only fault injection (C15). The degraded-panel states exist for the
+ * day a real Firestore read rejects, and that day cannot be produced on demand
+ * against the in-memory preview store — so the store can be TOLD to fail.
+ * `sessionStorage["mb-preview-fault"]` names the reads that should reject
+ * (comma-separated; today only `"summaries"` is consulted), which is how the
+ * visual harness photographs the one-panel-failed screen without touching a
+ * network. Guarded by `DEV_PREVIEW_SESSION`, whose first term is literally
+ * `false` in a production build, so this is dead code twice over there — same
+ * contract as every other branch of the preview hatch.
+ */
+const previewFault = (read: string): boolean => {
+  if (!DEV_PREVIEW_SESSION || typeof window === "undefined") return false;
+  try {
+    return (window.sessionStorage.getItem("mb-preview-fault") ?? "")
+      .split(",")
+      .map((entry) => entry.trim())
+      .includes(read);
+  } catch {
+    return false;
+  }
+};
+
 /** The uid `AuthContext`'s PREVIEW_USER carries. "You", in preview. */
 const PREVIEW_VIEWER_UID = "dev-preview-user";
 
@@ -775,6 +798,9 @@ export const getCreatorSummaries = async (
   creatorId: string
 ): Promise<SessionSummary[]> => {
   if (DEV_PREVIEW_SESSION) {
+    if (previewFault("summaries")) {
+      throw new Error("preview fault: summaries read rejected on request");
+    }
     return Array.from(previewData().summaries.values()).filter(
       (summary) => summary.creatorId === creatorId
     );
