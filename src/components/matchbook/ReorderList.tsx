@@ -211,8 +211,8 @@ export const MbReorderList = <T,>({
                 style={style}
                 /* `py-[3px]`: the grip and the up/down pair are 44px tall, so a
                    row that only fits them leaves ~7px between one row's
-                   controls and the next row's — under the 8px separation
-                   invariant 33 requires. Three pixels of row padding buys the
+                   controls and the next row's — under the 8px separation floor.
+                   Three pixels of row padding buys the
                    clearance on both sides of every hairline. */
                 className="mb-row-hover relative flex min-w-0 items-center gap-1.5 border-b border-mb-rule px-2 py-[3px] last:border-b-0"
               >

@@ -1,5 +1,5 @@
 /**
- * What is left of `src/components/shared` after the P4 legacy deletion.
+ * Shared primitives that survived the redesign.
  *
  * `PageLoadingSpinner`, `EmptyState`, `DecorativeBackground` and `PageHeader`
  * were the pre-Matchbook page furniture; all four are deleted, along with the

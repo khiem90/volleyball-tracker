@@ -205,7 +205,7 @@ export const MbShareAction = (props: MbShareActionProps) => {
       </span>
 
       {/* Total refusal is never silent: the link comes back on screen, already
-          selected, with the keyboard instruction (charter Appendix A, D-8). */}
+          selected, with the keyboard instruction. */}
       {fallbackOpen && (
         <MbDialog
           open

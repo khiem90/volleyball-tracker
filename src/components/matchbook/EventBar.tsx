@@ -8,7 +8,7 @@ import { MbIconButton } from "./IconButton";
    THE NAVY EVENT STRIP
 
    Distinct from `MatchbookMasthead`, and deliberately not a variant of it
-   (charter Appendix A, D-5): the editorial masthead is paper, static, and sets
+  : the editorial masthead is paper, static, and sets
    a 3rem headline; the event strip is navy, sticky, 56px, and exists to keep
    the event's identity and the way out on screen while the body of the page is
    a scoring console or a public scoreboard.

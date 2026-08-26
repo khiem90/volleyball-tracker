@@ -118,7 +118,7 @@ export const TeamMark = ({
   /**
    * The team colour, rendered as a 3px bar only — beside the crest when
    * horizontal, under the name when vertical. Never a fill, never a tint on
-   * the crest, never a panel background (charter D-9).
+   * the crest, never a panel background.
    */
   accent?: string;
   /** Wrap the name over as many lines as it needs instead of truncating it. */
@@ -293,7 +293,7 @@ export interface MbStateToneMeta {
   word: string | null;
   /**
    * Ink for the **glyph only**. The word itself stays `.mb-kicker` muted, so a
-   * tone is never carried by small coloured letterforms (invariant 12).
+   * tone is never carried by small coloured letterforms.
    */
   ink: string;
 }

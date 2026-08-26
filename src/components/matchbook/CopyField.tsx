@@ -9,7 +9,7 @@ import { MB_FIELD_LABEL } from "./form";
  * How a copy attempt ended. `"manual"` means every programmatic path was
  * refused and the caller MUST show the value and the keyboard hint — a copy
  * that fails silently is the one outcome this component may never produce
- * (charter Appendix A, D-8).
+ *.
  */
 export type MbCopyOutcome = "clipboard" | "exec" | "manual";
 
@@ -84,7 +84,7 @@ export const MbCopyField = ({
    * Optional handle on the value input. An overlay that opens *because* the
    * clipboard was refused needs to hand focus — and therefore the selection —
    * straight to the value; `MbShareAction` passes this to `MbDialog`'s
-   * `initialFocus`. Not a charter prop; added because the D-8 fallback is only
+   * `initialFocus`. Added because the select-on-focus fallback is only
    * real if the text is selected without a second failed press.
    */
   inputRef?: RefObject<HTMLInputElement | null>;
@@ -160,8 +160,7 @@ export const MbCopyField = ({
         them is irreversible in the way that matters: an admin token put on
         screen has been seen. When the eye and Copy shared an edge the measured
         gap between them was 0px, so a thumb aimed at either could land on the
-        other (charter §4.33 wants ≥8px of clear water between targets, and the
-        §5.3 sweep counted this pair on every route that shares a link).
+        other (targets need ≥8px of clear water).
 
         10px, not 8px — `gap-2.5`, the same choice and the same reason as
         `MbSwatchPicker`: sub-pixel layout must not be able to round the

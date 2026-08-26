@@ -22,7 +22,7 @@ const INK = "var(--mb-badge-ink, var(--mb-navy))";
 
 /**
  * One mark per tone, and every one a different *shape* — because a desaturated
- * capture is the honest test of invariant 13, and before this the nine tones
+ * capture is the honest test that colour is never the only channel — before this the nine tones
  * were nine copies of the same 11px square in nine hues. Under greyscale that
  * is one badge repeated nine times, which is information carried by colour
  * alone whatever the hex values are.
@@ -94,8 +94,7 @@ export const MbBadge = ({
 }) => {
   /**
    * `solid` is white ink on the tone fill, and only `live` clears 4.5:1 there
-   * (#fff on --mb-red is 4.76:1; on --mb-green 4.45:1). Design language §11
-   * GAP-4 permits solid for `live` alone, so every other tone degrades to
+   * (#fff on --mb-red is 4.76:1; on --mb-green 4.45:1), so every other tone degrades to
    * `framed` rather than shipping a contrast failure.
    */
   const resolved: MbBadgeVariant =

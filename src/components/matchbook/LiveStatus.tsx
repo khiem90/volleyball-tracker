@@ -14,15 +14,14 @@ export type MbLiveStatusValue = "live" | "reconnecting" | "offline" | "ended" | 
 type MbLiveStatusTone = "navy" | "paper";
 
 /**
- * Five states, five words, five marks. `word` is the second channel required by
- * global invariant 13 and `icon` is the third, so the state survives greyscale
+ * Five states, five words, five marks. `word` is the second channel and `icon` the
+ * third, so the state survives greyscale
  * and a screenshot with the dot cropped off. Only `live` gets a colour, and it
  * rides `.mb-live-dot` rather than the letterforms — status text here is
- * 0.66rem, well under the 18.66px large-text threshold, so invariant 12 keeps
- * the word navy (or paper-bright on navy).
+ * 0.66rem, well under the 18.66px large-text threshold, so the word stays navy (or paper-bright on navy).
  *
- * `reconnecting` deliberately uses a **static** refresh glyph: invariant 45
- * allows exactly one infinite loop in the system and `.mb-live-dot` has it.
+ * `reconnecting` deliberately uses a **static** refresh glyph: `.mb-live-dot` is the system's
+ * only infinite loop.
  */
 const STATES: Record<
   MbLiveStatusValue,
@@ -66,7 +65,7 @@ export const MbLiveStatus = ({
   const onNavy = tone === "paper";
   const ink = onNavy ? "text-mb-paper-bright" : "text-mb-navy";
   /**
-   * `--mb-ink-muted` is never text on navy (invariant 11), so the age line
+   * `--mb-ink-muted` is never text on navy, so the age line
    * keeps full paper-bright there and separates itself by weight instead.
    */
   const subInk = onNavy ? "text-mb-paper-bright" : "text-mb-ink-muted";

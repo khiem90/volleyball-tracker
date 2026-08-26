@@ -15,7 +15,7 @@ export type MbButtonVariant = "coral" | "navy" | "outline" | "outline-navy";
    THE CONTROL SIZE LADDER — one ladder, three rungs, for the whole kit.
 
    Before this, four ladders shipped side by side and disagreed about what
-   `size="md"` meant. Measured on `/dev/kit`:
+   `size="md"` meant. Measured:
 
      .mb-btn        44 / 48 / 56
      MbIconButton   44 /      56     `md` was 44 — a different number to
@@ -40,7 +40,7 @@ export type MbButtonVariant = "coral" | "navy" | "outline" | "outline-navy";
    | `sm` | 44px | THE FLOOR. A target that sits *inside* something else and  |
    |      |      | must not dominate it: a tag's remove key, a colour swatch, |
    |      |      | a filter chip in a toolbar, the retry inside              |
-   |      |      | `MbLiveStatus`. Invariant 33 / rubric HF-2 forbid less.    |
+   |      |      | `MbLiveStatus`. 44px is the hard floor.                    |
    | `md` | 48px | THE DEFAULT. Every standalone control: buttons, icon       |
    |      |      | buttons, text fields, selects, segmented groups, steppers, |
    |      |      | toggles. One number, so any two of them on one row align.  |
@@ -157,7 +157,7 @@ const SIZE: Record<MbButtonSize, SizeSpec> = {
  * `.mb-btn-touch`'s `min-height` are unlayered and would outrank any Tailwind
  * utility, and the caller's own `style` still wins because it is spread last.
  *
- * `minWidth` carries the other half of invariant 33: a two-letter label at
+ * `minWidth` guards the hit-area floor sideways: a two-letter label at
  * `sm` measures ~42px without it.
  */
 const geometry = (size: MbButtonSize, style?: CSSProperties): CSSProperties => ({
@@ -209,8 +209,7 @@ export type MbButtonProps = MbButtonShared & {
   /**
    * Busy state. Keeps the button focusable and keeps its label, blocks
    * activation (including a `type="submit"` form post) and never animates —
-   * invariant 45 allows exactly one infinite loop in the system and it is the
-   * live dot. The present-participle label is what carries "in progress".
+   * the live dot is the system's only infinite loop. The present-participle label is what carries "in progress".
    */
   loading?: boolean;
 } & React.ButtonHTMLAttributes<HTMLButtonElement>;

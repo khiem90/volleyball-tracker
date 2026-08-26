@@ -76,7 +76,7 @@ const SheetFrame = ({
 };
 
 /**
- * Bottom sheet. Drag-to-expand is deferred (charter §2.3): `snapPoints` are
+ * Bottom sheet. Drag-to-expand is deferred: `snapPoints` are
  * discrete heights cycled by a real 44px button, so the affordance survives
  * without a pointer and without a gesture nobody can discover.
  *

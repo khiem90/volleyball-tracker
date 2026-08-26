@@ -125,7 +125,7 @@ export const MbStepRail = ({
          * The trailing space is padding on an inert step and **margin** on a
          * clickable one. Same geometry either way, but as margin it sits
          * outside the hit box, so two adjacent completed steps keep the 8px of
-         * clear water invariant 33 requires instead of abutting at 0px.
+         * clear water required between targets instead of abutting at 0px.
          */
         const bodyClass = vertical
           ? "flex min-h-[44px] w-full min-w-0 items-start gap-3 pr-2 text-left"

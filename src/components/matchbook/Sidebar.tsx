@@ -15,7 +15,7 @@ export interface MbSidebarCta {
   icon?: string;
   /**
    * Coral by default, because the rail's key is normally the screen's primary
-   * action. It is a prop because invariant 15 allows **one** coral fill per
+   * action. It is a prop because only **one** coral fill is allowed per
    * screen and on two of the six console routes the primary action is an
    * `onClick`, not a link — `/quick-match` starts a match, `/summaries`
    * exports a CSV — so it can only live in the masthead. On those routes the
@@ -36,7 +36,7 @@ export interface MbSidebarCta {
  *   1. `.scrollbar-thin` is gone. It is a LEGACY class whose thumb is
  *      `oklch(0.7 0.08 25 / 0.3)`, the pre-Matchbook warm red, and this file
  *      was one of only two Matchbook components consuming anything from the
- *      legacy stylesheet (register D-2, HF-4). The native scrollbar is the
+ *      legacy stylesheet. The native scrollbar is the
  *      correct answer here: the rail only scrolls on a short viewport.
  *   2. `<nav aria-label="Primary">` and `aria-current="page"`, neither of which
  *      any of the app's three navigations had.

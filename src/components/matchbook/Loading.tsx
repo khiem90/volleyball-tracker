@@ -798,7 +798,7 @@ export const MB_ROUTE_STATE: Record<MbRouteStateId, MbRouteStateCopy> = {
 
 /**
  * The visible body of a failure route, drawn once. `app/error.tsx`,
- * `app/not-found.tsx`, `app/global-error.tsx` and the `/dev/states/*` harness
+ * `app/not-found.tsx` and `app/global-error.tsx`
  * all render THIS, differing only in frame and available actions
  * (`global-error` has no router, so no links). The digest renders as a
  * `.mb-code-chip` reference token; `error.message` never appears in this

@@ -29,7 +29,7 @@ import { courtPercent } from "./MbCourt";
 
    MOTION. The token is positioned by a CSS `transform` on its group and moves
    by transitioning that transform, so a rotation change is one composited
-   property on seven elements. There is no spring and no framer-motion.
+   property on seven elements. There is no spring.
    While a finger is down, `instant` switches the
    transition off entirely: a drag that eases toward the pointer feels like
    lag, and dragging must feel exact.

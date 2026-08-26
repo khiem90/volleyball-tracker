@@ -20,7 +20,7 @@ const DEFAULT_ICON: Record<MbNoticeTone, string> = {
 /**
  * Inline hairline notice — the replacement for every stray `text-destructive`
  * line and amber tint block. The tone rides the 4px left rule of `.mb-banner`,
- * never the letterforms (they stay navy, as GAP-4 requires of small type).
+ * never the letterforms (small type never carries tone — it stays navy).
  */
 export const MbNotice = ({
   tone,

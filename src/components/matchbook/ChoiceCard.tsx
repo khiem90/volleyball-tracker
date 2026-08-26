@@ -7,7 +7,7 @@ import { MbCheckMark } from "./SelectList";
 /**
  * The "pick a thing" tile — wizard format grid, tools hub, any future chooser.
  *
- * `accent` is a **contained mark only** (charter D-9): it colours the 3px rail
+ * `accent` is a **contained mark only**: it colours the 3px rail
  * down the card's spine and nothing else. It never becomes ink or a fill,
  * because the accents in `FORMAT_META` include `--mb-gold`, which measures
  * 2.15:1 on paper — fine as a rule, illegal as a glyph.

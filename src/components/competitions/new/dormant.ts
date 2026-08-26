@@ -40,9 +40,8 @@
    rather than by this file.
 
    HANDOFF: this belongs in `MbButton` as the definition of `disabled`, at
-   which point this module and its seven call sites disappear. It is written
-   here because `Button.tsx` is kit, not wizard, and this workstream owns
-   `src/components/competitions/new/*`. The same washed-fill treatment is still
+   which point this module and its seven call sites disappear. It lives
+   here rather than in the kit for now. The same washed-fill treatment is still
    live wherever a filled `MbButton` can be disabled — the scoring console's
    gated commit control is the one the walkthrough named.
    =========================================================================== */
@@ -73,8 +72,7 @@ export const MB_DORMANT =
    than `disabled:`-scoped, because the button really is operable and the
    `disabled:` variants would never fire. It is scoped instead to the bar's
    last child, which is `MbActionBar`'s primary, so it can be handed to the bar
-   as a `className` from the route without reaching inside a component this
-   workstream does not own.
+   as a `className` from the route without reaching inside the component.
 
    The result: paper ground, muted-but-legible label at `--mb-ink-muted`
    (5.1:1 on paper), opacity 1, cursor and hit area untouched, and NO coral
@@ -96,8 +94,7 @@ export const MB_DORMANT =
    HANDOFF: the accessibility tree still reports the control as enabled.
    `aria-disabled="true"` is the correct annotation for "present, focusable,
    not available yet, press me and I will tell you why", but `MbAction` has no
-   axis for it and `ActionBar.tsx` is owned by another workstream this round.
-   One optional `ariaDisabled` field on `MbAction`, forwarded by `BarAction`,
+   axis for it yet. One optional `ariaDisabled` field on `MbAction`, forwarded by `BarAction`,
    closes it. Until then the reason is carried by the bar's own status line
    (in the bar, before the press) and by the gate notice (after it).
    =========================================================================== */

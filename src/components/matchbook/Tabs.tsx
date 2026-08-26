@@ -14,8 +14,7 @@ export interface MbTabItem {
 }
 
 /**
- * Hand-rolled tablist — deliberately not `@radix-ui/react-tabs`, which is
- * deleted in P4. Automatic activation: arrow keys move focus and select, which
+ * Hand-rolled tablist. Automatic activation: arrow keys move focus and select, which
  * is the WAI-ARIA pattern for tabs whose panels are already mounted.
  *
  * `.mb-tabs` is a horizontal scroller, so two things this component owns:
@@ -27,7 +26,7 @@ export interface MbTabItem {
  * That first job is done by writing `rail.scrollLeft`, never by
  * `scrollIntoView`. `scrollIntoView` walks *every* scrollable ancestor, and
  * `globals.css` makes BODY the document scroller, so the old call moved the
- * page: on mount, with no user action, /dev/kit opened 709px down on desktop
+ * page: on mount, with no user action, the page opened 709px down on desktop
  * and 3300px down on mobile because the tab strip sits that far into the page.
  * A control may scroll itself; it may not scroll the document out from under
  * the reader. So: the rail only, one axis only, and only when the active tab

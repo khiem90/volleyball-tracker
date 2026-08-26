@@ -5,7 +5,7 @@ import { MB_STATE_SCALE, MbStateBlock, type PanelEmptyTone } from "./Panel";
 
 /**
  * The same six tones `PanelEmpty` carries — page level here, in-panel there
- * (charter Appendix A, D-7). Aliased rather than restated so the two can never
+ *. Aliased rather than restated so the two can never
  * drift apart.
  */
 export type MbEmptyStateTone = PanelEmptyTone;
@@ -13,7 +13,7 @@ export type MbEmptyStateTone = PanelEmptyTone;
 /**
  * `MbActionVariant` verbatim, so `variant="outline"` means `.mb-btn-outline`
  * here and in `MbActionBar` alike. A second four-value union with a different
- * meaning for one of its members is exactly the drift the rubric penalises.
+ * meaning for one of its members is exactly the drift this prevents.
  */
 export type MbEmptyStateActionVariant = MbActionVariant;
 

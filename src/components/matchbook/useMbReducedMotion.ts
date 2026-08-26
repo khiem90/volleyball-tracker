@@ -1,8 +1,5 @@
 // prefers-reduced-motion, read straight from matchMedia.
 //
-// Deliberately does NOT wrap framer-motion's useReducedMotion: importing it
-// for a media query would reintroduce the library everywhere.
-//
 // useSyncExternalStore (rather than useState + useEffect) so the first client
 // render already returns the real value — a useEffect implementation renders
 // `false` once, a frame of motion for a user who asked for none.

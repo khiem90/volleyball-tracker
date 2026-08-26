@@ -53,7 +53,7 @@ const SeriesPips = ({ wins, of }: { wins: number; of: number }) => (
 /**
  * Both numerals carry the 3px rule slot whether or not they are leading — the
  * losing side draws it in `transparent` — so a lead change repaints one colour
- * and moves nothing (invariant 43).
+ * and moves nothing.
  *
  * The rule is as wide as the figures, not as wide as the box. The box is a
  * three-figure reserve at every step, so it measures the same at 0 and at 108
@@ -159,8 +159,8 @@ const ScoreboardRow = ({
  * right, which is the shape every phone scoreboard uses and which charges the
  * reserve once instead of twice.
  *
- * **Names wrap, they do not truncate.** The rubric's own reference anchor is
- * Apple Sports surviving Dynamic Type by wrapping rather than truncating, and
+ * **Names wrap, they do not truncate.** Apple Sports survives
+ * Dynamic Type by wrapping rather than truncating, and
  * an ellipsis is a worse failure than a second line: "Northwest Kalamazoo
  * Thunderhawks Academy" and "Northside Community Volleyball Association" are
  * the same three characters once truncated. Every threshold above is set at the
@@ -197,7 +197,7 @@ export const MbScoreboardHero = ({
   away: MbTeam;
   homeScore: number;
   awayScore: number;
-  /** Team colour as a contained bar only — never a fill (charter D-9). */
+  /** Team colour as a contained bar only — never a fill. */
   homeAccent?: string;
   awayAccent?: string;
   series?: MbScoreboardSeries;

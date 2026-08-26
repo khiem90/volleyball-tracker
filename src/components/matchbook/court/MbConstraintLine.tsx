@@ -10,7 +10,7 @@ import type { OverlapType } from "@/lib/volleyball/types";
    — two raw literals whose only difference was hue, described in the help copy
    as "blue dashed lines" and "orange dotted lines". Desaturate that and the
    legend stops mapping to the drawing: a colour-blind reader is told to look
-   for a colour that is not there. That is invariant 13, and it is a hard fail.
+   for a colour that is not there. Colour must never be the only channel.
 
    The channel that carries the meaning here is the MIDPOINT MARK:
 

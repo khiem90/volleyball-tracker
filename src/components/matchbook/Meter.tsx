@@ -29,8 +29,8 @@ export const MbMeter = ({
       )}
       {/* G22 — the fill is a full-width bar SCALED on X, never a `width`.
           `width` is a layout property, so animating it re-ran layout for the
-          bar's whole subtree on every frame; charter invariant 40 allows only
-          `transform` and `opacity`, which the compositor can run without
+          bar's whole subtree on every frame; only `transform` and `opacity` may
+          animate, which the compositor can run without
           touching layout. `--mb-meter-fill` is unitless because `scaleX()`
           takes a number, and `.mb-meter` owns the geometry — see the block in
           `globals.css`. Nothing about the painted result changes. */}

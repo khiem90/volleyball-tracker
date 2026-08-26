@@ -17,8 +17,8 @@ import type { MbOverviewSection, MbStartStep, MbStepState } from "./panels";
 /* ---------------------------------------------------------------------------
    THE FIRST-RUN VIEW
 
-   `MbDashboardData` lives in `types.ts`, which this workstream does not own, so
-   the first-run fields extend it here rather than editing it. Nothing that
+   `MbDashboardData` lives in `types.ts`; the first-run fields extend it here
+   rather than editing it. Nothing that
    reads `MbDashboardData` changes shape.
    --------------------------------------------------------------------------- */
 

@@ -15,7 +15,7 @@ export interface MbSegmentedOption {
  * A framed composite, so `md` and `lg` only — `Button.tsx` has the derivation.
  * The short version: the interior WIDTH of a framed composite is `rung − 2`,
  * and at `sm` it would be 42px — under the floor for the segments, which are
- * the actual targets (rubric HF-2).
+ * the actual targets.
  *
  * The cells' HEIGHT is the full rung — 48/56, the same number as the group —
  * because the frame is drawn as an inset `outline`, which is paint rather than
@@ -54,7 +54,7 @@ const COLS_SM: Record<number, string> = {
 const clampColumns = (n: number) => Math.min(6, Math.max(1, Math.round(n)));
 
 /**
- * The form-control sibling of `MbTabs` (charter Appendix A D-3): tabs switch a
+ * The form-control sibling of `MbTabs`: tabs switch a
  * view, this picks a value. `role="radiogroup"` with real radio semantics,
  * arrow-key roving tabindex, and a grid that wraps to another row rather than
  * squeezing a cell below the touch floor.
@@ -124,10 +124,9 @@ export const MbSegmented = ({
          * THE FRAME IS PAINT, NOT LAYOUT (the composite half of G21).
          *
          * `.mb-segmented`'s block borders used to charge the cells for the
-         * frame: group 48, cells 46 — and 46 is the number the D2 sweep sees,
-         * because an audit enumerates `role="radio"` buttons, not the group
-         * div around them (the rubric names "46/58" as the pair that fails
-         * the ladder twice). So the border comes off and the same 1px navy
+         * frame: group 48, cells 46 — and 46 is what a hit-area audit sees,
+         * because it enumerates `role="radio"` buttons, not the group
+         * div around them. So the border comes off and the same 1px navy
          * ring is drawn as an inset `outline`, which occupies zero layout and
          * paints OVER the cells' outer edge — outlines render in the final
          * paint phase (CSS 2.1 App. E), so the ring survives the cells'

@@ -9,7 +9,7 @@ import { MbTeamName } from "./TeamName";
 import type { MbTeam } from "./types";
 
 /* ===========================================================================
-   THE COURT CARD (charter §2.3, W4 / P3a)
+   THE COURT CARD
 
    `ActiveCourtCard.tsx` and `TwoMatchCourtCard.tsx` are 250 lines each and
    ~85% identical. Both carry the same three defects:
@@ -25,7 +25,7 @@ import type { MbTeam } from "./types";
      R9     "Court" was hardcoded in several strings. The venue word is a
             required prop and comes from `useTerminology` at every call site.
 
-   Team identity is a crest and a name (invariant 21) — the shipped card drew a
+   Team identity is a crest and a name — the shipped card drew a
    `Users` glyph on a team-coloured gradient tile, which is a person pictogram
    standing in for a team, twice per card.
    =========================================================================== */
@@ -75,7 +75,7 @@ const Side = ({
 }) => (
   /* `gap-3`, not `gap-2.5`: 10px was the only gap value on this screen that
      came from a W4 file and was off the 4/6/8/12/16 ladder — measured twice on
-     `w2o-live@1440`, against 8px ×345 and 12px ×100 (rubric 2.3). 12px is what
+     `w2o-live@1440`, against 8px ×345 and 12px ×100. 12px is what
      every other crest-and-name cluster on the screen already uses. */
   <div
     className={`flex min-w-0 items-center gap-3 ${
@@ -87,7 +87,7 @@ const Side = ({
       {/* `display/panel-title`'s tuple, reused rather than a fourth 0.95rem
           tracking. The card used 0.02em here and the panel head above it uses
           0.05em, which is a size/weight pair carrying two trackings on one
-          screen (rubric 1.3). */}
+          screen. */}
       {/* Not `truncate`. Measured in a 278px box on the win2out board, two
           clubs sharing a prefix both painted "Wolverhampton Wanderers Athletic"
           — on the live scoring card, where telling the two sides apart is the
@@ -145,7 +145,7 @@ export const MbCourtCard = ({
               /* Reassigning teams mid-point would orphan a live score, which
                  is why the shipped card gated it on `pending` too. It stays
                  painted and disabled rather than vanishing, so the control's
-                 existence does not depend on the match state (invariant 36). */
+                 existence does not depend on the match state. */
               disabled={live}
             />
           </span>
@@ -196,7 +196,7 @@ export const MbCourtCard = ({
               "Start match" on an idle court identically to "Continue scoring"
               on a running one put the same emphasis on the thing already
               happening and the thing that has not started, and it spent two
-              of the screen's coral jobs on one panel (rubric 3.4, 8.2). */}
+              of the screen's coral jobs on one panel. */}
           <MbButton
             variant={live ? "coral" : "outline-navy"}
             icon={live ? "live" : "quick"}

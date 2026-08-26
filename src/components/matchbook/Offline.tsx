@@ -1,9 +1,9 @@
 "use client";
 
 /* ===========================================================================
-   THE OFFLINE BANNER (charter §2.3, shell R9, W2 / P2b)
+   THE OFFLINE BANNER
 
-   Two hard requirements from the charter, and they pull against each other:
+   Two hard requirements that pull against each other:
 
      "enters once, never re-animates"   and   "must NOT shift layout".
 
@@ -37,10 +37,8 @@ import { MbIcon } from "./MbIcon";
 /**
  * How the band is positioned.
  *
- * `fixed` is the shipped form. `inline` exists so the gallery and any future
- * embedded surface can show the band in flow — it is the same markup with the
- * fixed positioning neutralised, exactly the pattern `/dev/kit` already uses to
- * make `.mb-skip-link` inspectable.
+ * `fixed` is the shipped form. `inline` shows the band in flow — the same
+ * markup with the fixed positioning neutralised.
  */
 export type MbOfflineBannerVariant = "fixed" | "inline";
 
@@ -78,9 +76,9 @@ export const MbOfflineBanner = ({
       className={`${VARIANT_CLASS[variant]} border-b-[1.5px] border-mb-navy bg-mb-paper-bright text-mb-navy`}
       /* The tone rides a 4px top rule in gold-INK, not raw gold: `--mb-gold`
          measures 2.15:1 on paper and would be a non-text contrast failure
-         (invariant 14) even as an accent. `--mb-gold-ink` is the same signal at
+         even as an accent. `--mb-gold-ink` is the same signal at
          a legible weight. The rule is the third channel behind the word and the
-         glyph, never the only one (invariant 13). */
+         glyph, never the only one. */
       style={{ borderTop: "4px solid var(--mb-gold-ink)" }}
       /* Polite, not assertive: losing the network is not worth interrupting a
          sentence the reader is mid-way through. The `status` role and the
@@ -100,7 +98,7 @@ export const MbOfflineBanner = ({
         />
         <p className="min-w-0 text-[0.78rem] leading-[1.4]">
           {/* The WORD carries the state; the hue only agrees with it. A
-              greyscale render still reads "Offline" (invariant 13). */}
+              greyscale render still reads "Offline". */}
           <span className="matchbook-display mb-track-display font-bold">
             Offline
           </span>

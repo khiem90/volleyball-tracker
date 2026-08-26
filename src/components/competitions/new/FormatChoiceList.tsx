@@ -89,8 +89,7 @@ import type { CompetitionType } from "@/types/game";
  * HANDOFF: `.mb-radio` in `globals.css` still draws the squared ballot box
  * this file just abandoned, with the same inset-square mark. Nothing renders
  * it — the class has no call site in `src/` — but the next control that needs
- * a one-of-N mark will find the collision waiting. It belongs in that file,
- * which this workstream does not own this round.
+ * a one-of-N mark will find the collision waiting. It belongs in that file.
  */
 const ChoiceSlot = ({ checked }: { checked: boolean }) => (
   <span

@@ -125,7 +125,7 @@ const BarAction = ({ action, primary }: { action: MbAction; primary: boolean }) 
  * The bottom-anchored commit bar: one primary, at most one secondary, and a
  * short status line. The only such bar in the system — the wizard's sticky
  * footer and the scoring console's action rail are both this component
- * (charter Appendix B).
+ *.
  *
  * `status` is always one truncating line — it is for a short measure
  * ("Step 2 of 3", "8 teams selected"); anything longer belongs above the bar.

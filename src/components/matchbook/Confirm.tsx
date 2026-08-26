@@ -6,8 +6,7 @@ import { MbDestructiveButton } from "./DangerZone";
 import { MbDialog, MbDialogBody, MbDialogFooter } from "./Dialog";
 
 /**
- * The only confirmation surface in the app (charter Appendix B — no
- * `window.confirm`). Destructive by default; `destructive={false}` turns it
+ * The only confirmation surface in the app — never `window.confirm`. Destructive by default; `destructive={false}` turns it
  * into a plain navy "are you sure".
  *
  * The two branches are deliberately *not* the same object:
@@ -25,7 +24,7 @@ import { MbDialog, MbDialogBody, MbDialogFooter } from "./Dialog";
  * outline is the channel that survives desaturation (greyscale ground 0.960
  * against `.mb-btn-navy`'s 0.029 and `.mb-btn-coral`'s 0.151), so the
  * destructive commit is never mistakable for a benign primary and never leans
- * on hue (invariant 13); the `warning` glyph is what separates it from
+ * on hue; the `warning` glyph is what separates it from
  * `Cancel`, the other outline in the footer.
  *
  * It is deliberately the quieter control of the two: the cheap action is

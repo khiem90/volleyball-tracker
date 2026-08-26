@@ -36,8 +36,7 @@ const TONE_INK: Record<MbStatTone, string> = {
  *                             call site — a live count is `red` (§1.2 fixes
  *                             live to --mb-red), and coral's three declared
  *                             jobs do not include a stat disc; the treatment
- *                             stays defined so the ladder's geometry is
- *                             complete in /dev/kit.
+ *                             stays defined so the shape ladder is complete.
  *   red    square, solid      the attention family's terminal states:
  *                             live now / blocked — urgent, look here
  *

@@ -4,7 +4,7 @@
    THE WIZARD VIEW-MODEL
 
    `useNewCompetitionPage` owns state and the mutation; this owns shape. The
-   route file below it contains layout and nothing else (invariant 23).
+   route file below it contains layout and nothing else.
 
    Two things here are worth more than the shaping: `formatPreview`, which
    turns the chosen format into the numbers it will actually generate, and

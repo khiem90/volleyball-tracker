@@ -21,10 +21,10 @@ const OPEN_STATE = "data-[state=open]:bg-[var(--mb-tint-2)] data-[state=open]:te
 
 /**
  * The overflow menu for a row or masthead carrying more than two actions
- * (charter §2.3). Wraps `@radix-ui/react-dropdown-menu` — the same dependency
+ *. Wraps `@radix-ui/react-dropdown-menu` — the same dependency
  * `MbDialog` already uses — for roving focus, Home/End, typeahead, Escape,
- * outside-click and focus restoration. `MbTabs` is hand-rolled because
- * `@radix-ui/react-tabs` is deleted in P4; dropdown-menu is not on that list.
+ * outside-click and focus restoration. `MbTabs` is hand-rolled; a menu's focus
+ * contract is the part worth taking from the library.
  *
  * Rows are full-bleed and ruled rather than padded and floating: a menu is a
  * short ledger, not a card stack.
@@ -48,7 +48,7 @@ export const MbMenu = ({
   /**
    * `.mb-btn` variant for the worded trigger. Defaults to `outline-navy`: a
    * labelled control needs a rule at rest, or the only thing marking it as a
-   * control is hover — which invariant 36 forbids. The icon-only trigger keeps
+   * control is hover, and hover-only affordances are forbidden. The icon-only trigger keeps
    * the plain treatment because a lone glyph in a row already reads as a
    * control.
    */

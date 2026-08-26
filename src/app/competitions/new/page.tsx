@@ -424,8 +424,7 @@ const WizardBones = () => {
  * `false` on the server and through hydration, `true` afterwards.
  *
  * The wizard reads its `sessionStorage` draft in a lazy `useState` initialiser,
- * which is only safe if the subtree never renders on the server — and in the
- * dev-preview build `AuthContext` resolves synchronously, so the auth gate
+ * which is only safe if the subtree never renders on the server — and the auth gate
  * alone does not guarantee that. `useSyncExternalStore` with a server snapshot
  * is the sanctioned way to say "client only" without a setState in an effect.
  */

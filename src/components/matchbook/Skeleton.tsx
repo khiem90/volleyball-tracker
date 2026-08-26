@@ -5,7 +5,7 @@ const len = (value: string | number) => (typeof value === "number" ? `${value}px
 
 /**
  * Static placeholder block — no shimmer, because a shimmer is a gradient and
- * gradients are banned (GAP-8). Size it to the geometry it stands in for: the
+ * gradients are banned. Size it to the geometry it stands in for: the
  * skeleton exists to stop layout shift, not to look busy.
  */
 export const MbSkeleton = ({

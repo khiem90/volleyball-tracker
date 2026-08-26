@@ -13,7 +13,7 @@ import {
    MOVEMENT ARROWS
 
    Contact position -> base position. Navy, because coral on this court is spent
-   on selection and nothing else (invariant 15), and because six coral arrows
+   on selection and nothing else, and because six coral arrows
    over six coral selection rings would make the one state that matters
    invisible.
 
