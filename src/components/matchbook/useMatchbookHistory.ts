@@ -1,8 +1,12 @@
 import { useMemo, useState } from "react";
 import { useApp } from "@/context/AppContext";
+import { exportMatchesCsv } from "@/lib/exportCsv";
 import type { Match } from "@/types/game";
+import type { MbLedgerRow } from "./panels";
 import { buildTeamTallies } from "./teamStats";
-import { crestForTeam, type MbTeam } from "./types";
+import { toast } from "./Toast";
+import { createTeamRef } from "./useMatchbookCompetitionDetail";
+import { type MbTeam } from "./types";
 
 export interface MbLedgerEntry {
   id: string;
@@ -45,7 +49,103 @@ export interface MbRecentCompetition {
   matches: number;
 }
 
+/* ===========================================================================
+   THE ARCHIVE'S OWN CONTENTS INDEX
+
+   Measured on a brand-new account at 390px, `/summaries` was 1600px of paper
+   carrying SIX `display/stat-sm` headlines in a column:
+
+     Results Ledger        "No results exist yet"
+     Match Report          "No match report exists yet"
+     Archive Summary       "No archive exists yet"
+     Top Matchups          "No matchups exist yet"
+     Recent Competitions   "No competitions exist yet"
+     Shared Reports        "No shared reports exist yet"
+
+   — one more than the eight-headline Overview that started this whole thread
+   had per pixel, plus a 251px filter bar whose three controls filter a set of
+   zero and a masthead whose single action ("Export CSV") is disabled.
+
+   The fix is the collapse `panels.tsx` already proved, not a new one: a panel
+   with nothing to say is withheld and named in one index instead. The index
+   table is here rather than in `panels.tsx` because `OVERVIEW_INDEX` names the
+   OVERVIEW's eight objects and the archive's six are different objects — one
+   file cannot own both without one screen borrowing the other's nouns. The
+   shape is deliberately identical (`key` / `term` / `gloss`, filtered in the
+   printed order) so the two tables read as one pattern, and `results` is the
+   one row both screens name, in the same words.
+
+   `gloss` is the DECK of the panel's own `PanelEmpty` message, not a second
+   sentence about the same thing — the same discipline `MB_OVERVIEW_CONTENTS`
+   states: a row here and an empty message on the panel are one promise written
+   once each.
+   =========================================================================== */
+
+export type MbArchiveSection =
+  | "ledger"
+  | "report"
+  | "summary"
+  | "matchups"
+  | "competitions"
+  | "shared";
+
+const ARCHIVE_INDEX: { key: MbArchiveSection; term: string; gloss: string }[] = [
+  {
+    key: "ledger",
+    term: "Results Ledger",
+    gloss: "Every finished match, newest first.",
+  },
+  {
+    key: "report",
+    term: "Match Report",
+    gloss: "Pick a result from the ledger to see its report.",
+  },
+  {
+    key: "summary",
+    term: "Archive Summary",
+    gloss: "Stats appear once matches are recorded.",
+  },
+  {
+    key: "matchups",
+    term: "Top Matchups",
+    gloss: "Rivalries build as teams replay each other.",
+  },
+  {
+    key: "competitions",
+    term: "Recent Competitions",
+    gloss: "Events you create are listed here, newest first.",
+  },
+  {
+    key: "shared",
+    term: "Shared Reports",
+    gloss: "End a session with sharing to save one.",
+  },
+];
+
+/**
+ * The index cut down to the panels that were actually withheld, in the order
+ * the populated screen prints them. Reading it back tells the reader exactly
+ * what the archive is still waiting for and nothing else.
+ *
+ * The archive twin of `mbContentsFor`. It is a separate function rather than a
+ * generic one because the two tables are two different sets of nouns; sharing
+ * the *shape* is the point, sharing the rows would be the drift.
+ */
+export const mbArchiveContentsFor = (
+  sections: readonly MbArchiveSection[]
+): MbLedgerRow[] =>
+  ARCHIVE_INDEX.filter((row) => sections.includes(row.key)).map(
+    ({ term, gloss }) => ({ term, gloss })
+  );
+
 export interface MbHistoryData {
+  /**
+   * True until the localStorage blob has landed in `AppContext`. While it is
+   * true every count below is a zero that means "unknown", not "empty" — the
+   * page must hold its first-paint reservation (the boot gate) rather than
+   * swap to the empty composition. See `MbBootSniff` in `Loading.tsx`.
+   */
+  hydrating: boolean;
   dateLine: string;
   totalResults: number;
   filteredCount: number;
@@ -61,6 +161,16 @@ export interface MbHistoryData {
     teams: { id: string; name: string }[];
   };
   downloadCsv: () => void;
+  /**
+   * The panels that cannot say anything, in printed order.
+   *
+   * Judged on the WHOLE archive, never on the current filter: a search that
+   * matches nothing must leave every panel standing so the reader can see what
+   * they filtered and undo it. `ledger` is deliberately absent from this list —
+   * it is the screen's principal object, the one place a filter miss is
+   * reported, and the single empty headline the screen allows.
+   */
+  muteSections: MbArchiveSection[];
 }
 
 const shortDate = (ts?: number) =>
@@ -73,7 +183,7 @@ export const useMatchbookHistory = (filters: {
   teamId: string;
   query: string;
 }): MbHistoryData => {
-  const { state } = useApp();
+  const { state, localReady } = useApp();
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   return useMemo(() => {
@@ -84,12 +194,12 @@ export const useMatchbookHistory = (filters: {
       year: "numeric",
     });
 
-    const teamName = (id: string) =>
-      state.teams.find((t) => t.id === id)?.name ?? "Unknown";
-    const refFor = (id: string): MbTeam => ({
-      name: teamName(id),
-      crest: crestForTeam(id, teamName(id)),
-    });
+    /* One resolver, shared with the other four `useMatchbook*` hooks, so a team
+       the state no longer holds is named the same thing on every screen. This
+       file's own version answered "Unknown", which is the string that painted
+       as "UNKNO…" on the overview (F13). */
+    const refFor = createTeamRef(state.teams);
+    const teamName = (id: string) => refFor(id).name;
     const compName = (id: string | null) =>
       state.competitions.find((c) => c.id === id)?.name ?? "Quick Match";
 
@@ -215,31 +325,49 @@ export const useMatchbookHistory = (filters: {
         return { id: c.id, name: c.name, range, matches: ms.length };
       });
 
+    /* The serialisation and the download live in `src/lib/exportCsv.ts` so
+       the public summary can reuse them without importing a screen hook. This
+       side keeps only the shaping — which rows, and what the ids resolve to.
+       The result is surfaced: a browser that refuses the blob URL must not
+       produce a button that does nothing. */
     const downloadCsv = () => {
-      const rows = [
-        ["Date", "Home", "Away", "Home Score", "Away Score", "Winner", "Competition"],
-        ...filtered.map((m) => [
-          m.completedAt ? new Date(m.completedAt).toISOString() : "",
-          teamName(m.homeTeamId),
-          teamName(m.awayTeamId),
-          String(m.homeScore),
-          String(m.awayScore),
-          teamName(m.winnerId ?? ""),
-          compName(m.competitionId),
-        ]),
-      ];
-      const csv = rows
-        .map((r) => r.map((cell) => `"${cell.replaceAll('"', '""')}"`).join(","))
-        .join("\n");
-      const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "match-archive.csv";
-      link.click();
-      URL.revokeObjectURL(url);
+      const result = exportMatchesCsv(
+        filtered.map((m) => ({
+          completedAt: m.completedAt ?? null,
+          home: teamName(m.homeTeamId),
+          away: teamName(m.awayTeamId),
+          homeScore: m.homeScore,
+          awayScore: m.awayScore,
+          winner: teamName(m.winnerId ?? ""),
+          competition: compName(m.competitionId),
+        }))
+      );
+      if (result.ok) {
+        toast({
+          tone: "success",
+          message: `${filtered.length} ${
+            filtered.length === 1 ? "result" : "results"
+          } exported to match-archive.csv`,
+        });
+      } else {
+        toast({ tone: "danger", message: result.reason, duration: 0 });
+      }
     };
 
+    /* Each test is the panel's OWN render condition, read off the same value
+       the panel branches on — so a panel can never be withheld while it still
+       had something to print, and can never print an empty state the index has
+       already accounted for. `shared` is not decidable here: it comes from
+       Firestore through `useSummariesPage`, so the page appends it once that
+       hook has actually finished loading. */
+    const muteSections: MbArchiveSection[] = [];
+    if (completed.length === 0) muteSections.push("report");
+    if (summary.matches === 0) muteSections.push("summary");
+    if (matchups.length === 0) muteSections.push("matchups");
+    if (competitions.length === 0) muteSections.push("competitions");
+
     return {
+      hydrating: !localReady,
       dateLine,
       totalResults: completed.length,
       filteredCount: filtered.length,
@@ -258,6 +386,7 @@ export const useMatchbookHistory = (filters: {
         teams: state.teams.map((t) => ({ id: t.id, name: t.name })),
       },
       downloadCsv,
+      muteSections,
     };
-  }, [state, filters.competitionId, filters.teamId, filters.query, selectedId]);
+  }, [state, localReady, filters.competitionId, filters.teamId, filters.query, selectedId]);
 };

@@ -85,12 +85,79 @@ export const readinessPercent = (tally?: TeamTally): number => {
   return Math.round((winRate * 0.5 + recentRate * 0.5) * 100);
 };
 
-export const readinessStatus = (percent: number): MbReadinessStatus =>
-  percent >= 85 ? "READY" : percent >= 65 ? "GOOD" : "NEEDS ATTN";
+/* ---------------------------------------------------------------------------
+   THE STATE A NEW TEAM IS IN
 
-export const readinessColor = (percent: number): string =>
-  percent >= 85
-    ? "var(--mb-green)"
-    : percent >= 65
-      ? "var(--mb-gold)"
-      : "var(--mb-red)";
+   `readinessPercent` answers 0 for a team that has lost five and 0 for a team
+   that has played none, and `readinessStatus` had one branch for both: the
+   first thing this app said to a user who had just created their first team
+   was `RIVERSIDE ROCKETS  0%  ▬  NEEDS ATTN`, in coral, thirty seconds in.
+
+   A team with no matches played is not failing. It has nothing to report, and
+   0 is not what it has to report — the percent is UNKNOWN, which is a different
+   claim from zero and needs a different mark, a different word and a different
+   ink. Nothing else on the row can carry it: `percent` is a `number`, and both
+   teams resolve to the same one.
+
+   So the condition is `played`, which the tally already holds and which the
+   percent has thrown away by the time these three functions see it.
+
+   ------------------------------------------------------------------ the shape
+
+   `readinessStatus` is OVERLOADED rather than widened: `/`'s dashboard
+   assigns this return straight into a field typed with the three-word union
+   in `types.ts`. The one-argument signature keeps that exact type and
+   behaviour; the two-argument one is the honest form.
+   --------------------------------------------------------------------------- */
+
+/** `MbReadinessStatus` plus the state that is not a judgement. */
+export type MbReadinessState = MbReadinessStatus | "NEW";
+
+export function readinessStatus(percent: number): MbReadinessStatus;
+export function readinessStatus(percent: number, played: number): MbReadinessState;
+export function readinessStatus(
+  percent: number,
+  played?: number
+): MbReadinessState {
+  if (played === 0) return "NEW";
+  return percent >= 85 ? "READY" : percent >= 65 ? "GOOD" : "NEEDS ATTN";
+}
+
+/**
+ * The MARK colour — a meter fill, a dot, a rule. A UI graphic's floor is 3:1
+ * and all three clear it on both paper tones.
+ *
+ * With nothing played there is no fill to colour: the caller draws the track at
+ * zero, and the rule tone keeps a stray 1px edge from reading as a result.
+ */
+export const readinessColor = (percent: number, played?: number): string =>
+  played === 0
+    ? "var(--mb-rule)"
+    : percent >= 85
+      ? "var(--mb-green)"
+      : percent >= 65
+        ? "var(--mb-gold)"
+        : "var(--mb-red)";
+
+/**
+ * The LETTERFORM colour — a second function, not `readinessColor()`: raw gold
+ * and green fail the 4.5:1 text floor at this size, so the words take the ink
+ * twins while the bar keeps the raw tones. Red clears the floor only on the
+ * panel ground (`--mb-paper-bright`); a future caller on bare `--mb-paper`
+ * needs a red ink twin, which the token set does not yet have.
+ *
+ * The bar keeps `readinessColor()`. A mark may be bright; a word may not.
+ *
+ * NEW takes `--mb-ink-muted` — 5.25:1 on `--mb-paper-bright`, over the 4.5:1
+ * floor — because it is the one of the four that is not a verdict, and inking
+ * it in the same family as READY/GOOD/NEEDS ATTN would make "you have not
+ * played yet" look like a grade.
+ */
+export const readinessInk = (percent: number, played?: number): string =>
+  played === 0
+    ? "var(--mb-ink-muted)"
+    : percent >= 85
+      ? "var(--mb-green-ink)"
+      : percent >= 65
+        ? "var(--mb-gold-ink)"
+        : "var(--mb-red)";

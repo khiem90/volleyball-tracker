@@ -1,295 +1,373 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import Link from "next/link";
-import { motion } from "framer-motion";
-import { Navigation } from "@/components/Navigation";
-import { CreateSessionDialog } from "@/components/CreateSessionDialog";
-import { CompetitionNotFound } from "@/components/competition-detail/CompetitionNotFound";
-import { CompetitionHeader } from "@/components/competition-detail/CompetitionHeader";
-import { CompetitionWinnerBanner } from "@/components/competition-detail/CompetitionWinnerBanner";
-import { CompetitionStats } from "@/components/competition-detail/CompetitionStats";
-import { CompetitionDraftTeams } from "@/components/competition-detail/CompetitionDraftTeams";
-import { CompetitionRoundRobinSection } from "@/components/competition-detail/CompetitionRoundRobinSection";
-import { StartCompetitionDialog } from "@/components/competition-detail/StartCompetitionDialog";
-import { MatchActionDialog } from "@/components/competition-detail/MatchActionDialog";
-import { EndCompetitionDialog } from "@/components/competition-detail/EndCompetitionDialog";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import {
-  ArrowLeft,
-  Trophy,
-} from "lucide-react";
-import { EditMatchDialog } from "@/components/dialogs/edit-match";
-import { useCompetitionDetailPage } from "@/hooks/useCompetitionDetailPage";
+import { useCallback, useMemo, useState } from "react";
+import { useAuth } from "@/context/AuthContext";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import { useCompetitionDetailPage } from "@/hooks/useCompetitionDetailPage";
+import { MatchbookShell } from "@/components/matchbook/AppShell";
+import { MbPageLoading } from "@/components/matchbook/Loading";
+import { MbBadge, type MbBadgeTone } from "@/components/matchbook/Badge";
+import { MbButton } from "@/components/matchbook/Button";
+import { MbLiveStatus } from "@/components/matchbook/LiveStatus";
+import { MbNotice } from "@/components/matchbook/Notice";
+import { MbShareAction } from "@/components/matchbook/ShareAction";
+import { MbSkeletonPanel } from "@/components/matchbook/Loading";
+import type { MbAction } from "@/components/matchbook/ActionBar";
+import { useMatchbookCompetitionDetail } from "@/components/matchbook/useMatchbookCompetitionDetail";
+import { CreateSessionDialog } from "@/components/CreateSessionDialog";
+import { AddEntrantsDialog } from "@/components/competition-detail/AddEntrantsDialog";
+import { CompetitionNotFound } from "@/components/competition-detail/CompetitionNotFound";
+import { EndCompetitionDialog } from "@/components/competition-detail/EndCompetitionDialog";
+import { MatchActionDialog } from "@/components/competition-detail/MatchActionDialog";
+import { StartCompetitionDialog } from "@/components/competition-detail/StartCompetitionDialog";
+import { BracketBody, DraftBody, RoundRobinBody } from "@/components/competition-detail/bodies";
+import { EditMatchDialog } from "@/components/dialogs/edit-match";
 import { getPlayInMatchCount } from "@/lib/singleElimination";
+import { exportMatchesCsv } from "@/lib/exportCsv";
+import type { Competition } from "@/types/game";
 
-// Lazy load tournament view components - only one is rendered based on competition type
-const Bracket = dynamic(
-  () => import("@/components/Bracket").then((mod) => ({ default: mod.Bracket })),
-  { ssr: false }
-);
-const DoubleBracket = dynamic(
-  () => import("@/components/DoubleBracket").then((mod) => ({ default: mod.DoubleBracket })),
-  { ssr: false }
-);
+/* The competition console: five formats through one screen. Layout only —
+   display data comes from `useMatchbookCompetitionDetail`, mutations from
+   `useCompetitionDetailPage`. The rotation/bracket views stay lazy
+   (`next/dynamic`, `ssr: false`) to keep five formats' worth of code out of
+   the first bundle. */
+
 const Win2OutView = dynamic(
   () => import("@/components/Win2OutView").then((mod) => ({ default: mod.Win2OutView })),
-  { ssr: false }
+  { ssr: false, loading: () => <MbSkeletonPanel rows={3} /> }
 );
 const TwoMatchRotationView = dynamic(
-  () => import("@/components/TwoMatchRotationView").then((mod) => ({ default: mod.TwoMatchRotationView })),
-  { ssr: false }
+  () =>
+    import("@/components/TwoMatchRotationView").then((mod) => ({
+      default: mod.TwoMatchRotationView,
+    })),
+  { ssr: false, loading: () => <MbSkeletonPanel rows={3} /> }
 );
 
-const typeLabels: Record<string, string> = {
-  round_robin: "Round Robin",
-  single_elimination: "Single Elimination",
-  double_elimination: "Double Elimination",
-  win2out: "Win 2 & Out",
-  two_match_rotation: "2 Match Rotation",
+const STATUS_TONE: Record<Competition["status"], MbBadgeTone> = {
+  draft: "draft",
+  in_progress: "live",
+  completed: "final",
 };
+
+const STATUS_LABEL: Record<Competition["status"], string> = {
+  draft: "Draft",
+  in_progress: "Live",
+  completed: "Final",
+};
+
+/** Short names take the house full stop; long ones would set it adrift. */
+const TITLE_STOP_MAX = 22;
 
 export default function CompetitionDetailPage() {
   const { isLoading, isAuthenticated } = useRequireAuth();
-  const {
-    canEdit,
-    competition,
-    competitionTeams,
-    completedMatches,
-    editingMatch,
-    handleMatchClick,
-    handlePlayMatch,
-    handleStartCompetition,
-    handleEndCompetition,
-    inProgressMatches,
-    isSharedMode,
-    isCreator,
-    isEndingCompetition,
-    matches,
-    pendingMatches,
-    roundRobinMatches,
-    selectedMatch,
-    setEditingMatch,
-    setSelectedMatch,
-    setShowCreateSession,
-    setShowStartConfirm,
-    setShowEndConfirm,
-    showCreateSession,
-    showStartConfirm,
-    showEndConfirm,
-    standings,
-    totalProgress,
-    winner,
-  } = useCompetitionDetailPage();
+  const { isConfigured } = useAuth();
+  const page = useCompetitionDetailPage();
+  const online = useOnlineStatus();
+  const [showAddTeams, setShowAddTeams] = useState(false);
 
-  // Show loading state while checking auth
-  if (isLoading || !isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Navigation />
-        <main className="max-w-6xl mx-auto px-4 py-8">
-          <div className="flex items-center justify-center min-h-[60vh]">
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-              className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full"
-            />
-          </div>
-        </main>
-      </div>
+  const data = useMatchbookCompetitionDetail({
+    competition: page.competition,
+    matches: page.matches,
+    teams: page.competitionTeams,
+  });
+
+  const competition = page.competition;
+
+  const exportResults = useCallback(() => {
+    if (!competition) return;
+    const nameOf = (id: string) =>
+      page.competitionTeams.find((t) => t.id === id)?.name ?? "Unknown team";
+    exportMatchesCsv(
+      page.matches
+        .filter((m) => m.status === "completed" && !m.isBye)
+        .map((m) => ({
+          completedAt: m.completedAt ?? null,
+          home: nameOf(m.homeTeamId),
+          away: nameOf(m.awayTeamId),
+          homeScore: m.homeScore,
+          awayScore: m.awayScore,
+          winner: m.winnerId ? nameOf(m.winnerId) : "",
+          competition: competition.name,
+        })),
+      `${competition.name.replace(/[^\w-]+/g, "-").toLowerCase()}-results.csv`
     );
+  }, [competition, page.matches, page.competitionTeams]);
+
+  /* Coral is reserved for the live state here. `MbAction` has no destructive
+   * variant, so "End competition" stays a quiet outline — the destructive
+   * treatment lives in `EndCompetitionDialog`. A draft masthead carries no
+   * action at all: the only Start button is the coral one in `PreviewPanel`,
+   * never a second copy of the same commit. */
+  const actions = useMemo<MbAction[]>(() => {
+    if (!competition) return [];
+    if (competition.status === "draft") return [];
+    if (competition.status === "in_progress") {
+      if (!page.isSharedMode) {
+        return page.canEdit
+          ? [
+              {
+                label: "Share live",
+                variant: "outline-navy",
+                icon: "share",
+                onClick: () => page.setShowCreateSession(true),
+              },
+            ]
+          : [];
+      }
+      return page.isCreator
+        ? [
+            {
+              label: "End competition",
+              variant: "outline-navy",
+              icon: "check",
+              onClick: () => page.setShowEndConfirm(true),
+            },
+          ]
+        : [];
+    }
+    return [
+      {
+        label: "Export results",
+        variant: "navy",
+        icon: "export",
+        onClick: exportResults,
+      },
+    ];
+  }, [competition, page, exportResults]);
+
+  if (isLoading || !isAuthenticated) {
+    return <MbPageLoading active="/competitions" />;
   }
 
   if (!competition) {
     return <CompetitionNotFound />;
   }
 
+  const short = competition.name.length <= TITLE_STOP_MAX;
+  const venueCount = competition.numberOfCourts ?? 0;
+
+  const bodyProps = {
+    data,
+    competition,
+    canEdit: page.canEdit,
+    onSelectMatch: page.handleMatchClick,
+    onEditMatch: page.setEditingMatch,
+  };
+
   return (
-    <div className="min-h-screen bg-background">
-      <Navigation />
+    <MatchbookShell
+      active="/competitions"
+      back={{ href: "/competitions", label: "All competitions" }}
+      cta={{ href: "/competitions/new", label: "New Competition", icon: "plus" }}
+      masthead={{
+        title: short ? (
+          <>
+            {competition.name}
+            <span className="text-mb-coral">.</span>
+          </>
+        ) : (
+          competition.name
+        ),
+        shortTitle: competition.name,
+        status: (
+          <MbBadge tone={STATUS_TONE[competition.status]} variant="framed" size="md">
+            {STATUS_LABEL[competition.status]}
+          </MbBadge>
+        ),
+        /* `venue.Many` is already the plural — pick One/Many, never append
+           a suffix ("2 Courtses"). */
+        dateLine: `${data.typeLabel} • ${competition.teamIds.length} Teams${
+          venueCount > 0
+            ? ` • ${venueCount} ${venueCount === 1 ? data.venue.One : data.venue.Many}`
+            : ""
+        }`,
+        subLine: `Created ${data.createdDate}`,
+        actions,
+      }}
+    >
+      {/* ---------------------------------------------------- state strips */}
 
-      <main className="max-w-6xl mx-auto px-4 py-8">
-        {/* Back Link */}
-        <Link href="/competitions">
-          <Button
-            variant="ghost"
-            className="mb-6 gap-2 text-muted-foreground hover:text-foreground"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Competitions
-          </Button>
-        </Link>
+      {!online && (
+        <div className="mb-4">
+          <MbNotice tone="warn" icon="wifi-off" title="You are offline">
+            The scores below are the last ones this device saw. They will catch up
+            on their own once the connection returns.
+          </MbNotice>
+        </div>
+      )}
 
-        {/* Header */}
-        <CompetitionHeader
+      {page.sessionError && (
+        <div className="mb-4">
+          {/* Never the raw provider string — `SessionContext.error` is already
+              user-facing. "Reconnect" re-joins the same share code through the
+              same context path that failed: a real retry, not a page reload. */}
+          <MbNotice tone="danger" title="Live sync stopped">
+            <div className="flex flex-col items-start gap-2">
+              <span>
+                This device is no longer receiving updates for the shared
+                session. Everything below is still correct locally.
+              </span>
+              {page.canRetrySync && (
+                <MbButton
+                  variant="outline-navy"
+                  size="sm"
+                  icon="refresh"
+                  loading={page.isRetryingSync}
+                  onClick={page.retrySync}
+                >
+                  Reconnect
+                </MbButton>
+              )}
+            </div>
+          </MbNotice>
+        </div>
+      )}
+
+      {page.isSharedMode && (
+        <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-y border-mb-navy py-2.5">
+          <MbLiveStatus status={online ? "live" : "offline"} />
+          {!page.canEdit && (
+            <p className="mb-kicker">
+              View only — the organiser controls this event.
+            </p>
+          )}
+          <span className="ml-auto">
+            <MbShareAction
+              as="button"
+              variant="outline-navy"
+              size="sm"
+              url={page.getShareUrl()}
+              title={competition.name}
+              text={`Follow ${competition.name} live`}
+            />
+          </span>
+        </div>
+      )}
+
+      {/* --------------------------------------------------------- the body */}
+
+      {competition.status === "draft" ? (
+        <DraftBody
+          data={data}
           competition={competition}
-          typeLabel={typeLabels[competition.type]}
-          isSharedMode={isSharedMode}
-          isCreator={isCreator}
-          onShowStartConfirm={() => setShowStartConfirm(true)}
-          onShowCreateSession={() => setShowCreateSession(true)}
-          onShowEndConfirm={() => setShowEndConfirm(true)}
+          canEdit={page.canEdit}
+          teams={page.competitionTeams}
+          onAddTeams={() => setShowAddTeams(true)}
+          onRemoveTeam={page.handleRemoveTeam}
+          onStart={() => page.setShowStartConfirm(true)}
+          onDelete={page.handleDeleteCompetition}
         />
-
-        <CompetitionWinnerBanner winner={winner} />
-
-        <CompetitionStats
-          status={competition.status}
-          completedMatches={completedMatches}
-          inProgressMatches={inProgressMatches}
-          pendingMatches={pendingMatches}
-          matchesCount={matches.length}
-          totalProgress={totalProgress}
+      ) : competition.type === "round_robin" ? (
+        <RoundRobinBody {...bodyProps} />
+      ) : competition.type === "single_elimination" ||
+        competition.type === "double_elimination" ? (
+        <BracketBody {...bodyProps} matches={page.matches} />
+      ) : competition.type === "win2out" && competition.win2outState ? (
+        <Win2OutView
+          state={competition.win2outState}
+          matches={page.matches}
+          teams={page.competitionTeams}
+          competition={competition}
+          onMatchClick={page.handleMatchClick}
         />
+      ) : competition.type === "two_match_rotation" &&
+        competition.twoMatchRotationState ? (
+        <TwoMatchRotationView
+          state={competition.twoMatchRotationState}
+          matches={page.matches}
+          teams={page.competitionTeams}
+          competition={competition}
+          onMatchClick={page.handleMatchClick}
+        />
+      ) : (
+        <div className="mb-enter-grid grid grid-cols-1 gap-4 xl:grid-cols-12">
+          <div className="xl:col-span-12">
+            <MbNotice tone="warn" title="This competition has no schedule">
+              The format is {data.typeLabel} but no matches were generated. Deleting
+              and recreating the competition is the safest way forward.
+            </MbNotice>
+          </div>
+        </div>
+      )}
 
-        {competition.status === "draft" && (
-          <CompetitionDraftTeams teams={competitionTeams} />
-        )}
+      {/* ------------------------------------------------------------ modals */}
 
-        {/* Round Robin - Show standings and matches */}
-        {competition.status !== "draft" &&
-          competition.type === "round_robin" &&
-          standings && (
-            <CompetitionRoundRobinSection
-              standings={standings}
-              teams={competitionTeams}
-              matches={roundRobinMatches}
-              canEdit={canEdit}
-              onMatchClick={handleMatchClick}
-              onEditMatch={setEditingMatch}
-            />
-          )}
-
-        {/* Single Elimination Bracket */}
-        {competition.status !== "draft" &&
-          competition.type === "single_elimination" && (
-            <Card className="border-border/40 bg-card/30">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Trophy className="w-5 h-5 text-primary" />
-                  Tournament Bracket
-                </CardTitle>
-              </CardHeader>
-              <Separator />
-              <CardContent className="pt-4">
-                <Bracket
-                  matches={matches}
-                  teams={competitionTeams}
-                  totalTeams={competition.teamIds.length}
-                  onMatchClick={handleMatchClick}
-                  onEditMatch={canEdit ? setEditingMatch : undefined}
-                />
-              </CardContent>
-            </Card>
-          )}
-
-        {/* Double Elimination Bracket */}
-        {competition.status !== "draft" &&
-          competition.type === "double_elimination" && (
-            <Card className="border-border/40 bg-card/30">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Trophy className="w-5 h-5 text-primary" />
-                  Tournament Bracket
-                </CardTitle>
-              </CardHeader>
-              <Separator />
-              <CardContent className="pt-4">
-                <DoubleBracket
-                  matches={matches}
-                  teams={competitionTeams}
-                  totalTeams={competition.teamIds.length}
-                  onMatchClick={handleMatchClick}
-                  onEditMatch={canEdit ? setEditingMatch : undefined}
-                />
-              </CardContent>
-            </Card>
-          )}
-
-        {/* Win 2 & Out View */}
-        {competition.status !== "draft" &&
-          competition.type === "win2out" &&
-          competition.win2outState && (
-            <Win2OutView
-              state={competition.win2outState}
-              matches={matches}
-              teams={competitionTeams}
-              competition={competition}
-              onMatchClick={handleMatchClick}
-            />
-          )}
-
-        {/* Two Match Rotation View */}
-        {competition.status !== "draft" &&
-          competition.type === "two_match_rotation" &&
-          competition.twoMatchRotationState && (
-            <TwoMatchRotationView
-              state={competition.twoMatchRotationState}
-              matches={matches}
-              teams={competitionTeams}
-              competition={competition}
-              onMatchClick={handleMatchClick}
-            />
-          )}
-      </main>
-
-      {/* Start Competition Confirmation */}
       <StartCompetitionDialog
-        open={showStartConfirm}
-        onOpenChange={setShowStartConfirm}
-        typeLabel={typeLabels[competition.type]}
+        open={page.showStartConfirm}
+        onOpenChange={page.setShowStartConfirm}
+        typeLabel={data.typeLabel}
         teamCount={competition.teamIds.length}
-        teams={competitionTeams}
+        teams={page.competitionTeams}
         competitionType={competition.type}
         playInMatchCount={getPlayInMatchCount(competition.teamIds.length)}
-        onStart={handleStartCompetition}
+        matchWord={data.matchWord.one}
+        /* Mirrors the auto-session effect's guard (`isSharedMode ||
+           !isConfigured`). Read from `useAuth` directly — a read-only prop
+           that keeps `useCompetitionDetailPage`'s surface unchanged. */
+        willPublish={!page.isSharedMode && isConfigured}
+        onStart={page.handleStartCompetition}
       />
 
-      {/* Match Action Dialog */}
       <MatchActionDialog
-        open={!!selectedMatch}
-        onOpenChange={(open) => !open && setSelectedMatch(null)}
-        match={selectedMatch}
-        teams={competitionTeams}
-        onPlayMatch={handlePlayMatch}
+        open={!!page.selectedMatch}
+        onOpenChange={(open) => !open && page.setSelectedMatch(null)}
+        match={page.selectedMatch}
+        teams={page.competitionTeams}
+        canEdit={page.canEdit}
+        venueLabel={
+          page.selectedMatch
+            ? `Round ${page.selectedMatch.round} · ${data.matchWord.one} ${page.selectedMatch.position}`
+            : undefined
+        }
+        onPlayMatch={page.canEdit ? page.handlePlayMatch : undefined}
+        onEditMatch={() =>
+          page.selectedMatch && page.setEditingMatch(page.selectedMatch)
+        }
       />
 
-      {/* Create Session Dialog */}
       <CreateSessionDialog
-        open={showCreateSession}
-        onOpenChange={setShowCreateSession}
-        defaultName={competition?.name}
-        competitionData={
-          competition
-            ? {
-                competition,
-                teams: competitionTeams,
-                matches,
-              }
+        open={page.showCreateSession}
+        onOpenChange={page.setShowCreateSession}
+        defaultName={competition.name}
+        competitionData={{
+          competition,
+          teams: page.competitionTeams,
+          matches: page.matches,
+        }}
+      />
+
+      <EndCompetitionDialog
+        open={page.showEndConfirm}
+        onOpenChange={page.setShowEndConfirm}
+        isEnding={page.isEndingCompetition}
+        competitionName={competition.name}
+        onEndCompetition={page.handleEndCompetition}
+      />
+
+      <EditMatchDialog
+        open={!!page.editingMatch}
+        onOpenChange={(open) => !open && page.setEditingMatch(null)}
+        match={page.editingMatch}
+        matches={page.matches}
+        teams={page.competitionTeams}
+        competition={competition}
+        label={
+          page.editingMatch
+            ? `Round ${page.editingMatch.round} · ${data.matchWord.one} ${page.editingMatch.position}`
             : undefined
         }
       />
 
-      {/* End Competition Confirmation Dialog */}
-      <EndCompetitionDialog
-        open={showEndConfirm}
-        onOpenChange={setShowEndConfirm}
-        isEnding={isEndingCompetition}
-        onEndCompetition={handleEndCompetition}
+      <AddEntrantsDialog
+        open={showAddTeams}
+        onOpenChange={setShowAddTeams}
+        allTeams={page.allTeams}
+        enteredIds={competition.teamIds}
+        onConfirm={page.handleAddTeams}
       />
-
-      {/* Edit Match Dialog */}
-      <EditMatchDialog
-        open={!!editingMatch}
-        onOpenChange={(open) => !open && setEditingMatch(null)}
-        match={editingMatch}
-        matches={matches}
-        teams={competitionTeams}
-        competition={competition}
-      />
-    </div>
+    </MatchbookShell>
   );
 }

@@ -1,30 +1,46 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
-import Image from "next/image";
-import { useAuth } from "@/context/AuthContext";
 import { useTeamsPage } from "@/hooks/useTeamsPage";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
-import { PageLoadingSpinner, DeleteConfirmDialog } from "@/components/shared";
-import { TeamForm } from "@/components/dialogs/team-form";
+import { DeleteConfirmDialog } from "@/components/shared";
+import {
+  TeamForm,
+  TEAM_BULK_ADD_LABEL,
+  TEAM_CREATE_LABEL,
+} from "@/components/dialogs/team-form";
 import { QuickAddTeams } from "@/components/QuickAddTeams";
-import { MatchbookSidebar } from "@/components/matchbook/Sidebar";
-import { MatchbookMobileBar } from "@/components/matchbook/MobileBar";
-import { MbIcon } from "@/components/matchbook/MbIcon";
+import { MatchbookShell, MB_DEFAULT_CTA } from "@/components/matchbook/AppShell";
+import { MbPageLoading } from "@/components/matchbook/Loading";
+import { pluralise } from "@/lib/text";
 import { useMatchbookTeams } from "@/components/matchbook/useMatchbookTeams";
 import {
+  MB_XL_SPAN,
+  mbClosingSpan,
+  MbLedgerPanel,
+} from "@/components/matchbook/panels";
+import {
   ClubSnapshotPanel,
+  MB_TEAM_ADD_ROUTES,
+  MB_TEAMS_CONTENTS,
+  mbTeamsContentsFor,
   RecentFormPanel,
   TeamDirectoryPanel,
   TeamProfilePanel,
   TeamReadinessPanel,
   UpcomingFixturesPanel,
+  type MbTeamsSection,
 } from "@/components/matchbook/teamPanels";
+
+/* TEAM DIRECTORY. Coral budget: the rail key (Quick Match) is the one coral
+   fill; "New team" is the screen's own primary but takes navy. Two cuts, the
+   same two `/` and `/competitions` use: `isFirstRun` (no team exists — two
+   ledgers replace six mute panels) and `collapsed` (only the match-fed panels
+   are mute — they are withheld and named in one closing index). On a
+   populated fixture `muteSections` is empty and all six panels render. */
 
 export default function TeamsPage() {
   const { isLoading, isAuthenticated } = useRequireAuth();
-  const { user, isGuest } = useAuth();
   const data = useMatchbookTeams();
   const {
     teams,
@@ -62,123 +78,140 @@ export default function TeamsPage() {
   const selectedTeam = teams.find((team) => team.id === effectiveId) ?? null;
 
   if (isLoading || !isAuthenticated) {
-    return <PageLoadingSpinner />;
+    return <MbPageLoading active="/teams" />;
   }
 
+  /* Arms at TWO mute panels, never one — a single empty panel beside
+     populated ones renders its own `PanelEmpty`. */
+  const collapsed = data.muteSections.length >= 2;
+  const kept = (key: MbTeamsSection) =>
+    !collapsed || !data.muteSections.includes(key);
+
+  /* Upcoming Fixtures (4) and Recent Form (3) close the second row against the
+     Team Profile (5). Withhold either and the row is left with a hole, so the
+     index takes whatever the last row still owes — 7 when both are gone. */
+  const keptSpans = [
+    7,
+    5,
+    5,
+    kept("fixtures") && 4,
+    kept("form") && 3,
+  ].filter((span): span is number => span !== false);
+
   return (
-    <div className="matchbook-surface min-h-screen">
-      <div className="flex">
-        <MatchbookSidebar />
-
-        <div className="min-w-0 flex-1">
-          <MatchbookMobileBar
-            active="/teams"
-            cta={{ href: "/quick-match", label: "Quick Match" }}
-          />
-
-          <main className="px-4 py-5 sm:px-6 lg:px-8">
-            {/* Masthead */}
-            <header className="mb-5 flex flex-wrap items-center gap-x-6 gap-y-4">
-              <div className="flex items-center gap-4">
-                <h1 className="matchbook-display text-4xl font-bold leading-none tracking-[0.01em] sm:text-5xl">
-                  Team <span className="text-mb-coral">Directory</span>
-                </h1>
-                <div className="flex flex-col items-center border-[2px] border-mb-coral px-2.5 py-1 text-mb-coral">
-                  <span className="matchbook-display text-2xl font-bold leading-none tabular-nums">
-                    {data.teamCount}
-                  </span>
-                  <span className="matchbook-display text-[0.6rem] font-bold tracking-[0.28em]">
-                    Teams
-                  </span>
-                </div>
-                <div className="hidden sm:block">
-                  <p
-                    className="matchbook-display text-[0.74rem] font-bold tracking-[0.1em]"
-                    suppressHydrationWarning
-                  >
-                    {data.dateLine}
-                  </p>
-                  <p className="mb-kicker">
-                    {data.matchesCompleted} matches completed
-                  </p>
-                </div>
-              </div>
-
-              <div className="ml-auto flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={handleCreateClick}
-                  className="mb-btn mb-btn-navy"
-                >
-                  <MbIcon id="plus" size={14} />
-                  Add Team
-                </button>
-                <button
-                  type="button"
-                  onClick={handleQuickAddClick}
-                  className="mb-btn mb-btn-outline"
-                >
-                  <MbIcon id="import" size={14} />
-                  Quick Add
-                </button>
-                <Link
-                  href="/login"
-                  className="hidden items-center gap-2.5 md:flex"
-                  title={isGuest ? "Sign in" : user?.email ?? "Account"}
-                >
-                  <span className="flex h-10 w-10 items-center justify-center rounded-full border-[1.5px] border-mb-navy bg-mb-paper-bright">
-                    <Image
-                      src="/assets/matchbook/brand/crest.svg"
-                      alt=""
-                      width={24}
-                      height={28}
-                    />
-                  </span>
-                  <span className="matchbook-display text-[0.72rem] font-bold leading-tight tracking-[0.08em]">
-                    My
-                    <br />
-                    Account
-                  </span>
-                  <MbIcon id="chevron-down" size={13} className="text-mb-ink-muted" />
-                </Link>
-              </div>
-            </header>
-
-            {/* Panel grid */}
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-12">
-              <div className="md:col-span-2 xl:col-span-7">
-                <TeamDirectoryPanel
-                  rows={filteredRows}
-                  totalTeams={data.teamCount}
-                  selectedId={effectiveId}
-                  onSelect={setSelectedId}
-                  search={search}
-                  onSearchChange={setSearch}
-                />
-              </div>
-              <div className="md:col-span-2 xl:col-span-5 flex flex-col gap-4">
-                <ClubSnapshotPanel stats={data.snapshot} />
-                <div className="flex-1">
-                  <TeamReadinessPanel rows={data.readiness} />
-                </div>
-              </div>
-              <div className="md:col-span-2 xl:col-span-5">
-                <TeamProfilePanel
-                  row={selectedRow}
-                  onEdit={() => selectedTeam && handleEditTeam(selectedTeam)}
-                  onDelete={() => selectedTeam && setDeleteOpen(true)}
-                />
-              </div>
-              <div className="xl:col-span-4">
-                <UpcomingFixturesPanel items={data.fixtures} />
-              </div>
-              <div className="xl:col-span-3">
-                <RecentFormPanel rows={data.recentForm} />
-              </div>
-            </div>
-          </main>
+    <MatchbookShell
+      active="/teams"
+      cta={MB_DEFAULT_CTA}
+      masthead={{
+        title: (
+          <>
+            Team <span className="text-mb-coral">Directory</span>
+          </>
+        ),
+        shortTitle: "Teams",
+        /* `pluralise`, not a hardcoded "Teams" — a hardcoded label reads
+           "1 TEAMS". */
+        badge: {
+          value: data.teamCount,
+          label: pluralise("Team", data.teamCount),
+        },
+        dateLine: data.dateLine,
+        subLine: data.subLine,
+        actions: [
+          {
+            label: TEAM_CREATE_LABEL,
+            icon: "plus",
+            variant: "navy",
+            onClick: handleCreateClick,
+          },
+          {
+            label: TEAM_BULK_ADD_LABEL,
+            icon: "import",
+            variant: "outline-navy",
+            onClick: handleQuickAddClick,
+          },
+        ],
+      }}
+    >
+      {data.isFirstRun ? (
+        /* First run: two panels, no controls — the masthead already carries
+           "New team" and "Quick Add". */
+        <div className="mb-enter-grid grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-12">
+          <div className="md:col-span-2 xl:col-span-7">
+            <MbLedgerPanel
+              title="What This Page Becomes"
+              rows={MB_TEAMS_CONTENTS}
+              meta={
+                <span className="mb-kicker tabular-nums">
+                  {MB_TEAMS_CONTENTS.length} Sections
+                </span>
+              }
+            />
+          </div>
+          <div className="md:col-span-2 xl:col-span-5">
+            <MbLedgerPanel
+              title="Ways to Add Teams"
+              rows={MB_TEAM_ADD_ROUTES}
+              meta={
+                <span className="mb-kicker tabular-nums">
+                  {MB_TEAM_ADD_ROUTES.length} Routes
+                </span>
+              }
+              dense
+            />
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="mb-enter-grid grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-12">
+          <div className="md:col-span-2 xl:col-span-7">
+            <TeamDirectoryPanel
+              rows={filteredRows}
+              totalTeams={data.teamCount}
+              selectedId={effectiveId}
+              onSelect={setSelectedId}
+              search={search}
+              onSearchChange={setSearch}
+            />
+          </div>
+          <div className="md:col-span-2 xl:col-span-5 flex flex-col gap-4">
+            <ClubSnapshotPanel stats={data.snapshot} />
+            <div className="flex-1">
+              <TeamReadinessPanel rows={data.readiness} />
+            </div>
+          </div>
+          <div className="md:col-span-2 xl:col-span-5">
+            <TeamProfilePanel
+              row={selectedRow}
+              onEdit={() => selectedTeam && handleEditTeam(selectedTeam)}
+              onDelete={() => selectedTeam && setDeleteOpen(true)}
+            />
+          </div>
+          {kept("fixtures") && (
+            <div className="xl:col-span-4">
+              <UpcomingFixturesPanel items={data.fixtures} />
+            </div>
+          )}
+          {kept("form") && (
+            <div className="xl:col-span-3">
+              <RecentFormPanel rows={data.recentForm} />
+            </div>
+          )}
+          {/* The withheld panels, as one index that closes the last row
+              flush. */}
+          {collapsed && (
+            <div
+              className={`md:col-span-2 ${MB_XL_SPAN[mbClosingSpan(keptSpans)]}`}
+            >
+              <MbLedgerPanel
+                title="Still to Come"
+                rows={mbTeamsContentsFor(data.muteSections)}
+                dense
+                wide
+              />
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Create / edit team modal */}
       <TeamForm
@@ -211,6 +244,6 @@ export default function TeamsPage() {
           setDeleteOpen(false);
         }}
       />
-    </div>
+    </MatchbookShell>
   );
 }

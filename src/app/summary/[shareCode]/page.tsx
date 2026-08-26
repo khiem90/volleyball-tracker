@@ -1,182 +1,532 @@
 "use client";
 
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  AlertCircle,
-  Loader2,
-  Check,
-  ArrowLeft,
-  Share2,
-  Home,
-  Trash2,
-} from "lucide-react";
 import { DeleteConfirmDialog } from "@/components/shared";
-import { useSummaryPage } from "@/hooks/useSummaryPage";
-import { SummaryOverviewCards } from "./SummaryOverviewCards";
-import { SummaryWinnerDisplay } from "./SummaryWinnerDisplay";
-import { SummaryStandings } from "./SummaryStandings";
-import { SummaryMatchHistory } from "./SummaryMatchHistory";
+import { MatchbookShell } from "@/components/matchbook/AppShell";
+import { MbButton } from "@/components/matchbook/Button";
+import { MbCopyField } from "@/components/matchbook/CopyField";
+import { MbDangerZone } from "@/components/matchbook/DangerZone";
+import { MbEmptyState, type MbEmptyStateTone } from "@/components/matchbook/EmptyState";
+import { MbFinalStamp } from "@/components/matchbook/FinalStamp";
+import { MbIcon } from "@/components/matchbook/MbIcon";
+import { MbMatchRow } from "@/components/matchbook/MatchRow";
+import { MbPageLoading } from "@/components/matchbook/Loading";
+import { Crest, FormLetters, Panel, PanelEmpty, TeamMark } from "@/components/matchbook/Panel";
+import { MbScoreboardHero } from "@/components/matchbook/ScoreboardHero";
+import {
+  MbStandingsLegend,
+  MbStandingsTable,
+} from "@/components/matchbook/StandingsTable";
+import { MbStat } from "@/components/matchbook/Stat";
+import {
+  MB_SUMMARY_LEDGER_CAP,
+  useMatchbookSummary,
+  type MbSummaryDay,
+  type MbSummaryHighlight,
+} from "@/components/matchbook/useMatchbookSummary";
+
+/* /summary/[shareCode] — the match report. A finished, print-first page:
+   the champion is the one hero-scale device; the decider takes the compact
+   cut. Nothing sits behind a tab (a tabbed report prints one tab) — every
+   section is mounted in reading order, and the ledger's capped rows are
+   `hidden print:block` so print carries all of them while the screen stops at
+   the cap. `MbMatchRow` renders without `onSelect` (a frozen snapshot has
+   nothing to open), and Delete lives at the bottom in `MbDangerZone`, never
+   beside Share. */
+
+/* ------------------------------------------------------------ failure copy */
+
+interface RouteFailure {
+  tone: MbEmptyStateTone;
+  title: string;
+  body: (code: string) => string;
+  retry: boolean;
+}
+
+const FAILURE: Record<"notfound" | "error" | "unconfigured", RouteFailure> = {
+  notfound: {
+    tone: "notfound",
+    title: "No such match report",
+    body: (code) =>
+      `Nothing here answers to the code ${code || "you used"}. Reports are created when a session ends, and the person who ran it can delete one at any time — ask them for a fresh link.`,
+    retry: false,
+  },
+  error: {
+    tone: "offline",
+    title: "This report could not be reached",
+    body: () =>
+      "The connection to the report store timed out. The link is almost certainly fine — try again in a moment.",
+    retry: true,
+  },
+  unconfigured: {
+    tone: "unconfigured",
+    title: "Shared reports are switched off here",
+    body: () =>
+      "This copy of Tournament Tracker is not set up to publish reports. Nothing is wrong with the link you were sent.",
+    retry: false,
+  },
+};
+
+/* ----------------------------------------------------------------- pieces */
+
+/** One day of the ledger. An empty label means the day above continues. */
+const LedgerDay = ({ day }: { day: MbSummaryDay }) => (
+  <>
+    {day.label && (
+      <p className="mb-day-head" suppressHydrationWarning>
+        {day.label}
+      </p>
+    )}
+    <div className="flex flex-col divide-y divide-mb-rule">
+      {day.entries.map((entry) => (
+        <MbMatchRow
+          key={entry.id}
+          label={entry.label}
+          subLabel={entry.time}
+          home={entry.home}
+          away={entry.away}
+          homeScore={entry.homeScore}
+          awayScore={entry.awayScore}
+          homeWon={entry.homeWon}
+          awayWon={entry.awayWon}
+          status="completed"
+          variant="result"
+        />
+      ))}
+    </div>
+  </>
+);
+
+/** A named result — the biggest win, the closest match. Both share one panel
+ * so neither stretches into a mostly-empty box. */
+const Standout = ({
+  highlight,
+  emptyMessage,
+  kicker,
+  first,
+}: {
+  highlight: MbSummaryHighlight | null;
+  emptyMessage: string;
+  kicker: string;
+  first?: boolean;
+}) => (
+  <div className={first ? "" : "border-t border-mb-navy"}>
+    <p className="mb-day-head">{kicker}</p>
+    {!highlight ? (
+      <PanelEmpty message={emptyMessage} />
+    ) : (
+      <>
+        <MbMatchRow
+          label={highlight.entry.label}
+          subLabel={highlight.entry.time}
+          home={highlight.entry.home}
+          away={highlight.entry.away}
+          homeScore={highlight.entry.homeScore}
+          awayScore={highlight.entry.awayScore}
+          homeWon={highlight.entry.homeWon}
+          awayWon={highlight.entry.awayWon}
+          status="completed"
+          variant="result"
+        />
+        <p className="border-t border-mb-rule px-4 py-2.5 text-[0.78rem] tabular-nums text-mb-ink-muted">
+          {highlight.note}
+        </p>
+      </>
+    )}
+  </div>
+);
+
+const RecordItem = ({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) => (
+  <div className="border-b border-mb-rule px-4 py-2.5 last:border-b-0 sm:border-b-0 sm:border-r sm:last:border-r-0">
+    <dt className="mb-kicker">{label}</dt>
+    <dd
+      className="matchbook-display mt-1 text-[0.82rem] mb-track-display font-bold tabular-nums"
+      suppressHydrationWarning
+    >
+      {children}
+    </dd>
+  </div>
+);
+
+/* -------------------------------------------------------------------- page */
 
 export default function SummaryPage() {
-  const {
-    completedMatches,
-    copied,
-    error,
-    formatDate,
-    formatDuration,
-    getCompetitionTypeLabel,
-    handleCopyLink,
-    handleDelete,
-    isCreator,
-    isDeleting,
-    isLoading,
-    setShowDeleteDialog,
-    shareCode,
-    showDeleteDialog,
-    summary,
-    teamStats,
-    teamsMap,
-  } = useSummaryPage();
+  const data = useMatchbookSummary();
 
-  // Loading state
-  if (isLoading) {
+  if (data.status === "loading") {
+    return <MbPageLoading variant="public" panels={4} />;
+  }
+
+  if (data.status !== "ready") {
+    const failure = FAILURE[data.status];
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
+      <MatchbookShell variant="public">
+        <MbEmptyState
+          tone={failure.tone}
+          title={failure.title}
+          body={failure.body(data.shareCode)}
+          actions={[
+            ...(failure.retry
+              ? [{ label: "Try again", onClick: data.retry, variant: "coral" as const }]
+              : []),
+            { label: "Go to Tournament Tracker", href: "/" },
+          ]}
+        />
+      </MatchbookShell>
     );
   }
 
-  // Error/Not found state
-  if (error || !summary) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Card className="max-w-md w-full">
-          <CardHeader className="text-center">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-destructive/10 flex items-center justify-center">
-              <AlertCircle className="w-8 h-8 text-destructive" />
-            </div>
-            <CardTitle>Summary Not Found</CardTitle>
-            <CardDescription>
-              {error || `We couldn't find a summary with code "${shareCode}".`}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Link href="/">
-              <Button className="w-full gap-2 cursor-pointer">
-                <Home className="w-4 h-4" />
-                Go to Dashboard
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  const { champion, decider, levelAtTop } = data;
+  const hasRest = data.ledgerRest.length > 0;
+  const shownRows = Math.min(data.totalResults, MB_SUMMARY_LEDGER_CAP);
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="glass border-b border-border/40 sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-4 py-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Link href={isCreator ? "/summaries" : "/"}>
-                <Button variant="ghost" size="icon" className="cursor-pointer">
-                  <ArrowLeft className="w-5 h-5" />
-                </Button>
-              </Link>
-              <div>
-                <h1 className="text-lg font-semibold">{summary.name}</h1>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Badge variant="outline" className="text-xs">
-                    {getCompetitionTypeLabel(summary.competition?.type)}
-                  </Badge>
-                  <span>•</span>
-                  <span>Session Summary</span>
+    <MatchbookShell
+      variant="public"
+      masthead={{
+        /* The title is the event's own name — no two-tone split inside
+           somebody else's league name. Coral's one appearance here is the
+           Share key. */
+        title: data.name,
+        shortTitle: data.name,
+        badge: { lines: ["Match", "Report"] },
+        status: <MbFinalStamp label="Full time" />,
+        dateLine: `Ended ${data.endedLine}`,
+        subLine: data.metaLine,
+        actions: [
+          {
+            label: "Share report",
+            icon: "share",
+            variant: "coral",
+            onClick: data.share,
+          },
+        ],
+      }}
+    >
+      <div className="mb-enter-grid grid grid-cols-1 gap-4 xl:grid-cols-12">
+        {/* ---------------------------------------------------- full time */}
+        <div className="xl:col-span-12">
+          <Panel title="Full Time" tone="navy" icon="crown">
+            {!data.playedAny ? (
+              <PanelEmpty message="No matches were played — this session ended before a result was recorded." />
+            ) : (
+              <div className="flex flex-col">
+                {champion ? (
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-3 px-4 py-5 sm:px-5">
+                    <Crest team={champion.team} size={64} />
+                    {/* `basis-60` makes the wrap real: a bare `flex-1 min-w-0`
+                        item shrinks to nothing before `flex-wrap` can fire, so
+                        without a basis the champion's name gets crushed
+                        instead of taking its own line. `break-words` stays as
+                        the last resort only. */}
+                    <div className="min-w-0 flex-1 basis-60">
+                      <p className="mb-kicker flex items-center gap-1.5">
+                        <MbIcon id="crown" size={13} className="shrink-0" />
+                        Champion
+                      </p>
+                      <p className="matchbook-display mt-1.5 break-words text-balance text-[1.875rem] mb-track-display font-bold leading-none">
+                        {/* The last space is replaced with a literal U+00A0 so
+                            `text-balance` can never strand a tail like "VC" as
+                            a one-word line. */}
+                        {champion.team.name.replace(/ (?=\S+$)/, " ")}
+                      </p>
+                      {champion.accent && (
+                        <span
+                          aria-hidden="true"
+                          className="mt-2 block h-[3px] w-16"
+                          style={{ background: champion.accent }}
+                        />
+                      )}
+                      <p className="mt-2.5 text-[0.85rem] tabular-nums text-mb-ink-muted">
+                        {champion.basis}
+                      </p>
+                      <p className="matchbook-display mt-1 text-[0.82rem] mb-track-display font-bold tabular-nums">
+                        {champion.record}
+                      </p>
+                    </div>
+                    <span className="flex shrink-0 flex-col items-start gap-1.5">
+                      <span className="mb-kicker">Form</span>
+                      <FormLetters form={champion.form} />
+                    </span>
+                  </div>
+                ) : (
+                  /* Never dropped in silence: who was level, and on what, is
+                     the report's actual finding. */
+                  <div className="px-4 py-5 sm:px-5">
+                    <p className="mb-kicker">No outright winner</p>
+                    <p className="matchbook-display mt-1.5 text-[1.2rem] mb-track-display font-bold leading-tight tabular-nums">
+                      {levelAtTop?.teams.length ?? 0} teams finished level on{" "}
+                      {levelAtTop?.points ?? 0} points
+                    </p>
+                    <span className="mt-2 block h-px w-16 bg-mb-navy" />
+                    <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2">
+                      {levelAtTop?.teams.map((team) => (
+                        <TeamMark key={team.name} team={team} size="md" />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {decider && (
+                  <div className="border-t border-mb-navy px-4 py-4 sm:px-5">
+                    <p className="mb-kicker mb-2.5">{decider.kicker}</p>
+                    {/* `compact`, not `hero`: the champion block above is the
+                        report's one hero-scale device; the decider is its
+                        supporting fact. */}
+                    <MbScoreboardHero
+                      home={decider.entry.home}
+                      away={decider.entry.away}
+                      homeScore={decider.entry.homeScore}
+                      awayScore={decider.entry.awayScore}
+                      status="final"
+                      size="compact"
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+          </Panel>
+        </div>
+
+        {/* -------------------------------------------------- final table */}
+        {/* 8 columns: a 7-column panel puts part of the standings behind a
+            scroll edge at 1440, and By The Numbers never needed the fifth. */}
+        <div className="xl:col-span-8">
+          <Panel
+            title="Final Table"
+            icon="chart"
+            meta={
+              <span className="mb-kicker tabular-nums">
+                {data.entered.length} Entered
+              </span>
+            }
+          >
+            {!data.playedAny ? (
+              /* A 0-0 table ranked 1st to 4th asserts an order nothing
+                 produced — the entrants are listed unranked instead. */
+              <div className="flex flex-col">
+                <p className="mb-day-head">Entered, unranked — no matches played</p>
+                <div className="flex flex-col divide-y divide-mb-rule">
+                  {data.entered.map((row) => (
+                    <div key={row.id} className="px-4 py-2.5">
+                      <TeamMark team={row.team} size="md" accent={row.accent} />
+                    </div>
+                  ))}
                 </div>
               </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleCopyLink}
-                className="gap-2 cursor-pointer"
-              >
-                {copied ? (
-                  <Check className="w-4 h-4 text-green-500" />
-                ) : (
-                  <Share2 className="w-4 h-4" />
-                )}
-                <span className="hidden sm:inline">{copied ? "Copied!" : "Share"}</span>
-              </Button>
-              {isCreator && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowDeleteDialog(true)}
-                  className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10 cursor-pointer"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  <span className="hidden sm:inline">Delete</span>
-                </Button>
-              )}
-            </div>
-          </div>
+            ) : (
+              <>
+                {/* No `highlightTeamId`: the coral rail means "the row the
+                    reader chose", and on a static share nothing is chosen —
+                    the champion's celebration is the hero block above. */}
+                <MbStandingsTable
+                  rows={data.standings}
+                  caption={`${data.name} — final standings, ${data.formatLabel}`}
+                />
+                <MbStandingsLegend />
+              </>
+            )}
+          </Panel>
         </div>
-      </header>
 
-      <main className="max-w-6xl mx-auto px-4 py-8 space-y-8">
-        <SummaryOverviewCards
-          stats={summary.stats}
-          endedAt={summary.endedAt}
-          formatDuration={formatDuration}
-        />
-
-        {summary.stats.winner && (
-          <SummaryWinnerDisplay winner={summary.stats.winner} />
-        )}
-
-        <SummaryStandings teamStats={teamStats} />
-
-        <SummaryMatchHistory
-          completedMatches={completedMatches}
-          teamsMap={teamsMap}
-        />
-
-        {/* Session Info */}
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex flex-col sm:flex-row justify-between gap-4 text-sm text-muted-foreground">
-              <div>
-                <span className="font-medium">Started:</span>{" "}
-                {formatDate(summary.createdAt)}
-              </div>
-              <div>
-                <span className="font-medium">Ended:</span>{" "}
-                {formatDate(summary.endedAt)}
-              </div>
-              <div className="flex items-center gap-1">
-                <span className="font-medium">Share Code:</span>{" "}
-                <code className="bg-muted px-1.5 py-0.5 rounded">{summary.shareCode}</code>
-              </div>
+        {/* ----------------------------------------------- by the numbers */}
+        <div className="xl:col-span-4">
+          <Panel title="By The Numbers" icon="clipboard">
+            {/* A ruled column, not a 2x3 grid — the panel stretches to the
+                table beside it, and ruled rows fill a tall box the way a
+                printed record does. */}
+            <div className="flex flex-1 flex-col divide-y divide-mb-rule">
+              {data.stats.map((stat) => (
+                <div key={stat.label} className="px-4 py-3">
+                  <MbStat
+                    icon={stat.icon}
+                    label={stat.label}
+                    value={stat.value}
+                    sub={stat.sub}
+                  />
+                </div>
+              ))}
             </div>
-          </CardContent>
-        </Card>
-      </main>
+          </Panel>
+        </div>
+
+        {/* ------------------------------------------------- match ledger */}
+        <div className="xl:col-span-12">
+          <Panel
+            title="Match Ledger"
+            icon="history"
+            meta={
+              <span className="mb-kicker tabular-nums">
+                {hasRest && !data.showAll
+                  ? `${shownRows} of ${data.totalResults} results`
+                  : `${data.totalResults} ${
+                      data.totalResults === 1 ? "result" : "results"
+                    }`}
+              </span>
+            }
+          >
+            {data.totalResults === 0 ? (
+              <PanelEmpty message="No results exist yet — completed matches are recorded here as they finish." />
+            ) : (
+              <>
+                {data.ledger.map((day, i) => (
+                  <LedgerDay key={`${day.label}-${i}`} day={day} />
+                ))}
+
+                {/* The capped rows stay in the document and are revealed by
+                    print, so `Cmd+P` produces the whole ledger without the
+                    reader having to remember to expand it first. */}
+                {hasRest && (
+                  <div className={data.showAll ? undefined : "hidden print:block"}>
+                    {data.ledgerRest.map((day, i) => (
+                      <LedgerDay key={`rest-${day.label}-${i}`} day={day} />
+                    ))}
+                  </div>
+                )}
+
+                <div className="mb-print-hide flex flex-wrap items-center gap-3 border-t border-mb-navy px-4 py-3">
+                  {hasRest && (
+                    <MbButton
+                      variant="outline-navy"
+                      icon={data.showAll ? "collapse" : "expand"}
+                      onClick={() => data.setShowAll(!data.showAll)}
+                    >
+                      {data.showAll
+                        ? `Show first ${MB_SUMMARY_LEDGER_CAP}`
+                        : `Show all ${data.totalResults}`}
+                    </MbButton>
+                  )}
+                  <MbButton
+                    variant="outline-navy"
+                    icon="export"
+                    onClick={data.downloadCsv}
+                  >
+                    Export CSV
+                  </MbButton>
+                </div>
+              </>
+            )}
+          </Panel>
+        </div>
+
+        {/* ----------------------------------------------------- standouts */}
+        <div className="xl:col-span-7">
+          <Panel title="Standouts" icon="star">
+            {/* One empty state, not one per standout, when nothing was played
+                at all. */}
+            {!data.playedAny ? (
+              <PanelEmpty message="No standouts exist yet — the biggest win and the closest match are named once matches have been played." />
+            ) : (
+              <>
+                <Standout
+                  first
+                  kicker="Biggest win"
+                  highlight={data.biggestWin}
+                  emptyMessage="No biggest win exists yet — it is named once a match has been decided."
+                />
+                <Standout
+                  kicker="Closest match"
+                  highlight={data.closestMatch}
+                  emptyMessage="No closest match exists yet — it is named once two matches have been played."
+                />
+              </>
+            )}
+          </Panel>
+        </div>
+
+        {/* --------------------------------------------------------- share */}
+        <div className="mb-print-hide xl:col-span-5">
+          <Panel title="Share &amp; Print" icon="share">
+            <div className="flex flex-1 flex-col gap-3 p-4">
+              <p className="text-[0.85rem] leading-[1.5] text-mb-ink-muted">
+                Anyone with this link can read the report. It grants no access
+                to the session it came from and carries no admin token — the
+                scoring controls stayed behind.
+              </p>
+              {/* Always on screen, not behind a failure — the manual leg of
+                  the copy chain. */}
+              <MbCopyField
+                label="Public report link"
+                value={data.shareUrl}
+                help="Paste it into a chat, or print the page for the wall."
+              />
+              {/* The one control in the app that reaches `@media print`. The
+                  stylesheet drops the chrome, the actions and the 25-row cap,
+                  so the sheet that comes out is the whole record in one
+                  column. */}
+              <MbButton
+                variant="navy"
+                icon="print"
+                fullWidth
+                className="mt-auto"
+                onClick={() => window.print()}
+              >
+                Print report
+              </MbButton>
+            </div>
+          </Panel>
+        </div>
+
+        {/* -------------------------------------------------------- record */}
+        <div className="xl:col-span-12">
+          <Panel title="The Record" icon="calendar">
+            <dl className="grid grid-cols-1 sm:grid-cols-4">
+              <RecordItem label="Started">{data.startedLine}</RecordItem>
+              <RecordItem label="Ended">{data.endedLine}</RecordItem>
+              <RecordItem label="Format">{data.formatLabel}</RecordItem>
+              <RecordItem label="Report code">
+                <span className="mb-code-chip">{data.shareCode}</span>
+              </RecordItem>
+            </dl>
+          </Panel>
+        </div>
+      </div>
+
+      {/* Creator only, last on the page, and never beside Share. */}
+      {data.isCreator && (
+        <div className="mb-print-hide mt-4">
+          <MbDangerZone
+            title="Delete this report"
+            description="The link stops working for everyone who has it, and the record cannot be rebuilt."
+            action={{
+              label: "Delete report",
+              onClick: () => data.setShowDeleteDialog(true),
+              loading: data.isDeleting,
+            }}
+          />
+        </div>
+      )}
+
+      {/* The colophon. The one place this page advertises what made it, and
+          the only line that survives onto paper — the public brand lockup at
+          the top of `variant="public"` carries `.mb-print-hide`. */}
+      <footer className="mb-safe-bottom mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t-[1.5px] border-mb-navy pt-3">
+        <Link
+          href="/"
+          className="mb-btn-touch matchbook-display flex items-center gap-2 text-[0.72rem] mb-track-link font-bold text-mb-navy"
+        >
+          <MbIcon id="volleyball" size={16} className="shrink-0" />
+          Scored live with Tournament Tracker
+        </Link>
+        <p className="mb-kicker tabular-nums" suppressHydrationWarning>
+          {data.startedLine} — {data.endedLine} · Code {data.shareCode}
+        </p>
+      </footer>
 
       <DeleteConfirmDialog
-        open={showDeleteDialog}
-        onOpenChange={setShowDeleteDialog}
-        title="Delete Summary?"
-        description="This will permanently delete this session summary and cannot be undone."
-        onConfirm={handleDelete}
-        isDeleting={isDeleting}
+        open={data.showDeleteDialog}
+        onOpenChange={data.setShowDeleteDialog}
+        title="Delete This Report?"
+        description={`"${data.name}" and its public link are removed for everyone. The matches themselves are not affected.`}
+        onConfirm={data.handleDelete}
+        isDeleting={data.isDeleting}
       />
-    </div>
+    </MatchbookShell>
   );
 }

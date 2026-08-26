@@ -1,45 +1,63 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { KeyRound } from "lucide-react";
+import { MbButton } from "@/components/matchbook/Button";
+import { MbField, MbTextInput } from "@/components/matchbook/form";
 
-interface AdminTokenFormProps {
-  adminToken: string;
-  onAdminTokenChange: (value: string) => void;
-  onSubmit: () => void;
-  isLoading: boolean;
-}
-
+/**
+ * The token is typed in PLAIN TEXT, deliberately.
+ *
+ * The share dialog masks the admin *link* by default, because that is a secret
+ * being handed out. This is the other direction: someone is pasting a 32-
+ * character string they were sent, and masking it means they cannot tell a
+ * mis-paste from a wrong token — the only feedback would be "that token does
+ * not match this event", which is the same sentence for both. Entry is not
+ * disclosure.
+ */
 export const AdminTokenForm = ({
   adminToken,
   onAdminTokenChange,
   onSubmit,
   isLoading,
-}: AdminTokenFormProps) => {
-  return (
-    <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">
-        If you have an admin token, enter it below to get admin access without signing in.
-      </p>
-      <div className="relative">
-        <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input
-          type="text"
-          placeholder="Enter admin token"
-          value={adminToken}
-          onChange={(e) => onAdminTokenChange(e.target.value)}
-          className="pl-10 font-mono"
-        />
-      </div>
-      <Button
-        className="w-full gap-2 cursor-pointer"
-        onClick={onSubmit}
-        disabled={isLoading || !adminToken}
-      >
-        <KeyRound className="w-4 h-4" />
-        Apply Admin Token
-      </Button>
-    </div>
-  );
-};
+}: {
+  adminToken: string;
+  onAdminTokenChange: (value: string) => void;
+  onSubmit: () => void;
+  isLoading: boolean;
+}) => (
+  <form
+    className="flex flex-col gap-4"
+    onSubmit={(event) => {
+      event.preventDefault();
+      onSubmit();
+    }}
+  >
+    <MbField
+      label="Admin token"
+      htmlFor="session-admin-token"
+      hint="The organiser can copy this from their share panel. It gives you permission to change scores."
+    >
+      <MbTextInput
+        id="session-admin-token"
+        icon="key"
+        value={adminToken}
+        onChange={(event) => onAdminTokenChange(event.target.value)}
+        placeholder="Paste the token"
+        autoComplete="off"
+        autoCapitalize="off"
+        spellCheck={false}
+      />
+    </MbField>
+
+    <MbButton
+      type="submit"
+      variant="navy"
+      size="lg"
+      fullWidth
+      icon="key"
+      loading={isLoading}
+      disabled={!adminToken.trim()}
+    >
+      Unlock editing
+    </MbButton>
+  </form>
+);

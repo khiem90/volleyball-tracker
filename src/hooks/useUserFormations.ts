@@ -15,11 +15,29 @@ import {
   type CreateFormationOptions,
 } from "@/lib/volleyball/userFormations";
 
+/**
+ * Why the list is not showing live server data. Consumed by the archive and the
+ * designer to pick a state block; `null` means the list is authoritative.
+ *
+ * The distinction exists because "empty" and "unreachable" produced the same
+ * screen before: zero rows, an invitation to create a formation, and no hint
+ * that forty of them were sitting on a server the browser could not reach.
+ */
+export type FormationsStatus = "ready" | "loading" | "stale" | "denied" | "error";
+
 type UseUserFormationsReturn = {
   // Data
   formations: UserFormation[];
   isLoading: boolean;
   error: Error | null;
+  /** The list came out of the local cache — it may be stale or empty-by-default. */
+  isStale: boolean;
+  /** One value the UI can switch on, rather than four booleans in every caller. */
+  status: FormationsStatus;
+  /** `permission-denied` from Firestore, which needs its own copy, not "error". */
+  isDenied: boolean;
+  /** When the last SERVED (non-cache) snapshot arrived. */
+  lastSyncedAt: number | null;
 
   // Auth state
   isAuthenticated: boolean;
@@ -55,6 +73,10 @@ export const useUserFormations = (): UseUserFormationsReturn => {
   const [formations, setFormations] = useState<UserFormation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const [isStale, setIsStale] = useState(false);
+  const [isDenied, setIsDenied] = useState(false);
+  const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(null);
+  const [attempt, setAttempt] = useState(0);
   const unsubscribeRef = useRef<(() => void) | null>(null);
 
   const userId = user?.uid ?? null;
@@ -69,20 +91,32 @@ export const useUserFormations = (): UseUserFormationsReturn => {
     if (!userId) {
       setFormations([]);
       setIsLoading(false);
+      setIsStale(false);
+      setIsDenied(false);
       return;
     }
 
     setIsLoading(true);
     setError(null);
+    setIsDenied(false);
 
     // Subscribe to user's formations
     const unsubscribe = subscribeToUserFormations(
       userId,
-      (updatedFormations) => {
+      (updatedFormations, meta) => {
         setFormations(updatedFormations);
         setIsLoading(false);
+        /* A cache-only snapshot is NOT authoritative. Reporting it as such is
+           what made an unreachable backend look like an empty account. */
+        setIsStale(meta.fromCache);
+        if (!meta.fromCache) setLastSyncedAt(Date.now());
       },
       (err) => {
+        const code =
+          typeof err === "object" && err !== null && "code" in err
+            ? String((err as { code: unknown }).code)
+            : "";
+        setIsDenied(code.includes("permission-denied"));
         setError(err);
         setIsLoading(false);
       }
@@ -96,18 +130,27 @@ export const useUserFormations = (): UseUserFormationsReturn => {
         unsubscribeRef.current = null;
       }
     };
-  }, [userId, authLoading]);
+  }, [userId, authLoading, attempt]);
 
-  // Manual refresh (fetch without subscription)
+  /**
+   * Retry. It re-runs the one-shot read AND bumps `attempt`, which tears the
+   * subscription down and re-establishes it — the case that matters is a
+   * listener that failed or went cache-only, and re-fetching without
+   * re-subscribing would leave the stale flag latched on for ever.
+   */
   const refresh = useCallback(async () => {
     if (!userId) return;
 
     setIsLoading(true);
     setError(null);
+    setIsDenied(false);
+    setAttempt((n) => n + 1);
 
     try {
       const data = await getUserFormations(userId);
       setFormations(data);
+      setIsStale(false);
+      setLastSyncedAt(Date.now());
     } catch (err) {
       setError(err instanceof Error ? err : new Error("Failed to fetch formations"));
     } finally {
@@ -203,10 +246,25 @@ export const useUserFormations = (): UseUserFormationsReturn => {
     [formations]
   );
 
+  const loading = authLoading || isLoading;
+  const status: FormationsStatus = loading
+    ? "loading"
+    : isDenied
+    ? "denied"
+    : error
+    ? "error"
+    : isStale
+    ? "stale"
+    : "ready";
+
   return {
     formations,
-    isLoading: authLoading || isLoading,
+    isLoading: loading,
     error,
+    isStale,
+    isDenied,
+    status,
+    lastSyncedAt,
     isAuthenticated,
     userId,
     create,

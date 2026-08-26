@@ -8,6 +8,7 @@ import {
   useCallback,
   useMemo,
   useRef,
+  useState,
   type ReactNode,
 } from "react";
 import type {
@@ -18,7 +19,6 @@ import type {
   CompetitionType,
   MatchStatus,
 } from "@/types/game";
-// Note: PersistentTeam, CompetitionType, MatchStatus are used in callback signatures
 import { useSession } from "./SessionContext";
 import {
   appReducer,
@@ -27,12 +27,37 @@ import {
   STORAGE_KEY,
   OLD_STORAGE_KEY,
 } from "./appReducer";
+import { normalizeTeamColor } from "@/lib/teamColor";
+
+/* Team colours migrated on read: saved accounts hold legacy CSS expressions;
+   `normalizeTeamColor` maps each to the ink it meant and the save effect
+   writes the migrated shape back. Nothing downstream depends on this having
+   run — `teamColorCss` resolves legacy values too; this only stops the old
+   strings accumulating. */
+const migrateTeamColors = (parsed: AppState): AppState => {
+  const teams = parsed.teams ?? [];
+  let changed = false;
+  const migrated = teams.map((team) => {
+    const ink = normalizeTeamColor(team.color) || undefined;
+    if (ink === team.color) return team;
+    changed = true;
+    return { ...team, color: ink };
+  });
+  return changed ? { ...parsed, teams: migrated } : parsed;
+};
 
 // ============================================
 // Context
 // ============================================
 interface AppContextValue {
   state: AppState;
+  /**
+   * True once the localStorage blob has been read into `state` (or found
+   * absent). Until then `state` is `initialState` on EVERY account, so a
+   * screen that swaps its composition on emptiness must not decide before
+   * this flips.
+   */
+  localReady: boolean;
   // Session info
   isSharedMode: boolean;
   canEdit: boolean;
@@ -140,8 +165,12 @@ export const AppProvider = ({ children }: AppProviderProps) => {
   }, [state.matches]);
 
   const hasLoadedLocalState = useRef(false);
+  const [localReady, setLocalReady] = useState(false);
 
   // Load state from localStorage on mount (with migration from old key)
+  /* eslint-disable react-hooks/set-state-in-effect -- `localReady` flips once,
+     in the same effect (and therefore the same commit) as the LOAD_STATE
+     dispatch, so consumers never see loaded data with the flag still false. */
   useEffect(() => {
     if (hasLoadedLocalState.current) return;
     hasLoadedLocalState.current = true;
@@ -163,12 +192,14 @@ export const AppProvider = ({ children }: AppProviderProps) => {
 
       if (stored) {
         const parsed = JSON.parse(stored) as AppState;
-        dispatch({ type: "LOAD_STATE", state: parsed });
+        dispatch({ type: "LOAD_STATE", state: migrateTeamColors(parsed) });
       }
     } catch (error) {
       console.error("Failed to load state from localStorage:", error);
     }
+    setLocalReady(true);
   }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Save state to localStorage whenever it changes (only for local mode)
   useEffect(() => {
@@ -186,10 +217,14 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     (name: string, color?: string) => {
       if (isSharedMode && !canEdit) return;
 
+      /* The write guard — the one funnel every caller passes through, so the
+         stored-form rule is enforced here rather than trusted. */
+      const ink = normalizeTeamColor(color) || undefined;
+
       const newTeam: PersistentTeam = {
         id: generateId(),
         name,
-        color,
+        color: ink,
         createdAt: Date.now(),
       };
 
@@ -197,7 +232,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         const newTeams = [...(session.teams || []), newTeam];
         syncAllData({ teams: newTeams });
       } else {
-        dispatch({ type: "ADD_TEAM", name, color });
+        dispatch({ type: "ADD_TEAM", name, color: ink });
       }
     },
     [isSharedMode, canEdit, session, syncAllData]
@@ -207,13 +242,15 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     (id: string, name: string, color?: string) => {
       if (isSharedMode && !canEdit) return;
 
+      const ink = normalizeTeamColor(color) || undefined;
+
       if (isSharedMode && session) {
         const newTeams = (session.teams || []).map((team) =>
-          team.id === id ? { ...team, name, color } : team
+          team.id === id ? { ...team, name, color: ink } : team
         );
         syncAllData({ teams: newTeams });
       } else {
-        dispatch({ type: "UPDATE_TEAM", id, name, color });
+        dispatch({ type: "UPDATE_TEAM", id, name, color: ink });
       }
     },
     [isSharedMode, canEdit, session, syncAllData]
@@ -1082,6 +1119,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
 
   const value: AppContextValue = {
     state,
+    localReady,
     isSharedMode,
     canEdit: isSharedMode ? canEdit : true,
     addTeam,

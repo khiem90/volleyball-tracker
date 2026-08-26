@@ -1,112 +1,128 @@
 "use client";
 
 import { memo } from "react";
-import { Button } from "@/components/ui/button";
-import { TrophyIcon } from "@heroicons/react/24/outline";
+import { MbButton } from "@/components/matchbook/Button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  MbDialog,
+  MbDialogBody,
+  MbDialogFooter,
+} from "@/components/matchbook/Dialog";
+import { MbScoreNumeral } from "@/components/matchbook/ScoreNumeral";
+import { Crest } from "@/components/matchbook/Panel";
+import type { MbTeam } from "@/components/matchbook/types";
+
+/* ===========================================================================
+   CONFIRM THE RESULT
+
+   Was a `glass-card` with two shadowed 48px colour swatches, a `text-3xl`
+   proportional score and the winner set in `text-emerald-400` — which on cream
+   paper made the winner's name the LEAST legible string in the dialog, and
+   emerald is not in the palette at all.
+
+   Now: `MbDialog`, crests, the two scores in the shared numeral (tabular,
+   hugging the rule between them), and the winner on a green-ruled band with
+   navy letterforms. Green because a result maps to `--mb-green`; navy
+   letterforms because tone stays off small type — the tone rides the 4px
+   rule beside it.
+   =========================================================================== */
 
 type MatchCompleteDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  homeTeamName: string;
-  awayTeamName: string;
+  homeTeam: MbTeam;
+  awayTeam: MbTeam;
   homeScore: number;
   awayScore: number;
-  homeColor: string;
-  awayColor: string;
+  homeAccent?: string;
+  awayAccent?: string;
   dialogTitle: string;
   dialogDescription: string;
   confirmLabel: string;
   onConfirm: () => void;
 };
 
+const Side = ({
+  team,
+  score,
+  accent,
+  align,
+}: {
+  team: MbTeam;
+  score: number;
+  accent?: string;
+  align: "start" | "end";
+}) => (
+  <div
+    className={`flex min-w-0 flex-col gap-1.5 ${
+      align === "end" ? "items-end text-right" : "items-start text-left"
+    }`}
+  >
+    <Crest team={team} size={40} />
+    <span className="matchbook-display w-full truncate text-[0.85rem] mb-track-display font-bold">
+      {team.name}
+    </span>
+    {accent && (
+      <span
+        aria-hidden="true"
+        className="block h-[3px] w-10"
+        style={{ background: accent }}
+      />
+    )}
+    <MbScoreNumeral value={score} size="compact" align={align} />
+  </div>
+);
+
 export const MatchCompleteDialog = memo(function MatchCompleteDialog({
   open,
   onOpenChange,
-  homeTeamName,
-  awayTeamName,
+  homeTeam,
+  awayTeam,
   homeScore,
   awayScore,
-  homeColor,
-  awayColor,
+  homeAccent,
+  awayAccent,
   dialogTitle,
   dialogDescription,
   confirmLabel,
   onConfirm,
 }: MatchCompleteDialogProps) {
+  const winner = homeScore > awayScore ? homeTeam : awayTeam;
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md glass-card border-glass-border">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <TrophyIcon className="w-5 h-5 text-primary" />
-            {dialogTitle}
-          </DialogTitle>
-          <DialogDescription>{dialogDescription}</DialogDescription>
-        </DialogHeader>
-        <div className="space-y-3 pt-2">
-          <div className="flex items-center justify-center gap-6 p-4 rounded-xl bg-accent/20">
-            <div className="text-center">
-              <div
-                className="w-12 h-12 rounded-xl mx-auto mb-2 shadow-lg"
-                style={{
-                  backgroundColor: homeColor,
-                  boxShadow: `0 8px 20px ${homeColor}40`,
-                }}
-              />
-              <p className="text-xs text-muted-foreground mb-1">
-                {homeTeamName}
-              </p>
-              <p className="text-3xl font-bold">{homeScore}</p>
-            </div>
-            <span className="text-2xl text-muted-foreground font-light">
-              :
-            </span>
-            <div className="text-center">
-              <div
-                className="w-12 h-12 rounded-xl mx-auto mb-2 shadow-lg"
-                style={{
-                  backgroundColor: awayColor,
-                  boxShadow: `0 8px 20px ${awayColor}40`,
-                }}
-              />
-              <p className="text-xs text-muted-foreground mb-1">
-                {awayTeamName}
-              </p>
-              <p className="text-3xl font-bold">{awayScore}</p>
-            </div>
-          </div>
-          <div className="text-center pt-2 pb-2">
-            <p className="text-sm text-muted-foreground mb-1">Winner</p>
-            <p className="font-semibold text-xl text-emerald-400">
-              {homeScore > awayScore ? homeTeamName : awayTeamName}
-            </p>
-          </div>
+    <MbDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={dialogTitle}
+      icon="check"
+      description={dialogDescription}
+      size="sm"
+    >
+      <MbDialogBody>
+        <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-3 border-b border-mb-navy pb-4">
+          <Side team={homeTeam} score={homeScore} accent={homeAccent} align="end" />
+          <span className="mb-kicker pb-2">vs</span>
+          <Side team={awayTeam} score={awayScore} accent={awayAccent} align="start" />
         </div>
-        <DialogFooter className="flex-row gap-2 sm:gap-2">
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            className="flex-1 rounded-xl cursor-pointer"
-          >
-            Continue Playing
-          </Button>
-          <Button
-            onClick={onConfirm}
-            className="flex-1 gap-2 btn-teal-gradient rounded-xl cursor-pointer"
-          >
-            <TrophyIcon className="w-4 h-4" />
-            {confirmLabel}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+
+        <div
+          className="mt-4 flex min-w-0 items-center gap-3 border-l-[3px] pl-3"
+          style={{ borderColor: "var(--mb-green)" }}
+        >
+          <span className="mb-kicker shrink-0">Winner</span>
+          <span className="matchbook-display min-w-0 truncate text-[1.2rem] mb-track-display font-bold text-mb-navy">
+            {winner.name}
+          </span>
+        </div>
+      </MbDialogBody>
+
+      <MbDialogFooter>
+        <MbButton variant="outline-navy" onClick={() => onOpenChange(false)}>
+          Continue Playing
+        </MbButton>
+        <MbButton variant="coral" icon="check" onClick={onConfirm}>
+          {confirmLabel}
+        </MbButton>
+      </MbDialogFooter>
+    </MbDialog>
   );
 });

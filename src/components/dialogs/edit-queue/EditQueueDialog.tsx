@@ -1,48 +1,53 @@
 "use client";
 
+import { MbBadge } from "@/components/matchbook/Badge";
+import { MbButton } from "@/components/matchbook/Button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Users, Clock } from "lucide-react";
+  MbDialog,
+  MbDialogBody,
+  MbDialogFooter,
+} from "@/components/matchbook/Dialog";
+import { MbReorderList } from "@/components/matchbook/ReorderList";
+import { TeamMark } from "@/components/matchbook/Panel";
+import { crestForTeam } from "@/components/matchbook/types";
 import type { PersistentTeam, Competition } from "@/types/game";
 import { useEditQueueDialog } from "./useEditQueueDialog";
-import { QueueTeamItem } from "./QueueTeamItem";
-import { NextUpIndicator } from "./NextUpIndicator";
 
-interface EditQueueDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  competition: Competition | null;
-  teams: PersistentTeam[];
-}
+/* ===========================================================================
+   EDIT QUEUE ORDER
+
+   Two shipped defects, both structural:
+
+     BUG-4  The footer was `flex-row` with Reset + spacer + Cancel + Save, and
+            at 390px the Save button was cut off by the right edge and could not
+            be pressed. `MbDialogFooter` stretches its direct buttons to full
+            width below `sm`, so the primary action is always reachable.
+     BUG-5  Reordering used HTML5 drag-and-drop, which does not fire on touch,
+            and the fallback arrows were 28px. `MbReorderList` is pointer-event
+            based, has 44px controls, `Alt+Arrow` keys and an `aria-live`
+            announcement per move.
+   =========================================================================== */
 
 export const EditQueueDialog = ({
   open,
   onOpenChange,
   competition,
   teams,
-}: EditQueueDialogProps) => {
+  venue = "court",
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  competition: Competition | null;
+  teams: PersistentTeam[];
+  /** Plural venue word from `useTerminology`. Never a hardcoded "courts". */
+  venue?: string;
+}) => {
   const {
     queue,
-    draggedIndex,
-    dragOverIndex,
     hasChanges,
     canEdit,
     getTeamName,
-    getTeamColor,
-    handleMoveUp,
-    handleMoveDown,
-    handleDragStart,
-    handleDragEnter,
-    handleDragOver,
-    handleDrop,
-    handleDragEnd,
+    handleReorder,
     handleSave,
     handleReset,
   } = useEditQueueDialog({
@@ -55,76 +60,60 @@ export const EditQueueDialog = ({
   if (!canEdit) return null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Clock className="w-5 h-5 text-blue-500" />
-            Edit Queue Order
-          </DialogTitle>
-          <DialogDescription>
-            Drag teams or use arrows to reorder. The team at the top plays next.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="py-4">
-          {queue.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <Users className="w-10 h-10 mx-auto mb-2 opacity-30" />
-              <p>No teams in queue</p>
-              <p className="text-xs mt-1">All teams are currently on court</p>
-            </div>
-          ) : (
-            <div className="space-y-1 max-h-80 overflow-y-auto pr-2">
-              {queue.map((teamId, index) => (
-                <QueueTeamItem
-                  key={teamId}
-                  teamId={teamId}
-                  index={index}
-                  totalCount={queue.length}
-                  teamName={getTeamName(teamId)}
-                  teamColor={getTeamColor(teamId)}
-                  isDragged={draggedIndex === index}
-                  isDragOver={dragOverIndex === index}
-                  onMoveUp={handleMoveUp}
-                  onMoveDown={handleMoveDown}
-                  onDragStart={handleDragStart}
-                  onDragEnter={handleDragEnter}
-                  onDragOver={handleDragOver}
-                  onDrop={handleDrop}
-                  onDragEnd={handleDragEnd}
-                />
-              ))}
-            </div>
+    <MbDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Queue order"
+      icon="queue"
+      size="md"
+      description="The team at the top plays next. Teams already on the floor are not listed."
+    >
+      <MbDialogBody flush>
+        <MbReorderList
+          items={queue}
+          label="Queue order"
+          onReorder={handleReorder}
+          getKey={(teamId) => teamId}
+          getLabel={(teamId) => getTeamName(teamId)}
+          emptyMessage={`No teams are waiting yet — every team is on ${venue}.`}
+          /* No ordinal here: `MbReorderList` numbers its own rows, and a second
+             figure beside it rendered "1 1". */
+          renderItem={(teamId, index) => (
+            <span className="flex min-w-0 items-center gap-2.5">
+              <TeamMark
+                team={{ name: getTeamName(teamId), crest: crestForTeam(teamId, getTeamName(teamId)) }}
+                size="sm"
+              />
+              {index === 0 && <MbBadge tone="teal">Next up</MbBadge>}
+            </span>
           )}
+        />
+      </MbDialogBody>
 
-          {queue.length > 0 && (
-            <NextUpIndicator
-              teamId={queue[0]}
-              teamName={getTeamName(queue[0])}
-              teamColor={getTeamColor(queue[0])}
-            />
-          )}
-        </div>
-
-        <DialogFooter className="flex-row gap-2 sm:gap-2">
-          <Button
-            variant="ghost"
-            onClick={handleReset}
-            disabled={!hasChanges}
-            className="text-muted-foreground"
-          >
-            Reset
-          </Button>
-          <div className="flex-1" />
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button onClick={handleSave} disabled={!hasChanges} className="gap-2">
-            Save Order
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      {/* TWO buttons, not three. Below `sm` `MbDialogFooter` stretches its
+          direct children to share the row, so Reset + Cancel + Save left 110px
+          each at 390px and the primary action read "Sav…" — BUG-4 in a new
+          shape. Cancel is the redundant one: nothing is written until Save, and
+          the 44px close key and Escape both discard. */}
+      <MbDialogFooter>
+        <MbButton
+          variant="outline-navy"
+          size="lg"
+          onClick={handleReset}
+          disabled={!hasChanges}
+        >
+          Reset
+        </MbButton>
+        <MbButton
+          variant="coral"
+          size="lg"
+          icon="save"
+          onClick={handleSave}
+          disabled={!hasChanges}
+        >
+          Save order
+        </MbButton>
+      </MbDialogFooter>
+    </MbDialog>
   );
 };

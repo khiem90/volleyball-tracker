@@ -91,16 +91,6 @@ export const generateInitialMatches = (
 };
 
 /**
- * Legacy function for single court - generates first match only.
- */
-const generateFirstMatch = (
-  competitionId: string,
-  teamIds: string[]
-): Omit<Match, "id" | "createdAt"> => {
-  return generateInitialMatches(competitionId, teamIds, 1)[0];
-};
-
-/**
  * Process a completed match and update Win 2 & Out state.
  * Handles multi-court games independently per court.
  * TRUE ENDLESS MODE:
@@ -338,14 +328,4 @@ export const getCurrentChampionStreak = (state: Win2OutState, courtNumber?: numb
 export const getChampionCount = (state: Win2OutState, teamId: string): number => {
   const status = state.teamStatuses.find((s) => s.teamId === teamId);
   return status?.eliminatedAt || 0;
-};
-
-/**
- * Get court info for a specific team.
- */
-const getTeamCourt = (
-  state: Win2OutState,
-  teamId: string
-): Win2OutCourt | null => {
-  return state.courts.find((c) => c.teamIds.includes(teamId)) || null;
 };

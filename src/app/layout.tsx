@@ -32,22 +32,42 @@ export const metadata: Metadata = {
   },
 };
 
+/* No maximumScale/userScalable: locking zoom is a WCAG 1.4.4 failure — the
+   double-tap-to-zoom risk is covered by `touch-action: manipulation` in
+   `globals.css` instead. `viewportFit: "cover"` is required before
+   `env(safe-area-inset-*)` reports anything but 0; it also extends content
+   under the notch, so every fixed/sticky edge element must keep its
+   `.mb-safe-*` padding. */
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
-  themeColor: "#0f172a",
+  viewportFit: "cover",
+  themeColor: "#07324d",
 };
 
+/**
+ * The next/font variable classes belong on <html>, NOT <body>: globals.css
+ * resolves --font-outfit / --font-oswald inside `:root`.
+ *
+ * `data-mb-touch="on"` arms the coarse-pointer 44px hit-target floor gated
+ * behind this attribute in `globals.css` — remove it and buttons shrink below
+ * the touch minimum on phones.
+ *
+ * `className="light"` pins the app light: `.matchbook-surface` has no dark
+ * form.
+ */
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`${outfit.variable} ${oswald.variable} font-sans antialiased`}>
+    <html
+      lang="en"
+      className={`light ${outfit.variable} ${oswald.variable}`}
+      data-mb-touch="on"
+    >
+      <body className="font-sans antialiased">
         <Providers>{children}</Providers>
       </body>
     </html>

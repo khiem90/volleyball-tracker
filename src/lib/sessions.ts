@@ -1,7 +1,6 @@
 import {
   collection,
   doc,
-  getDoc,
   getDocs,
   setDoc,
   updateDoc,
@@ -86,10 +85,6 @@ export const createSession = async (
   teams: PersistentTeam[] = [],
   matches: Match[] = []
 ): Promise<{ session: Session; adminToken: string }> => {
-  if (!db) {
-    throw new Error("Firebase is not configured");
-  }
-
   const sessionId = generateSessionId();
   const shareCode = generateShareCode();
   const adminToken = generateAdminToken();
@@ -108,6 +103,10 @@ export const createSession = async (
     updatedAt: Date.now(),
   };
 
+  if (!db) {
+    throw new Error("Firebase is not configured");
+  }
+
   const sanitizedSession = sanitizeForFirestore(session);
   await setDoc(doc(db, SESSIONS_COLLECTION, sessionId), sanitizedSession);
 
@@ -115,26 +114,11 @@ export const createSession = async (
 };
 
 /**
- * Get a session by ID
- */
-const getSessionById = async (sessionId: string): Promise<Session | null> => {
-  if (!db) return null;
-  
-  const docRef = doc(db, SESSIONS_COLLECTION, sessionId);
-  const docSnap = await getDoc(docRef);
-
-  if (docSnap.exists()) {
-    return docSnap.data() as Session;
-  }
-  return null;
-};
-
-/**
  * Get a session by share code
  */
 export const getSessionByShareCode = async (shareCode: string): Promise<Session | null> => {
   if (!db) return null;
-  
+
   const q = query(
     collection(db, SESSIONS_COLLECTION),
     where("shareCode", "==", shareCode.toUpperCase())
@@ -157,43 +141,13 @@ const updateSession = async (
   if (!db) {
     throw new Error("Firebase is not configured");
   }
-  
+
   const docRef = doc(db, SESSIONS_COLLECTION, sessionId);
   const sanitizedUpdates = sanitizeForFirestore({
     ...updates,
     updatedAt: Date.now(),
   });
   await updateDoc(docRef, sanitizedUpdates);
-};
-
-/**
- * Update session competition
- */
-const updateSessionCompetition = async (
-  sessionId: string,
-  competition: Competition
-): Promise<void> => {
-  await updateSession(sessionId, { competition });
-};
-
-/**
- * Update session teams
- */
-const updateSessionTeams = async (
-  sessionId: string,
-  teams: PersistentTeam[]
-): Promise<void> => {
-  await updateSession(sessionId, { teams });
-};
-
-/**
- * Update session matches
- */
-const updateSessionMatches = async (
-  sessionId: string,
-  matches: Match[]
-): Promise<void> => {
-  await updateSession(sessionId, { matches });
 };
 
 /**
@@ -217,60 +171,9 @@ export const deleteSession = async (sessionId: string): Promise<void> => {
   if (!db) {
     throw new Error("Firebase is not configured");
   }
-  
+
   const docRef = doc(db, SESSIONS_COLLECTION, sessionId);
   await deleteDoc(docRef);
-};
-
-/**
- * Grant admin access to a user
- */
-const grantAdminAccess = async (
-  sessionId: string,
-  userId: string
-): Promise<void> => {
-  if (!db) {
-    throw new Error("Firebase is not configured");
-  }
-  
-  const session = await getSessionById(sessionId);
-  if (!session) {
-    throw new Error("Session not found");
-  }
-
-  if (!session.adminIds.includes(userId)) {
-    await updateDoc(doc(db, SESSIONS_COLLECTION, sessionId), {
-      adminIds: [...session.adminIds, userId],
-      updatedAt: Date.now(),
-    });
-  }
-};
-
-/**
- * Revoke admin access from a user
- */
-const revokeAdminAccess = async (
-  sessionId: string,
-  userId: string
-): Promise<void> => {
-  if (!db) {
-    throw new Error("Firebase is not configured");
-  }
-  
-  const session = await getSessionById(sessionId);
-  if (!session) {
-    throw new Error("Session not found");
-  }
-
-  // Can't revoke creator's access
-  if (session.creatorId === userId) {
-    throw new Error("Cannot revoke creator's admin access");
-  }
-
-  await updateDoc(doc(db, SESSIONS_COLLECTION, sessionId), {
-    adminIds: session.adminIds.filter((id) => id !== userId),
-    updatedAt: Date.now(),
-  });
 };
 
 // ============================================
@@ -290,7 +193,7 @@ export const subscribeToSession = (
     callback(null);
     return () => {};
   }
-  
+
   const docRef = doc(db, SESSIONS_COLLECTION, sessionId);
 
   return onSnapshot(
@@ -304,43 +207,6 @@ export const subscribeToSession = (
     },
     (error) => {
       console.error("Error subscribing to session:", error);
-      if (onError) {
-        onError(error);
-      }
-    }
-  );
-};
-
-/**
- * Subscribe to session by share code
- */
-const subscribeToSessionByShareCode = (
-  shareCode: string,
-  callback: (session: Session | null) => void,
-  onError?: (error: Error) => void
-): Unsubscribe => {
-  if (!db) {
-    // Return a no-op unsubscribe function
-    callback(null);
-    return () => {};
-  }
-  
-  const q = query(
-    collection(db, SESSIONS_COLLECTION),
-    where("shareCode", "==", shareCode.toUpperCase())
-  );
-
-  return onSnapshot(
-    q,
-    (querySnapshot) => {
-      if (!querySnapshot.empty) {
-        callback(querySnapshot.docs[0].data() as Session);
-      } else {
-        callback(null);
-      }
-    },
-    (error) => {
-      console.error("Error subscribing to session by share code:", error);
       if (onError) {
         onError(error);
       }
@@ -482,10 +348,6 @@ const computeSessionStats = (
 export const createSessionSummary = async (
   session: Session
 ): Promise<SessionSummary> => {
-  if (!db) {
-    throw new Error("Firebase is not configured");
-  }
-
   const summaryId = `summary-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
   const shareCode = generateShareCode();
   const stats = computeSessionStats(session);
@@ -503,27 +365,14 @@ export const createSessionSummary = async (
     stats,
   };
 
+  if (!db) {
+    throw new Error("Firebase is not configured");
+  }
+
   const sanitizedSummary = sanitizeForFirestore(summary);
   await setDoc(doc(db, SUMMARIES_COLLECTION, summaryId), sanitizedSummary);
 
   return summary;
-};
-
-/**
- * Get a summary by ID
- */
-const getSummaryById = async (
-  summaryId: string
-): Promise<SessionSummary | null> => {
-  if (!db) return null;
-
-  const docRef = doc(db, SUMMARIES_COLLECTION, summaryId);
-  const docSnap = await getDoc(docRef);
-
-  if (docSnap.exists()) {
-    return docSnap.data() as SessionSummary;
-  }
-  return null;
 };
 
 /**

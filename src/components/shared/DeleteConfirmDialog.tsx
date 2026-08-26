@@ -1,16 +1,7 @@
 "use client";
 
 import { memo, type ReactNode } from "react";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { TrashIcon } from "@heroicons/react/24/outline";
+import { MbConfirm } from "@/components/matchbook/Confirm";
 
 type DeleteConfirmDialogProps = {
   open: boolean;
@@ -22,6 +13,14 @@ type DeleteConfirmDialogProps = {
   className?: string;
 };
 
+/**
+ * Thin adapter over `MbConfirm`. The public props are unchanged so
+ * the existing call sites keep working untouched.
+ *
+ * `className` is retained for source compatibility but is no longer read: it
+ * only ever carried the shadcn width override (`sm:max-w-md`), which `MbDialog`
+ * owns through `size`. No call site passes it.
+ */
 export const DeleteConfirmDialog = memo(function DeleteConfirmDialog({
   open,
   onOpenChange,
@@ -29,38 +28,16 @@ export const DeleteConfirmDialog = memo(function DeleteConfirmDialog({
   description,
   onConfirm,
   isDeleting = false,
-  className,
 }: DeleteConfirmDialogProps) {
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={className ?? "sm:max-w-md"}>
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-destructive">
-            <TrashIcon className="w-5 h-5" />
-            {title}
-          </DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
-        </DialogHeader>
-        <DialogFooter className="flex-row gap-2 sm:gap-2">
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={isDeleting}
-            className="flex-1 cursor-pointer rounded-xl"
-          >
-            Cancel
-          </Button>
-          <Button
-            variant="destructive"
-            onClick={onConfirm}
-            disabled={isDeleting}
-            className="flex-1 gap-2 cursor-pointer rounded-xl"
-          >
-            <TrashIcon className="w-4 h-4" />
-            {isDeleting ? "Deleting..." : "Delete"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <MbConfirm
+      open={open}
+      onOpenChange={onOpenChange}
+      title={title}
+      verb="Delete"
+      body={description}
+      loading={isDeleting}
+      onConfirm={onConfirm}
+    />
   );
 });

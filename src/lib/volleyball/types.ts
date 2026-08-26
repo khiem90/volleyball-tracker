@@ -33,7 +33,6 @@ export type PlayerPosition = {
   zone: CourtZone;
   position: CourtPosition;
   label: string;
-  color: string;
   isBackRow: boolean;
   isLiberoEligible: boolean;
 };
@@ -63,8 +62,6 @@ export type PlayerInfo = {
   fullName: string;
   shortName: string;
   description: string;
-  color: string;
-  textColor: string;
 };
 
 /** Formation configuration */

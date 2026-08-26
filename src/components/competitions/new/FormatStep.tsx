@@ -1,100 +1,158 @@
 "use client";
 
-import { ArrowRightIcon } from "@heroicons/react/24/outline";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { useEffect, useRef } from "react";
+import { Panel } from "@/components/matchbook/Panel";
+import { useMbReducedMotion } from "@/components/matchbook/useMbReducedMotion";
+import type {
+  MbFormatOption,
+  MbPreviewBasis,
+  MbPreviewLine,
+} from "@/components/matchbook/useMatchbookNewCompetition";
 import type { CompetitionType } from "@/types/game";
-import type { FormatOption } from "@/hooks/useNewCompetitionPage";
+import { FormatChoiceList } from "./FormatChoiceList";
+import { FormatPreviewPanel } from "./FormatPreviewPanel";
 
-interface FormatStepProps {
-  formatOptions: FormatOption[];
+/* ===========================================================================
+   STEP 1 — FORMAT
+
+   One panel holding a five-row radio group, and a preview panel that answers
+   the question the group cannot: "what will this actually produce?".
+
+   ------------------------------------------------ why a list, not five cards
+
+   The cards were `MbChoiceCard`s, and two measurements killed them. Both were
+   the same defect twice: the control did not say what kind of question it was
+   asking.
+
+   1. **IT READ AS A MULTI-SELECT.** Every card carried an unlabelled empty
+      ballot box in its top-right corner and `aria-pressed="false"` on its
+      button — the toggle contract, five times over, on a list where exactly
+      one answer is legal. Nothing on the screen said "pick one".
+   2. **1.9 OF 5 FITTED ON A PHONE.** Measured at 390x844 on the shipped grid:
+      each card 324x187, the first at y=308, the sticky commit bar covering
+      everything from y=681. Card 1 was whole, card 2 was clipped at its
+      description, cards 3-5 were below the fold. Choosing between five formats
+      meant scrolling and remembering, which is not a comparison.
+
+   `FormatChoiceList` fixes both with one move — see its own header for the
+   radiogroup semantics and the 56px row arithmetic.
+
+   ------------------------------------------------------- the preview stays
+
+   Stacked under the group at every width, still full-width: in a side column
+   it leaves a large hole of paper and squeezes the card blurbs well under a
+   readable line length. Step 3 stacks the same panel the same way, so this
+   is the wizard agreeing with itself.
+
+   It also now carries the sentence the rows gave up: the list's second line is
+   four words, and `FormatPreviewPanel` prints `FORMAT_META[format].blurb`
+   verbatim as its first line the moment a format is chosen. The list is the
+   comparison; the preview is the detail.
+
+   ------------------------------------------- and it is not there before that
+
+   The preview used to render on arrival too, drawing "NO FORMAT CHOSEN YET —
+   pick one to see the schedule it will generate" — an empty-state headline on
+   the one screen in the app that cannot have an empty state, because the five
+   things to choose are 150px above it and the panel head already says PICK
+   ONE. Measured at 390x844 it cost 153px of a document the sticky commit bar
+   was already covering the end of, and every pixel of it was an apology for a
+   question the user had been on the screen for four seconds.
+
+   So the panel arrives WITH the answer. Step 1 on arrival is the rail, the
+   five choices and the commit bar; choosing adds the preview under the list,
+   below the fold on a phone and beside nothing it displaces. `FormatStep` is
+   the only place that ever had a nullable format, which is why the guard lives
+   here and `FormatPreviewPanel` now takes a `CompetitionType`.
+   =========================================================================== */
+
+export interface FormatStepProps {
+  formats: MbFormatOption[];
   selectedFormat: CompetitionType | null;
   onSelectFormat: (type: CompetitionType) => void;
-  onNext: () => void;
+  previewLines: MbPreviewLine[];
+  previewBasis: MbPreviewBasis;
 }
 
 export const FormatStep = ({
-  formatOptions,
+  formats,
   selectedFormat,
   onSelectFormat,
-  onNext,
-}: FormatStepProps) => (
-  <div className="space-y-6">
-    <div className="text-center mb-8">
-      <h2 className="text-2xl font-bold mb-2">Choose Format</h2>
-      <p className="text-muted-foreground">
-        Select how teams will compete against each other
-      </p>
-    </div>
+  previewLines,
+  previewBasis,
+}: FormatStepProps) => {
+  /* ---------------------------------------------------------------------
+     THE PREVIEW HAS TO BE SEEN TO BE THE REWARD.
 
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {formatOptions.map((option) => {
-        const isSelected = selectedFormat === option.type;
+     The panel below arrives only once a format is chosen, and on a phone it
+     lands where the sticky commit bar floats: measured at 390x844, the panel's
+     blurb sat at y=657 with `.mb-action-bar` starting at y=681, so two of its
+     three sample points hit-tested to the bar. The user taps a format and the
+     sentence justifying that choice is sliced through its x-height.
 
-        return (
-          <Card
-            key={option.type}
-            className={`
-              cursor-pointer transition-all duration-300 overflow-hidden
-              ${
-                isSelected
-                  ? "ring-2 ring-primary shadow-lg shadow-primary/20"
-                  : "border-border/40 bg-card/50 hover:bg-card hover:border-primary/30"
-              }
-            `}
-            onClick={() => onSelectFormat(option.type)}
-            role="button"
-            tabIndex={0}
-            aria-pressed={isSelected}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" || event.key === " ") {
-                event.preventDefault();
-                onSelectFormat(option.type);
-              }
-            }}
-          >
-            <CardHeader className="text-center pb-2">
-              <div
-                className={`
-                  w-16 h-16 mx-auto rounded-2xl flex items-center justify-center mb-4
-                  transition-all duration-300 shadow-lg
-                  ${
-                    isSelected
-                      ? `bg-linear-to-br ${option.gradient} text-white`
-                      : `bg-linear-to-br ${option.gradient} opacity-60 text-white`
-                  }
-                `}
-              >
-                {option.icon}
-              </div>
-              <CardTitle className="text-lg">{option.label}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <CardDescription className="text-center text-sm">
-                {option.description}
-              </CardDescription>
-              <div className="flex justify-center mt-3">
-                <Badge variant="secondary" className="text-xs">
-                  Min {option.minTeams} teams
-                </Badge>
-              </div>
-            </CardContent>
-          </Card>
-        );
-      })}
-    </div>
+     So the panel is brought into view — but only on a genuine CHANGE, never
+     on mount: returning to step 1 with a format already chosen must not move
+     the document (an unconditional `scrollIntoView` on mount once put the
+     first painted frame thousands of pixels down the page).
 
-    <div className="flex justify-end pt-4">
-      <Button
-        onClick={onNext}
-        disabled={!selectedFormat}
-        className="gap-2 shadow-lg shadow-primary/20"
-        size="lg"
+     It also only scrolls when the panel is genuinely obscured — if the choice
+     was made with the preview already fully clear of the bar, nothing moves.
+     --------------------------------------------------------------------- */
+  const previewRef = useRef<HTMLDivElement>(null);
+  const lastFormat = useRef<CompetitionType | null>(selectedFormat ?? null);
+  const reduced = useMbReducedMotion();
+
+  useEffect(() => {
+    const changed = selectedFormat !== lastFormat.current;
+    lastFormat.current = selectedFormat ?? null;
+    if (!changed || !selectedFormat) return;
+
+    const panel = previewRef.current;
+    if (!panel) return;
+
+    const bar = document.querySelector(".mb-action-bar");
+    const floor = bar
+      ? bar.getBoundingClientRect().top
+      : window.innerHeight;
+    const box = panel.getBoundingClientRect();
+    if (box.bottom <= floor && box.top >= 0) return; // already fully clear
+
+    panel.scrollIntoView({
+      behavior: reduced ? "auto" : "smooth",
+      block: "center",
+    });
+  }, [selectedFormat, reduced]);
+
+  return (
+  <>
+    <div className="xl:col-span-12">
+      <Panel
+        title="Choose a Format"
+        icon="compete"
+        /* "Pick one" rather than "5 formats".
+           The count was already legible — five rows are five rows — and the
+           one thing the old grid never said is the thing this label now says.
+           It sits in the panel head, which is the group's own caption. */
+        meta={<span className="mb-kicker">Pick one</span>}
       >
-        Next
-        <ArrowRightIcon className="w-4 h-4" />
-      </Button>
+        <FormatChoiceList
+          options={formats}
+          value={selectedFormat}
+          onChange={onSelectFormat}
+          label="Competition format"
+        />
+      </Panel>
     </div>
-  </div>
-);
+
+    {selectedFormat && (
+      <div ref={previewRef} className="xl:col-span-12">
+        <FormatPreviewPanel
+          format={selectedFormat}
+          lines={previewLines}
+          basis={previewBasis}
+        />
+      </div>
+    )}
+  </>
+  );
+};

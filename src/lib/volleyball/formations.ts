@@ -13,36 +13,41 @@ import type { FormationType, FormationConfig } from './types';
  * - Volleyball Vault 5-1 system analysis
  * - Art of Coaching Volleyball
  */
+/*
+ * COPY LENGTH IS A LAYOUT CONSTRAINT: each `description` is a card caption
+ * that sets ONE full line at both card widths only when held to 45-54
+ * characters. The nuance lives in `tradeoffs`.
+ */
 export const FORMATIONS: Record<FormationType, FormationConfig> = {
   traditional: {
     id: 'traditional',
     name: 'Traditional',
-    description: 'Standard 3-passer serve-receive formation with OH1, OH2, and Libero passing.',
-    tradeoffs: 'Most balanced. Good for consistent serve-receive but can limit quick attack options.',
+    description: 'Balanced three-passer receive: OH1, OH2 and libero.',
+    tradeoffs: 'Most consistent passing; fewer quick-attack looks.',
   },
   stack: {
     id: 'stack',
     name: 'Stack',
-    description: 'Players grouped to one side to create clear approach lanes for hitters. Used by Olympic teams.',
-    tradeoffs: 'Better attack options but requires precise passing. Vulnerable to short serves.',
+    description: 'Passers grouped one side to clear hitting lanes.',
+    tradeoffs: 'Stronger attack options, but demands precise passing.',
   },
   spread: {
     id: 'spread',
     name: 'Spread',
-    description: 'Wider positioning for maximum court coverage and defensive readiness.',
-    tradeoffs: 'Good court coverage but longer transition to attack positions.',
+    description: 'Wide positioning for maximum defensive coverage.',
+    tradeoffs: 'Great coverage, but a longer transition to attack.',
   },
   rightSlant: {
     id: 'rightSlant',
     name: 'Right Slant',
-    description: 'Passers shifted toward the right side. Good when opponents target left side.',
-    tradeoffs: 'Protects weak left-side passer. May leave right side vulnerable.',
+    description: 'Passers shifted right against left-side serving.',
+    tradeoffs: 'Protects a weak left-side passer; opens the right.',
   },
   leftSlant: {
     id: 'leftSlant',
     name: 'Left Slant',
-    description: 'Passers shifted toward the left side. Good when opponents target right side.',
-    tradeoffs: 'Protects weak right-side passer. Sets up outside hitter approach from left.',
+    description: 'Passers shifted left against right-side serving.',
+    tradeoffs: 'Protects a weak right-side passer; sets up the outside.',
   },
 };
 

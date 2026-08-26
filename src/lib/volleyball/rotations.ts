@@ -8,7 +8,7 @@ import type {
   FormationType,
   MovementArrow,
 } from './types';
-import { PLAYER_COLORS, ZONE_POSITIONS, BACK_ROW_ZONES } from './constants';
+import { ZONE_POSITIONS, BACK_ROW_ZONES } from './constants';
 
 /**
  * 5-1 Rotation Chart: Which role is in which zone for each rotation
@@ -343,16 +343,9 @@ export const SERVE_RECEIVE_ADJUSTMENTS: Record<
 };
 
 /**
- * Target positions after serve (base/transition positions)
- * Used for movement arrows
- */
-/**
- * Target/Base positions after serve contact (attack approach starting positions)
- *
- * Based on research from:
- * - Art of Coaching Volleyball: Outside hitters start 10-15ft off net, 2-3ft wide of antenna
- * - SportsEdTV: Middle blockers start at 3m line for quick approach
- * - Gold Medal Squared: Setter target is Zone 2.5 (right-of-center, 2ft off net)
+ * Target/base positions after serve contact (attack approach starts).
+ * Used for movement arrows. Sources: Art of Coaching Volleyball, SportsEdTV,
+ * Gold Medal Squared.
  */
 export const TARGET_POSITIONS: Record<PlayerRole, CourtPosition> = {
   S: { x: 0.75, y: 0.75 },   // Setting position (Zone 2.5 - right of center, 2ft off net)
@@ -364,23 +357,14 @@ export const TARGET_POSITIONS: Record<PlayerRole, CourtPosition> = {
   L: { x: 0.50, y: 0.25 },   // Deep center for defense
 };
 
-/**
- * Check if setter is in front row for given rotation
- */
 export const isSetterFrontRow = (rotation: RotationNumber): boolean => {
   return rotation >= 4;
 };
 
-/**
- * Get number of front row attackers for given rotation
- */
 export const getFrontRowAttackerCount = (rotation: RotationNumber): number => {
   return rotation <= 3 ? 3 : 2;
 };
 
-/**
- * Get the zone for a specific role in a specific rotation
- */
 export const getRoleZone = (rotation: RotationNumber, role: PlayerRole): CourtZone => {
   if (role === 'L') {
     // Libero position depends on which MB is in back row
@@ -396,17 +380,11 @@ export const getRoleZone = (rotation: RotationNumber, role: PlayerRole): CourtZo
   throw new Error(`Role ${role} not found in rotation ${rotation}`);
 };
 
-/**
- * Get which middle blocker is in back row for a rotation
- */
 export const getBackRowMiddle = (rotation: RotationNumber): 'MB1' | 'MB2' => {
   const mb1Zone = getRoleZone(rotation, 'MB1');
   return BACK_ROW_ZONES.includes(mb1Zone) ? 'MB1' : 'MB2';
 };
 
-/**
- * Build player positions for a rotation
- */
 export const buildPlayerPositions = (
   rotation: RotationNumber,
   mode: GameMode,
@@ -440,7 +418,6 @@ export const buildPlayerPositions = (
       zone,
       position,
       label: actualRole,
-      color: PLAYER_COLORS[actualRole].bg,
       isBackRow,
       isLiberoEligible: isMiddleBlocker,
     });
@@ -449,9 +426,6 @@ export const buildPlayerPositions = (
   return positions;
 };
 
-/**
- * Build movement arrows for a rotation
- */
 export const buildMovementArrows = (
   rotation: RotationNumber,
   mode: GameMode,

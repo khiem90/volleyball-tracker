@@ -1,240 +1,146 @@
 "use client";
 
-import { memo, useState, useCallback, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useCallback, useState } from "react";
 import type { UserFormation } from "@/lib/volleyball/types";
 import { getFormationShareUrl } from "@/lib/volleyball/userFormations";
+import { MbButton } from "@/components/matchbook/Button";
+import { MbCopyField } from "@/components/matchbook/CopyField";
+import { MbDialog, MbDialogBody, MbDialogFooter } from "@/components/matchbook/Dialog";
+import { MbNotice } from "@/components/matchbook/Notice";
 
-type ShareFormationDialogProps = {
-  isOpen: boolean;
-  onClose: () => void;
+/* ===========================================================================
+   SHARE A FORMATION
+
+   The old dialog had no `role="dialog"`, no `aria-modal`, no focus trap, no
+   initial focus and no Escape handler; the share URL sat in a `readOnly` input
+   with `focus:outline-none`; and the "copied" confirmation was a `bg-green-500`
+   swap with no announcement. It also hand-rolled a `document.execCommand`
+   fallback that never surfaced its own failure.
+
+   `MbDialog` supplies every one of those, and `MbCopyField` supplies the
+   clipboard chain — `navigator.clipboard`
+   then `execCommand` then select-on-focus with an explicit hint — and always
+   surfaces failure.
+
+   Revoking is the destructive half and it stays in this dialog rather than in a
+   row menu, because "make private" is only comprehensible next to the link it
+   invalidates.
+   =========================================================================== */
+
+export interface ShareFormationDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   formation: UserFormation | null;
   onEnableSharing: (formationId: string) => Promise<string>;
   onDisableSharing: (formationId: string) => Promise<void>;
-};
+}
 
-export const ShareFormationDialog = memo(
-  ({
-    isOpen,
-    onClose,
-    formation,
-    onEnableSharing,
-    onDisableSharing,
-  }: ShareFormationDialogProps) => {
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [copied, setCopied] = useState(false);
-    const [shareUrl, setShareUrl] = useState<string | null>(null);
+export const ShareFormationDialog = ({
+  open,
+  onOpenChange,
+  formation,
+  onEnableSharing,
+  onDisableSharing,
+}: ShareFormationDialogProps) => {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  // Local echo of the id, so the panel flips the instant the write resolves
+  // rather than waiting for the Firestore subscription to come back round.
+  const [localShareId, setLocalShareId] = useState<string | null>(null);
 
-    // Update share URL when formation changes
-    useEffect(() => {
-      if (formation?.shareId) {
-        setShareUrl(getFormationShareUrl(formation.shareId));
-      } else {
-        setShareUrl(null);
+  const shareId = localShareId ?? formation?.shareId ?? null;
+
+  const handleOpenChange = useCallback(
+    (next: boolean) => {
+      if (!next) {
+        setLocalShareId(null);
+        setError(null);
       }
-    }, [formation?.shareId]);
+      onOpenChange(next);
+    },
+    [onOpenChange]
+  );
 
-    const handleEnableSharing = useCallback(async () => {
-      if (!formation) return;
+  const enable = useCallback(async () => {
+    if (!formation) return;
+    setBusy(true);
+    setError(null);
+    try {
+      setLocalShareId(await onEnableSharing(formation.id));
+    } catch {
+      setError("The share link could not be created. Check your connection and try again.");
+    } finally {
+      setBusy(false);
+    }
+  }, [formation, onEnableSharing]);
 
-      setIsLoading(true);
-      setError(null);
+  const disable = useCallback(async () => {
+    if (!formation) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await onDisableSharing(formation.id);
+      setLocalShareId(null);
+    } catch {
+      setError("Sharing could not be turned off. Check your connection and try again.");
+    } finally {
+      setBusy(false);
+    }
+  }, [formation, onDisableSharing]);
 
-      try {
-        const shareId = await onEnableSharing(formation.id);
-        setShareUrl(getFormationShareUrl(shareId));
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to enable sharing");
-      } finally {
-        setIsLoading(false);
-      }
-    }, [formation, onEnableSharing]);
+  if (!formation) return null;
 
-    const handleDisableSharing = useCallback(async () => {
-      if (!formation) return;
+  return (
+    <MbDialog
+      open={open}
+      onOpenChange={handleOpenChange}
+      title="Share Formation"
+      icon="share"
+      kicker={formation.name}
+      size="sm"
+      dismissible={!busy}
+    >
+      <MbDialogBody className="flex flex-col gap-4">
+        {error && <MbNotice tone="danger">{error}</MbNotice>}
 
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        await onDisableSharing(formation.id);
-        setShareUrl(null);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to disable sharing");
-      } finally {
-        setIsLoading(false);
-      }
-    }, [formation, onDisableSharing]);
-
-    const handleCopyLink = useCallback(async () => {
-      if (!shareUrl) return;
-
-      try {
-        await navigator.clipboard.writeText(shareUrl);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      } catch {
-        // Fallback for browsers that don't support clipboard API
-        const input = document.createElement("input");
-        input.value = shareUrl;
-        document.body.appendChild(input);
-        input.select();
-        document.execCommand("copy");
-        document.body.removeChild(input);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      }
-    }, [shareUrl]);
-
-    if (!isOpen || !formation) return null;
-
-    const isShared = formation.visibility === "unlisted" && !!formation.shareId;
-
-    return (
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
-            onClick={(e) => e.target === e.currentTarget && onClose()}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="w-full max-w-md bg-background rounded-2xl shadow-2xl overflow-hidden"
-            >
-              {/* Header */}
-              <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-                <h2 className="text-lg font-bold">Share Formation</h2>
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="p-2 rounded-lg hover:bg-accent transition-colors"
-                  aria-label="Close dialog"
-                >
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
-                </button>
-              </div>
-
-              {/* Content */}
-              <div className="p-6 space-y-4">
-                {/* Formation Info */}
-                <div>
-                  <h3 className="font-semibold text-foreground">{formation.name}</h3>
-                  {formation.description && (
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {formation.description}
-                    </p>
-                  )}
-                </div>
-
-                {/* Sharing Status */}
-                <div className="p-4 rounded-lg bg-accent/50">
-                  {isShared ? (
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-green-500" />
-                        <span className="text-sm font-medium text-green-700 dark:text-green-300">
-                          Sharing enabled
-                        </span>
-                      </div>
-
-                      {/* Share URL */}
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="text"
-                          value={shareUrl || ""}
-                          readOnly
-                          className="flex-1 px-3 py-2 text-sm bg-background border border-border rounded-lg focus:outline-none"
-                        />
-                        <button
-                          type="button"
-                          onClick={handleCopyLink}
-                          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                            copied
-                              ? "bg-green-500 text-white"
-                              : "bg-primary text-primary-foreground hover:bg-primary/90"
-                          }`}
-                        >
-                          {copied ? "Copied!" : "Copy"}
-                        </button>
-                      </div>
-
-                      <p className="text-xs text-muted-foreground">
-                        Anyone with this link can view your formation
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="text-center py-2">
-                      <p className="text-sm text-muted-foreground mb-3">
-                        This formation is private. Enable sharing to generate a link.
-                      </p>
-                      <button
-                        type="button"
-                        onClick={handleEnableSharing}
-                        disabled={isLoading}
-                        className="px-4 py-2 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-                      >
-                        {isLoading ? "Enabling..." : "Enable Sharing"}
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {/* Error */}
-                {error && (
-                  <p className="text-sm text-red-500">{error}</p>
-                )}
-
-                {/* Disable Sharing */}
-                {isShared && (
-                  <div className="pt-2 border-t border-border">
-                    <button
-                      type="button"
-                      onClick={handleDisableSharing}
-                      disabled={isLoading}
-                      className="text-sm text-red-500 hover:text-red-600 disabled:opacity-50"
-                    >
-                      {isLoading ? "Disabling..." : "Make Private"}
-                    </button>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      This will revoke access for anyone with the share link
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {/* Footer */}
-              <div className="px-6 py-4 border-t border-border bg-accent/30 flex justify-end">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="px-4 py-2 rounded-lg text-sm font-medium hover:bg-accent transition-colors"
-                >
-                  Close
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
+        {shareId ? (
+          <>
+            <MbCopyField
+              label="Share link"
+              value={getFormationShareUrl(shareId)}
+              help="Anyone with the link can view this formation. It never appears in search."
+            />
+            <div className="flex flex-col gap-1.5 border-t border-mb-rule pt-3">
+              <p className="mb-kicker">Stop sharing</p>
+              <p className="text-[0.78rem] leading-snug text-mb-ink-muted">
+                Making it private breaks the existing link. Sharing again creates
+                a new one.
+              </p>
+            </div>
+          </>
+        ) : (
+          <p className="text-[0.85rem] leading-[1.5] text-mb-ink-muted">
+            This formation is private. Creating a link lets anyone who has it
+            view the formation and copy it into their own archive — it does not
+            let them change yours.
+          </p>
         )}
-      </AnimatePresence>
-    );
-  }
-);
-ShareFormationDialog.displayName = "ShareFormationDialog";
+      </MbDialogBody>
+
+      <MbDialogFooter>
+        <MbButton variant="outline-navy" onClick={() => handleOpenChange(false)} disabled={busy}>
+          Close
+        </MbButton>
+        {shareId ? (
+          <MbButton variant="outline" icon="lock" onClick={disable} loading={busy}>
+            Make Private
+          </MbButton>
+        ) : (
+          <MbButton variant="coral" icon="link" onClick={enable} loading={busy}>
+            Create Link
+          </MbButton>
+        )}
+      </MbDialogFooter>
+    </MbDialog>
+  );
+};

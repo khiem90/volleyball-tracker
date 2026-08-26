@@ -1,149 +1,314 @@
 "use client";
 
-import { memo } from "react";
-import { ChevronDown, ChevronUp, Settings2 } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
+import { useId, useState } from "react";
+import { MbButton } from "@/components/matchbook/Button";
+import { MbIcon } from "@/components/matchbook/MbIcon";
+import { Panel } from "@/components/matchbook/Panel";
+import {
+  MbField,
+  MbNumberStepper,
+  MbTextInput,
+  MbToggle,
+  MB_FIELD_LABEL,
+} from "@/components/matchbook/form";
+import { FORMAT_META } from "@/components/matchbook/formatMeta";
+import { pluralise } from "@/lib/text";
+import {
+  POINTS_MAX,
+  POINTS_MIN,
+  type AdvancedSettings,
+} from "@/hooks/useNewCompetitionPage";
 import type { CompetitionType } from "@/types/game";
-import type { AdvancedSettings, AdvancedSettingsHandlers } from "@/hooks/useNewCompetitionPage";
+import { MB_DORMANT } from "./dormant";
 
-type AdvancedSettingsPanelProps = {
-  selectedFormat: CompetitionType | null;
+/* ===========================================================================
+   ADVANCED SETTINGS
+
+   Renders for ALL FIVE formats (`terminology` applies to every one).
+   `venuePlural` is a real, editable field seeded from `pluralise()` — naive
+   `+ "s"` produced "pitchs" and "boxs".
+
+   CLOSED until asked for: every value inside is already defaulted correctly,
+   so the panel is a set of answers the app has given, not questions the user
+   must settle. The head reads DEFAULTS or CUSTOMISED so a change is visible
+   at a glance, and it opens itself when the settings are customised — a
+   restored draft saying "CUSTOMISED" with the fields hidden would be asking
+   the reader to take its word for it.
+
+   The points are ROWS (label left, control right), never a 3-column grid: a
+   stepper's intrinsic width is 156px and cannot shrink without taking its
+   keys under the 44px floor, so in a narrow panel a grid overlaps adjacent
+   steppers' keys.
+   =========================================================================== */
+
+export interface AdvancedSettingsPanelProps {
+  format: CompetitionType;
   settings: AdvancedSettings;
-  handlers: AdvancedSettingsHandlers;
-};
+  onChange: (patch: Partial<AdvancedSettings>) => void;
+  onReset: () => void;
+  customised: boolean;
+}
 
-export const AdvancedSettingsPanel = memo(function AdvancedSettingsPanel({
-  selectedFormat,
+/**
+ * One points row: name on the left, stepper on the right, guidance underneath.
+ *
+ * `MbField` still owns the wiring — the `<label for>`, the hint id and the
+ * `aria-describedby` that carries it onto the spinbutton — so this is a layout
+ * override of the primitive, not a second field implementation. `.mb-field` is
+ * an unlayered `flex-direction: column`, which is why the row direction and the
+ * gaps need `!`; `[&>p]:basis-full` is what drops the hint onto its own line
+ * instead of leaving it as a third column.
+ */
+const PointsRow = ({
+  id,
+  label,
+  spoken,
+  hint,
+  value,
+  onChange,
+  disabled = false,
+}: {
+  id: string;
+  label: string;
+  /** Accessible name of the spinbutton — "Win" alone is ambiguous when read. */
+  spoken: string;
+  hint?: string;
+  value: number;
+  onChange: (value: number) => void;
+  disabled?: boolean;
+}) => (
+  <MbField
+    label={label}
+    htmlFor={id}
+    hint={hint}
+    className="flex-row! flex-wrap items-center justify-between gap-x-4! gap-y-1! border-b border-mb-rule px-4 py-3 [&>p]:basis-full"
+  >
+    <MbNumberStepper
+      id={id}
+      label={spoken}
+      value={value}
+      onChange={onChange}
+      min={POINTS_MIN}
+      max={POINTS_MAX}
+      disabled={disabled}
+      className="shrink-0"
+    />
+  </MbField>
+);
+
+export const AdvancedSettingsPanel = ({
+  format,
   settings,
-  handlers,
-}: AdvancedSettingsPanelProps) {
-  const showPanel =
-    selectedFormat === "round_robin" ||
-    selectedFormat === "two_match_rotation" ||
-    selectedFormat === "win2out";
+  onChange,
+  onReset,
+  customised,
+}: AdvancedSettingsPanelProps) => {
+  const { standingsPoints } = FORMAT_META[format].supports;
+  const venue = settings.venueName.trim() || "court";
+  const bodyId = useId();
 
-  if (!showPanel) return null;
+  /* Lazy initialiser, not an effect: a restored draft that already carries
+     custom settings arrives open on the first paint rather than opening on
+     the second. After mount the disclosure is the user's — changing a value
+     cannot slam it shut, and reverting to the defaults cannot either. */
+  const [open, setOpen] = useState(() => customised);
+
+  /** What the closed row says is inside. Format-aware, and complete: a summary
+      that omits a block is a summary the reader cannot use to decide whether
+      to open the disclosure. */
+  const summary = standingsPoints
+    ? `Match scoring, standings points and ${venue} wording`
+    : `Match scoring and ${venue} wording`;
 
   return (
-    <>
-      <Separator />
-      <div className="space-y-4">
-        <button
-          type="button"
-          onClick={handlers.onToggleAdvancedSettings}
-          className="w-full flex items-center justify-between py-2 px-1 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-          aria-expanded={settings.showAdvancedSettings}
-          aria-controls="advanced-settings-content"
-        >
-          <span className="flex items-center gap-2">
-            <Settings2 className="w-4 h-4" />
-            Advanced Settings
+    <Panel
+      title="Advanced Settings"
+      tone="navy"
+      icon="settings"
+      meta={
+        <span className="matchbook-display text-[0.66rem] mb-track-status font-bold text-mb-paper-bright">
+          {customised ? "Customised" : "Defaults"}
+        </span>
+      }
+    >
+      {/* The disclosure is a row of the panel, not a control in its head: the
+          head is navy and already carries two things, and a 44px target inside
+          a 44px navy strip would have made it three. `mb-btn-touch` is the
+          floor, `mb-row-hover` the same press the ruled rows below it use. */}
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        aria-expanded={open}
+        aria-controls={bodyId}
+        className="mb-btn-touch mb-row-hover flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
+      >
+        {/* The closed row is an ACTION, not a second title.
+            It read "Advanced settings" over "… — left at the defaults", eight
+            pixels under a panel head already reading "ADVANCED SETTINGS ·
+            DEFAULTS": the title twice and the defaults twice, in one 44px
+            strip. The verb pair says the same thing about what the control
+            does and cannot be mistaken for the head, and the tail comes off
+            because the head owns that word.
+
+            And `truncate` comes off with it. Measured at 390px, the summary
+            span was 337px of text in a 300px box, so the line ended
+            "left at the defau…" — a disclosure summary that cannot finish its
+            own sentence tells the reader less than no summary. Two lines that
+            wrap cost 18px and clip nothing at 320px. */}
+        <span className="flex min-w-0 flex-col gap-1">
+          <span className="mb-kicker">
+            {open ? "Hide advanced settings" : "Show advanced settings"}
           </span>
-          {settings.showAdvancedSettings ? (
-            <ChevronUp className="w-4 h-4" />
-          ) : (
-            <ChevronDown className="w-4 h-4" />
+          {!open && (
+            <span className="text-[0.78rem] leading-snug text-mb-ink-muted">
+              {summary}
+            </span>
           )}
-        </button>
+        </span>
+        <MbIcon id={open ? "collapse" : "expand"} size={12} className="shrink-0" />
+      </button>
 
-        {settings.showAdvancedSettings && (
-          <div
-            id="advanced-settings-content"
-            className="space-y-4 p-4 rounded-xl bg-card/30 border border-border/40"
-          >
-            {/* Standings Points - Only for Round Robin */}
-            {selectedFormat === "round_robin" && (
-              <>
-                <div className="space-y-3">
-                  <label className="text-sm font-medium">Standings Points</label>
-                  <p className="text-xs text-muted-foreground">
-                    Configure points awarded for wins, ties, and losses.
-                  </p>
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="space-y-1">
-                      <label className="text-xs text-muted-foreground">Win</label>
-                      <Input
-                        type="number"
-                        min="0"
-                        max="10"
-                        value={settings.pointsForWin}
-                        onChange={(e) => handlers.onPointsForWinChange(Number(e.target.value))}
-                        className="text-center"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs text-muted-foreground">Tie</label>
-                      <Input
-                        type="number"
-                        min="0"
-                        max="10"
-                        value={settings.pointsForTie}
-                        onChange={(e) => handlers.onPointsForTieChange(Number(e.target.value))}
-                        className="text-center"
-                        disabled={!settings.allowTies}
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs text-muted-foreground">Loss</label>
-                      <Input
-                        type="number"
-                        min="0"
-                        max="10"
-                        value={settings.pointsForLoss}
-                        onChange={(e) => handlers.onPointsForLossChange(Number(e.target.value))}
-                        className="text-center"
-                      />
-                    </div>
-                  </div>
-                </div>
+      <div id={bodyId} hidden={!open}>
+        {/* WHERE "POINTS TO WIN" WOULD BE, AND WHY IT IS NOT A FIELD.
+            A first-run walkthrough went looking for a target score and found
+            no field for one anywhere in the wizard. There is none because the
+            app has no such concept to configure: `CompetitionConfig`
+            (src/types/competition-config.ts) carries points per RESULT and
+            terminology and nothing else, `Match` carries two running scores
+            and a status, and `useMatchPage.handleCompleteMatch` decides the
+            winner by comparing those two scores at the moment the user
+            presses Complete — it never compares either of them against a
+            threshold. A "points to win" input here would therefore write a
+            number that no code reads, which is worse than the gap: a setting
+            that lies. Adding the capability means changing the match model
+            and the completion path, and that path is a BLACK BOX.
+            So the wizard answers the question in the one place a user hunting
+            for a scoring setting will open, in a sentence rather than a
+            control. */}
+        {/* `border-t`, not `border-y`: every block below opens with its own
+            top rule, and two adjacent hairlines draw one 2px line that belongs
+            to no tier. */}
+        <div className="border-t border-mb-rule px-4 py-3">
+          <span className={MB_FIELD_LABEL.className}>
+            Match score
+          </span>
+          <p className="mt-1 text-[0.78rem] leading-snug text-mb-ink-muted">
+            There is no target score to set. You keep the score as you play and
+            the match ends when you complete it, whatever the score is then.
+          </p>
+        </div>
 
-                {/* Allow Ties */}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <label className="text-sm font-medium">Allow Ties</label>
-                    <p className="text-xs text-muted-foreground">
-                      Enable if matches can end in a draw
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => handlers.onAllowTiesChange(!settings.allowTies)}
-                    role="switch"
-                    aria-checked={settings.allowTies}
-                    aria-label="Allow ties"
-                    className={`
-                      relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer
-                      ${settings.allowTies ? "bg-primary" : "bg-muted"}
-                    `}
-                  >
-                    <span
-                      className={`
-                        inline-block h-4 w-4 transform rounded-full bg-white transition-transform
-                        ${settings.allowTies ? "translate-x-6" : "translate-x-1"}
-                      `}
-                    />
-                  </button>
-                </div>
-              </>
-            )}
-
-            {/* Venue Name */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Venue Name</label>
-              <p className="text-xs text-muted-foreground">
-                Customize terminology (e.g., court, field, table)
+        {standingsPoints ? (
+          <>
+            <div className="border-y border-mb-rule px-4 py-3">
+              <span
+                className={MB_FIELD_LABEL.className}
+              >
+                Standings points
+              </span>
+              <p className="mt-1 text-[0.78rem] leading-snug text-mb-ink-muted">
+                Awarded per result when the table is calculated.
               </p>
-              <Input
-                type="text"
-                value={settings.venueName}
-                onChange={(e) => handlers.onVenueNameChange(e.target.value)}
-                placeholder="court"
+            </div>
+
+            {/* Each stepper carries a VISIBLE label. `MbNumberStepper`'s own
+                `label` is an accessible name only — three bare figures reading
+                3 / 0 / 0 tell a sighted user nothing about which is which. */}
+            <PointsRow
+              id="points-win"
+              label="Win"
+              spoken="Points for a win"
+              value={settings.pointsForWin}
+              onChange={(value) => onChange({ pointsForWin: value })}
+            />
+            <PointsRow
+              id="points-tie"
+              label="Tie"
+              spoken="Points for a tie"
+              /* The one place this is said, and it is said beside the disabled
+                 control rather than as a fourth notice in the panel. */
+              hint={
+                settings.allowTies
+                  ? undefined
+                  : "Turn on Allow ties below to award points for a drawn match."
+              }
+              value={settings.pointsForTie}
+              onChange={(value) => onChange({ pointsForTie: value })}
+              disabled={!settings.allowTies}
+            />
+            <PointsRow
+              id="points-loss"
+              label="Loss"
+              spoken="Points for a loss"
+              value={settings.pointsForLoss}
+              onChange={(value) => onChange({ pointsForLoss: value })}
+            />
+
+            <div className="border-b border-mb-rule px-4 py-3">
+              <MbToggle
+                checked={settings.allowTies}
+                onChange={(checked) => onChange({ allowTies: checked })}
+                label="Allow ties"
+                hint="Enable if a match can end level."
               />
             </div>
-          </div>
+          </>
+        ) : (
+          <p className="border-y border-mb-rule px-4 py-3 text-[0.78rem] leading-snug text-mb-ink-muted">
+            {FORMAT_META[format].label} does not keep a standings table, so points
+            per result do not apply to it.
+          </p>
         )}
+
+        <div className="flex flex-col gap-4 px-4 py-4">
+          <div>
+            <span className={MB_FIELD_LABEL.className}>
+              Venue wording
+            </span>
+            <p className="mt-1 text-[0.78rem] leading-snug text-mb-ink-muted">
+              Every screen that names a playing surface uses these two words.
+            </p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <MbField label="Singular" htmlFor="venue-name">
+              <MbTextInput
+                id="venue-name"
+                value={settings.venueName}
+                placeholder="court"
+                maxLength={24}
+                onChange={(event) =>
+                  onChange({
+                    venueName: event.target.value,
+                    venuePlural: pluralise(event.target.value || "court"),
+                  })
+                }
+              />
+            </MbField>
+            <MbField label="Plural" htmlFor="venue-plural">
+              <MbTextInput
+                id="venue-plural"
+                value={settings.venuePlural}
+                placeholder={pluralise(venue)}
+                maxLength={28}
+                onChange={(event) => onChange({ venuePlural: event.target.value })}
+              />
+            </MbField>
+          </div>
+          <p className="text-[0.78rem] text-mb-ink-muted">
+            Reads as “{venue} 1” and “2 {settings.venuePlural.trim() || pluralise(venue)}”.
+          </p>
+          <MbButton
+            variant="outline-navy"
+            size="sm"
+            icon="undo"
+            onClick={onReset}
+            disabled={!customised}
+            className={`self-start ${MB_DORMANT}`}
+          >
+            Reset to defaults
+          </MbButton>
+        </div>
       </div>
-    </>
+    </Panel>
   );
-});
+};

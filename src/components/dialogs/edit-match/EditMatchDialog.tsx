@@ -1,29 +1,37 @@
 "use client";
 
+import { MbButton } from "@/components/matchbook/Button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Users, Repeat, AlertCircle } from "lucide-react";
+  MbDialog,
+  MbDialogBody,
+  MbDialogFooter,
+} from "@/components/matchbook/Dialog";
+import { MbIconButton } from "@/components/matchbook/IconButton";
+import { MbNotice } from "@/components/matchbook/Notice";
+import { Crest } from "@/components/matchbook/Panel";
+import { MbField, MbSelect } from "@/components/matchbook/form";
+import { crestForTeam } from "@/components/matchbook/types";
 import type { Match, PersistentTeam, Competition } from "@/types/game";
 import { useEditMatchDialog } from "./useEditMatchDialog";
-import { TeamSelectDropdown } from "./TeamSelectDropdown";
-import { MatchPreview } from "./MatchPreview";
-import { SwapWarning } from "./SwapWarning";
 
-interface EditMatchDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  match: Match | null;
-  matches?: Match[];
-  teams: PersistentTeam[];
-  competition?: Competition | null;
-}
+/* ===========================================================================
+   EDIT MATCH ASSIGNMENT
+
+   Three defects the shipped dialog carried, all fixed by the primitives:
+
+     - It said "Edit Match - Court {position}" and "Change which teams are
+       playing on this court" for every format. `position` is a bracket slot in
+       an elimination bracket and a fixture number in a round robin, and the
+       venue word is configurable (R9). The caller now supplies the label.
+     - `TeamSelectDropdown` was a bare native `<select>` that truncated to
+       "Apex Me…" at 390px. `MbSelect` is 48px with a 16px face and its own
+       frame at the `edge` rule tier.
+     - The swap key was a shadcn `size="icon"` button, measured under 44px.
+       `MbIconButton` guarantees the hit box.
+
+   The team **crest** is shown beside each select so the choice is legible
+   without reading the truncated option text.
+   =========================================================================== */
 
 export const EditMatchDialog = ({
   open,
@@ -32,7 +40,17 @@ export const EditMatchDialog = ({
   matches = [],
   teams,
   competition,
-}: EditMatchDialogProps) => {
+  label,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  match: Match | null;
+  matches?: Match[];
+  teams: PersistentTeam[];
+  competition?: Competition | null;
+  /** Names the fixture: "Round 3 · Match 2", "Court 1". */
+  label?: string;
+}) => {
   const {
     homeTeamId,
     setHomeTeamId,
@@ -45,7 +63,6 @@ export const EditMatchDialog = ({
     hasChanges,
     canEdit,
     getTeamName,
-    getTeamColor,
     isTeamPlaying,
     handleSwapTeams,
     handleSave,
@@ -59,114 +76,111 @@ export const EditMatchDialog = ({
 
   if (!canEdit) return null;
 
+  const options = availableTeams.map((team) => ({
+    value: team.id,
+    label: isTeamPlaying(team.id) ? `${team.name} (playing)` : team.name,
+    disabled: isTeamPlaying(team.id),
+  }));
+
+  const crestFor = (teamId: string) => ({
+    name: getTeamName(teamId),
+    crest: crestForTeam(teamId, getTeamName(teamId)),
+  });
+
+  const sameTeam = Boolean(homeTeamId) && homeTeamId === awayTeamId;
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Users className="w-5 h-5 text-primary" />
-            Edit Match{match?.position ? ` - Court ${match.position}` : ""}
-          </DialogTitle>
-          <DialogDescription>
-            Change which teams are playing on this court
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-4 py-4">
-          {/* Team Selection */}
-          <div className="space-y-3">
-            <label className="text-sm font-medium text-muted-foreground">
-              Teams
-            </label>
-
-            <div className="flex items-center gap-3">
-              <TeamSelectDropdown
-                value={homeTeamId}
-                onChange={setHomeTeamId}
-                teams={availableTeams}
-                teamColor={getTeamColor(homeTeamId)}
-                isTeamPlaying={isTeamPlaying}
-                label="Select home team"
-              />
-
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                onClick={handleSwapTeams}
-                className="shrink-0"
-                aria-label="Swap home and away teams"
-              >
-                <Repeat className="w-4 h-4" />
-              </Button>
-
-              <TeamSelectDropdown
-                value={awayTeamId}
-                onChange={setAwayTeamId}
-                teams={availableTeams}
-                teamColor={getTeamColor(awayTeamId)}
-                isTeamPlaying={isTeamPlaying}
-                label="Select away team"
-              />
-            </div>
-
-            {/* Validation errors */}
-            {homeTeamId === awayTeamId && homeTeamId && (
-              <p className="text-xs text-destructive flex items-center gap-1">
-                <AlertCircle className="w-3 h-3" />
-                A team cannot play against itself
-              </p>
-            )}
-
-            {isTeamPlaying(homeTeamId) && (
-              <p className="text-xs text-destructive flex items-center gap-1">
-                <AlertCircle className="w-3 h-3" />
-                {getTeamName(homeTeamId)} is currently playing another match
-              </p>
-            )}
-
-            {isTeamPlaying(awayTeamId) && (
-              <p className="text-xs text-destructive flex items-center gap-1">
-                <AlertCircle className="w-3 h-3" />
-                {getTeamName(awayTeamId)} is currently playing another match
-              </p>
-            )}
+    <MbDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Change the teams"
+      icon="swap"
+      kicker={label}
+      size="md"
+      description="Both teams must be free — a team already playing elsewhere cannot be selected."
+    >
+      <MbDialogBody className="flex flex-col gap-4">
+        <div className="flex items-end gap-2">
+          <div className="min-w-0 flex-1">
+            <MbField label="Home" htmlFor="edit-match-home">
+              <div className="flex items-center gap-2">
+                {homeTeamId && <Crest team={crestFor(homeTeamId)} size={26} />}
+                <MbSelect
+                  id="edit-match-home"
+                  className="flex-1"
+                  options={options}
+                  placeholder="Select a team"
+                  value={homeTeamId}
+                  onChange={(e) => setHomeTeamId(e.target.value)}
+                />
+              </div>
+            </MbField>
           </div>
 
-          <MatchPreview
-            homeTeamId={homeTeamId}
-            awayTeamId={awayTeamId}
-            getTeamName={getTeamName}
-            getTeamColor={getTeamColor}
+          <MbIconButton
+            icon="swap"
+            label="Swap the home and away teams"
+            size="md"
+            variant="outline-navy"
+            onClick={handleSwapTeams}
+            className="mb-1 shrink-0"
           />
 
-          <SwapWarning swapInfo={swapInfo} getTeamName={getTeamName} />
-
-          {error && (
-            <p className="text-sm text-destructive flex items-center gap-1">
-              <AlertCircle className="w-4 h-4" />
-              {error}
-            </p>
-          )}
+          <div className="min-w-0 flex-1">
+            <MbField label="Away" htmlFor="edit-match-away">
+              <div className="flex items-center gap-2">
+                {awayTeamId && <Crest team={crestFor(awayTeamId)} size={26} />}
+                <MbSelect
+                  id="edit-match-away"
+                  className="flex-1"
+                  options={options}
+                  placeholder="Select a team"
+                  value={awayTeamId}
+                  onChange={(e) => setAwayTeamId(e.target.value)}
+                />
+              </div>
+            </MbField>
+          </div>
         </div>
 
-        <DialogFooter className="flex-row gap-2 sm:gap-2">
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            className="flex-1"
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSave}
-            disabled={!isValidMatchup || !hasChanges}
-            className="flex-1 gap-2"
-          >
-            Save Changes
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        {sameTeam && (
+          <MbNotice tone="danger">A team cannot play against itself.</MbNotice>
+        )}
+        {isTeamPlaying(homeTeamId) && (
+          <MbNotice tone="danger">
+            {getTeamName(homeTeamId)} is already playing another match.
+          </MbNotice>
+        )}
+        {isTeamPlaying(awayTeamId) && (
+          <MbNotice tone="danger">
+            {getTeamName(awayTeamId)} is already playing another match.
+          </MbNotice>
+        )}
+
+        {swapInfo?.needsSwap && swapInfo.swappingTeamId && swapInfo.displacedTeamId && (
+          <MbNotice tone="warn" icon="swap" title="This is a two-way swap">
+            {getTeamName(swapInfo.swappingTeamId)} is in another fixture. Saving moves{" "}
+            {getTeamName(swapInfo.displacedTeamId)} into that fixture in its place.
+          </MbNotice>
+        )}
+
+        {error && <MbNotice tone="danger">{error}</MbNotice>}
+      </MbDialogBody>
+
+      <MbDialogFooter>
+        <MbButton variant="outline-navy" size="lg" onClick={() => onOpenChange(false)}>
+          Cancel
+        </MbButton>
+        <MbButton
+          variant="coral"
+          size="lg"
+          icon="save"
+          disabled={!isValidMatchup || !hasChanges}
+          onClick={handleSave}
+        >
+          Save teams
+        </MbButton>
+      </MbDialogFooter>
+    </MbDialog>
   );
 };

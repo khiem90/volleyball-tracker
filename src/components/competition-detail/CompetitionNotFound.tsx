@@ -1,31 +1,28 @@
 "use client";
 
-import Link from "next/link";
-import { Navigation } from "@/components/Navigation";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft, Trophy } from "lucide-react";
+import { MatchbookShell } from "@/components/matchbook/AppShell";
+import { MbEmptyState } from "@/components/matchbook/EmptyState";
 
+/**
+ * The route-level not-found state.
+ *
+ * It used to be a `Trophy` in a `rounded-3xl bg-muted/50` tile inside the
+ * legacy shell, and it was doing three jobs at once — genuinely-missing,
+ * deleted, and permission-denied all rendered the same four words. The copy
+ * below names the two cases it actually covers and offers the one route out.
+ * `MbEmptyState` supplies the state language; the shell is the real one, so a
+ * bad id never flashes a different design system.
+ */
 export const CompetitionNotFound = () => (
-  <div className="min-h-screen bg-background">
-    <Navigation />
-    <main className="max-w-6xl mx-auto px-4 py-8">
-      <div className="text-center py-16">
-        <div className="w-24 h-24 mx-auto mb-6 rounded-3xl bg-muted/50 flex items-center justify-center">
-          <Trophy className="w-12 h-12 text-muted-foreground/30" />
-        </div>
-        <h2 className="text-2xl font-semibold mb-3">
-          Competition not found
-        </h2>
-        <p className="text-muted-foreground mb-8">
-          This competition may have been deleted.
-        </p>
-        <Link href="/competitions">
-          <Button variant="outline" className="gap-2">
-            <ArrowLeft className="w-4 h-4" />
-            Back to Competitions
-          </Button>
-        </Link>
-      </div>
-    </main>
-  </div>
+  <MatchbookShell active="/competitions">
+    <MbEmptyState
+      tone="notfound"
+      title="No competition exists at this address"
+      body="It may have been deleted, or the link may be out of date. Everything else is unaffected."
+      actions={[
+        { label: "Back to competitions", href: "/competitions", variant: "coral" },
+        { label: "New competition", href: "/competitions/new" },
+      ]}
+    />
+  </MatchbookShell>
 );

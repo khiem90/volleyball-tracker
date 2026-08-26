@@ -1,36 +1,79 @@
 "use client";
 
-import Link from "next/link";
-import { motion } from "framer-motion";
-import { Button } from "@/components/ui/button";
+import { MbButton, MbButtonLink } from "@/components/matchbook/Button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  TrophyIcon,
-  ArrowPathIcon,
-  ArrowRightEndOnRectangleIcon,
-  UserGroupIcon,
-  ClockIcon,
-  ChartBarIcon,
-} from "@heroicons/react/24/outline";
-import type { PersistentTeam } from "@/types/game";
+  MbDialog,
+  MbDialogBody,
+  MbDialogFooter,
+} from "@/components/matchbook/Dialog";
+import { MbIcon } from "@/components/matchbook/MbIcon";
+import { MbScoreNumeral } from "@/components/matchbook/ScoreNumeral";
+import { Crest } from "@/components/matchbook/Panel";
+import type { MbTeam } from "@/components/matchbook/types";
+
+/* ===========================================================================
+   GUEST RESULT
+
+   Was a `glass-card` opening with a 80px amber gradient trophy tile that sprang
+   in from `scale: 0, rotate: -180`, an emerald winner line at 3.4:1 on cream,
+   and four heroicons. None of amber, emerald or the gradient is in the palette.
+
+   Now it is the same object as `MatchCompleteDialog` — one dialog frame, one
+   scoreline, one winner rule — followed by the four things signing in unlocks,
+   set as a ruled 2x2 list rather than as a tinted card. The unlock list is the
+   only reason this dialog exists rather than reusing the confirm one.
+   =========================================================================== */
 
 interface GuestMatchCompleteProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  winner: PersistentTeam | null;
-  homeTeam: PersistentTeam;
-  awayTeam: PersistentTeam;
+  winner: MbTeam | null;
+  homeTeam: MbTeam;
+  awayTeam: MbTeam;
   homeScore: number;
   awayScore: number;
+  homeAccent?: string;
+  awayAccent?: string;
   onPlayAgain: () => void;
 }
+
+const UNLOCKS: { icon: string; label: string }[] = [
+  { icon: "teams", label: "Your own teams" },
+  { icon: "compete", label: "Tournaments" },
+  { icon: "history", label: "Match history" },
+  { icon: "chart", label: "Statistics" },
+];
+
+const Side = ({
+  team,
+  score,
+  accent,
+  align,
+}: {
+  team: MbTeam;
+  score: number;
+  accent?: string;
+  align: "start" | "end";
+}) => (
+  <div
+    className={`flex min-w-0 flex-col gap-1.5 ${
+      align === "end" ? "items-end text-right" : "items-start text-left"
+    }`}
+  >
+    <Crest team={team} size={40} />
+    <span className="matchbook-display w-full truncate text-[0.85rem] mb-track-display font-bold">
+      {team.name}
+    </span>
+    {accent && (
+      <span
+        aria-hidden="true"
+        className="block h-[3px] w-10"
+        style={{ background: accent }}
+      />
+    )}
+    <MbScoreNumeral value={score} size="compact" align={align} />
+  </div>
+);
 
 export const GuestMatchComplete = ({
   open,
@@ -40,128 +83,63 @@ export const GuestMatchComplete = ({
   awayTeam,
   homeScore,
   awayScore,
+  homeAccent,
+  awayAccent,
   onPlayAgain,
-}: GuestMatchCompleteProps) => {
-  const homeColor = homeTeam.color || "#3b82f6";
-  const awayColor = awayTeam.color || "#f97316";
+}: GuestMatchCompleteProps) => (
+  <MbDialog
+    open={open}
+    onOpenChange={onOpenChange}
+    title="Match complete"
+    icon="check"
+    kicker="Guest match"
+    description="Nothing from this match was saved. Sign in to keep the next one."
+    size="sm"
+  >
+    <MbDialogBody>
+      <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-3 border-b border-mb-navy pb-4">
+        <Side team={homeTeam} score={homeScore} accent={homeAccent} align="end" />
+        <span className="mb-kicker pb-2">vs</span>
+        <Side team={awayTeam} score={awayScore} accent={awayAccent} align="start" />
+      </div>
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md glass-card border-glass-border">
-        <DialogHeader className="text-center">
-          <motion.div
-            initial={{ scale: 0, rotate: -180 }}
-            animate={{ scale: 1, rotate: 0 }}
-            transition={{ type: "spring", stiffness: 200, damping: 15 }}
-            className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-linear-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-xl"
-          >
-            <TrophyIcon className="w-10 h-10 text-white" />
-          </motion.div>
-          <DialogTitle className="text-2xl">Match Complete!</DialogTitle>
-          <DialogDescription>
-            Great game! Here are the final results.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-4 py-4">
-          {/* Score Display */}
-          <div className="flex items-center justify-center gap-6 p-4 rounded-xl bg-accent/20">
-            <div className="text-center">
-              <div
-                className="w-14 h-14 rounded-xl mx-auto mb-2 shadow-lg flex items-center justify-center"
-                style={{
-                  backgroundColor: homeColor,
-                  boxShadow: `0 8px 20px ${homeColor}40`,
-                }}
-              >
-                <span className="text-xl font-bold text-white">
-                  {homeTeam.name.charAt(0)}
-                </span>
-              </div>
-              <p className="text-xs text-muted-foreground mb-1">{homeTeam.name}</p>
-              <p className="text-3xl font-bold">{homeScore}</p>
-            </div>
-            <span className="text-2xl text-muted-foreground font-light">:</span>
-            <div className="text-center">
-              <div
-                className="w-14 h-14 rounded-xl mx-auto mb-2 shadow-lg flex items-center justify-center"
-                style={{
-                  backgroundColor: awayColor,
-                  boxShadow: `0 8px 20px ${awayColor}40`,
-                }}
-              >
-                <span className="text-xl font-bold text-white">
-                  {awayTeam.name.charAt(0)}
-                </span>
-              </div>
-              <p className="text-xs text-muted-foreground mb-1">{awayTeam.name}</p>
-              <p className="text-3xl font-bold">{awayScore}</p>
-            </div>
-          </div>
-
-          {/* Winner */}
-          {winner && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="text-center p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20"
-            >
-              <p className="text-sm text-muted-foreground mb-1">Winner</p>
-              <p className="font-bold text-xl text-emerald-400">{winner.name}</p>
-            </motion.div>
-          )}
-
-          {/* Sign In CTA */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.3 }}
-            className="p-4 rounded-xl bg-primary/5 border border-primary/10"
-          >
-            <p className="text-sm font-medium mb-2 text-center">
-              Sign in to unlock more features:
-            </p>
-            <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-              <div className="flex items-center gap-1.5">
-                <UserGroupIcon className="w-3.5 h-3.5 text-primary" />
-                <span>Custom Teams</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <TrophyIcon className="w-3.5 h-3.5 text-primary" />
-                <span>Tournaments</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <ClockIcon className="w-3.5 h-3.5 text-primary" />
-                <span>Match History</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <ChartBarIcon className="w-3.5 h-3.5 text-primary" />
-                <span>Statistics</span>
-              </div>
-            </div>
-          </motion.div>
+      {winner && (
+        <div
+          className="mt-4 flex min-w-0 items-center gap-3 border-l-[3px] pl-3"
+          style={{ borderColor: "var(--mb-green)" }}
+        >
+          <span className="mb-kicker shrink-0">Winner</span>
+          <span className="matchbook-display min-w-0 truncate text-[1.2rem] mb-track-display font-bold text-mb-navy">
+            {winner.name}
+          </span>
         </div>
+      )}
 
-        <DialogFooter className="flex-col sm:flex-col gap-2">
-          <Button
-            onClick={onPlayAgain}
-            className="w-full gap-2 btn-teal-gradient rounded-xl"
+      <p className="mb-kicker mt-5">Signing in adds</p>
+      <ul className="mt-2 grid grid-cols-1 border-t border-mb-rule sm:grid-cols-2">
+        {UNLOCKS.map((item) => (
+          <li
+            key={item.label}
+            className="flex min-w-0 items-center gap-2 border-b border-mb-rule py-2 text-[0.85rem]"
           >
-            <ArrowPathIcon className="w-4 h-4" />
-            Play Again
-          </Button>
-          <Link href="/login?redirect=/quick-match" className="w-full">
-            <Button
-              variant="outline"
-              className="w-full gap-2 rounded-xl cursor-pointer"
-            >
-              <ArrowRightEndOnRectangleIcon className="w-4 h-4" />
-              Sign In for More
-            </Button>
-          </Link>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-};
+            <MbIcon id={item.icon} size={15} className="shrink-0 text-mb-navy" />
+            <span className="min-w-0 truncate">{item.label}</span>
+          </li>
+        ))}
+      </ul>
+    </MbDialogBody>
+
+    <MbDialogFooter>
+      <MbButtonLink
+        href="/login?redirect=/quick-match"
+        variant="outline-navy"
+        icon="login"
+      >
+        Sign In
+      </MbButtonLink>
+      <MbButton variant="coral" icon="refresh" onClick={onPlayAgain}>
+        Play Again
+      </MbButton>
+    </MbDialogFooter>
+  </MbDialog>
+);

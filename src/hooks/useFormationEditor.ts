@@ -13,6 +13,7 @@ import type {
   FormationValidationError,
 } from "@/lib/volleyball/types";
 import { cloneFormationData, getTemplateById } from "@/lib/volleyball/templateFormations";
+import { getBackRowMiddle } from "@/lib/volleyball/rotations";
 import { validateFormation, isFormationValid, getBlockingErrors, getOverlapWarnings } from "@/lib/volleyball/formationValidation";
 
 // ============================================
@@ -98,6 +99,8 @@ type UseFormationEditorReturn = {
   loadDraft: () => boolean;
   clearDraft: () => void;
   hasDraft: boolean;
+  /** When the draft was last written — makes the 30s autosave visible. */
+  draftSavedAt: number | null;
 
   // Export
   getFormationForSave: () => {
@@ -181,8 +184,13 @@ export const useFormationEditor = (
     return false;
   });
 
-  // Ref for initial data comparison
-  const initialDataRef = useRef<FormationData>(getInitialData());
+  /* Lazily initialised: `useRef(getInitialData())` would run a full deep
+     clone on every render and discard it — 60 clones/s under a drag. */
+  const initialDataRef = useRef<FormationData | null>(null);
+  if (initialDataRef.current === null) {
+    initialDataRef.current = getInitialData();
+  }
+  const initialData0 = initialDataRef.current;
 
   // Current frame
   const currentFrame = useMemo(() => {
@@ -198,55 +206,57 @@ export const useFormationEditor = (
     setCurrentRotation((prev) => (prev === 1 ? 6 : ((prev - 1) as RotationNumber)));
   }, []);
 
-  // Update player position
-  const updatePlayerPosition = useCallback(
-    (role: PlayerRole, position: CourtPosition) => {
+  /* Replace ONE frame, sharing every other frame by reference — the eleven
+     untouched frames must keep their identity so memoised consumers (and the
+     four validation passes) do not re-run per drag frame. */
+  const writeFrame = useCallback(
+    (mutate: (frame: RotationFrame) => RotationFrame) => {
       setFormationData((prev) => {
-        const newData = cloneFormationData(prev);
-        const frame = newData[currentMode][currentRotation];
-        if (frame) {
-          frame.roleSpots[role] = position;
-        }
-        return newData;
+        const frame = prev[currentMode]?.[currentRotation];
+        if (!frame) return prev;
+        return {
+          ...prev,
+          [currentMode]: { ...prev[currentMode], [currentRotation]: mutate(frame) },
+        };
       });
       setHasUnsavedChanges(true);
     },
     [currentMode, currentRotation]
+  );
+
+  // Update player position
+  const updatePlayerPosition = useCallback(
+    (role: PlayerRole, position: CourtPosition) => {
+      writeFrame((frame) => ({
+        ...frame,
+        roleSpots: { ...frame.roleSpots, [role]: position },
+      }));
+    },
+    [writeFrame]
   );
 
   // Update movement arrow
   const updateMovementArrow = useCallback(
     (role: PlayerRole, from: CourtPosition, to: CourtPosition) => {
-      setFormationData((prev) => {
-        const newData = cloneFormationData(prev);
-        const frame = newData[currentMode][currentRotation];
-        if (frame) {
-          if (!frame.movementArrows) {
-            frame.movementArrows = {};
-          }
-          frame.movementArrows[role] = { from, to };
-        }
-        return newData;
-      });
-      setHasUnsavedChanges(true);
+      writeFrame((frame) => ({
+        ...frame,
+        movementArrows: { ...frame.movementArrows, [role]: { from, to } },
+      }));
     },
-    [currentMode, currentRotation]
+    [writeFrame]
   );
 
   // Remove movement arrow
   const removeMovementArrow = useCallback(
     (role: PlayerRole) => {
-      setFormationData((prev) => {
-        const newData = cloneFormationData(prev);
-        const frame = newData[currentMode][currentRotation];
-        if (frame?.movementArrows) {
-          delete frame.movementArrows[role];
-        }
-        return newData;
+      writeFrame((frame) => {
+        if (!frame.movementArrows) return frame;
+        const next = { ...frame.movementArrows };
+        delete next[role];
+        return { ...frame, movementArrows: next };
       });
-      setHasUnsavedChanges(true);
     },
-    [currentMode, currentRotation]
+    [writeFrame]
   );
 
   // Metadata setters
@@ -262,22 +272,16 @@ export const useFormationEditor = (
 
   // Reset current rotation to initial/template
   const resetCurrentRotation = useCallback(() => {
-    setFormationData((prev) => {
-      const newData = cloneFormationData(prev);
-      const initialFrame = initialDataRef.current[currentMode]?.[currentRotation];
-      if (initialFrame) {
-        newData[currentMode][currentRotation] = JSON.parse(JSON.stringify(initialFrame));
-      }
-      return newData;
-    });
-    setHasUnsavedChanges(true);
-  }, [currentMode, currentRotation]);
+    const initialFrame = initialData0[currentMode]?.[currentRotation];
+    if (!initialFrame) return;
+    writeFrame(() => JSON.parse(JSON.stringify(initialFrame)) as RotationFrame);
+  }, [currentMode, currentRotation, initialData0, writeFrame]);
 
   // Reset all rotations
   const resetAllRotations = useCallback(() => {
-    setFormationData(cloneFormationData(initialDataRef.current));
+    setFormationData(cloneFormationData(initialData0));
     setHasUnsavedChanges(true);
-  }, []);
+  }, [initialData0]);
 
   // Copy/paste frame
   const copyCurrentFrame = useCallback(() => {
@@ -287,15 +291,9 @@ export const useFormationEditor = (
   }, [currentFrame]);
 
   const pasteFrame = useCallback(() => {
-    if (copiedFrame) {
-      setFormationData((prev) => {
-        const newData = cloneFormationData(prev);
-        newData[currentMode][currentRotation] = JSON.parse(JSON.stringify(copiedFrame));
-        return newData;
-      });
-      setHasUnsavedChanges(true);
-    }
-  }, [copiedFrame, currentMode, currentRotation]);
+    if (!copiedFrame) return;
+    writeFrame(() => JSON.parse(JSON.stringify(copiedFrame)) as RotationFrame);
+  }, [copiedFrame, writeFrame]);
 
   // Apply current frame to all rotations in current mode
   const applyCurrentFrameToAllRotations = useCallback(() => {
@@ -320,19 +318,28 @@ export const useFormationEditor = (
   const hasBlockingErrors = blockingErrors.length > 0;
 
   // Draft management
+  const [draftSavedAt, setDraftSavedAt] = useState<number | null>(null);
+
   const saveDraft = useCallback(() => {
     if (typeof window === "undefined") return;
 
+    const savedAt = Date.now();
     const draft = {
       formationData,
       metadata,
       currentRotation,
       currentMode,
       liberoActive,
-      savedAt: Date.now(),
+      savedAt,
     };
-    localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
-    setHasDraft(true);
+    try {
+      localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
+      setHasDraft(true);
+      setDraftSavedAt(savedAt);
+    } catch {
+      /* Quota or a privacy mode that refuses storage. The draft is a
+         convenience; losing it must never take the editor down with it. */
+    }
   }, [formationData, metadata, currentRotation, currentMode, liberoActive]);
 
   const loadDraft = useCallback((): boolean => {
@@ -367,8 +374,13 @@ export const useFormationEditor = (
 
   const clearDraft = useCallback(() => {
     if (typeof window === "undefined") return;
-    localStorage.removeItem(DRAFT_STORAGE_KEY);
+    try {
+      localStorage.removeItem(DRAFT_STORAGE_KEY);
+    } catch {
+      /* see saveDraft */
+    }
     setHasDraft(false);
+    setDraftSavedAt(null);
   }, []);
 
   // Auto-save draft periodically
@@ -382,14 +394,34 @@ export const useFormationEditor = (
     return () => clearInterval(interval);
   }, [hasUnsavedChanges, saveDraft]);
 
-  // Get formation data for saving
+  /* Materialise the libero spot on save: a formation built from a template
+     that never placed `L` has no `L` spot at all. The read-side
+     `roleSpots.L || roleSpots[backRowMB]` fallback stays for documents saved
+     before this shipped. */
   const getFormationForSave = useCallback(() => {
+    const materialised: FormationData = { serving: {}, receiving: {} } as FormationData;
+    (["serving", "receiving"] as const).forEach((frameMode) => {
+      for (let r = 1; r <= 6; r += 1) {
+        const rotationKey = r as RotationNumber;
+        const frame = formationData[frameMode]?.[rotationKey];
+        if (!frame) continue;
+        if (frame.roleSpots?.L) {
+          materialised[frameMode][rotationKey] = frame;
+          continue;
+        }
+        const fallback = frame.roleSpots?.[getBackRowMiddle(rotationKey)];
+        materialised[frameMode][rotationKey] = fallback
+          ? { ...frame, roleSpots: { ...frame.roleSpots, L: { ...fallback } } }
+          : frame;
+      }
+    });
+
     return {
       name: metadata.name.trim(),
       description: metadata.description.trim() || undefined,
       tags: metadata.tags.length > 0 ? metadata.tags : undefined,
       visibility: metadata.visibility,
-      data: formationData,
+      data: materialised,
     };
   }, [metadata, formationData]);
 
@@ -452,6 +484,7 @@ export const useFormationEditor = (
     loadDraft,
     clearDraft,
     hasDraft,
+    draftSavedAt,
 
     // Export
     getFormationForSave,

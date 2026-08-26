@@ -1,19 +1,50 @@
 "use client";
 
-import { useState, useCallback, type KeyboardEvent, type ChangeEvent } from "react";
+import { useCallback, useState, type KeyboardEvent, type ChangeEvent } from "react";
 import type { PersistentTeam } from "@/types/game";
-import { DEFAULT_TEAM_COLORS } from "@/components/ui/color-picker";
+import {
+  DEFAULT_TEAM_COLOR,
+  nextTeamColor,
+  normalizeTeamColor,
+  teamColorCss,
+  teamColorHex,
+  teamColorName,
+} from "@/lib/teamColor";
+
+const MIN_NAME_LENGTH = 2;
+export const TEAM_NAME_MAX = 40;
 
 interface UseTeamFormProps {
   open: boolean;
   team?: PersistentTeam | null;
+  /** Every other team's name, for the non-blocking duplicate warning. */
+  existingNames?: string[];
+  /**
+   * Every other team's stored colour. The default for a new team is the ink
+   * this roster is using least (`nextTeamColor`), so it is deterministic and
+   * so the first six teams of an account are six different colours.
+   */
+  existingColors?: Array<string | undefined>;
   onSubmit: (name: string, color: string) => void;
   onClose: () => void;
 }
 
-export const useTeamForm = ({ open, team, onSubmit, onClose }: UseTeamFormProps) => {
+export const useTeamForm = ({
+  open,
+  team,
+  existingNames = [],
+  existingColors = [],
+  onSubmit,
+  onClose,
+}: UseTeamFormProps) => {
   const [name, setName] = useState("");
-  const [color, setColor] = useState(DEFAULT_TEAM_COLORS[0]);
+  /**
+   * Holds the STORED form — an ink id like `"rose"`, or a hex for a hand-mixed
+   * colour — not the CSS the swatch paints. `handleColorSelect` normalises on
+   * the way in and `colorCss` resolves on the way out, so the value this hook
+   * hands to `onSubmit` is the value that belongs in `PersistentTeam.color`.
+   */
+  const [color, setColor] = useState<string>(DEFAULT_TEAM_COLOR);
   const [error, setError] = useState("");
 
   const isEditing = !!team;
@@ -24,12 +55,15 @@ export const useTeamForm = ({ open, team, onSubmit, onClose }: UseTeamFormProps)
     setPrevOpen(open);
     if (open) {
       if (team) {
+        /* Normalised on the way in, so a team saved before the palette had ids
+           — `color-mix(in oklab, var(--mb-plum) 50%, var(--mb-red))` — opens
+           with Rose already selected instead of with nothing selected, and
+           saving it again writes the id rather than the expression. */
         setName(team.name);
-        setColor(team.color || DEFAULT_TEAM_COLORS[0]);
+        setColor(normalizeTeamColor(team.color) || DEFAULT_TEAM_COLOR);
       } else {
         setName("");
-        // eslint-disable-next-line react-hooks/purity -- intentional random default color on dialog open
-        setColor(DEFAULT_TEAM_COLORS[Math.floor(Math.random() * DEFAULT_TEAM_COLORS.length)]);
+        setColor(nextTeamColor(existingColors));
       }
       setError("");
     }
@@ -40,8 +74,11 @@ export const useTeamForm = ({ open, team, onSubmit, onClose }: UseTeamFormProps)
     setError("");
   }, []);
 
+  /* `MbSwatchPicker` speaks CSS — its chips ARE the paint. Normalising here is
+     the boundary where a paint value becomes a stored value, and it is the
+     reason `onSubmit` can no longer hand a `color-mix()` to the reducer. */
   const handleColorSelect = useCallback((selectedColor: string) => {
-    setColor(selectedColor);
+    setColor(normalizeTeamColor(selectedColor));
   }, []);
 
   const handleSubmit = useCallback(() => {
@@ -50,7 +87,7 @@ export const useTeamForm = ({ open, team, onSubmit, onClose }: UseTeamFormProps)
       setError("Team name is required");
       return;
     }
-    if (trimmedName.length < 2) {
+    if (trimmedName.length < MIN_NAME_LENGTH) {
       setError("Team name must be at least 2 characters");
       return;
     }
@@ -61,6 +98,7 @@ export const useTeamForm = ({ open, team, onSubmit, onClose }: UseTeamFormProps)
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLInputElement>) => {
       if (e.key === "Enter") {
+        e.preventDefault();
         handleSubmit();
       }
     },
@@ -72,21 +110,35 @@ export const useTeamForm = ({ open, team, onSubmit, onClose }: UseTeamFormProps)
   }, [onClose]);
 
   // Preview data
-  const previewInitial = name.trim().charAt(0).toUpperCase() || "T";
-  const previewName = name.trim() || "Team Name";
+  const previewName = name.trim() || "Team name";
+
+  /**
+   * A warning, never a block. Two squads can legitimately share a name across
+   * seasons, and the app has no uniqueness constraint — so the honest UI is to
+   * say it and let the user decide.
+   */
+  const duplicate =
+    name.trim().length >= MIN_NAME_LENGTH &&
+    existingNames.some(
+      (existing) =>
+        existing.trim().toLowerCase() === name.trim().toLowerCase() &&
+        existing.trim().toLowerCase() !== team?.name.trim().toLowerCase()
+    );
 
   return {
-    // State
     name,
+    /** The stored form. Give this to `onSubmit`, never to a `style`. */
     color,
+    /** The paint. Give this to `MbSwatchPicker` and to the preview's accent. */
+    colorCss: teamColorCss(color),
+    /** The word. "Rose", or "Custom" for a hand-mixed hex. */
+    colorName: teamColorName(color),
+    /** Set only for a hand-mixed colour, which has no name to print. */
+    colorHex: teamColorHex(color),
     error,
     isEditing,
-
-    // Preview data
-    previewInitial,
+    duplicate,
     previewName,
-
-    // Actions
     handleNameChange,
     handleColorSelect,
     handleSubmit,

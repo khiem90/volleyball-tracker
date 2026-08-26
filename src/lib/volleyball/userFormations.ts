@@ -1,7 +1,6 @@
 import {
   collection,
   doc,
-  getDoc,
   getDocs,
   setDoc,
   updateDoc,
@@ -90,10 +89,6 @@ export const createFormation = async (
   data: FormationData,
   options?: CreateFormationOptions
 ): Promise<UserFormation> => {
-  if (!db) {
-    throw new Error("Firebase is not configured");
-  }
-
   const formationId = generateFormationId();
   const now = Date.now();
 
@@ -109,6 +104,10 @@ export const createFormation = async (
     createdAt: now,
     updatedAt: now,
   };
+
+  if (!db) {
+    throw new Error("Firebase is not configured");
+  }
 
   const sanitized = sanitizeForFirestore(formation);
   await setDoc(doc(db, FORMATIONS_COLLECTION, formationId), sanitized);
@@ -141,42 +140,57 @@ export const duplicateFormation = async (
 // Read Operations
 // ============================================
 
+
 /**
- * Get a formation by ID
+ * Why a share link failed to resolve — each cause needs its own message and
+ * action. `unindexed`: the share query filters on `shareId` AND `visibility`,
+ * which Firestore serves only from a composite index; it works in the emulator,
+ * but in production a missing index throws `failed-precondition`, and that must
+ * not be reported as "not found".
  */
-const getFormationById = async (
-  formationId: string
-): Promise<UserFormation | null> => {
-  if (!db) return null;
+export type ShareLookupFailure = "notfound" | "offline" | "unindexed" | "error";
 
-  const docRef = doc(db, FORMATIONS_COLLECTION, formationId);
-  const docSnap = await getDoc(docRef);
+export interface ShareLookupResult {
+  formation: UserFormation | null;
+  failure: ShareLookupFailure | null;
+}
 
-  if (docSnap.exists()) {
-    return docSnap.data() as UserFormation;
-  }
-  return null;
+const classifyFirestoreError = (error: unknown): ShareLookupFailure => {
+  const code =
+    typeof error === "object" && error !== null && "code" in error
+      ? String((error as { code: unknown }).code)
+      : "";
+  if (code.includes("unavailable") || code.includes("deadline")) return "offline";
+  if (code.includes("failed-precondition")) return "unindexed";
+  if (code.includes("permission-denied")) return "notfound";
+  return "error";
 };
 
 /**
- * Get a formation by share ID (for unlisted formations)
+ * Get a formation by share ID (for unlisted formations).
+ *
+ * Requires the composite index `formations(shareId ASC, visibility ASC)`.
  */
 export const getFormationByShareId = async (
   shareId: string
-): Promise<UserFormation | null> => {
-  if (!db) return null;
+): Promise<ShareLookupResult> => {
+  if (!db) return { formation: null, failure: "error" };
 
   const q = query(
     collection(db, FORMATIONS_COLLECTION),
     where("shareId", "==", shareId),
     where("visibility", "==", "unlisted")
   );
-  const snapshot = await getDocs(q);
 
-  if (!snapshot.empty) {
-    return snapshot.docs[0].data() as UserFormation;
+  try {
+    const snapshot = await getDocs(q);
+    if (!snapshot.empty) {
+      return { formation: snapshot.docs[0].data() as UserFormation, failure: null };
+    }
+    return { formation: null, failure: "notfound" };
+  } catch (error) {
+    return { formation: null, failure: classifyFirestoreError(error) };
   }
-  return null;
 };
 
 /**
@@ -220,29 +234,7 @@ export const updateFormation = async (
   await updateDoc(docRef, sanitized);
 };
 
-/**
- * Update formation data (positions/arrows)
- */
-const updateFormationData = async (
-  formationId: string,
-  data: FormationData
-): Promise<void> => {
-  await updateFormation(formationId, { data });
-};
 
-/**
- * Update formation metadata
- */
-const updateFormationMetadata = async (
-  formationId: string,
-  metadata: {
-    name?: string;
-    description?: string;
-    tags?: string[];
-  }
-): Promise<void> => {
-  await updateFormation(formationId, metadata);
-};
 
 // ============================================
 // Sharing Operations
@@ -252,11 +244,12 @@ const updateFormationMetadata = async (
  * Enable sharing for a formation (generate share ID)
  */
 export const enableSharing = async (formationId: string): Promise<string> => {
+  const shareId = generateShareId();
+
   if (!db) {
     throw new Error("Firebase is not configured");
   }
 
-  const shareId = generateShareId();
   await updateDoc(doc(db, FORMATIONS_COLLECTION, formationId), {
     shareId,
     visibility: "unlisted",
@@ -312,15 +305,27 @@ export const deleteFormation = async (formationId: string): Promise<void> => {
 // ============================================
 
 /**
- * Subscribe to a user's formations (real-time updates)
+ * Snapshot metadata the UI must read: with Firestore unreachable the
+ * subscription still fires with zero documents, and only `fromCache`
+ * distinguishes "you have no formations" from "your formations are unreachable".
+ */
+export interface FormationsSnapshotMeta {
+  fromCache: boolean;
+  hasPendingWrites: boolean;
+}
+
+/**
+ * Subscribe to a user's formations (real-time updates).
+ *
+ * Requires the composite index `formations(ownerUserId ASC, updatedAt DESC)`.
  */
 export const subscribeToUserFormations = (
   userId: string,
-  callback: (formations: UserFormation[]) => void,
+  callback: (formations: UserFormation[], meta: FormationsSnapshotMeta) => void,
   onError?: (error: Error) => void
 ): Unsubscribe => {
   if (!db) {
-    callback([]);
+    callback([], { fromCache: true, hasPendingWrites: false });
     return () => {};
   }
 
@@ -332,89 +337,21 @@ export const subscribeToUserFormations = (
 
   return onSnapshot(
     q,
+    // `includeMetadataChanges` so the UI learns when a cached read is replaced
+    // by a served one and can drop the "showing last known" label without a
+    // document actually changing.
+    { includeMetadataChanges: true },
     (snapshot) => {
       const formations = snapshot.docs.map((doc) => doc.data() as UserFormation);
-      callback(formations);
+      callback(formations, {
+        fromCache: snapshot.metadata.fromCache,
+        hasPendingWrites: snapshot.metadata.hasPendingWrites,
+      });
     },
     (error) => {
-      console.error("Error subscribing to formations:", error);
       onError?.(error);
     }
   );
 };
 
-/**
- * Subscribe to a single formation (real-time updates)
- */
-const subscribeToFormation = (
-  formationId: string,
-  callback: (formation: UserFormation | null) => void,
-  onError?: (error: Error) => void
-): Unsubscribe => {
-  if (!db) {
-    callback(null);
-    return () => {};
-  }
 
-  const docRef = doc(db, FORMATIONS_COLLECTION, formationId);
-
-  return onSnapshot(
-    docRef,
-    (docSnap) => {
-      if (docSnap.exists()) {
-        callback(docSnap.data() as UserFormation);
-      } else {
-        callback(null);
-      }
-    },
-    (error) => {
-      console.error("Error subscribing to formation:", error);
-      onError?.(error);
-    }
-  );
-};
-
-// ============================================
-// Permission Helpers
-// ============================================
-
-/**
- * Check if a user owns a formation
- */
-const isFormationOwner = (
-  formation: UserFormation,
-  userId: string | null
-): boolean => {
-  return userId !== null && formation.ownerUserId === userId;
-};
-
-/**
- * Check if a formation can be viewed by a user
- */
-const canViewFormation = (
-  formation: UserFormation,
-  userId: string | null
-): boolean => {
-  // Owner can always view
-  if (isFormationOwner(formation, userId)) {
-    return true;
-  }
-
-  // Unlisted formations can be viewed by anyone with the link
-  if (formation.visibility === "unlisted") {
-    return true;
-  }
-
-  // Private formations can only be viewed by owner
-  return false;
-};
-
-/**
- * Check if a formation can be edited by a user
- */
-const canEditFormation = (
-  formation: UserFormation,
-  userId: string | null
-): boolean => {
-  return isFormationOwner(formation, userId);
-};

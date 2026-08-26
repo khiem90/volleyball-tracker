@@ -1,48 +1,74 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { Navigation } from "@/components/Navigation";
+import { MatchbookShell, MB_DEFAULT_CTA } from "@/components/matchbook/AppShell";
+import { MbConfirm } from "@/components/matchbook/Confirm";
+import { MbNotice } from "@/components/matchbook/Notice";
+import { Panel } from "@/components/matchbook/Panel";
 import {
-  VolleyballCourt,
-  RotationControls,
-  LegendPanel,
-  HelpAccordion,
-  FormationSelector,
-  FormationEditorModal,
+  useMatchbookDesigner,
+  type MbFormationCategory,
+} from "@/components/matchbook/useMatchbookRotations";
+import {
+  CourtStage,
+  DiagramGuide,
+  FormationPicker,
+  OnCourtPanel,
+  RotationFacts,
+  RotationLayers,
+  RotationRail,
   ShareFormationDialog,
 } from "@/components/volleyball";
-import { useVolleyballRotation } from "@/hooks/useVolleyballRotation";
-import { useUserFormations } from "@/hooks/useUserFormations";
-import { MotionDiv, slideUp } from "@/components/motion";
-import type { FormationType, UserFormation, FormationData, FormationVisibility } from "@/lib/volleyball/types";
+import type { UserFormation } from "@/lib/volleyball/types";
+
+/* ROTATION DESIGNER. DOM order is the mobile order (a `xl:grid-cols-12`
+   collapses to DOM order below `xl`): court panel, On Court legend,
+   Formation, then reference prose. Delete goes through `MbConfirm` —
+   `window.confirm` blocks the main thread and cannot be styled.
+
+   THE SHORT-VIEWPORT CUT (`SHORT` below): under 560px of viewport height the
+   panel body becomes two columns — rail, layer chips and facts move beside
+   the diagram — and the court is sized from the height that is left, so the
+   whole diagram lands above the fold on a sideways phone. Above 560px nothing
+   changes; every declaration is inside the query. */
+
+/**
+ * Grid placement for the short-viewport cut. Written once so the four children
+ * cannot drift into four different queries, and applied through explicit
+ * `col-start`/`row-start` so the DOM order — rail, court, layers, facts — stays
+ * the reading order at every other size.
+ */
+const SHORT = {
+  body:
+    "[@media(max-height:560px)]:grid [@media(max-height:560px)]:grid-cols-[auto_minmax(0,1fr)] " +
+    "[@media(max-height:560px)]:items-start",
+  court:
+    "[@media(max-height:560px)]:col-start-1 [@media(max-height:560px)]:row-start-1 " +
+    "[@media(max-height:560px)]:row-span-3 [@media(max-height:560px)]:border-r " +
+    "[@media(max-height:560px)]:border-mb-rule",
+  rail: "[@media(max-height:560px)]:col-start-2 [@media(max-height:560px)]:row-start-1",
+  layers: "[@media(max-height:560px)]:col-start-2 [@media(max-height:560px)]:row-start-2",
+  facts: "[@media(max-height:560px)]:col-start-2 [@media(max-height:560px)]:row-start-3",
+  /* 1.21 is COURT_ASPECT (464/382). 356px is a HARD width floor: any
+     narrower and two adjacent players' hit circles fall under the 8px
+     separation minimum — a mis-tap is worse than a scroll. */
+  courtSize:
+    "[@media(max-height:560px)]:w-[calc((100dvh-16.5rem)*1.21)] " +
+    "[@media(max-height:560px)]:min-w-[356px] [@media(max-height:560px)]:max-w-full",
+} as const;
 
 export default function VolleyballRotationsPage() {
   const router = useRouter();
-  const {
-    formations: userFormations,
-    isAuthenticated,
-    create,
-    update,
-    remove,
-    share,
-    unshare,
-    getById,
-  } = useUserFormations();
-
-  // Currently selected formation (can be builtin type or custom ID)
-  const [selectedFormationId, setSelectedFormationId] = useState<FormationType | string>("traditional");
-
-  // Get custom formation data if a custom formation is selected
-  const selectedCustomFormation = useMemo(() => {
-    if (["traditional", "stack", "spread", "rightSlant", "leftSlant"].includes(selectedFormationId)) {
-      return null;
-    }
-    return getById(selectedFormationId);
-  }, [selectedFormationId, getById]);
+  const designer = useMatchbookDesigner();
+  const [category, setCategory] = useState<MbFormationCategory>("builtin");
+  const [sharing, setSharing] = useState<UserFormation | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<UserFormation | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const {
+    formations,
     rotation,
     mode,
     liberoActive,
@@ -51,283 +77,245 @@ export default function VolleyballRotationsPage() {
     overlaps,
     setRotation,
     setMode,
-    setFormation,
     setLiberoActive,
     nextRotation,
     prevRotation,
-  } = useVolleyballRotation({
-    customFormationData: selectedCustomFormation?.data || null,
-  });
+    selected,
+    selectedId,
+    selectFormation,
+    selectedPlayer,
+    setSelectedPlayer,
+    showOverlaps,
+    setShowOverlaps,
+    showArrows,
+    setShowArrows,
+    setterRow,
+    frontRowAttackers,
+  } = designer;
 
-  const [selectedPlayer, setSelectedPlayer] = useState<string | null>(null);
-  const [showOverlaps, setShowOverlaps] = useState(true);
-  const [showArrows, setShowArrows] = useState(true);
+  const signedIn = formations.isAuthenticated;
 
-  // Editor modal state
-  const [editorOpen, setEditorOpen] = useState(false);
-  const [editorMode, setEditorMode] = useState<"create" | "edit" | "duplicate">("create");
-  const [editingFormation, setEditingFormation] = useState<UserFormation | null>(null);
-  const [initialTemplateId, setInitialTemplateId] = useState<string | undefined>();
-
-  // Share dialog state
-  const [shareDialogOpen, setShareDialogOpen] = useState(false);
-  const [sharingFormation, setSharingFormation] = useState<UserFormation | null>(null);
-
-  // Handle formation change (builtin or custom)
-  const handleFormationChange = useCallback((f: FormationType | string) => {
-    setSelectedFormationId(f);
-    // If it's a builtin formation, also update the hook's formation
-    if (["traditional", "stack", "spread", "rightSlant", "leftSlant"].includes(f)) {
-      setFormation(f as FormationType);
+  const editorHref = useMemo(() => {
+    if (selected.category === "custom") {
+      return `/tools/volleyball-rotations/editor?id=${encodeURIComponent(selected.id)}`;
     }
-  }, [setFormation]);
-
-  // Handle create formation
-  const handleCreateFormation = useCallback(() => {
-    setEditorMode("create");
-    setEditingFormation(null);
-    setInitialTemplateId(undefined);
-    setEditorOpen(true);
-  }, []);
-
-  // Handle edit formation
-  const handleEditFormation = useCallback((id: string) => {
-    const formation = getById(id);
-    if (formation) {
-      setEditorMode("edit");
-      setEditingFormation(formation);
-      setInitialTemplateId(undefined);
-      setEditorOpen(true);
+    if (selected.category === "starter") {
+      return `/tools/volleyball-rotations/editor?template=${encodeURIComponent(selected.id)}`;
     }
-  }, [getById]);
+    return "/tools/volleyball-rotations/editor";
+  }, [selected]);
 
-  // Handle duplicate formation
-  const handleDuplicateFormation = useCallback((formation: UserFormation) => {
-    setEditorMode("duplicate");
-    setEditingFormation(formation);
-    setInitialTemplateId(undefined);
-    setEditorOpen(true);
-  }, []);
-
-  // Handle share formation
-  const handleShareFormation = useCallback((formation: UserFormation) => {
-    setSharingFormation(formation);
-    setShareDialogOpen(true);
-  }, []);
-
-  // Handle delete formation
-  const handleDeleteFormation = useCallback(async (id: string) => {
-    if (window.confirm("Are you sure you want to delete this formation?")) {
-      await remove(id);
-      // If the deleted formation was selected, switch back to traditional
-      if (selectedFormationId === id) {
-        setSelectedFormationId("traditional");
-        setFormation("traditional");
-      }
+  const handleDelete = useCallback(async () => {
+    if (!pendingDelete) return;
+    setDeleting(true);
+    setActionError(null);
+    try {
+      await formations.remove(pendingDelete.id);
+      if (selectedId === pendingDelete.id) selectFormation("traditional");
+      setPendingDelete(null);
+    } catch {
+      setActionError(
+        `“${pendingDelete.name}” could not be deleted. Check your connection and try again.`
+      );
+    } finally {
+      setDeleting(false);
     }
-  }, [remove, selectedFormationId, setFormation]);
+  }, [pendingDelete, formations, selectedId, selectFormation]);
 
-  // Handle save formation from editor
-  const handleSaveFormation = useCallback(
-    async (data: {
-      name: string;
-      description?: string;
-      tags?: string[];
-      visibility: FormationVisibility;
-      data: FormationData;
-    }) => {
-      if (editorMode === "edit" && editingFormation) {
-        await update(editingFormation.id, {
-          name: data.name,
-          description: data.description,
-          tags: data.tags,
-          visibility: data.visibility,
-          data: data.data,
-        });
-      } else {
-        const newFormation = await create(data.name, data.data, {
-          description: data.description,
-          tags: data.tags,
-          visibility: data.visibility,
-          baseSource: editingFormation
-            ? { type: "custom", id: editingFormation.id }
-            : initialTemplateId
-            ? { type: "template", id: initialTemplateId }
-            : undefined,
-        });
-        // Select the newly created formation
-        setSelectedFormationId(newFormation.id);
-      }
-    },
-    [editorMode, editingFormation, initialTemplateId, create, update]
+  const byId = useCallback(
+    (id: string) => formations.formations.find((formation) => formation.id === id) ?? null,
+    [formations.formations]
   );
 
-  // Handle sign in click
-  const handleSignInClick = useCallback(() => {
-    router.push(`/login?redirect=${encodeURIComponent("/tools/volleyball-rotations")}`);
-  }, [router]);
+  const duplicate = useCallback(
+    async (id: string) => {
+      const source = byId(id);
+      if (!source) return;
+      setActionError(null);
+      try {
+        const copy = await formations.duplicate(source);
+        selectFormation(copy.id);
+      } catch {
+        setActionError("The formation could not be duplicated. Check your connection and try again.");
+      }
+    },
+    [byId, formations, selectFormation]
+  );
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navigation />
-
-      <main className="max-w-7xl mx-auto px-4 py-6 pb-12">
-        {/* Header */}
-        <MotionDiv
-          initial="hidden"
-          animate="visible"
-          variants={slideUp}
-          className="text-center mb-8"
-        >
-          <h1 className="text-3xl md:text-4xl font-black tracking-tight mb-2 uppercase">
-            5-1 Volleyball <span className="text-primary">Rotations</span>
-          </h1>
-          <p className="text-muted-foreground max-w-xl mx-auto text-sm md:text-base">
-            Interactive visualization of all 6 rotations with overlap rules,
-            formation variants, and movement transitions
-          </p>
-          {/* My Formations Link */}
-          {isAuthenticated && (
-            <Link
-              href="/tools/volleyball-rotations/my-formations"
-              className="inline-block mt-4 px-4 py-2 text-sm font-medium bg-accent hover:bg-accent/80 rounded-lg transition-colors"
-            >
-              Manage My Formations
-            </Link>
-          )}
-        </MotionDiv>
-
-        {/* Custom Formation Indicator */}
-        {selectedCustomFormation && (
-          <MotionDiv
-            initial="hidden"
-            animate="visible"
-            variants={slideUp}
-            className="mb-6 p-4 rounded-xl bg-primary/10 border border-primary/20"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-xs font-medium text-primary uppercase tracking-wider">
-                  Custom Formation
-                </span>
-                <h2 className="text-lg font-bold">{selectedCustomFormation.name}</h2>
-                {selectedCustomFormation.description && (
-                  <p className="text-sm text-muted-foreground">{selectedCustomFormation.description}</p>
-                )}
-              </div>
-              <button
-                type="button"
-                onClick={() => handleFormationChange("traditional")}
-                className="px-3 py-1 text-sm bg-background rounded-lg hover:bg-accent transition-colors"
-              >
-                Switch to Built-in
-              </button>
-            </div>
-          </MotionDiv>
-        )}
-
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
-          {/* Left Column: Court + Controls */}
-          <div className="space-y-6">
-            {/* Controls Card */}
-            <div className="rounded-2xl border border-border bg-card p-4 md:p-6 shadow-soft">
-              <RotationControls
-                rotation={rotation}
-                mode={mode}
-                liberoActive={liberoActive}
-                showOverlaps={showOverlaps}
-                showArrows={showArrows}
-                onRotationChange={setRotation}
-                onModeChange={setMode}
-                onLiberoToggle={setLiberoActive}
-                onShowOverlapsToggle={setShowOverlaps}
-                onShowArrowsToggle={setShowArrows}
-                onNext={nextRotation}
-                onPrev={prevRotation}
-              />
-            </div>
-
-            {/* Court Visualization Card */}
-            <div className="rounded-2xl border border-border bg-card p-4 md:p-6 shadow-soft">
-              <VolleyballCourt
-                players={players}
-                overlaps={overlaps}
-                arrows={arrows}
-                selectedPlayer={selectedPlayer}
-                onPlayerSelect={setSelectedPlayer}
-                mode={mode}
-                showOverlaps={showOverlaps}
-                showArrows={showArrows}
-              />
-            </div>
-
-            {/* Formation Selector Card - Enhanced Mode */}
-            <div className="rounded-2xl border border-border bg-card p-4 md:p-6 shadow-soft">
-              <FormationSelector
-                enhanced={true}
-                formation={selectedFormationId}
-                rotation={rotation}
-                onFormationChange={handleFormationChange}
-                isAuthenticated={isAuthenticated}
-                userFormations={userFormations}
-                onCreateFormation={handleCreateFormation}
-                onEditFormation={handleEditFormation}
-                onDuplicateFormation={handleDuplicateFormation}
-                onShareFormation={handleShareFormation}
-                onDeleteFormation={handleDeleteFormation}
-                onSignInClick={handleSignInClick}
-              />
-            </div>
-
-            {/* Help Accordion (visible on mobile, hidden on lg) */}
-            <div className="lg:hidden">
-              <HelpAccordion />
-            </div>
-          </div>
-
-          {/* Right Sidebar: Legend */}
-          <div className="space-y-6 lg:sticky lg:top-20 lg:h-fit">
-            {/* Legend Panel */}
-            <div className="rounded-2xl border border-border bg-card p-4 shadow-soft">
-              <LegendPanel
-                players={players}
-                rotation={rotation}
-                mode={mode}
-                selectedPlayer={selectedPlayer}
-                onPlayerSelect={setSelectedPlayer}
-              />
-            </div>
-
-            {/* Help Accordion (hidden on mobile, visible on lg) */}
-            <div className="hidden lg:block">
-              <HelpAccordion />
-            </div>
-          </div>
+    <MatchbookShell
+      active="/tools"
+      /* The app's default CTA — "My Formations" here would name the masthead's
+         second action twice on one screen. */
+      cta={MB_DEFAULT_CTA}
+      masthead={{
+        title: (
+          <>
+            Rotation <span className="text-mb-coral">Designer</span>
+          </>
+        ),
+        shortTitle: "Rotations",
+        badge: { value: `R${rotation}`, label: "Rotation" },
+        dateLine: "5-1 System",
+        subLine: "6 Rotations · FIVB 7.4",
+        actions: [
+          signedIn
+            ? {
+                label: selected.category === "custom" ? "Edit Formation" : "Open Editor",
+                icon: "edit",
+                variant: "coral",
+                href: editorHref,
+              }
+            : {
+                label: "Sign In To Save",
+                icon: "login",
+                variant: "coral",
+                href: "/login?redirect=/tools/volleyball-rotations",
+              },
+          {
+            label: "My Formations",
+            icon: "save",
+            variant: "navy",
+            href: "/tools/volleyball-rotations/my-formations",
+          },
+        ],
+      }}
+    >
+      {actionError && (
+        <div className="mb-4">
+          <MbNotice tone="danger" title="Action failed">
+            {actionError}
+          </MbNotice>
         </div>
-      </main>
+      )}
 
-      {/* Editor Modal */}
-      <FormationEditorModal
-        isOpen={editorOpen}
-        onClose={() => setEditorOpen(false)}
-        onSave={handleSaveFormation}
-        mode={editorMode}
-        existingFormation={editingFormation || undefined}
-        initialTemplateId={initialTemplateId}
-      />
+      {/* The right-hand panels carry `xl:self-start` so they take their own
+          height instead of stretching into voids. `sticky` still works on a
+          `self-start` grid item — it travels inside its grid area, which is
+          still the full row height. */}
+      <div className="mb-enter-grid grid grid-cols-1 gap-4 xl:grid-cols-12">
+        <div className="xl:col-span-7">
+          <Panel
+            title={`Rotation ${rotation} · ${mode === "serving" ? "Serving" : "Receiving"}`}
+            /* Wrapped, not truncated, and no `title` attribute — a tooltip is
+               unreachable on a touch screen. */
+            meta={
+              <span className="mb-kicker max-w-[22ch] text-right leading-tight break-words">
+                {selected.name}
+              </span>
+            }
+          >
+            <div className={SHORT.body}>
+              <div className={SHORT.rail}>
+                <RotationRail
+                  rotation={rotation}
+                  mode={mode}
+                  onRotationChange={setRotation}
+                  onModeChange={setMode}
+                  onNext={nextRotation}
+                  onPrev={prevRotation}
+                />
+              </div>
+              {/* The court is full-bleed to the panel edge — the reason the
+                  panel body carries no padding here. */}
+              <div className={`flex justify-center ${SHORT.court}`}>
+                <CourtStage
+                  className={SHORT.courtSize}
+                  players={players}
+                  overlaps={overlaps}
+                  arrows={arrows}
+                  mode={mode}
+                  rotation={rotation}
+                  selectedPlayer={selectedPlayer}
+                  onPlayerSelect={setSelectedPlayer}
+                  showOverlaps={showOverlaps}
+                  showArrows={showArrows}
+                />
+              </div>
+              <div className={SHORT.layers}>
+                <RotationLayers
+                  liberoActive={liberoActive}
+                  onLiberoToggle={setLiberoActive}
+                  showOverlaps={showOverlaps}
+                  showArrows={showArrows}
+                  onShowOverlapsChange={setShowOverlaps}
+                  onShowArrowsChange={setShowArrows}
+                />
+              </div>
+              <div className={SHORT.facts}>
+                <RotationFacts
+                  setterRow={setterRow}
+                  frontRowAttackers={frontRowAttackers}
+                />
+              </div>
+            </div>
+          </Panel>
+        </div>
 
-      {/* Share Dialog */}
+        <div className="xl:col-span-5 xl:self-start">
+          <Panel
+            title="On Court"
+            className="xl:sticky xl:top-5"
+            meta={<span className="mb-kicker tabular-nums">{players.length} Players</span>}
+          >
+            <OnCourtPanel
+              players={players}
+              selectedPlayer={selectedPlayer}
+              onPlayerSelect={setSelectedPlayer}
+            />
+          </Panel>
+        </div>
+
+        <div className="xl:col-span-7">
+          <Panel title="Formation">
+            <FormationPicker
+              category={category}
+              onCategoryChange={setCategory}
+              builtins={designer.builtins}
+              starters={designer.starters}
+              custom={designer.custom}
+              selectedId={selectedId}
+              selected={selected}
+              onSelect={selectFormation}
+              isAuthenticated={signedIn}
+              status={formations.status}
+              onRetry={() => void formations.refresh()}
+              onCreate={() => router.push("/tools/volleyball-rotations/editor")}
+              onEdit={(id) =>
+                router.push(`/tools/volleyball-rotations/editor?id=${encodeURIComponent(id)}`)
+              }
+              onDuplicate={(id) => void duplicate(id)}
+              onShare={(id) => setSharing(byId(id))}
+              onDelete={(id) => setPendingDelete(byId(id))}
+            />
+          </Panel>
+        </div>
+
+        <div className="xl:col-span-5 xl:self-start">
+          <Panel title="Reading The Diagram" icon="help">
+            <DiagramGuide />
+          </Panel>
+        </div>
+      </div>
+
       <ShareFormationDialog
-        isOpen={shareDialogOpen}
-        onClose={() => {
-          setShareDialogOpen(false);
-          setSharingFormation(null);
-        }}
-        formation={sharingFormation}
-        onEnableSharing={share}
-        onDisableSharing={unshare}
+        open={Boolean(sharing)}
+        onOpenChange={(open) => !open && setSharing(null)}
+        formation={sharing}
+        onEnableSharing={formations.share}
+        onDisableSharing={formations.unshare}
       />
-    </div>
+
+      <MbConfirm
+        open={Boolean(pendingDelete)}
+        onOpenChange={(open) => !open && setPendingDelete(null)}
+        title="Delete formation"
+        verb="Delete"
+        subject={pendingDelete?.name}
+        body="The formation and any share link it has are removed. This cannot be undone."
+        loading={deleting}
+        onConfirm={() => void handleDelete()}
+      />
+    </MatchbookShell>
   );
 }

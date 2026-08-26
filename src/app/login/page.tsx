@@ -3,10 +3,19 @@
 import { Suspense } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { MbButton } from "@/components/matchbook/Button";
+import { MbTextInput } from "@/components/matchbook/form";
 import { MbIcon } from "@/components/matchbook/MbIcon";
 import { crestPath } from "@/components/matchbook/types";
-import { PageLoadingSpinner } from "@/components/shared";
 import { useLoginPage } from "@/hooks/useLoginPage";
+import { LoginSkeleton } from "./LoginSkeleton";
+
+/* Use `MbButton` / `MbTextInput`, never a hand-written `.mb-btn` or bare
+   `.mb-input`: the touch-height ladder (44/48/56) is applied inline by the
+   components, and `.mb-btn`'s padding/font-size are unlayered, so Tailwind
+   utilities on a hand-rolled copy are inert and the control renders below the
+   44px floor. Sign In takes `lg` (56), the rung reserved for targets that end
+   a task. */
 
 const SHOWCASE_CRESTS = [
   { slug: "surge", name: "Surge" },
@@ -44,7 +53,7 @@ const LoginPageContent = () => {
   } = useLoginPage();
 
   if (isLoading || isAuthenticated) {
-    return <PageLoadingSpinner />;
+    return <LoginSkeleton />;
   }
 
   const isSignUp = mode === "signup";
@@ -69,15 +78,21 @@ const LoginPageContent = () => {
               height={60}
               priority
             />
-            <span className="matchbook-display text-[1.15rem] font-bold leading-[1.05]">
+            {/* `--mb-coral-deep`, not `--mb-coral`: the ink twin is the rule
+                for text at label sizes — the bright coral fails the 4.5:1
+                contrast floor. */}
+            <span className="matchbook-display text-[1.2rem] mb-track-display font-bold leading-[1.05]">
               <span className="block text-mb-navy">Tournament</span>
-              <span className="block text-mb-coral">Tracker</span>
+              <span className="block text-mb-coral-deep">Tracker</span>
             </span>
           </Link>
 
           {/* Masthead */}
           <div className="mb-3 flex items-center gap-3 sm:gap-4">
-            <h1 className="matchbook-display whitespace-nowrap text-[2rem] font-bold leading-none tracking-[0.01em] sm:text-[2.9rem]">
+            {/* Same step `MatchbookMasthead` emits. Must wrap (`min-w-0
+                break-words`) — a nowrap h1 at this size pushes horizontal
+                scroll on narrow phones. */}
+            <h1 className="matchbook-display min-w-0 break-words text-balance text-4xl mb-track-masthead font-bold leading-none sm:text-5xl">
               {isSignUp ? (
                 <>
                   Join <span className="text-mb-coral">the Club</span>
@@ -88,16 +103,19 @@ const LoginPageContent = () => {
                 </>
               )}
             </h1>
-            <div className="flex flex-col items-center border-[2px] border-mb-coral px-2.5 py-1 text-mb-coral">
-              <span className="matchbook-display text-[0.8rem] font-bold leading-tight tracking-[0.1em]">
+            {/* Hand-rolled badge — must stay in step with the navy count badge
+                `MatchbookMasthead` draws. Its mark is the 2px border weight,
+                the only 2px border in the system. */}
+            <div className="flex flex-col items-center border-[2px] border-mb-navy px-2.5 py-1 text-mb-navy">
+              <span className="matchbook-display text-[0.8rem] mb-track-button font-bold leading-tight">
                 All
               </span>
-              <span className="matchbook-display text-[0.8rem] font-bold leading-tight tracking-[0.1em]">
+              <span className="matchbook-display text-[0.8rem] mb-track-button font-bold leading-tight">
                 Events
               </span>
             </div>
           </div>
-          <p className="matchbook-display mb-5 text-[0.82rem] font-semibold tracking-[0.14em] text-mb-navy">
+          <p className="matchbook-display mb-5 text-[0.82rem] mb-track-display font-semibold text-mb-navy">
             {isSignUp
               ? "Sign up to save your teams, tournaments, and match history."
               : "Sign in to manage your teams and tournaments."}
@@ -108,35 +126,44 @@ const LoginPageContent = () => {
             <div className="flex flex-col gap-4 p-5" onKeyDown={handleKeyDown}>
               {error && (
                 <p
-                  className="border-[1.5px] border-mb-red px-3 py-2 text-[0.8rem] font-medium text-mb-red"
+                  className="border-[1.5px] border-mb-red px-3 py-2 text-[0.85rem] text-mb-red"
                   role="alert"
                 >
                   {error}
                 </p>
               )}
+              {/* Frame in `--mb-green`, text in `--mb-green-ink`: the mark
+                  colour fails the 4.5:1 floor at this size, the ink twin
+                  passes. */}
               {notice && (
                 <p
-                  className="border-[1.5px] border-mb-green px-3 py-2 text-[0.8rem] font-medium text-mb-green"
+                  className="border-[1.5px] border-mb-green px-3 py-2 text-[0.85rem] text-mb-green-ink"
                   role="status"
                 >
                   {notice}
                 </p>
               )}
 
-              <button
-                type="button"
+              <MbButton
+                variant="outline-navy"
+                fullWidth
                 onClick={handleGoogleSignIn}
                 disabled={isSubmitting}
-                className="mb-btn mb-btn-outline-navy w-full"
               >
+                {/* `inline-block` is load-bearing: preflight sets
+                    `img { display: block }` and `MbButton` wraps children in
+                    one label span, so a block image stacks ABOVE the label.
+                    The Google mark keeps its own four colours, so it stays an
+                    `<Image>` rather than the sprite `icon` prop. */}
                 <Image
                   src="/assets/matchbook/auth/google-g.svg"
                   alt=""
                   width={16}
                   height={16}
+                  className="mr-2 inline-block align-[-3px]"
                 />
                 Continue with Google
-              </button>
+              </MbButton>
 
               <div className="flex items-center gap-3">
                 <span className="h-px flex-1 bg-mb-rule" />
@@ -148,43 +175,45 @@ const LoginPageContent = () => {
                 <label htmlFor="login-email" className="mb-kicker mb-1 block">
                   Email
                 </label>
-                <div className="mb-input">
-                  <input
-                    id="login-email"
-                    type="email"
-                    placeholder="Email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    disabled={isSubmitting}
-                    autoComplete="email"
-                  />
-                  <MbIcon id="mail" size={16} className="shrink-0 text-mb-navy" />
-                </div>
+                <MbTextInput
+                  id="login-email"
+                  type="email"
+                  placeholder="Email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={isSubmitting}
+                  autoComplete="email"
+                  trailing={
+                    <MbIcon id="mail" size={16} className="shrink-0 text-mb-navy" />
+                  }
+                />
               </div>
 
               <div>
                 <label htmlFor="login-password" className="mb-kicker mb-1 block">
                   Password
                 </label>
-                <div className="mb-input">
-                  <input
-                    id="login-password"
-                    type="password"
-                    placeholder={isSignUp ? "Password (min 6 characters)" : "Password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    disabled={isSubmitting}
-                    autoComplete={isSignUp ? "new-password" : "current-password"}
-                  />
-                  <MbIcon id="lock" size={16} className="shrink-0 text-mb-navy" />
-                </div>
+                <MbTextInput
+                  id="login-password"
+                  type="password"
+                  placeholder={isSignUp ? "Password (min 6 characters)" : "Password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={isSubmitting}
+                  autoComplete={isSignUp ? "new-password" : "current-password"}
+                  trailing={
+                    <MbIcon id="lock" size={16} className="shrink-0 text-mb-navy" />
+                  }
+                />
                 {!isSignUp && (
                   <div className="mt-1 text-right">
                     <button
                       type="button"
                       onClick={handleForgotPassword}
                       disabled={isSubmitting}
-                      className="matchbook-display text-[0.68rem] font-bold tracking-[0.1em] text-mb-navy hover:text-mb-coral"
+                      /* Hover ink is `--mb-coral-deep` — bright coral fails
+                         contrast at this size. */
+                      className="matchbook-display -my-[13.85px] inline-flex min-h-[44px] items-center text-[0.66rem] mb-track-status font-bold text-mb-navy hover:text-mb-coral-deep"
                     >
                       Forgot Password?
                     </button>
@@ -192,26 +221,33 @@ const LoginPageContent = () => {
                 )}
               </div>
 
-              <button
+              <MbButton
                 type="button"
                 onClick={handleEmailSubmit}
                 disabled={isSubmitting}
-                className="mb-btn mb-btn-coral w-full py-3 text-[0.9rem]"
+                variant="coral"
+                size="lg"
+                icon="login"
+                fullWidth
               >
-                <MbIcon id="login" size={16} />
+                {/* The glyph must go through `icon`, not `children`: as a
+                    child, preflight's `svg { display: block }` stacks it over
+                    the words and breaks the button's height rung. */}
                 {isSubmitting
                   ? "Please wait..."
                   : isSignUp
                     ? "Create Account"
                     : "Sign In"}
-              </button>
+              </MbButton>
 
-              <p className="matchbook-display text-center text-[0.72rem] font-semibold tracking-[0.1em] text-mb-navy">
+              <p className="matchbook-display text-center text-[0.72rem] mb-track-link font-semibold text-mb-navy">
                 {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
                 <button
                   type="button"
                   onClick={toggleMode}
-                  className="font-bold text-mb-coral hover:underline"
+                  /* `--mb-coral-deep` for contrast — this is the only way to
+                     reach sign-up. */
+                  className="-my-[13.36px] inline-flex min-h-[44px] items-center font-bold text-mb-coral-deep hover:underline"
                 >
                   {isSignUp ? "Sign In" : "Sign Up"}
                 </button>
@@ -222,16 +258,17 @@ const LoginPageContent = () => {
           {/* Guest option */}
           <div className="mt-5 flex items-center gap-3">
             <MbIcon id="quick" size={22} className="shrink-0 text-mb-navy" />
-            <button
+            <MbButton
               type="button"
               onClick={handleContinueAsGuest}
-              className="mb-btn mb-btn-outline-navy w-full"
+              variant="outline-navy"
+              fullWidth
             >
               <span className="sm:hidden">Continue as Guest</span>
               <span className="hidden sm:inline">
                 Continue as Guest — Quick Match Only
               </span>
-            </button>
+            </MbButton>
           </div>
         </div>
       </div>
@@ -239,13 +276,15 @@ const LoginPageContent = () => {
       {/* Promo half */}
       <div className="hidden bg-mb-navy px-10 py-12 text-mb-paper-bright lg:flex lg:min-h-screen lg:flex-col lg:items-center lg:justify-center">
         <div className="w-full max-w-[520px]">
-          <h2 className="matchbook-display whitespace-nowrap text-center text-[2.1rem] font-bold leading-tight xl:text-[2.6rem]">
+          {/* One size at every width — a larger nowrap headline overflowed the
+              promo column at `lg`. */}
+          <h2 className="matchbook-display text-center text-[1.875rem] mb-track-display font-bold leading-tight">
             Your Tournaments, <span className="text-mb-coral">Ready.</span>
           </h2>
-          <div className="mx-auto mt-5 mb-8 h-px w-full bg-[rgba(255,250,241,0.25)]" />
+          <div className="mx-auto mt-5 mb-8 h-px w-full bg-mb-rule-on-navy" />
 
           {/* Crest showcase */}
-          <div className="grid grid-cols-3 gap-x-6 gap-y-5">
+          <div className="grid grid-cols-3 gap-x-6 gap-y-4">
             {SHOWCASE_CRESTS.map((crest) => (
               <div key={crest.slug} className="flex flex-col items-center gap-2">
                 <Image
@@ -254,7 +293,7 @@ const LoginPageContent = () => {
                   width={86}
                   height={100}
                 />
-                <span className="matchbook-display text-[0.9rem] font-bold tracking-[0.1em]">
+                <span className="matchbook-display text-[0.9rem] mb-track-display font-bold">
                   {crest.name}
                 </span>
               </div>
@@ -262,14 +301,14 @@ const LoginPageContent = () => {
           </div>
 
           {/* Feature list */}
-          <div className="mt-8 border-t border-[rgba(255,250,241,0.25)]">
+          <div className="mt-8 border-t border-mb-rule-on-navy">
             {FEATURES.map((feature) => (
               <div
                 key={feature.label}
-                className="flex items-center gap-3 border-b border-[rgba(255,250,241,0.25)] py-2.5"
+                className="flex items-center gap-3 border-b border-mb-rule-on-navy py-2.5"
               >
                 <MbIcon id={feature.icon} size={20} className="text-mb-paper-bright" />
-                <span className="matchbook-display text-[0.95rem] font-semibold tracking-[0.1em]">
+                <span className="matchbook-display text-[0.95rem] mb-track-title font-semibold">
                   {feature.label}
                 </span>
               </div>
@@ -277,22 +316,30 @@ const LoginPageContent = () => {
           </div>
 
           {/* Sample scoreline */}
-          <div className="mt-6 flex items-center justify-center gap-3 rounded-[4px] border-[1.5px] border-mb-paper-bright bg-[rgba(255,250,241,0.06)] px-4 py-2.5">
-            <span className="matchbook-display rounded-[2px] bg-mb-coral px-1.5 py-0.5 text-[0.6rem] font-bold tracking-[0.14em] text-white">
+          <div className="mt-6 flex items-center justify-center gap-3 rounded-[4px] border-[1.5px] border-mb-paper-bright bg-mb-tint-on-navy px-4 py-2.5">
+            {/* Fill is `--mb-coral-deep`: white on raw coral fails contrast at
+                this size. */}
+            <span className="matchbook-display rounded-[2px] bg-mb-coral-deep px-1.5 py-0.5 text-[0.6rem] mb-track-badge font-bold text-white">
               Live
             </span>
             <Image src={crestPath("surge")} alt="" width={26} height={30} />
-            <span className="matchbook-display text-[0.85rem] font-bold tracking-[0.08em]">
+            <span className="matchbook-display text-[0.85rem] mb-track-display font-bold">
               Surge
             </span>
-            <span className="matchbook-display text-2xl font-bold tabular-nums">
+            <span className="matchbook-display text-2xl mb-track-display font-bold tabular-nums">
               3 <span className="text-mb-coral">—</span> 1
             </span>
-            <span className="matchbook-display text-[0.85rem] font-bold tracking-[0.08em]">
+            <span className="matchbook-display text-[0.85rem] mb-track-display font-bold">
               Tide
             </span>
             <Image src={crestPath("tide")} alt="" width={26} height={30} />
-            <span className="mb-kicker text-[rgba(255,250,241,0.7)]">• Final</span>
+            {/* NOT `.mb-kicker`: that class bakes an unlayered
+                `color: var(--mb-ink-muted)` that beats any colour utility
+                beside it and is illegible on navy. The kicker step is composed
+                explicitly with the on-navy token instead. */}
+            <span className="matchbook-display text-[0.62rem] mb-track-kicker font-semibold text-mb-ink-on-navy-soft">
+              • Final
+            </span>
           </div>
 
           {/* Tagline */}
@@ -301,7 +348,10 @@ const LoginPageContent = () => {
             <MbIcon id="star" size={14} className="text-mb-coral" />
             <span className="h-[2px] flex-1 bg-mb-coral" />
           </div>
-          <p className="matchbook-display mt-3 text-center text-[1rem] font-bold tracking-[0.12em]">
+          {/* The 1.2rem size is load-bearing: coral on navy only passes WCAG
+              via the large-text floor (19.2px/700), and `--mb-coral-deep` is a
+              paper ink that cannot substitute here. */}
+          <p className="matchbook-display mt-3 text-center text-[1.2rem] mb-track-display font-bold">
             Every Team. Every Match.{" "}
             <span className="text-mb-coral">One Record.</span>
           </p>
@@ -314,7 +364,7 @@ const LoginPageContent = () => {
 // Wrap in Suspense for useSearchParams
 export default function LoginPage() {
   return (
-    <Suspense fallback={<PageLoadingSpinner />}>
+    <Suspense fallback={<LoginSkeleton />}>
       <LoginPageContent />
     </Suspense>
   );

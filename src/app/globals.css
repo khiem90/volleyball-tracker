@@ -1,68 +1,56 @@
 @import "tailwindcss";
-@import "tw-animate-css";
+
+/* ---------------------------------------------------------------------------
+   TYPEFACE PLUMBING — the next/font classes MUST be on <html>. The tokens
+   below resolve `--font-outfit` / `--font-oswald` inside `:root`, and a custom
+   property whose var() cannot resolve AT ITS DECLARATION SITE is
+   guaranteed-invalid: it computes to nothing and every descendant inherits
+   that nothing, however many elements further down define the variable. The
+   `var(--x, "Name")` fallbacks keep the tokens VALID if the variables ever go
+   out of scope — next/font registers the @font-face under exactly that name.
+   --------------------------------------------------------------------------- */
+
+/* ---------------------------------------------------------------------------
+   THE UTILITY SURFACE. There is deliberately no shadcn token bridge: in
+   Tailwind v4 a utility exists only because a `--color-*` / `--radius-*` key
+   is declared here, so a stray legacy `bg-primary` generates no CSS instead of
+   silently shipping an old colour. `--font-sans` stays (read by `body` and
+   `.matchbook-surface`); the `--color-mb-*` keys generate the palette
+   utilities. Radii are written literally (`rounded-[2px]` etc.) so a radius
+   never depends on a scale that can be redefined out from under it.
+   --------------------------------------------------------------------------- */
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-outfit);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary: var(--primary);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
-  --color-card: var(--card);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --radius-2xl: calc(var(--radius) + 8px);
-  --radius-3xl: calc(var(--radius) + 12px);
-  --radius-4xl: calc(var(--radius) + 16px);
+  --font-sans: var(--font-outfit, "Outfit");
 
-  /* Custom team colors */
-  --color-team-blue: oklch(0.55 0.18 220);
-  --color-team-blue-light: oklch(0.92 0.04 220);
-  --color-team-orange: oklch(0.65 0.18 45);
-  --color-team-orange-light: oklch(0.95 0.04 45);
-
-  /* Card shadow colors */
-  --color-card-shadow: var(--card-shadow);
+  /* Tailwind's own motion defaults, repointed at the tokens: every bare
+     `transition-*` utility written in JSX resolves through these, so future
+     markup is on the ladder by default. `--mb-ease-in-out` is byte-identical
+     to the Tailwind default it replaces; `duration-*` / `ease-*` utilities
+     still override per call site. */
+  --default-transition-duration: var(--mb-dur-fast);
+  --default-transition-timing-function: var(--mb-ease-in-out);
 
   /* Matchbook palette (home redesign) */
   --color-mb-paper: var(--mb-paper);
   --color-mb-paper-bright: var(--mb-paper-bright);
   --color-mb-navy: var(--mb-navy);
   --color-mb-coral: var(--mb-coral);
+  --color-mb-coral-deep: var(--mb-coral-deep);
   --color-mb-teal: var(--mb-teal);
   --color-mb-gold: var(--mb-gold);
+  --color-mb-gold-ink: var(--mb-gold-ink);
+  --color-mb-green-ink: var(--mb-green-ink);
   --color-mb-plum: var(--mb-plum);
   --color-mb-green: var(--mb-green);
   --color-mb-red: var(--mb-red);
   --color-mb-ink-muted: var(--mb-ink-muted);
   --color-mb-rule: var(--mb-rule);
+  /* The on-navy set, exposed as utilities — `border-mb-rule-on-navy`,
+     `bg-mb-tint-on-navy`, `text-mb-ink-on-navy-soft` are the spelling. */
+  --color-mb-rule-on-navy: var(--mb-rule-on-navy);
+  --color-mb-tint-on-navy: var(--mb-tint-on-navy);
+  --color-mb-ink-on-navy-soft: var(--mb-ink-on-navy-soft);
 }
 
 /* ===================== Matchbook (home screen redesign) ===================== */
@@ -79,7 +67,195 @@
   --mb-red: #cf3f32;
   --mb-ink-muted: #5d6c70;
   --mb-rule: rgba(7, 50, 77, 0.28);
-  --mb-display-font: var(--font-oswald), "Arial Narrow", "Roboto Condensed", Impact, sans-serif;
+  /* Resolves only because the next/font classes are on <html> — see "Typeface
+     plumbing" above. The "Oswald" fallback keeps this token valid. */
+  --mb-display-font: var(--font-oswald, "Oswald"), "Arial Narrow", "Roboto Condensed", Impact, sans-serif;
+
+  /* ===================== THE TRACKING ROLES =====================
+     Twelve named voices, one token each — every letter-spacing in the app
+     resolves to one of these names. A declaration in this file writes
+     `var(--mb-track-…)`, never a literal; a call site writes the matching
+     `.mb-track-…` rung utility (end of `@layer components`), never a
+     `tracking-[…]`.
+
+     masthead  the title lockup — em-tracking compounds at display sizes,
+               so the biggest voice is the tightest one.
+     display   the base display voice: row titles, team marks, stat figures.
+     link      the quiet verb — panel actions and footer links.
+     title     the label that names a container: panel titles, select values.
+     button    the imperative — button labels at every cut.
+     nav       wayfinding — sidebar, tabs, the bottom bar, the md badge.
+     status    the state word and the meta line: LIVE, FINAL, dates.
+     head      the columnar head: table heads and day heads.
+     kicker    the eyebrow — labels the thing below it, widest text spread.
+     code      the share code: glyphs transcribed one at a time.
+     badge     the stamp — single engraved caption words, maximum spread.
+     numeral   figures and marks: tracking pads AFTER the last glyph and
+               pushes a centred figure off its own centre, so figures are
+               authored `normal` — a number is not a word. */
+  --mb-track-masthead: 0.01em;
+  --mb-track-display: 0.02em;
+  --mb-track-link: 0.04em;
+  --mb-track-title: 0.05em;
+  --mb-track-button: 0.06em;
+  --mb-track-nav: 0.08em;
+  --mb-track-status: 0.1em;
+  --mb-track-head: 0.12em;
+  --mb-track-kicker: 0.16em;
+  --mb-track-code: 0.18em;
+  --mb-track-badge: 0.22em;
+  --mb-track-numeral: normal;
+
+  /* ===================== THE CORAL JOB LIST =====================
+     The list is closed. Coral has FOUR jobs and nothing may add a fifth
+     without editing this comment:
+
+       1. THE PRIMARY ACTION      .mb-btn-coral            fill, one per screen
+       2. THE SELECTION RAIL      .mb-rail (default),      3px mark, one
+                                  .mb-nav-item[data-active] left,   axis each
+                                  .mb-tab[data-active] bottom
+       3. THE MASTHEAD LOCKUP     the emphasised title word + the 2px badge
+                                  frame (JSX)
+       4. THE SCHEDULE SPINE      the 2px left rule on a schedule/timeline list
+
+     Job 2 is ONE job in three orientations — nav rail, tab underline and row
+     rail are the same "this is the selected one".
+
+     THE CORAL RULE: --mb-coral is a MARK colour and never a letterform — over
+     the 3:1 floor for a border/rail/dot/underline, under the 4.5:1 floor for
+     text at label sizes. --mb-coral-deep is the INK twin and survives as the
+     .mb-btn-coral FILL; the only coral letterform is the masthead word
+     (job 3, ≥36px, in JSX). */
+  --mb-coral-deep: #c9351f;
+  /* Gold as ink on paper: 5.13:1 on --mb-paper. --mb-gold stays on-navy only. */
+  --mb-gold-ink: #8a5c00;
+  /* The smallest darkening of --mb-green that clears 4.5:1 on both paper
+     tones, so "Final" can be green as a letterform. --mb-green stays the mark
+     colour (badge rule, form square, meter fill); --mb-green-ink is the ink. */
+  --mb-green-ink: #137a54;
+
+  /* --- tints, bands and the one shadow ---------------------------------- */
+  --mb-tint-1: rgba(7, 50, 77, 0.04); /* row hover                      */
+  --mb-tint-2: rgba(7, 50, 77, 0.06); /* nav / outline-navy hover       */
+  --mb-tint-3: rgba(7, 50, 77, 0.12); /* empty form square, meter track */
+  /* There is deliberately no coral tint: --mb-coral-deep clears 4.5:1 on bare
+     --mb-paper by 0.12, so any wash under it fails. Coral states are carried
+     by rules and lifts, never by fills under coral ink. */
+  --mb-band: rgba(7, 50, 77, 0.05); /* table day-group header band    */
+  /* THE ON-NAVY SET: --mb-paper-bright at an alpha, and the ONLY three alphas
+     of it the system may use. A fourth, fainter text rung is deliberately
+     refused — 0.5 already measures under the 4.5:1 floor, so it could only be
+     an accessibility trap with a token's name on it. Text on navy is opaque
+     or 0.75. */
+  --mb-rule-on-navy: rgba(255, 250, 241, 0.25); /* divider / boundary  */
+  --mb-tint-on-navy: rgba(255, 250, 241, 0.06); /* wash under content  */
+  --mb-ink-on-navy-soft: rgba(255, 250, 241, 0.75); /* secondary text  */
+  --mb-panel-shadow: 0 8px 22px rgba(57, 41, 23, 0.08);
+
+  /* --- rule tiers -------------------------------------------------------
+     Blink floors a used border-width to whole CSS pixels (a 1.5px border
+     paints 1px at every DPR), so the thin tiers are separated by INK, not
+     thickness:
+
+       hairline  1px  --mb-rule   a divider INSIDE a thing (rows, panel head)
+       edge      1px  --mb-navy   the BOUNDARY of a thing (panel, input, box)
+       accent    3px  tone        active / selected marks (tab, nav, rail)
+       anchor    4px  tone        the identity mark (panel top, toast left)
+
+     `hairline` and `edge` are both 1px today but stay two names — they say
+     what the line IS, and a future density change moves one without the
+     other. 2px is NOT a tier: it survives only in the masthead badge lockup,
+     the schedule spine, and glyph strokes (drawings, not rules). Nothing in
+     this file may reintroduce a fractional rule — it is either invisible (a
+     border) or off-hierarchy (a gap or a width). */
+  --mb-rule-hairline: 1px;
+  --mb-rule-edge: 1px;
+  --mb-rule-accent: 3px;
+  --mb-rule-anchor: 4px;
+
+  /* --- the gap vocabulary ------------------------------------------------
+     Gaps are written in px, never rem: rem makes a gap a function of the type
+     size (the panel grid is in whole px, so a raised root size would slide
+     control interiors off the exterior spacing) and produces fractional
+     values. The set: 1 (the .mb-segmented divider, a rule rather than a gap),
+     4, 6, 8, 10, 12 — plus 3, 16 and 24 from markup. */
+
+  /* --- the pill radius, named once ---------------------------------------
+     `rounded-full` compiles to `calc(infinity * 1px)` and cannot be
+     re-pointed (v4 hard-codes it), so the pill is a class the system owns:
+     authors write `.mb-round`; components that draw their own geometry read
+     `--mb-radius-round`. 999px rather than infinity because a real length
+     composes in `calc()`, animates, and prints. */
+  --mb-radius-round: 999px;
+
+  /* --- focus --------------------------------------------------------------
+     FOCUS IS NOT CORAL: focus is a transient "you are here on the keyboard",
+     coral is a persistent "this is the selected thing", and two meanings
+     cannot share a channel. Focus is the ink. A navy ring fails on a navy
+     ground, so --mb-focus is INHERITED and every navy surface re-points it to
+     paper-bright — a new navy surface sets one custom property, not a ring. */
+  --mb-focus: var(--mb-navy);
+
+  /* --- motion ------------------------------------------------------------ */
+  --mb-dur-fast: 120ms;
+  --mb-dur-base: 180ms;
+  --mb-dur-slow: 280ms;
+  --mb-ease-out: cubic-bezier(0.2, 0.8, 0.3, 1);
+  --mb-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --mb-stagger: 40ms;
+  /* The heartbeat — deliberately not one of the three feedback steps above:
+     fast/base/slow are the bands a state change may occupy, and a repeating
+     pulse is ambient rhythm, a different kind of motion. */
+  --mb-dur-pulse: 1400ms;
+  /* The entrance's beats: content (the panel grid) holds two stagger beats so
+     the page's name lands before its first panel moves; accent (live marks)
+     arrives last — a pulse before the row it annotates is a claim with no
+     referent. Derived from the tokens rather than restated, so re-tuning
+     `--mb-stagger` re-times the whole sequence coherently. */
+  --mb-seq-content: calc(var(--mb-stagger) * 2);
+  --mb-seq-accent: calc(var(--mb-seq-content) + var(--mb-stagger) * 5 + var(--mb-dur-fast));
+
+  /* --- press (the click feel) -------------------------------------------
+     The ink a flush surface takes while held down: one tier past --mb-tint-2
+     (the hover wash), so hover -> press is a visible step. See "THE PRESS"
+     further down. */
+  --mb-tint-press: rgba(7, 50, 77, 0.1);
+  --mb-press-shift: 1px;
+
+  /* --- safe area --------------------------------------------------------- */
+  --mb-safe-top: env(safe-area-inset-top, 0px);
+  --mb-safe-bottom: env(safe-area-inset-bottom, 0px);
+  /* The horizontal pair: zero in portrait and on desktop, ~47px on the notch
+     side of a landscape phone — where `MatchbookLandscapeRail` puts the app's
+     only navigation. */
+  --mb-safe-left: env(safe-area-inset-left, 0px);
+  --mb-safe-right: env(safe-area-inset-right, 0px);
+
+  /* --- court diagram surface (tools) ------------------------------------
+     The accent is TEAL, not coral: the court diagram is a reference drawing,
+     not a call to action. */
+  --mb-court-fill: var(--mb-paper-bright);
+  --mb-court-line: var(--mb-rule);
+  --mb-court-line-strong: var(--mb-navy);
+  --mb-court-accent: var(--mb-teal);
+}
+
+/* ---------------------------------------------------------------------------
+   Navy grounds re-point the focus ring (see --mb-focus above).
+
+   A custom property inherits, so setting it on the surface reaches every
+   focusable descendant without any of them knowing they are on navy. Listed
+   here rather than in each component so there is ONE place to add the next
+   navy surface. `.bg-mb-navy` is the generated Tailwind utility that
+   `Panel tone="navy"` and the Login promo half both apply.
+   --------------------------------------------------------------------------- */
+
+.mb-segmented > [data-selected="true"],
+.mb-dialog[data-tone="navy"] .mb-dialog-head,
+.matchbook-surface .bg-mb-navy,
+.mb-dialog .bg-mb-navy,
+.mb-sheet .bg-mb-navy {
+  --mb-focus: var(--mb-paper-bright);
 }
 
 .matchbook-surface {
@@ -88,64 +264,304 @@
   font-family: var(--font-sans), system-ui, sans-serif;
 }
 
-.matchbook-display {
-  font-family: var(--mb-display-font);
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
+/* ---------------------------------------------------------------------------
+   Text overflow. Caller-supplied strings (URLs, machine ids) cannot be
+   trusted to contain a break opportunity, so the defence lives here once and
+   is inherited — on the surface AND on each portalled overlay root, which
+   renders outside it. `break-word` is the safe default: it leaves intrinsic
+   sizing alone, but does not reduce min-content, so shrink-to-fit carriers
+   opt into `anywhere` individually below (`anywhere` on the whole surface
+   reflows shipped screens). The third ingredient is `min-width: 0` — a
+   flex/grid item defaults to min-content, which sizes it to its longest word
+   before the text ever gets the chance to break.
+   --------------------------------------------------------------------------- */
+
+.matchbook-surface,
+.mb-dialog,
+.mb-sheet,
+.mb-toast {
+  overflow-wrap: break-word;
 }
 
+/* Shrink-to-fit carriers of machine-generated strings: these size to
+   min-content, so they need the stronger form to be allowed to narrow.
+   .mb-badge is deliberately absent — it is `white-space: nowrap` by contract
+   (micro-caps tone words never wrap), which makes any overflow-wrap inert on
+   it. Its defence is the short-label API plus `min-width: 0` on its row. */
+.mb-code-chip,
+.mb-banner,
+.mb-panel[data-tone] p,
+.mb-day-head,
+.mb-field-hint,
+.mb-field-error {
+  overflow-wrap: anywhere;
+}
+
+/* Both min-width rules are DEFAULTS, so they live in @layer base where any
+   Tailwind `min-w-*` utility outranks them (an unlayered rule would beat
+   every utility — exactly wrong for a defensive floor). The STRUCTURAL rules
+   in this file stay unlayered on purpose. */
+@layer base {
+  .mb-panel-head > *,
+  .mb-dialog-head > *,
+  .mb-banner > *,
+  .mb-toast > * {
+    min-width: 0;
+  }
+
+  /* The same unlock for prose blocks wherever they sit. `:where()` keeps the
+     specificity at zero so a component can override with a bare element rule. */
+  .matchbook-surface :where(h1, h2, h3, h4, h5, h6, p, li, dd, dt, figcaption),
+  .mb-dialog :where(h1, h2, h3, h4, h5, h6, p, li, dd, dt, figcaption),
+  .mb-sheet :where(h1, h2, h3, h4, h5, h6, p, li, dd, dt, figcaption),
+  .mb-toast :where(h1, h2, h3, h4, h5, h6, p, li, dd, dt, figcaption) {
+    min-width: 0;
+  }
+}
+
+.matchbook-display {
+  font-family: var(--mb-display-font);
+}
+
+/* ---------------------------------------------------------------------------
+   THE TYPE-VOICE LAYER. An unlayered rule beats every Tailwind utility, so
+   type-voice DEFAULTS (`letter-spacing`, `text-transform`) live in
+   `@layer components`, restoring the normal contract: a utility wins. Only
+   those two properties are relayered — the rest of each class is structure
+   (borders, padding, colour), where a stray utility winning would be a bug,
+   and `font-family` stays unlayered because the display face is identity, not
+   a default. Keep new type-voice declarations in THIS block, not in the class.
+   --------------------------------------------------------------------------- */
+
+@layer components {
+  /* Every declaration below cites a tracking role from `:root` — never a
+     literal. Where a class rides a role that is not its namesake, the line
+     says why. */
+  .matchbook-display {
+    text-transform: uppercase;
+    letter-spacing: var(--mb-track-display);
+  }
+
+  .mb-panel-link {
+    text-transform: uppercase;
+    letter-spacing: var(--mb-track-link);
+  }
+
+  .mb-btn {
+    text-transform: uppercase;
+    letter-spacing: var(--mb-track-button);
+  }
+
+  .mb-nav-item {
+    text-transform: uppercase;
+    letter-spacing: var(--mb-track-nav);
+  }
+
+  .mb-kicker {
+    text-transform: uppercase;
+    letter-spacing: var(--mb-track-kicker);
+  }
+
+  /* head, not a private 0.12em: a day head is a column label for the strip
+     of rows under it — the same job as a table head, so the same voice. */
+  .mb-table th {
+    text-transform: uppercase;
+    letter-spacing: var(--mb-track-head);
+  }
+
+  .mb-select-native {
+    text-transform: uppercase;
+    letter-spacing: var(--mb-track-title);
+  }
+
+  /* status: a badge word IS a status word in a frame — LIVE, DRAFT, FINAL.
+     The badge ROLE token (0.22em) belongs to the badge CAPTION, not to this
+     class. */
+  .mb-badge {
+    text-transform: uppercase;
+    letter-spacing: var(--mb-track-status);
+  }
+
+  /* The md cut steps down one rung (status -> nav), the same optical move
+     the masthead makes against the display base: bigger cut, tighter track. */
+  .mb-badge[data-size="md"] {
+    letter-spacing: var(--mb-track-nav);
+  }
+
+  /* nav: a tab is wayfinding laid horizontally. */
+  .mb-tab {
+    text-transform: uppercase;
+    letter-spacing: var(--mb-track-nav);
+  }
+
+  /* button: each segment is a button-sized imperative. */
+  .mb-segmented > * {
+    text-transform: uppercase;
+    letter-spacing: var(--mb-track-button);
+  }
+
+  /* badge: the FINAL stamp is a single engraved caption word — the same
+     voice as the masthead badge caption, at the same maximum spread. */
+  .mb-stamp-final {
+    text-transform: uppercase;
+    letter-spacing: var(--mb-track-badge);
+  }
+
+  .mb-code-chip {
+    text-transform: uppercase;
+    letter-spacing: var(--mb-track-code);
+  }
+
+  /* head: see .mb-table th — one job, one voice. */
+  .mb-day-head {
+    text-transform: uppercase;
+    letter-spacing: var(--mb-track-head);
+  }
+
+  /* button: the skip link is a button when it is visible at all. */
+  .mb-skip-link {
+    text-transform: uppercase;
+    letter-spacing: var(--mb-track-button);
+  }
+
+  /* The numerals declare `normal`, and that is a VALUE, not an omission:
+     `letter-spacing` inherits, so without it a display container could reach
+     in and shift a score sideways — tracking pads after the last glyph, so a
+     centred numeral in a fixed reserve is pushed off centre and
+     `.mb-numeral-digit`'s `1ch` cells stop matching the advance they were
+     measured against. A `.mb-track-*` rung or utility still wins per call
+     site — the "VS" pip takes `.mb-track-title` because it is a word. */
+  .mb-score-box,
+  .mb-stepper-value,
+  .mb-numeral {
+    letter-spacing: var(--mb-track-numeral);
+  }
+
+  /* -------------------------------------------------------------------------
+     THE TRACKING LADDER: one utility per role token, so the ladder is a
+     closed vocabulary that can be grepped instead of an open field of
+     decimals. Declared LAST in `@layer components` so a rung always beats the
+     class defaults above it, and in the components layer (not unlayered) so a
+     Tailwind `tracking-*` utility still wins where an author genuinely needs
+     an exception.
+     ------------------------------------------------------------------------- */
+  .mb-track-masthead { letter-spacing: var(--mb-track-masthead); }
+  .mb-track-display  { letter-spacing: var(--mb-track-display); }
+  .mb-track-link     { letter-spacing: var(--mb-track-link); }
+  .mb-track-title    { letter-spacing: var(--mb-track-title); }
+  .mb-track-button   { letter-spacing: var(--mb-track-button); }
+  .mb-track-nav      { letter-spacing: var(--mb-track-nav); }
+  .mb-track-status   { letter-spacing: var(--mb-track-status); }
+  .mb-track-head     { letter-spacing: var(--mb-track-head); }
+  .mb-track-kicker   { letter-spacing: var(--mb-track-kicker); }
+  .mb-track-code     { letter-spacing: var(--mb-track-code); }
+  .mb-track-badge    { letter-spacing: var(--mb-track-badge); }
+  .mb-track-numeral  { letter-spacing: var(--mb-track-numeral); }
+}
+
+/* ---------------------------------------------------------------------------
+   THE PANEL SIZES TO ITS CONTENT — deliberately no `height: 100%`: a grid row
+   is as tall as its tallest card, and a stretched panel spends the difference
+   on blank paper. Leftover height stays in the grid cell as page stock.
+   `display: flex; flex-direction: column` STAYS, and `mt-auto` with it: a
+   panel can still be taller than its content for a reason of its own, and
+   the footer strip still sits on the bottom edge.
+   --------------------------------------------------------------------------- */
 .mb-panel {
   background: var(--mb-paper-bright);
-  border: 1.5px solid var(--mb-navy);
-  border-top-width: 4px;
+  border: var(--mb-rule-edge) solid var(--mb-navy);
+  border-top-width: var(--mb-rule-anchor);
   border-radius: 4px;
-  box-shadow: 0 8px 22px rgba(57, 41, 23, 0.08);
+  box-shadow: var(--mb-panel-shadow);
   display: flex;
   flex-direction: column;
-  height: 100%;
+}
+
+/* Where the panel IS the grid item, the default `align-self: stretch` would
+   re-impose the row height. Scoped to the grid child rather than declared on
+   `.mb-panel` itself: on the class it would also apply inside column-flex
+   stacking cells, where the cross axis is HORIZONTAL and a panel would shrink
+   to the width of its longest word. `:has(> .mb-panel)` covers the wrapper
+   form and keeps the rule off cells that hold something else, where equal
+   heights are the design. */
+.matchbook-surface [class*="grid-cols-"] > .mb-panel,
+.matchbook-surface [class*="grid-cols-"] > :has(> .mb-panel) {
+  align-self: start;
 }
 
 .mb-panel-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
+  gap: 12px;
   padding: 0.65rem 1rem 0.55rem;
-  border-bottom: 1px solid var(--mb-rule);
+  border-bottom: var(--mb-rule-hairline) solid var(--mb-rule);
 }
 
 .mb-panel-link {
   font-family: var(--mb-display-font);
   font-size: 0.72rem;
   font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
   color: var(--mb-navy);
   display: inline-flex;
   align-items: center;
-  gap: 0.2rem;
+  gap: 4px;
   white-space: nowrap;
+  /* The containing block for the hit pad below. Inert on its own. */
+  position: relative;
 }
 
+/* ---------------------------------------------------------------------------
+   THE PANEL LINK'S HIT PAD — generated content is painted and hit-tested AS
+   ITS ORIGINATING ELEMENT, so the ::after square gives the link a 44px target
+   with zero layout and zero ink (min-height would grow every panel head;
+   negative margins overhang neighbours and break separation measurement).
+   `max(100%, 44px)` so a link wider than 44px is never made wider — an
+   absolutely positioned box counts toward scrollable overflow. Scoped to
+   operable elements only: `.mb-panel-link` is also used as a MARK inside
+   `MbChoiceCard`, where the card is the link and the span is decoration, and
+   `a[href]` because a bare anchor is not a target either.
+   --------------------------------------------------------------------------- */
+a[href].mb-panel-link::after,
+button.mb-panel-link::after,
+[role="button"].mb-panel-link::after,
+[role="link"].mb-panel-link::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: max(100%, 44px);
+  height: 44px;
+  transform: translate(-50%, -50%);
+}
+
+/* A link hover does not need a hue: ink stays navy and the underline is a
+   second channel, so the state survives greyscale. */
 .mb-panel-link:hover {
-  color: var(--mb-coral);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: var(--mb-rule-edge);
 }
 
 .mb-btn {
   font-family: var(--mb-display-font);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
   font-weight: 600;
   font-size: 0.8rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.45rem;
+  gap: 8px;
   padding: 0.55rem 1.1rem;
   border-radius: 4px;
-  border: 1.5px solid transparent;
-  transition: filter 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+  border: var(--mb-rule-edge) solid transparent;
+  /* `transform` is here so the press RELEASE eases back (see "THE PRESS");
+     the press itself zeroes the duration so it lands on the next frame. */
+  transition: filter var(--mb-dur-fast) var(--mb-ease-out),
+    background-color var(--mb-dur-fast) var(--mb-ease-out),
+    color var(--mb-dur-fast) var(--mb-ease-out),
+    transform var(--mb-dur-fast) var(--mb-ease-out);
   white-space: nowrap;
+  touch-action: manipulation;
 }
 
 .mb-btn-navy {
@@ -153,14 +569,21 @@
   color: var(--mb-paper-bright);
 }
 
+/* Fill is --mb-coral-deep, not --mb-coral: white on coral fails 4.5:1 at
+   button-label size. Borders and accents keep --mb-coral. */
 .mb-btn-coral {
-  background: var(--mb-coral);
+  background: var(--mb-coral-deep);
   color: #fff;
 }
 
+/* The secondary is not in the primary's hue — an outlined coral beside the
+   filled coral CTA reads as one control in two states. It differs from
+   .mb-btn-outline-navy by its GROUND: this one is transparent and lets the
+   paper (or a navy head) show through; that one brings its own paper-bright
+   card. */
 .mb-btn-outline {
-  border-color: var(--mb-coral);
-  color: var(--mb-coral);
+  border-color: var(--mb-navy);
+  color: var(--mb-navy);
   background: transparent;
 }
 
@@ -169,7 +592,7 @@
 }
 
 .mb-btn-outline:hover {
-  background: rgba(238, 75, 52, 0.08);
+  background: var(--mb-tint-2);
   filter: none;
 }
 
@@ -180,42 +603,53 @@
 }
 
 .mb-btn-outline-navy:hover {
-  background: rgba(7, 50, 77, 0.06);
+  background: var(--mb-tint-2);
   filter: none;
 }
 
 .mb-nav-item {
   display: flex;
   align-items: center;
-  gap: 0.7rem;
+  gap: 12px;
   padding: 0.55rem 1.25rem;
   font-family: var(--mb-display-font);
   font-size: 0.85rem;
   font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
   color: var(--mb-navy);
-  border-left: 3px solid transparent;
-  transition: background-color 0.15s ease, color 0.15s ease;
+  border-left: var(--mb-rule-accent) solid transparent;
+  /* Fast + ease-out matches `.mb-btn`, the other control a finger lands on
+     most. */
+  transition: background-color var(--mb-dur-fast) var(--mb-ease-out),
+    color var(--mb-dur-fast) var(--mb-ease-out);
+  touch-action: manipulation;
 }
 
 .mb-nav-item:hover {
-  background: rgba(7, 50, 77, 0.06);
+  background: var(--mb-tint-2);
 }
 
+/* The active row keeps the coral RAIL (coral job 2) and navy ink — rail +
+   lift + ink weight are three readings of "current", so the state survives
+   greyscale. This rule sits after `.mb-nav-item:hover` at equal specificity,
+   so it also wins while the active row is hovered. */
 .mb-nav-item[data-active="true"] {
-  color: var(--mb-coral);
+  color: var(--mb-navy);
   border-left-color: var(--mb-coral);
-  background: rgba(238, 75, 52, 0.08);
+  background: var(--mb-paper-bright);
 }
 
 .mb-kicker {
   font-family: var(--mb-display-font);
   font-size: 0.62rem;
   font-weight: 600;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
   color: var(--mb-ink-muted);
+  /* Optical correction — the kicker hangs Oswald's median cap side bearing
+     (-0.04em) so its ink sits on the box datum beside the display line it
+     labels. The display side is deliberately NOT hung: at display sizes the
+     per-glyph spread is large enough that a constant would push some initials
+     visibly past the margin. `text-indent`, not margin or transform: no
+     stacking context, no containing block, and boxes in normal flow hold. */
+  text-indent: -0.04em;
 }
 
 .mb-form-square {
@@ -225,13 +659,20 @@
   display: inline-block;
 }
 
+/* THE PILL, SPELLED ONCE. Only the four sanctioned round marks — live dot,
+   account disc, icon disc, colour swatch — may use it. See `--mb-radius-round`
+   for why `rounded-full` cannot simply be re-pointed. */
+.mb-round {
+  border-radius: var(--mb-radius-round);
+}
+
 .mb-live-dot {
   width: 7px;
   height: 7px;
-  border-radius: 999px;
+  border-radius: var(--mb-radius-round);
   background: var(--mb-red);
   display: inline-block;
-  animation: mb-pulse 1.4s ease-in-out infinite;
+  animation: mb-pulse var(--mb-dur-pulse) var(--mb-ease-in-out) infinite;
 }
 
 @keyframes mb-pulse {
@@ -246,7 +687,7 @@
   min-width: 26px;
   height: 26px;
   padding: 0 4px;
-  border: 1.5px solid var(--mb-navy);
+  border: var(--mb-rule-edge) solid var(--mb-navy);
   border-radius: 3px;
   background: var(--mb-paper-bright);
   font-family: var(--mb-display-font);
@@ -257,8 +698,8 @@
 .mb-seed-box {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  border: 1.5px solid var(--mb-navy);
+  gap: 8px;
+  border: var(--mb-rule-edge) solid var(--mb-navy);
   border-radius: 3px;
   background: var(--mb-paper-bright);
   padding: 0.3rem 0.55rem;
@@ -268,17 +709,15 @@
   font-family: var(--mb-display-font);
   font-size: 0.66rem;
   font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
   color: var(--mb-ink-muted);
   text-align: left;
   padding: 0.45rem 0.5rem;
-  border-bottom: 1.5px solid var(--mb-navy);
+  border-bottom: var(--mb-rule-edge) solid var(--mb-navy);
 }
 
 .mb-table td {
   padding: 0.5rem 0.5rem;
-  border-bottom: 1px solid var(--mb-rule);
+  border-bottom: var(--mb-rule-hairline) solid var(--mb-rule);
   font-size: 0.85rem;
 }
 
@@ -293,11 +732,22 @@
   white-space: nowrap;
 }
 
+/* ---------------------------------------------------------------------------
+   FORM CONTROL BOUNDARIES
+
+   Inputs/search/textarea/select all take the solid-navy edge tier: --mb-rule
+   is a hairline for dividers INSIDE a surface and lands under the 3:1 a UI
+   boundary needs, so it must never draw a control's outer frame.
+   --------------------------------------------------------------------------- */
+
 .mb-search {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  border: 1px solid var(--mb-rule);
+  gap: 6px;
+  /* The rung lives here, not at the call site. 44 is the floor; a caller may
+     still raise it. */
+  min-height: 44px;
+  border: var(--mb-rule-edge) solid var(--mb-navy);
   border-radius: 4px;
   background: var(--mb-paper-bright);
   padding: 0.25rem 0.55rem;
@@ -312,6 +762,23 @@
   color: var(--mb-navy);
 }
 
+/* ---------------------------------------------------------------------------
+   THE FRAMED FIELD'S OWN HEIGHT
+
+   A stretched child of a bordered shell resolves to rung − 2×edge (46px, on
+   no ladder). The negative block margin of exactly one edge lets the input
+   resolve to the shell's BORDER-box height, so its hit box is the frame edge
+   to edge. Symmetric, so a centred (unstretched) input is unaffected, and the
+   input's transparent background keeps the frame painting. Do not swap the
+   border for inset box-shadow: that re-points `.mb-field[data-invalid]` and
+   focus rules and changes what `outline-offset` measures from.
+   --------------------------------------------------------------------------- */
+.mb-input > input,
+.mb-search > input {
+  align-self: stretch;
+  margin-block: calc(-1 * var(--mb-rule-edge));
+}
+
 .mb-search input::placeholder {
   color: var(--mb-ink-muted);
 }
@@ -319,16 +786,33 @@
 .mb-input {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  border: 1.5px solid var(--mb-rule);
+  gap: 10px;
+  /* `md`, the rung `MbTextInput` already inlines at every call site it owns.
+     Declared here so the two hand-rolled `.mb-input` fields on /login — which
+     had no floor at all and sized to their own line box — are on the same
+     ladder, and so the negative block margin on the input below can never pull
+     an unstretched shell under its rung. */
+  min-height: 48px;
+  border: var(--mb-rule-edge) solid var(--mb-navy);
   border-radius: 4px;
   background: var(--mb-paper-bright);
   padding: 0.6rem 0.8rem;
-  transition: border-color 0.15s ease;
 }
 
-.mb-input:focus-within {
-  border-color: var(--mb-navy);
+/* The frame is navy at rest now, so it can no longer darken to signal focus.
+   The ring does that instead, and it is drawn on the WRAPPER rather than on the
+   bare <input> inside it: an outline around the input alone lands inside the
+   field's own padding and reads as a box within a box. .mb-search gets the same
+   treatment for the same reason. */
+.mb-input:focus-within,
+.mb-search:focus-within {
+  outline: 2px solid var(--mb-focus);
+  outline-offset: 2px;
+}
+
+.mb-input input:focus-visible,
+.mb-search input:focus-visible {
+  outline: none;
 }
 
 .mb-input input {
@@ -348,93 +832,1361 @@
 .mb-select-native {
   width: 100%;
   appearance: none;
-  border: 1.5px solid var(--mb-navy);
+  border: var(--mb-rule-edge) solid var(--mb-navy);
   border-radius: 4px;
   background: var(--mb-paper-bright);
   padding: 0.55rem 2.2rem 0.55rem 0.8rem;
   font-family: var(--mb-display-font);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
   font-weight: 600;
   font-size: 0.95rem;
   color: var(--mb-navy);
   cursor: pointer;
 }
 
-.mb-select-native:focus {
-  outline: 2px solid var(--mb-coral);
-  outline-offset: 1px;
+/* No bespoke :focus rule here any more. It was a second, hard-coded coral ring
+   that (a) duplicated --mb-focus, (b) fired on mouse click as well as keyboard
+   because it used :focus rather than :focus-visible, and (c) drifted from the
+   shared ring at 1px offset against 2px. The shared .matchbook-surface
+   :focus-visible rule below covers it. */
+
+/* ---------------------------------------------------------------------------
+   Focus
+   The legacy global `:focus-visible` outline (further down this file) stays
+   scoped to legacy screens; this pair outranks it on specificity inside a
+   Matchbook surface and inside the portalled overlays, which render outside it.
+   2px is fine here: an outline is a transient mark drawn OUTSIDE the box, so
+   it does not compete with the rule tiers.
+   --------------------------------------------------------------------------- */
+
+.matchbook-surface :focus-visible,
+.mb-dialog :focus-visible,
+.mb-sheet :focus-visible,
+.mb-toast :focus-visible {
+  outline: 2px solid var(--mb-focus);
+  outline-offset: 2px;
 }
 
+/* The ring goes INSIDE a clipping container: .mb-tabs is `overflow-x: auto`
+   and .mb-segmented / .mb-stepper are `overflow: hidden`, so a ring drawn
+   outside a cell loses its top and bottom strokes to the clip and reads as
+   tab dividers. Inset, it is never clipped. These come after the base rule at
+   equal specificity, so order carries them. */
+.mb-tabs :focus-visible,
+.mb-segmented :focus-visible,
+.mb-stepper :focus-visible {
+  outline-offset: -2px;
+}
 
-/* Mobile landscape mode - when height is limited, optimize for score visibility */
-@media (max-height: 500px) {
-  .hide-landscape {
+/* ---------------------------------------------------------------------------
+   THE PRESS — two recipes, never scale (scaling a printed rectangle shrinks
+   its rules and type, the one thing ink on paper cannot do):
+
+     RAISED things (button, tile, swatch, segmented cell, stepper key) sit ON
+     the stock, so they sink INTO it by --mb-press-shift — one edge-rule width.
+     FLUSH things (nav row, tab, list row, scoring column) ARE the page plane
+     and cannot sink; they ink instead, one tier past hover.
+
+   The press lands in ZERO time (`transition-duration: 0s` inside `:active`)
+   and the release eases back through the base rule's transition — that
+   asymmetry is what keeps it from feeling like syrup. Only transform and
+   background-color animate.
+   --------------------------------------------------------------------------- */
+
+/* `.mb-tile` and `.mb-swatch` carry no transition of their own; the other three
+   members of the raised family declare theirs beside their geometry further
+   down, each including `transform` so the release eases. */
+.mb-tile,
+.mb-swatch {
+  transition: background-color var(--mb-dur-fast) var(--mb-ease-out),
+    transform var(--mb-dur-fast) var(--mb-ease-out);
+}
+
+/* RAISED — sink by one rule-width, instantly. */
+.mb-btn:active:not(:disabled),
+.mb-tile:active:not(:disabled),
+.mb-swatch:active:not(:disabled),
+.mb-segmented > *:active:not(:disabled),
+.mb-stepper button:active:not(:disabled) {
+  transform: translateY(var(--mb-press-shift));
+  transition-duration: 0s;
+}
+
+/* FLUSH — ink one tier past hover, instantly, and do NOT move.
+   `transform: none` guards against any global `button:active` scale reaching
+   these: a flush surface is the page plane, and the page plane does not
+   scale. */
+.mb-nav-item:active:not(:disabled),
+.mb-tab:active:not(:disabled),
+.mb-row-hover:active:not(:disabled),
+.mb-panel-link:active:not(:disabled),
+.mb-console-column:active:not(:disabled) {
+  background: var(--mb-tint-press);
+  transform: none;
+  transition-duration: 0s;
+}
+
+/* A filled button has no room for a wash, so the sink is its whole press. The
+   outlined and ghost variants take BOTH — they sink and they ink — because a
+   1px shift on a transparent control is easy to miss at arm's length. */
+.mb-btn-outline:active:not(:disabled),
+.mb-btn-outline-navy:active:not(:disabled) {
+  background: var(--mb-tint-press);
+}
+
+/* ---------------------------------------------------------------------------
+   ENTRANCE — chrome -> content -> accent. Apply ONE of two ways:
+   `.mb-enter-grid` on the grid container (stagger derived from :nth-child,
+   capped structurally at 6 so a 12-panel grid still finishes in 560ms), or
+   `.mb-enter` + `.mb-stagger-N` by hand where the animating elements are not
+   siblings. It must NOT go on data — table rows, list rows, bracket cells:
+   staggering data implies the rows arrived in that order. Removed outright
+   under prefers-reduced-motion (see the reduced-motion block).
+   --------------------------------------------------------------------------- */
+
+@keyframes mb-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.mb-enter,
+.mb-enter-grid > * {
+  animation: mb-enter var(--mb-dur-slow) var(--mb-ease-out) both;
+}
+
+.mb-stagger-1 { animation-delay: calc(var(--mb-stagger) * 1); }
+.mb-stagger-2 { animation-delay: calc(var(--mb-stagger) * 2); }
+.mb-stagger-3 { animation-delay: calc(var(--mb-stagger) * 3); }
+.mb-stagger-4 { animation-delay: calc(var(--mb-stagger) * 4); }
+.mb-stagger-5 { animation-delay: calc(var(--mb-stagger) * 5); }
+.mb-stagger-6 { animation-delay: calc(var(--mb-stagger) * 6); }
+
+/* The content beat: every child holds for `--mb-seq-content` so the chrome
+   above it demonstrably leads, then the panels arrive in reading order. */
+.mb-enter-grid > *:nth-child(1) { animation-delay: var(--mb-seq-content); }
+.mb-enter-grid > *:nth-child(2) { animation-delay: calc(var(--mb-seq-content) + var(--mb-stagger) * 1); }
+.mb-enter-grid > *:nth-child(3) { animation-delay: calc(var(--mb-seq-content) + var(--mb-stagger) * 2); }
+.mb-enter-grid > *:nth-child(4) { animation-delay: calc(var(--mb-seq-content) + var(--mb-stagger) * 3); }
+.mb-enter-grid > *:nth-child(5) { animation-delay: calc(var(--mb-seq-content) + var(--mb-stagger) * 4); }
+/* The cap: child 6 and everything after it share one delay, so the sequence
+   is six steps long however many panels the grid holds. */
+.mb-enter-grid > *:nth-child(n + 6) { animation-delay: calc(var(--mb-seq-content) + var(--mb-stagger) * 5); }
+
+/* The accent beat: live dots arrive LAST, and only inside an entrance
+   context. `:where()` keeps specificity at (0,1,0) so the reduced-motion
+   block's `.mb-live-dot { animation: none }` further down still wins the tie
+   by order. `both`-filled, so the dot is simply absent until its beat. */
+@keyframes mb-accent-in {
+  from {
+    opacity: 0;
+  }
+}
+
+:where(.mb-enter, .mb-enter-grid) .mb-live-dot {
+  animation:
+    mb-accent-in var(--mb-dur-fast) var(--mb-ease-out) var(--mb-seq-accent) both,
+    mb-pulse var(--mb-dur-pulse) var(--mb-ease-in-out) calc(var(--mb-seq-accent) + var(--mb-dur-fast)) infinite;
+}
+
+/* ---------------------------------------------------------------------------
+   LIST-TO-DETAIL CONTINUITY — the same-document view transition on
+   `/summaries` (row scoreline -> report hero). The names are applied
+   TRANSIENTLY by the page (set at click, removed on `finished`): a standing
+   `view-transition-name` creates a stacking context and captures a group on
+   every unrelated transition. Three parts — mb-vt-report (chrome cross-fade),
+   mb-vt-score (the UA group carries the figure), mb-vt-accent (the "Final"
+   kicker, opacity-in last). Where the API does not exist the page calls
+   `selectMatch` directly and this block is inert; under
+   prefers-reduced-motion the page never starts a transition, with the
+   reduced-motion block below as backstop. Each pseudo-element selector stands
+   alone so an engine that cannot parse `::view-transition-*` drops one rule,
+   not a list.
+   --------------------------------------------------------------------------- */
+
+@keyframes mb-vt-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes mb-vt-out {
+  to {
+    opacity: 0;
+  }
+}
+
+::view-transition-group(mb-vt-report) {
+  animation-duration: var(--mb-dur-base);
+  animation-timing-function: var(--mb-ease-out);
+}
+
+::view-transition-old(mb-vt-report) {
+  animation: mb-vt-out var(--mb-dur-base) var(--mb-ease-out) both;
+}
+
+::view-transition-new(mb-vt-report) {
+  animation: mb-vt-in var(--mb-dur-base) var(--mb-ease-out) both;
+}
+
+::view-transition-group(mb-vt-score) {
+  animation-duration: var(--mb-dur-slow);
+  animation-timing-function: var(--mb-ease-out);
+}
+
+::view-transition-old(mb-vt-score) {
+  animation: mb-vt-out var(--mb-dur-slow) var(--mb-ease-out) both;
+}
+
+::view-transition-new(mb-vt-score) {
+  animation: mb-vt-in var(--mb-dur-slow) var(--mb-ease-out) both;
+}
+
+/* The accent enters only — there is deliberately no old accent: the previous
+   report's kicker leaves inside the chrome's own cross-fade. */
+::view-transition-new(mb-vt-accent) {
+  animation: mb-vt-in var(--mb-dur-fast) var(--mb-ease-out)
+    calc(var(--mb-seq-content) + var(--mb-dur-base)) both;
+}
+
+/* ---------------------------------------------------------------------------
+   Safe area
+   --------------------------------------------------------------------------- */
+
+.mb-safe-top {
+  padding-top: var(--mb-safe-top);
+}
+
+.mb-safe-bottom {
+  padding-bottom: var(--mb-safe-bottom);
+}
+
+/* ---------------------------------------------------------------------------
+   THE LANDSCAPE NAVIGATION GATE — the exact complement of the bottom bar's
+   hiding gates, so a rotated phone always has one nav:
+
+     width >= 1024px                  sidebar          rail hidden
+     width <  1024px, height >  500px bottom bar       rail hidden
+     width <  1024px, height <= 500px THE RAIL         bar hidden
+
+   `1023.98px` rather than `1023px` so a fractional viewport width cannot fall
+   between this and Tailwind's `lg` and paint neither. `display` ONLY — every
+   other property is a utility on the element, so this unlayered rule can
+   never quietly out-rank one of them.
+   --------------------------------------------------------------------------- */
+
+.mb-landscape-rail {
+  display: none;
+}
+
+@media (max-height: 500px) and (max-width: 1023.98px) {
+  .mb-landscape-rail {
+    display: flex;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Touch targets. `.mb-btn-lg` and `.mb-btn-touch` are unconditional; the
+   blanket coarse-pointer floor below is armed by `data-mb-touch="on"` on
+   `<html>`.
+   --------------------------------------------------------------------------- */
+
+.mb-btn-lg {
+  padding: 0.75rem 1.25rem;
+  font-size: 0.9rem;
+  min-height: 44px;
+}
+
+.mb-btn-touch {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+@media (pointer: coarse) {
+  [data-mb-touch="on"] .mb-btn,
+  [data-mb-touch="on"] .mb-nav-item,
+  [data-mb-touch="on"] .mb-tab,
+  [data-mb-touch="on"] .mb-panel-link {
+    min-height: 44px;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Promoted inline recipes
+   --------------------------------------------------------------------------- */
+
+.mb-row-hover {
+  transition: background-color var(--mb-dur-base) var(--mb-ease-in-out);
+}
+
+.mb-row-hover:hover {
+  background: var(--mb-tint-1);
+}
+
+/* Selection / rank rail. Set --mb-rail-color per row; coral is the default. */
+.mb-rail {
+  box-shadow: inset var(--mb-rule-accent) 0 0 var(--mb-rail-color, var(--mb-coral));
+}
+
+.mb-tile {
+  border: var(--mb-rule-edge) solid var(--mb-navy);
+  background: var(--mb-paper-bright);
+}
+
+/* ---------------------------------------------------------------------------
+   THE ICON MARK — geometry here, SHAPE as a named channel (circle = a steady
+   measure, box = wants attention; the shape axis is what keeps six tones
+   distinct in greyscale):
+
+     .mb-icon-mark                    geometry, default disc
+     .mb-icon-mark[data-shape="box"]  3px
+
+   `.mb-icon-disc` is kept as an exact alias of the disc shape.
+   --------------------------------------------------------------------------- */
+
+.mb-icon-mark,
+.mb-icon-disc {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: var(--mb-radius-round);
+  border: var(--mb-rule-edge) solid var(--mb-navy);
+  color: var(--mb-navy);
+}
+
+.mb-icon-mark[data-shape="box"] {
+  border-radius: 3px;
+}
+
+/* ---------------------------------------------------------------------------
+   THE METER — rule-thin progress track. The fill is a full-width bar scaled
+   on its X axis, never an animated `width` (a layout-animating property
+   reflows the row on every tick). The fraction arrives as `--mb-meter-fill`,
+   a UNITLESS 0-1 number, because `scaleX()` takes a number and a
+   `calc(N% / 100%)` round-trip is not portable. `will-change` is deliberately
+   absent: a permanent compositor layer per row costs more than the one
+   promotion the transition triggers.
+   --------------------------------------------------------------------------- */
+.mb-meter {
+  display: block;
+  width: 100%;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--mb-tint-3);
+}
+
+.mb-meter > span {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform-origin: left center;
+  transform: scaleX(var(--mb-meter-fill, 0));
+  background: var(--mb-meter-color, var(--mb-navy));
+  transition: transform var(--mb-dur-base) var(--mb-ease-out);
+}
+
+/* ---------------------------------------------------------------------------
+   Dialogs and sheets
+   Navy wash, never a blur. Radius 4px, 4px navy top border, one panel shadow.
+   --------------------------------------------------------------------------- */
+
+.mb-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(7, 50, 77, 0.55);
+  animation: mb-fade var(--mb-dur-base) var(--mb-ease-out) both;
+}
+
+@keyframes mb-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.mb-dialog {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  max-height: calc(100dvh - 2rem);
+  background: var(--mb-paper-bright);
+  border: var(--mb-rule-edge) solid var(--mb-navy);
+  border-top-width: var(--mb-rule-anchor);
+  border-radius: 4px;
+  box-shadow: var(--mb-panel-shadow);
+  animation: mb-enter var(--mb-dur-slow) var(--mb-ease-out) both;
+}
+
+.mb-dialog-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0.65rem 1rem 0.55rem;
+  border-bottom: var(--mb-rule-hairline) solid var(--mb-rule);
+}
+
+.mb-dialog[data-tone="navy"] .mb-dialog-head {
+  background: var(--mb-navy);
+  color: var(--mb-paper-bright);
+  border-bottom-color: var(--mb-rule-on-navy);
+}
+
+.mb-dialog[data-tone="danger"] {
+  border-top-color: var(--mb-red);
+}
+
+.mb-dialog-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 1rem;
+}
+
+.mb-dialog-foot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 0.75rem 1rem;
+  padding-bottom: calc(0.75rem + var(--mb-safe-bottom));
+  border-top: var(--mb-rule-edge) solid var(--mb-navy);
+}
+
+.mb-sheet {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  max-height: calc(100dvh - 3rem);
+  background: var(--mb-paper-bright);
+  border: var(--mb-rule-edge) solid var(--mb-navy);
+  border-top-width: var(--mb-rule-anchor);
+  border-radius: 4px 4px 0 0;
+  box-shadow: var(--mb-panel-shadow);
+  padding-bottom: var(--mb-safe-bottom);
+  animation: mb-sheet-up var(--mb-dur-slow) var(--mb-ease-out) both;
+}
+
+@keyframes mb-sheet-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Toast
+   Paper-bright, an edge-tier navy border, an anchor-tier left border in the
+   tone colour — the horizontal mirror of the accent rail.
+   --------------------------------------------------------------------------- */
+
+.mb-toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+  background: var(--mb-paper-bright);
+  border: var(--mb-rule-edge) solid var(--mb-navy);
+  border-left: var(--mb-rule-anchor) solid var(--mb-toast-tone, var(--mb-navy));
+  border-radius: 4px;
+  box-shadow: var(--mb-panel-shadow);
+  padding: 0.6rem 0.8rem;
+  animation: mb-enter var(--mb-dur-slow) var(--mb-ease-out) both;
+}
+
+.mb-toast[data-tone="info"] { --mb-toast-tone: var(--mb-navy); }
+.mb-toast[data-tone="success"] { --mb-toast-tone: var(--mb-green); }
+/* gold-INK, not raw gold: raw --mb-gold fails the 3:1 non-text floor on
+   paper-bright, --mb-gold-ink clears it. Raw gold keeps its other jobs
+   (badge fill mark, team accents, on-navy uses). */
+.mb-toast[data-tone="warning"] { --mb-toast-tone: var(--mb-gold-ink); }
+.mb-toast[data-tone="danger"] { --mb-toast-tone: var(--mb-red); }
+
+/* ---------------------------------------------------------------------------
+   Badge
+
+   The letterforms are always navy: every tone colour fails the 4.5:1 text
+   floor at 0.66rem/700, so the tone rides a second channel instead —
+     text    the paired mark (.mb-live-dot / .mb-form-square via --mb-badge-fill)
+     framed  an edge-tier rule in --mb-badge-ink (draft/warn use --mb-gold-ink,
+             since raw gold fails the 3:1 UI floor)
+     solid   a tone fill with white ink — only tone="live" clears 4.5:1 there,
+             so MbBadge restricts `solid` to live.
+   --------------------------------------------------------------------------- */
+
+.mb-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  font-family: var(--mb-display-font);
+  font-weight: 700;
+  font-size: 0.66rem;
+  line-height: 1;
+  border: var(--mb-rule-edge) solid transparent;
+  border-radius: 2px;
+  color: var(--mb-navy);
+  font-variant-numeric: tabular-nums;
+}
+
+.mb-badge[data-size="md"] {
+  font-size: 0.74rem;
+}
+
+/* The paired mark takes the tone so the caller never sets a colour inline. */
+.mb-badge .mb-form-square {
+  background: var(--mb-badge-fill, var(--mb-navy));
+}
+
+.mb-badge[data-tone="live"] { --mb-badge-ink: var(--mb-red); --mb-badge-fill: var(--mb-red); }
+.mb-badge[data-tone="draft"] { --mb-badge-ink: var(--mb-gold-ink); --mb-badge-fill: var(--mb-gold); }
+.mb-badge[data-tone="final"] { --mb-badge-ink: var(--mb-green); --mb-badge-fill: var(--mb-green); }
+.mb-badge[data-tone="win"] { --mb-badge-ink: var(--mb-green); --mb-badge-fill: var(--mb-green); }
+.mb-badge[data-tone="loss"] { --mb-badge-ink: var(--mb-red); --mb-badge-fill: var(--mb-red); }
+.mb-badge[data-tone="neutral"] { --mb-badge-ink: var(--mb-ink-muted); --mb-badge-fill: var(--mb-ink-muted); }
+.mb-badge[data-tone="teal"] { --mb-badge-ink: var(--mb-teal); --mb-badge-fill: var(--mb-teal); }
+.mb-badge[data-tone="guest"] { --mb-badge-ink: var(--mb-plum); --mb-badge-fill: var(--mb-plum); }
+.mb-badge[data-tone="warn"] { --mb-badge-ink: var(--mb-gold-ink); --mb-badge-fill: var(--mb-gold); }
+
+.mb-badge[data-variant="framed"] {
+  border-color: var(--mb-badge-ink);
+  padding: 0.2rem 0.4rem;
+}
+
+/* White, not --mb-paper-bright: on --mb-red white is 4.76:1 and paper-bright
+   4.58:1; the extra margin is what keeps the one permitted solid tone above
+   4.5:1 at 0.66rem/700. Same #fff-on-fill pairing as .mb-btn-coral. */
+.mb-badge[data-variant="solid"] {
+  background: var(--mb-badge-fill);
+  border-color: var(--mb-badge-fill);
+  color: #fff;
+  padding: 0.2rem 0.4rem;
+}
+
+/* A solid badge must still read in greyscale, so the live dot rides along; on a
+   tone fill it inverts to paper-bright. */
+.mb-badge[data-variant="solid"] .mb-live-dot {
+  background: var(--mb-paper-bright);
+}
+
+/* ---------------------------------------------------------------------------
+   Tabs — the horizontal mirror of .mb-nav-item.
+   --------------------------------------------------------------------------- */
+
+.mb-tabs {
+  display: flex;
+  align-items: stretch;
+  overflow-x: auto;
+  border-bottom: var(--mb-rule-edge) solid var(--mb-navy);
+}
+
+.mb-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0.5rem 1rem;
+  margin-bottom: calc(-1 * var(--mb-rule-edge));
+  white-space: nowrap;
+  font-family: var(--mb-display-font);
+  font-size: 0.85rem;
+  font-weight: 600;
+  /* Inactive tabs are MUTED, not bold-vs-regular: muting the inactive side
+     keeps both labels at 600, so switching tabs cannot reflow the strip. */
+  color: var(--mb-ink-muted);
+  border-bottom: var(--mb-rule-accent) solid transparent;
+  transition: color var(--mb-dur-base) var(--mb-ease-in-out),
+    border-color var(--mb-dur-base) var(--mb-ease-in-out),
+    background-color var(--mb-dur-base) var(--mb-ease-in-out);
+  touch-action: manipulation;
+}
+
+.mb-tab:hover {
+  background: var(--mb-tint-2);
+  color: var(--mb-navy);
+}
+
+/* Same split as .mb-nav-item: the 3px underline is the coral (job 2, the
+   selection rail in its horizontal orientation); the label is the ink. */
+.mb-tab[data-active="true"] {
+  color: var(--mb-navy);
+  border-bottom-color: var(--mb-coral);
+}
+
+/* ---------------------------------------------------------------------------
+   Form controls
+   Radii stay 4/3/2px — the radio is a squared ballot box: 999px is reserved
+   for the live dot, account disc, icon discs and colour swatches.
+   --------------------------------------------------------------------------- */
+
+.mb-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.mb-field-hint {
+  font-size: 0.72rem;
+  color: var(--mb-ink-muted);
+}
+
+.mb-field-error {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--mb-red);
+}
+
+.mb-field[data-invalid="true"] .mb-input,
+.mb-field[data-invalid="true"] .mb-textarea,
+.mb-field[data-invalid="true"] .mb-select-native {
+  border-color: var(--mb-red);
+}
+
+.mb-textarea {
+  width: 100%;
+  min-height: 5rem;
+  resize: vertical;
+  border: var(--mb-rule-edge) solid var(--mb-navy);
+  border-radius: 4px;
+  background: var(--mb-paper-bright);
+  padding: 0.6rem 0.8rem;
+  font-size: 0.9rem;
+  color: var(--mb-navy);
+}
+
+.mb-textarea::placeholder {
+  color: var(--mb-ink-muted);
+}
+
+.mb-check,
+.mb-radio {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  display: inline-grid;
+  place-content: center;
+  border: var(--mb-rule-edge) solid var(--mb-navy);
+  border-radius: 2px;
+  background: var(--mb-paper-bright);
+  transition: background-color var(--mb-dur-fast) var(--mb-ease-out),
+    border-color var(--mb-dur-fast) var(--mb-ease-out);
+}
+
+/* The "on" state is INK, not accent: a form renders a dozen at once, and
+   coral is allowed once per screen. A filled-in ballot box on printed stock
+   is inked, not highlighted. */
+.mb-check:checked {
+  background: var(--mb-navy);
+  border-color: var(--mb-navy);
+}
+
+.mb-check:checked::after {
+  content: "";
+  width: 7px;
+  height: 4px;
+  border-left: 2px solid var(--mb-paper-bright);
+  border-bottom: 2px solid var(--mb-paper-bright);
+  transform: rotate(-45deg) translate(0.5px, -1px);
+}
+
+.mb-radio:checked::after {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 2px;
+  background: var(--mb-navy);
+}
+
+.mb-switch {
+  appearance: none;
+  position: relative;
+  width: 28px;
+  height: 16px;
+  flex-shrink: 0;
+  border: var(--mb-rule-edge) solid var(--mb-navy);
+  border-radius: 2px;
+  background: var(--mb-paper-bright);
+  transition: background-color var(--mb-dur-base) var(--mb-ease-in-out),
+    border-color var(--mb-dur-base) var(--mb-ease-in-out);
+}
+
+.mb-switch::after {
+  content: "";
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  width: 11px;
+  height: 11px;
+  border-radius: 2px;
+  background: var(--mb-navy);
+  transition: transform var(--mb-dur-base) var(--mb-ease-out),
+    background-color var(--mb-dur-base) var(--mb-ease-in-out);
+}
+
+.mb-switch:checked {
+  background: var(--mb-navy);
+  border-color: var(--mb-navy);
+}
+
+.mb-switch:checked::after {
+  transform: translateX(11px);
+  background: var(--mb-paper-bright);
+}
+
+.mb-stepper {
+  display: inline-flex;
+  align-items: stretch;
+  overflow: hidden;
+  border: var(--mb-rule-edge) solid var(--mb-navy);
+  border-radius: 4px;
+  background: var(--mb-paper-bright);
+}
+
+.mb-stepper button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  min-height: 44px;
+  background: transparent;
+  color: var(--mb-navy);
+  touch-action: manipulation;
+  transition: background-color var(--mb-dur-fast) var(--mb-ease-out),
+    transform var(--mb-dur-fast) var(--mb-ease-out);
+}
+
+.mb-stepper button:hover:not(:disabled) {
+  background: var(--mb-tint-2);
+}
+
+.mb-stepper button:disabled {
+  color: var(--mb-ink-muted);
+  cursor: not-allowed;
+}
+
+.mb-stepper-value {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 3.5rem;
+  padding: 0 0.5rem;
+  border-left: var(--mb-rule-edge) solid var(--mb-navy);
+  border-right: var(--mb-rule-edge) solid var(--mb-navy);
+  font-family: var(--mb-display-font);
+  font-weight: 700;
+  font-size: 1.5rem;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.mb-stepper[data-size="lg"] button {
+  width: 56px;
+  min-height: 56px;
+}
+
+.mb-stepper[data-size="lg"] .mb-stepper-value {
+  min-width: 4.5rem;
+  font-size: 1.875rem;
+}
+
+.mb-swatch {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  padding: 0;
+  border: var(--mb-rule-edge) solid var(--mb-navy);
+  border-radius: 2px;
+}
+
+.mb-swatch[data-size="touch"] {
+  width: 44px;
+  height: 44px;
+  border-radius: 4px;
+}
+
+.mb-swatch[data-selected="true"] {
+  box-shadow: inset 0 0 0 2px var(--mb-paper-bright), inset 0 0 0 4px var(--mb-navy);
+}
+
+/* Wraps instead of squeezing; the navy background shows through the gaps as
+   the dividing rules, so a wrapped second row is still ruled correctly. The
+   gap is held to --mb-rule-edge — `gap` is a LayoutUnit and honours fractional
+   values, so anything wider paints heavier than the borders it sits under. */
+.mb-segmented {
+  display: grid;
+  gap: var(--mb-rule-edge);
+  overflow: hidden;
+  border: var(--mb-rule-edge) solid var(--mb-navy);
+  border-radius: 4px;
+  background: var(--mb-navy);
+}
+
+.mb-segmented > * {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0.5rem 0.75rem;
+  background: var(--mb-paper-bright);
+  color: var(--mb-navy);
+  font-family: var(--mb-display-font);
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-align: center;
+  touch-action: manipulation;
+  transition: background-color var(--mb-dur-base) var(--mb-ease-in-out),
+    color var(--mb-dur-base) var(--mb-ease-in-out),
+    transform var(--mb-dur-fast) var(--mb-ease-out);
+}
+
+.mb-segmented[data-size="md"] > * {
+  min-height: 48px;
+}
+
+.mb-segmented > [data-selected="true"] {
+  background: var(--mb-navy);
+  color: var(--mb-paper-bright);
+}
+
+/* ---------------------------------------------------------------------------
+   Scoring console
+   --------------------------------------------------------------------------- */
+
+.mb-console {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overscroll-behavior: none;
+  background: var(--mb-paper-bright);
+}
+
+@supports (height: 100dvh) {
+  .mb-console {
+    height: 100dvh;
+  }
+}
+
+.mb-console-column {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: var(--mb-paper-bright);
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
+  transition: background-color var(--mb-dur-fast) var(--mb-ease-out);
+}
+
+/* The press lives in "THE PRESS" above, with the rest of the flush family. */
+
+/* The leader notch is TEAL: "rank #1 / leading" is teal everywhere (the
+   standings rail draws the same fact), and coral means the primary action. */
+.mb-console-column[data-leading="true"],
+.mb-notch-lead {
+  box-shadow: inset 0 var(--mb-rule-accent) 0 var(--mb-teal);
+}
+
+.mb-numeral {
+  display: block;
+  text-align: center;
+  font-family: var(--mb-display-font);
+  font-weight: 700;
+  line-height: 0.9;
+  font-variant-numeric: tabular-nums;
+  min-width: 2ch;
+}
+
+/* One cell per figure, each exactly `1ch` — the advance of "0", which is the
+   widest figure in Oswald 700 (measured at the console step: 0 → 33.000px,
+   4 → 31.453, 9 → 32.281, 7 → 26.344, 1 → 23.109).
+   `font-variant-numeric: tabular-nums` above is a **no-op on this face**: Oswald
+   ships no `tnum` table, so `.mb-numeral` alone measured 54.375px for "18" and
+   55.391px for "19" — the whole numeral jittered 1.02px sideways on a single
+   point, and any value holding a "1" sat visibly off the divider it flanks.
+   Boxing each figure restores real tabular metrics without changing the face:
+   an N-figure value is exactly N × 1ch wide whatever the figures are, so the
+   reserve below is exact and no glyph moves when a digit changes. */
+.mb-numeral-digit {
+  display: inline-block;
+  width: 1ch;
+  text-align: center;
+}
+
+/* A rule that marks a score — the lead notch, the increment flash — sized to
+   the figures actually rendered rather than to the reserve standing behind
+   them. Once the two scores hug their divider the reserve opens outward, and a
+   rule cut to the box floats over blank paper: at the compact step it ran 49.5px
+   over a 16.5px "9". Carry a `.mb-numeral--*` step class alongside this one and
+   nothing else — those rules set only `font-size`; family and weight below
+   supply the rest of what `1ch` needs to land on the same figure advance the
+   numeral uses. Both were measured the hard way: inheriting Outfit made `3ch`
+   118.08px instead of 99.00px (a 19.08px reflow on any 3-figure score — the
+   exact thing this component exists to prevent), and inheriting weight 400 made
+   `1ch` 31.01px instead of 33.00px, so the rule sat 2px per figure narrower
+   than the figures it marks. `ch` is the advance of "0" in the *computed* font,
+   not in the family. */
+.mb-score-rule {
+  display: block;
+  height: 3px;
+  width: calc(var(--mb-figures, 3) * 1ch + 2 * var(--mb-score-bleed, 0px));
+  font-family: var(--mb-display-font);
+  font-weight: 700;
+  background: var(--mb-score-ink, var(--mb-navy));
+}
+
+/* display/stat-lg */
+.mb-numeral--compact {
+  font-size: 1.875rem;
+}
+
+/* display/score-xl */
+.mb-numeral--console {
+  font-size: 3.75rem;
+}
+
+/* display/score-2xl — MbScoreNumeral size="court" only */
+.mb-numeral--court {
+  font-size: clamp(4rem, 18vw, 9rem);
+}
+
+/* A width, not a border, so this one really did paint at 1.5px while every
+   "1.5px" border beside it painted at 1. Held to the edge tier so the console
+   divider matches the panel edge it meets. */
+.mb-rule-vertical {
+  width: var(--mb-rule-edge);
+  align-self: stretch;
+  flex-shrink: 0;
+  background: var(--mb-navy);
+}
+
+.mb-action-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0.75rem 1rem;
+  padding-bottom: calc(0.75rem + var(--mb-safe-bottom));
+  border-top: var(--mb-rule-edge) solid var(--mb-navy);
+  background: var(--mb-paper-bright);
+}
+
+/* ---------------------------------------------------------------------------
+   Skeleton — static block at the final geometry. No shimmer: a shimmer is a
+   gradient, and gradients are banned.
+   --------------------------------------------------------------------------- */
+
+.mb-skeleton {
+  display: block;
+  background: rgba(7, 50, 77, 0.08);
+  border-radius: 2px;
+}
+
+/* ---------------------------------------------------------------------------
+   Editorial set (public share)
+   --------------------------------------------------------------------------- */
+
+/* FINAL IS GREEN — same status colour as MbBadge[data-tone="final"], never the
+   coral accent. Ink twin, not raw --mb-green: raw green fails AA at
+   0.74rem/700. */
+.mb-stamp-final {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem 0.6rem;
+  border: var(--mb-rule-edge) solid var(--mb-green-ink);
+  border-radius: 2px;
+  color: var(--mb-green-ink);
+  font-family: var(--mb-display-font);
+  font-weight: 700;
+  font-size: 0.74rem;
+  line-height: 1;
+  transform: rotate(var(--mb-stamp-rotate, -6deg));
+  transform-origin: center;
+}
+
+.mb-code-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0.25rem 0.5rem;
+  border: var(--mb-rule-edge) solid var(--mb-navy);
+  border-radius: 3px;
+  background: var(--mb-paper-bright);
+  font-family: var(--mb-display-font);
+  font-weight: 700;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.mb-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 0.55rem 0.8rem;
+  background: var(--mb-paper-bright);
+  border: var(--mb-rule-edge) solid var(--mb-banner-tone, var(--mb-navy));
+  border-left-width: var(--mb-rule-anchor);
+  border-radius: 4px;
+  font-size: 0.85rem; /* body/sm */
+}
+
+.mb-banner[data-tone="info"] { --mb-banner-tone: var(--mb-navy); }
+.mb-banner[data-tone="success"] { --mb-banner-tone: var(--mb-green); }
+/* gold-INK, not raw gold — see .mb-toast[data-tone="warning"]. */
+.mb-banner[data-tone="warn"] { --mb-banner-tone: var(--mb-gold-ink); }
+.mb-banner[data-tone="danger"] { --mb-banner-tone: var(--mb-red); }
+
+/* Grid, never flex — the name cells must be able to shrink. */
+.mb-scoreline {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
+}
+
+.mb-scoreline > * {
+  min-width: 0;
+}
+
+/* ---------------------------------------------------------------------------
+   Scoreboard cuts (MbScoreboardHero)
+
+   The score box is a fixed reserve, so in a `1fr auto 1fr` scoreline the two
+   name columns pay for it. Cuts key on the card's own inline size (container
+   query), never the viewport — the same card renders at very different widths
+   in different panels on one screen.
+
+   620 / 500 are the container widths at which each name column can still set
+   a 40-character name in two lines at its type step (hero 0.9rem, compact
+   0.72rem), given padding, gaps and the score reserve.
+   --------------------------------------------------------------------------- */
+
+.mb-scoreboard {
+  container-type: inline-size;
+}
+
+.mb-sb-wide {
+  display: none;
+}
+
+@container (min-width: 620px) {
+  .mb-scoreboard[data-size="hero"] > .mb-sb-wide { display: block; }
+  .mb-scoreboard[data-size="hero"] > .mb-sb-narrow { display: none; }
+}
+
+@container (min-width: 500px) {
+  .mb-scoreboard[data-size="compact"] > .mb-sb-wide { display: block; }
+  .mb-scoreboard[data-size="compact"] > .mb-sb-narrow { display: none; }
+}
+
+/* Below those, one block per team. The score keeps its full step and its full
+   reserve; it simply stops standing between the two names.
+
+   Narrower still, the reserve alone would starve the name beside it, so the
+   score drops to a second line and the name takes the whole width. That
+   threshold is again the two-line floor: hero row name = C − 175px, so a
+   40-character name needs C ≥ 320; compact row name = C − 120.5px against a
+   49.5px reserve, which only starves under C ≈ 210. */
+.mb-sb-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  align-items: center;
+  gap: 12px;
+}
+
+@container (min-width: 320px) {
+  .mb-scoreboard[data-size="hero"] .mb-sb-row { grid-template-columns: 1fr auto; }
+}
+
+@container (min-width: 210px) {
+  .mb-scoreboard[data-size="compact"] .mb-sb-row { grid-template-columns: 1fr auto; }
+}
+
+.mb-day-head {
+  padding: 0.35rem 0.5rem;
+  background: var(--mb-band);
+  font-family: var(--mb-display-font);
+  font-weight: 700;
+  font-size: 0.66rem;
+  color: var(--mb-ink-muted);
+}
+
+/* ---------------------------------------------------------------------------
+   Skip link — first focusable node, targets #mb-main.
+   --------------------------------------------------------------------------- */
+
+.mb-skip-link {
+  position: fixed;
+  top: calc(0.5rem + var(--mb-safe-top));
+  left: 0.5rem;
+  z-index: 100;
+  transform: translateY(-300%);
+  padding: 0.55rem 1.1rem;
+  border-radius: 4px;
+  background: var(--mb-navy);
+  color: var(--mb-paper-bright);
+  font-family: var(--mb-display-font);
+  font-weight: 600;
+  font-size: 0.8rem;
+}
+
+.mb-skip-link:focus {
+  transform: none;
+}
+
+/* ---------------------------------------------------------------------------
+   REDUCED MOTION
+
+   Motion is REMOVED here, not shortened: a transition compressed to 0.01ms is
+   still a jump. The press ink and hover wash deliberately survive — a
+   background change is not motion, and reduced-motion users still need to see
+   that a control responded. `.mb-live-dot` loses its pulse and holds at full
+   opacity, so "Live" is still marked by the dot and the word beside it.
+   --------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  /* Entrance, dialog, sheet and toast arrive at their end state. */
+  .mb-enter,
+  .mb-enter-grid > *,
+  .mb-dialog,
+  .mb-dialog-overlay,
+  .mb-sheet,
+  .mb-toast {
+    animation: none;
+  }
+
+  .mb-live-dot {
+    animation: none;
+    opacity: 1;
+  }
+
+  /* View transitions are never STARTED under reduced motion — call sites
+     feature-gate on this media query before `startViewTransition` — so these
+     rules are the backstop in case a future call site forgets the gate. One
+     selector per rule: an engine without the pseudo drops one rule, not its
+     neighbours. */
+  ::view-transition-group(*) {
+    animation: none !important;
+  }
+  ::view-transition-image-pair(*) {
+    animation: none !important;
+  }
+  ::view-transition-old(*) {
+    animation: none !important;
+  }
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+
+  /* The press keeps its ink and loses its movement. */
+  .mb-btn:active:not(:disabled),
+  .mb-tile:active:not(:disabled),
+  .mb-swatch:active:not(:disabled),
+  .mb-segmented > *:active:not(:disabled),
+  .mb-stepper button:active:not(:disabled) {
+    transform: none;
+  }
+
+  /* Nothing in the zone transitions a transform. */
+  .mb-btn,
+  .mb-tile,
+  .mb-swatch,
+  .mb-segmented > *,
+  .mb-stepper button,
+  .mb-switch::after,
+  .mb-meter > span {
+    transition-property: background-color, color, border-color;
+  }
+
+  /* ------------------------------------------------------- the backstop
+
+     The named rules above cover every recipe the system OWNS. This one
+     covers everything it does not: a Tailwind `transition-*`/`duration-*`
+     written inline on a screen, a `<video>`/`<details>` UA animation, and
+     `scroll-behavior`, which no `.mb-*` selector can reach. The stronger
+     `animation: none` / `transform: none` rules above still win on
+     specificity, so "hurry" here never weakens "remove" there.
+
+     `!important` is load-bearing: an inline `style="transition: …"` is the
+     common way a component sets a duration, and nothing else outranks it.
+     ------------------------------------------------------------------- */
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   SELECTION
+
+   Declared deliberately: without it selected text falls back to the UA's
+   default blue, the one colour in the app that belongs to no palette. Navy
+   at low alpha keeps selected text at full contrast against paper.
+   --------------------------------------------------------------------------- */
+
+::selection {
+  background: rgba(7, 50, 77, 0.2);
+  color: var(--mb-navy);
+}
+
+/* ---------------------------------------------------------------------------
+   Print
+   Overriding the palette tokens is what turns the whole system black on white;
+   nothing below needs to restate a colour.
+   --------------------------------------------------------------------------- */
+
+@media print {
+  :root {
+    --mb-paper: #ffffff;
+    --mb-paper-bright: #ffffff;
+    --mb-navy: #000000;
+    --mb-ink-muted: #333333;
+    --mb-rule: rgba(0, 0, 0, 0.35);
+    --mb-tint-1: transparent;
+    --mb-tint-2: transparent;
+    --mb-tint-3: rgba(0, 0, 0, 0.12);
+    --mb-band: rgba(0, 0, 0, 0.06);
+    --mb-panel-shadow: none;
+  }
+
+  @page {
+    margin: 12mm;
+  }
+
+  .matchbook-surface {
+    background-image: none;
+  }
+
+  /* Chrome and actions */
+  .mb-print-hide,
+  .mb-skip-link,
+  .mb-action-bar,
+  .mb-toast,
+  .mb-dialog-overlay,
+  .mb-btn,
+  .mb-panel-link,
+  .mb-tabs,
+  .matchbook-surface nav,
+  .matchbook-surface aside {
     display: none !important;
   }
 
-  .hide-landscape-divider {
-    display: none !important;
-  }
-
-  .show-landscape {
+  /* One column */
+  .matchbook-surface [class*="grid-cols-"] {
     display: block !important;
   }
 
-  .landscape-row {
-    flex-direction: row !important;
+  .mb-panel {
+    height: auto;
+    margin-bottom: 1rem;
+    box-shadow: none;
+    break-inside: avoid;
+  }
+
+  /* Expand capped ledgers */
+  .matchbook-surface [class*="max-h-"] {
+    max-height: none !important;
+  }
+
+  .matchbook-surface [class*="overflow-"] {
+    overflow: visible !important;
   }
 }
+
 
 * {
   box-sizing: border-box;
 }
 
-html,
-body {
+/* ---------------------------------------------------------------------------
+   THE SCROLLPORT — read this before touching html/body
+
+   Never put `height: 100%` or any `overflow` on BODY. A clamped body with
+   one overflow axis hidden becomes a second scrollport stacked on the
+   document's: the wheel and the keyboard then scroll two different boxes,
+   window.scrollY pins at 0, and scroll restoration silently breaks. Body
+   fills the viewport with min-height and the DOCUMENT stays the scrollport.
+
+   Never put `overflow-x: hidden` back on html. On mobile it does not make
+   off-screen content reachable — Chrome grows the layout viewport to the
+   overflow either way — it only hides the evidence (no scrollbar, no cut
+   edge). If a route overflows, that is a defect in the route, and without
+   this line it is a visible one.
+   --------------------------------------------------------------------------- */
+
+html {
   height: 100%;
   margin: 0;
   padding: 0;
-  overflow-x: hidden;
 }
 
+/* ---------------------------------------------------------------------------
+   THE ESCAPED LABEL — visually-hidden text must carry a definite inline start
+
+   Tailwind's `.sr-only` is `position: absolute` with NO INSET, so the box
+   takes its STATIC position — and an ancestor's `overflow` scroller does not
+   clip it, because an absolutely positioned box's containing block is its
+   nearest POSITIONED ancestor, outside the scroller. A 1x1 label sitting past
+   a wide table can therefore be the widest thing in the document and widen it.
+   `inset-inline-start: 0` pins every such box inside its containing block; it
+   changes nothing visually (the box is 1x1, clipped, unpainted) and nothing
+   for a screen reader (announcement order is DOM order).
+
+   UNLAYERED and by attribute, both deliberately: Tailwind's own `.sr-only`
+   sits in `@layer utilities` and an unlayered rule beats every layered one,
+   and `[class*=":sr-only"]` is the only selector that also reaches variant
+   forms like `max-sm:sr-only`. Applying it to an element that is not
+   currently `sr-only` is free — inset does nothing to a static box.
+   --------------------------------------------------------------------------- */
+
+[class~="sr-only"],
+[class*=":sr-only"] {
+  inset-inline-start: 0;
+}
+
+/* The canvas. The browser propagates BODY's background to the canvas, so this
+   is what paints an iOS rubber-band overscroll and any area a short route
+   leaves uncovered; `color` is the inherited default for anything rendering
+   outside `.matchbook-surface` (a portalled overlay root, a noscript). */
 body {
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
+  background: var(--mb-paper);
+  color: var(--mb-navy);
   font-family: var(--font-sans), system-ui, sans-serif;
 }
 
-/* Custom scrollbar - light theme */
-.scrollbar-thin {
-  scrollbar-width: thin;
-}
-
-.scrollbar-thin::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-.scrollbar-thin::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.scrollbar-thin::-webkit-scrollbar-thumb {
-  background-color: oklch(0.7 0.08 25 / 0.3);
-  border-radius: 999px;
-}
-
-.scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background-color: oklch(0.5 0.15 25 / 0.5);
-}
-
-/* Dark mode scrollbar */
-.dark .scrollbar-thin::-webkit-scrollbar-thumb {
-  background-color: oklch(0.4 0.08 25 / 0.4);
-}
-
-.dark .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background-color: oklch(0.5 0.12 25 / 0.6);
-}
-
-/* Prevent text selection on score panels */
+/* Prevent text selection on score panels. NOT legacy: Tailwind's own
+   `select-none` sets `user-select` alone, and the scoring columns additionally
+   need `-webkit-touch-callout: none` or an iOS long-press on a tap column
+   raises the copy/share callout mid-game. */
 .select-none {
   -webkit-user-select: none;
   -moz-user-select: none;
@@ -448,1063 +2200,12 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* ============================================
-   PLAYFUL WARM THEME - Cream + Bold Red
-   Inspired by Don't Board Me - warm, playful, inviting
-   ============================================ */
-:root {
-  --radius: 0.75rem;
-
-  /* Warm cream background */
-  --background: oklch(0.96 0.025 70);
-  --foreground: oklch(0.18 0.02 60);
-
-  /* Warm white cards */
-  --card: oklch(0.98 0.015 70);
-  --card-foreground: oklch(0.18 0.02 60);
-  --card-shadow: oklch(0.55 0.1 25 / 0.08);
-
-  --popover: oklch(0.98 0.015 70);
-  --popover-foreground: oklch(0.18 0.02 60);
-
-  /* Bold red primary - energetic and playful */
-  --primary: oklch(0.55 0.22 25);
-  --primary-foreground: oklch(0.99 0 0);
-
-  /* Red accent variations */
-  --red-light: oklch(0.92 0.06 25);
-  --red-dark: oklch(0.45 0.2 25);
-
-  /* Warm beige secondary */
-  --secondary: oklch(0.94 0.02 70);
-  --secondary-foreground: oklch(0.25 0.02 60);
-
-  --muted: oklch(0.94 0.015 70);
-  --muted-foreground: oklch(0.45 0.02 60);
-
-  /* Cream accent for hover states */
-  --accent: oklch(0.93 0.025 70);
-  --accent-foreground: oklch(0.2 0.02 60);
-
-  /* Destructive - stays red */
-  --destructive: oklch(0.55 0.22 25);
-  --destructive-light: oklch(0.95 0.04 25);
-
-  /* Borders and inputs - warm grey */
-  --border: oklch(0.88 0.015 70);
-  --input: oklch(0.96 0.015 70);
-  --ring: oklch(0.55 0.22 25);
-
-  /* Status colors - warm theme friendly */
-  --status-draft: oklch(0.55 0.12 250);
-  --status-draft-bg: oklch(0.94 0.03 250);
-  --status-active: oklch(0.55 0.22 25);
-  --status-active-bg: oklch(0.95 0.04 25);
-  --status-complete: oklch(0.55 0.12 145);
-  --status-complete-bg: oklch(0.94 0.03 145);
-  --status-live: oklch(0.55 0.22 25);
-  --status-live-bg: oklch(0.95 0.05 25);
-
-  /* Chart colors - warm gradient palette */
-  --chart-1: oklch(0.55 0.22 25);
-  --chart-2: oklch(0.6 0.15 45);
-  --chart-3: oklch(0.55 0.12 145);
-  --chart-4: oklch(0.55 0.12 250);
-  --chart-5: oklch(0.6 0.12 180);
-
-  /* Decorative colors */
-  --wave-light: oklch(0.94 0.04 55);
-  --wave-medium: oklch(0.9 0.06 45);
-  --cloud: oklch(1 0 0 / 0.8);
-
-  /* Playful card colors - Warm & Cozy palette */
-  --card-mint: oklch(0.94 0.045 165);
-  --card-mint-border: oklch(0.88 0.06 165 / 0.4);
-  --card-lavender: oklch(0.94 0.04 290);
-  --card-lavender-border: oklch(0.85 0.06 290 / 0.4);
-  --card-sky: oklch(0.95 0.04 235);
-  --card-sky-border: oklch(0.88 0.06 235 / 0.4);
-  --card-peach: oklch(0.95 0.05 55);
-  --card-peach-border: oklch(0.88 0.07 55 / 0.4);
-  --card-sage: oklch(0.94 0.035 145);
-  --card-sage-border: oklch(0.88 0.05 145 / 0.4);
-}
-
-/* ============================================
-   DARK THEME - Cozy Night Atmosphere
-   Deep warm charcoal with red glowing accents
-   ============================================ */
-.dark {
-  --radius: 0.75rem;
-
-  /* Deep warm charcoal backgrounds */
-  --background: oklch(0.14 0.01 50);
-  --foreground: oklch(0.93 0.01 70);
-
-  /* Elevated card surfaces */
-  --card: oklch(0.19 0.01 50);
-  --card-foreground: oklch(0.93 0.01 70);
-  --card-shadow: oklch(0 0 0 / 0.4);
-
-  --popover: oklch(0.17 0.01 50);
-  --popover-foreground: oklch(0.93 0.01 70);
-
-  /* Red primary - enhanced glow for dark */
-  --primary: oklch(0.62 0.2 25);
-  --primary-foreground: oklch(0.98 0.01 25);
-
-  /* Red accent variations */
-  --red-light: oklch(0.35 0.1 25);
-  --red-dark: oklch(0.55 0.18 25);
-
-  /* Muted secondary */
-  --secondary: oklch(0.22 0.01 50);
-  --secondary-foreground: oklch(0.85 0.01 70);
-
-  --muted: oklch(0.2 0.008 50);
-  --muted-foreground: oklch(0.6 0.015 70);
-
-  /* Accent for hover states */
-  --accent: oklch(0.24 0.015 25);
-  --accent-foreground: oklch(0.93 0.01 70);
-
-  /* Destructive - vivid red on dark */
-  --destructive: oklch(0.62 0.22 25);
-  --destructive-light: oklch(0.25 0.08 25);
-
-  /* Borders and inputs */
-  --border: oklch(0.28 0.01 50);
-  --input: oklch(0.2 0.008 50);
-  --ring: oklch(0.62 0.2 25);
-
-  /* Status colors - boosted for dark contrast */
-  --status-draft: oklch(0.65 0.14 250);
-  --status-draft-bg: oklch(0.22 0.04 250);
-  --status-active: oklch(0.65 0.2 25);
-  --status-active-bg: oklch(0.25 0.06 25);
-  --status-complete: oklch(0.65 0.14 145);
-  --status-complete-bg: oklch(0.22 0.04 145);
-  --status-live: oklch(0.65 0.2 25);
-  --status-live-bg: oklch(0.25 0.06 25);
-
-  /* Chart colors - luminous on dark */
-  --chart-1: oklch(0.65 0.2 25);
-  --chart-2: oklch(0.7 0.15 45);
-  --chart-3: oklch(0.65 0.14 145);
-  --chart-4: oklch(0.65 0.14 250);
-  --chart-5: oklch(0.7 0.12 180);
-
-  /* Decorative colors */
-  --wave-light: oklch(0.22 0.03 45);
-  --wave-medium: oklch(0.27 0.05 40);
-  --cloud: oklch(0.2 0.015 50 / 0.5);
-
-  /* Playful card colors - Dark mode (muted versions) */
-  --card-mint: oklch(0.22 0.03 165);
-  --card-mint-border: oklch(0.32 0.04 165 / 0.5);
-  --card-lavender: oklch(0.22 0.025 290);
-  --card-lavender-border: oklch(0.32 0.04 290 / 0.5);
-  --card-sky: oklch(0.22 0.025 235);
-  --card-sky-border: oklch(0.32 0.04 235 / 0.5);
-  --card-peach: oklch(0.24 0.03 55);
-  --card-peach-border: oklch(0.34 0.05 55 / 0.5);
-  --card-sage: oklch(0.22 0.02 145);
-  --card-sage-border: oklch(0.32 0.035 145 / 0.5);
-}
-
-@layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
-}
-
-/* ============================================
-   DECORATIVE BACKGROUND
-   ============================================ */
-.bg-tournament {
-  position: relative;
-  background: linear-gradient(
-    180deg,
-    oklch(0.96 0.025 70) 0%,
-    oklch(0.95 0.03 65) 50%,
-    oklch(0.94 0.035 60) 100%
-  );
-  min-height: 100vh;
-}
-
-.dark .bg-tournament {
-  background: linear-gradient(
-    180deg,
-    oklch(0.14 0.01 50) 0%,
-    oklch(0.13 0.012 50) 50%,
-    oklch(0.12 0.015 50) 100%
-  );
-}
-
-/* Decorative wave pattern */
-.bg-waves {
-  position: relative;
-  overflow: hidden;
-}
-
-.bg-waves::before {
-  content: "";
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 200px;
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 320'%3E%3Cpath fill='%2399d6e5' fill-opacity='0.15' d='M0,192L48,197.3C96,203,192,213,288,229.3C384,245,480,267,576,250.7C672,235,768,181,864,181.3C960,181,1056,235,1152,234.7C1248,235,1344,181,1392,154.7L1440,128L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z'%3E%3C/path%3E%3C/svg%3E") no-repeat bottom;
-  background-size: cover;
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* ============================================
-   SOFT CARD STYLES (replaces glassmorphism)
-   ============================================ */
-.soft-card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-2xl);
-  box-shadow:
-    0 1px 3px oklch(0 0 0 / 0.04),
-    0 4px 12px oklch(0.55 0.1 25 / 0.06);
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-}
-
-.dark .soft-card {
-  box-shadow:
-    0 1px 3px oklch(0 0 0 / 0.3),
-    0 4px 12px oklch(0 0 0 / 0.4);
-}
-
-.soft-card-hover:hover {
-  border-color: oklch(0.55 0.22 25 / 0.3);
-  box-shadow:
-    0 2px 8px oklch(0 0 0 / 0.06),
-    0 8px 24px oklch(0.55 0.15 25 / 0.1);
-  transform: translateY(-2px);
-}
-
-.dark .soft-card-hover:hover {
-  border-color: oklch(0.62 0.2 25 / 0.4);
-  box-shadow:
-    0 2px 8px oklch(0 0 0 / 0.4),
-    0 8px 24px oklch(0.62 0.2 25 / 0.15);
-}
-
-/* Legacy glass-card class for compatibility - now soft card */
-.glass-card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-2xl);
-  box-shadow:
-    0 1px 3px oklch(0 0 0 / 0.04),
-    0 4px 12px oklch(0.55 0.1 25 / 0.06);
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-}
-
-.dark .glass-card {
-  box-shadow:
-    0 1px 3px oklch(0 0 0 / 0.3),
-    0 4px 12px oklch(0 0 0 / 0.4);
-}
-
-.glass-card-hover:hover {
-  border-color: oklch(0.55 0.22 25 / 0.3);
-  box-shadow:
-    0 2px 8px oklch(0 0 0 / 0.06),
-    0 8px 24px oklch(0.55 0.15 25 / 0.1);
-  transform: translateY(-2px);
-}
-
-.dark .glass-card-hover:hover {
-  border-color: oklch(0.62 0.2 25 / 0.4);
-  box-shadow:
-    0 2px 8px oklch(0 0 0 / 0.4),
-    0 8px 24px oklch(0.62 0.2 25 / 0.15);
-}
-
-/* ============================================
-   PLAYFUL CARD VARIANTS - Warm & Cozy
-   ============================================ */
-.playful-card {
-  background: var(--card);
-  border: 2px solid var(--border);
-  border-radius: var(--radius-3xl);
-  box-shadow:
-    0 2px 8px oklch(0 0 0 / 0.04),
-    0 6px 20px oklch(0.55 0.1 25 / 0.06);
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-}
-
-.playful-card:hover {
-  transform: translateY(-3px) scale(1.01);
-  box-shadow:
-    0 4px 12px oklch(0 0 0 / 0.06),
-    0 12px 32px oklch(0.55 0.15 25 / 0.1);
-}
-
-.dark .playful-card {
-  box-shadow:
-    0 2px 8px oklch(0 0 0 / 0.3),
-    0 6px 20px oklch(0 0 0 / 0.4);
-}
-
-.dark .playful-card:hover {
-  box-shadow:
-    0 4px 12px oklch(0 0 0 / 0.4),
-    0 12px 32px oklch(0.62 0.2 25 / 0.15);
-}
-
-/* Mint card variant */
-.playful-card-mint {
-  background: var(--card-mint);
-  border-color: var(--card-mint-border);
-}
-
-.playful-card-mint:hover {
-  border-color: oklch(0.75 0.1 165 / 0.6);
-}
-
-/* Lavender card variant */
-.playful-card-lavender {
-  background: var(--card-lavender);
-  border-color: var(--card-lavender-border);
-}
-
-.playful-card-lavender:hover {
-  border-color: oklch(0.75 0.08 290 / 0.6);
-}
-
-/* Sky card variant */
-.playful-card-sky {
-  background: var(--card-sky);
-  border-color: var(--card-sky-border);
-}
-
-.playful-card-sky:hover {
-  border-color: oklch(0.75 0.1 235 / 0.6);
-}
-
-/* Peach card variant */
-.playful-card-peach {
-  background: var(--card-peach);
-  border-color: var(--card-peach-border);
-}
-
-.playful-card-peach:hover {
-  border-color: oklch(0.75 0.1 55 / 0.6);
-}
-
-/* Sage card variant */
-.playful-card-sage {
-  background: var(--card-sage);
-  border-color: var(--card-sage-border);
-}
-
-.playful-card-sage:hover {
-  border-color: oklch(0.75 0.08 145 / 0.6);
-}
-
-/* ============================================
-   PLAYFUL BUTTON STYLES
-   ============================================ */
-.btn-playful {
-  border-radius: 9999px;
-  font-weight: 600;
-  padding: 0.75rem 1.5rem;
-  transition: all 0.2s ease;
-}
-
-.btn-playful-primary {
-  background: linear-gradient(135deg, oklch(0.55 0.22 25) 0%, oklch(0.5 0.24 20) 100%);
-  color: white;
-  box-shadow: 0 4px 14px oklch(0.55 0.22 25 / 0.3);
-}
-
-.btn-playful-primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px oklch(0.55 0.22 25 / 0.4);
-}
-
-.btn-playful-primary:active {
-  transform: translateY(0) scale(0.98);
-}
-
-/* Text highlight effect - subtle underline style */
-.text-highlight {
-  position: relative;
-  display: inline;
-  background: linear-gradient(to top, oklch(0.55 0.22 25 / 0.15) 0%, oklch(0.55 0.22 25 / 0.15) 40%, transparent 40%);
-  padding: 0 0.15em;
-}
-
-.text-highlight-mint {
-  background: linear-gradient(to top, oklch(0.8 0.08 165 / 0.3) 0%, oklch(0.8 0.08 165 / 0.3) 40%, transparent 40%);
-}
-
-.text-highlight-lavender {
-  background: linear-gradient(to top, oklch(0.8 0.06 290 / 0.3) 0%, oklch(0.8 0.06 290 / 0.3) 40%, transparent 40%);
-}
-
-.text-highlight-sky {
-  background: linear-gradient(to top, oklch(0.8 0.08 235 / 0.3) 0%, oklch(0.8 0.08 235 / 0.3) 40%, transparent 40%);
-}
-
-/* Navigation bar - flat, warm background */
-.glass-nav {
-  background: var(--background);
-  border-bottom: 1px solid var(--border);
-  box-shadow: none;
-}
-
-.dark .glass-nav {
-  background: var(--background);
-  border-bottom: 1px solid var(--border);
-  box-shadow: none;
-}
-
-/* Flat nav style for redesigned navbar */
-.flat-nav {
-  background: var(--background);
-  border-bottom: 1px solid var(--border);
-}
-
-.dark .flat-nav {
-  background: var(--background);
-  border-bottom: 1px solid var(--border);
-}
-
-/* Input fields - warm theme */
-.glass-input {
-  background: var(--input);
-  border: 1px solid var(--border);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-
-.glass-input:focus {
-  border-color: oklch(0.55 0.22 25 / 0.5);
-  box-shadow: 0 0 0 3px oklch(0.55 0.22 25 / 0.12);
-}
-
-/* ============================================
-   SCORE PANEL GRADIENTS - Light Theme
-   ============================================ */
-.team-blue-gradient {
-  background: linear-gradient(
-    135deg,
-    oklch(0.55 0.16 220) 0%,
-    oklch(0.5 0.14 225) 50%,
-    oklch(0.45 0.12 230) 100%
-  );
-}
-
-.team-orange-gradient {
-  background: linear-gradient(
-    135deg,
-    oklch(0.65 0.18 45) 0%,
-    oklch(0.6 0.16 48) 50%,
-    oklch(0.55 0.14 52) 100%
-  );
-}
-
-.team-red-gradient {
-  background: linear-gradient(
-    135deg,
-    oklch(0.55 0.22 25) 0%,
-    oklch(0.5 0.2 22) 50%,
-    oklch(0.45 0.18 20) 100%
-  );
-}
-
-/* ============================================
-   SOFT SHADOW UTILITIES
-   ============================================ */
-.shadow-soft-sm {
-  box-shadow: 0 1px 2px oklch(0 0 0 / 0.03), 0 2px 6px oklch(0.55 0.1 25 / 0.04);
-}
-
-.shadow-soft {
-  box-shadow: 0 1px 3px oklch(0 0 0 / 0.04), 0 4px 12px oklch(0.55 0.1 25 / 0.06);
-}
-
-.shadow-soft-md {
-  box-shadow: 0 2px 8px oklch(0 0 0 / 0.05), 0 8px 20px oklch(0.55 0.1 25 / 0.08);
-}
-
-.shadow-soft-lg {
-  box-shadow: 0 4px 16px oklch(0 0 0 / 0.06), 0 12px 32px oklch(0.55 0.15 25 / 0.1);
-}
-
-/* Red glow for primary elements */
-.glow-red {
-  box-shadow: 0 0 20px -5px oklch(0.55 0.22 25 / 0.35);
-}
-
-.glow-primary {
-  box-shadow: 0 0 20px -5px oklch(0.55 0.22 25 / 0.35);
-}
-
-.glow-amber {
-  box-shadow: 0 0 20px -5px oklch(0.65 0.15 55 / 0.35);
-}
-
-.glow-success {
-  box-shadow: 0 0 15px -5px oklch(0.55 0.12 145 / 0.35);
-}
-
-.glow-live {
-  box-shadow: 0 0 15px oklch(0.55 0.22 25 / 0.4);
-}
-
-/* ============================================
-   ANIMATED GRADIENTS - Subtle for warm theme
-   ============================================ */
-.animated-gradient {
-  background: linear-gradient(
-    -45deg,
-    oklch(0.95 0.03 55 / 0.5),
-    oklch(0.96 0.025 65 / 0.3),
-    oklch(0.96 0.02 70 / 0.2),
-    oklch(0.96 0.025 70)
-  );
-  background-size: 400% 400%;
-  animation: gradientShift 15s ease infinite;
-}
-
-.animated-gradient-subtle {
-  background: linear-gradient(
-    135deg,
-    oklch(0.55 0.22 25 / 0.05) 0%,
-    transparent 50%,
-    oklch(0.6 0.15 45 / 0.03) 100%
-  );
-  background-size: 200% 200%;
-  animation: gradientShift 20s ease infinite;
-}
-
-@keyframes gradientShift {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
-  }
-}
-
-/* ============================================
-   SHINE/SHIMMER EFFECTS - Light theme
-   ============================================ */
-.shine-hover {
-  position: relative;
-  overflow: hidden;
-}
-
-.shine-hover::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    115deg,
-    transparent 0%,
-    transparent 40%,
-    oklch(1 0 0 / 0.6) 50%,
-    transparent 60%,
-    transparent 100%
-  );
-  transform: translateX(-100%);
-  transition: transform 0.6s ease;
-}
-
-.shine-hover:hover::after {
-  transform: translateX(100%);
-}
-
-/* ============================================
-   CARD INTERACTIONS
-   ============================================ */
-.card-lift {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.card-lift:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 30px -10px oklch(0.55 0.15 25 / 0.2);
-}
-
-/* ============================================
-   COLOR TRANSITIONS
-   ============================================ */
-.color-transition {
-  transition: color 0.15s ease, background-color 0.15s ease,
-    border-color 0.15s ease;
-}
-
-/* ============================================
-   STATUS BADGES - Light Theme
-   ============================================ */
-.status-draft {
-  background: var(--status-draft-bg);
-  color: var(--status-draft);
-}
-
-.status-active {
-  background: var(--status-active-bg);
-  color: var(--status-active);
-}
-
-.status-complete {
-  background: var(--status-complete-bg);
-  color: var(--status-complete);
-}
-
-.status-live {
-  background: var(--status-live-bg);
-  color: var(--status-live);
-  animation: livePulse 2s ease-in-out infinite;
-}
-
-@keyframes livePulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.7;
-  }
-}
-
-/* ============================================
-   LIVE INDICATOR DOT
-   ============================================ */
-.live-dot {
-  position: relative;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--status-live);
-}
-
-.live-dot::before {
-  content: "";
-  position: absolute;
-  inset: -3px;
-  border-radius: 50%;
-  background: oklch(0.55 0.18 30 / 0.3);
-  animation: liveDotPulse 1.5s ease-in-out infinite;
-}
-
-@keyframes liveDotPulse {
-  0%,
-  100% {
-    transform: scale(1);
-    opacity: 0.3;
-  }
-  50% {
-    transform: scale(1.5);
-    opacity: 0;
-  }
-}
-
-/* ============================================
-   FOCUS STATES - Red ring
-   ============================================ */
-:focus-visible {
-  outline: 2px solid oklch(0.55 0.22 25);
-  outline-offset: 2px;
-}
-
-/* ============================================
-   BUTTON STATES
-   ============================================ */
-button:active:not(:disabled) {
-  transform: scale(0.98);
-}
-
-/* ============================================
-   ICON CONTAINER
-   ============================================ */
-.icon-container {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--radius-lg);
-}
-
-/* ============================================
-   RED GRADIENT BUTTONS
-   ============================================ */
-.btn-red-gradient {
-  background: linear-gradient(
-    135deg,
-    oklch(0.55 0.22 25) 0%,
-    oklch(0.5 0.24 20) 100%
-  );
-  color: white;
-  box-shadow: 0 2px 8px oklch(0.55 0.22 25 / 0.25),
-    inset 0 1px 0 oklch(1 0 0 / 0.15);
-  transition: all 0.2s ease;
-}
-
-.btn-red-gradient:hover {
-  box-shadow: 0 4px 16px oklch(0.55 0.22 25 / 0.35),
-    inset 0 1px 0 oklch(1 0 0 / 0.2);
-  transform: translateY(-1px);
-}
-
-.btn-red-gradient:active {
-  transform: translateY(0) scale(0.98);
-}
-
-/* Legacy btn-teal-gradient for compatibility - now red */
-.btn-teal-gradient {
-  background: linear-gradient(
-    135deg,
-    oklch(0.55 0.22 25) 0%,
-    oklch(0.5 0.24 20) 100%
-  );
-  color: white;
-  box-shadow: 0 2px 8px oklch(0.55 0.22 25 / 0.25),
-    inset 0 1px 0 oklch(1 0 0 / 0.15);
-  transition: all 0.2s ease;
-}
-
-.btn-teal-gradient:hover {
-  box-shadow: 0 4px 16px oklch(0.55 0.22 25 / 0.35),
-    inset 0 1px 0 oklch(1 0 0 / 0.2);
-  transform: translateY(-1px);
-}
-
-.btn-teal-gradient:active {
-  transform: translateY(0) scale(0.98);
-}
-
-/* Soft button variant */
-.btn-soft {
-  background: var(--accent);
-  color: var(--accent-foreground);
-  border: 1px solid var(--border);
-  transition: all 0.2s ease;
-}
-
-.btn-soft:hover {
-  background: oklch(0.92 0.035 70);
-  border-color: oklch(0.55 0.22 25 / 0.3);
-}
-
-/* ============================================
-   VS DIVIDER STYLING - Warm theme
-   ============================================ */
-.vs-divider {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.vs-divider::before,
-.vs-divider::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: linear-gradient(
-    to right,
-    transparent,
-    oklch(0.55 0.22 25 / 0.3),
-    transparent
-  );
-}
-
-/* ============================================
-   SCORE DISPLAY - Warm theme
-   ============================================ */
-.score-text {
-  text-shadow: 0 2px 10px oklch(0 0 0 / 0.1);
-}
-
-.score-glow {
-  filter: drop-shadow(0 0 10px oklch(0.55 0.22 25 / 0.2));
-}
-
-/* ============================================
-   REDUCED MOTION SUPPORT
-   ============================================ */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
-
-  .glass-card-hover:hover,
-  .soft-card-hover:hover {
-    transform: none;
-  }
-
-  .card-lift:hover {
-    transform: none;
-  }
-
-  .btn-teal-gradient:hover,
-  .btn-orange-gradient:hover {
-    transform: none;
-  }
-
-  .shine-hover::after {
-    display: none;
-  }
-
-  .animated-gradient,
-  .animated-gradient-subtle {
-    animation: none;
-    background-size: 100% 100%;
-  }
-}
-
-/* ============================================
-   GPU ACCELERATION HINTS
-   ============================================ */
-.soft-card,
-.glass-card,
-.glass-nav,
-.glass-input {
-  will-change: auto;
-  transform: translateZ(0);
-}
-
-/* ============================================
-   SIMPLE CSS ANIMATIONS
-   ============================================ */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.animate-fade-in {
-  animation: fadeIn 0.4s ease-out forwards;
-}
-
-.animate-fade-in-delay-1 {
-  animation: fadeIn 0.4s ease-out 0.1s forwards;
-  opacity: 0;
-}
-
-.animate-fade-in-delay-2 {
-  animation: fadeIn 0.4s ease-out 0.2s forwards;
-  opacity: 0;
-}
-
-.animate-fade-in-delay-3 {
-  animation: fadeIn 0.4s ease-out 0.3s forwards;
-  opacity: 0;
-}
-
-/* Stagger animation classes */
-.stagger-1 { animation-delay: 0.05s; }
-.stagger-2 { animation-delay: 0.1s; }
-.stagger-3 { animation-delay: 0.15s; }
-.stagger-4 { animation-delay: 0.2s; }
-.stagger-5 { animation-delay: 0.25s; }
-.stagger-6 { animation-delay: 0.3s; }
-
-/* ============================================
-   DECORATIVE ELEMENTS
-   ============================================ */
-.decorative-circle {
-  position: absolute;
-  border-radius: 50%;
-  background: linear-gradient(
-    135deg,
-    oklch(0.55 0.22 25 / 0.08),
-    oklch(0.6 0.15 45 / 0.04)
-  );
-  pointer-events: none;
-}
-
-.decorative-blob {
-  position: absolute;
-  border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
-  background: linear-gradient(
-    135deg,
-    oklch(0.92 0.05 55 / 0.4),
-    oklch(0.94 0.04 70 / 0.25)
-  );
-  pointer-events: none;
-  filter: blur(50px);
-}
-
-/* Playful blob variants - warm colors */
-.decorative-blob:nth-child(1) {
-  background: linear-gradient(135deg, oklch(0.92 0.06 55 / 0.35), oklch(0.94 0.05 70 / 0.2));
-}
-
-.decorative-blob:nth-child(2) {
-  background: linear-gradient(135deg, oklch(0.92 0.05 45 / 0.3), oklch(0.94 0.04 60 / 0.2));
-}
-
-.decorative-blob:nth-child(3) {
-  background: linear-gradient(135deg, oklch(0.94 0.04 65 / 0.25), oklch(0.95 0.03 75 / 0.15));
-}
-
-/* ============================================
-   ILLUSTRATION COLORS
-   ============================================ */
-.illustration-primary {
-  fill: oklch(0.55 0.22 25);
-}
-
-.illustration-secondary {
-  fill: oklch(0.85 0.08 25);
-}
-
-.illustration-accent {
-  fill: oklch(0.65 0.15 45);
-}
-
-.illustration-light {
-  fill: oklch(0.95 0.03 70);
-}
-
-/* ============================================
-   RANK BADGE COLORS
-   ============================================ */
-.rank-gold {
-  background: linear-gradient(135deg, oklch(0.8 0.12 85), oklch(0.7 0.14 75));
-  color: oklch(0.3 0.08 70);
-}
-
-.rank-silver {
-  background: linear-gradient(135deg, oklch(0.85 0.01 250), oklch(0.75 0.02 250));
-  color: oklch(0.35 0.02 250);
-}
-
-.rank-bronze {
-  background: linear-gradient(135deg, oklch(0.65 0.1 55), oklch(0.55 0.12 50));
-  color: oklch(0.95 0.02 55);
-}
-
-/* ============================================
-   INPUT PLACEHOLDER
-   ============================================ */
-::placeholder {
-  color: oklch(0.6 0.015 60);
-  opacity: 1;
-}
-
-/* ============================================
-   SELECTION HIGHLIGHT
-   ============================================ */
-::selection {
-  background: oklch(0.55 0.22 25 / 0.2);
-  color: oklch(0.18 0.02 60);
-}
-
-.dark ::selection {
-  background: oklch(0.62 0.2 25 / 0.3);
-  color: oklch(0.95 0.01 70);
-}
-
-/* ============================================
-   THEME TOGGLE - Stadium Lighting Control
-   ============================================ */
-.theme-toggle-track {
-  position: relative;
-  width: 44px;
-  height: 24px;
-  border-radius: 12px;
-  background: oklch(0.92 0.04 55);
-  border: 1px solid oklch(0.85 0.06 55 / 0.5);
-  cursor: pointer;
-  overflow: hidden;
-  transition: background 0.3s ease, border-color 0.3s ease;
-  flex-shrink: 0;
-}
-
-.theme-toggle-track:hover {
-  border-color: oklch(0.75 0.1 55);
-}
-
-.theme-toggle-track:focus-visible {
-  outline: 2px solid oklch(0.55 0.22 25);
-  outline-offset: 2px;
-}
-
-.dark .theme-toggle-track {
-  background: oklch(0.22 0.02 50);
-  border-color: oklch(0.35 0.08 25 / 0.5);
-}
-
-.dark .theme-toggle-track:hover {
-  border-color: oklch(0.5 0.15 25);
-}
-
-.theme-toggle-glow {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-.theme-toggle-orb {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow:
-    0 1px 3px oklch(0 0 0 / 0.15),
-    0 2px 6px oklch(0 0 0 / 0.1);
-}
-
-.dark .theme-toggle-orb {
-  box-shadow:
-    0 1px 3px oklch(0 0 0 / 0.3),
-    0 0 8px oklch(0.7 0.1 250 / 0.3);
-}
-
-.theme-toggle-icon {
-  width: 14px;
-  height: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* Sun rays rotation animation */
-@keyframes rotateSunRays {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.sun-rays {
-  transform-origin: center;
-  animation: rotateSunRays 12s linear infinite;
-}
-
-.dark ::placeholder {
-  color: oklch(0.5 0.015 50);
-}
+/* ===========================================================================
+   END OF FILE
+
+   The pre-Matchbook theme (shadcn tokens, dark mode, the playful card and
+   button families, the global :focus-visible and :active rules) used to live
+   below this point and is deleted with no consumers. The file is one system:
+   colours are --mb-*, radii are 4/3/2/999 written literally, controls live in
+   src/components/matchbook/. There is no second stylesheet to fall back to.
+   =========================================================================== */

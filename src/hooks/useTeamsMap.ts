@@ -2,6 +2,7 @@
 
 import { useMemo, useCallback } from "react";
 import type { PersistentTeam } from "@/types/game";
+import { teamColorCssOrDefault } from "@/lib/teamColor";
 
 interface UseTeamsMapReturn {
   teamsMap: Map<string, PersistentTeam>;
@@ -28,7 +29,7 @@ export const useTeamsMap = (teams: PersistentTeam[]): UseTeamsMapReturn => {
   );
 
   const getTeamColor = useCallback(
-    (teamId: string) => teamsMap.get(teamId)?.color || "#3b82f6",
+    (teamId: string) => teamColorCssOrDefault(teamsMap.get(teamId)?.color),
     [teamsMap]
   );
 

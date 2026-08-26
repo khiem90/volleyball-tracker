@@ -42,25 +42,3 @@ export const DEFAULT_COMPETITION_CONFIG: CompetitionConfig = {
   allowTies: false,
   terminology: DEFAULT_TERMINOLOGY,
 };
-
-/**
- * Get a complete config by merging partial config with defaults
- */
-const getCompetitionConfig = (
-  partialConfig?: Partial<CompetitionConfig>
-): CompetitionConfig => {
-  if (!partialConfig) {
-    return DEFAULT_COMPETITION_CONFIG;
-  }
-
-  return {
-    pointsForWin: partialConfig.pointsForWin ?? DEFAULT_COMPETITION_CONFIG.pointsForWin,
-    pointsForTie: partialConfig.pointsForTie,
-    pointsForLoss: partialConfig.pointsForLoss ?? DEFAULT_COMPETITION_CONFIG.pointsForLoss,
-    allowTies: partialConfig.allowTies ?? DEFAULT_COMPETITION_CONFIG.allowTies,
-    terminology: {
-      ...DEFAULT_TERMINOLOGY,
-      ...partialConfig.terminology,
-    },
-  };
-};

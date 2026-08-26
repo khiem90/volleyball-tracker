@@ -1,5 +1,5 @@
 import type { Match, Competition } from "@/types/game";
-import type { UndoSnapshot, UndoActionType } from "@/types/undo";
+import type { UndoSnapshot } from "@/types/undo";
 
 /**
  * Generate a unique ID for undo entries
@@ -61,21 +61,3 @@ export const createSnapshot = (
   };
 };
 
-/**
- * Create a human-readable description for an undo action
- */
-const createUndoDescription = (
-  actionType: UndoActionType,
-  winnerName?: string
-): string => {
-  switch (actionType) {
-    case "instant_win":
-      return winnerName ? `${winnerName} won` : "Match completed";
-    case "match_complete":
-      return winnerName ? `${winnerName} won` : "Match completed";
-    case "match_start":
-      return "Match started";
-    default:
-      return "Action performed";
-  }
-};

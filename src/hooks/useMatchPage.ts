@@ -1,13 +1,34 @@
-import { useState, useCallback, useMemo, useEffect } from "react";
+import {
+  useState,
+  useCallback,
+  useMemo,
+  useEffect,
+  useSyncExternalStore,
+} from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useApp } from "@/context/AppContext";
 import { useSession } from "@/context/SessionContext";
-import { useFullscreen } from "@/hooks/useFullscreen";
+import { useScoreHistory } from "@/hooks/useScoreHistory";
+import { useScoreRollbackToast } from "@/hooks/useScoreRollbackToast";
 import { advanceWinner } from "@/lib/singleElimination";
 import { calculateStandings } from "@/lib/roundRobin";
 import { processMatchResult } from "@/lib/win2out";
 import { processMatchResult as processTwoMatchRotationResult } from "@/lib/twoMatchRotation";
 import type { Match } from "@/types/game";
+
+/* ===========================================================================
+   `handleCompleteMatch` below covers five competition formats, bracket
+   advancement, the shared-mode merge and the cascade to `completeCompetition`.
+   Treat it as a BLACK BOX: change what calls it, never its internals.
+   Fullscreen/orientation live in `useCourtView` (the Fullscreen API needs the
+   element, not the route); the score history is `useScoreHistory` — one
+   stack, surviving reload.
+   =========================================================================== */
+
+/** A store that never emits: the only thing that changes is the environment. */
+const NEVER_CHANGES = () => () => {};
+const CLIENT = () => true;
+const SERVER = () => false;
 
 export const useMatchPage = () => {
   const params = useParams();
@@ -29,46 +50,9 @@ export const useMatchPage = () => {
     isSharedMode,
   } = useApp();
 
-  const { role, updateMatches } = useSession();
-  const { isFullscreen, toggleFullscreen } = useFullscreen();
+  const { updateMatches } = useSession();
 
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
-  const [history, setHistory] = useState<{ home: number; away: number }[]>([]);
-  const [showRotatePrompt, setShowRotatePrompt] = useState(false);
-
-  const isLandscape = useCallback(() => {
-    return window.innerWidth > window.innerHeight;
-  }, []);
-
-  const handleFullscreenToggle = useCallback(() => {
-    if (isFullscreen) {
-      toggleFullscreen();
-    } else {
-      if (isLandscape()) {
-        toggleFullscreen();
-      } else {
-        setShowRotatePrompt(true);
-      }
-    }
-  }, [isFullscreen, isLandscape, toggleFullscreen]);
-
-  useEffect(() => {
-    if (!isFullscreen) return;
-
-    const handleOrientationChange = () => {
-      if (!isLandscape()) {
-        toggleFullscreen();
-      }
-    };
-
-    window.addEventListener("resize", handleOrientationChange);
-    window.addEventListener("orientationchange", handleOrientationChange);
-
-    return () => {
-      window.removeEventListener("resize", handleOrientationChange);
-      window.removeEventListener("orientationchange", handleOrientationChange);
-    };
-  }, [isFullscreen, isLandscape, toggleFullscreen]);
 
   const match = useMemo(() => getMatchById(matchId), [getMatchById, matchId]);
   const competition = useMemo(
@@ -86,6 +70,89 @@ export const useMatchPage = () => {
     [state.teams, match?.awayTeamId]
   );
 
+  /* ---------------------------------------------------------- hydration
+
+     `AppContext` loads localStorage inside a mount effect, so `state` is empty
+     on the first client render and `!match` is indistinguishable from "this
+     match does not exist" until hydration lands — gate on `hydrated` or the
+     route flashes "Match not found" on every successful load.
+
+     `useSyncExternalStore` with a store that never changes is the codebase's
+     existing idiom for "is this the client yet" (`useOnlineStatus`,
+     `useMbReducedMotion`): the server snapshot is `false`, the client snapshot
+     is `true`, and React re-renders once hydration finishes. That re-render is
+     scheduled in the same pass as `AppContext`'s `LOAD_STATE` — which is
+     dispatched from a mount effect on an ancestor — so the two land together
+     and `hydrated === true` genuinely means "localStorage has been read". */
+  const hydrated = useSyncExternalStore(NEVER_CHANGES, CLIENT, SERVER);
+
+  /* ------------------------------------------------------- score history */
+
+  const history = useScoreHistory({
+    seed: { home: match?.homeScore ?? 0, away: match?.awayScore ?? 0 },
+    /* Null until the match is real, so the restore runs once against a seed
+       that means something rather than against 0–0. */
+    storageKey: match ? `mb-score-history:${matchId}` : null,
+  });
+
+  /* All four are `useCallback`s with stable dependencies, so they can sit in
+     the dependency arrays below without re-creating a single handler. */
+  const {
+    bump: bumpScore,
+    undo: undoScore,
+    reset: resetScoreHistory,
+    reconcile: reconcileScore,
+  } = history;
+
+  /* The context is the single source of truth for the rendered score; the stack
+     follows it. This adopts a remote write in a shared session, an edit made on
+     the competition screen, and the 0–0 that opens the next game of a series. */
+  useEffect(() => {
+    if (!match) return;
+    reconcileScore({ home: match.homeScore, away: match.awayScore });
+  }, [match, reconcileScore]);
+
+  useEffect(() => {
+    if (match && match.status === "pending") {
+      startMatch(matchId);
+    }
+  }, [match, matchId, startMatch]);
+
+  /* ------------------------------------------------------------ scoring */
+
+  const handleAddPoint = useCallback(
+    (team: "home" | "away") => {
+      if (!match || !canEdit || match.status === "completed") return;
+      const next = bumpScore(team, 1);
+      updateMatchScore(matchId, next.home, next.away);
+    },
+    [match, matchId, updateMatchScore, canEdit, bumpScore]
+  );
+
+  const handleDeductPoint = useCallback(
+    (team: "home" | "away") => {
+      if (!match || !canEdit || match.status === "completed") return;
+      const next = bumpScore(team, -1);
+      updateMatchScore(matchId, next.home, next.away);
+    },
+    [match, matchId, updateMatchScore, canEdit, bumpScore]
+  );
+
+  const announceRollback = useScoreRollbackToast();
+
+  const handleUndo = useCallback(() => {
+    if (!match || !canEdit || match.status === "completed") return;
+    /* The tip BEFORE the undo, read off the context (the rendered truth), so
+       the strip can say which way the correction went (C16). */
+    const previous = { home: match.homeScore, away: match.awayScore };
+    const target = undoScore();
+    if (!target) return;
+    updateMatchScore(matchId, target.home, target.away);
+    announceRollback(previous, target);
+  }, [match, matchId, updateMatchScore, canEdit, undoScore, announceRollback]);
+
+  /* --------------------------------------------------------- series info */
+
   const seriesInfo = useMemo(() => {
     const supportsSeries =
       !!competition &&
@@ -101,77 +168,31 @@ export const useMatchPage = () => {
 
     const gamesPlayed = homeWins + awayWins;
 
+    /* `Game 0` was reachable: a completed series match whose counters were
+       never written reported `gamesPlayed`, which is 0, and the chip printed it
+       verbatim. Null means "omit the chip" — better than inventing a number. */
+    const gameNumber = !isSeries
+      ? 1
+      : match?.status === "completed"
+        ? gamesPlayed > 0
+          ? gamesPlayed
+          : null
+        : gamesPlayed + 1;
+
     return {
       isSeries,
       seriesLength,
       homeWins,
       awayWins,
       winsNeeded: isSeries ? Math.ceil(seriesLength / 2) : 1,
-      gameNumber: isSeries
-        ? match?.status === "completed"
-          ? gamesPlayed
-          : gamesPlayed + 1
-        : 1,
+      gamesPlayed,
+      gameNumber,
     };
   }, [competition, match]);
 
-  useEffect(() => {
-    if (match && match.status === "pending") {
-      startMatch(matchId);
-    }
-  }, [match, matchId, startMatch]);
-
-  const handleAddPoint = useCallback(
-    (team: "home" | "away") => {
-      if (!match || !canEdit || match.status === "completed") return;
-      const currentHome = match.homeScore;
-      const currentAway = match.awayScore;
-      const newHome = team === "home" ? currentHome + 1 : currentHome;
-      const newAway = team === "away" ? currentAway + 1 : currentAway;
-      setHistory((prev) => {
-        const seeded =
-          prev.length === 0 ? [{ home: currentHome, away: currentAway }] : prev;
-        const last = seeded[seeded.length - 1];
-        if (!last || last.home !== newHome || last.away !== newAway) {
-          return [...seeded, { home: newHome, away: newAway }];
-        }
-        return seeded;
-      });
-      updateMatchScore(matchId, newHome, newAway);
-    },
-    [match, matchId, updateMatchScore, canEdit]
-  );
-
-  const handleDeductPoint = useCallback(
-    (team: "home" | "away") => {
-      if (!match || !canEdit || match.status === "completed") return;
-      const currentHome = match.homeScore;
-      const currentAway = match.awayScore;
-      const newHome =
-        team === "home" ? Math.max(0, currentHome - 1) : currentHome;
-      const newAway =
-        team === "away" ? Math.max(0, currentAway - 1) : currentAway;
-      setHistory((prev) => {
-        const seeded =
-          prev.length === 0 ? [{ home: currentHome, away: currentAway }] : prev;
-        const last = seeded[seeded.length - 1];
-        if (!last || last.home !== newHome || last.away !== newAway) {
-          return [...seeded, { home: newHome, away: newAway }];
-        }
-        return seeded;
-      });
-      updateMatchScore(matchId, newHome, newAway);
-    },
-    [match, matchId, updateMatchScore, canEdit]
-  );
-
-  const handleUndo = useCallback(() => {
-    if (!match || history.length < 2 || match.status === "completed") return;
-    const prevState = history[history.length - 2];
-    setHistory((prev) => prev.slice(0, -1));
-    updateMatchScore(matchId, prevState.home, prevState.away);
-  }, [match, matchId, history, updateMatchScore]);
-
+  /* =========================================================================
+     BLACK BOX — do not refactor. See the note at the top of this file.
+     ====================================================================== */
   const handleCompleteMatch = useCallback(() => {
     if (!match || match.status === "completed") return;
 
@@ -212,7 +233,7 @@ export const useMatchPage = () => {
         winnerId: undefined,
         completedAt: undefined,
       });
-      setHistory([]);
+      resetScoreHistory({ home: 0, away: 0 });
       setShowCompleteDialog(false);
       return;
     }
@@ -450,7 +471,13 @@ export const useMatchPage = () => {
     updateMatches,
     isSharedMode,
     router,
+    /* Stable (`useCallback` over a `useCallback(…, [])`), so its presence here
+       changes nothing about when this callback is rebuilt. It is listed because
+       the series branch calls it, and a dependency array that lies is worse
+       than one that is one entry longer. */
+    resetScoreHistory,
   ]);
+  /* ===================== end of the black box ============================ */
 
   const handleOpenCompleteDialog = useCallback(() => {
     if (!match || match.status === "completed") return;
@@ -460,49 +487,41 @@ export const useMatchPage = () => {
     setShowCompleteDialog(true);
   }, [match]);
 
-  const handleBack = useCallback(() => {
-    if (competition) {
-      router.push(`/competitions/${competition.id}`);
-    } else {
-      router.push("/");
-    }
-  }, [competition, router]);
+  /* A string, not a handler. The console renders "back" as a real anchor so it
+     keeps middle-click, "open in new tab" and the status bar — and so the shell
+     draws it with a visible word instead of an unlabelled disc. */
+  const backHref = competition ? `/competitions/${competition.id}` : "/";
 
-  const canComplete =
+  const canComplete = !!(
     match &&
     match.status !== "completed" &&
-    match.homeScore !== match.awayScore;
-  const homeColor = homeTeam?.color || "#3b82f6";
-  const awayColor = awayTeam?.color || "#f97316";
+    match.homeScore !== match.awayScore
+  );
+
   const homeLeading = match ? match.homeScore > match.awayScore : false;
   const awayLeading = match ? match.awayScore > match.homeScore : false;
 
   return {
-    awayColor,
     awayLeading,
     awayTeam,
+    backHref,
     canComplete,
     canEdit,
+    canUndo: history.canUndo,
     competition,
     handleAddPoint,
-    handleBack,
     handleCompleteMatch,
     handleDeductPoint,
-    handleFullscreenToggle,
     handleOpenCompleteDialog,
     handleUndo,
-    history,
-    homeColor,
     homeLeading,
     homeTeam,
-    isFullscreen,
+    hydrated,
     isSharedMode,
     match,
-    role,
     seriesInfo,
     setShowCompleteDialog,
-    setShowRotatePrompt,
     showCompleteDialog,
-    showRotatePrompt,
+    undoRestored: history.restored,
   };
 };
