@@ -17,11 +17,8 @@ import type { PersistentTeam } from "@/types/game";
 /**
  * Adding entrants to a draft competition.
  *
- * The shipped detail screen had no path to this at all — the entrant list was
- * read-only from the moment the competition was created, so a late arrival
- * meant deleting the competition and rebuilding it (brief §2.5). `MbSelectList`
- * carries the `Set`, the search field and the row windowing, so this file is
- * only the eligibility rule and the write.
+ * `MbSelectList` carries the `Set`, the search field and the row windowing,
+ * so this file is only the eligibility rule and the write.
  */
 export const AddEntrantsDialog = ({
   open,

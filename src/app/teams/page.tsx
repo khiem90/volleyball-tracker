@@ -32,41 +32,12 @@ import {
   type MbTeamsSection,
 } from "@/components/matchbook/teamPanels";
 
-/* ===========================================================================
-   TEAM DIRECTORY
-
-   Converted onto `MatchbookShell`. The masthead's coral badge caption ("TEAMS"
-   at 0.6rem/700) measured 3.26:1 here and on three sibling routes — the D-10
-   defect `MatchbookMasthead` fixes centrally by inking the caption navy
-   (11.79:1) while the >=24px value and the 2px frame keep their coral, where
-   the 3:1 mark floor applies.
-
-   Coral budget: the rail key (Quick Match) is the one coral fill. "New team"
-   is the screen's own primary but it takes navy, because a directory's primary
-   is not louder than the app's — and two coral fills on one screen is
-   invariant 15's exact failure mode.
-
-   ------------------------------------------------------ the first thirty seconds
-
-   The Overview's one coral control reads "Add Your First Team" and it lands
-   HERE, so this is the second screen every new user sees. Measured on a new
-   account at 390px it was 1543px carrying five `display/stat-sm` headlines of
-   identical size and weight, over a Club Snapshot reading 0 / 0 / 0.
-
-   Two cuts, the same two `/` and `/competitions` already use:
-
-     `isFirstRun`   no team exists, so all six panels are mute. They are not
-                    rendered; two ledgers say what the page becomes and how to
-                    make a team. See `teamPanels.tsx`, THE ZERO STATE.
-     `collapsed`    at least one team exists, so the directory, the snapshot,
-                    the readiness table and the profile all have something to
-                    print — and only the two match-fed panels do not. They are
-                    withheld and named in one index that closes the row.
-
-   Populated behaviour is measured rather than asserted: on the full fixture
-   `muteSections` is empty at 390 and at 1440, `collapsed` is false, every span
-   resolves to the shipped value and all six panels render.
-   =========================================================================== */
+/* TEAM DIRECTORY. Coral budget: the rail key (Quick Match) is the one coral
+   fill; "New team" is the screen's own primary but takes navy. Two cuts, the
+   same two `/` and `/competitions` use: `isFirstRun` (no team exists — two
+   ledgers replace six mute panels) and `collapsed` (only the match-fed panels
+   are mute — they are withheld and named in one closing index). On a
+   populated fixture `muteSections` is empty and all six panels render. */
 
 export default function TeamsPage() {
   const { isLoading, isAuthenticated } = useRequireAuth();
@@ -110,12 +81,8 @@ export default function TeamsPage() {
     return <MbPageLoading active="/teams" />;
   }
 
-  /* Arms at TWO mute panels, never at one: a single empty panel beside five
-     populated ones is what a `PanelEmpty` is for, and the rubric's anchor is
-     <= 1 display headline on a screen. With one team and nothing played both
-     match-fed panels are mute at once, which is the exact case this exists
-     for — and with a fixture in the diary only Recent Form is, so the screen
-     keeps its one honest empty state. */
+  /* Arms at TWO mute panels, never one — a single empty panel beside
+     populated ones renders its own `PanelEmpty`. */
   const collapsed = data.muteSections.length >= 2;
   const kept = (key: MbTeamsSection) =>
     !collapsed || !data.muteSections.includes(key);
@@ -142,11 +109,8 @@ export default function TeamsPage() {
           </>
         ),
         shortTitle: "Teams",
-        /* `pluralise`, not a hardcoded "Teams". The badge under a fresh
-           account's one team read `1 TEAMS` — the first count the app shows a
-           new user, wrong in the one place a count is the whole content.
-           `pluralise("Team", 0)` is "Teams", which is what English does with
-           zero, so the empty screen is unchanged. */
+        /* `pluralise`, not a hardcoded "Teams" — a hardcoded label reads
+           "1 TEAMS". */
         badge: {
           value: data.teamCount,
           label: pluralise("Team", data.teamCount),
@@ -170,12 +134,8 @@ export default function TeamsPage() {
       }}
     >
       {data.isFirstRun ? (
-        /* ----------------------------------------------------- first run
-
-           Two panels, neither of them empty, and not one control between them:
-           the masthead already carries "New team" and "Quick Add" at the top of
-           the page where a thumb reaches first, and the ledger beside the index
-           names the third route the masthead cannot show. */
+        /* First run: two panels, no controls — the masthead already carries
+           "New team" and "Quick Add". */
         <div className="mb-enter-grid grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-12">
           <div className="md:col-span-2 xl:col-span-7">
             <MbLedgerPanel
@@ -236,10 +196,8 @@ export default function TeamsPage() {
               <RecentFormPanel rows={data.recentForm} />
             </div>
           )}
-          {/* The withheld panels, as one index that closes the last row flush.
-              Same rows and same words as the first-run index above, cut to what
-              is actually missing — so the promise survives and two equal
-              display headlines become zero. */}
+          {/* The withheld panels, as one index that closes the last row
+              flush. */}
           {collapsed && (
             <div
               className={`md:col-span-2 ${MB_XL_SPAN[mbClosingSpan(keptSpans)]}`}

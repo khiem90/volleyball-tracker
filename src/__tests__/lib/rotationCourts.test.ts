@@ -8,10 +8,7 @@ import type { Competition, Win2OutCourt, TwoMatchRotationCourt } from '@/types/g
 
 /**
  * CHARACTERISATION suite for the court rewrite extracted out of
- * `useEditMatchDialog.ts:145-209` (charter W4 acceptance 8).
- *
- * Every expectation below was read off the two shipped blocks before they were
- * deleted, so a behavioural regression during the W4 restyle fails here rather
+ * `useEditMatchDialog.ts`: a behavioural regression fails here rather
  * than silently mis-seating two teams on a live court.
  */
 

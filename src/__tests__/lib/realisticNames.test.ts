@@ -29,9 +29,8 @@ import { crestForTeam } from "@/components/matchbook/types";
         about a long club name WITHOUT a browser belongs here rather than in a
         Playwright sweep, because it runs in every `vitest run`.
 
-   Layout consequences — overflow, chrome reachability, text drawn through text
-   — cannot be measured in jsdom. Those are `audit.mjs`: OVERFLOW (both scroll
-   widths), WIDTHS (invariant 31) and TEXTOVER.
+   Layout consequences — overflow, chrome reachability, text drawn through
+   text — cannot be measured in jsdom and are out of scope here.
    --------------------------------------------------------------------------- */
 
 /** The default roster of `gen-fixture.mts`, in fixture order. */

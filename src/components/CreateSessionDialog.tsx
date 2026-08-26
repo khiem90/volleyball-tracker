@@ -19,18 +19,15 @@ import { MbField, MbTextInput } from "@/components/matchbook/form";
 /* ===========================================================================
    CREATE A SHARED SESSION
 
-   The nested-dialog problem is gone (charter H11): sign-in is a STEP inside
-   this dialog, not a second Radix dialog mounted as a sibling. Two Radix
+   Sign-in is a STEP inside
+   this dialog, never a second Radix dialog mounted as a sibling. Two Radix
    overlays stacked on a bottom sheet fight over the focus trap, the scroll
    lock and the escape key, and on a phone the inner one opened behind the
    outer one's backdrop.
 
-   ---------------------------------------------------------------- W6 HOOK-UP
-
-   Landed. `auth/SessionAuthPanel.tsx` is the sign-in FORM with no dialog of
-   its own, and it renders as this dialog's `auth` step. Rendering the old
-   `<SessionAuth>` here instead would have re-introduced the exact nested
-   overlay this rewrite removed.
+   `auth/SessionAuthPanel.tsx` is the sign-in FORM with no dialog of its own,
+   and it renders as this dialog's `auth` step. Rendering `<SessionAuth>` here
+   instead would re-introduce exactly that nested overlay.
    =========================================================================== */
 
 type SessionStep = "name" | "auth" | "created";
@@ -96,7 +93,7 @@ export const CreateSessionDialog = ({
       onCreated?.(result.shareCode, result.adminToken);
     } catch {
       /* Never the provider's own message: it names the backend and the
-         collection path, neither of which helps anybody (invariant 28). */
+         collection path, neither of which helps anybody. */
       setFailure(
         "The session could not be created. Check your connection and try again."
       );
@@ -229,11 +226,10 @@ export const CreateSessionDialog = ({
         )}
 
         {step === "auth" && (
-          /* W6's panel, landed. It is the sign-in FORM with no dialog of its
-             own, so the nested-overlay problem charter H11 forbids never
-             arises — this is a step of THIS dialog, not a second one. The
-             admin-token mode is withheld: `applyAdminToken` validates against
-             the session you are watching, and there is no session here yet. */
+          /* The sign-in FORM with no dialog of its own — a step of THIS
+             dialog, not a second one, so no nested overlay. The admin-token
+             mode is withheld: `applyAdminToken` validates against the session
+             you are watching, and there is no session here yet. */
           <SessionAuthPanel
             modes={["signin", "signup"]}
             onDone={() => setStep("name")}

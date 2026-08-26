@@ -3,20 +3,15 @@ import type { MbTeam } from "./types";
 /* ===========================================================================
    BRACKET GEOMETRY — arithmetic only, no DOM, no React
 
-   Split out of `BracketRail.tsx` so it can be tested without a renderer, and
-   because charter §2.3 makes the arithmetic the contract: "connectors computed
-   arithmetically (round *r* has `2^(R-r)` cells; cell *i* centres between
-   children `2i`, `2i+1`), never measured from the DOM, never animated."
-
-   Measuring was the alternative and it is worse in three separate ways. It
-   needs `ResizeObserver` + `getBoundingClientRect` inside a horizontally
-   scrolling container, so it re-runs on every resize and on every scroll frame;
-   it produces a first paint with no connectors and a second with them, which is
-   a visible layout change on load (invariant 27); and elbows that are recomputed
-   from live boxes slide when anything reflows, which §4 forbids outright.
+   Split out of `BracketRail.tsx` so it can be tested without a renderer. The
+   arithmetic is the contract: connectors are computed (round r has 2^(R-r)
+   cells; cell i centres between children 2i, 2i+1), never measured from the
+   DOM, never animated. Measuring is worse in three ways: it re-runs on every
+   resize and scroll frame, it paints once without connectors and again with
+   them, and elbows recomputed from live boxes slide when anything reflows.
    =========================================================================== */
 
-/** Cell box. 156px is the brief's figure; the height is 32 + 32 + 24 + 2px rule. */
+/** Cell box. The height is 32 + 32 + 24 + 2px rule. */
 export const MB_CELL_W = 156;
 export const MB_CELL_H = 90;
 /** Vertical air between sibling cells in the same round. */
@@ -41,9 +36,8 @@ export interface MbBracketCellData {
   away: MbTeam | null;
   /**
    * Seeding position, 1-based. Drawn as a `.mb-seed-box` numeral beside the
-   * crest so a bracket states the seeding it was generated from — rubric 4's
-   * 8-anchor requires "seeds and byes are explicit", and a cell that shows two
-   * names and no seeds cannot be checked against the draw.
+   * crest so a bracket states the seeding it was generated from — a cell that
+   * shows two names and no seeds cannot be checked against the draw.
    */
   homeSeed?: number;
   awaySeed?: number;
@@ -65,7 +59,7 @@ export interface MbBracketRound {
   /**
    * The round being played, or the next one to be played. Exactly one round of
    * a section carries it; the rail marks it so "where are we" is answered
-   * without counting completed cells (rubric 4, "the current round is marked").
+   * without counting completed cells.
    */
   current?: boolean;
 }
@@ -75,7 +69,7 @@ export interface MbBracketRound {
  * and coral's three declared jobs (primary action, selection mark, masthead
  * lockup) do not include "Grand Finals" — the old coral section rail put a
  * fourth coral meaning on every double-elimination screen. Plum is the one
- * token §1.2 leaves without an interaction or status lock.
+ * token without an interaction or status lock.
  */
 export type MbBracketAccent = "teal" | "gold" | "plum";
 

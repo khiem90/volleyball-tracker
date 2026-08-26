@@ -21,9 +21,9 @@ import type { MbTeam } from "@/components/matchbook/types";
 
    Now: `MbDialog`, crests, the two scores in the shared numeral (tabular,
    hugging the rule between them), and the winner on a green-ruled band with
-   navy letterforms. Green because design language §1.2 maps a result to
-   `--mb-green`; navy letterforms because the name is 1.05rem and invariant 12
-   keeps tone off small type — the tone rides the 4px rule beside it.
+   navy letterforms. Green because a result maps to `--mb-green`; navy
+   letterforms because tone stays off small type — the tone rides the 4px
+   rule beside it.
    =========================================================================== */
 
 type MatchCompleteDialogProps = {

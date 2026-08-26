@@ -1,25 +1,13 @@
 /* ===========================================================================
-   CSV EXPORT (charter H10, §2.3 `exportMatchesCsv()`, W2 / P2b)
+   CSV EXPORT
 
-   H10 records this exporter as living inline in `src/app/summaries/page.tsx`
-   and assigns W2 to extract it so W6 can reuse it without opening that file.
-   It had already moved once by the time this landed — into
-   `useMatchbookHistory.ts` — so the extraction is from there. `summaries/page.tsx`
-   is NOT touched: it calls `data.downloadCsv` and never knew where the bytes
-   came from.
+   The serialisation is a data contract with whatever the user opens the file
+   in — every cell quoted, inner quotes doubled, `\n` between rows, an ISO
+   timestamp or empty string for the date — so do not change it casually.
 
-   The serialisation is byte-for-byte what shipped: every cell quoted, inner
-   quotes doubled, `\n` between rows, an ISO timestamp or an empty string for
-   the date. An exporter is a data contract with whatever the user opens the
-   file in, so the extraction deliberately changes none of it. (A UTF-8 BOM
-   would stop Excel mangling accented team names, and is the obvious next
-   improvement — but it is an improvement, not an extraction, and it belongs in
-   its own change.)
-
-   What did change is the download mechanics, which had a real race: the old
-   code called `URL.revokeObjectURL` on the line after `link.click()`, and
-   Firefox and Safari can revoke the blob before the download stream opens,
-   producing a silent zero-byte file. See `download()` below.
+   Do not revoke the object URL on the line after `link.click()`: Firefox and
+   Safari can revoke the blob before the download stream opens, producing a
+   silent zero-byte file. See `download()` below.
    =========================================================================== */
 
 /** One exported match. Deliberately primitives only, so a caller shapes its
@@ -117,8 +105,8 @@ export const exportMatchesCsv = (
     download(buildMatchesCsv(rows), filename, "text/csv");
     return { ok: true };
   } catch {
-    /* The thrown value is a browser/security object with no wording fit for a
-       user, and invariant 28 forbids leaking a raw provider message. */
+    /* The thrown value is a browser/security object with no wording fit for
+       a user — it must not leak into the UI. */
     return { ok: false, reason: "The file could not be saved." };
   }
 };

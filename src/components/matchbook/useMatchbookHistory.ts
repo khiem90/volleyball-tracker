@@ -168,7 +168,7 @@ export interface MbHistoryData {
    * matches nothing must leave every panel standing so the reader can see what
    * they filtered and undo it. `ledger` is deliberately absent from this list —
    * it is the screen's principal object, the one place a filter miss is
-   * reported, and the single headline the rubric's anchor allows.
+   * reported, and the single empty headline the screen allows.
    */
   muteSections: MbArchiveSection[];
 }
@@ -325,14 +325,11 @@ export const useMatchbookHistory = (filters: {
         return { id: c.id, name: c.name, range, matches: ms.length };
       });
 
-    /* The serialisation and the download both moved to `src/lib/exportCsv.ts`
-       (charter H10) so W6's public summary can reuse them without importing a
-       screen hook. This side keeps only the shaping — which rows, and what the
-       ids resolve to — which is the part that is specific to the archive.
-
-       The result is now surfaced. The old version returned `void`, so a
-       browser that refused the blob URL produced a button that did nothing at
-       all; invariant 28 wants failures visible and recoverable. */
+    /* The serialisation and the download live in `src/lib/exportCsv.ts` so
+       the public summary can reuse them without importing a screen hook. This
+       side keeps only the shaping — which rows, and what the ids resolve to.
+       The result is surfaced: a browser that refuses the blob URL must not
+       produce a button that does nothing. */
     const downloadCsv = () => {
       const result = exportMatchesCsv(
         filtered.map((m) => ({

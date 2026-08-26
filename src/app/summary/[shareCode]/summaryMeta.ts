@@ -2,44 +2,22 @@ import { FORMAT_META } from "@/components/matchbook/formatMeta";
 import { rankTeams } from "@/lib/standings";
 import type { Competition, Match, PersistentTeam } from "@/types/game";
 
-/* ===========================================================================
-   WHAT THE LINK LOOKS LIKE BEFORE ANYONE OPENS IT
+/* Share-card metadata for `/summary/[shareCode]` (link unfurls).
 
-   `/summary/[shareCode]` has exactly one distribution channel: somebody pastes
-   the link into a group chat. Until this file existed it unfurled as a bare URL
-   with the root layout's generic app description — the one artefact of the
-   product that outlives the event, arriving looking like nothing.
+   THE READ: unauthenticated Firestore REST `runQuery`, static card as the
+   fallback. Not `firebase-admin` — that would put a service-account key in
+   the deploy config for a document `firestore.rules` already declares
+   world-readable. The REST call carries the public Web API key and no bearer
+   token, so Firestore evaluates it as `request.auth == null`: the same
+   identity a stranger with the link already has. Nothing privileged can leak
+   structurally — a summary document has no admin token (that lives on
+   `sessions`), and `summaryMeta.test.ts` asserts the built metadata against a
+   token-shaped needle so a future field cannot smuggle one in.
 
-   ---------------------------------------------------------------- THE READ
-
-   Charter Appendix A, D-13: **unauthenticated Firestore REST `runQuery`, with
-   a static card as the fallback.** Not `firebase-admin` — that would add a
-   dependency and put a service-account private key in the deploy config for a
-   document `firestore.rules` already declares world-readable
-   (`match /summaries/{summaryId} { allow read: if true }`). The REST call sends
-   the public Web API key and no bearer token at all, so Firestore evaluates it
-   as `request.auth == null`, which is the same identity a stranger with the
-   link already has.
-
-   NOTHING PRIVILEGED CAN LEAK THROUGH HERE, and that is structural rather than
-   careful: a summary document has no admin token in it (the token lives on the
-   `sessions` collection, and `SessionSummary` in `types/session.ts` has no such
-   field), and the only strings this module puts into metadata are the event
-   name, team names, four counts and a date. `summaryMeta.test.ts` asserts the
-   built metadata against a token-shaped needle so a future field cannot smuggle
-   one in.
-
-   ------------------------------------------------------- ONE CHAMPION, AGAIN
-
-   Register D-40 is the reason this file imports `rankTeams` rather than reading
-   `stats.winner`: `computeSessionStats` picks the first team to reach the
-   highest win count with no tiebreak, and it is frozen into the document at end
-   time, so on the `SPRNG7` fixture it names a different team from the table the
-   page draws. A share card that names a different champion from the page it
-   links to is worse than a share card that names none. The rule below is the
-   one `useMatchbookSummary.ts` applies, against the same `rankTeams` the live
-   table uses (charter N10).
-   =========================================================================== */
+   THE CHAMPION comes from `rankTeams`, never `stats.winner`:
+   `computeSessionStats` picks the first team to reach the highest win count
+   with no tiebreak, so it can name a different champion from the table the
+   page draws. Same rule `useMatchbookSummary.ts` applies. */
 
 /* --------------------------------------------------- firestore REST decoding */
 
@@ -187,16 +165,9 @@ export const shapeSummaryMeta = (raw: Record<string, unknown>): MbSummaryMeta | 
     ? competition.teamIds.filter((id) => teams.some((t) => t.id === id))
     : teams.map((t) => t.id);
 
-  /* THE D-40 RULE, transcribed from `useMatchbookSummary.ts` line for line:
-       - a competition that recorded its own `winnerId` names that team, which
-         in practice is the knockout case — a bracket winner is a fact about
-         the draw, not about a points table;
-       - otherwise `rankTeams(...)[0]`, and only when that line does not share
-         its rank;
-       - a session with no completed match names nobody.
-     `stats.winner` is never read: `computeSessionStats` picks the first team to
-     reach the highest win count with no tiebreak, and the hook stopped trusting
-     it for exactly that reason. */
+  /* Transcribed from `useMatchbookSummary.ts`: a recorded `winnerId` names
+     that team (the knockout case); otherwise `rankTeams(...)[0]`, and only
+     when that line does not share its rank; no completed match names nobody. */
   const declaredWinner =
     competition?.winnerId && teams.some((t) => t.id === competition.winnerId)
       ? competition.winnerId

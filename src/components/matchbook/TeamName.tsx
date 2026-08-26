@@ -27,8 +27,7 @@
    part that gives, the tail is `shrink-0` so it always survives. No JS
    measurement, no `ResizeObserver`, no width prop — the elision is done by the
    same layout pass that sized the box, so it is correct at 320, 390 and 1440
-   and at any zoom or font size, and it cannot produce the sliding elbows
-   §4 forbids.
+   and at any zoom or font size, and it cannot produce sliding elbows.
 
    The FULL name is always in the DOM. `textContent` is head + tail with no
    character removed, so a screen reader, a find-in-page and a copy all get

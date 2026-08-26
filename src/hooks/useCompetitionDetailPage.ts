@@ -279,8 +279,7 @@ export const useCompetitionDetailPage = () => {
   ]);
 
   /* ------------------------------------------------------------ draft edits
-     The draft console can add and remove entrants (brief §2.5 — the shipped
-     screen could do neither). Both are guarded on `status === "draft"`: once a
+     Both are guarded on `status === "draft"`: once a
      schedule exists the entrant list is what the fixtures were generated from,
      and editing it would orphan matches. */
 
@@ -335,13 +334,9 @@ export const useCompetitionDetailPage = () => {
     : null;
 
   /**
-   * The sync-error strip's action.
-   *
-   * "Live sync stopped" used to be a dead end — a `danger` notice with no
-   * control on it at all (rubric 7.4: an error state must offer a way out).
-   * `joinSession` re-subscribes to the same share code through the existing
-   * `SessionContext` path, which is exactly the operation that failed, so the
-   * retry is the real one rather than a page reload.
+   * The sync-error strip's action. `joinSession` re-subscribes to the same
+   * share code through the existing `SessionContext` path — the operation
+   * that failed — so the retry is the real one rather than a page reload.
    */
   const [isRetryingSync, setIsRetryingSync] = useState(false);
   const retrySync = useCallback(async () => {

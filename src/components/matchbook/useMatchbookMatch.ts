@@ -11,11 +11,11 @@ import type { MbConsoleSeries, MbConsoleSide } from "@/components/match/MatchCon
 import type { Competition, Match } from "@/types/game";
 
 /* ===========================================================================
-   THE CONSOLE'S VIEW MODEL (charter §2.3, W5/P3a)
+   THE CONSOLE'S VIEW MODEL
 
    `useMatchPage` owns the state machine and the completion black box; this
    turns what it returns into the shape the console renders, so the route file
-   is layout and nothing else (invariant 23).
+   is layout and nothing else.
 
    The one piece of product logic that lives here is `state`, and it exists
    because the old route conflated four different situations into one error
@@ -78,7 +78,7 @@ const DATE = new Intl.DateTimeFormat("en-GB", {
  *
  * The two rotation formats have no rounds; what identifies their fixture is the
  * court it is being played on, and the word for "court" comes from
- * `useTerminology` — never hardcoded (charter W4 acceptance 9, same rule).
+ * `useTerminology` — never hardcoded.
  */
 const stageFor = (
   match: Match,
@@ -156,9 +156,8 @@ export const useMatchbookMatch = () => {
       return { ...base, state: hydrated ? "notfound" : "hydrating" };
     }
     if (!homeTeam || !awayTeam) {
-      /* A deleted team is NOT a missing match. The old route reported both with
-         the same words, so a live fixture whose roster had been edited read as
-         gone (brief §2.4.6). */
+      /* A deleted team is NOT a missing match — reporting both with the same
+         words makes a live fixture whose roster was edited read as gone. */
       return { ...base, state: hydrated ? "teams-unavailable" : "hydrating" };
     }
 
@@ -198,12 +197,10 @@ export const useMatchbookMatch = () => {
         }
       : null;
 
-    /* One line, and only when it earns its row. A tie is the one that matters:
-       `End Match` silently refused to open with no explanation at all. Kept
-       under 40 characters because the rubric's characters-per-line measure only
-       counts blocks longer than that, and a 65-character sentence set in a
-       288px column at 320 renders as two 33-character lines — outside the
-       45–75 band whichever way it is written. Short is the only honest fix. */
+    /* One line, and only when it earns its row. A tie is the one that
+       matters: `End Match` must never silently refuse with no explanation.
+       Kept under 40 characters — a longer sentence wraps into short ragged
+       lines in the narrow column. */
     const tied = match.homeScore === match.awayScore;
     const hint =
       mode !== "scoring"

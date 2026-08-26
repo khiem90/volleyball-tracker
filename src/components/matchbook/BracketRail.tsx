@@ -46,57 +46,25 @@ export type {
 } from "./bracketLayout";
 
 /* ===========================================================================
-   THE BRACKET RAIL (charter §2.3, W4 / P3a)
+   THE BRACKET RAIL
 
-   Two brackets ship today and neither is readable.
-
-   `Bracket.tsx` absolutely positions every card inside a `relative` box
-   (`BracketMatchCard.tsx:61-63`), so a card contributes **no intrinsic width**
-   to its flex column and `Bracket.tsx:74`'s `justify-between` sizes each round
-   from its LABEL. Reproduced: at 390px the Semi-Finals cards render on top of
-   the Quarter-Finals cards; at 1440px with 8 or 16 teams the Finals card is
-   sliced in half at the panel edge (BUG-1). It then reserves
-   `140 * 2^(round-1)` px per slot, so a finals match owns 560px of mostly
-   whitespace (BUG-2), and draws a 16px stub instead of a tree, so nothing says
-   which cell feeds which (BUG-3). `DoubleBracket.tsx` avoids all three by
-   laying out in normal flow — with a second, incompatible match card, three
-   independent horizontal scrollers and clipped round headings (BUG-10).
-
-   ------------------------------------------------------------- the geometry
-
-   This rail computes its layout ARITHMETICALLY and never measures the DOM
-   (charter §2.3, comp-detail R2). Every cell is `MB_CELL_W x MB_CELL_H`, every
-   column is exactly `MB_CELL_W` wide, and the canvas height is known before a
-   single node mounts:
+   Layout is computed ARITHMETICALLY — the DOM is never measured. Every cell
+   is `MB_CELL_W x MB_CELL_H`, every column exactly `MB_CELL_W` wide, and the
+   canvas height is known before a node mounts:
 
      round 0   centre(0, i) = offset + i * (CELL_H + ROW_GAP) + CELL_H / 2
      round r   centre(r, i) = (centre(r-1, 2i) + centre(r-1, 2i+1)) / 2
 
-   which is the charter's rule verbatim: round *r* holds `2^(R-r)` cells and
-   cell *i* centres between children `2i` and `2i+1`. The rhythm is LINEAR —
-   a finals cell sits at the mean of its two feeders rather than inside an
-   exponentially tall slot — so a 16-team bracket is 15 cells in 1,470px of
-   canvas instead of 15 cells in 4,500px.
+   The rhythm is LINEAR — a finals cell sits at the mean of its two feeders,
+   never inside an exponentially tall slot. A round whose cell count is not
+   exactly half its predecessor's is RAGGED (the losers side of a double-elim
+   bracket) and is distributed evenly instead, with NO connectors drawn into
+   it: a line that does not describe a real parent/child link is worse than
+   none. Nothing animates — a bracket that reflows is unreadable.
 
-   A round whose cell count is not exactly half its predecessor's is RAGGED —
-   the losers side of a double-elimination bracket is full of them — and is
-   distributed evenly down the canvas instead, with **no connectors drawn into
-   it**. A drawn line that does not describe a real parent/child relationship
-   is worse than no line, so the code refuses to guess.
-
-   Nothing here animates and nothing here is measured: `ResizeObserver` on a
-   horizontally scrolling container re-runs on every resize and produces elbows
-   that slide, and a bracket that reflows is unreadable (§4, "Must NOT
-   animate").
-
-   ------------------------------------------------------------------ mobile
-
-   A 16-team rail is 1,176px wide. On a 390px screen that is not a bracket, it
-   is a filing cabinet. Below `sm` the rail therefore defaults to a vertical
-   ROUNDS LIST of the same matches — the same `MbMatchRow` the schedule uses,
-   grouped by round, with a real 44px edit key — and a segmented control
-   switches to the rail for anyone who wants it. The control is `sm:hidden`
-   because above `sm` there is no choice to offer.
+   Below `sm` the rail defaults to a vertical ROUNDS LIST of the same matches
+   (a 16-team rail is 1,176px wide); a segmented control switches to the rail.
+   Above `sm` there is no choice to offer, so the control is `sm:hidden`.
    =========================================================================== */
 
 /* ------------------------------------------------------------------- cell */
@@ -116,9 +84,8 @@ const CellSide = ({
   won: boolean;
   showScore: boolean;
   /**
-   * What an empty side says. `TBD` = a real slot awaiting a winner; `—` = there
-   * is no opponent at all because the other side had a bye. The row uses the
-   * same two words for the same two states (F12/F13), so the schedule and the
+   * `TBD` = a real slot awaiting a winner; `—` = no opponent (a bye). The row
+   * uses the same two words for the same two states, so the schedule and the
    * bracket beside it cannot describe one match with two vocabularies.
    */
   placeholder?: "TBD" | "—";
@@ -141,11 +108,8 @@ const CellSide = ({
       />
     )}
     {team ? (
-      /* Middle elision, not end truncation. This box measures 93px at 1440
-         holding a 237px name, and the fixture's two Wolverhampton sides differ
-         only in their last character — end-truncation printed both cells as
-         "WOLVERHAM…" and the reader could not tell which side was which
-         (F15). `MbTeamName` keeps the last token. */
+      /* Middle elision, not end truncation: two names differing only near the
+         end must stay distinguishable — `MbTeamName` keeps the last token. */
       <MbTeamName
         name={team.name}
         className={`matchbook-display min-w-0 flex-1 text-[0.72rem] mb-track-link ${
@@ -192,14 +156,10 @@ const FootWord = ({ cell }: { cell: MbBracketCellData }) => {
 };
 
 /**
- * One bracket cell. It participates in layout — a fixed `MB_CELL_W` box inside
- * a column of the same fixed width — which is the whole of the BUG-1 fix.
- *
- * The entire cell is the target when it is openable (156 x 90, comfortably over
- * the 44px floor) and there is no separate edit key: the match sheet the cell
- * opens carries "Change teams", which is how the edit path stops being a
- * hover-only 24px pencil (BUG-9). `memo` is preserved from `BracketMatchCard`,
- * which was already memoised (comp-detail R4).
+ * One bracket cell — a fixed `MB_CELL_W` box inside a column of the same
+ * fixed width, so it participates in layout. The whole cell is the target
+ * when openable (156x90, over the 44px floor); the match sheet it opens
+ * carries "Change teams", so there is no separate edit key.
  */
 const BracketCellInner = ({
   cell,
@@ -245,8 +205,7 @@ const BracketCellInner = ({
   const style = {
     width: MB_CELL_W,
     height: MB_CELL_H,
-    /* Red, not coral: §1.2 fixes live to `--mb-red`, matching the cell's own
-       live dot and word — the rail restates them, never replaces them. */
+    /* Red, not coral: live is `--mb-red`, matching the cell's own live dot. */
     ...(cell.live ? { boxShadow: "inset 3px 0 0 var(--mb-red)" } : null),
   };
 
@@ -264,7 +223,7 @@ const BracketCellInner = ({
       onClick={() => onSelect?.(cell.id)}
       aria-label={`Open ${cell.home?.name ?? "TBD"} v ${cell.away?.name ?? "TBD"}`}
       /* Explicit duration token: bare `transition-colors` carries Tailwind's
-         own 150ms, which is not `--mb-dur-fast/base/slow` (rubric 5.2). */
+         own 150ms, which is not a `--mb-dur-*`. */
       className={`${frame} transition-colors duration-[var(--mb-dur-fast)] ease-[var(--mb-ease-out)] hover:bg-[var(--mb-tint-1)]`}
       style={style}
     >
@@ -279,12 +238,10 @@ MbBracketCell.displayName = "MbBracketCell";
 /* ------------------------------------------------------------- connectors */
 
 /**
- * The tree, drawn from `layoutBracket`'s numbers and nothing else.
- *
- * One `<svg>` per section — not one per cell — so a re-render of a single cell
- * cannot re-render the overlay (comp-detail R4). It is `aria-hidden` and
- * `pointer-events: none`: it is a picture of a relationship the cells already
- * state in words, and it must never intercept a tap meant for a cell.
+ * The tree, drawn from `layoutBracket`'s numbers and nothing else. One `<svg>`
+ * per section — not per cell — so a single cell's re-render cannot re-render
+ * the overlay. `aria-hidden` and `pointer-events: none`: a picture of a
+ * relationship the cells already state, and it must never intercept a tap.
  */
 export const BracketConnectors = ({ layout }: { layout: SectionLayout }) => {
   const paths = useMemo(() => bracketConnectorPaths(layout), [layout]);
@@ -305,8 +262,8 @@ export const BracketConnectors = ({ layout }: { layout: SectionLayout }) => {
           key={i}
           d={path.d}
           fill="none"
-          /* Live path = `--mb-red` (§1.2), and the doubled stroke width is
-             the non-colour channel that survives greyscale. */
+          /* Live path = `--mb-red`; the doubled stroke width is the
+             non-colour channel that survives greyscale. */
           strokeWidth={path.live ? 2 : 1}
           stroke={path.live ? "var(--mb-red)" : "var(--mb-rule)"}
         />
@@ -340,15 +297,12 @@ const RailSection = ({
       <h3 className="mb-kicker mb-2 text-mb-navy">{section.label}</h3>
     )}
 
-    {/* Round headings. A flex row of fixed-width cells so each heading sits
-        over its own column — `Bracket.tsx` used `<span>`s with no heading
-        structure at all and `DoubleBracket.tsx` used `<h3>` inconsistently. */}
+    {/* Round headings: a flex row of fixed-width cells so each heading sits
+        over its own column. */}
     <div className="flex" style={{ gap: MB_COL_GAP }}>
       {layout.columns.map((column) => (
-        /* The round the event is standing on is marked by INVERTING its head —
-           navy ground, paper letterforms — so "where are we" survives a
-           desaturated capture. `PlacedColumn.current` shipped computed and
-           never drawn, so every round head read identically (rubric 4). */
+        /* The current round's head INVERTS — navy ground, paper letterforms —
+           so "where are we" survives a desaturated capture. */
         <h4
           key={column.label}
           className={`mb-kicker shrink-0 truncate ${
@@ -359,12 +313,9 @@ const RailSection = ({
           style={{ width: MB_CELL_W, scrollSnapAlign: "start" }}
         >
           {column.label}
-          {/* Two states wear one mark: `current` is the round IN PLAY or the
-              next one to be played, and the word has to say which. On a
-              bracket that has just been generated every cell is pending, and
-              this head announced "· Now" over a column of TBDs. Read off the
-              column's own cells, the same rule the Schedule panel's band
-              follows, so the two cannot describe one round differently. */}
+          {/* `current` is the round in play OR the next to be played; the
+              suffix says which, read off the column's own cells — the same
+              rule the Schedule panel's band follows. */}
           {column.current
             ? column.cells.some((placed) => placed.cell.live)
               ? " · Now"
@@ -417,7 +368,7 @@ export const MbBracketChampionBlock = ({
     <div className="min-w-0">
       <p
         className="mb-kicker"
-        /* `.mb-kicker` is ink-muted, which invariant 11 forbids on navy. */
+        /* `.mb-kicker` is ink-muted, which is illegible on navy. */
         style={{ color: "var(--mb-gold)" }}
       >
         {champion.caption ?? "Champion"}
@@ -479,11 +430,8 @@ const RoundsList = ({
                   away={cell.away}
                   homeSeed={cell.homeSeed}
                   awaySeed={cell.bye ? undefined : cell.awaySeed}
-                  /* `cell.bye` joins the guard on the scores. Without it this
-                     list — the cut a PHONE gets, where the rail is not shown —
-                     rendered the generator's bookkeeping 1–0 as a result, the
-                     same F12 defect the desktop Schedule panel had, while the
-                     cell one tap away said "Bye". */
+                  /* `cell.bye` joins the guard: a bye's bookkeeping 1–0 must
+                     never render as a played result. */
                   homeScore={
                     cell.pending || cell.tbd || cell.bye ? undefined : cell.homeScore
                   }
@@ -566,11 +514,10 @@ export const BracketRail = ({
   }, []);
 
   /**
-   * One scroll on mount, to the earliest round that still has something to
-   * watch. `scrollLeft` is assigned directly — never `scrollIntoView`, which
-   * walks every scrollable ancestor and would move the page (the exact defect
-   * `Tabs.tsx` records) — and it is deliberately not smooth, so there is no
-   * behaviour to clamp under `prefers-reduced-motion`.
+   * One scroll on mount, to the earliest round still worth watching.
+   * `scrollLeft` is assigned directly — never `scrollIntoView`, which walks
+   * every scrollable ancestor and would move the page — and it is not smooth,
+   * so there is nothing to clamp under `prefers-reduced-motion`.
    */
   const focusRound = useMemo(() => {
     for (const layout of layouts) {
@@ -640,8 +587,7 @@ export const BracketRail = ({
       {champion && <MbBracketChampionBlock champion={champion} />}
 
       {/* The choice exists only where both cuts are useful, so the control
-          exists only there too (invariant 38 — this is redundant context above
-          `sm`, not hidden information). */}
+          exists only there too. */}
       <div className="border-b border-mb-rule px-4 py-2.5 sm:hidden">
         <MbSegmented
           name="bracket-view"

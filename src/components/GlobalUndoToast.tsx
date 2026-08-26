@@ -143,24 +143,13 @@ export const GlobalUndoToast = ({ children }: GlobalUndoToastProps) => {
   };
 
   /* ---------------------------------------------------------------------
-     THE GLOBAL FEEDBACK MOUNT (charter §2.3, W2 / P2b)
+     THE GLOBAL FEEDBACK MOUNT
 
-     `AnimatePresence` is gone: framer-motion is banned on converted screens
-     (design language §9), and it was only ever wrapping an exit animation that
-     `.mb-toast` does not have. Nothing about the undo contract touches it —
-     `pushUndo`, `performUndo`, `clearUndo`, MAX_UNDO_STACK_SIZE, the Ctrl+Z
-     listener and the three-step restore order above are byte-identical (H9).
-
-     WHY THE OTHER TWO LAYERS MOUNT HERE. `ToastHost` and `MbOfflineBanner`
-     each need exactly one app-wide mount, and this component is already it:
-     it is the single node `Providers` wraps every route in, and it is already
-     named for the job it does — rendering a toast at the root. The alternative
-     was editing `Providers.tsx`, which a sibling workstream holds this phase.
-
-     When `MatchbookShell` lands (W2/P2a) both lines move into it and this file
-     goes back to owning the undo stack alone. Until then, moving them is a
-     one-line change and leaving them out would mean shipping a toast system
-     with no host and an offline banner nothing renders.
+     `ToastHost` and `MbOfflineBanner` each need exactly one app-wide mount,
+     and this component is already it: the single node `Providers` wraps every
+     route in. Do not touch the undo contract — `pushUndo`, `performUndo`,
+     `clearUndo`, MAX_UNDO_STACK_SIZE, the Ctrl+Z listener and the three-step
+     restore order above.
      --------------------------------------------------------------------- */
   return (
     <UndoContext.Provider value={contextValue}>

@@ -2,8 +2,8 @@ import { MbIcon } from "./MbIcon";
 
 /**
  * Tone drives the icon disc (border + glyph) — never the value or the label,
- * because display/stat text sits under 18.66px and global invariant 12 keeps
- * small text navy or ink-muted. Gold resolves to `--mb-gold-ink`: raw gold is
+ * because display/stat text sits under 18.66px and
+ * small text stays navy or ink-muted. Gold resolves to `--mb-gold-ink`: raw gold is
  * 2.15:1 on paper and would fail the 3:1 floor even as a hairline border.
  */
 export type MbStatTone = "navy" | "coral" | "teal" | "green" | "gold" | "red";
@@ -21,7 +21,7 @@ const TONE_INK: Record<MbStatTone, string> = {
  * The disc's geometry, so the six tones are six readings rather than six hues.
  *
  * Six tone names that differ only in hue are six identical discs in a
- * desaturated capture — invariant 13's exact failure mode, and worse here than
+ * desaturated capture — worse here than
  * on a badge because a stat's tone has no word beside it to fall back on. So
  * the tones are bound to a two-axis system and the geometry says which:
  *

@@ -148,7 +148,7 @@ export const useEditMatchDialog = ({
            Two near-identical 30-line index-search blocks lived here — one per
            state key — and both silently no-opped when either index was -1.
            They are now `src/lib/rotationCourts.ts`, under test, with the
-           no-op made explicit as a `null` return (charter W4 acceptance 8). */
+           no-op made explicit as a `null` return. */
         if (isRotationFormat && competition) {
           const updated = applyRotationCourtSwap(competition, {
             currentTeamIds: [match.homeTeamId, match.awayTeamId],

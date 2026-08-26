@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * `navigator.onLine`, as a React value (charter §2.3, W2/P2b).
+ * `navigator.onLine`, as a React value.
  *
  * `useSyncExternalStore` rather than `useState` + `useEffect`, for the same
  * reason `useMbReducedMotion` uses it: an effect-based implementation renders

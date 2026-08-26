@@ -19,8 +19,8 @@ import {
    its metadata is the one surface of this product that gets copied into other
    people's systems. Three properties are asserted here rather than assumed:
 
-     1. it names the SAME champion the page names (register D-40 — the frozen
-        `stats.winner` disagrees with the table on the shipped fixture);
+     1. it names the SAME champion the page names (the frozen `stats.winner`
+        can disagree with the table);
      2. it carries no token, no uid and no credential of any kind;
      3. its palette still resolves to `--mb-*`, even though Satori forced the
         one place in `src/` that writes a Matchbook colour as a literal.
@@ -237,7 +237,7 @@ const restEnvelope = () => [
   },
 ];
 
-describe("fetchSummaryMeta — unauthenticated REST runQuery (charter D-13)", () => {
+describe("fetchSummaryMeta — unauthenticated REST runQuery", () => {
   const ENV = { ...process.env };
   afterEach(() => {
     vi.unstubAllGlobals();

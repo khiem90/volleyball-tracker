@@ -25,37 +25,14 @@ import {
   type MbSummaryHighlight,
 } from "@/components/matchbook/useMatchbookSummary";
 
-/* ===========================================================================
-   THE MATCH REPORT — /summary/[shareCode]
-
-   The back page of a sports almanac, which is what the Matchbook system was
-   drawn to be. It is the only screen in the product that is *finished*: the
-   scores cannot change, nobody is going to tap anything, and the two things it
-   is for are being screenshotted into a group chat and being printed and put
-   on a wall.
-
-   Both of those set the layout:
-
-     - The headline is the CHAMPION, full bleed, at the top — one screen, one
-       primary rank device. The Full Time panel used to carry two: the 64px
-       crowned crest and, directly under it, the decider at `size="hero"`
-       whose scoreline is the 60px console step. Two hero-scale objects both
-       claiming to be the page's answer is the equal-weight failure the empty
-       states were cleared of, in the panel that exists to say who won. The
-       champion block keeps the hero scale; the decider now takes the compact
-       cut beside it, a supporting fact rather than a second headline.
-     - Nothing is behind a tab. `@media print` in `globals.css` has existed
-       since P0 and has never been exercised; a tabbed report prints one tab.
-       Every section is mounted, in reading order, and the ledger's capped rows
-       are `hidden print:block` so a printed report carries all of them while
-       the screen still stops at 25 (brief S22).
-
-   Interaction is deliberately almost absent. `MbMatchRow` is rendered without
-   `onSelect`, so it draws as static type rather than as 48 dead buttons — a
-   frozen snapshot has nothing to open. The two controls that exist are Share
-   and Export, plus Delete for the creator, and Delete lives at the very bottom
-   in `MbDangerZone`, never in the masthead beside Share (invariant 35).
-   =========================================================================== */
+/* /summary/[shareCode] — the match report. A finished, print-first page:
+   the champion is the one hero-scale device; the decider takes the compact
+   cut. Nothing sits behind a tab (a tabbed report prints one tab) — every
+   section is mounted in reading order, and the ledger's capped rows are
+   `hidden print:block` so print carries all of them while the screen stops at
+   the cap. `MbMatchRow` renders without `onSelect` (a frozen snapshot has
+   nothing to open), and Delete lives at the bottom in `MbDangerZone`, never
+   beside Share. */
 
 /* ------------------------------------------------------------ failure copy */
 
@@ -120,12 +97,8 @@ const LedgerDay = ({ day }: { day: MbSummaryDay }) => (
   </>
 );
 
-/**
- * A named result — the biggest win, the closest match. Both live in one panel
- * rather than two: as separate 4-column tiles they stretched to the height of
- * the share panel beside them and each carried ~110px of content in a ~300px
- * box, which is the "lone card in empty space" the rubric fails outright.
- */
+/** A named result — the biggest win, the closest match. Both share one panel
+ * so neither stretches into a mostly-empty box. */
 const Standout = ({
   highlight,
   emptyMessage,
@@ -217,11 +190,9 @@ export default function SummaryPage() {
     <MatchbookShell
       variant="public"
       masthead={{
-        /* The title is the event's own name, so it carries no two-tone split:
-           an invented coral word inside somebody else's league name is an
-           emphasis nobody asked for. Coral's one appearance on this screen is
-           the Share key; the masthead badge frame is its declared structural
-           job. Same rule the shared-formation viewer settled on. */
+        /* The title is the event's own name — no two-tone split inside
+           somebody else's league name. Coral's one appearance here is the
+           Share key. */
         title: data.name,
         shortTitle: data.name,
         badge: { lines: ["Match", "Report"] },
@@ -249,37 +220,20 @@ export default function SummaryPage() {
                 {champion ? (
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-3 px-4 py-5 sm:px-5">
                     <Crest team={champion.team} size={64} />
-                    {/* A BASIS, so the row wraps instead of squeezing (L2).
-
-                        `flex-wrap` was already here and could never fire: a
-                        `flex-1 min-w-0` item shrinks to nothing before it
-                        wraps, so the crest and the form run kept their widths
-                        and the name paid. Measured at 320 with an eight-club
-                        roster, the name held 76px at `display/stat-lg` (30px)
-                        and `break-words` cut "Marlow Blues VC" into four
-                        mid-word pieces — the champion's name, on the panel
-                        announcing the champion.
-
-                        192px is the width at which "Barrington", this roster's
-                        longest token at 30px, still sets whole. Below it the
-                        block takes its own line and gets the panel's full
-                        254px; above it the row is unchanged. `break-words`
-                        stays as the last resort it is meant to be — it only
-                        breaks a word that cannot fit a line at all. */}
+                    {/* `basis-60` makes the wrap real: a bare `flex-1 min-w-0`
+                        item shrinks to nothing before `flex-wrap` can fire, so
+                        without a basis the champion's name gets crushed
+                        instead of taking its own line. `break-words` stays as
+                        the last resort only. */}
                     <div className="min-w-0 flex-1 basis-60">
                       <p className="mb-kicker flex items-center gap-1.5">
                         <MbIcon id="crown" size={13} className="shrink-0" />
                         Champion
                       </p>
                       <p className="matchbook-display mt-1.5 break-words text-balance text-[1.875rem] mb-track-display font-bold leading-none">
-                        {/* The terminal token is PINNED to the word before it
-                            — the replacement string is a literal U+00A0 — so
-                            `text-balance` can never strand a tail like "VC"
-                            as a one-word line under a 30px name. The regex
-                            shipped by the cut agent had lost its backslash
-                            (`(?=S+$)`: a space followed by capital S's), so
-                            the pin never fired; `(?=\S+$)` is the last space
-                            before the final token, which is what it meant. */}
+                        {/* The last space is replaced with a literal U+00A0 so
+                            `text-balance` can never strand a tail like "VC" as
+                            a one-word line. */}
                         {champion.team.name.replace(/ (?=\S+$)/, " ")}
                       </p>
                       {champion.accent && (
@@ -302,8 +256,8 @@ export default function SummaryPage() {
                     </span>
                   </div>
                 ) : (
-                  /* Brief S19: the block is never dropped in silence. Who was
-                     level, and on what, is the report's actual finding. */
+                  /* Never dropped in silence: who was level, and on what, is
+                     the report's actual finding. */
                   <div className="px-4 py-5 sm:px-5">
                     <p className="mb-kicker">No outright winner</p>
                     <p className="matchbook-display mt-1.5 text-[1.2rem] mb-track-display font-bold leading-tight tabular-nums">
@@ -322,14 +276,9 @@ export default function SummaryPage() {
                 {decider && (
                   <div className="border-t border-mb-navy px-4 py-4 sm:px-5">
                     <p className="mb-kicker mb-2.5">{decider.kicker}</p>
-                    {/* `compact`, not `hero` (C7). At `hero` this block set
-                        its scoreline at the 60px console step two inches under
-                        a 64px champion crest — two 60px-class rank devices on
-                        one screen, each claiming to be the page's answer. The
-                        champion block above IS the report's rank device (the
-                        crown, the crest, the name); the decider is its
-                        supporting fact and takes the same compact cut the
-                        session board gives co-equal courts. */}
+                    {/* `compact`, not `hero`: the champion block above is the
+                        report's one hero-scale device; the decider is its
+                        supporting fact. */}
                     <MbScoreboardHero
                       home={decider.entry.home}
                       away={decider.entry.away}
@@ -346,13 +295,8 @@ export default function SummaryPage() {
         </div>
 
         {/* -------------------------------------------------- final table */}
-        {/* 8 columns, not the Standouts row's 7. Measured at 1440 with the
-            club-name fixture, the full standings set (now carrying Gap) is
-            644.36px of table and a 7-column panel gives it a 596px scrollport
-            — 48px of the Form column behind a scroll edge on the one screen
-            whose job is the finished record. At 8/4 the port is ~682px and
-            the whole set paints at rest; By The Numbers is six label+value
-            rows and never needed the fifth column. */}
+        {/* 8 columns: a 7-column panel puts part of the standings behind a
+            scroll edge at 1440, and By The Numbers never needed the fifth. */}
         <div className="xl:col-span-8">
           <Panel
             title="Final Table"
@@ -364,8 +308,8 @@ export default function SummaryPage() {
             }
           >
             {!data.playedAny ? (
-              /* Brief S18: a 0-0 table ranked 1st to 4th asserts an order that
-                 nothing produced. The entrants are listed unranked instead. */
+              /* A 0-0 table ranked 1st to 4th asserts an order nothing
+                 produced — the entrants are listed unranked instead. */
               <div className="flex flex-col">
                 <p className="mb-day-head">Entered, unranked — no matches played</p>
                 <div className="flex flex-col divide-y divide-mb-rule">
@@ -378,12 +322,9 @@ export default function SummaryPage() {
               </div>
             ) : (
               <>
-                {/* No `highlightTeamId`. The coral highlight rail means "the
-                    row the reader chose" (§1.2, selection), and on a static
-                    share nothing is chosen — passing the champion here painted
-                    a coral "champion" rail, an off-list coral meaning, on top
-                    of the teal rank-#1 rail the same row already earns. The
-                    champion's celebration is the hero block above. */}
+                {/* No `highlightTeamId`: the coral rail means "the row the
+                    reader chose", and on a static share nothing is chosen —
+                    the champion's celebration is the hero block above. */}
                 <MbStandingsTable
                   rows={data.standings}
                   caption={`${data.name} — final standings, ${data.formatLabel}`}
@@ -397,12 +338,9 @@ export default function SummaryPage() {
         {/* ----------------------------------------------- by the numbers */}
         <div className="xl:col-span-4">
           <Panel title="By The Numbers" icon="clipboard">
-            {/* A ruled COLUMN, not a 2x3 grid of floating tiles. The panel
-                stretches to the final table beside it — 8 entrants is 500px —
-                and a 2-column grid left a third of the box blank whether the
-                rows were packed or spread. Six ruled rows fill a tall box the
-                way a printed record does, and each row gets the panel's full
-                width for its label. */}
+            {/* A ruled column, not a 2x3 grid — the panel stretches to the
+                table beside it, and ruled rows fill a tall box the way a
+                printed record does. */}
             <div className="flex flex-1 flex-col divide-y divide-mb-rule">
               {data.stats.map((stat) => (
                 <div key={stat.label} className="px-4 py-3">
@@ -480,10 +418,8 @@ export default function SummaryPage() {
         {/* ----------------------------------------------------- standouts */}
         <div className="xl:col-span-7">
           <Panel title="Standouts" icon="star">
-            {/* One state, not two, when nothing was played at all. Four display
-                headlines all reading "NO … EXISTS YET" appeared on the empty
-                report before this — the equal-weight-state-headline problem
-                register D-14 raises against `/competitions`, reproduced here. */}
+            {/* One empty state, not one per standout, when nothing was played
+                at all. */}
             {!data.playedAny ? (
               <PanelEmpty message="No standouts exist yet — the biggest win and the closest match are named once matches have been played." />
             ) : (
@@ -513,9 +449,8 @@ export default function SummaryPage() {
                 to the session it came from and carries no admin token — the
                 scoring controls stayed behind.
               </p>
-              {/* Always on screen, not behind a failure. It is the manual leg
-                  of the copy chain (charter D-8) and it is also the answer to
-                  "read me the link" out loud. */}
+              {/* Always on screen, not behind a failure — the manual leg of
+                  the copy chain. */}
               <MbCopyField
                 label="Public report link"
                 value={data.shareUrl}

@@ -1,7 +1,7 @@
 "use client";
 
 /* ===========================================================================
-   THE PUBLIC SESSION VIEW (public-share brief N8, W6 / P3b)
+   THE PUBLIC SESSION VIEW
 
    `/session/<code>` is the only screen in this product a stranger ever sees.
    Someone is handed a link at 7pm, on a phone, in a gym, on bad wifi, and has
@@ -9,43 +9,27 @@
    decision in this file is downstream of that sentence.
 
    It mirrors `useMatchbookHistory` / `useMatchbookCompetitionDetail`: all
-   shaping here, the route file carries layout only (invariant 23).
+   shaping here, the route file carries layout only.
    `useSessionPage` keeps the joining, the roles and the navigation — the two
    are deliberately not merged, because one of them talks to Firestore through
    `SessionContext` and this one is a pure function of a `Session` object.
 
-   ------------------------------------------------- five defects fixed by it
+   ------------------------------------------------------------- the rules
 
-   1. **"Upcoming" double-counted the live matches.** `page.tsx` passed
-      `pendingMatches.length + inProgressMatches.length`, so 3 pending + 2 live
-      rendered "Upcoming 5 / Live 2" — the same two matches counted twice, on
-      the counter a stranger reads first (brief §2.4.3). `counts.upcoming` is
-      pending only.
+   `counts.upcoming` is pending only — never pending + live, which counts the
+   live matches twice on the counter a stranger reads first.
 
-   2. **Two ranking rules for one event.** The viewer sorted by competition
-      points then difference with its own hand-rolled tally that defaulted
-      `pointsForTie` to 1 even when the competition forbade ties; the summary
-      sorted by wins then difference. The table could therefore REORDER the
-      instant a session ended (brief §2.4.11). Both now go through
-      `rankTeams()`, which `lib/standings.ts` exists to be the only answer to,
-      and the T / PF / PA columns the old code computed and threw away are
-      rendered.
+   Ranking goes through `rankTeams()` — `lib/standings.ts` exists to be the
+   only answer — so the table cannot reorder the instant a session ends.
 
-   3. **Non-competition matches vanished.** The old hook filtered
-      `session.matches` down to the competition and returned nothing else, so a
-      quick match inside a shared session was invisible to every viewer (brief
-      §2.4.9). Two lists exist here instead: `scoped` drives the standings and
-      the bracket, `all` drives what is on court, what is next and what just
-      finished. A match with `competitionId === null` shows up in the second.
+   Two match lists exist: `scoped` drives the standings and the bracket, `all`
+   drives what is on court, what is next and what just finished, so a quick
+   match (`competitionId === null`) inside a shared session stays visible.
+   Scoping happens ONCE — re-filtering by `competitionId` downstream wrongly
+   drops matches for a competition whose `matchIds` carry a different one.
 
-   4. **Redundant re-filtering that could drop matches.** `page.tsx` re-applied
-      `m.competitionId === competition.id` to an already-scoped array, which
-      also wrongly dropped matches for a competition that uses `matchIds` with
-      a different `competitionId` (brief §2.4.10). Scoping happens once.
-
-   5. **"Game 4 of 3".** `gamesPlayed + 1` was unclamped (brief §2.4.8). The
-      series is handed to `MbScoreboardHero`, which clamps `game` to `of` in
-      its own constructor, so the bug cannot be reintroduced by a caller.
+   The series is handed to `MbScoreboardHero`, which clamps `game` to `of` in
+   its own constructor, so "Game 4 of 3" cannot be reintroduced by a caller.
 
    ------------------------------------------------------------- what it caps
 
@@ -105,7 +89,7 @@ export interface MbSessionCourt {
   away: MbTeam;
   homeScore: number;
   awayScore: number;
-  /** Team colour, drawn as a contained 3px bar only (charter D-9). */
+  /** Team colour, drawn as a contained 3px bar only. */
   homeAccent?: string;
   awayAccent?: string;
   series?: MbScoreboardSeries;
@@ -144,7 +128,7 @@ export interface MbSessionView {
   /**
    * One plain sentence describing the state of play. It is what the ended
    * state prints, and what a link preview would carry if `generateMetadata`
-   * ever gets a server-side read (brief §3.8 / risk R4).
+   * ever gets a server-side read.
    */
   storyLine: string;
 }
@@ -177,10 +161,9 @@ const plural = (n: number, one: string, many = `${one}s`) =>
 /**
  * Team colour, only when it is a real value.
  *
- * `PersistentTeam.color` is optional and the shipped viewer fell back to
- * `#888` — a hardcoded grey that is not in the palette and that turned "this
- * team has no colour" into "this team's colour is grey" (invariant 8). No
- * colour means no bar; the crest already carries the identity.
+ * `PersistentTeam.color` is optional. Never fall back to a grey: that turns
+ * "this team has no colour" into "this team's colour is grey". No colour
+ * means no bar; the crest already carries the identity.
  */
 const accentOf = (team?: PersistentTeam) => teamColorCss(team?.color);
 

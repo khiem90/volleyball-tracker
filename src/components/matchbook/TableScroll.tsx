@@ -6,15 +6,9 @@ import { MbIcon } from "./MbIcon";
 /* ===========================================================================
    THE TABLE SCROLLER, WITH ITS EDGE CUE
 
-   Charter invariant 32: "Only `.mb-table` wrappers, the bracket rail and the
-   tool rail scroll horizontally, EACH WITH A VISIBLE EDGE CUE." Every shipped
-   `.mb-table` had the scroller and none of them had the cue. Measured at 390px:
-
-     /        standings table   lost  67px of 356 — the Form column
-     /teams   directory table   lost 238px of 356 — Next Match and Status
-                                are entirely off-screen, Pts is cut mid-figure
-
-   238px is 67% of the panel's own width. Nothing on the screen said so: the
+   Only `.mb-table` wrappers, the bracket rail and the tool rail scroll
+   horizontally, EACH WITH A VISIBLE EDGE CUE. Without the cue a phone-width
+   table can hide most of its own columns and nothing on the screen says so: the
    header row ended at "Pts" with a clean panel border beside it, which reads as
    the end of the table rather than the edge of a window onto it.
 
@@ -34,10 +28,9 @@ import { MbIcon } from "./MbIcon";
 
    So the cue is a caption under the table, in the system's own `mb-kicker`
    micro-caps with a chevron pointing at the side that still has content. It is
-   a rule and a letterform, not a gradient fade: invariant 24 bans gradients
-   outright, which is why neither a mask nor a shadow is used, and invariant 36
-   bans hover-only affordances, which is why it is always painted rather than
-   revealed on hover. Nothing in this component is positioned.
+   a rule and a letterform, not a gradient fade: gradients are banned
+   outright (so no mask or shadow), and hover-only affordances are banned
+   (so it is always painted). Nothing in this component is positioned.
 
    The caption appears only when an edge is genuinely overflowing, so a table
    that fits — every one of these at 1440 — carries no furniture at all.
@@ -74,7 +67,7 @@ import { MbIcon } from "./MbIcon";
    probing every `.mb-panel-link` with `elementFromPoint` down its own column,
    real hit height with `position: relative` added to this wrapper:
 
-     View Full Table        46px -> 43px   (44px floor, invariant 33: LOST)
+     View Full Table        46px -> 43px   (under the 44px floor: LOST)
      View All Courts        47px -> 47px
      View Full Bracket      47px -> 47px
 

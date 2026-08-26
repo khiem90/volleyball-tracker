@@ -10,7 +10,6 @@ Where things live:
 - **Tokens + utility classes:** the Matchbook block at the top of `src/app/globals.css`.
 - **Components:** `src/components/matchbook/` (no barrel — import from the file).
 - **Assets:** `public/assets/matchbook/` (sprite icons, crests, textures).
-- **Live gallery of every primitive:** `/dev/kit` (`src/app/dev/kit/page.tsx`).
 
 ---
 
@@ -233,8 +232,9 @@ padding in one of a paired band's panels, re-check its partner.
 - Horizontal scroll only on a `.mb-table` wrapper (`overflow-x-auto`), bracket
   rails, and the mobile nav strip; the page body never scrolls horizontally.
 - Client-rendered `new Date()` strings carry `suppressHydrationWarning`.
-- Before writing a new control, check `/dev/kit` — nothing in the kit gets
-  re-invented, and new tokens/classes go in `globals.css` + this document.
+- Before writing a new control, check `src/components/matchbook/` — nothing in
+  the kit gets re-invented, and new tokens/classes go in `globals.css` + this
+  document.
 
 ## 6. Engineering traps
 
@@ -252,9 +252,6 @@ padding in one of a paired band's panels, re-check its partner.
   lets content set a floor and defeats `truncate`; write `minmax(0, 1fr)` so the
   pair is sized by the track, not the track by the pair. Same for flex: every
   text-bearing flex/grid child needs `min-w-0`.
-- **`public/assets/matchbook/tokens.css` is NOT loaded by the app.** It exists
-  only for `public/assets/matchbook/preview.html`; the runtime source of truth
-  is always `globals.css`.
 - **Keep a tab in view with `scrollLeft`, never `scrollIntoView`** —
   `scrollIntoView` walks every scrollable ancestor including the document
   scroller and opens the page mid-scroll (`MbTabs` has the fix).

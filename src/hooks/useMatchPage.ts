@@ -17,34 +17,12 @@ import { processMatchResult as processTwoMatchRotationResult } from "@/lib/twoMa
 import type { Match } from "@/types/game";
 
 /* ===========================================================================
-   WHAT CHANGED HERE, AND WHAT DELIBERATELY DID NOT
-
-   `handleCompleteMatch` below is 278 lines covering five competition formats,
-   bracket advancement, the shared-mode merge and the cascade to
-   `completeCompetition`. Charter W5 acceptance 1 makes it a BLACK BOX: change
-   what calls it, never its internals. It is reproduced verbatim with exactly
-   TWO edits, both forced by the score history moving out of this file, and
-   neither touching a branch:
-
-     · `setHistory([]);` in the series-continuation branch is now
-       `resetScoreHistory({ home: 0, away: 0 });` — same job, same line, same
-       moment. The local `history` state it used to clear no longer exists.
-     · `resetScoreHistory` joins the dependency array. It is a `useCallback`
-       over a `useCallback(…, [])`, so it is stable and the completion callback
-       is rebuilt on exactly the same renders as before.
-
-   Nothing else in those 278 lines differs by a character.
-
-   Everything else in this file did move:
-
-     · Fullscreen and the orientation block are GONE (they were duplicated
-       verbatim in `match/guest/page.tsx:53-86`). `useCourtView` owns both, and
-       it lives in the component because the Fullscreen API needs the element,
-       not the route (charter H12, shell brief R4).
-     · The score history is `useScoreHistory` — one stack, surviving reload.
-     · `gameNumber` can no longer be 0. `Game 0` shipped on every completed
-       series match whose counters were never written (brief §2.4.3).
-     · `role` is no longer returned. It had no consumer (brief §2.4, cleanup).
+   `handleCompleteMatch` below covers five competition formats, bracket
+   advancement, the shared-mode merge and the cascade to `completeCompetition`.
+   Treat it as a BLACK BOX: change what calls it, never its internals.
+   Fullscreen/orientation live in `useCourtView` (the Fullscreen API needs the
+   element, not the route); the score history is `useScoreHistory` — one
+   stack, surviving reload.
    =========================================================================== */
 
 /** A store that never emits: the only thing that changes is the environment. */
@@ -95,9 +73,9 @@ export const useMatchPage = () => {
   /* ---------------------------------------------------------- hydration
 
      `AppContext` loads localStorage inside a mount effect, so `state` is empty
-     on the first client render and `!match` was indistinguishable from "this
-     match does not exist". The route rendered its "Match not found" error on
-     the first paint of EVERY successful load (brief §2.4.1, probe-confirmed).
+     on the first client render and `!match` is indistinguishable from "this
+     match does not exist" until hydration lands — gate on `hydrated` or the
+     route flashes "Match not found" on every successful load.
 
      `useSyncExternalStore` with a store that never changes is the codebase's
      existing idiom for "is this the client yet" (`useOnlineStatus`,
@@ -213,8 +191,7 @@ export const useMatchPage = () => {
   }, [competition, match]);
 
   /* =========================================================================
-     BLACK BOX — charter W5 acceptance 1. Do not refactor. The only edit is the
-     `historyRef.current.reset` line noted at the top of this file.
+     BLACK BOX — do not refactor. See the note at the top of this file.
      ====================================================================== */
   const handleCompleteMatch = useCallback(() => {
     if (!match || match.status === "completed") return;

@@ -26,13 +26,8 @@ import { formatPreview } from "@/components/matchbook/useMatchbookNewCompetition
 import type { CompetitionType } from "@/types/game";
 
 /* ===========================================================================
-   The format -> controls matrix.
-
-   This is the table the charter (W3 acceptance 2) asks for. Before the
-   rewrite the same knowledge lived in three predicates in `NameStep` and a
-   fourth in `AdvancedSettingsPanel`; the values below are those four
-   predicates, transcribed from the pre-rewrite source, so the test fails if
-   `FORMAT_META` ever quietly drops a control from a format.
+   The format -> controls matrix, transcribed from the pre-rewrite source, so
+   the test fails if `FORMAT_META` ever quietly drops a control from a format.
    =========================================================================== */
 
 const LEGACY_MATRIX: Record<
@@ -74,9 +69,9 @@ describe("format -> controls matrix", () => {
   it("gives every format a sprite mark and no colour key", () => {
     for (const type of FORMAT_ORDER) {
       expect(FORMAT_META[type].icon).toMatch(/^[a-z-]+$/);
-      // Formats deliberately carry NO accent: the old per-format rails reused
+      // Formats deliberately carry NO accent: a per-format rail would reuse
       // --mb-teal (rank-#1 rail) and --mb-gold (Draft) as a categorical key,
-      // double-booking locked semantic tokens (design language §1.2).
+      // double-booking locked semantic tokens.
       expect(FORMAT_META[type]).not.toHaveProperty("accent");
     }
   });

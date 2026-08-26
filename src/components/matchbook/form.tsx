@@ -378,8 +378,7 @@ export const MbNumberStepper = ({
    * Split out, the figure keeps the numeral step and the unit takes
    * `display/link` (0.72rem / 600 / 0.04em, muted) — an existing step, ~2.1x
    * smaller than the figure it annotates, and well clear of the 0.6–0.66rem
-   * band the design language forbids for information that is not repeated
-   * elsewhere.
+   * band forbidden for information that is not repeated elsewhere.
    *
    * `aria-valuetext` still says "3 games", so the split is visual only.
    */

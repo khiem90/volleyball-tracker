@@ -375,8 +375,8 @@
   }
 
   /* status: a badge word IS a status word in a frame — LIVE, DRAFT, FINAL.
-     The badge ROLE token (0.22em) belongs to the badge CAPTION (§2.1
-     display/badge-label), not to this class. */
+     The badge ROLE token (0.22em) belongs to the badge CAPTION, not to this
+     class. */
   .mb-badge {
     text-transform: uppercase;
     letter-spacing: var(--mb-track-status);
@@ -659,14 +659,9 @@ button.mb-panel-link::after,
   display: inline-block;
 }
 
-/* THE PILL, SPELLED ONCE (F7). Use this instead of `rounded-full` anywhere the
-   four sanctioned round marks are drawn — the live dot, the account disc, an
-   icon disc, a colour swatch — and nowhere else; design language 3.3 reserves
-   the radius to exactly those. `.mb-live-dot`, `.mb-icon-mark[data-shape=disc]`
-   and `.mb-icon-disc` already bake it, so a call site only needs this class
-   when it is drawing one of the four by hand.
-   See `--mb-radius-round` above for why `rounded-full` cannot simply be
-   re-pointed and why the value is a real length. */
+/* THE PILL, SPELLED ONCE. Only the four sanctioned round marks — live dot,
+   account disc, icon disc, colour swatch — may use it. See `--mb-radius-round`
+   for why `rounded-full` cannot simply be re-pointed. */
 .mb-round {
   border-radius: var(--mb-radius-round);
 }
@@ -738,34 +733,19 @@ button.mb-panel-link::after,
 }
 
 /* ---------------------------------------------------------------------------
-   FORM CONTROL BOUNDARIES (C3)
+   FORM CONTROL BOUNDARIES
 
-   .mb-input, .mb-search and .mb-textarea drew their frame in --mb-rule. That is
-   the HAIRLINE tier — a divider INSIDE a thing — and these are the BOUNDARY of
-   a thing, which §3.3 maps to the edge tier in solid navy. Composited over
-   --mb-paper-bright, rgba(7,50,77,0.28) resolves to #bac2c3 and measures
-   1.74:1 against the field it encloses; the same frame on --mb-paper is
-   #b4bbba at 1.72:1. Both are far under the 3:1 a UI boundary needs, and the
-   frame is the only thing telling the user where the field is.
-
-   It also made the form incoherent with itself: .mb-select-native was already
-   correct at solid navy, 12.84:1, so a select and a text input standing 8px
-   apart in one MbField drew visibly different frames. Measured before this
-   change on /dev/kit: 14 controls at 1.74:1 (.mb-input x9, .mb-textarea x3,
-   .mb-search x2) against 4 at 12.84:1 (.mb-select-native).
-
-   All four now take the edge tier. --mb-rule keeps every job it was actually
-   built for — row rules, the panel-head underline, list dividers — where it is
-   a line drawn ON a surface rather than the surface's own edge.
+   Inputs/search/textarea/select all take the solid-navy edge tier: --mb-rule
+   is a hairline for dividers INSIDE a surface and lands under the 3:1 a UI
+   boundary needs, so it must never draw a control's outer frame.
    --------------------------------------------------------------------------- */
 
 .mb-search {
   display: flex;
   align-items: center;
-  gap: 6px; /* was 0.4rem = 6.4px — G23 */
-  /* The rung lives here, not at the call site. Three call sites each spelled
-     their own floor (`min-h-12`, `min-h-[44px]`, nothing) — see the G21 note
-     below the input rule. 44 is the floor; a caller may still raise it. */
+  gap: 6px;
+  /* The rung lives here, not at the call site. 44 is the floor; a caller may
+     still raise it. */
   min-height: 44px;
   border: var(--mb-rule-edge) solid var(--mb-navy);
   border-radius: 4px;
@@ -783,43 +763,15 @@ button.mb-panel-link::after,
 }
 
 /* ---------------------------------------------------------------------------
-   THE FRAMED FIELD'S OWN HEIGHT (G21) — the 46px rung that was not a rung
+   THE FRAMED FIELD'S OWN HEIGHT
 
-   `.mb-input` and `.mb-search` are frames around a target. The shell carries
-   the ladder rung (44 / 48 / 56) and the `<input>` inside it is stretched to
-   fill, so its used height came out at `rung − 2 × --mb-rule-edge`:
-
-     /teams     input[type=search]  144 x 46   inside a 48px label.mb-search
-     /summaries input[type=search]  666 x 46   inside a 48px div.mb-input,
-                select                  x 48     standing 12px to its left
-
-   46 is on no ladder. It is also the number the SWEEP sees, because an audit
-   enumerates `input`, not the `<div>` wrapped round it — so every framed field
-   in the system reported a control 2px short of the select beside it, its top
-   edge 1px low and its bottom edge 1px high. The system had already named the
-   discrepancy (`MB_CONTROL_CELL = MB_CONTROL_HEIGHT − 2`) rather than closed
-   it, which turned one ladder into two.
-
-   The fix is to stop charging the interior for the frame. A negative block
-   margin of exactly one edge lets the stretched child resolve to the shell's
-   BORDER-box height:
-
-     stretch height = content(46) − marginTop(−1) − marginBottom(−1) = 48
-
-   so the input's hit box is the frame, edge to edge — which is what a user who
-   taps the border of a search field already believes. Nothing moves: the margin
-   is symmetric, so a field whose input is centred rather than stretched is
-   unaffected, and the input's background is `transparent`, so the frame it now
-   overlaps still paints.
-
-   Why not the obvious alternatives:
-     - shell at rung + 2 (50/58): puts the FRAME off the ladder and misaligns it
-       with `.mb-select-native`, which is a single box and genuinely is its rung.
-     - `box-shadow: inset` instead of `border`: also works, and would let the
-       shell and cell be one number by construction — but it re-points the
-       `.mb-field[data-invalid]` and focus rules onto a different property and
-       changes what `outline-offset` measures from, for a result the eye cannot
-       tell from this one.
+   A stretched child of a bordered shell resolves to rung − 2×edge (46px, on
+   no ladder). The negative block margin of exactly one edge lets the input
+   resolve to the shell's BORDER-box height, so its hit box is the frame edge
+   to edge. Symmetric, so a centred (unstretched) input is unaffected, and the
+   input's transparent background keeps the frame painting. Do not swap the
+   border for inset box-shadow: that re-points `.mb-field[data-invalid]` and
+   focus rules and changes what `outline-offset` measures from.
    --------------------------------------------------------------------------- */
 .mb-input > input,
 .mb-search > input {
@@ -834,7 +786,7 @@ button.mb-panel-link::after,
 .mb-input {
   display: flex;
   align-items: center;
-  gap: 10px; /* was 0.6rem = 9.6px — G23 */
+  gap: 10px;
   /* `md`, the rung `MbTextInput` already inlines at every call site it owns.
      Declared here so the two hand-rolled `.mb-input` fields on /login — which
      had no floor at all and sized to their own line box — are on the same
@@ -898,16 +850,12 @@ button.mb-panel-link::after,
    :focus-visible rule below covers it. */
 
 /* ---------------------------------------------------------------------------
-   Focus (GAP-12)
-   The legacy global `:focus-visible` red outline (further down this file) stays
+   Focus
+   The legacy global `:focus-visible` outline (further down this file) stays
    scoped to legacy screens; this pair outranks it on specificity inside a
    Matchbook surface and inside the portalled overlays, which render outside it.
-
-   The ring is navy — see --mb-focus for the measurements and for why it stopped
-   being coral. 2px is deliberate and is the third exception to "2px is not a
-   tier" listed in the rule-tier note above: an outline is a transient state
-   mark drawn OUTSIDE the box, not a rule in the layout, so it does not compete
-   with the hairline/edge/accent/anchor hierarchy.
+   2px is fine here: an outline is a transient mark drawn OUTSIDE the box, so
+   it does not compete with the rule tiers.
    --------------------------------------------------------------------------- */
 
 .matchbook-surface :focus-visible,
@@ -1336,16 +1284,15 @@ button.mb-panel-link::after,
 }
 
 /* ---------------------------------------------------------------------------
-   Toast (GAP-2)
+   Toast
    Paper-bright, an edge-tier navy border, an anchor-tier left border in the
-   tone colour — the
-   horizontal mirror of the accent rail.
+   tone colour — the horizontal mirror of the accent rail.
    --------------------------------------------------------------------------- */
 
 .mb-toast {
   display: flex;
   align-items: flex-start;
-  gap: 10px; /* was 0.6rem = 9.6px — G23 */
+  gap: 10px;
   min-width: 0;
   background: var(--mb-paper-bright);
   border: var(--mb-rule-edge) solid var(--mb-navy);
@@ -1358,38 +1305,28 @@ button.mb-panel-link::after,
 
 .mb-toast[data-tone="info"] { --mb-toast-tone: var(--mb-navy); }
 .mb-toast[data-tone="success"] { --mb-toast-tone: var(--mb-green); }
-/* gold-INK, not raw gold (D-21's second half). The warning tone is an
-   anchor-tier RAIL on paper-bright, and --mb-gold measures 2.15:1 there —
-   under the 3:1 non-text floor (WCAG 1.4.11) every other rail tone clears
-   (navy 12.84, green 4.28, red 4.58). --mb-gold-ink is 5.59:1 on
-   paper-bright / 5.13:1 on paper: same hue family, the same swap the badge
-   tones already made for draft/warn ink. Raw gold keeps its other jobs —
-   the badge FILL mark, team accents, on-navy uses — untouched. */
+/* gold-INK, not raw gold: raw --mb-gold fails the 3:1 non-text floor on
+   paper-bright, --mb-gold-ink clears it. Raw gold keeps its other jobs
+   (badge fill mark, team accents, on-navy uses). */
 .mb-toast[data-tone="warning"] { --mb-toast-tone: var(--mb-gold-ink); }
 .mb-toast[data-tone="danger"] { --mb-toast-tone: var(--mb-red); }
 
 /* ---------------------------------------------------------------------------
-   Badge (GAP-4)
+   Badge
 
-   The letterforms are always navy. GAP-4 says this class exists partly to fix
-   the §1.3 rule-1 debt, and colouring 0.66rem/700 text with the tone would
-   re-create it: measured on paper, --mb-green is 3.93:1, --mb-red 4.20:1,
-   --mb-coral 3.26:1 and --mb-gold 1.97:1, all under the 4.5:1 floor for text
-   below 18.66px. So the tone rides a second channel instead —
-     text    the paired mark (.mb-live-dot, or .mb-form-square, which picks up
-             --mb-badge-fill automatically)
-     framed  an edge-tier rule in --mb-badge-ink (every tone clears the 3:1 UI floor;
-             draft and warn use --mb-gold-ink, since raw gold does not)
-     solid   a tone fill with white ink. Only tone="live" clears 4.5:1 there
-             (#fff on --mb-red is 4.76:1; on --mb-green it is 4.45:1), so
-             MbBadge restricts `solid` to live and the design language §5.6
-             claim that final also passes solid is corrected.
+   The letterforms are always navy: every tone colour fails the 4.5:1 text
+   floor at 0.66rem/700, so the tone rides a second channel instead —
+     text    the paired mark (.mb-live-dot / .mb-form-square via --mb-badge-fill)
+     framed  an edge-tier rule in --mb-badge-ink (draft/warn use --mb-gold-ink,
+             since raw gold fails the 3:1 UI floor)
+     solid   a tone fill with white ink — only tone="live" clears 4.5:1 there,
+             so MbBadge restricts `solid` to live.
    --------------------------------------------------------------------------- */
 
 .mb-badge {
   display: inline-flex;
   align-items: center;
-  gap: 4px; /* was 0.3rem = 4.8px — G23 */
+  gap: 4px;
   white-space: nowrap;
   font-family: var(--mb-display-font);
   font-weight: 700;
@@ -1495,7 +1432,7 @@ button.mb-panel-link::after,
 .mb-field {
   display: flex;
   flex-direction: column;
-  gap: 6px; /* was 0.35rem = 5.6px — G23 */
+  gap: 6px;
   min-width: 0;
 }
 
@@ -1855,8 +1792,8 @@ button.mb-panel-link::after,
 }
 
 /* ---------------------------------------------------------------------------
-   Skeleton (GAP-8) — static block at the final geometry. No shimmer: a shimmer
-   is a gradient, and gradients are banned.
+   Skeleton — static block at the final geometry. No shimmer: a shimmer is a
+   gradient, and gradients are banned.
    --------------------------------------------------------------------------- */
 
 .mb-skeleton {
@@ -1866,18 +1803,12 @@ button.mb-panel-link::after,
 }
 
 /* ---------------------------------------------------------------------------
-   Editorial set (public share §5.3)
+   Editorial set (public share)
    --------------------------------------------------------------------------- */
 
-/* FINAL IS GREEN. Design language §1.2 maps Final/complete to --mb-green and
-   MbBadge[data-tone="final"] already obeys it, but this stamp was coral-deep —
-   so a finished match said "Final" in green on the badge and in coral six
-   pixels away on the stamp, and the reader had to learn that one status owns
-   two colours. Worse, coral is the accent, so a screen full of completed
-   matches was a screen full of accents.
-   11.8px/700 letterforms, so it takes the ink twin rather than --mb-green
-   itself: --mb-green-ink is 5.13:1 on paper-bright and 4.71:1 on paper, where
-   --mb-green measures 4.28:1 and 3.93:1 and fails AA at this size. */
+/* FINAL IS GREEN — same status colour as MbBadge[data-tone="final"], never the
+   coral accent. Ink twin, not raw --mb-green: raw green fails AA at
+   0.74rem/700. */
 .mb-stamp-final {
   display: inline-flex;
   align-items: center;
@@ -1897,7 +1828,7 @@ button.mb-panel-link::after,
 .mb-code-chip {
   display: inline-flex;
   align-items: center;
-  gap: 6px; /* was 0.4rem = 6.4px — G23 */
+  gap: 6px;
   padding: 0.25rem 0.5rem;
   border: var(--mb-rule-edge) solid var(--mb-navy);
   border-radius: 3px;
@@ -1911,21 +1842,19 @@ button.mb-panel-link::after,
 .mb-banner {
   display: flex;
   align-items: center;
-  gap: 10px; /* was 0.6rem = 9.6px — G23 */
+  gap: 10px;
   min-width: 0;
   padding: 0.55rem 0.8rem;
   background: var(--mb-paper-bright);
   border: var(--mb-rule-edge) solid var(--mb-banner-tone, var(--mb-navy));
   border-left-width: var(--mb-rule-anchor);
   border-radius: 4px;
-  font-size: 0.85rem; /* body/sm — 0.8rem was a latent off-ladder stray (type-census Y-round) */
+  font-size: 0.85rem; /* body/sm */
 }
 
 .mb-banner[data-tone="info"] { --mb-banner-tone: var(--mb-navy); }
 .mb-banner[data-tone="success"] { --mb-banner-tone: var(--mb-green); }
-/* gold-INK — see .mb-toast[data-tone="warning"]: this rail is the register's
-   D-21 second half, --mb-gold at 2.15:1 on paper-bright against the 3:1
-   non-text floor. --mb-gold-ink measures 5.59:1 there. */
+/* gold-INK, not raw gold — see .mb-toast[data-tone="warning"]. */
 .mb-banner[data-tone="warn"] { --mb-banner-tone: var(--mb-gold-ink); }
 .mb-banner[data-tone="danger"] { --mb-banner-tone: var(--mb-red); }
 
@@ -1944,24 +1873,14 @@ button.mb-panel-link::after,
 /* ---------------------------------------------------------------------------
    Scoreboard cuts (MbScoreboardHero)
 
-   The score box is a fixed reserve, so in a `1fr auto 1fr` scoreline it is the
-   two *name* columns that pay for it — and they pay twice, once per side. The
-   cut is therefore chosen from the card's own inline size, never the viewport:
-   the same card is 771px wide in a `xl:col-span-7` panel and 537px in a
-   `col-span-5` one on the same 1440px screen, and the viewport cannot tell
-   them apart. Measured at 1440 before this existed: the compact card's name
-   column was 155.33px and dropped 16 of a 40-character name; at 320 it was
-   1.00px and dropped all 40.
+   The score box is a fixed reserve, so in a `1fr auto 1fr` scoreline the two
+   name columns pay for it. Cuts key on the card's own inline size (container
+   query), never the viewport — the same card renders at very different widths
+   in different panels on one screen.
 
-   Thresholds are the container width at which each name column still sets the
-   longest shipped name (40 characters) in two lines at that step:
-
-     hero    name column = (C − 48 px padding − 24 px gaps − 223.5 px score)/2
-             40 chars at display 0.9rem = 317.6px → two lines need 158.8px
-             → C ≥ 617  → 620
-     compact name column = (C − 24 − 24 − 124.5)/2, less 35px of crest + accent
-             40 chars at display 0.72rem = 254px → two lines need 127px
-             → C ≥ 497  → 500
+   620 / 500 are the container widths at which each name column can still set
+   a 40-character name in two lines at its type step (hero 0.9rem, compact
+   0.72rem), given padding, gaps and the score reserve.
    --------------------------------------------------------------------------- */
 
 .mb-scoreboard {
@@ -2015,7 +1934,7 @@ button.mb-panel-link::after,
 }
 
 /* ---------------------------------------------------------------------------
-   Skip link (shell §5.16) — first focusable node, targets #mb-main.
+   Skip link — first focusable node, targets #mb-main.
    --------------------------------------------------------------------------- */
 
 .mb-skip-link {
@@ -2038,27 +1957,13 @@ button.mb-panel-link::after,
 }
 
 /* ---------------------------------------------------------------------------
-   REDUCED MOTION — the Matchbook zone's own clamp (charter invariant 44)
+   REDUCED MOTION
 
-   Until now there was NO prefers-reduced-motion rule anywhere in the Matchbook
-   zone. Every converted screen was relying on the legacy theme's global clamp,
-   which lives in zone C and is scheduled for deletion in W2/P4 — so the moment
-   that block goes, every Matchbook animation would have started running at full
-   length for users who asked for none. This closes one of the three
-   out-of-zone-A dependencies recorded in design language §7.3.
-
-   It is also stronger than what it replaces. The legacy clamp only shortens
-   durations to 0.01ms, which is not the same as removing motion: a 10px rise
-   compressed to 0.01ms is still a 10px jump, and a translateY press compressed
-   to 0.01ms still teleports the control. Motion is REMOVED here, not hurried.
-
-   What deliberately survives: the press INK and the hover wash. A background
-   change is not motion — it does not move, scale or fade anything across the
-   screen — and reduced-motion users still need to know a control responded to
-   their tap. Removing the tint as well would leave them with a button that does
-   nothing at all until the page changes, which is the exact defect this whole
-   block was written to fix. `.mb-live-dot` loses its pulse and holds at full
-   opacity, so "Live" is still marked, by the dot and the word beside it.
+   Motion is REMOVED here, not shortened: a transition compressed to 0.01ms is
+   still a jump. The press ink and hover wash deliberately survive — a
+   background change is not motion, and reduced-motion users still need to see
+   that a control responded. `.mb-live-dot` loses its pulse and holds at full
+   opacity, so "Live" is still marked by the dot and the word beside it.
    --------------------------------------------------------------------------- */
 
 @media (prefers-reduced-motion: reduce) {
@@ -2077,13 +1982,11 @@ button.mb-panel-link::after,
     opacity: 1;
   }
 
-  /* The C12 view transition is never STARTED under reduced motion — the page
-     feature-gates on the same media query before calling
-     `startViewTransition` — so these rules are the backstop, not the
-     mechanism. They pin every view-transition pseudo-element dead, including
-     the UA-generated group flight, in case any future call site forgets the
-     gate. One selector per rule: an engine without the pseudo drops one rule,
-     not its neighbours. */
+  /* View transitions are never STARTED under reduced motion — call sites
+     feature-gate on this media query before `startViewTransition` — so these
+     rules are the backstop in case a future call site forgets the gate. One
+     selector per rule: an engine without the pseudo drops one rule, not its
+     neighbours. */
   ::view-transition-group(*) {
     animation: none !important;
   }
@@ -2121,22 +2024,13 @@ button.mb-panel-link::after,
 
      The named rules above cover every recipe the system OWNS. This one
      covers everything it does not: a Tailwind `transition-*`/`duration-*`
-     written inline on a screen, a `<video>`/`<details>` UA animation, and —
-     the reason it is not optional — `scroll-behavior`, which no `.mb-*`
-     selector can reach.
+     written inline on a screen, a `<video>`/`<details>` UA animation, and
+     `scroll-behavior`, which no `.mb-*` selector can reach. The stronger
+     `animation: none` / `transform: none` rules above still win on
+     specificity, so "hurry" here never weakens "remove" there.
 
-     It is the rule the legacy theme used to provide from zone C, restated
-     here because design language §7.3 lists it as one of three guarantees
-     Matchbook screens rely on from outside zone A, and P4 deletes zone C.
-     Restated VERBATIM in effect, so this deletion changes nothing for a
-     reduced-motion user; the strictly stronger `animation: none` /
-     `transform: none` rules above still win on specificity (0,1,0 beats
-     0,0,0), which is why "hurry the motion" here does not weaken "remove the
-     motion" there.
-
-     `!important` is inherited from the rule this replaces and is load-bearing:
-     an inline `style="transition: …"` is the common way a component sets a
-     duration, and nothing short of `!important` outranks it.
+     `!important` is load-bearing: an inline `style="transition: …"` is the
+     common way a component sets a duration, and nothing else outranks it.
      ------------------------------------------------------------------- */
   *,
   *::before,
@@ -2151,12 +2045,9 @@ button.mb-panel-link::after,
 /* ---------------------------------------------------------------------------
    SELECTION
 
-   Also re-declared from zone C rather than dropped. The legacy rule painted a
-   20%-alpha warm red behind selected text with a near-black ink; deleting it
-   without a replacement hands every screen back to the UA's default blue,
-   which is the one colour in the app that belongs to no palette. Navy at the
-   same alpha is the Matchbook equivalent and keeps selected text at full
-   contrast against paper.
+   Declared deliberately: without it selected text falls back to the UA's
+   default blue, the one colour in the app that belongs to no palette. Navy
+   at low alpha keeps selected text at full contrast against paper.
    --------------------------------------------------------------------------- */
 
 ::selection {
@@ -2165,7 +2056,7 @@ button.mb-panel-link::after,
 }
 
 /* ---------------------------------------------------------------------------
-   Print (GAP-15.2)
+   Print
    Overriding the palette tokens is what turns the whole system black on white;
    nothing below needs to restate a colour.
    --------------------------------------------------------------------------- */
@@ -2228,111 +2119,25 @@ button.mb-panel-link::after,
   }
 }
 
-/* The `@media (max-height: 500px)` landscape helpers — `.hide-landscape`,
-   `.hide-landscape-divider`, `.show-landscape`, `.landscape-row` — were here.
-   They are gone with P4 and they close register item D-4, the one row that had
-   no owner and no automated check behind it.
-
-   They are safe to delete because they have no consumers: they were the legacy
-   scoring screen's landscape contract, and W5 rebuilt that screen on its own
-   `@media` query rather than reusing them, exactly as design language §7.3
-   instructs ("re-declare them as `.mb-*` in zone A or write the media query
-   locally"). `ScoreSide.tsx` carries the note. Zero references in `src/` at
-   deletion time, verified by grep across .tsx/.ts. */
 
 * {
   box-sizing: border-box;
 }
 
 /* ---------------------------------------------------------------------------
-   THE SCROLLPORT — read this before touching html/body (zone B)
+   THE SCROLLPORT — read this before touching html/body
 
-   This block used to read `html, body { height: 100%; …; overflow-x: hidden }`
-   and it made BODY a second scrollport stacked on top of the document's. The
-   mechanism, measured on /dev/kit at 1440x900:
+   Never put `height: 100%` or any `overflow` on BODY. A clamped body with
+   one overflow axis hidden becomes a second scrollport stacked on the
+   document's: the wheel and the keyboard then scroll two different boxes,
+   window.scrollY pins at 0, and scroll restoration silently breaks. Body
+   fills the viewport with min-height and the DOCUMENT stays the scrollport.
 
-     - `overflow-x: hidden` on the ROOT propagates to the viewport, and the root
-       then uses `overflow: visible` itself. That is the horizontal guard and it
-       is the half that was doing real work.
-     - `overflow-x: hidden` on BODY does NOT propagate — body keeps it. Per CSS
-       Overflow 3, one axis `hidden` forces the other from `visible` to `auto`,
-       so body computed `overflow-y: auto`.
-     - `height: 100%` then clamped body to the viewport's 900px while its content
-       measured 20868px. An `auto` overflow on a clamped box is a scroll
-       container, so body scrolled internally.
-
-   The result was two independent scrollports over the same content:
-
-     wheel over the page   ->  body.scrollTop 0..19968, window.scrollY STAYS 0
-     PageDown / End / Home ->  window.scrollY 0..17223, body.scrollTop unchanged
-
-   So the pointer and the keyboard scrolled two different boxes, and neither
-   could reach where the other was — End could still add 17223px of travel to a
-   page the wheel had already bottomed out. `window.scrollY` pinned at 0 also
-   silently disables scroll restoration, every scroll-linked measurement, and
-   any future scroll-progress affordance, app-wide.
-
-   The fix is to stop clamping body. `min-height` gives the same "fill the
-   viewport" guarantee without capping the box, so body grows to its content and
-   the DOCUMENT is the scrollport again. Measured after:
-
-     wheel +600 -> window.scrollY 600 · PageDown -> 787 · End -> 19968 · Home -> 0
-     document.scrollHeight 18123 -> 20868 (it now reports the real content height)
-
-   ----------------------------------------- why `overflow-x: hidden` is GONE
-
-   It used to stay on html, described here as "the rubric §3.1 horizontal guard".
-   It was not a guard. It was the thing that made a hard navigation failure both
-   invisible and unfixable-by-the-reader, and it is what let this ship:
-
-   A roster of ordinary club names — Westhill Wanderers, Northside Thunder,
-   Beckton Blues — put `documentElement.scrollWidth` at 419px inside a 390px
-   viewport on `/teams` (see THE ESCAPED LABEL below for the mechanism). Under
-   mobile emulation Chrome grows the LAYOUT VIEWPORT to the overflow, and the
-   bottom nav is `fixed inset-x-0`, so the nav stretched to 419px too and laid
-   its six cells out across a width the screen does not have. Measured, before:
-
-     viewport   doc.scrollWidth   nav width   the "More" cell (x 349..419)
-     320        419 vs 320        419         entirely off-screen
-     360        419 vs 360        419         59px of it off-screen
-     375        419 vs 375        419         44px of it off-screen
-     390        420 vs 390        420         30px of it off-screen
-     414        419 vs 419        419          5px of it off-screen
-
-   None of that was reachable. `window.scrollTo(420, 0)` left `scrollX` at 0 on
-   a phone — but do not credit that to this declaration, because it is not the
-   cause. Measured both ways with a 600px probe in a 390px viewport:
-
-                          wheel      window.scrollTo(2000, 0)
-     phone, no clip       scrollX 0  scrollX 0
-     phone, clip on html  scrollX 0  scrollX 0
-     desktop, no clip     scrollX 0  scrollX 210
-     desktop, clip        scrollX 0  scrollX 210
-
-   The unreachability is Chrome's own mobile behaviour: it grows the layout
-   viewport to the content and fits that to the screen instead of offering a
-   horizontal scroll, so there is no scroll position at which the off-screen
-   nav cells exist. The clip changes nothing about it.
-
-   What the clip DID do is hide it. No scrollbar, no cut edge, nothing for an
-   eye or a screenshot to catch — which is how a hard navigation failure passed
-   every review this programme has run. On `/` the same overflow left NINE
-   pixels of the 57px bar on screen with all five cells failing
-   `elementFromPoint`, and the page looked fine.
-
-   Rubric 6.3 counts "content clipped off-viewport by `overflow-x: hidden`" as
-   the defect, not the remedy, and charter invariant 31 says in as many words
-   that this declaration "hides the symptom, so verify the number". The number
-   is now verified instead: all 31 routes at 320/375/390/1440 on a 39-character
-   roster and at 320/360/390/414 on a club-name one,
-   `documentElement.scrollWidth === documentElement.clientWidth` on every one,
-   with the bottom bar 57px tall and all five cells hit-testable.
-
-   Do not put it back. If a route overflows, that is a defect in the route, and
-   without this line it is a visible one.
-
-   Do not put `height: 100%` or any `overflow` back on `body`. Pages fill the
-   viewport with `min-h-screen` (a vh unit), which needs nothing from body.
+   Never put `overflow-x: hidden` back on html. On mobile it does not make
+   off-screen content reachable — Chrome grows the layout viewport to the
+   overflow either way — it only hides the evidence (no scrollbar, no cut
+   edge). If a route overflows, that is a defect in the route, and without
+   this line it is a visible one.
    --------------------------------------------------------------------------- */
 
 html {
@@ -2344,49 +2149,20 @@ html {
 /* ---------------------------------------------------------------------------
    THE ESCAPED LABEL — visually-hidden text must carry a definite inline start
 
-   The 419px above was not a table, a name or a column. It was ONE 1x1px
-   screen-reader label, and it is worth spelling out because the same trap is
-   waiting for every `sr-only` this app adds.
+   Tailwind's `.sr-only` is `position: absolute` with NO INSET, so the box
+   takes its STATIC position — and an ancestor's `overflow` scroller does not
+   clip it, because an absolutely positioned box's containing block is its
+   nearest POSITIONED ancestor, outside the scroller. A 1x1 label sitting past
+   a wide table can therefore be the widest thing in the document and widen it.
+   `inset-inline-start: 0` pins every such box inside its containing block; it
+   changes nothing visually (the box is 1x1, clipped, unpainted) and nothing
+   for a screen reader (announcement order is DOM order).
 
-   `FormLetters` ends its run with `<span class="sr-only">Recent form, oldest
-   first: won, won, lost…</span>`. Tailwind's `.sr-only` is `position: absolute`
-   with `width: 1px`, `overflow: hidden` and NO INSET — so the box takes its
-   STATIC position, which for that span is inside the directory table, at
-   x = 417.5 in a 390px viewport, because the table is 409px wide in a 356px
-   scrollport.
-
-   `MbTableScroll`'s `overflow-x: auto` does not clip it. An overflow clips only
-   the descendants for which it is in the CONTAINING-BLOCK chain, and an
-   absolutely positioned box's containing block is its nearest POSITIONED
-   ancestor — here `div.xl:col-span-7`, outside the scroller. So the label kept a
-   static position that the scroller had already scrolled away from, landed
-   28.5px past the viewport, and widened the document. Measured on `/teams` at
-   390 with a club-name roster:
-
-     baseline                                     documentElement.scrollWidth 420
-     `.sr-only { display: none }`                                             390
-     `.sr-only { inset-inline-start: 0 }`                                     390
-     `.sr-only { white-space: normal }`                                       420
-     `.sr-only { overflow: clip }`                                            420
-     `.sr-only { contain: strict }`                                           420
-     `.sr-only { max-width: 1px }`                                            420
-
-   Only the position changes it, because the position is the whole fault — the
-   text inside was never painted and never measured.
-
-   `inset-inline-start: 0` pins every such box to its containing block's inline
-   start, which is always inside the viewport, so it can never again be the
-   widest thing in the document. It cannot affect anything visually: the box is
-   1x1, `clip`ped, and unpainted. It cannot affect a screen reader either —
-   announcement order is DOM order, not layout order.
-
-   UNLAYERED and by attribute, both deliberately. Unlayered because Tailwind's
-   own `.sr-only` sits in `@layer utilities` and an unlayered rule beats every
-   layered one (see THE UTILITY SURFACE above). By attribute because the class
-   also ships behind variants — `TopStrip.tsx` uses `max-sm:sr-only` — and
-   `[class*=":sr-only"]` is the only selector that reaches those. Applying it to
-   an element that is NOT currently `sr-only` is free: inset properties do
-   nothing to a statically positioned box.
+   UNLAYERED and by attribute, both deliberately: Tailwind's own `.sr-only`
+   sits in `@layer utilities` and an unlayered rule beats every layered one,
+   and `[class*=":sr-only"]` is the only selector that also reaches variant
+   forms like `max-sm:sr-only`. Applying it to an element that is not
+   currently `sr-only` is free — inset does nothing to a static box.
    --------------------------------------------------------------------------- */
 
 [class~="sr-only"],
@@ -2394,17 +2170,10 @@ html {
   inset-inline-start: 0;
 }
 
-/* The canvas.
-   `background` and `color` moved here from the shadcn
-   `@layer base { body { @apply bg-background text-foreground } }` that P4
-   deleted along with the tokens it read. Two reasons it is not simply dropped:
-   the browser propagates BODY's background to the canvas, so this is what
-   paints an iOS rubber-band overscroll and any area a short route leaves
-   uncovered; and `color` is the inherited default for anything that renders
-   outside `.matchbook-surface` (a portalled overlay root, a `<noscript>`).
-   Measured before the swap on all 31 routes at 1440x900 and 390x844: zero
-   sample points anywhere resolved to the body paint — every route covers its
-   own viewport — so this is a correctness change with no pixel behind it. */
+/* The canvas. The browser propagates BODY's background to the canvas, so this
+   is what paints an iOS rubber-band overscroll and any area a short route
+   leaves uncovered; `color` is the inherited default for anything rendering
+   outside `.matchbook-surface` (a portalled overlay root, a noscript). */
 body {
   min-height: 100%;
   margin: 0;
@@ -2413,14 +2182,6 @@ body {
   color: var(--mb-navy);
   font-family: var(--font-sans), system-ui, sans-serif;
 }
-
-/* `.scrollbar-thin` was here, with an `oklch(0.7 0.08 25 / 0.3)` thumb — the
-   pre-Matchbook warm red — plus a `.dark` arm. It is deleted (register D-2).
-   Its two logged Matchbook consumers, `Sidebar.tsx` and `MobileBar.tsx`, had
-   already dropped it during P2a, and the two legacy ones named in the register,
-   `QuickAddTeams.tsx:261` and `volleyball/FormationEditorModal.tsx:244`, went
-   with W3's and W7's rewrites (the modal is now a route). Zero references in
-   `src/` at deletion time. */
 
 /* Prevent text selection on score panels. NOT legacy: Tailwind's own
    `select-none` sets `user-select` alone, and the scoring columns additionally
@@ -2440,62 +2201,11 @@ body {
 }
 
 /* ===========================================================================
-   END OF FILE — and end of the pre-Matchbook design system (W2 / P4)
+   END OF FILE
 
-   Everything below this point used to be the old theme, 1060 lines of it,
-   beginning with `PLAYFUL WARM THEME - Cream + Bold Red`. It is deleted:
-
-     - the second `:root` — 46 shadcn tokens (`--primary` the old warm red,
-       `--card`, `--popover`, `--muted`, `--secondary`, `--accent`,
-       `--destructive`, `--border`, `--input`, `--ring`, `--radius`, the eight
-       `--status-*`, the five `--chart-*`, the three decorative and the ten
-       `--card-*` playful-card colours);
-     - the `.dark` block, 46 more of the same (charter Appendix A D-15: dark
-       mode is dropped, and it had been mis-stating reality on 7 of 13 routes);
-     - `@layer base { * { @apply border-border outline-ring/50 } body { @apply
-       bg-background text-foreground } }` — measured across all 31 routes at
-       both viewports before removal: **0** elements anywhere were still
-       resolving a border colour from it, and the body paint was visible at 0
-       of ~4400 hit-test sample points;
-     - the card families `.soft-card`, `.glass-card`, `.playful-card` and its
-       five colour variants, `.bg-tournament`, `.bg-waves`;
-     - the button families `.btn-playful*`, `.btn-red-gradient`,
-       `.btn-teal-gradient`, `.btn-soft`, and `.glass-nav` / `.flat-nav` /
-       `.glass-input`;
-     - `.shadow-soft*`, `.glow-*`, `.animated-gradient*`, `.shine-hover`,
-       `.card-lift`, `.color-transition`, the GPU-hint block, the three
-       `.team-*-gradient`s, `.text-highlight*`, `.vs-divider`, `.score-text`,
-       `.score-glow`, `.icon-container`;
-     - `.status-*`, `.live-dot`, `.animate-fade-in*`, `.stagger-1..6`,
-       `.decorative-circle`, `.decorative-blob`, `.illustration-*`,
-       `.rank-gold/silver/bronze`, the `.theme-toggle-*` set and `.sun-rays`;
-     - the legacy `::placeholder` and `::selection` (the latter re-declared in
-       Matchbook navy up in the zone-A block — see "SELECTION");
-     - the global `:focus-visible { outline: 2px solid oklch(0.55 0.22 25) }`.
-       Matchbook scopes its own ring to `.matchbook-surface :focus-visible`
-       against `--mb-focus`, which is the coral/paper-bright pair that flips on
-       navy grounds. The legacy rule was the app's only focus ring for
-       everything outside the surface and its colour was the old red;
-     - `button:active:not(:disabled) { transform: scale(0.98) }`. This one was
-       not merely dead — it was actively wrong. At (0,2,1) it applied to every
-       `<button>` in the app including `.mb-tab`, `.mb-nav-item` and every
-       Matchbook control, it fought the deliberate press recipes above, and it
-       survived `prefers-reduced-motion` because the legacy clamp only
-       shortened durations and a `transform` on `:active` has no duration to
-       shorten. The system's own 25 `:active` rules replace it;
-     - the legacy `@media (prefers-reduced-motion: reduce)` universal clamp,
-       re-declared verbatim inside the Matchbook zone before this deletion, per
-       design language §7.3.
-
-   Nothing here had a consumer. The audit that established that ran three ways:
-   an import graph over `src/` (the legacy React tree was a closed island whose
-   only doors were `PageLoadingSpinner` on `/login` and `ThemeProvider` in
-   `Providers.tsx`, both migrated first), a literal grep for all 78 class names
-   above across every `.ts`/`.tsx` (only hits were inside doc comments), and a
-   live computed-style probe on all 31 routes at desktop and mobile.
-
-   The file is now one system. If you need a colour, it is `--mb-*`; if you
-   need a radius, it is 4/3/2/999 written literally; if you need a control, it
-   is in `src/components/matchbook/`. There is no second stylesheet to fall
-   back to, and that is the point.
+   The pre-Matchbook theme (shadcn tokens, dark mode, the playful card and
+   button families, the global :focus-visible and :active rules) used to live
+   below this point and is deleted with no consumers. The file is one system:
+   colours are --mb-*, radii are 4/3/2/999 written literally, controls live in
+   src/components/matchbook/. There is no second stylesheet to fall back to.
    =========================================================================== */

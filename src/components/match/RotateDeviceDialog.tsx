@@ -11,16 +11,10 @@ import {
 /* ===========================================================================
    ROTATE TO ENTER COURT VIEW
 
-   The illustration used to be a rounded rectangle animating
-   `rotate: [0, 90, 0]` with `repeat: Infinity` — an endlessly looping element
-   on a modal, which is a vestibular hazard, pins a compositor layer for as long
-   as the dialog is open, and is the one thing invariant 45 reserves for
-   `.mb-live-dot` alone.
-
-   It is now a static line drawing: a portrait phone, a landscape phone, and one
-   coral arc between them. It says the same thing and it holds still. Every
-   stroke is `currentColor` or a `--mb-*` token — invariant 10 counts colours
-   inside SVG.
+   A static line drawing, deliberately not animated: infinite animation is
+   reserved for `.mb-live-dot` alone, and a looping element on a modal is a
+   vestibular hazard. Every stroke is `currentColor` or a `--mb-*` token —
+   the no-literal-colours rule counts colours inside SVG.
    =========================================================================== */
 
 const RotateDiagram = () => (
@@ -43,10 +37,9 @@ const RotateDiagram = () => (
     />
     <line x1="20" y1="16" x2="35" y2="16" stroke="currentColor" strokeWidth="3" />
 
-    {/* The turn — navy, like the rest of the pictogram. The arrow was coral,
-        which spent the accent on an illustration: not the primary action, not
-        a selection, not the lockup (§1.2a). The curve and the arrowhead are
-        the emphasis; an instruction drawing in an almanac is ruled in ink. */}
+    {/* The turn — navy, like the rest of the pictogram: coral would spend the
+        accent on an illustration. The curve and the arrowhead are the
+        emphasis; an instruction drawing in an almanac is ruled in ink. */}
     <path
       d="M62 26c12-9 24-9 36 0"
       stroke="currentColor"

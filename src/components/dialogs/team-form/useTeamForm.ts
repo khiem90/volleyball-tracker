@@ -115,7 +115,7 @@ export const useTeamForm = ({
   /**
    * A warning, never a block. Two squads can legitimately share a name across
    * seasons, and the app has no uniqueness constraint — so the honest UI is to
-   * say it and let the user decide (brief §1.3).
+   * say it and let the user decide.
    */
   const duplicate =
     name.trim().length >= MIN_NAME_LENGTH &&

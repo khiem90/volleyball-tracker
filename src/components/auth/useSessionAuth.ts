@@ -7,22 +7,13 @@ import { useSession } from "@/context/SessionContext";
 /* ===========================================================================
    SIGN-IN STATE, WITH NO OPINION ABOUT WHERE IT IS DRAWN
 
-   Two changes from the shipped hook, both of them product rather than style:
+   `onDone`, not `onClose`: the hook is mounted inside a dialog *and* inside a
+   step of another dialog (`CreateSessionDialog`), and only the caller knows
+   which of those means "close". A step does not close; it advances.
 
-   1. **`handleContinueAsViewer` is gone.** It called `onClose()` and nothing
-      else — a full-width control labelled "Continue as Viewer (Read Only)"
-      that performed no action and changed no state (brief §2.4.13). Dismissing
-      the panel already does exactly that, and the dismiss affordance is right
-      there. A button that pretends to be a choice is worse than no button.
-
-   2. **`onClose` became `onDone`.** The hook is now mounted inside a dialog
-      *and* inside a step of another dialog (`CreateSessionDialog`), and only
-      the caller knows which of those means "close". A step does not close;
-      it advances.
-
-   Provider messages are mapped to product sentences. `signInWithEmail` rejects
-   with strings like `Firebase: Error (auth/invalid-credential).`, which names
-   the backend to the public and tells the reader nothing (invariant 28).
+   Provider messages are mapped to product sentences: `signInWithEmail`
+   rejects with strings like `Firebase: Error (auth/invalid-credential).`,
+   which names the backend to the public and tells the reader nothing.
    =========================================================================== */
 
 export type SessionAuthMode = "signin" | "signup" | "token";

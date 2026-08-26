@@ -21,42 +21,14 @@ import { FormationRow, ShareFormationDialog } from "@/components/volleyball";
 import { getTemplateFormations } from "@/lib/volleyball/templateFormations";
 import type { UserFormation } from "@/lib/volleyball/types";
 
-/* ===========================================================================
-   FORMATION ARCHIVE
+/* FORMATION ARCHIVE, modelled on `/summaries`. It knows when it is offline
+   (`useUserFormations` reports `snapshot.metadata.fromCache`); it can be
+   searched, filtered, sorted and paged; delete goes through a dialog; share
+   links are listed in the Sharing panel.
 
-   Modelled on `/summaries`, the shipped archive. Four things this screen did
-   not have and now does:
-
-     IT KNOWS WHEN IT IS OFFLINE. With Firestore unreachable the old page
-     rendered "Your Formations (0)" and offered to create another — a coach with
-     forty saved formations was told they had none, and the primary action on
-     offer was to make a forty-first. `useUserFormations` now reports
-     `snapshot.metadata.fromCache`, and a stale list says so in the masthead and
-     in the panel.
-
-     IT CAN BE SEARCHED. There was no search, no filter, no sort and no paging.
-     Every document rendered as a card, for ever.
-
-     ITS DELETE IS A DIALOG. It was click-to-arm with a three-second silent
-     `setTimeout` that disarmed it again — so the second press either deleted
-     the formation or re-armed the control, depending on how long the reader
-     took to decide — drawn under a `backdrop-blur` overlay, with Delete sitting
-     against Share.
-
-     ITS SHARE LINKS ARE VISIBLE. Which formations are shared was buried one
-     dialog deep, per formation. The Sharing panel lists them.
-
-   WHERE THE OFFLINE WARNING LIVES, and why it moved. It used to be a top-level
-   `MbNotice` inserted above the filter bar the moment the first Firestore
-   snapshot resolved from cache. That insertion moved the entire panel grid down
-   ~90px at t = 2.94s and, together with five collapsing row skeletons, measured
-   CLS 0.099 at 390x844 — a hard fail, and the only one on this route. The
-   warning is now a strip INSIDE the panel it is about, drawn in the block the
-   loading skeleton already reserved, so the resolve costs no layout at all. The
-   masthead sub-line still says "Offline"; the panel's own empty state still
-   carries the `offline` tone; the retry is in the strip and in the empty state.
-   Three places said it before and one of them was the one that shifted.
-   =========================================================================== */
+   The offline warning is a strip INSIDE the panel it is about, drawn in the
+   block the loading skeleton already reserved — inserting it above the filter
+   bar shifted the whole grid when the first snapshot resolved from cache. */
 
 const SORT_OPTIONS: { value: MbFormationSort; label: string }[] = [
   { value: "updated", label: "Recently updated" },
@@ -72,22 +44,12 @@ const formatDate = (timestamp: number) =>
   });
 
 /**
- * The block the list occupies before it knows what is in it.
- *
- * `ROW_RESERVE` is one skeleton row; `LIST_RESERVE` is the whole reservation,
- * and the SAME number floors the resolved list. That is what holds CLS at 0:
- * a skeleton that collapses is a shift even when the skeleton was honest, so
- * the resolved state has to be allowed to fill the hole the skeleton dug.
+ * The block the list occupies before it knows what is in it. The SAME number
+ * floors the resolved list — a skeleton that collapses is a layout shift even
+ * when the skeleton was honest. Three rows is the smallest reservation that
+ * still covers every non-happy state; longer lists grow downward.
  */
 const ROW_RESERVE = 84;
-/**
- * Three rows, not five. Five reserved 420px against a resolved failure state
- * that measures ~250px with the offline strip above it, which traded a layout
- * shift for 170px of empty cream — a void that is leftover rather than shaped.
- * Three is the smallest reservation that still covers every non-happy state at
- * both viewports, and a list longer than three grows downward, which is what a
- * list is allowed to do.
- */
 const LIST_RESERVE = ROW_RESERVE * 3;
 
 const RowSkeleton = () => (
@@ -112,10 +74,8 @@ const StaleStrip = ({ onRetry }: { onRetry: () => void }) => (
       The formation store cannot be reached, so anything saved on another device
       may be missing.
     </span>
-    {/* `.mb-panel-link` alone renders 52.8x17.3 — under the 44px floor and a
-        hard fail. `.mb-btn-touch` supplies the floor without changing the
-        link's ink; it is unlayered, so it neither beats nor loses to
-        `.mb-panel-link`. Same fix `AppShell` applies to the skip link. */}
+    {/* `.mb-btn-touch` supplies the 44px floor `.mb-panel-link` alone lacks,
+        without changing the link's ink. */}
     <button
       type="button"
       onClick={onRetry}
@@ -177,17 +137,15 @@ export default function MyFormationsPage() {
   }
 
   const { status, isStale } = archive;
-  /* The count is only an assertion once a list has actually been read. The
-     badge used to print "0 SAVED" on the same screen whose sub-line said the
-     archive could not be reached — two statements, one of them invented. */
+  /* The count is only an assertion once a list has actually been read —
+     never "0 SAVED" on a screen that also says the archive is unreachable. */
   const countKnown = status !== "loading" && !(isStale && archive.total === 0);
 
   return (
     <MatchbookShell
       active="/tools"
-      /* The app's own primary action, as on `/teams` and `/summaries`. It used
-         to be "Open Designer", which is also the masthead's second action —
-         the same destination named twice on one screen. */
+      /* The app's default CTA — "Open Designer" here would duplicate the
+         masthead's second action. */
       cta={MB_DEFAULT_CTA}
       back={{ href: "/tools/volleyball-rotations", label: "Rotation Designer" }}
       masthead={{
@@ -224,11 +182,8 @@ export default function MyFormationsPage() {
         </div>
       )}
 
-      {/* Filters. Each control takes a full line below `sm` rather than
-          shrinking a select to the width of its own chevron — the same rule
-          `/summaries` settled on after its filter values clipped mid-word. Tag
-          and Sort shared a 358px line until this pass, which set the sort value
-          to "RECENTLY UPDA…": a control whose own state is unreadable. */}
+      {/* Filters: each control takes a full line below `sm`, so a select's
+          own value is never clipped unreadable. */}
       <div className="mb-4 flex flex-wrap items-end gap-3 border-y border-mb-navy py-3">
         <div className="min-w-[200px] flex-[2] basis-full sm:basis-auto">
           <p className="mb-kicker mb-1">Search</p>
@@ -265,11 +220,8 @@ export default function MyFormationsPage() {
         </div>
       </div>
 
-      {/* `items-start`: the two columns are their own height instead of the
-          taller one stretching the shorter. Without it the Saved Formations
-          panel was stretched to the height of Start From + Sharing and ran
-          ~160px of empty cream under its own state block — a void that is
-          leftover rather than shaped. */}
+      {/* `items-start`: the two columns take their own height instead of the
+          taller one stretching the shorter into empty cream. */}
       <div className="mb-enter-grid grid grid-cols-1 gap-4 xl:grid-cols-12 xl:items-start">
         <div className="xl:col-span-7">
           <Panel
@@ -285,10 +237,8 @@ export default function MyFormationsPage() {
                 [0, 1, 2].map((index) => <RowSkeleton key={index} />)
               ) : (
                 <>
-                  {/* Only when there is a list to caveat. With nothing to show,
-                      the panel's own `offline`-toned empty state already says
-                      it and offers the same retry, and two "OFFLINE" eyebrows
-                      stacked 90px apart is one screen saying one thing twice. */}
+                  {/* Only when there is a list to caveat — the empty state
+                      already says "offline" and offers the same retry. */}
                   {isStale && archive.rows.length > 0 && (
                     <StaleStrip onRetry={() => void archive.refresh()} />
                   )}
@@ -377,21 +327,15 @@ export default function MyFormationsPage() {
         <div className="flex flex-col gap-4 xl:col-span-5">
           <Panel title="Start From">
             <div className="flex flex-col">
-              {/* `py-1.5`, not `py-2`, and the difference is the rung: at 8px
-                  of block padding the 40px disc summed to exactly 56, so the
-                  row's own `border-b` tipped its border box to 57 — one px off
-                  the authored 56. At 6px the content sums to 53 and the inline
-                  `minHeight` governs: a one-line row is 56, border included.
-                  (A row whose blurb wraps still grows past the rung — it is a
-                  content row above the floor, §3.3.) */}
+              {/* `py-1.5` keeps the content sum under 56 so the inline
+                  `minHeight` governs — at `py-2` the row's border tipped its
+                  box to 57. */}
               <Link
                 href="/tools/volleyball-rotations/editor"
                 className="mb-btn-touch mb-row-hover flex items-center gap-3 border-b border-mb-rule px-4 py-1.5"
-                /* Inline, not `min-h-14`: `.mb-btn-touch` declares `min-height`
-                   from OUTSIDE every cascade layer, so the Tailwind utility it
-                   sat next to never applied — the rung held only because the
-                   content happened to sum past it. Inline style outranks the
-                   unlayered rule, so 56 is now authored rather than luck. */
+                /* Inline, not `min-h-14`: `.mb-btn-touch` declares an
+                   unlayered `min-height` that beats any Tailwind utility —
+                   only an inline style outranks it. */
                 style={{ minHeight: 56 }}
               >
                 <span className="mb-icon-disc h-10 w-10">
@@ -401,10 +345,8 @@ export default function MyFormationsPage() {
                   <span className="matchbook-display block text-[0.82rem] mb-track-display font-bold">
                     Neutral court
                   </span>
-                  {/* Wrapped, never truncated. Both template blurbs ran past
-                      the column and lost 108px and 232px of themselves at 1440,
-                      with the remainder reachable only through a `title`
-                      attribute — which a touch reader cannot open at all. */}
+                  {/* Wrapped, never truncated — a `title` attribute is
+                      unreachable on touch. */}
                   <span className="block text-[0.72rem] leading-snug text-mb-ink-muted">
                     Every player on their base zone position.
                   </span>
@@ -443,11 +385,9 @@ export default function MyFormationsPage() {
               </div>
             ) : archive.shared.length === 0 ? (
               /* Deliberately written WITHOUT an em dash and past the 60-char
-                 headline cap, so `splitStateMessage` keeps it as copy. Two
-                 display-weight state headlines on one screen ("NO FORMATIONS
-                 COULD BE READ" beside "NO SHARE LINKS EXIST YET") is two
-                 screens arguing about which one is the subject; the cap is 1
-                 (rubric 7.3) and the subject is the list on the left. */
+                 headline cap, so `splitStateMessage` keeps it as copy rather
+                 than a second display headline — the screen's subject is the
+                 list on the left. */
               <PanelEmpty message="Nothing is shared yet. Open a formation's menu and choose Share to create a link." />
             ) : (
               <ul className="flex flex-col">

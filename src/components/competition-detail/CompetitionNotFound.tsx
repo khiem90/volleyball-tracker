@@ -11,7 +11,7 @@ import { MbEmptyState } from "@/components/matchbook/EmptyState";
  * deleted, and permission-denied all rendered the same four words. The copy
  * below names the two cases it actually covers and offers the one route out.
  * `MbEmptyState` supplies the state language; the shell is the real one, so a
- * bad id never flashes a different design system (invariant 2).
+ * bad id never flashes a different design system.
  */
 export const CompetitionNotFound = () => (
   <MatchbookShell active="/competitions">

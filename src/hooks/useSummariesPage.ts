@@ -6,36 +6,24 @@ import { getCreatorSummaries, deleteSummary, getSummaryUrl } from "@/lib/session
 import type { SessionSummary } from "@/types/session";
 
 /* ===========================================================================
-   THE ONE REMOTE FEED ON /summaries (C15)
+   THE ONE REMOTE FEED ON /summaries
 
-   Every other panel on the archive derives synchronously from localStorage;
-   Shared Reports is the single panel that crosses a network. Its failure mode
-   used to be a lie: the `catch` logged to the console and left `summaries` at
-   `[]`, so a Firestore outage rendered as "No shared reports exist yet" — a
-   failure dressed as an empty account, with no retry and no way to tell the
-   two apart. Invariant 28 wants failures visible and recoverable; C15 wants
-   them CONTAINED — one panel degraded, five loaded, never a whole dead screen.
+   Shared Reports is the only panel that crosses a network, so its failure
+   must render as a failure, never as an empty account:
 
-   Three additions, no change to the happy path:
-
-     faulted    the last load attempt rejected. The page renders the panel
-                stale/failed instead of empty, and the mute-panel index no
-                longer counts a failed feed as "nothing to show".
-     last-known cache — the most recent GOOD payload, kept per-creator in
-                localStorage. A later visit whose fetch fails shows that data
-                greyed under a dated band ("Couldn't refresh — showing
-                2:14 PM") rather than a blank, which is the same
-                keep-the-last-numbers rule the share routes'
-                `useLiveConnection` staleness already enforces.
+     faulted    the last load attempt rejected — the panel renders
+                stale/failed, and the mute-panel index does not count a failed
+                feed as "nothing to show".
+     last-known cache — the most recent GOOD payload, per-creator in
+                localStorage; a failed refresh shows it greyed under a dated
+                band rather than a blank.
      retry      re-runs the fetch. `isLoading` flips in the same handler
                 commit as the attempt counter so there is no one-frame
-                failure-under-a-retry render (the bug `useSummaryPage`'s
-                docblock names).
+                failure-under-a-retry render.
 
-   The cache is EVIDENCE, not truth: it is only ever read on a failed fetch,
-   is keyed by creator uid so accounts cannot bleed into each other, and is
-   overwritten by every successful load (including after a delete, so a
-   deleted report cannot resurrect through the stale path).
+   The cache is EVIDENCE, not truth: read only on a failed fetch, keyed by
+   creator uid, overwritten by every successful load (including after a
+   delete, so a deleted report cannot resurrect through the stale path).
    =========================================================================== */
 
 const CACHE_PREFIX = "mb-shared-reports:";
@@ -144,9 +132,8 @@ export const useSummariesPage = () => {
       setDeleteTarget(null);
     } catch (err) {
       console.error("Failed to delete summary:", err);
-      /* The dialog stays open so the action is still reachable — the same
-         surfaced-failure contract `useSummaryPage` fixed for its own delete.
-         No provider string is printed (invariant 28). */
+      /* The dialog stays open so the action is still reachable. No provider
+         string is printed. */
       toast({
         tone: "danger",
         message: "The report could not be deleted right now — try again in a moment.",

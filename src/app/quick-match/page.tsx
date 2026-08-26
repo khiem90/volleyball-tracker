@@ -321,12 +321,9 @@ export default function QuickMatchPage() {
                       className="mb-btn mb-btn-outline-navy h-12 w-12 shrink-0 flex-col gap-1 self-center p-0 @min-[380px]:mt-9 @min-[380px]:self-start"
                     >
                       <MbIcon id="swap" size={16} />
-                      {/* `display/kicker` — 0.62rem/600/0.16em, the step every
-                          `.mb-kicker` on this screen already prints. 0.5rem was
-                          8px, the smallest type in the app and two steps below
-                          the scale's floor; it is not inked muted because this
-                          one sits inside a button and must take the button's
-                          ink through every state. */}
+                      {/* Kicker step, but not ink-muted: it sits inside a
+                          button and must take the button's ink through every
+                          state. */}
                       <span className="matchbook-display text-[0.62rem] mb-track-kicker font-semibold">
                         Swap
                       </span>
@@ -341,9 +338,8 @@ export default function QuickMatchPage() {
                   </div>
                 </div>
 
-                {/* `MbNotice`, not a hand-rolled red-framed <p>. The kit's
-                    notice carries a glyph as well as a hue, which a bare red
-                    frame did not (invariant 13). */}
+                {/* `MbNotice`, not a hand-rolled red frame — the kit's notice
+                    carries a glyph as well as a hue. */}
                 {error && <MbNotice tone="danger">{error}</MbNotice>}
 
                 <div className="mt-auto flex flex-wrap items-center justify-between gap-3 border-t border-mb-rule pt-3">
@@ -364,13 +360,10 @@ export default function QuickMatchPage() {
           </Panel>
         </div>
 
-        {/* Scoreboard preview. Withheld below two teams: a scoreboard whose
-            sides have no names previews nothing. Since C17 the panel carries
-            NO control at all — its "Start Scoring" was the bar's Start Match
-            in a second dress, so the screen said one verb twice and disabled
-            it twice. The panel now only shows what the board will look like;
-            while the bar's commit is dormant, one sentence here says what
-            arms it, in the bar's own words. */}
+        {/* Scoreboard preview — withheld below two teams (no names, nothing to
+            preview) and deliberately control-free: the bar's Start Match is
+            the screen's one verb. While that commit is dormant, one sentence
+            here says what arms it. */}
         {kept("preview") && (
         <div className="xl:col-span-5">
           <Panel title="Scoreboard Preview" icon="live" tone="navy">
@@ -410,19 +403,11 @@ export default function QuickMatchPage() {
                     {data.recentQuickMatches.map((m, i) => (
                       <div
                         key={i}
-                        /* One cell for the matchup (L1). The five-track row
-                           gave each `1fr` 59px at 320 and painted " VC",
-                           " CC", "Nor Pan" and "West Wan" — two to seven
-                           characters against `NAME_FLOOR`'s eight, with
-                           "Beckton Blues VC" and "Marlow Blues VC"
-                           indistinguishable at " VC".
-
-                           `justify-self` had to go with it: a grid item with
-                           a `justify-self` other than `stretch` is sized by
-                           its MAX-CONTENT, so neither mark was ever eligible
-                           to truncate in the first place. `MbMatchupPair`
+                        /* One cell for the matchup. A grid item with any
+                           `justify-self` other than `stretch` is sized by its
+                           max-content and can never truncate — `MbMatchupPair`
                            mirrors the away side from its own container width
-                           instead, and stacks one team per line below it. */
+                           instead. */
                         className="grid grid-cols-[44px_minmax(0,1fr)_14px] items-center gap-2 px-3 py-2.5"
                       >
                         <p className="matchbook-display text-[0.66rem] mb-track-status font-bold leading-tight tabular-nums text-mb-ink-muted">
@@ -470,10 +455,7 @@ export default function QuickMatchPage() {
                       </div>
                       <div className="text-center">
                         <p className="mb-kicker">Record</p>
-                        {/* `display/stat-sm` — a kicker over a figure is the
-                            stat block anatomy, and 1.2rem is the step §2.1
-                            names for its value. 1.05rem (16.8px) was between
-                            steps. */}
+                        {/* Kicker over a figure — the stat block anatomy. */}
                         <p className="matchbook-display text-[1.2rem] mb-track-display font-bold leading-tight tabular-nums">
                           {homeSummary.record} · {awaySummary.record}
                         </p>
@@ -504,9 +486,7 @@ export default function QuickMatchPage() {
             )}
 
             {/* The withheld strips, as one index that closes the last row
-                flush. Same object `/` and `/competitions` use, so the three
-                screens promise a list in one sentence each rather than in
-                three sets of words that can drift apart. */}
+                flush — the same object `/` and `/competitions` use. */}
             {collapsed && (
               <div className={MB_XL_SPAN[mbClosingSpan(keptSpans)]}>
                 <MbLedgerPanel
@@ -521,15 +501,12 @@ export default function QuickMatchPage() {
         )}
       </div>
 
-      {/* THE COMMIT BAR (§8). Same recipe as the wizard's, and each piece is
-          load-bearing: `mt-auto` sends the bar to the end of the
-          viewport-fill column on a short page; the inline `bottom` rides the
-          bar above the fixed tab bar via the offset `MatchbookBottomBar`
-          publishes (57px under `lg`, 0 at `lg` and 0 in landscape), and the
+      {/* The commit bar — each piece is load-bearing: `mt-auto` sends it to
+          the end of the viewport-fill column; `bottom` rides it above the
+          fixed tab bar via the offset `MatchbookBottomBar` publishes, and the
           `!` is required because `.mb-action-bar { bottom: 0 }` is unlayered
-          and outranks a plain utility. `mb-enter mb-stagger-4` is the "slides
-          up on first mount only" the brief asks of a sticky commit bar — it
-          sits outside `.mb-enter-grid`, so it arrives once with the route. */}
+          and outranks a plain utility. It sits outside `.mb-enter-grid`, so
+          it slides up once with the route. */}
       <MbActionBar
         className="mb-enter mb-stagger-4 mt-auto bottom-[var(--mb-toast-offset,0px)]!"
         primary={primaryAction}

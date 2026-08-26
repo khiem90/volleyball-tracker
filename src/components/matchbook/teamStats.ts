@@ -104,16 +104,10 @@ export const readinessPercent = (tally?: TeamTally): number => {
 
    ------------------------------------------------------------------ the shape
 
-   `readinessStatus` is OVERLOADED rather than widened. `MbReadinessStatus`
-   lives in `types.ts`, which charter H3 reserves to W1, and `/`'s dashboard
-   (`useMatchbookDashboard.ts:341`) assigns this return straight into a field
-   typed with that three-word union. A plain widening would break a file this
-   workstream does not own; the one-argument signature keeps its exact old type
-   and its exact old behaviour, and the two-argument one is the honest form.
-
-   `/`'s readiness panel therefore still prints NEEDS ATTN for an unplayed team.
-   That is a one-line change (pass `tally?.played ?? 0`) in a file W2 owns, and
-   it is flagged rather than made here.
+   `readinessStatus` is OVERLOADED rather than widened: `/`'s dashboard
+   assigns this return straight into a field typed with the three-word union
+   in `types.ts`. The one-argument signature keeps that exact type and
+   behaviour; the two-argument one is the honest form.
    --------------------------------------------------------------------------- */
 
 /** `MbReadinessStatus` plus the state that is not a judgement. */
@@ -146,20 +140,11 @@ export const readinessColor = (percent: number, played?: number): string =>
         : "var(--mb-red)";
 
 /**
- * The LETTERFORM colour, and the reason it is a second function rather than the
- * same one. `readinessColor()` was being spent on both the bar and the word
- * beside it, and measured at 0.64–0.66rem/700 on `--mb-paper-bright` the words
- * were: gold 2.15:1, green 4.28:1, red 4.58:1 — two live HF-6s against the
- * 4.5:1 floor for text under 18.66px.
- *
- * The ink twins `globals.css` already declares for this exact problem measure
- * 5.59:1 (gold-ink) and 5.13:1 (green-ink); red is the one tone that already
- * cleared, so it is unchanged and the three still read as one family.
- *
- * The 4.58:1 on red assumes the panel ground. Every caller today is inside
- * `.mb-panel` (`--mb-paper-bright`); on bare `--mb-paper` red drops to 4.20:1,
- * so a future caller on the page ground needs a red ink twin, which the token
- * set does not yet have.
+ * The LETTERFORM colour — a second function, not `readinessColor()`: raw gold
+ * and green fail the 4.5:1 text floor at this size, so the words take the ink
+ * twins while the bar keeps the raw tones. Red clears the floor only on the
+ * panel ground (`--mb-paper-bright`); a future caller on bare `--mb-paper`
+ * needs a red ink twin, which the token set does not yet have.
  *
  * The bar keeps `readinessColor()`. A mark may be bright; a word may not.
  *

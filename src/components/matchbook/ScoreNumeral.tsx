@@ -24,74 +24,36 @@ const EDGE_ANCHOR: Record<MbScoreNumeralAlign, React.CSSProperties> = {
 };
 
 /**
- * How many figures the box reserves at every size step.
+ * How many figures the box reserves at every size step. Three, not two: a
+ * 2ch floor only holds the box still to 99, and the point that crosses 99
+ * would widen it mid-match — pixels that come straight out of the name
+ * columns. Three covers everything this app scores; four is only a season
+ * total, which is a stat — those callers pass `digits` explicitly.
  *
- * Three, not two. `.mb-numeral`'s `min-width: 2ch` floor only held the box
- * still from 0 to 99; the point that crosses 99 widened it from 33.00px to
- * 44.56px at compact, 66.00px to 89.11px at console and 158.39px to 213.84px at
- * court — mid-match, and in a scoreline every one of those pixels comes out of
- * the two name columns. Three is the real ceiling for everything this app
- * scores: a volleyball match aggregates to ~125 points over five sets, table
- * tennis to ~100 over seven games, and charter §5.13 already requires the
- * 3-digit case at every breakpoint. Four is reachable only by a season total,
- * which is a stat, not a score — those callers pass `digits` explicitly.
- *
- * The reserve is `digits`ch on the LAYER, whose font-size is always the step's
- * own — never the ink scale below — so the box costs the same at 0 as at 108.
- * That constancy is the whole point: `MbScoreboardHero` chooses its layout from
- * how much room is left over rather than shrinking the reserve.
+ * The reserve is `digits`ch on the LAYER at the step's own font-size — never
+ * the ink scale below — so the box costs the same at 0 as at 108.
+ * `MbScoreboardHero` chooses its layout from the leftover room.
  */
 const RESERVED_DIGITS = 3;
 
 /* ===========================================================================
-   OPTICAL MASS — the Apple Sports steal, without the width axis. (C1)
+   OPTICAL MASS — ink coverage of the reserved box must stay roughly even
+   across the score range. Oswald ships no width axis to equalise with, so the
+   substitute is SIZE by digit count: fewer figures render larger, more render
+   smaller, and the RESERVED BOX never moves. 0.78 rather than 0.80 because
+   "1" is the lightest glyph in the set and "25 v 1" broke the cap at 0.80;
+   1.12 and not more because the court step can run at exactly `100cqh` and a
+   larger scale leaves no headroom before a clipped cap. (Per-glyph
+   equalisation is out on principle: it would scale 18 differently from 19
+   and break the repaint-one-glyph contract below.)
 
-   Rubric D4's 10-anchor: ink coverage of the reserved box may vary by no more
-   than 1.5x across the in-set score range. Before this block, a 7 filled 26.6%
-   of the box and a 25 filled 62.0% — a 2.33x swing between two legitimate
-   volleyball scores in one identical box. Apple equalises with the variable
-   font's `wdth` axis. That tool does not exist here, and the probe that proves
-   it is recorded rather than assumed: the Oswald the app loads registers 20
-   static instances (400/500/600/700), every `FontFace.stretch` reads
-   `normal`, and a 10-digit specimen at 100px measures **502.203125px at
-   font-stretch 50%, 100%, 200% and at font-variation-settings 'wdth' 60 and
-   150 alike** — no axis, and no synthesis in any engine this app targets.
-
-   So the honest substitute named by the charter round is SIZE by digit count:
-   fewer figures render larger, more render smaller, and the RESERVED BOX never
-   moves. Factors, measured against the same canvas census (per-digit painted
-   pixels at 700 weight: 0→2696 … 1→1447 … 7→1568 … 8→2608 per 100px em):
-
-     figures   scale    box fill (was)     painted-pixel spread, worst v 1 digit
-     1         1.12     37.3%  (33.3%)     —
-     2         0.78     52.0%  (66.7%)     25v7 1.39x · 21v7 1.15x · 25v1 1.46x
-                                           (was 2.92x / 2.42x / 3.01x)
-     3         0.72     72.0%  (100%)      108v7 1.80x, out of the in-set range
-                                           (was 4.45x)
-
-   In-set spread (1 v 2 figures) lands at 2x0.78/1.12 = **1.39x by ink width**
-   and ≤1.47x by measured pixel count over every pairing of the verdict's own
-   cited values, under the 1.5x cap. 0.78 and not 0.80 because "25 v 1" — both
-   legitimate in-set scores — measured 1.54x at 0.80: the census is of glyphs,
-   not digit counts, and "1" is the lightest glyph in the set. (Full per-glyph
-   equalisation is out of reach on principle: it would scale 18 differently
-   from 19 and break the repaint-one-glyph contract below.) 1.12 and not more
-   because the court step can run at exactly `100cqh`: a scaled "0" ascends
-   0.83 x 1.12 = 0.930F over a baseline seated at R/2 + 0.45F, leaving 0.020R
-   of headroom — 5.2px at the 256px step — where 1.14 left 0.97px, one
-   subpixel rounding away from a clipped cap.
-
-   HOW THE BOX SURVIVES: the value no longer sets inside the layer's own line.
-   The layer is a fixed box — `digits`ch wide, 0.9em tall, the step's own
-   font-size — and the figures live in an absolutely positioned overlay
-   (`.mb-numeral-ink`) at `fontSize: <scale>em`, anchored `bottom: 0`. With
-   `line-height: 0.9` the baseline of ANY box here sits exactly on its bottom
-   edge (0.90em below the top of a 0.9em box), so overlay-bottom-on-layer-bottom
-   IS baseline-on-baseline, at every scale — the two sides of a scoreline keep
-   byte-identical baselines whether they show 9 v 18 or 21 v 18, which is the
-   property the last verdict credited to 0.01px. Nothing inline-level scales,
-   so the layer's height, the reserve and every neighbour are untouched: a
-   digit-count change cross-fades between two overlays and reflows 0.00px.
+   HOW THE BOX SURVIVES: the layer is a fixed box — `digits`ch wide, 0.9em
+   tall, the step's own font-size — and the figures live in an absolutely
+   positioned overlay (`.mb-numeral-ink`) at `fontSize: <scale>em`, anchored
+   to the bottom. With `line-height: 0.9` every box's baseline sits exactly on
+   its bottom edge, so overlay-bottom-on-layer-bottom IS baseline-on-baseline
+   at every scale. Nothing inline-level scales: a digit-count change
+   cross-fades between two overlays and reflows 0.00px.
    =========================================================================== */
 const INK_SCALE = [1, 1.12, 0.78, 0.72] as const;
 
@@ -100,31 +62,16 @@ export const mbInkScale = (figures: number): number =>
   INK_SCALE[Math.min(Math.max(Math.round(figures), 1), 3)];
 
 /* ===========================================================================
-   DIVIDER CENTRING ON INK, NOT ON THE BOX. (C2)
-
-   Two scores hugging a rule are positioned by their CELLS, and a cell is 1ch
-   with the glyph's own advance centred inside it — so the paper between the
-   rule and the first ink varies with whichever figure lands against the rule.
-   Measured on the live console at the 256px court step: `20 | 19` sat 57.80px
-   ink-to-rule on the "0" side and 68.68px on the "1" side, and `14 | 11` sat
-   51.91 v 68.68 — a 16.77px wobble on the axis of the one object the screen
-   exists to present, because tabular "1" holds 30px of ink in a 38.5px advance
-   inside a 55px cell.
-
-   The correction: each hugging layer translates toward (or off) the rule by
-   the measured inset of its EDGE figure, normalised to a constant 0.045em of
-   paper between rule and ink. The insets are per-glyph, from the same canvas
-   census (units: 1/100 em; inset = cell padding + side bearing at 100px):
-
-     figure        0     1      2    3    4    5     6    7     8     9
-     left inset    5.0   9.25   4.8  4.8  3.3  6.05  4.6  6.55  4.45  3.6
-     right inset   5.0  15.75   4.2  4.2  2.7  4.95  4.4  8.45  4.55  5.4
-
-   The shift is a static `translate` — paint-only, so the reserve, the layout
-   and rubric 4.1/4.2 cannot see it — applied per LAYER, so an outgoing value
-   keeps its own correction while it fades. `ScoreSide`'s stacked mode centres
-   the figures with `!important` utilities, which is exactly what outranks an
-   inline `translate`, so the correction cannot leak into a centred layout.
+   DIVIDER CENTRING ON INK, NOT ON THE BOX. A cell is 1ch with the glyph's
+   advance centred inside it, so the paper between the rule and the first ink
+   varies with whichever figure lands against the rule (tabular "1" is the
+   worst). Each hugging layer translates toward the rule by the measured inset
+   of its EDGE figure (the per-glyph tables below, 1/100 em), normalising the
+   rule-to-ink paper to a constant 0.045em. The shift is a static `translate`
+   — paint-only, so the reserve and layout cannot see it — applied per LAYER,
+   so an outgoing value keeps its own correction while it fades. `ScoreSide`'s
+   stacked mode centres with `!important` utilities, which outrank an inline
+   `translate`, so the correction cannot leak into a centred layout.
    =========================================================================== */
 const INSET_LEFT: Record<string, number> = {
   "0": 5, "1": 9.25, "2": 4.8, "3": 4.8, "4": 3.3,
@@ -166,9 +113,9 @@ const Figures = ({ value }: { value: string }) => (
  * The loudest object in the app. Four rules it may never break:
  *
  * 1. It never moves. A changing value cross-fades between two layers stacked in
- *    one grid cell — no translate, no scale, no flip (global invariant 43).
- *    (The static ink-centring `translate` above is not motion: it never
- *    animates, and each layer carries its own for the life of that layer.)
+ *    one grid cell — no translate, no scale, no flip. (The static ink-centring
+ *    `translate` above is not motion: it never animates, and each layer
+ *    carries its own for the life of that layer.)
  * 2. It never reflows its neighbours. The box is `digits` figures wide and
  *    0.9em tall at that size step, whatever the value, so 7 occupies exactly
  *    the footprint of 21 and of 187 — the ink scale changes what is painted
@@ -178,8 +125,8 @@ const Figures = ({ value }: { value: string }) => (
  *    the unboxed face measured 54.375px against 55.391px for that pair and
  *    slid the whole number sideways.
  * 4. It is silent to assistive tech unless the caller opts in. A live value is
- *    announced once, by the screen's own `aria-live` region (invariant 49); pass
- *    `ariaLabel` only where there is no such region — a static final score.
+ *    announced once, by the screen's own `aria-live` region; pass `ariaLabel`
+ *    only where there is no such region — a static final score.
  *
  * The swap is detected during render and stored in state, which is React's
  * documented way to adjust state when a prop changes. It is deliberately not an
@@ -188,8 +135,8 @@ const Figures = ({ value }: { value: string }) => (
  *
  * `flash` adds a coral 3px edge on the side the score moved — top for "up",
  * bottom for "down" — so the direction survives greyscale. Every duration and
- * easing comes from a §2.1 token (invariant 40), and the global
- * `prefers-reduced-motion` clamp collapses all three animations at once.
+ * easing is a token, and the global `prefers-reduced-motion` clamp collapses
+ * all three animations at once.
  */
 export const MbScoreNumeral = ({
   value,
@@ -213,14 +160,10 @@ export const MbScoreNumeral = ({
    */
   digits?: number;
   /**
-   * Which edge of the reserve the figures sit against.
-   *
-   * Two numerals flanking a divider should pass `end` and `start`: the reserve
-   * then opens *away* from the rule, the figure nearest it is anchored, and
-   * the ink-centring shift above seats both sides' ink 0.045em off the rule.
-   * Measured at the court step before the shift, rule centre to first ink:
-   * 57.80 v 68.68 over `20–19` and 51.91 v 68.68 over `14–11`; after it, both
-   * sides of any pair sit within a subpixel of the same gap.
+   * Which edge of the reserve the figures sit against. Two numerals flanking
+   * a divider pass `end` and `start`: the reserve opens *away* from the rule,
+   * the figure nearest it is anchored, and the ink-centring shift seats both
+   * sides' ink 0.045em off the rule.
    */
   align?: MbScoreNumeralAlign;
   ariaLabel?: string;
@@ -262,36 +205,19 @@ export const MbScoreNumeral = ({
   /* The ink overlay: scaled by figure count, baseline-locked to the layer.
      With `line-height: 0.9` every box here puts its baseline exactly on its
      own bottom edge, so the overlay's baseline lands on the layer's at any
-     scale. `max-content` keeps the overlay's rect the width of the figures
-     themselves — which is what the rubric's 4.3 expression measures as ink
-     against the reserve behind it.
+     scale; `max-content` keeps the overlay's rect the width of the figures.
 
-     THE OVERLAY IS ALSO THE FIGURES' HIT-BOX, AND IT NOW TELLS THE TRUTH. (C3)
-     A text rect measured by the Range method spans the FONT's ascent to its
-     descent — 1.48em on this face — while the figures' actual ink runs
-     0.83em over the baseline and 0.02em under it. On any surface that stacks
-     two numerals (the narrow scoreboard's home row over its away row), the
-     phantom 0.29em skirts overlapped by 9.4px at the console step with the
-     real ink boxes 24.5px apart, and the register printed it as a descender
-     graze. `overflow: clip` makes the measured rect stop at this box.
-
-     The box is grown to enclose every painted pixel first, WITHOUT moving
-     the baseline: `paddingBottom` extends the border box 0.05em (of the
-     scaled em) below the content box, and `bottom: -0.05em` seats it so the
-     content bottom — which IS the baseline under `line-height: 0.9` — stays
-     exactly on the layer's bottom edge. 0.05em covers the 0.02em true ink
-     descent 2.5x over, in every engine, with `overflowClipMargin` adding
-     0.1em of slack against edge antialiasing where the property exists.
-     Ascenders need no skirt: 0.83em of ink stands inside the 0.9em content
-     box. Nothing inline-level changes, so the reserve, the baselines and the
-     0-reflow contract are untouched. Measured: the skirt alone is
-     pixel-identical to `bottom: 0` (0 differing px at dpr 2); adding the clip
-     leaves geometry byte-identical (Range bottoms and layer bottoms to
-     0.01px) but flips Chromium's text-AA path on the clipped glyphs — 690 of
-     2.02M device px at a max channel delta of 7/255 on a court-step figure,
-     scattered along the contours, invisible at any zoom. That is the entire
-     paint cost of making the measured rect match the box the figures
-     genuinely occupy. */
+     The overlay is also the figures' HIT-BOX, and it must tell the truth: a
+     Range-measured text rect spans the FONT's ascent to descent (~1.48em on
+     this face) while the real ink runs 0.85em, so on stacked numerals the
+     phantom skirts read as an overlap. `overflow: clip` stops the measured
+     rect at this box. The box is first grown to enclose every painted pixel
+     WITHOUT moving the baseline: `paddingBottom: 0.05em` extends the border
+     box below the content box and `bottom: -0.05em` seats it so the content
+     bottom — the baseline under `line-height: 0.9` — stays on the layer's
+     bottom edge; `overflowClipMargin` adds slack against edge antialiasing.
+     Ascenders need no skirt (0.83em of ink inside a 0.9em box). Nothing
+     inline-level changes, so the reserve and the 0-reflow contract hold. */
   const inkStyle = (v: number): React.CSSProperties => ({
     position: "absolute",
     bottom: "-0.05em",

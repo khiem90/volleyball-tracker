@@ -9,12 +9,8 @@ import { MbMenu } from "@/components/matchbook/Menu";
 /* ===========================================================================
    ONE ARCHIVE ROW
 
-   `FormationCard` put five controls — Select, Edit, Duplicate, Share, Delete —
-   in a 187px row at 24px each, with Delete immediately beside Share. Invariant
-   35 forbids a destructive action adjacent to a frequent one, and the phone
-   measurement made the point for it.
-
-   The row is now one link (open it in the editor) plus one overflow menu, and
+   A destructive action must never sit adjacent to a frequent one.
+   The row is one link (open it in the editor) plus one overflow menu, and
    the menu keeps Delete last with a `danger` tone. The confirm is `MbConfirm` —
    never `window.confirm`, never the three-second silent auto-disarm that the
    archive used, which re-armed a Delete key into a Cancel key while the reader
@@ -23,13 +19,10 @@ import { MbMenu } from "@/components/matchbook/Menu";
    Visibility is a WORD plus a mark, never a hue alone: `SHARED` with a filled
    square, `PRIVATE` with a hollow one.
 
-   NOTHING HERE LIVES IN A `title` ATTRIBUTE ANY MORE. The description was
-   truncated with the full string in a tooltip and the tags past the third were
-   replaced by "+N more" with the rest in a second tooltip — on a touch screen
-   both are simply gone, which is hard fail 12. The description wraps and every
-   tag renders. Tags are one to three words each; a formation with nine of them
-   costs one extra line, and a row that is one line taller is a better failure
-   than a row whose content is unreachable.
+   NOTHING HERE LIVES IN A `title` ATTRIBUTE — a tooltip is unreachable on a
+   touch screen. The description wraps and every tag renders; a row that is
+   one line taller is a better failure than a row whose content is
+   unreachable.
    =========================================================================== */
 
 const VisibilityMark = ({ shared }: { shared: boolean }) => (
@@ -131,7 +124,7 @@ export const FormationRow = memo(
 
         {/* Below `sm` the two facts above are hidden from their own columns, so
             they return here on one line rather than being dropped: a share
-            state and a date are not redundant context (invariant 38). */}
+            state and a date are not redundant context. */}
         <span className="col-span-2 flex items-center gap-3 sm:hidden">
           <VisibilityMark shared={Boolean(formation.shareId)} />
           <span className="mb-kicker tabular-nums">

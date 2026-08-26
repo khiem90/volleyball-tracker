@@ -25,7 +25,7 @@ import type { CompetitionType, PersistentTeam } from "@/types/game";
    about to build. The bracket preview moved to the draft console's "What Will
    Be Generated" panel, where there is room for it; what is left here is the
    picker, rebuilt at 44px rows with a real checked mark rather than a
-   colour-only "selected" tint (invariant 13).
+   colour-only "selected" tint.
 
    ------------------------------------------------------ the undisclosed half
 
@@ -41,8 +41,7 @@ import type { CompetitionType, PersistentTeam } from "@/types/game";
    about any of that.
 
    Two ways to close it: stop doing it, or say it. Saying it is right, and not
-   only because the effect is charter-locked (W4 acceptance 1) and lives outside
-   this component.
+   only because the effect lives outside this component.
 
      - It is the product. This app's loop is one person scoring on a phone while
        everyone else watches on theirs; the share link IS the feature, and

@@ -10,33 +10,15 @@ import { PanelEmpty } from "@/components/matchbook/Panel";
 /* ===========================================================================
    ON COURT
 
-   The legend, as a ledger. It cross-highlights the court, and on a phone it
-   used to live at y = 2096 on a 2915px page — two and a half screens below the
-   thing it highlights, so the highlight was never visible when it fired. It now
-   sits directly under the court in DOM order, which is also its mobile order.
+   The legend, as a ledger. It cross-highlights the court, so it sits directly
+   under it in DOM order (also the mobile order). The selected row takes the
+   3px coral left rule — the same active idiom as `.mb-nav-item`.
 
-   Rows are ruled and uniform, the zone is right-ranged and `tabular-nums`, and
-   the selected row takes a 3px coral left rule — the same active idiom as
-   `.mb-nav-item`, and one of the three structural jobs invariant 15 reserves
-   for coral.
-
-   THE SECOND LINE IS THE ROW, NOT A PARAGRAPH. It used to be
-   `"Back row · Secondary left-side attacker"`, set on one truncating line: at
-   390 five of the six rows lost 12-69px of that sentence and at 320 six of them
-   lost up to 139px, which is a description nobody can read placed where nobody
-   can act on it. It also made the row 53px tall — off the {44,48,56} control
-   ladder — and it would have gone to two ragged heights if it were allowed to
-   wrap. The row now carries only what is true of THIS rotation (which row the
-   player is in, which zone they occupy) at a fixed 56px; the seven role
-   descriptions moved to "Reading the Diagram", where they are reference prose
-   set at full width and never clipped.
-
-   THE KEY at the bottom names every mark by its SHAPE. "Blue dashed lines" and
-   "orange dotted lines" — the old wording — cannot be followed by a reader who
-   cannot see blue, and could not be followed by anyone on the greyscale print
-   the rubric asks for. The setter and the libero are told apart by SOLID vs
-   DASHED ring for the same reason: gold and navy are one hue apart and nothing
-   else.
+   A row carries only what is true of THIS rotation (row + zone) at a fixed
+   56px; the seven role descriptions are reference prose and live in "Reading
+   the Diagram" where they set at full width. The key names every mark by its
+   SHAPE — a hue name cannot be followed in greyscale, and setter vs libero is
+   solid vs dashed ring for the same reason.
    =========================================================================== */
 
 export interface OnCourtPanelProps {

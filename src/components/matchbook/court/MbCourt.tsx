@@ -20,20 +20,13 @@ import {
    diverged in stroke weight, in zone-numeral placement and in how the attack
    line was dashed.
 
-   What changed visually, and why:
+   THE COURT IS PAPER, NOT GREEN: `--mb-court-fill` — the brighter of the two
+   papers — on the page's own grain, bounded by navy rules, so it reads as a
+   diagram printed in the almanac rather than a screenshot of a video game.
 
-     THE COURT IS PAPER, NOT GREEN. `oklch(0.55 0.12 145 / 0.25)` was a raw
-     literal (invariant 10) and, more to the point, a green rectangle is the one
-     thing on a Matchbook page that could not have come from the same press as
-     the rest of it. The court is now `--mb-court-fill` — the brighter of the
-     two papers — sitting on the page's own grain, bounded by navy rules. It
-     reads as a diagram printed in the almanac rather than a screenshot of a
-     video game.
-
-     THE 3 M LINE IS TEAL. `--mb-court-accent` resolves to `--mb-teal`, and
-     `globals.css` states why in its own words: a diagram is not a call to
-     action, and coral on it would spend the screen's one coral on a reference
-     drawing.
+   THE 3 M LINE IS TEAL (`--mb-court-accent`): a diagram is not a call to
+   action, and coral on it would spend the screen's one coral on a reference
+   drawing.
 
      THE ZONE NUMERALS ARE THE TEXTURE. Set in the display face at 10% navy and
      hung in the corner of each of the six cells, they do the job the old grey
@@ -77,14 +70,12 @@ const GRID_STEPS = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 
 const HAIRLINE = { vectorEffect: "non-scaling-stroke" } as const;
 
-/* Both SVG steps below are named steps of the display scale (design language
-   §2.1) rather than numbers picked to look right: 13.6 = 0.85rem, 36 = 2.25rem
-   `display/stat-xl`. They were 13 and 44, which sit between steps and were
-   counted as off-scale sizes (rubric 1.2). Dropping the watermark from 44 to 36
-   also buys back 8 units of clearance between the numeral and the discs that
-   stand on the centre line. */
+/* Both SVG steps below are named steps of the display scale rather than
+   numbers picked to look right: 13.6 = 0.85rem, 36 = 2.25rem
+   `display/stat-xl`. The 36 watermark also keeps 8 units of clearance between
+   the numeral and the discs that stand on the centre line. */
 
-/** Reference labels — `display/court-label` (design language §2.1a exception 3).
+/** Reference labels — `display/court-label`.
  *  The kicker VOICE (weight 600, 0.16em, muted ink) at 13.6 **SVG user units**,
  *  not 13.6px: the viewBox is 464 wide and the court renders at 356-464px, so
  *  the painted size is 10.4-13.6px — it lands on the kicker's optical size at
@@ -101,9 +92,9 @@ const EDGE_LABEL: CSSProperties = {
 const ZONE_NUMERAL: CSSProperties = {
   fontSize: 36,
   fontWeight: 700,
-  /* 0.01em, which is `display/masthead`'s tracking at the same 36px/700 the
-     mobile `<h1>` renders at. Left at `.matchbook-display`'s 0.02em default it
-     was a tracking collision with the page's own title (rubric 1.3). */
+  /* 0.01em — `display/masthead`'s tracking at the same 36px/700 the mobile
+     `<h1>` renders at; any other value is a tracking collision with the
+     page's own title. */
   letterSpacing: "var(--mb-track-masthead)",
   fill: "var(--mb-court-line-strong)",
   fillOpacity: 0.1,
@@ -124,8 +115,8 @@ export interface MbCourtProps {
    *
    * The SVG is a PICTURE and carries `pointer-events: none`; every target is an
    * HTML control absolutely positioned over it. `<g role="button" tabIndex={0}>`
-   * satisfies ARIA but not invariant 48 ("interactive cells are real
-   * `<button type="button">`"), it takes no `.mb-btn-touch` floor, and SVG
+   * satisfies ARIA but is not a real
+   * `<button type="button">`, it takes no `.mb-btn-touch` floor, and SVG
    * `:focus-visible` is unstyled in this stylesheet — so a keyboard user
    * tabbing through the court saw nothing at all. A real button inherits the
    * surface's coral focus ring, measures as a target, and takes `touch-action`
@@ -158,7 +149,7 @@ export const MbCourt = ({
   className = "",
 }: MbCourtProps) => (
   /* The wrapper reserves the aspect BEFORE the SVG paints, so the court cannot
-     contribute to CLS while the formation data resolves (invariant 27). It is
+     contribute to CLS while the formation data resolves. It is
      also the positioning context for the HTML target layer. */
   <div
     className={`relative w-full ${className}`}

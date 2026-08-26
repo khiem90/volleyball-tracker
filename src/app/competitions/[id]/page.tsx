@@ -28,23 +28,11 @@ import { getPlayInMatchCount } from "@/lib/singleElimination";
 import { exportMatchesCsv } from "@/lib/exportCsv";
 import type { Competition } from "@/types/game";
 
-/* ===========================================================================
-   THE COMPETITION CONSOLE
-
-   Five formats through one screen. What this file used to be: a
-   `min-h-screen bg-background` with `<Navigation/>`, a `max-w-6xl` centred
-   column, a ghost back-link, an inline framer-motion ring spinner, three
-   shadcn `<Card>`s and a lucide `<Trophy>` per bracket heading.
-
-   It is layout only now (invariant 23). Every number on the screen is shaped by
-   `useMatchbookCompetitionDetail`; every mutation still belongs to
-   `useCompetitionDetailPage`, whose auto-complete and auto-session effects are
-   byte-identical to before the conversion (charter W4 acceptance 1).
-
-   The four rotation/bracket view components stay lazy (`next/dynamic`,
-   `ssr: false`) — behaviour 14 of the brief's must-survive list, and the only
-   thing keeping five formats' worth of code out of the first bundle.
-   =========================================================================== */
+/* The competition console: five formats through one screen. Layout only —
+   display data comes from `useMatchbookCompetitionDetail`, mutations from
+   `useCompetitionDetailPage`. The rotation/bracket views stay lazy
+   (`next/dynamic`, `ssr: false`) to keep five formats' worth of code out of
+   the first bundle. */
 
 const Win2OutView = dynamic(
   () => import("@/components/Win2OutView").then((mod) => ({ default: mod.Win2OutView })),
@@ -108,48 +96,11 @@ export default function CompetitionDetailPage() {
     );
   }, [competition, page.matches, page.competitionTeams]);
 
-  /**
-   * The masthead action set — and what coral is NOT allowed to be.
-   *
-   * Three things were wrong here and all three spent the screen's accent on
-   * something that is not the reader's job:
-   *
-   *   `Share live`      was the coral primary of a live console. Broadcasting
-   *                     is optional and secondary to the event, and the
-   *                     masthead renders its actions full-width below `sm`, so
-   *                     even in navy it read as a 358x48 slab between the title
-   *                     and the live score. It goes back to the outline it had
-   *                     before the redesign.
-   *   `End competition` was `variant: "coral"` — a terminal, irreversible action
-   *                     painted as the house CTA. Charter §2.3 assigns it to
-   *                     `MbDestructiveButton`, which `MbAction` cannot express
-   *                     (`MbActionVariant = MbButtonVariant` has no danger
-   *                     member — register D-16). The quiet outline is the
-   *                     nearest honest thing the bar can render, and the
-   *                     destructive treatment lives where the commit actually
-   *                     happens: `EndCompetitionDialog` → `MbConfirm` →
-   *                     `MbDestructiveButton`.
-   *   `Start` on draft  rendered coral TWICE on one 1,129px page — here and in
-   *                     `PreviewPanel`'s footer. Repainting this one navy did
-   *                     not fix it, it disguised it: measured on a four-team
-   *                     draft at 390px the reader met "START COMPETITION" navy
-   *                     at y=159 and "START COMPETITION" coral at y=337 — the
-   *                     SAME WORDS, 178px apart, both in the first viewport,
-   *                     in two different colours (346px apart on a bracket
-   *                     draft, 915px at 1440). Two paints of one irreversible
-   *                     commit is a question — "which one is the real one?" —
-   *                     asked at the exact moment the reader is deciding
-   *                     whether to commit. There is ONE now, and it is the
-   *                     coral in `PreviewPanel`'s foot, because that button
-   *                     sits directly beneath the sentence describing what it
-   *                     will build. `DraftBody` leads with that panel at every
-   *                     width so the pair is on the first screen (measured
-   *                     after: y=289 at 390, y=197 at 1440, one button).
-   *
-   * Net: coral does ONE job on this screen's own chrome — live — against a
-   * ceiling of two (rubric 3.4), and a draft masthead carries no action at all
-   * rather than a second copy of the screen's only commit.
-   */
+  /* Coral is reserved for the live state here. `MbAction` has no destructive
+   * variant, so "End competition" stays a quiet outline — the destructive
+   * treatment lives in `EndCompetitionDialog`. A draft masthead carries no
+   * action at all: the only Start button is the coral one in `PreviewPanel`,
+   * never a second copy of the same commit. */
   const actions = useMemo<MbAction[]>(() => {
     if (!competition) return [];
     if (competition.status === "draft") return [];
@@ -226,9 +177,8 @@ export default function CompetitionDetailPage() {
             {STATUS_LABEL[competition.status]}
           </MbBadge>
         ),
-        /* `venue.Many` is ALREADY the plural — running it through `pluralise`
-           produced "2 Courtses". The singular/plural pair comes from
-           `useTerminology`, so the choice is which one, never a suffix. */
+        /* `venue.Many` is already the plural — pick One/Many, never append
+           a suffix ("2 Courtses"). */
         dateLine: `${data.typeLabel} • ${competition.teamIds.length} Teams${
           venueCount > 0
             ? ` • ${venueCount} ${venueCount === 1 ? data.venue.One : data.venue.Many}`
@@ -251,12 +201,9 @@ export default function CompetitionDetailPage() {
 
       {page.sessionError && (
         <div className="mb-4">
-          {/* Never the raw provider string (invariant 28) — `SessionContext`
-              exposes `error` and this screen was the only one that never read
-              it (brief S9). It also has to offer a way OUT: a `danger` state
-              with no control on it is a dead end (rubric 7.4). "Reconnect"
-              re-joins the same share code through the same context path that
-              failed, so it is a real retry rather than a page reload. */}
+          {/* Never the raw provider string — `SessionContext.error` is already
+              user-facing. "Reconnect" re-joins the same share code through the
+              same context path that failed: a real retry, not a page reload. */}
           <MbNotice tone="danger" title="Live sync stopped">
             <div className="flex flex-col items-start gap-2">
               <span>
@@ -357,12 +304,9 @@ export default function CompetitionDetailPage() {
         competitionType={competition.type}
         playInMatchCount={getPlayInMatchCount(competition.teamIds.length)}
         matchWord={data.matchWord.one}
-        /* The auto-session effect's own guard, restated as a prop rather than
-           re-derived: `if (isSharedMode || !isConfigured) return`. Read from
-           `useAuth` here rather than threaded through `useCompetitionDetailPage`
-           so that hook's mutation surface stays exactly as the charter froze it
-           (W4 acceptance 1) — this is a read, and the dialog is the only thing
-           that needs it. */
+        /* Mirrors the auto-session effect's guard (`isSharedMode ||
+           !isConfigured`). Read from `useAuth` directly — a read-only prop
+           that keeps `useCompetitionDetailPage`'s surface unchanged. */
         willPublish={!page.isSharedMode && isConfigured}
         onStart={page.handleStartCompetition}
       />

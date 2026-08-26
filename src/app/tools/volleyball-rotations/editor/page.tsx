@@ -35,27 +35,10 @@ import type {
   UserFormation,
 } from "@/lib/volleyball/types";
 
-/* ===========================================================================
-   THE FORMATION EDITOR — NOW A ROUTE
-
-   It was a modal, and on a phone it did not work at all: the court's bounding
-   box sat at y = 1060 inside an `overflow-hidden` shell capped at
-   `max-h-[90vh]`, in a column whose `scrollHeight === clientHeight`, so it
-   could not be scrolled to. Measured at 390x844: the court was unreachable and
-   no player could be positioned from a phone. Even at 1440x900 the Description,
-   Tags and Visibility fields sat below the visible area with no affordance.
-
-   As a route (charter W7 decision) the browser's own scroller is the scroller,
-   deep links work (`?id=` to edit, `?from=` to duplicate, `?template=` to start
-   from a starter), Back means Back, and drafts survive a full navigation.
-
-   `variant="focus"` rather than `console`: an editor with unsaved state is a
-   workspace, and the shell's fixed bottom bar is exactly where the Save action
-   belongs. One fixed bar, not two.
-
-   Mobile layout is the same DOM in one column — court first, tools under it,
-   Save in the bar. Every metadata field is reachable by ordinary page scroll.
-   =========================================================================== */
+/* THE FORMATION EDITOR — a route, not a modal: the browser's own scroller is
+   the scroller, deep links work (`?id=` to edit, `?from=` to duplicate,
+   `?template=` to start from a starter), Back means Back, and drafts survive
+   a full navigation. `variant="focus"`: one fixed bar, and Save lives in it. */
 
 const backRowForRotation = (rotation: number) => (role: PlayerRole) => {
   const zone = getRoleZone(rotation as 1 | 2 | 3 | 4 | 5 | 6, role === "L" ? "MB1" : role);
@@ -249,10 +232,8 @@ const EditorWorkspace = ({ mode, existing, templateId }: WorkspaceProps) => {
                 editor.currentMode === "serving" ? "Serving" : "Receiving"
               }`}
               meta={
-                /* The live readout, in a FIXED-WIDTH tabular box. It used to be
-                   SVG text under the dragged token in proportional figures,
-                   re-typesetting every frame. Here nothing can reflow: the box
-                   is 11 characters wide whether it holds a value or a dash. */
+                /* The live readout sits in a fixed 11ch tabular box so nothing
+                   reflows while a token is dragged. */
                 <span
                   className="mb-kicker inline-block text-right tabular-nums"
                   style={{ width: "11ch" }}
@@ -316,20 +297,11 @@ const EditorWorkspace = ({ mode, existing, templateId }: WorkspaceProps) => {
             </Panel>
           </div>
 
-          {/* The tool rail is sticky and scrolls in its own right from `xl` up
-              (brief §3.5). Two reasons, and the second is a measurement:
-
-              the court is the fixed reference and the rail is a stack of four
-              tool panels taller than any laptop, so scrolling the page to reach
-              Validation used to scroll the court away from the thing being
-              validated;
-
-              and a rail that ends at the viewport is a rail whose last control
-              cannot come to rest a few pixels above the sticky commit bar. At
-              1440x900 the Name field settled 6.4px above Save and Close — two
-              targets a mis-tap apart, which is exactly what the separation
-              floor is for. Below `xl` there is no inner scroller at all: the
-              document is the scroller and the panels simply stack. */}
+          {/* The tool rail is sticky and scrolls in its own right from `xl`
+              up: the court is the fixed reference, and the rail is taller
+              than any laptop — page-scrolling to Validation would scroll the
+              court away from the thing being validated. Below `xl` there is
+              no inner scroller; the document is the scroller. */}
           <div className="flex flex-col gap-4 xl:col-span-5 xl:sticky xl:top-5 xl:max-h-[calc(100vh-9rem)] xl:overflow-y-auto xl:pr-1">
             <Panel title="Arrows" icon="arrow-move">
               <ArrowsPanel
@@ -384,26 +356,12 @@ const EditorWorkspace = ({ mode, existing, templateId }: WorkspaceProps) => {
         </div>
       </div>
 
-      {/* The commit bar FLOATS on a phone and SITS at the end of the workspace
-          from `xl` up.
-
-          Invariant 35 puts the primary action in the bottom third on mobile,
-          and that is what the sticky wrapper does below `xl`. It does not say
-          the bar must float on a 1440px desktop, and floating there has a
-          measurable cost: a bar that overlays a scrolling page rests a few
-          pixels from whatever the page happens to have at that height, and at
-          1440x900 that was the Name field — measured 6.4px from Save and 6.4px
-          from Close, two targets a mis-tap apart. On the wide layout the rail
-          is a sticky column of its own, so the bar has a natural home under the
-          workspace instead.
-
-          `sticky={false}` is passed rather than fought: `.mb-action-bar` is
-          unlayered and its `position: sticky` outranks a Tailwind `static`
-          utility, so the component's own escape hatch is the only one that
-          works, and the wrapper supplies the mobile behaviour on top. */}
-      {/* `xl:mt-5`: once the bar is in flow it is a real neighbour of whatever
-          the tool rail ends on, and the tag field landed 1.8px above Save. In
-          flow the 8px separation floor genuinely applies, so it is paid. */}
+      {/* The commit bar floats on a phone and sits in flow from `xl` up — a
+          floating bar over a scrolling page can rest a mis-tap away from
+          whatever the rail ends on. `sticky={false}` must go through the
+          component: `.mb-action-bar`'s `position: sticky` is unlayered and
+          outranks a Tailwind `static` utility. `xl:mt-5` pays the separation
+          floor once the bar is a real neighbour in flow. */}
       <div className="sticky bottom-0 z-30 xl:static xl:mt-5">
         <MbActionBar
           sticky={false}

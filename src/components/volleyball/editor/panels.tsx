@@ -96,8 +96,8 @@ export const ArrowsPanel = ({
   <div className="flex flex-col gap-3 p-4">
     {isDrawing ? (
       <>
-        {/* A static instruction, not the old `animate-pulse` chip: an infinite
-            animation is banned outright except for the live dot (invariant 45). */}
+        {/* A static instruction, never `animate-pulse`: infinite animation is
+            banned outright except for the live dot. */}
         <MbNotice tone="info" icon="arrow-move">
           {arrowStartRole
             ? `Tap where ${arrowStartRole} should end up. Escape cancels.`

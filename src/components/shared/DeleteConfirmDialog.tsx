@@ -14,8 +14,8 @@ type DeleteConfirmDialogProps = {
 };
 
 /**
- * Thin adapter over `MbConfirm` (charter H8). The public props are unchanged so
- * the five existing call sites keep working untouched.
+ * Thin adapter over `MbConfirm`. The public props are unchanged so
+ * the existing call sites keep working untouched.
  *
  * `className` is retained for source compatibility but is no longer read: it
  * only ever carried the shadcn width override (`sm:max-w-md`), which `MbDialog`

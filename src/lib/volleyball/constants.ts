@@ -10,8 +10,7 @@ import type { PlayerRole, PlayerInfo, CourtZone, CourtPosition } from './types';
  * tokens became the same grey. Role tokens now come from
  * `lib/volleyball/roleTokens.ts`, which maps a role and its ROW to `--mb-*`
  * references and carries a second, non-colour mark for the setter and the
- * libero. Nothing in the app paints from a literal any more (invariant 10,
- * charter W7 acceptance 8).
+ * libero. Nothing in the app paints from a literal any more.
  */
 export const PLAYER_INFO: Record<PlayerRole, PlayerInfo> = {
   S: {

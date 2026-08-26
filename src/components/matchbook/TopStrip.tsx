@@ -63,7 +63,7 @@ const BrandMark = () => (
 );
 
 /**
- * `{ title, back?, action? }` (charter §2.3). Rendered by
+ * `{ title, back?, action? }`. Rendered by
  * `MatchbookShell variant="console"` below `lg`; `variant="focus"` uses
  * `MbEventBar` instead, and `variant="public"` uses its own brand lockup.
  */

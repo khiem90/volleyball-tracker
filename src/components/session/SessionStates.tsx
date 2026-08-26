@@ -1,20 +1,14 @@
 "use client";
 
 /* ===========================================================================
-   THE FOUR DEAD ENDS, REDRAWN AS SCREENS (public-share brief §3.6)
+   THE FOUR DEAD ENDS, REDRAWN AS SCREENS
 
-   Every one of these replaces a `rounded-2xl bg-destructive/10` blob over a
-   centred sentence, and two of them replace something worse than that:
-
-     not found     used to be the FIRST PAINT of every visit (brief S2). It is
-                   now only reachable once the lookup has answered, and it
-                   tells the reader the two things that actually help — the
-                   code they tried, and what a real code looks like.
-     unavailable   used to read "Firebase Not Configured. Please set up
-                   Firebase…" to a member of the public (brief S7, S5). The
-                   word Firebase does not appear anywhere on this route.
-     denied        used to be the raw string "Missing or insufficient
-                   permissions." (brief S6).
+     not found     only reachable once the lookup has answered — never the
+                   first paint — and it tells the reader the two things that
+                   actually help: the code they tried, and what a real code
+                   looks like.
+     unavailable   the word Firebase does not appear anywhere on this route.
+     denied        never the provider's raw permissions string.
 
    All four are `MbEmptyState` at `scale="route"`, inside the same public
    shell the live page uses, so a stranger who lands on a wrong code still

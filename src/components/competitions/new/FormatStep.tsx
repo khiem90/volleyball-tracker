@@ -39,11 +39,10 @@ import { FormatPreviewPanel } from "./FormatPreviewPanel";
 
    ------------------------------------------------------- the preview stays
 
-   Stacked under the group at every width, still full-width. The measurement
-   that put it there has not changed: in an `xl:col-span-5` side column it left
-   a 473 x ~700px hole of paper at 1440, and it squeezed the card blurbs to
-   30-37 characters per line against the rubric's 45-75 band. Step 3 stacks the
-   same panel the same way, so this is the wizard agreeing with itself.
+   Stacked under the group at every width, still full-width: in a side column
+   it leaves a large hole of paper and squeezes the card blurbs well under a
+   readable line length. Step 3 stacks the same panel the same way, so this
+   is the wizard agreeing with itself.
 
    It also now carries the sentence the rows gave up: the list's second line is
    four words, and `FormatPreviewPanel` prints `FORMAT_META[format].blurb`
@@ -91,11 +90,10 @@ export const FormatStep = ({
      three sample points hit-tested to the bar. The user taps a format and the
      sentence justifying that choice is sliced through its x-height.
 
-     So the panel is brought into view — but only on a genuine CHANGE, never on
-     mount. Returning to step 1 with a format already chosen must not move the
-     document, and an earlier round shipped exactly that bug: `MbTabs` called
-     `scrollIntoView` unconditionally on mount and put the first painted frame
-     709px (desktop) / 3300px (mobile) down the page with no user action.
+     So the panel is brought into view — but only on a genuine CHANGE, never
+     on mount: returning to step 1 with a format already chosen must not move
+     the document (an unconditional `scrollIntoView` on mount once put the
+     first painted frame thousands of pixels down the page).
 
      It also only scrolls when the panel is genuinely obscured — if the choice
      was made with the preview already fully clear of the bar, nothing moves.

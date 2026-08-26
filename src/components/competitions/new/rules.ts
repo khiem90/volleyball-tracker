@@ -113,8 +113,8 @@ export const courtOptionCount = (teamCount: number): number =>
   Math.max(1, Math.min(maxCourtsFor(teamCount), 4));
 
 /**
- * Re-clamped on every read rather than only on change (charter W3 acceptance
- * 4): `maxCourts` is derived from the selection, so choosing 4 courts with 12
+ * Re-clamped on every read rather than only on change:
+ * `maxCourts` is derived from the selection, so choosing 4 courts with 12
  * teams and then dropping to 4 teams used to leave `numberOfCourts = 4` and
  * generate a competition with two empty venues.
  */
@@ -148,11 +148,8 @@ export const POINTS_MAX = 10;
  * Whether the user actually touched the config, which decides whether a
  * `config` object is persisted at all.
  *
- * `pointsForTie` is in the list now. It was not, so a competition that set tie
- * points and changed nothing else round-tripped with the value dropped — the
- * defect the brief records at `useNewCompetitionPage.tsx:217-221`.
- * `venuePlural` is in the list for the same reason: it is a real field now
- * rather than `venueName + "s"`.
+ * `pointsForTie` and `venuePlural` must stay in the list, or a competition
+ * that customises only one of them round-trips with the value dropped.
  */
 export const isConfigCustomised = (settings: AdvancedSettings): boolean =>
   settings.pointsForWin !== DEFAULT_ADVANCED_SETTINGS.pointsForWin ||

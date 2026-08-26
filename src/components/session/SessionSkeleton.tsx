@@ -1,20 +1,15 @@
 "use client";
 
 /* ===========================================================================
-   THE LOADING STATE, AT THE REAL GEOMETRY (public-share brief S1)
+   THE LOADING STATE, AT THE REAL GEOMETRY
 
    `MbPageLoading` draws a console masthead and five generic panels, which is
    the wrong page: this route has no masthead, its first object is a scoreboard
-   and its grid is 8/4, not 7/5 + 4/4/4. A skeleton that advertises a layout
-   the page does not have is a second layout change on top of the first, so it
-   draws THIS page's bones instead — navy event strip, one hero scoreboard, the
-   two side panels, the table.
-
-   It is never a spinner. The shipped state was `<Loader2 className="animate-spin"/>`
-   on an otherwise empty page, which tells a reader on a slow connection
-   nothing about what is coming, and `PageLoadingSpinner` — the other candidate
-   — renders the legacy `<Navigation/>`, i.e. the old red nav bar flashing on a
-   public page (brief §2.4.16).
+   and its grid is 8/4. A skeleton that advertises a layout the page does not
+   have is a second layout change on top of the first, so it draws THIS page's
+   bones instead — navy event strip, one hero scoreboard, the two side panels,
+   the table. Never a spinner: a spinner on an empty page tells a reader on a
+   slow connection nothing about what is coming.
    =========================================================================== */
 
 import { MbSkeleton } from "@/components/matchbook/Skeleton";

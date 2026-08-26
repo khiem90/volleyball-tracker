@@ -22,10 +22,9 @@ import { useEffect, useRef } from "react";
    On a page taller than the viewport the margin resolves to 0 and nothing
    moves.
 
-   Extracted from `competitions/new/page.tsx` (where the measurements above
-   were taken) so `/quick-match`'s commit bar is the same object rather than a
-   second derivation — design language §8's "wizard-style commit goes in a
-   bottom `MbActionBar`" now has one floor under it, not one per route.
+   Shared so `/quick-match`'s commit bar is the same object as the wizard's
+   rather than a second derivation — one floor under every bottom
+   `MbActionBar`, not one per route.
    =========================================================================== */
 
 /**

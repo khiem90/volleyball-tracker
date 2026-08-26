@@ -3,16 +3,9 @@ import type { Competition } from "@/types/game";
 /**
  * Court-state rewriting for a cross-court team swap in a rotation format.
  *
- * This is `useEditMatchDialog.ts:145-209` extracted verbatim in behaviour and
- * de-duplicated (charter W4 acceptance 8, comp-detail R7). It shipped as two
- * near-identical 30-line blocks — one for `win2outState.courts`, one for
- * `twoMatchRotationState.courts` — differing only in which key they read. Two
- * copies of an index-search that silently no-ops when either index is -1 is
- * exactly the code that rots when a screen is restyled around it, so it is
- * lifted out, given one implementation and put under test **before** anything
- * that calls it is redrawn.
- *
- * The module is pure: no React, no context, no writes.
+ * One implementation shared by `win2outState.courts` and
+ * `twoMatchRotationState.courts`; the index search silently no-ops when
+ * either index is -1. The module is pure: no React, no context, no writes.
  */
 
 /** The shape both `Win2OutCourt` and `TwoMatchRotationCourt` share. */
@@ -37,9 +30,8 @@ export interface RotationSwapRequest {
  * `displacedTeamId` takes its old seat.
  *
  * Returns `null` — never a half-applied array — when either court cannot be
- * located. The shipped code expressed the same decision as a silent
- * `if (a !== -1 && b !== -1)`, which left the caller unable to tell "nothing to
- * do" from "the state and the match list disagree".
+ * located, so the caller can tell "nothing to do" from "the state and the
+ * match list disagree".
  *
  * Order matters and is preserved from the original: the edited court is
  * assigned the operator's chosen pair **as given**, so home/away order is the
@@ -81,8 +73,7 @@ export const rewriteRotationCourts = <C extends RotationCourtLike>(
  *
  * Returns `null` when the competition is not a rotation format, or when the
  * courts could not be rewritten — the caller then leaves the competition
- * untouched, which is what the two shipped blocks did by falling through their
- * `if`.
+ * untouched.
  */
 export const applyRotationCourtSwap = (
   competition: Competition,

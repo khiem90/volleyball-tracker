@@ -5,29 +5,16 @@ import { useCallback, useEffect, useRef, useState } from "react";
 /* ===========================================================================
    ONE UNDO STACK, FOR BOTH CONSOLES
 
-   `/match/[id]` and `/match/guest` each shipped their own history array and the
-   two disagreed about what "one step back" meant:
-
-     useMatchPage.ts:131-139     seeded lazily and pushed with the updater form,
-                                 but computed the NEXT value from a closure over
-                                 `match` — so a second tap inside one React batch
-                                 recomputed from the same base and was lost.
-     useGuestQuickMatch.ts:56-62 worse: `setMatch` used the updater form while
-                                 `setHistory` read `match.homeScore` from the
-                                 closure, so the two diverged outright. Measured:
-                                 5 rapid taps then 6 undos left the score stuck
-                                 at 1 and it never returned to 0.
-
-   Both are the same bug — the caller doing the arithmetic against a value React
-   has not re-rendered yet — and "remember to use the updater form" cannot fix
-   it, because a `useState` updater cannot RETURN the new score and both
-   consoles need it synchronously (one writes it to `AppContext`, the other
+   The trap this exists for: a caller doing score arithmetic against a value
+   React has not re-rendered yet loses rapid taps ("use the updater form"
+   cannot fix it — a `useState` updater cannot RETURN the new score, and both
+   consoles need it synchronously: one writes it to `AppContext`, the other
    renders it).
 
    So the stack is a synchronous cursor. `entriesRef` is advanced inside the
-   event handler, before `setEntries` publishes it, and every one of the four
-   mutations below reads its base from that cursor rather than from a closure or
-   from props. Five taps in one batch therefore read 0 → 1 → 2 → 3 → 4 → 5 and
+   event handler, before `setEntries` publishes it, and every mutation below
+   reads its base from that cursor rather than from a closure or from props.
+   Five taps in one batch therefore read 0 → 1 → 2 → 3 → 4 → 5 and
    five undos walk back down the same steps. No caller anywhere is allowed to
    compute a score: `bump(side, delta)` and `undo()` own the arithmetic outright,
    which is what makes the class of bug unrepresentable rather than merely fixed.
@@ -37,8 +24,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
    --------------------------------------------------------- surviving reload
 
-   The stack was memory-only, so reloading an 18–15 match left Undo permanently
-   disabled with no explanation (live-scoring brief §2.4.5). It now persists to
+   The stack persists to
    `sessionStorage` under `storageKey`, and is restored only when the stored tip
    still matches the score the caller seeds with — a stack whose tip disagrees
    with reality belongs to a game that has since moved on (a series reset, an

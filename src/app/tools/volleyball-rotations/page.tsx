@@ -22,40 +22,16 @@ import {
 } from "@/components/volleyball";
 import type { UserFormation } from "@/lib/volleyball/types";
 
-/* ===========================================================================
-   ROTATION DESIGNER
+/* ROTATION DESIGNER. DOM order is the mobile order (a `xl:grid-cols-12`
+   collapses to DOM order below `xl`): court panel, On Court legend,
+   Formation, then reference prose. Delete goes through `MbConfirm` —
+   `window.confirm` blocks the main thread and cannot be styled.
 
-   Was: `<div className="min-h-screen bg-background"><Navigation />`, a centred
-   `text-4xl font-black uppercase` headline, four `rounded-2xl shadow-soft`
-   cards, twenty-five sub-44px targets, five Heroicons, a `window.confirm` for
-   delete, and a mobile order that put the court 243px tall above 700px of
-   formation picker and 500px of help text with the legend — the thing the
-   court cross-highlights — at y = 2096.
-
-   The order here IS the mobile order, because a `xl:grid-cols-12` collapses to
-   DOM order at every width below `xl`:
-
-     1  masthead, carrying the live rotation in its badge
-     2  the court panel — control rail, then the diagram
-     3  On Court — the legend, now one scroll from the thing it highlights
-     4  Formation
-     5  Reading the Diagram — reference prose, last
-
-   Delete goes through `MbConfirm`. `window.confirm` blocks the main thread,
-   cannot be styled, cannot be reached by the screenshot harness, and on iOS
-   renders the origin above the question.
-
-   THE SHORT-VIEWPORT CUT (`SHORT` below) is the answer to a measured failure:
-   at 844x390 — a phone turned sideways, which is exactly how somebody props a
-   device on a bench — the masthead ran to y 191, the control rail to y 399, and
-   the court began 9px BELOW the fold. Not "clipped": absent. Under 560px of
-   height the panel body becomes two columns and the rail, the layer chips and
-   the facts move BESIDE the diagram instead of above it, which buys back the
-   148px the rail was spending; the court is then sized from the height that is
-   left rather than from the width that is available, so the whole diagram lands
-   above the fold instead of a slice of it. Above 560px nothing changes — the
-   grid placement and the width cap are both inside the query.
-   =========================================================================== */
+   THE SHORT-VIEWPORT CUT (`SHORT` below): under 560px of viewport height the
+   panel body becomes two columns — rail, layer chips and facts move beside
+   the diagram — and the court is sized from the height that is left, so the
+   whole diagram lands above the fold on a sideways phone. Above 560px nothing
+   changes; every declaration is inside the query. */
 
 /**
  * Grid placement for the short-viewport cut. Written once so the four children
@@ -74,13 +50,9 @@ const SHORT = {
   rail: "[@media(max-height:560px)]:col-start-2 [@media(max-height:560px)]:row-start-1",
   layers: "[@media(max-height:560px)]:col-start-2 [@media(max-height:560px)]:row-start-2",
   facts: "[@media(max-height:560px)]:col-start-2 [@media(max-height:560px)]:row-start-3",
-  /* 1.21 is COURT_ASPECT (464/382): the court is sized from the height left
-     under the masthead and the panel head, not from the column it sits in.
-     356px is a HARD floor and it is the reason the whole court cannot fit at
-     390px of viewport height: the six 52px token targets are 61px apart at a
-     356px court and 55px apart at a 320px one, so anything narrower puts two
-     adjacent players' hit circles under the 8px separation floor — a mis-tap
-     on the screen's primary object, which is worse than a scroll. */
+  /* 1.21 is COURT_ASPECT (464/382). 356px is a HARD width floor: any
+     narrower and two adjacent players' hit circles fall under the 8px
+     separation minimum — a mis-tap is worse than a scroll. */
   courtSize:
     "[@media(max-height:560px)]:w-[calc((100dvh-16.5rem)*1.21)] " +
     "[@media(max-height:560px)]:min-w-[356px] [@media(max-height:560px)]:max-w-full",
@@ -173,10 +145,8 @@ export default function VolleyballRotationsPage() {
   return (
     <MatchbookShell
       active="/tools"
-      /* The app's own primary action, as on `/teams` and `/summaries`. It used
-         to be "My Formations", which is also the masthead's second action — the
-         same destination named twice on one desktop screen, and the rail key is
-         gone below `lg` so the duplication bought nothing on a phone either. */
+      /* The app's default CTA — "My Formations" here would name the masthead's
+         second action twice on one screen. */
       cta={MB_DEFAULT_CTA}
       masthead={{
         title: (
@@ -219,21 +189,16 @@ export default function VolleyballRotationsPage() {
         </div>
       )}
 
-      {/* The two right-hand panels carry `xl:self-start`, so they are the
-          height of their own contents instead of being stretched to the row.
-          Before it, the On Court panel ran ~380px of empty cream under its
-          legend at 1440 and the guide panel ran ~200px under its last closed
-          section — voids that were leftover rather than shaped (rubric 2.x).
-          `sticky` still works on a `self-start` grid item: it travels inside
-          its grid AREA, which is still the full row height. */}
+      {/* The right-hand panels carry `xl:self-start` so they take their own
+          height instead of stretching into voids. `sticky` still works on a
+          `self-start` grid item — it travels inside its grid area, which is
+          still the full row height. */}
       <div className="mb-enter-grid grid grid-cols-1 gap-4 xl:grid-cols-12">
         <div className="xl:col-span-7">
           <Panel
             title={`Rotation ${rotation} · ${mode === "serving" ? "Serving" : "Receiving"}`}
-            /* Wrapped, not truncated, and no `title` attribute: the formation
-               name is the answer to "which of these am I looking at", and a
-               truncated answer with the rest in a tooltip is unreachable on a
-               touch screen (hard fail 12). */
+            /* Wrapped, not truncated, and no `title` attribute — a tooltip is
+               unreachable on a touch screen. */
             meta={
               <span className="mb-kicker max-w-[22ch] text-right leading-tight break-words">
                 {selected.name}
@@ -251,10 +216,8 @@ export default function VolleyballRotationsPage() {
                   onPrev={prevRotation}
                 />
               </div>
-              {/* The court is full-bleed to the panel edge. On a 390px screen
-                  that is the difference between a 243px diagram and a 287px
-                  one, and it is the whole reason the panel body carries no
-                  padding here. */}
+              {/* The court is full-bleed to the panel edge — the reason the
+                  panel body carries no padding here. */}
               <div className={`flex justify-center ${SHORT.court}`}>
                 <CourtStage
                   className={SHORT.courtSize}

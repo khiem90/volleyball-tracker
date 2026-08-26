@@ -34,56 +34,26 @@ import {
 /* ===========================================================================
    BULK TEAM CREATION
 
-   ------------------------------------------------------- the promise (D1)
+   The pasted list is the DEFAULT mode; a numbered block is the special case
+   (a draw with no names yet), kept because the wizard enters through it.
 
-   `/teams` advertises this sheet as "Type a list and add a whole roster in one
-   go." It could not take a list. It generated "Team 2, Team 3, Team 4" from a
-   counter, so a club organiser holding eleven real names was sent to New Team
-   eleven times — the single capability the walkers kept asking for, described
-   on the page and absent from the dialog.
+   What the parser must survive — it is what a paste actually contains: blank
+   lines, a trailing comma, tabs out of a spreadsheet, `- ` bullets, `1.`
+   numbering, CSV quotes, the same team twice, a team the roster already has,
+   and a name longer than the field allows. Each one is dropped or repaired
+   and then COUNTED, and the count is printed under the box — a silent drop is
+   the one behaviour a bulk importer must not have. See `parseTeamList`.
 
-   It takes a list now, and the list is the DEFAULT mode: a numbered block is
-   the special case (a draw with no names yet), not the other way round. The
-   counter survives intact beside it because that case is real — five courts,
-   no roster — and because deleting it would have broken the wizard's own
-   entry point.
-
-   What the parser has to survive, because it is what a paste actually
-   contains: blank lines, a trailing comma, tabs out of a spreadsheet, `- `
-   bullets, `1.` numbering, wrapping quotes out of a CSV, the same team twice,
-   a team the roster already has, and a name longer than the field allows. Each
-   one is dropped or repaired and then COUNTED, and the count is printed under
-   the box — a silent drop is the one behaviour a bulk importer must not have.
-   See `parseTeamList`.
-
-   ------------------------------------------------------- the four old defects
-
-   1. `startNumber` was STATE seeded once by a `useState(() => …)` used as an
-      effect. `/teams` mounts this dialog permanently, so the initialiser ran
-      on page mount and never again: bulk-add twice and the second batch
-      restarted at 1, producing duplicate names. It is derived now.
-   2. The preview avatar printed `name.charAt(name.length - 1)` — the LAST
-      character, so "Team 12" previewed as "2". The preview is the real crest
-      the app will draw.
-   3. Group / Side lettering was `String.fromCharCode(64 + n)`, which produces
-      "[" at 27. It carries past Z now.
-   4. A scheme's `colors` were the palette's CSS **expressions**, and
-      `onAddTeams` handed them straight to the reducer. Quick-adding five teams
-      wrote `Team 3 :: color-mix(in oklab, var(--mb-navy) 55%, var(--mb-green))`
-      into localStorage and into every share link made from it. A scheme now
-      carries ink **ids** (`"teal"`), which is what `PersistentTeam.color` is
-      for; `teamColorCss()` turns one into paint at the two places this file
-      paints. See `@/lib/teamColor`.
-
-   The eight colour presets were 64 literal hex values (invariant 10). They are
-   re-keyed onto the team palette in `form.tsx` — five named schemes plus a
-   single-colour custom, every one of them resolving through `--mb-*`. Those
-   schemes used to be sorted by temperature: "Warm" was coral, gold and red,
-   which is Draft, Loss and the app's own accent handed out as identity to
-   three teams in one click. The palette they draw from no longer contains a
-   status colour at all, and the two mixed schemes are now split by weight —
-   the darker inks against the lighter ones — a distinction that survives on a
-   bracket printed in greyscale.
+   Standing constraints:
+   - `startNumber` is DERIVED, never state: `/teams` mounts this dialog
+     permanently, so a state initialiser runs once per page and a second
+     batch would restart numbering at 1.
+   - Group/Side lettering carries past Z (a bare charCode produces "[" at 27).
+   - A scheme's `colors` are ink IDS ("teal"), never CSS expressions —
+     `PersistentTeam.color` is persisted and shared; `teamColorCss()` turns an
+     id into paint only where this file paints.
+   - The two mixed schemes are split by weight, a distinction that survives a
+     greyscale print.
    =========================================================================== */
 
 const TEAM_COUNT_MIN = 2;
@@ -93,8 +63,7 @@ const TEAM_COUNT_MAX = 16;
  * The ceiling on one pasted batch.
  *
  * Higher than the stepper's 16, which is a *typing* limit — nobody thumbs a
- * stepper to 48 — where this is a PASTE limit and 48 is the roster size the
- * charter already stress-tests the wizard's team list at. Anything past it is
+ * stepper to 48 — where this is a PASTE limit. Anything past it is
  * reported rather than dropped in silence.
  */
 export const QUICK_ADD_MAX = 48;
@@ -684,8 +653,8 @@ export const QuickAddTeams = ({
         {/* The one thing a scheme of one or two inks cannot be saved from: two
             teams whose names happen to draw the same crest, in the same ink.
             Said rather than hidden — the reader can rename one, or take a
-            scheme with inks to spare (charter D-10: the pack is eight, and
-            identity is crest + name + colour together). */}
+            scheme with inks to spare (identity is crest + name + colour
+            together). */}
         {clash && (
           <MbNotice tone="warn" title="Two teams will look alike">
             {clash[0].name} and {clash[1].name} both draw the{" "}
@@ -724,13 +693,10 @@ export const QuickAddTeams = ({
                     size="sm"
                     className="min-w-0 flex-1"
                   />
-                  {/* The crest and the ink, in words. The row distinguished five
-                      teams' colours by a 3px bar and nothing else, which is
-                      information carried by hue alone (invariant 13) and
-                      unreadable on the scheme the reader just chose. Naming the
-                      CREST too is D2: a mark you can name is a mark you can
-                      check, and it is the only place the pack is legible before
-                      the teams exist. */}
+                  {/* The crest and the ink, in words — a 3px bar alone is
+                      information carried by hue alone. A mark you can name is
+                      a mark you can check, and this is the only place the
+                      pack is legible before the teams exist. */}
                   <span className="mb-kicker shrink-0 text-right">
                     {crestNameFor(entry.name)} · {teamColorName(entry.color)}
                   </span>

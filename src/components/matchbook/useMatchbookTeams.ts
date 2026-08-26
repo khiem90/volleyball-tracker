@@ -22,8 +22,8 @@ import {
 /* ---------------------------------------------------------------------------
    THE DIRECTORY VIEW
 
-   `MbTeamsData` lives in `types.ts`, which charter H3 reserves to W1, so the
-   fields the zero state needs extend it here rather than editing it. Nothing
+   The fields the zero state needs extend `MbTeamsData` (`types.ts`) here
+   rather than editing it. Nothing
    that reads `MbTeamsData` changes shape; `readiness` is re-declared because
    its row gains a state the three-word union in `types.ts` cannot spell (see
    `teamStats.ts`, THE STATE A NEW TEAM IS IN).

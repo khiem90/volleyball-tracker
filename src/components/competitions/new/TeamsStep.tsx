@@ -241,13 +241,11 @@ export const TeamsStep = ({
             )}
 
             <div className="flex flex-wrap gap-2">
-              {/* The ONLY select-all on the step.
-                  `MbSelectList` ships one in its own header row, and that
-                  button abuts the first ruled row at 1px — a measured
-                  invariant-33 separation failure on a kit file this workstream
-                  does not own. Omitting `onSelectAll` there turns that header
-                  into a plain count, and this control takes the job. It also
-                  respects the filter, which the list's own never could. */}
+              {/* The ONLY select-all on the step. `MbSelectList` ships one in
+                  its own header row that abuts the first ruled row at 1px;
+                  omitting `onSelectAll` there turns that header into a plain
+                  count, and this control takes the job — it also respects the
+                  filter, which the list's own never could. */}
               <MbButton
                 variant="outline-navy"
                 size="sm"

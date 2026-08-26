@@ -7,9 +7,8 @@ import { COURT_SVG } from "@/lib/volleyball/constants";
    load-bearing. Every saved formation in Firestore is a bag of `{x, y}` in
    that space; `toSvgCoords` / `fromSvgCoords` in `lib/volleyball/coordinateUtils`
    map it into a FIXED 480x380 user space (400x300 court + 40 padding), and
-   those two functions are NOT touched by this module. Changing them silently
-   re-draws every stored formation, which is why the charter (§2.3, W7
-   acceptance 1) spells it out.
+   those two functions are NOT touched by this module: changing them silently
+   re-draws every stored formation.
 
    What this module does change is (a) the rendered viewBox — the window onto
    that fixed space — and (b) the drawn radii, and it derives the arrow-shorten
@@ -33,9 +32,9 @@ export const COURT_RECT = {
 } as const;
 
 /**
- * The rendered window — the ONE thing the charter lets this module change about
- * the geometry (W7 acceptance 1). The legacy window was `0 0 480 380`: the full
- * 40-unit padding on every side.
+ * The rendered window — the ONE thing this module may change about the
+ * geometry. The legacy window was `0 0 480 380`: the full 40-unit padding on
+ * every side.
  *
  * Most of that padding is spent and cannot be cropped. A token dragged to
  * `x = 0` centres ON the sideline, so its disc overhangs by `TOKEN_RADIUS`, the
@@ -82,7 +81,7 @@ export const TOKEN_RADIUS_SM = NODE_RADIUS - 3;
 /**
  * The transparent target, in CSS PIXELS rather than user units.
  *
- * The charter requires ≥52 CSS px of real hit area on a player token whatever
+ * A player token needs ≥52 CSS px of real hit area whatever
  * the disc is drawn at. Expressing it in user units made it a function of the
  * viewport — 36 units is 53px at 390 and 99px at 1440, which is far more target
  * than a mouse needs and starts swallowing neighbouring tokens on a wide

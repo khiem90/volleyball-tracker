@@ -14,11 +14,8 @@ import type { SessionAuthMode } from "./useSessionAuth";
  * validation message and every provider call lives in the panel, so the
  * viewer route and `CreateSessionDialog` cannot drift into two sign-in forms.
  *
- * `Keep watching` replaces "Continue as Viewer (Read Only)". The old control
- * called `onClose()` and nothing else while presenting itself as a decision
- * (brief §2.4.13); this one is the dialog's dismiss, worded for the gate that
- * opened it, and sits in the footer where a dismiss belongs rather than as a
- * full-width slab under the forms.
+ * `Keep watching` is the dialog's dismiss, worded for the gate that opened
+ * it, and sits in the footer where a dismiss belongs.
  */
 export const SessionAuth = ({
   open,

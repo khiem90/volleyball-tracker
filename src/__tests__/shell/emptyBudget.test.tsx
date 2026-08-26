@@ -12,69 +12,30 @@ import type { UserFormation } from "@/lib/volleyball/types";
 /* ===========================================================================
    THE ZERO STATE, AS A NUMBER
 
-   Three rounds have now each fixed the empty-account cliff on the routes their
-   brief named and left it standing on every route it did not. The defect did
-   not shrink between rounds; it MOVED, and grew:
+   The empty-account cliff keeps coming back when nothing measures it, so this
+   file opens every route in the app on an account with nothing in it and
+   counts empty headlines and document height.
 
-     round 1   "eight stacked empty headlines on /"
-     round 2   "/ and /competitions fixed; five headlines one tap away on
-               /teams — reached by the very button the fix installed"
-     round 3   fifteen headlines across five screens
-
-   Measured in the browser, empty account, 390x844, counting the display lines
-   an empty panel prints ("No teams exist yet", "No form exists yet", ...):
-
-       route            document height    empty headlines
-       /                        1117px         0   fixed in round 2
-       /competitions             960px         1   fixed in round 2
-       /teams                   1543px         5
-       /summaries               1600px         6
-       /quick-match             1195px         2
-       /tools                   1798px         1
-
-   It keeps coming back because NOTHING MEASURES IT. Every round's fix was
-   verified by opening the two routes the brief named. This file opens every
-   route in the app, on an account with nothing in it, and counts.
-
-   ------------------------------------------------------------- the layer
-
-   `firstRun.test.ts` and `skeletonSpec.test.ts` test view-models, which is the
-   right layer for a rule ABOUT a view-model. This rule is not one. The number
-   of empty headlines on a screen is a property of the COMPOSITION — of which
-   panels `page.tsx` chooses to render and which it withholds — and no
-   view-model in the app can be interrogated for it. `buildDashboard` knows
-   `muteSections`; the decision to collapse at two of them lives in
-   `src/app/page.tsx`, and `/teams` has no such view-model field at all,
-   because `/teams` renders all six of its panels unconditionally. A
-   view-model-layer test here would be a second copy of the composition written
-   in the test file, and it would pass while the screen showed six shrugs.
-
-   So this file renders the real page components against the real view-models,
-   with the four leaf providers stubbed (`AppContext`, `AuthContext`,
-   `SessionContext`, `next/navigation`) and nothing else. Everything between a
-   provider and a pixel — every hook, every panel, every `PanelEmpty` — is the
-   shipped code. The harness is calibrated against the browser twice over:
-
-     the headline count  reproduces the six numbers above EXACTLY (see
-                         `describe("the census reproduces the browser")`)
-     the height model    reproduces all six document heights to within 1px
-                         (see `describe("the height model is calibrated")`)
-
-   That calibration is the whole argument for trusting a jsdom render here: it
-   is not a proxy for the browser walk, it is the same six numbers.
+   THE LAYER: the number of empty headlines on a screen is a property of the
+   COMPOSITION — which panels `page.tsx` renders and which it withholds — and
+   no view-model can be interrogated for it. So this file renders the real
+   page components against the real view-models, with only the four leaf
+   providers stubbed (`AppContext`, `AuthContext`, `SessionContext`,
+   `next/navigation`). Everything between a provider and a pixel is shipped
+   code. The census and the height model are each calibrated against measured
+   browser numbers (see the two calibration describes below) — the jsdom
+   render is not a proxy for the browser walk, it reproduces it.
    =========================================================================== */
 
-/** The rubric's anchor: at most ONE equal-weight empty headline per screen. */
+/** At most ONE equal-weight empty headline per screen. */
 const EMPTY_HEADLINE_BUDGET = 1;
 
 /**
  * A phone viewport, and the most paper an empty screen may spend.
  *
- * 1.5 screens is one screenful of content plus a scroll to confirm there is no
- * more. It is not a round number picked to be generous: the two screens the
- * walker singled out as correct measure 1117px (`/`) and 960px
- * (`/competitions`), so the budget clears the proven-good pair with 149px of
- * headroom and still refuses `/teams` (1543) and `/summaries` (1600).
+ * 1.5 screens is one screenful of content plus a scroll to confirm there is
+ * no more — chosen to clear the proven-good screens with headroom while still
+ * refusing the over-tall ones.
  */
 const PHONE_VIEWPORT = 844;
 const EMPTY_HEIGHT_BUDGET = Math.round(PHONE_VIEWPORT * 1.5); // 1266
@@ -333,7 +294,7 @@ const HEADLINE_SELECTOR = "p.matchbook-display.text-balance";
  * cannot see it, so a route could clear the headline budget by demoting five
  * `PanelEmpty`s to five paragraphs and changing nothing a reader experiences.
  *
- * This matches the SENTENCE instead of the markup: design language §5.7's copy
+ * This matches the SENTENCE instead of the markup: the empty-state copy
  * rule is `No <things> exist yet — <what makes them appear>`, so any element
  * whose text opens "No …" and reaches "yet" inside 64 characters is one,
  * however it is drawn. Only the innermost match counts, so a panel that
@@ -357,7 +318,7 @@ const squash = (node: Element): string =>
   (node.textContent ?? "").replace(/\s+/g, " ").trim();
 
 interface Census {
-  /** Display lines drawn by `MbStateBlock` — the rubric's own number. */
+  /** Display lines drawn by `MbStateBlock`. */
   headlines: string[];
   /** "No … yet" sentences, however they are drawn. */
   shrugs: string[];
@@ -523,8 +484,7 @@ const pageFiles = (dir: string): string[] => {
 /* ===========================================================================
    1 — THE MAP IS THE WHOLE APP
 
-   The reason the last three fixes each stopped at the edge of their brief is
-   that nothing enumerated the routes. This does, from the filesystem.
+   Nothing else enumerates the routes. This does, from the filesystem.
    =========================================================================== */
 
 describe("every route is on the map", () => {
@@ -700,8 +660,8 @@ describe("the census reproduces the browser", () => {
    `/competitions` is the model — one panel, one headline, one action — and it
    is what the other five are measured against.
 
-   Both counts, at the same budget. The headline count is the rubric's own
-   number; the shrug count is the same rule stated so that redrawing a
+   Both counts, at the same budget. The
+   shrug count is the same rule stated so that redrawing a
    `PanelEmpty` as a paragraph cannot satisfy it. A screen that passes one and
    fails the other has moved the defect, not fixed it.
    =========================================================================== */
@@ -755,8 +715,8 @@ describe("no screen stacks empty headlines on a new account", () => {
    The budget rather than zero, because one of these panels is legitimately
    waiting on a SELECTION and not on data: `/quick-match`'s comparison panel
    reads "No comparison exists yet — select both teams to compare their form."
-   on a fully populated account, which is a prompt and not a shrug. One is what
-   §5.7 empty states are for; the budget is the same number at both ends.
+   on a fully populated account, which is a prompt and not a shrug. One is
+   what empty states are for; the budget is the same number at both ends.
    =========================================================================== */
 
 describe("a populated account still gets its whole screen", () => {
@@ -788,11 +748,10 @@ describe("a populated account still gets its whole screen", () => {
 /* ===========================================================================
    6 — THE HEIGHT
 
-   `MB_ROUTE_SKELETON` is the app's own record of measured page geometry: every
-   number in it was read off a shipped page in a browser at 390x844 by
-   `pw/mb-geom.mjs`, and invariant 27 binds it to stay that way. So the empty
-   page's height is already in the repo as data, and does not need a browser
-   here to be asserted on.
+   `MB_ROUTE_SKELETON` is the app's own record of measured page geometry:
+   every number in it was read off a shipped page in a browser at 390x844. So
+   the empty page's height is already in the repo as data, and does not need
+   a browser here to be asserted on.
 
    `SHELL_RESERVE` is what sits below the last panel — the bottom bar's own
    reservation plus `<main>`'s closing padding — and it is measured, not

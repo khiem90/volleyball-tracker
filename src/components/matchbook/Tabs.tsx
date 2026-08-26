@@ -21,8 +21,8 @@ export interface MbTabItem {
  * `.mb-tabs` is a horizontal scroller, so two things this component owns:
  * the active tab is kept inside the rail (a value restored from a URL can start
  * off-screen), and each overflowing edge grows a 1.5px navy hairline — the
- * system's own rule vocabulary standing in for the gradient fade invariant 24
- * forbids.
+ * system's own rule vocabulary standing in for a gradient fade, which is
+ * banned.
  *
  * That first job is done by writing `rail.scrollLeft`, never by
  * `scrollIntoView`. `scrollIntoView` walks *every* scrollable ancestor, and
@@ -165,12 +165,11 @@ export const MbTabs = ({
               {item.icon && <MbIcon id={item.icon} size={14} className="shrink-0" />}
               {item.label}
               {item.count !== undefined && (
-                /* The count carries its OWN rung (charter invariant 8). Left
-                   bare it inherited `.mb-tab`'s 0.08em as a computed px, which
-                   at 0.72rem re-measured as a 0.094em tracking that exists on
-                   no ladder — and `font-normal` put weight 400 on a display
-                   face whose ladder starts at 600. 0.72rem/600 is
-                   `display/link`; muted ink keeps it secondary to the label. */
+                /* The count carries its OWN rung: left bare it inherits
+                   `.mb-tab`'s 0.08em as a computed px, which at 0.72rem
+                   re-measures as a tracking that exists on no ladder.
+                   0.72rem/600 is `display/link`; muted ink keeps it secondary
+                   to the label. */
                 <span className="text-[0.72rem] mb-track-link font-semibold tabular-nums text-mb-ink-muted">
                   {item.count}
                 </span>

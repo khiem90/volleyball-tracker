@@ -1,43 +1,14 @@
 "use client";
 
-/* ===========================================================================
-   /session/<shareCode> — THE PUBLIC LIVE SCOREBOARD
+/* /session/<shareCode> — the public live scoreboard, the only screen a
+   stranger ever sees. Layout only: data from `useMatchbookSession`, state
+   transitions from `useSessionPage`. Live score first at every width; the
+   reader's permissions, the connection and "event ended" are narrow bands
+   directly under the event bar.
 
-   The only screen in this product a stranger ever sees. Someone is handed a
-   link at 7pm, opens it on a phone, in a gym, on bad wifi, and has three
-   seconds of attention. Everything below is downstream of that.
-
-   LAYOUT ONLY (invariant 23). Every number comes from `useMatchbookSession`,
-   every state transition from `useSessionPage`, and every mark from the
-   Matchbook kit. What this file was: a `min-h-glassmorphic-header` over a
-   competition card, three pastel counters, a fourteen-row table, and — last,
-   below all of it, at 24px — the live score.
-
-   ------------------------------------------------------------------ the shell
-
-   `MatchbookShell variant="public"`: no sidebar, no bottom bar, no account
-   chip, a brand lockup and the sanctioned `max-w-[1100px]` column. The event's
-   own identity rides `MbEventBar`, bled to the column edges and sticky, so the
-   name, the format, the code and the connection state stay on screen while a
-   reader scrolls a bracket.
-
-   ------------------------------------------------------- the ordering rule
-
-   Live score first, at every width, with nothing above it but one strip of
-   state. The reader's own permissions, the connection, and the fact the event
-   has ended are all bands directly under the bar — narrow, ruled, and never a
-   card at the bottom of the page, which is where the read-only notice used to
-   sit ~1,500px below the fold.
-
-   ------------------------------------------------------------ the Suspense
-
-   `useSessionPage` reads `useSearchParams` (the `?admin=` token). Next bails
-   the whole route out of prerendering unless that read is inside a
-   `<Suspense>`, which `login/page.tsx` already does deliberately and this
-   route never did (brief §2.4.7). The boundary is the default export; the
-   fallback is the real skeleton, so a bail-out looks like loading rather than
-   like nothing.
-   =========================================================================== */
+   The Suspense wrapper is required: `useSessionPage` reads `useSearchParams`
+   (the `?admin=` token), and Next bails the route out of prerendering unless
+   that read sits inside a `<Suspense>`. The fallback is the real skeleton. */
 
 import { Suspense, useState } from "react";
 import { MatchbookShell } from "@/components/matchbook/AppShell";
@@ -83,11 +54,10 @@ const SessionView = () => {
 
   const session = page.view;
   const ended = page.phase === "ended";
-  /* Two independent pieces of evidence for one fact. `navigator.onLine ===
-     false` is certain (no interface, nothing is arriving); a faulted
-     subscription is the case `onLine` cannot see, because the interface is up
-     and the socket is not. Either one means the numbers below are the last
-     ones received, and the page says so rather than removing them. */
+  /* Two independent signals for one fact: `!online` is certain, and a faulted
+     subscription is the case `onLine` cannot see (interface up, socket down).
+     Either way the numbers below are the last ones received, and the page
+     says so rather than removing them. */
   const stale = page.faulted || !online;
 
   /* ------------------------------------------------------- state-only routes */
@@ -137,8 +107,7 @@ const SessionView = () => {
           },
         ]),
     /* The creator never sees "stop watching": leaving clears the stored
-       session, and for the person running the event that is a foot-gun rather
-       than an action. Same rule the shipped header had, kept. */
+       session, a foot-gun for the person running the event. */
     ...(page.isCreator
       ? []
       : [{ label: "Stop watching", icon: "logout", onClick: page.leave }]),
@@ -153,11 +122,8 @@ const SessionView = () => {
           <>
             {view.metaLine}
             {view.metaLine && " · "}
-            {/* The share code is the most important string on this page for
-                anybody trying to find the event again, so it is set in the
-                display face at the strip's own tracking and LABELLED — never a
-                `<code>` tag, and never a bare word, because a code like
-                "SUMMER" reads as prose without one. */}
+            {/* The share code is always labelled — a code like "SUMMER" reads
+                as prose without the "Code" prefix. */}
             Code{" "}
             <span className="tabular-nums">
               {session.shareCode}
@@ -167,13 +133,10 @@ const SessionView = () => {
         status={
           <div className="flex items-center gap-3">
             {(page.role === "creator" || page.role === "admin") && (
-              /* NOT `MbBadge`. `.mb-badge` paints its letterforms in
-                 `--mb-badge-ink`, which defaults to `--mb-navy` — measured on
-                 this strip, the word "Organiser" rendered navy-on-navy and the
-                 only thing visible was the neutral tone's 3px bar. The mark
-                 and the word here inherit the strip's paper-bright ink, and
-                 they are the same crown/shield vocabulary the role band below
-                 uses, so one reader sees one symbol for one idea. */
+              /* NOT `MbBadge`: `.mb-badge` inks its letterforms in
+                 `--mb-badge-ink` (navy), which is invisible on this navy
+                 strip. The mark inherits the strip's paper-bright ink and
+                 reuses the role band's crown/shield vocabulary. */
               <span className="hidden items-center gap-1.5 sm:inline-flex">
                 <MbIcon
                   id={page.role === "creator" ? "crown" : "shield"}
@@ -196,11 +159,8 @@ const SessionView = () => {
           </div>
         }
         actions={
-          /* ONE action, 48x48. The shipped header stacked three 32px
-             `size="sm"` ghosts against a title truncated to 200px; sharing is
-             the only thing a stranger ever wants from this bar, and the two
-             remaining actions live in the footer where they cost nobody the
-             top of the screen. */
+          /* One action only: sharing is the only thing a stranger wants from
+             this bar; the other actions live in the footer. */
           <MbIconButton
             icon="share"
             label="Share this event"
@@ -211,13 +171,9 @@ const SessionView = () => {
         }
       />
 
-      {/* ONE live status per viewport, and never inside the board's panel head.
-          The sticky strip carries it from `sm` up, where it survives a long
-          scroll. Below `sm` the strip has room for the name and one 48px
-          control and nothing else, so the pill moves to its own full-width
-          line here — measured in the panel head instead, "RECONNECTING · Last
-          update just now" pushed the head's `justify-between` past its
-          measure and broke "ON COURT NOW" across two lines. */}
+      {/* One live status per viewport, never inside the board's panel head
+          (a long status there breaks the head across two lines). The sticky
+          strip carries it from `sm` up; below `sm` it gets its own line. */}
       <div className="mb-3 flex sm:hidden">
         <SessionLiveStatus
           version={session.updatedAt}
@@ -244,22 +200,14 @@ const SessionView = () => {
         )}
       </div>
 
-      {/* One panel per grid cell, spans 7/5 and 12 only (invariant 4) — never a
-          flex column of panels inside a cell. `.mb-panel` declares
-          `height: 100%` so that a panel fills the row it shares, and stacking
-          two of them inside one stretched cell made both resolve to 100% of
-          the same box: measured on this screen at 1440, the board grew a 350px
-          void under a scoreboard that had nothing else to put in it.
-
-          The board is the first cell at every width, so source order and
-          reading order are the same and no reader meets the table first. */}
+      {/* One panel per grid cell, never a flex column of panels inside a
+          cell: `.mb-panel` declares `height: 100%`, so two stacked in one
+          stretched cell both resolve to 100% of the same box and grow voids.
+          The board is the first cell at every width. */}
       <div className="mb-enter-grid grid grid-cols-1 gap-4 xl:grid-cols-12">
-        {/* Full width, and that is a legibility decision rather than a
-            compositional one. `MbScoreboardHero` chooses its own cut from the
-            CARD's inline size: at 620px it draws the `1fr auto 1fr` scoreline
-            with the numerals between the two crests, and below that it stacks
-            one team per row. In a 7-column cell the card measured 572px, so
-            the desktop scoreboard was rendering the phone layout. */}
+        {/* Full width for legibility: `MbScoreboardHero` picks its layout
+            from the card's inline size, and in a 7-column cell the desktop
+            scoreboard renders the phone layout. */}
         <div className="min-w-0 xl:col-span-12">
           <SessionBoard
             view={view}
@@ -296,9 +244,8 @@ const SessionView = () => {
           </div>
         )}
 
-        {/* Results before fixtures: a spectator asks "what happened" before
-            "what is next", and a result row needs the wider cell because it
-            carries a scoreline between the two names. */}
+        {/* Results before fixtures; the result row takes the wider cell
+            because it carries a scoreline between the names. */}
         <div className="min-w-0 xl:col-span-7">
           <SessionLedger
             title="Latest results"

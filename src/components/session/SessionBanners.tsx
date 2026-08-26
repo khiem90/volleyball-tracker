@@ -1,22 +1,19 @@
 "use client";
 
 /* ===========================================================================
-   THE STRIPS UNDER THE EVENT BAR (public-share brief §3.3.7, §3.6 S5, S4)
+   THE STRIPS UNDER THE EVENT BAR
 
-   Four bands, all of them narrow, all of them above the scoreboard, none of
-   them a card at the bottom of the page — which is where the shipped
-   "You're viewing this session in read-only mode" notice lived, ~1,500px below
-   the fold, on the one screen where the reader's permissions decide whether
-   half the affordances they can see do anything.
+   Four bands, all of them narrow, all of them above the scoreboard — the
+   reader's permissions decide whether half the affordances they can see do
+   anything, so this is not information for the bottom of the page.
 
    THE ORDER IS THE PRIORITY ORDER, and only one of the top three can be true
    at a time:
 
      ended     the event is over. States it, keeps the scores below it
      stale     the feed is faulted. States what the scores on screen ARE —
-               the last ones received — and does NOT remove them (brief S5)
-     token     an `?admin=` link was opened and did not match this event.
-               It used to fail in silence
+               the last ones received — and does NOT remove them
+     token     an `?admin=` link was opened and did not match this event
      role      read-only, with the two ways out of it
 
    The read-only band is dismissible because it is the only one a reader can
@@ -40,9 +37,7 @@ export const SessionEndedBanner = () => (
 /**
  * `offline` distinguishes the two causes, because the reader can act on one of
  * them and not on the other: no network interface is theirs to fix, a faulted
- * subscription is ours. Neither sentence names a provider or an error code
- * (invariant 28) — the shipped page put `Missing or insufficient permissions.`
- * on screen verbatim.
+ * subscription is ours. Neither sentence names a provider or an error code.
  */
 export const SessionStaleBanner = ({
   offline,

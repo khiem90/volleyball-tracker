@@ -9,23 +9,17 @@ import type { PersistentTeam } from "@/types/game";
 /* ===========================================================================
    THE GUEST CONSOLE'S STATE
 
-   The score is no longer a second copy of the same numbers. It IS
-   `history.tip`, so the desync that shipped here — `setMatch` using the updater
-   form while `setHistory` read `match.homeScore` from the closure, five rapid
-   taps then six undos leaving the score stuck at 1 — is unrepresentable rather
-   than merely fixed. There is exactly one place a guest score can change and it
-   is `useScoreHistory`.
+   The score IS `history.tip` — never a second copy of the same numbers, so a
+   score/history desync is unrepresentable. The one place a guest score can
+   change is `useScoreHistory`.
 
-   Nothing is persisted, deliberately: a guest match is in memory and the console
-   says so out loud in the action rail. That includes the undo stack — a page
-   reload starts a new match, so a restored stack would be a stack for a game
-   that no longer exists.
+   Nothing is persisted, deliberately: a guest match is in memory and the
+   console says so. That includes the undo stack — a reload starts a new
+   match, so a restored stack would belong to a game that no longer exists.
 
-   The two guest teams carry hard-coded blue and orange hexes in
-   `src/constants/guestTeams.ts`, which is not this workstream's file and is
-   consumed elsewhere. They are mapped to Matchbook tokens here rather than
-   passed through, so no off-palette colour reaches a rendered surface
-   (invariant 10).
+   The guest teams carry hard-coded hexes in `constants/guestTeams.ts`; they
+   are mapped to Matchbook tokens here rather than passed through, so no
+   off-palette colour reaches a rendered surface.
    =========================================================================== */
 
 type MatchStatus = "pending" | "in_progress" | "completed";

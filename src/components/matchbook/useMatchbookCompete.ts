@@ -133,10 +133,9 @@ export interface MbCompeteSelected {
    * no results) among four populated panels.
    *
    * The main panel is deliberately NOT in this list. It is the screen's
-   * principal object, its empty state names the one thing to do next ("start
-   * the competition to generate it"), and §5.7 exists for exactly that. Capping
-   * the screen at that one headline is the rubric's anchor, not a compromise
-   * with it.
+   * principal object, and its empty state names the one thing to do next
+   * ("start the competition to generate it") — the one headline the screen
+   * allows.
    */
   muteSections: MbOverviewSection[];
 }

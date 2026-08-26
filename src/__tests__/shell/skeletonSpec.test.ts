@@ -11,9 +11,9 @@ import { MB_NAV_ALL } from "@/components/matchbook/BottomBar";
    THE SKELETON'S GEOMETRY IS A CLAIM ABOUT ANOTHER FILE
 
    `MB_ROUTE_SKELETON` reserves each console route's real height so nothing
-   moves when the data lands (invariant 27). Every number in it is measured off
-   a shipped page, which means it is a claim about a file this one does not
-   own, and claims rot.
+   moves when the data lands. Every number in it is measured off a shipped
+   page, which means it is a claim about a file this one does not own, and
+   claims rot.
 
    These tests cannot re-measure a browser, so they pin what is checkable
    without one: that every destination in the nav has an answer at all, that

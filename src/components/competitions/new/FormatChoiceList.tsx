@@ -66,9 +66,8 @@ import type { CompetitionType } from "@/types/game";
  * the shape a sighted reader already knows means "tick as many as you like".
  * `role="radio"` fixed this for assistive tech and could not fix it for eyes,
  * and the "PICK ONE" caption in the panel head is a word arguing with a
- * picture. The design language settles which one wins: nine badge tones draw
- * nine different mark SHAPES precisely so that meaning is never carried by
- * context alone, and "a desaturated screenshot is the honest test".
+ * picture. Nine badge tones draw nine different mark SHAPES precisely so
+ * that meaning is never carried by context alone.
  *
  * So the box goes. What is left is the print form's own idiom for a
  * one-of-N answer — a **blank on a ruled line**:
@@ -84,8 +83,8 @@ import type { CompetitionType } from "@/types/game";
  * lives — "THE 'ON' STATE IS INK, NOT ACCENT … a filled-in ballot box on
  * printed stock is inked, not highlighted" — and the mark this replaces used
  * `--mb-coral-deep`, which put a second coral job on the selected row beside
- * the selection rail that is already coral and is already structural
- * (invariant 15). Inking the mark returns the row to one coral job.
+ * the selection rail that is already coral and is already structural.
+ * Inking the mark returns the row to one coral job.
  *
  * HANDOFF: `.mb-radio` in `globals.css` still draws the squared ballot box
  * this file just abandoned, with the same inset-square mark. Nothing renders
@@ -150,12 +149,9 @@ export const FormatChoiceList = ({
       {options.map((option, index) => {
         const selected = option.type === value;
         /* Unselected rows carry the neutral `--mb-rule` rail — formats have NO
-           colour key (see `formatMeta.ts`: the old per-format accents spent
-           teal and gold, both locked to other meanings in §1.2, as a
-           categorical key). Selection takes the rail to coral — the selection
-           mark, coral's declared structural job — which is the third channel
-           after the filled slot and the inverted disc and the only one visible
-           from across a room. */
+           colour key (see `formatMeta.ts`). Selection takes the rail to coral,
+           the third channel after the filled slot and the inverted disc and
+           the only one visible from across a room. */
         const style: CSSProperties = {};
         (style as Record<string, string>)["--mb-rail-color"] = selected
           ? "var(--mb-coral)"
@@ -175,12 +171,10 @@ export const FormatChoiceList = ({
             onClick={() => onChange(option.type)}
             onKeyDown={(event) => handleKeyDown(event, index)}
             style={style}
-            /* `py-2`, not `py-2.5`, and the difference is the rung. At 10px of
-               block padding the 36px disc summed to exactly 56, so the rows
-               that also carry `divide-y`'s 1px rule rendered 57 — one px off
-               the authored `min-h-[56px]`, on four of five rows (the rubric's
-               D2 expression reads border boxes). At 8px the content sums to 53
-               and `min-height` governs: every row is 56, dividers included. */
+            /* `py-2`, not `py-2.5`: at 10px of block padding the 36px disc
+               sums to exactly 56, so rows that also carry `divide-y`'s 1px
+               rule render 57. At 8px the content sums to 53 and `min-height`
+               governs: every row is 56, dividers included. */
             className="mb-rail mb-row-hover flex min-h-[56px] w-full items-center gap-2.5 py-2 pr-3 pl-3.5 text-left"
           >
             <ChoiceSlot checked={selected} />

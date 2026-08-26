@@ -1,14 +1,11 @@
 "use client";
 
 /* ===========================================================================
-   THE LIVE CONNECTION (public-share brief N1, W6 / P3b)
+   THE LIVE CONNECTION
 
-   `MbLiveStatus` draws five words. This is the thing that decides which one is
-   true, and it exists because the shipped viewer had no answer at all: the only
-   "live" signal on `/session/<code>` was a 2px amber dot with `animate-pulse`
-   on it, which pulses identically whether the socket is delivering, stalled,
-   or dead. A viewer in a gym on bad wifi could watch a frozen 12–7 for twenty
-   minutes and the page would keep telling them it was live.
+   `MbLiveStatus` draws five words. This is the thing that decides which one
+   is true: a pulsing dot alone pulses identically whether the socket is
+   delivering, stalled, or dead.
 
    ------------------------------------------------------------- what it reads
 
@@ -26,7 +23,7 @@
 
    `reconnecting` and `offline` both set `stale`, which is the flag the screen
    uses to keep the last known scores on-screen behind a banner instead of
-   replacing them with an error card (brief DoD 15).
+   replacing them with an error card.
 
    -------------------------------------------------------------- the 1s tick
 
@@ -125,17 +122,10 @@ export const useLiveConnection = ({
     status,
     /**
      * `0` — not `undefined` — for the window between "a payload exists" and
-     * "the clock has ticked once".
-     *
-     * `MbLiveStatus` omits the whole age line when `secondsAgo` is undefined,
-     * so returning undefined for that window inserted a `<span>` into the navy
-     * strip roughly one second after every load. Measured by `audit.mjs`
-     * MOTION on `session-live-token`, where it showed up as **538 drifts** —
-     * not motion at all, but the node list shifting by one index because an
-     * element appeared between the two sampled frames. It is a real layout
-     * insertion on load either way (invariant 27), and the honest value for a
-     * payload that has just arrived is "just now", which is exactly what
-     * `relative(0)` prints.
+     * "the clock has ticked once": `MbLiveStatus` omits the whole age line
+     * when `secondsAgo` is undefined, so undefined here inserts an element
+     * into the strip a second after every load. A payload that just arrived
+     * is honestly "just now".
      */
     secondsAgo: !arrived
       ? undefined

@@ -29,26 +29,18 @@ import type {
 } from "./BracketRail";
 
 /* ===========================================================================
-   THE COMPETITION-DETAIL VIEW MODEL (charter §2.3, W4 / P3a)
+   THE COMPETITION-DETAIL VIEW MODEL
 
    Every converted screen shapes its data in a `useMatchbook*` hook and keeps
-   the route file to layout (invariant 23). On this screen the shaping was
-   spread across ten components: `Bracket.tsx` built rounds, `DoubleBracket.tsx`
-   built different rounds, `Win2OutView.tsx` built a leaderboard,
-   `TwoMatchRotationView.tsx` built another one, `Standings.tsx` rendered
-   whatever order it was handed, and each of them resolved team names through
-   its own `useTeamsMap`.
+   the route file to layout. This module owns all of it: crests, ranking,
+   bracket rounds, courts, the queue, the leaderboard, the ledger, terminology
+   and the config readout. `useCompetitionDetailPage.ts` keeps the MUTATIONS —
+   in particular the auto-complete effect and the auto-session effect, which
+   are easy to fire twice by changing the identity of `matches`.
 
-   This module owns all of it: crests, ranking, bracket rounds, courts, the
-   queue, the leaderboard, the ledger, terminology and the config readout.
-   `useCompetitionDetailPage.ts` keeps the MUTATIONS untouched — in particular
-   the auto-complete effect and the auto-session effect, which comp-detail R5
-   and R6 both flag as easy to fire twice by changing the identity of `matches`
-   (charter W4 acceptance 1).
-
-   One ranking source. `rankTeams()` replaces `calculateStandings` here so the
-   live table, the champion the auto-complete effect derives and the summary a
-   session generates cannot disagree (charter §2.3 / W8 P1).
+   One ranking source: `rankTeams()`, so the live table, the champion the
+   auto-complete effect derives and the summary a session generates cannot
+   disagree.
    =========================================================================== */
 
 /* ------------------------------------------------------------------ shapes */
@@ -128,9 +120,8 @@ export interface MbDraftPreview {
   summary: string;
   /**
    * Seeded round-one pairings for an elimination format, with the seed each
-   * team enters on. The seeds are the whole point of a seeded draw — 1 v 8 and
-   * 4 v 5 are checkable, "Nova v Storm" is not (rubric 4, "seeds and byes are
-   * explicit") — and `.mb-seed-box` shipped with zero consumers until these.
+   * team enters on. The seeds are the whole point of a seeded draw — 1 v 8
+   * and 4 v 5 are checkable, "Nova v Storm" is not.
    */
   pairings: { home: MbTeam; away: MbTeam; homeSeed: number; awaySeed: number }[];
   /** Teams that receive a first-round bye, with the seed that earned it. */
@@ -158,21 +149,11 @@ export interface MbCompetitionDetail {
     pct: number;
   };
   /**
-   * Empty until a match has actually been played.
-   *
-   * A ranking is a claim that the order means something, and after `rankTeams`
-   * has been handed a competition with no results the order means nothing: it
-   * answers a four-team league with four rows reading `=1 · P0 · W0 · L0 · PF0
-   * · PA0 · PD0 · Pts0`. The draft screen was cured of exactly this by
-   * branching on `status === "draft"` — but the property that makes the table
-   * meaningless is that NOTHING HAS BEEN PLAYED, not that nothing has been
-   * started, and a competition one second past Start has it too. Measured on
-   * the four-team round robin a first-time reader actually creates, at the
-   * instant the Start dialog closes: 32 printed zeros at 390px, 35 at 1440,
-   * over a table whose own caption calls it a standing.
-   *
-   * So the rule moves to the real condition and lives HERE, where every body
-   * inherits it, rather than in each panel that might forget.
+   * Empty until a match has actually been played: a table of all-zero rows
+   * claims an order that means nothing, and the condition is "nothing
+   * played", not "not started" — a competition one second past Start has it
+   * too. The rule lives HERE, where every body inherits it, rather than in
+   * each panel that might forget.
    */
   standings: MbStandingLine[];
   scheduleRounds: MbScheduleRound[];
@@ -198,8 +179,7 @@ export interface MbCompetitionDetail {
   nextLine: MbMatchLine | null;
   /**
    * The `id` of the round being played, or of the next one to be played — the
-   * one round the schedule marks. Three identical `.mb-kicker` bands answered
-   * "where is this competition" with nothing (rubric 4).
+   * one round the schedule marks.
    */
   currentRoundId: string | null;
   liveLines: MbMatchLine[];
@@ -259,20 +239,11 @@ const nextPowerOf2 = (n: number) => {
 };
 
 /**
- * What pressing Start will actually build, in one sentence.
- *
- * A pure function rather than a line inside this hook's `useMemo`, because TWO
- * screens now print it. `/competitions` shows the selected event, and when that
- * event is a draft it used to show a `MATCHES COMPLETED 0 / 0` meter and a
- * standings table of four all-zero rows — facts about a competition that has no
- * fixtures. What a draft actually has to say is what Start will generate, and
- * the setup console already said it. Two screens saying it from two arithmetics
- * is how "6 matches over 3 rounds" and "6 games over 3 rounds" drift apart, so
- * there is one function and both call it.
- *
- * Terminology is read off the competition itself rather than through
- * `useTerminology`, which is a hook and therefore cannot be called per row of a
- * list. It is the same merge that hook performs.
+ * What pressing Start will actually build, in one sentence. A pure function
+ * because TWO screens print it — one function, both call it, so the
+ * arithmetics cannot drift. Terminology is read off the competition itself
+ * (the same merge `useTerminology` performs): a hook cannot be called per row
+ * of a list.
  */
 export const mbDraftSummary = (competition: Competition): string => {
   const words = { ...DEFAULT_TERMINOLOGY, ...(competition.config?.terminology ?? {}) };
@@ -310,13 +281,8 @@ export const mbDraftSummary = (competition: Competition): string => {
 /* --------------------------------------------------- shared pure builders */
 
 /**
- * One team-reference resolver, memoised per call.
- *
- * `Bracket.tsx`, `DoubleBracket.tsx`, `Win2OutView.tsx`,
- * `TwoMatchRotationView.tsx` and `Standings.tsx` each resolved names through
- * their own `useTeamsMap`, and none of them ever reached `crestForTeam`, which
- * is why every one of them drew a coloured dot or a `Users` glyph where a crest
- * belongs (invariant 21).
+ * One shared team resolver, memoised per call, so every surface reaches
+ * `crestForTeam` and none draws a coloured dot where a crest belongs.
  */
 export const createTeamRef = (teams: PersistentTeam[]) => {
   const byId = new Map(teams.map((team) => [team.id, team]));
@@ -393,9 +359,8 @@ export interface MbBracketView {
 }
 
 /**
- * Marks the one round a section is ON: the earliest round holding a live cell,
- * else the earliest holding an unplayed one. `MbBracketRound.current` shipped
- * declared and never written, so every round head read identically.
+ * Marks the one round a section is ON: the earliest round holding a live
+ * cell, else the earliest holding an unplayed one.
  */
 const markCurrent = (rounds: MbBracketRound[]): MbBracketRound[] => {
   let index = rounds.findIndex((r) => r.cells.some((c) => c.live));
@@ -439,8 +404,7 @@ export const buildSingleBracket = (
 
 /**
  * Double elimination: winners / losers / grand finals as three labelled
- * sections inside ONE rail. `DoubleBracket.tsx` rendered them as three
- * independently scrolling regions with clipped headings (BUG-10).
+ * sections inside ONE rail.
  */
 export const buildDoubleBracket = (
   matches: Match[],
@@ -479,8 +443,7 @@ export const buildDoubleBracket = (
       id: "grand-finals",
       label: "Grand Finals",
       /* Plum, not coral: a section key is categorical, and coral's declared
-         jobs (primary action / selection mark / masthead lockup) do not
-         include "the climax section". The label carries the identity. */
+         jobs do not include "the climax section". */
       accent: "plum",
       rounds: [{ label: "Grand Finals", cells: [bracketCellFor(gf, refFor)] }],
     });
@@ -558,13 +521,10 @@ export const useMatchbookCompetitionDetail = ({
     const isRotation =
       competition.type === "win2out" || competition.type === "two_match_rotation";
 
-    /* A bye is not a match. It is a slot in the draw that resolves without
-       anybody playing, so it is excluded from every COUNT — the progress
-       readout on `/competitions/s-se-13` said "7 / 15 · 47%" when four matches
-       had been played out of twelve that will be. It still appears in the
-       schedule and in the bracket, because the draw is where it is a fact.
-       `useMatchbookSummary` already counted this way (`!m.isBye`); this is the
-       live screen agreeing with the report it will generate. */
+    /* A bye is not a match: it resolves without anybody playing, so it is
+       excluded from every COUNT while still appearing in the schedule and
+       bracket, where the draw is a fact. `useMatchbookSummary` counts the
+       same way, so the live screen agrees with the report it generates. */
     const playable = matches.filter((m) => !m.isBye);
     const completed = playable.filter((m) => m.status === "completed");
     const live = playable.filter((m) => m.status === "in_progress");
@@ -577,15 +537,10 @@ export const useMatchbookCompetitionDetail = ({
 
     /* ------------------------------------------------------------- lines */
 
-    /* F12 — ONE SHAPE FOR A WALKOVER, shared with the bracket cell.
-       `bracketCellFor` already resolved a bye correctly: the advancing team on
-       the home side, nothing on the away side, no score. `lineFor` did not —
-       it read `homeTeamId` / `awayTeamId` / the two scores straight off the
-       match, and `lib/singleElimination.ts:164-175` writes a bye as a
-       *completed* match scoring 1–0 with one team id blank. So the Schedule
-       panel printed `1 – 0` against "TBD" on three rows of
-       `/competitions/s-se-13` while the Bracket panel beside it said `BYE`.
-       Both now derive the same three facts from `isBye`. */
+    /* ONE SHAPE FOR A WALKOVER, shared with `bracketCellFor`: the generator
+       writes a bye as a *completed* match scoring 1–0 with one team id blank,
+       so both derive the advancing team / empty away side / no score from
+       `isBye` rather than reading the raw fields. */
     const lineFor = (match: Match, label: string, subLabel?: string): MbMatchLine => {
       const bye = match.isBye === true;
       const advancing = bye
@@ -761,13 +716,10 @@ export const useMatchbookCompetitionDetail = ({
           ? getCurrentChampionStreak(w2o, court.courtNumber)
           : 0;
       };
-      /* The sub-line carries a team's standing on this court — a live streak, or
-         crowns already won. A team with neither has nothing to say, and saying
-         "No crowns yet" for it put the same empty sentence under every team on
-         the board: measured 2 on a two-court game, which is the whole of the
-         empty-headline budget spent on a stat that is simply zero.
-         `MbCourtCard` renders the line only when it is truthy, so returning
-         undefined removes it rather than leaving a gap. */
+      /* The sub-line carries a team's standing on this court — a live streak,
+         or crowns already won. A team with neither has nothing to say:
+         `MbCourtCard` renders the line only when truthy, so `undefined`
+         removes it rather than leaving a gap. */
       const subFor = (teamId: string) => {
         const streak = streakOf(teamId);
         if (streak > 0) return `Streak ${streak} · crown on the next win`;

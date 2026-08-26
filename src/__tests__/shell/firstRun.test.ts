@@ -6,18 +6,11 @@ import type { AppState, Competition, Match, PersistentTeam } from "@/types/game"
 /* ===========================================================================
    THE FIRST THIRTY SECONDS, AS A TEST
 
-   Two defects on the Overview survived the whole programme because every
-   critic before the last one judged the screen against a full fixture:
-
-     G1  a brand-new account rendered EIGHT stacked "No X exists yet" panels
-         over 2540px, five of them display headlines of identical size.
-     G2  the loudest control on that screen read RECORD RESULT, on an account
-         with zero teams and zero matches.
-
-   Both were fixed, and neither was covered. This file covers them, because the
-   thing that makes them regress is not a refactor of the composition — it is
-   somebody adding a ninth panel, or an early return, and never opening the app
-   on an empty account to see it.
+   Two defects only show on an EMPTY account: a wall of stacked "No X exists
+   yet" panels, and a primary action ("Record Result") that cannot be
+   performed with zero teams. This file pins the fixes, because what makes
+   them regress is somebody adding a panel or an early return and never
+   opening the app on an empty account to see it.
 
    The stages below are the real progression, in order, and they are the same
    seven states the fix was measured against in the running app.

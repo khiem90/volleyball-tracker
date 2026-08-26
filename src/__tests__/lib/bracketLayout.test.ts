@@ -20,19 +20,18 @@ import {
 import type { Match } from '@/types/game';
 
 /**
- * The bracket geometry is the contract charter §2.3 states in arithmetic, so it
- * is asserted in arithmetic. Everything BUG-1, BUG-2 and BUG-3 were about is
- * measurable here without a renderer:
+ * The bracket geometry is a contract stated in arithmetic, so it
+ * is asserted in arithmetic, without a renderer:
  *
- *   BUG-1  cells overlapped and columns had zero width  -> no two cells in a
+ *   - no two cells in a
  *          column may overlap, and every column is exactly MB_CELL_W wide.
- *   BUG-2  `140 * 2^(round-1)` px slots  -> the canvas is the FIRST round's
+ *   - the canvas is the FIRST round's
  *          natural height and no taller, at every team count.
- *   BUG-3  a 16px stub instead of a tree  -> one connector per parent in every
+ *   - one connector per parent in every
  *          paired round, ending on the parent's own left edge.
  *
  * Exercised at 2, 3, 5, 6, 7, 8, 11 and 16 teams so byes and ragged rounds are
- * covered rather than assumed (charter W4 acceptance 3).
+ * covered rather than assumed.
  */
 
 const TEAM_COUNTS = [2, 3, 5, 6, 7, 8, 11, 16];

@@ -6,9 +6,9 @@ import { MbButton } from "@/components/matchbook/Button";
  * The Google mark is a BRAND ASSET, not an icon, which is why it is inline SVG
  * here and not a sprite id — Google's terms require its own mark and the
  * Matchbook sprite may not carry a third party's logo. It is drawn in
- * `currentColor` so it inherits the button's navy ink and introduces no hex
- * (invariant 8); a full-colour Google mark would be four hardcoded brand hues
- * on a paper surface that has none.
+ * `currentColor` so it inherits the button's navy ink and introduces no hex;
+ * a full-colour Google mark would be four hardcoded brand hues on a paper
+ * surface that has none.
  */
 const GoogleMark = () => (
   <svg viewBox="0 0 24 24" width={16} height={16} aria-hidden="true" focusable="false">

@@ -14,14 +14,9 @@ import type { FormationType, FormationConfig } from './types';
  * - Art of Coaching Volleyball
  */
 /*
- * COPY LENGTH IS A LAYOUT CONSTRAINT HERE, not a style preference. Each
- * `description` is the caption of a formation card and each `tradeoffs` is the
- * strip under the card grid. Measured at 390 (one column, ~56 characters per
- * line) and at 1440 (two columns, ~61): a caption of 76-98 characters set two
- * ragged lines averaging 35-38 characters, under the 45-75 measure band, on
- * every card. Held to 45-54 characters they set ONE full line at both widths.
- * The nuance that came off the caption is in `tradeoffs`, which is where a
- * reader comparing two shapes is looking anyway.
+ * COPY LENGTH IS A LAYOUT CONSTRAINT: each `description` is a card caption
+ * that sets ONE full line at both card widths only when held to 45-54
+ * characters. The nuance lives in `tradeoffs`.
  */
 export const FORMATIONS: Record<FormationType, FormationConfig> = {
   traditional: {

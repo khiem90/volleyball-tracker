@@ -31,26 +31,12 @@ import {
 } from "@/lib/volleyball/rotations";
 import type { UserFormation } from "@/lib/volleyball/types";
 
-/* ===========================================================================
-   PUBLIC FORMATION VIEWER
-
-   A link a coach sends to a parent, so it takes `variant="public"`: brand
-   lockup, no sidebar, no bottom bar, no account chip — the same shell
-   `/summary/[shareCode]` uses.
-
-   THE FAILURE STATES ARE NOW THREE, NOT ONE. Every thrown error used to land on
-   the same centred "Formation Not Found" sentence, including a network timeout
-   and — worse — a missing Firestore composite index. `getFormationByShareId`
-   filters on `shareId` AND `visibility`, which needs an index on
-   (`shareId`, `visibility`); without it production throws `failed-precondition`
-   and every visitor was told the owner had un-shared the link. Each cause now
-   gets its own copy, and only the recoverable ones get a Retry.
-
-   COPYING DOES NOT REDIRECT. It used to navigate away 1.5s after the copy
-   landed, which takes the page out from under a reader who wanted to keep
-   looking at the diagram. It confirms in place and offers the archive as a
-   link.
-   =========================================================================== */
+/* PUBLIC FORMATION VIEWER — `variant="public"`, the same shell as
+   `/summary/[shareCode]`. Failure states are per-cause: notably,
+   `getFormationByShareId` filters on `shareId` AND `visibility`, which needs
+   a Firestore composite index — a missing index throws `failed-precondition`
+   and must not be reported as "not shared". Copying confirms in place and
+   never navigates away from the diagram. */
 
 const FAILURE_COPY: Record<
   ShareLookupFailure,
@@ -120,14 +106,9 @@ export default function SharedFormationPage() {
 
   /**
    * ONE piece of state for the whole fetch, tagged with the request that
-   * produced it, and `isLoading` derived from whether the tag matches the
-   * request the render wants.
-   *
-   * The obvious shape — three `useState`s and `setIsLoading(true)` at the top of
-   * the effect — is a cascading render (React's own `set-state-in-effect` rule
-   * rejects it) and it has a real bug in it: pressing Retry sets loading in a
-   * second commit, so for one frame the page shows the previous FAILURE with a
-   * retry that appears not to have done anything.
+   * produced it; `isLoading` is derived from the tag. The obvious shape
+   * (`setIsLoading(true)` at the top of the effect) is a cascading render and
+   * shows the stale failure for a frame after Retry.
    */
   const [attempt, setAttempt] = useState(0);
   const requestKey = `${shareId}#${attempt}`;
@@ -212,18 +193,9 @@ export default function SharedFormationPage() {
 
   /**
    * The link this page was reached by, handed back so it can be passed on.
-   *
-   * A shared artefact that cannot itself be shared is a dead end: the parent
-   * who was sent this has no way to forward it except by reading the address
-   * bar, and on a phone the address bar is truncated. Same pair the public
-   * match report uses — `MbCopyField` for the always-visible manual leg,
-   * `MbShareAction` for the native sheet — so the app has one share language
-   * across both of its public surfaces (charter §2.3, brief N3/N4).
-   *
-   * `shareId` alone. It carries no token and no account: `getFormationByShareId`
-   * gates on `visibility`, so revoking the share is what closes the link.
-   * `window` is safe to read here — the loading branch above returns first on
-   * the server, so this expression never reaches server output.
+   * `shareId` alone — no token, no account: revoking the share is what closes
+   * the link. `window` is safe to read here because the loading branch above
+   * returns first on the server.
    */
   const shareUrl =
     typeof window === "undefined"
@@ -234,9 +206,8 @@ export default function SharedFormationPage() {
     <MatchbookShell
       variant="public"
       masthead={{
-        /* The title is user data, so it carries no coral span: the one coral on
-           this screen is the copy action, and a two-tone split of somebody
-           else's formation name would be an invented emphasis. */
+        /* User data carries no coral span — the one coral on this screen is
+           the copy action. */
         title: formation.name,
         shortTitle: formation.name,
         badge: { lines: ["Shared", "Formation"] },
@@ -350,8 +321,8 @@ export default function SharedFormationPage() {
               )}
             </div>
 
-            {/* Coral is already spent in this panel on the copy/sign-in key,
-                so the share control takes the quiet outline (invariant 15). */}
+            {/* Coral is already spent on the copy/sign-in key, so the share
+                control takes the quiet outline. */}
             <div className="flex flex-col gap-3 border-t border-mb-navy p-4">
               <p className="mb-kicker">Pass it on</p>
               <MbCopyField

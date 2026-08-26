@@ -1,15 +1,10 @@
 "use client";
 
 /* ===========================================================================
-   SHARE THIS EVENT (public-share brief §3.7)
+   SHARE THIS EVENT
 
-   Replaces `ShareSession.tsx`, which was the app's second clipboard
-   implementation and disagreed with the first: it swallowed a failed
-   `navigator.clipboard.writeText` into `console.error` and showed the reader
-   nothing, and its admin link was a bare `type="password"` — 32 characters
-   nobody could verify before handing them out.
-
-   Everything here is the kit's one implementation. `MbCopyField` guards the
+   Everything here is the kit's one clipboard implementation — never a second
+   hand-rolled copy path. `MbCopyField` guards the
    clipboard, falls back to `execCommand`, and when both are refused it selects
    the value and says so. `MbShareAction` is the single native-share → copy →
    toast path, so the masthead and this dialog can no longer behave

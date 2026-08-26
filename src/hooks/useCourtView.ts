@@ -6,25 +6,12 @@ import { useCallback, useEffect, useRef, useState, type RefObject } from "react"
    COURT VIEW — the landscape scoreboard, and the one place three browser APIs
    have to agree
 
-   This replaces `useFullscreen.ts` (deleted) and the orientation block that was
-   copied verbatim into `useMatchPage.ts:39-71` and `match/guest/page.tsx:53-86`
-   (charter H12 / W5 acceptance 8). Three defects came with those files and none
-   of them survive here:
-
-     1. Failure was swallowed. `requestFullscreen` rejecting produced a
-        `console.log` and nothing else, so on an iPhone — which has no element
-        fullscreen at all — the button appeared to do nothing, for ever.
-        Court View now falls back to an IN-PAGE mode that covers the viewport
-        without the Fullscreen API, and says so in one line.
-     2. Five `console.log`s shipped.
-     3. The fullscreen target was `document.documentElement`, which drags the
-        whole app shell into the fullscreen surface. The target is now the
-        console element the caller hands in — which is why `MatchbookShell
-        variant="focus"` puts `children` directly inside `<main>` with nothing
-        between (shell brief R4).
-
-   The wake lock, the `visibilitychange` re-acquisition, the landscape-only
-   entry rule and the auto-exit on rotation are all preserved exactly.
+   iPhone has no element fullscreen at all, so a rejected `requestFullscreen`
+   falls back to an IN-PAGE mode that covers the viewport without the
+   Fullscreen API, and says so in one line. The fullscreen target is the
+   console element the caller hands in, never `document.documentElement` —
+   which is why `MatchbookShell variant="focus"` puts `children` directly
+   inside `<main>` with nothing between.
    =========================================================================== */
 
 interface WakeLockSentinel {
@@ -61,8 +48,8 @@ export interface MbCourtView {
   blockedReason: MbCourtBlockedReason;
   /**
    * A one-line explanation of something the user could not otherwise see —
-   * today, only "this browser has no fullscreen mode". Never an error string
-   * from the platform (invariant 28).
+   * today, only "this browser has no fullscreen mode". Never a raw error
+   * string from the platform.
    */
   notice: string | null;
   dismissNotice: () => void;

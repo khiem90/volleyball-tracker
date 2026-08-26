@@ -15,36 +15,31 @@ import { createTeamRef } from "./useMatchbookCompetitionDetail";
 import { type MbTeam } from "./types";
 
 /* ===========================================================================
-   THE MATCH REPORT, SHAPED (charter §2.3 `useMatchbookSummary`, W6 / P3b)
+   THE MATCH REPORT, SHAPED
 
    `/summary/[shareCode]` is the only artefact of this product that outlives
    the event: a frozen record somebody pastes into a group chat, screenshots,
    or prints. Everything it draws is computed here so the route file is layout
-   and nothing else (invariant 23).
+   and nothing else.
 
    ------------------------------------------------- ONE ranking, one champion
 
-   Register D-40, found the week this route first rendered populated: on
-   `/summary/SPRNG7` the hero read "Champion — Tide, 3 wins" while the final
-   table put Apex 1st and Tide 4th. Two rankings on one screen, and the screen
-   is the *public* one.
-
-   The cause is that `computeSessionStats` (`lib/sessions.ts`) picks the first
+   `computeSessionStats` (`lib/sessions.ts`) picks the first
    team to reach the highest win count — no tiebreak, iteration order deciding
    — and it is frozen into `summary.stats.winner` at end time. Four teams were
    level on three wins in that fixture, so the two disagreed by construction.
 
    `summary.stats.winner` is therefore NOT read for the champion. The champion
-   is `rankTeams(...)[0]` — the same function the live table uses (charter N10)
-   — and it is only named when that line does not share its rank. A knockout
+   is `rankTeams(...)[0]` — the same function the live table uses —
+   and it is only named when that line does not share its rank. A knockout
    competition names its champion from `competition.winnerId` instead, because
    a bracket winner is a fact about the draw and not about a points table.
 
    When nobody can be named, the block says so and lists who was level. It is
-   never omitted silently: brief S19.
+   never omitted silently.
    =========================================================================== */
 
-/** Rows shown before the ledger asks to be opened (brief §3.5, S22). */
+/** Rows shown before the ledger asks to be opened. */
 export const MB_SUMMARY_LEDGER_CAP = 25;
 
 export interface MbSummaryEntry {
@@ -71,7 +66,7 @@ export interface MbSummaryDay {
 export interface MbSummaryChampion {
   teamId: string;
   team: MbTeam;
-  /** Team colour, drawn as a contained bar only (charter D-9). */
+  /** Team colour, drawn as a contained bar only. */
   accent?: string;
   /** How the title was won — the honest provenance of the name above. */
   basis: string;
@@ -117,7 +112,7 @@ export interface MbSummaryData {
   levelAtTop: { teams: MbTeam[]; points: number } | null;
   decider: MbSummaryDecider | null;
   standings: MbStandingLine[];
-  /** Everyone who entered, for a session that recorded no result (brief S18). */
+  /** Everyone who entered, for a session that recorded no result. */
   entered: { id: string; team: MbTeam; accent?: string }[];
   stats: MbSummaryStatLine[];
   biggestWin: MbSummaryHighlight | null;
@@ -483,12 +478,12 @@ export const useMatchbookSummary = (): MbSummaryData => {
   /**
    * THE ONE SHARE PATH, called from the masthead's action row.
    *
-   * `MastheadProps.actions` is a list of action *descriptions* — the charter's
-   * `MbAction` — not a node slot, so `MbShareAction` cannot be rendered into
+   * `MastheadProps.actions` is a list of action *descriptions* (`MbAction`),
+   * not a node slot, so `MbShareAction` cannot be rendered into
    * it. What matters is that there is one implementation, and there is:
    * `shareLink()` is `MbShareAction`'s own core, exported from the same file,
    * so the sheet-then-clipboard chain and its outcome union are shared rather
-   * than forked (charter §2.3, brief N4).
+   * than forked.
    *
    * The share sits in the masthead and NOT in the panel below because of what
    * a phone does with it: the masthead's action row is full-width at 390px, so

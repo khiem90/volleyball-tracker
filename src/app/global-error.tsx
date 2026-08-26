@@ -1,31 +1,16 @@
 "use client";
 
 /**
- * Global error boundary (charter §2.3, invariants 2 / 28, W2 / P2b).
- *
- * This is the only file in the app that renders in place of `app/layout.tsx`,
- * so it owns its own `<html>` and `<body>` and gets NONE of the root layout's
- * work: no `Providers`, no `AuthProvider`, no router-dependent components. It
- * fires when the layout itself throws, which means anything the layout supplies
- * must be assumed unavailable.
- *
- * Two consequences are deliberate, not omissions:
- *
- *  1. NO `<Link>` AND NO SHELL. `MatchbookShell` reads `usePathname` and mounts
- *     a route announcer, and `MbButtonLink` renders `next/link`. Both depend on
- *     router context that may be exactly what failed. Every action here is an
- *     `onClick` against `location`, which cannot fail for that reason.
- *
- *  2. NO `next/font`. The two webfonts are instantiated by the root layout,
- *     which is gone, so `--font-oswald` / `--font-outfit` are unset and the
- *     token fallback chains in `globals.css` take over (`"Oswald", "Arial
- *     Narrow", …` and `"Outfit", system-ui`). Re-instantiating them here would
- *     put two network font requests on the one code path whose entire premise
- *     is that loading did not work. The screen paints with what is already on
- *     the machine, immediately.
- *
- * `error.message` is never shown (invariant 28). `error.digest` is, because it
- * is the same hash Next writes to the server log.
+ * Global error boundary — renders IN PLACE of `app/layout.tsx`, so it owns its
+ * own `<html>`/`<body>` and nothing the root layout supplies exists here.
+ * Deliberate consequences:
+ *  - No `<Link>` and no `MatchbookShell`: both need router context, which may
+ *    be exactly what failed. Actions use `onClick` against `location`.
+ *  - No `next/font`: the layout that instantiates the webfonts is gone, so the
+ *    token fallback chains in `globals.css` take over and the screen paints
+ *    without any network fetch.
+ * `error.message` is never shown; `error.digest` is (the hash Next also writes
+ * to the server log).
  */
 
 import { MbRouteState } from "@/components/matchbook/Loading";
@@ -43,18 +28,11 @@ export default function GlobalError({
       <body className="font-sans antialiased">
         <div className="matchbook-surface min-h-screen">
           <main id="mb-main" className="px-4 py-5 sm:px-6 lg:px-8">
-            {/* The wordmark, set in type rather than fetched as an asset — the
-                crest is an SVG over the network, and this is the one screen
-                that must not depend on the network having worked. */}
-            {/* `display/stat-sm` + its rung, matching `Sidebar` and `/login`.
-                Was `text-[1.05rem] tracking-[0.05em]`: a size between steps
-                0.95 and 1.2, on the panel-title tracking. `/dev/states/globalError`
-                mirrors this markup, so the two move together. */}
+            {/* Wordmark set in type, not the crest SVG — this is the one
+                screen that must not depend on the network having worked. */}
             <p className="matchbook-display mb-5 text-[1.2rem] mb-track-display font-bold leading-none">
-              {/* `--mb-coral-deep`, not `--mb-coral`: at the old 16.8px/700 the
-                  bright coral measured 3.26:1 on `--mb-paper` against the 4.5:1
-                  floor below 18.66px (HF-6). The ink twin is 4.62:1 and stays
-                  the rule at any size (§1.3). */}
+              {/* `--mb-coral-deep`, not `--mb-coral`: the bright coral fails
+                  the 4.5:1 contrast floor at this size; the deep twin passes. */}
               Tournament <span className="text-mb-coral-deep">Tracker</span>
             </p>
             <MbRouteState

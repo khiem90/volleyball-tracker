@@ -6,36 +6,17 @@ import {
   summaryCardLines,
 } from "./summaryMeta";
 
-/* ===========================================================================
-   THE CARD ITSELF (charter Appendix A, D-13)
+/* The 1200x630 share card, drawn server-side by `next/og` from the same
+   `fetchSummaryMeta` the metadata uses, so picture and description cannot
+   name two different champions.
 
-   1200x630, drawn server-side by `next/og` from the same
-   `fetchSummaryMeta` the metadata uses, so the picture and the description
-   cannot name two different champions.
-
-   ------------------------------------------------------- ONE HONEST LIMIT
-
-   Satori needs a real font file. `next/og` bundles exactly one —
-   `noto-sans-v27-latin-regular.ttf`, REGULAR ONLY — and there is no Oswald
-   `.ttf` in this repo: `next/font/google` emits `.woff2`, which Satori cannot
-   read, and vendoring a new binary font was not this workstream's to do. So
-   this card is NOT set in the Matchbook display face, and `fontWeight: 700`
-   would render as 400 rather than as bold.
-
-   The design is therefore built out of the things that survive a single
-   weight, which are the same things the almanac look is actually made of:
-   SCALE (a 20-22px label against a 56-72px headline), CASE and TRACKING
-   (uppercase at 0.12-0.18em for every label), RULES at three weights — the
-   28px navy/coral spine, the 3px navy head rule, the 1px `--mb-rule` foot —
-   and the palette. It is the one thing about this deliverable that is short of
-   the design language, and it is a font-file problem rather than a layout one:
-   dropping an `Oswald-Bold.ttf` into `public/assets/matchbook/brand/` and
-   passing it in `fonts` is the whole fix.
-
-   No CSS custom properties either: Satori has no cascade and no stylesheet, so
-   the palette is a literal map. `summaryMeta.test.ts` reads `globals.css` and
-   fails if any value here stops matching the `--mb-*` token it is named for.
-   =========================================================================== */
+   Satori limits: `next/og` bundles one REGULAR-weight font only (a bold
+   `fontWeight` renders as 400, and `next/font`'s .woff2 files cannot be fed
+   to it — dropping an `Oswald-Bold.ttf` into public assets and passing it in
+   `fonts` is the whole fix). The design therefore leans on scale, case,
+   tracking and rules rather than weight. No CSS custom properties either:
+   Satori has no cascade, so the palette is the literal `MB_OG_INK` map, which
+   `summaryMeta.test.ts` locks against the `--mb-*` tokens. */
 
 export const runtime = "nodejs";
 export const alt = "Match report — Tournament Tracker";
@@ -83,8 +64,7 @@ const OgImage = async ({ params }: { params: Promise<{ shareCode: string }> }) =
           fontFamily: "sans-serif",
         }}
       >
-        {/* The spine. Navy over coral, full height — the system's structural
-            rule and its accent, doing the job the display face cannot. */}
+        {/* The navy/coral spine, full height. */}
         <div style={{ display: "flex", width: 28, height: "100%" }}>
           <div style={{ width: 18, height: "100%", background: MB_OG_INK.navy }} />
           <div style={{ width: 10, height: "100%", background: MB_OG_INK.coral }} />

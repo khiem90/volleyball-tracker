@@ -9,29 +9,13 @@ import type { PlayerRole } from "@/lib/volleyball/types";
 /* ===========================================================================
    READING THE DIAGRAM
 
-   The old accordion imported a sixth Heroicon, stacked four framed buttons 5px
-   apart (the three spacing violations the harness recovers when its rule cap is
-   applied), animated `height: 0 -> auto` on open, and — worst — named the two
-   overlap constraints by hue: "Blue dashed lines", "Orange dotted lines".
-
-   Rewritten: sprite icon, ruled rows at the 44px floor, `aria-controls` wired
-   to a real region, opacity-and-transform on the content instead of a height
-   animation (invariant 40 — height is a layout property), and every mark named
-   by its SHAPE so this copy and the drawing agree in greyscale.
-
-   TWO CORRECTIONS IN THIS PASS.
-
-   THE DISCLOSURE MARK WAS THE WRONG METAPHOR. `expand` / `collapse` are the
-   sprite's diagonal fullscreen arrows — "make this fill the screen", which is
-   not what an accordion does. A section that opens and closes in place is
-   `plus` / `minus`: non-directional, unambiguous, and the mark an almanac would
-   actually print.
-
-   THE SEVEN ROLE DESCRIPTIONS LIVE HERE NOW. They used to ride as a truncating
-   second line inside each On Court row, where five of six were clipped at 390
-   and all six at 320. They are reference prose about the SYSTEM, not about the
-   current rotation, so this is where they belong — and here they set at full
-   width and are never cut.
+   Every mark is named by its SHAPE, never by hue, so this copy and the
+   drawing agree in greyscale. Sections animate opacity-and-transform, not
+   height (height is a layout property), and the disclosure mark is
+   `plus`/`minus` — `expand`/`collapse` are the sprite's fullscreen arrows.
+   The seven role descriptions live here because they are reference prose
+   about the SYSTEM, not about the current rotation: at full width they are
+   never clipped.
    =========================================================================== */
 
 const Section = ({
@@ -57,8 +41,8 @@ const Section = ({
           className="mb-btn-touch mb-row-hover flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left"
         >
           {/* 0.06em: the shell's mobile top-strip title is the other
-              0.8rem/700 on this screen and it is tracked 0.06em. Two trackings
-              on one size/weight pair is a collision (rubric 1.3). */}
+              0.8rem/700 on this screen and it is tracked 0.06em — two
+              trackings on one size/weight pair is a collision. */}
           <span className="matchbook-display text-[0.8rem] mb-track-button font-bold">
             {title}
           </span>

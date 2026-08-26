@@ -29,7 +29,7 @@ import { TEAM_NAME_MAX, useTeamForm } from "./useTeamForm";
    a white initial on it — a mark the app renders nowhere else. It is now the
    real matchbook team row, crest and all, so what the dialog shows is what
    `/teams`, the wizard and every scoreboard will draw. The colour is a 3px bar
-   beside the crest and nothing more (charter D-9).
+   beside the crest and nothing more.
    =========================================================================== */
 
 interface TeamFormProps {
@@ -129,10 +129,8 @@ export const TeamForm = ({ open, onOpenChange, team, onSubmit }: TeamFormProps) 
         )}
 
         {/* `MB_FIELD_LABEL`, not `.mb-kicker`. Both blocks below are *fields* —
-            a colour choice and the row it produces — and a kicker is an eyebrow
-            (design language §2.2). Left as kickers they set the two lower
-            labels at 9.92px muted under a 13.6px navy "Team name", so the sheet
-            read as one field plus two captions. */}
+            a colour choice and the row it produces — and a kicker is an
+            eyebrow; as kickers the sheet read as one field plus two captions. */}
         <div className="flex flex-col gap-2.5">
           <span className={MB_FIELD_LABEL.className}>
             Team colour
@@ -153,7 +151,7 @@ export const TeamForm = ({ open, onOpenChange, team, onSubmit }: TeamFormProps) 
             They did not. At rest the picker said `SELECTED Rose` and the
             preview beside it drew a green shield with a gold star — the crest
             art, which is fixed by the pack and has nothing to do with the
-            chosen ink (charter D-9: colour is a contained accent, it never
+            chosen ink (colour is a contained accent, it never
             tints or selects the crest). The only rose on screen was a 3px bar
             at the far left edge, which reads as part of the frame.
 
@@ -200,8 +198,8 @@ export const TeamForm = ({ open, onOpenChange, team, onSubmit }: TeamFormProps) 
               left the reader guessing: they pick Navy, a teal shield appears,
               and nothing on screen says whether that is their badge, a
               placeholder, or a fault. The pack is eight designs and the colour
-              is forbidden from choosing among them (charter D-9: a contained
-              accent, never a tint and never a selector), so the sheet has to
+              is forbidden from choosing among them (a contained accent, never
+              a tint and never a selector), so the sheet has to
               name the design and name what moves it.
 
               It names the crest the team will actually wear — the same word for

@@ -134,9 +134,9 @@ describe("the rail carries every destination, and only the console has one", () 
   });
 
   it("six 44px cells fit the shortest landscape phone", () => {
-    // 320px tall, the smallest viewport in the sweep, against the 44px floor
-    // invariant 33 sets. This is why the rail carries six destinations rather
-    // than the bar's five-plus-a-sheet.
+    // 320px tall, the smallest landscape viewport, against the 44px touch
+    // floor — the reason the rail carries six destinations rather than the
+    // bar's five-plus-a-sheet.
     expect(MB_NAV_ALL.length * 44).toBeLessThanOrEqual(320);
   });
 
@@ -150,8 +150,8 @@ describe("the rail carries every destination, and only the console has one", () 
   });
 
   it("honours the horizontal safe-area insets it now sits inside", () => {
-    // invariant 34, on the axis that only mattered once a nav moved to the
-    // notch edge of a landscape phone
+    // the horizontal axis only matters once a nav sits at the notch edge of
+    // a landscape phone
     expect(CSS).toMatch(/--mb-safe-left:\s*env\(safe-area-inset-left,\s*0px\)/);
     expect(BOTTOM_BAR).toMatch(/paddingLeft:\s*"var\(--mb-safe-left\)"/);
   });

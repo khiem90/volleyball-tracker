@@ -1,16 +1,13 @@
 "use client";
 
 /* ===========================================================================
-   THE SIGN-IN PANEL — A FORM, WITH NO DIALOG OF ITS OWN (charter H11)
+   THE SIGN-IN PANEL — A FORM, WITH NO DIALOG OF ITS OWN
 
-   `SessionAuth` used to be one component that was both the form and a Radix
-   `<Dialog>`. That is why `CreateSessionDialog` could not offer sign-in: the
-   only way to reach the form was to mount a second Radix overlay as a sibling
-   of the first, and two overlays over a bottom sheet fight over the focus
-   trap, the scroll lock and Escape — on a phone the inner one opened *behind*
-   the outer one's backdrop.
+   Never fold a dialog back into this component: two overlays over a bottom
+   sheet fight over the focus trap, the scroll lock and Escape — on a phone
+   the inner one opens *behind* the outer one's backdrop.
 
-   So the form is here and it renders nothing but the form. Two callers
+   The form is here and it renders nothing but the form. Two callers
    compose it:
 
      `SessionAuth`          wraps it in `MbDialog` for the viewer route

@@ -51,9 +51,7 @@ describe("the horizontal guard is the absence of a clip, not a clip", () => {
 
   /* `overflow-x: hidden` on the ROOT propagates to the viewport: it hides the
      overflow AND makes it unscrollable, so the reader can neither see the
-     problem nor work around it. Rubric 6.3 counts content clipped this way as
-     the defect; charter invariant 31 says in as many words that it "hides the
-     symptom, so verify the number". If a route overflows, that is a bug in the
+     problem nor work around it. If a route overflows, that is a bug in the
      route. */
   it("never puts overflow back on the root", () => {
     expect(htmlRule()).not.toMatch(/overflow/);

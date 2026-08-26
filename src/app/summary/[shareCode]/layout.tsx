@@ -8,29 +8,14 @@ import {
   summaryTitle,
 } from "./summaryMeta";
 
-/* ===========================================================================
-   THE SHARE CARD FOR /summary/[shareCode]
+/* Share-card metadata for /summary/[shareCode]. A layout because `page.tsx`
+   is "use client" and `generateMetadata` is a server export — this is the
+   segment's server half, and it returns `children` untouched.
 
-   A layout, not a page, for one reason: `page.tsx` is `"use client"` — it has
-   to be, it is a whole interactive report — and `generateMetadata` is a server
-   export. A layout is the segment's server half. It adds no markup: the shell
-   is the page's, and this returns `children` untouched.
-
-   ------------------------------------------------------------ metadataBase
-
-   `og:image` and `og:url` must be ABSOLUTE or no scraper resolves them, and
-   this app has no configured origin. `NEXT_PUBLIC_SITE_URL` wins when a deploy
-   sets one; otherwise the request's own `host` is the truth — the route is
-   already `ƒ` (server-rendered on demand), so reading a header costs nothing
-   it was not already paying.
-
-   ---------------------------------------------------------------- noindex
-
-   A share code is unlisted, it is handed out person to person, and the page
-   carries real people's names. `robots: { index: false }` keeps it out of
-   search while leaving it fully unfurlable — Open Graph scrapers read the tags
-   regardless, which is the whole point of the distinction.
-   =========================================================================== */
+   `og:image`/`og:url` must be absolute: `NEXT_PUBLIC_SITE_URL` wins when set,
+   otherwise the request's own host (the route is server-rendered on demand
+   anyway). `robots: { index: false }` keeps an unlisted code carrying real
+   names out of search while staying fully unfurlable. */
 
 const origin = async () => {
   const configured = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, "");

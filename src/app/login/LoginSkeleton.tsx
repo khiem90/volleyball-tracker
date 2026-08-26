@@ -2,43 +2,14 @@
 
 import { MbSkeleton } from "@/components/matchbook/Skeleton";
 
-/* ---------------------------------------------------------------------------
-   THE LOADING STATE OF /login (invariants 2 and 26, W2 / P4)
+/* The loading state of /login. `MbPageLoading` draws a shell and /login has
+   none — it is a full-bleed two-column poster — so the bones are local and
+   mirror the form's exact geometry: nothing moves when the real form arrives.
+   The promo half paints flat navy (a static poster has no data to wait for).
 
-   This replaces `PageLoadingSpinner`, which was the LAST consumer of the
-   pre-Matchbook shell anywhere in the app: it rendered `<Navigation/>` — the
-   old warm-red nav bar — over `bg-background` with a framer-motion ring
-   spinning in the middle of an empty `max-w-6xl` column. On this route that
-   meant the redesigned poster was preceded, on every cold load and on every
-   `useSearchParams` suspension, by a flash of the design system this whole
-   programme exists to remove. Invariant 2 hard-fails a converted route that
-   renders `<Navigation/>` "including during loading"; invariant 26 hard-fails
-   the spinner separately.
-
-   `MbPageLoading` is the general answer but not this route's: its three
-   variants all draw the console or public *shell*, and `/login` has no shell —
-   it is a full-bleed two-column poster. So the bones are local, and they are
-   the poster's own geometry, not a generic grey page: the 52x60 crest slot and
-   two-line wordmark, the masthead row with its bordered "All Events" block,
-   the `.mb-panel` carrying a full-width button, the ruled "or", two 48px
-   fields and the coral submit, then the guest row. Nothing moves when the real
-   form arrives.
-
-   The promo half stays `hidden lg:block` and paints flat navy: it is a static
-   poster with no data to wait for, so drawing skeleton bones over it would
-   invent a wait that does not exist.
-
-   ------------------------------------------------------- WHY IT LIVES HERE
-
-   It was inline in `page.tsx` until the root loading boundary needed it too.
-   `app/loading.tsx` paints BEFORE this route's own `<Suspense>` — Next shows
-   the outermost invalidated boundary first — and it was drawing the console
-   shell there: measured on a production build at 390x844, 255ms of sidebar,
-   bottom bar and "Quick Match" on the sign-in screen. A page file cannot be
-   imported from for that (its non-default exports are Next's, not ours), so
-   the component is colocated in the route folder instead, where both the page
-   and the boundary can reach it.
-   --------------------------------------------------------------------------- */
+   Colocated here, not inline in page.tsx, because `app/loading.tsx` also
+   renders it (the root boundary paints before this route's own Suspense) and
+   a page file's non-default exports belong to Next. */
 
 export const LoginSkeleton = () => (
   <div className="min-h-screen lg:grid lg:grid-cols-2">

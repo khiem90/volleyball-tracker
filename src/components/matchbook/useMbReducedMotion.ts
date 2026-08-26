@@ -1,12 +1,11 @@
 // prefers-reduced-motion, read straight from matchMedia.
 //
-// Charter D-17: this deliberately does NOT wrap framer-motion's useReducedMotion.
-// Design language §9 bans framer-motion on converted screens, and importing it
-// for a media query would reintroduce it everywhere.
+// Deliberately does NOT wrap framer-motion's useReducedMotion: importing it
+// for a media query would reintroduce the library everywhere.
 //
 // useSyncExternalStore (rather than useState + useEffect) so the first client
 // render already returns the real value — a useEffect implementation renders
-// `false` once, which is exactly the frame of motion invariant 44 forbids.
+// `false` once, a frame of motion for a user who asked for none.
 
 import { useSyncExternalStore } from "react";
 

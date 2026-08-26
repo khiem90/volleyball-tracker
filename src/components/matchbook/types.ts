@@ -219,8 +219,7 @@ const TRAILING_LETTERS = /^(.*?[^A-Za-z])([A-Z]{1,4})$/;
    two-word club names: chi² 3.1). The id is only a fallback for an unnamed
    team, which the form does not allow but a share payload could carry.
 
-   Charter D-9 stands: the colour never selects the crest. D-10 stands too —
-   this is the same eight-crest pack, spent better. What separates two teams
+   The colour never selects the crest. What separates two teams
    that genuinely do collide (the ninth team in a batch) is unchanged: the
    name, and now a colour that is never a repeat of the last five (see
    `nextTeamColor`).

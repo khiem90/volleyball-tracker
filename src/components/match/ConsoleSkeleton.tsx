@@ -6,26 +6,14 @@ import { MbSkeleton } from "@/components/matchbook/Skeleton";
 /* ===========================================================================
    THE CONSOLE, BEFORE THE DATA
 
-   `AppContext` hydrates from localStorage inside an effect, so the first paint
-   of EVERY successful match load used to be the "Match not found" error screen
-   — probe-confirmed, and the single most alarming frame in the product.
-
-   This is what renders instead, and it is the console's own geometry rather
-   than a generic panel grid. `MbPageLoading variant="focus"` was the obvious
-   candidate and is deliberately not used: it draws five `xl:col-span-*` panels,
-   which is the CONSOLE variant's layout, and invariant 26 asks for the FINAL
-   geometry — a fixture line, two full-height columns with a ruled head each,
-   either side of a navy rule, and the action rail.
-
-   Every box below tracks a box in `MbScoreSide` / `MatchConsole`: the head bar
-   is `py-2.5` around a 36/52px crest, the numeral placeholder is the same
-   `clamp()` the numeral itself resolves, the foot is `pb-3 pt-2`. Rubric 7.2
-   asks for a 0px delta between the skeleton and its loaded counterpart, and the
-   only way to hold that is to change this file whenever the column changes.
-
-   Static blocks, no shimmer (a shimmer is a gradient), and one polite status so
-   a screen reader hears "Loading the match" once rather than crawling a dozen
-   empty boxes.
+   `AppContext` hydrates from localStorage inside an effect, so without this
+   the first paint of every successful match load is the "Match not found"
+   error screen. It draws the console's own final geometry (not
+   `MbPageLoading`, which draws panel grids): every box below tracks a box in
+   `MbScoreSide` / `MatchConsole` and must hold a 0px delta against its loaded
+   counterpart — change this file whenever the column changes. Static blocks,
+   no shimmer (a shimmer is a gradient), and one polite status line for
+   screen readers.
    =========================================================================== */
 
 const Column = () => (
@@ -48,8 +36,7 @@ const Column = () => (
     </div>
 
     <div className="flex min-h-0 flex-1 items-center justify-center px-3 sm:px-4">
-      {/* The two numeral rules, in the two places they apply. Rubric 7.2 wants a
-          0px delta against the loaded column, and the loaded column's figure is
+      {/* Zero delta against the loaded column, whose figure is
           `clamp(4rem, min(36vh,34vw), 9rem)` stacked and
           `clamp(4rem, min(36vh,26vw), 16rem)` side by side. */}
       <span className="sm:hidden">
@@ -98,8 +85,8 @@ export const MatchConsoleSkeleton = () => (
       </div>
 
       {/* The console's hint row is always present, blank or not, so the
-          skeleton reserves it too — without this the grid stood 641px tall
-          against the loaded 604 at 390x844, a 37px rubric-7.2 delta. */}
+          skeleton reserves it too or its grid stands taller than the loaded
+          console. */}
       <div className="min-h-[36px] shrink-0 border-t border-mb-rule px-4 py-2 [@media(max-height:520px)]:min-h-[28px] [@media(max-height:520px)]:py-1">
         <MbSkeleton w="11rem" h="0.85rem" />
       </div>

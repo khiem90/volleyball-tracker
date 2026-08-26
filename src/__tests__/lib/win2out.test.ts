@@ -71,7 +71,7 @@ describe('initializeWin2OutState', () => {
     // `numberOfCourts * 2 <= teamIds.length` already implies
     // `numberOfCourts <= floor(teamIds.length / 2)`, so `Math.min` never bites
     // and an over-large court count is an exception rather than a clamp. The
-    // wizard must clamp before calling (charter W3 acceptance 4).
+    // wizard must clamp before calling.
     expect(() => initializeWin2OutState('c', teamIds(5), 9)).toThrow(
       'requires at least 18 teams'
     );

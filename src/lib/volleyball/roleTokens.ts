@@ -3,14 +3,8 @@ import type { PlayerRole } from "./types";
 /* ===========================================================================
    ROLE -> MATCHBOOK TOKENS
 
-   `PLAYER_COLORS` (constants.ts) is a seven-hue map of raw `oklch(...)`
-   literals and it was the PRIMARY identity channel on the court: seven discs,
-   seven hues, the label repeated on top. That fails invariant 10 (no hardcoded
-   colour, including inside SVG) and invariant 13 (information never carried by
-   colour alone) at the same time — desaturate the old court and the only thing
-   telling you a player is back row is a dashed blue ring that is itself a hue.
-
-   This is the replacement. Identity is carried by the LETTERFORM (`S`, `OPP`,
+   Identity must never be carried by hue alone — desaturated, a
+   seven-hue court tells you nothing. Identity is carried by the LETTERFORM (`S`, `OPP`,
    `MB2`), which was always there and was always the thing coaches read. What
    the tokens carry is the one fact the letterform cannot: which ROW the player
    is in, which is what the overlap rules are about.
@@ -26,22 +20,11 @@ import type { PlayerRole } from "./types";
                  "not permanently part of this", which is exactly what a
                  substituted player is.
 
-   WHAT CHANGED IN THIS PASS, and why:
-
-     THE SETTER'S RING WAS 2.15:1. It drew in `--mb-gold`, which is a mark
-     colour for navy grounds; the detached ring sits OUTSIDE the disc, so its
-     ground is always `--mb-court-fill` (#fffaf1), where gold measures 2.15:1
-     against a 3:1 floor for a non-text mark. It now draws in `--mb-gold-ink`,
-     the same hue family darkened until it is legible on paper — 5.59:1 on
-     `--mb-court-fill`. Same mark, same meaning, over the floor by 1.9x.
-
-     THE LIBERO WAS A FILLED PLUM DISC UNDER A LEGEND THAT SAID "HOLLOW DISC —
-     BACK ROW". The libero IS back row, always, by rule; drawing it filled made
-     the diagram contradict its own key and made plum the last surviving
-     hue-as-identity in the file whose comment claimed they were gone. It is now
-     an ordinary back-row disc — paper fill, navy edge, navy letterform — and
-     the substitution is carried entirely by the dashed ring. `--mb-plum` is no
-     longer referenced here.
+   The setter's ring draws in `--mb-gold-ink`, not `--mb-gold`: the detached
+   ring sits OUTSIDE the disc, so its ground is always `--mb-court-fill`,
+   where raw gold fails the 3:1 non-text floor. The libero is an ordinary
+   back-row disc — it IS back row by rule — with the substitution carried
+   entirely by the dashed ring.
 
    `PLAYER_COLORS` is deliberately not imported here and is no longer read by
    anything that renders. It stays in `constants.ts` because `PlayerInfo.color`
@@ -118,16 +101,13 @@ export const roleToken = (role: PlayerRole, isBackRow: boolean): MbRoleToken => 
 };
 
 /**
- * The chip cut of the same token, for the legend and the arrow list — the
- * non-SVG variant the charter calls `MbRoleChip`. Identical rules; separated so
- * a future change to the disc recipe cannot make the legend disagree with the
- * court, which is exactly how the old legend ended up drawing a hue the court
- * had already stopped using.
+ * The chip cut of the same token, for the legend and the arrow list (the
+ * non-SVG `MbRoleChip`). Identical rules; separated so a change to the disc
+ * recipe cannot make the legend disagree with the court.
  *
  * The ring is returned as an `outline` because an outline draws OUTSIDE the
  * border box without reserving space — the HTML equivalent of the SVG's
- * detached circle — and because invariant 24 permits no shadow but
- * `--mb-panel-shadow`.
+ * detached circle — and no shadow but `--mb-panel-shadow` is permitted.
  */
 export const roleChipStyle = (
   role: PlayerRole,

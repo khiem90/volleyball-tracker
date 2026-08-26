@@ -29,10 +29,10 @@ import { courtPercent } from "./MbCourt";
 
    MOTION. The token is positioned by a CSS `transform` on its group and moves
    by transitioning that transform, so a rotation change is one composited
-   property on seven elements. There is no spring and no framer-motion
-   (invariants 40, 41, 51). While a finger is down, `instant` switches the
-   transition off entirely: a drag that eases toward the pointer feels like lag,
-   and the brief's whole ask for this screen is that dragging feel exact.
+   property on seven elements. There is no spring and no framer-motion.
+   While a finger is down, `instant` switches the
+   transition off entirely: a drag that eases toward the pointer feels like
+   lag, and dragging must feel exact.
 
    THE PRESS, in two layers. Before this the target was a transparent
    `<button>` carrying no `mb-*` class, so the only rule that reached it was the
@@ -57,7 +57,7 @@ import { courtPercent } from "./MbCourt";
 
    `--mb-stagger` fractions give the six tokens a rotation-ordered settle so the
    eye can follow the clockwise move. No literal duration appears here; every
-   number resolves to a motion token (invariant 40).
+   number resolves to a motion token.
    =========================================================================== */
 
 export type MbPlayerTokenState = "idle" | "selected" | "dragging" | "arrow-source";
@@ -90,9 +90,9 @@ export interface MbPlayerTokenProps {
   pressed?: boolean;
 }
 
-/* Both literals are named steps of the display scale (design language §2.1):
-   19.2px = 1.2rem `display/stat-sm`, 11.52px = 0.72rem. They were 17 and 12,
-   which are between steps and were counted as off-scale sizes (rubric 1.2). */
+/* Both literals are named steps of the display scale:
+   19.2px = 1.2rem `display/stat-sm`, 11.52px = 0.72rem. Values between steps
+   count as off-scale sizes. */
 const LETTERFORM: CSSProperties = {
   fontSize: 19.2,
   fontWeight: 700,
@@ -154,10 +154,9 @@ export const MbPlayerToken = memo(
             transitionDuration: pressed ? "0s" : undefined,
           }}
         >
-          {/* Selection. Coral, which is one of the three structural jobs
-              invariant 15 reserves for it: this is the selection rail, drawn
-              round instead of straight. No Gaussian glow — the old
-              `filter="url(#glow)"` was both a banned effect and a repaint. */}
+          {/* Selection. Coral — the selection rail, drawn round instead of
+              straight. No Gaussian glow: a `filter` is both a banned effect
+              and a repaint. */}
           {selected && (
             <circle
               r={radius + 10}
@@ -244,7 +243,7 @@ MbPlayerToken.displayName = "MbPlayerToken";
  * of the whole tool.
  *
  * `left`/`top` carry no transition on purpose. They are layout properties and
- * invariant 40 allows only `transform` and `opacity` to animate — and it costs
+ * only `transform` and `opacity` may animate — and it costs
  * nothing here, because the button is invisible: the eye follows the SVG disc,
  * which eases, while its target snaps. During a drag both are instant anyway.
  *
@@ -341,12 +340,12 @@ export const MbPlayerTarget = ({
          takes the literal rather than `.mb-icon-disc`, which would draw a navy
          edge around an element that must stay invisible.
 
-         Both numbers here are NAMED EXEMPTIONS in design language §3.3, not
-         strays: the round is outside the four-use ink budget because it never
-         paints (invisible hit-extension geometry), and the 52px box is target
-         geometry, not a control height — 52 is the charter's floor for a
-         court token, and it must not migrate onto the {44,48,56} ladder or
-         the ladder acquires a rung that exists for one screen. */
+         Both numbers here are named exemptions, not strays: the round is
+         outside the four-use ink budget because it never paints (invisible
+         hit-extension geometry), and the 52px box is target geometry, not a
+         control height — the floor for a court token. It must not migrate
+         onto the {44,48,56} ladder or the ladder acquires a rung that exists
+         for one screen. */
       className="mb-row-hover absolute rounded-[999px]"
       style={{
         ...position,
@@ -406,7 +405,7 @@ export const MbRoleChip = ({
         height: size,
         /* 0.62rem, not 0.6rem: `display/badge-label` is 0.6rem/700 at 0.22em
            and the masthead prints one on this very screen, so a 0.6rem/700
-           chip at any other tracking would be a collision (rubric 1.3).
+           chip at any other tracking would be a collision.
 
            The TRACKING follows the size, because the ladder is per (size,
            weight) and this chip renders at two sizes: 0.62rem/700 is

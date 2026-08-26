@@ -4,12 +4,8 @@ import { TEAM_COLOR_IDS } from "@/lib/teamColor";
 /**
  * Pre-defined teams for guest Quick Match mode.
  * These teams exist only in memory and are never persisted.
- *
- * Their colours were `#3b82f6` and `#f97316` — a Tailwind blue and a Tailwind
- * orange, two hexes from a palette this app does not use, sitting in code as
- * literals (charter §4 invariant 10). They are ink ids now, like every other
- * team colour in the app: the two ends of the "Two sides" scheme, which is the
- * scheme a head-to-head draw is for.
+ * Colours are ink ids, never hex literals: the two ends of the "Two sides"
+ * scheme, which is the scheme a head-to-head draw is for.
  */
 const GUEST_TEAMS: readonly PersistentTeam[] = [
   {

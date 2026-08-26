@@ -15,41 +15,19 @@ import {
 import { MbEventBar } from "./EventBar";
 
 /* ===========================================================================
-   ONE SHELL, DECLARED ONCE
-
-   The app ships five mutually exclusive shells today and the route decides
-   which visual system, which navigation model and which palette you get, with
-   no transition between them. `src/app/layout.tsx` renders no chrome at all, so
-   every page re-declares its own — the same 70 lines, six times.
-
-   This is that shell. Three variants, and the ROUTE declares which one it is
-   rather than a nav component string-matching the pathname to decide whether to
-   hide itself (shell brief R6, which is how `/session/*` is handled today).
+   ONE SHELL — the ROUTE declares its variant; a nav component never
+   string-matches the pathname to decide whether to hide itself.
 
      console  sidebar (>=lg) + top strip + bottom bar (<lg) + editorial masthead
-     public   no sidebar, no bottom bar, no account chip — a brand lockup and a
-              centred max-w-[1100px] column. THE sanctioned exception to "no
-              max-w" (GAP-15.3).
-     focus    no chrome except one 44px exit control in `MbEventBar`. It must
-              not wrap the fullscreen target (R4), so `children` sits directly
-              inside `<main>` with nothing between.
+     public   no sidebar/bottom bar/account chip — brand lockup and a centred
+              max-w-[1100px] column (the sanctioned exception to "no max-w")
+     focus    no chrome except one 44px exit control in `MbEventBar`; children
+              sit directly inside <main> so the fullscreen target is unwrapped.
 
-   ------------------------------------------------------------------ "alive"
-
-   Two things, and only two, make a route arrive rather than appear:
-
-     1. `<main>` carries `.mb-enter` and is KEYED on the pathname, so the
-        entrance replays on navigation instead of only on first mount. Opacity
-        plus a 10px rise over `--mb-dur-slow`; removed outright under
-        prefers-reduced-motion by the clamp in `globals.css`.
-     2. The chrome does not move. The sidebar, the top strip and the bottom bar
-        are siblings of `<main>`, outside the key, so they never re-mount and
-        never animate on a route change (brief §4.3). The bottom bar's coral
-        rule grows across, which is the one animated mark in the shell.
-
-   A page adds `.mb-enter-grid` to its own panel grid for the staggered
-   settle — that is a per-screen authoring decision, capped at six by the CSS,
-   and never applied to table rows (invariant 42).
+   "Alive": `<main>` carries `.mb-enter` and is KEYED on the pathname so the
+   entrance replays per navigation (removed by the reduced-motion clamp); the
+   chrome is a sibling of `<main>`, outside the key, so it never re-mounts.
+   A page adds `.mb-enter-grid` to its own panel grid — never to table rows.
    =========================================================================== */
 
 export type MatchbookShellVariant = "console" | "public" | "focus";
@@ -57,38 +35,12 @@ export type MatchbookShellVariant = "console" | "public" | "focus";
 /* ------------------------------------------------- which shell is this URL? */
 
 /**
- * THE ROUTE → VARIANT PREDICATE, and why a shell that is otherwise declared by
- * the page needs one.
- *
- * `app/loading.tsx` is the ROOT loading boundary, and Next always paints the
- * OUTERMOST invalidated boundary first: a nested `loading.tsx` takes over only
- * once the parent subtree has resolved, so it cannot remove the frames above
- * it. `app/match/loading.tsx` states this residual in its own docblock and
- * hands it here. Measured against a PRODUCTION build (`next build && next
- * start`, 390x844, `waitUntil:"commit"`) with the root boundary declaring
- * `variant="console"`:
- *
- *   /summary/GYMDAY                     12 `.mb-nav-item` + `nav[aria-label=
- *   /session/SUMMER                     "Primary"]` + the bottom bar in the
- *   /tools/…/shared/demoShare1          FIRST PAINTED FRAME, for 34 / 40 / 172
- *   /login                              / 255 ms respectively.
- *
- * That is the app's private navigation on the four screens the product hands
- * to strangers — and on `/login`, which has no shell at all. It is also
- * invariant 26's own words failing: a skeleton at "the FINAL GEOMETRY" is
- * exactly what the console shell is not, on a route whose final geometry is a
- * centred 1100px column with no rail.
- *
- * The fix is not another nested boundary. It is that the root boundary stops
- * assuming, and asks the URL — which is the same question `MatchbookShell`
- * already answers for `active`, through the same `usePathname()`.
- *
- * PAGES STILL DECLARE THEIR OWN VARIANT. This does not replace that (shell
- * brief R6: the ROUTE declares which shell it is, rather than a component
- * string-matching the pathname to decide whether to hide itself). It is the
- * loading boundary's best guess at what the page is about to declare, and
- * `src/__tests__/shell/shellVariant.test.ts` reads every `page.tsx` in
- * `src/app` and fails if a guess and a declaration ever disagree.
+ * THE ROUTE → VARIANT PREDICATE. `app/loading.tsx` is the ROOT boundary and
+ * Next paints the outermost invalidated boundary first, so a skeleton that
+ * assumed `console` would flash the private navigation on public/focus routes.
+ * The boundary asks the URL instead. Pages still declare their own variant;
+ * `src/__tests__/shell/shellVariant.test.ts` fails if a guess and a
+ * declaration ever disagree.
  */
 const MB_PUBLIC_ROOTS = [
   "/session",
@@ -128,18 +80,13 @@ export interface MatchbookShellProps {
   variant?: MatchbookShellVariant;
   /**
    * Override the active section. Omit it and the shell derives it from
-   * `usePathname()` through the one predicate in `BottomBar.tsx` — which is how
-   * the three shipped navs came to disagree about `/competitions/new`.
+   * `usePathname()` through the one predicate in `BottomBar.tsx`.
    */
   active?: string;
   masthead?: MastheadProps;
   cta?: MbShellCta;
-  /**
-   * The back/exit control: the mobile top strip's on `console`, the event
-   * bar's on `focus`. Not in the charter's shell signature, but without it the
-   * `back` slot the charter gives `MatchbookTopStrip` and `MbEventBar` is
-   * unreachable from a page.
-   */
+  /** The back/exit control: the mobile top strip's on `console`, the event
+      bar's on `focus`. */
   back?: MbTopStripBack;
   /** One screen-specific icon action in the mobile top strip. */
   action?: MbTopStripAction;
@@ -174,25 +121,10 @@ const useRouteChange = (pathname: string, name: string) => {
       settled.current = true;
       return;
     }
-    /**
-     * `preventScroll`, and `[pathname]` alone.
-     *
-     * The effect used to depend on `[pathname, name]`, and `name` is
-     * `masthead.shortTitle` — which on `/competitions` is the SELECTED EVENT'S
-     * NAME and therefore changes once, after the data resolves, with no
-     * navigation at all. That second run cleared the first-paint guard and
-     * focused `<main>`; `<main tabIndex={-1}>` sits directly under the sticky
-     * mobile top strip, so the browser scrolled it into view and the route
-     * arrived at **scrollY 57 with its own `<h1>` hidden behind the strip** —
-     * measured at 390x844, and invariant 27's "no visible layout shift on
-     * load" exactly. `/` and `/teams` were at scrollY 0 because their titles
-     * are literals.
-     *
-     * Keying on the pathname makes the effect mean what its name says. The
-     * `preventScroll` is the belt: a route change already leaves Next at the
-     * top of the document, so moving focus there must never move the viewport
-     * again — same rule `Tabs.tsx` states for its own rail.
-     */
+    /* `[pathname]` alone: `name` can change with no navigation (a data title
+       resolving), and that run would clear the first-paint guard, focus
+       `<main>` and scroll it under the sticky top strip. `preventScroll` is
+       the belt — a route change already leaves Next at the document top. */
     mainRef.current?.focus({ preventScroll: true });
     /* Written imperatively, not through state. The live region is an external
        system — the announcement IS the DOM mutation, and routing it through a
@@ -212,18 +144,11 @@ const RouteAnnouncer = ({
 
 /* -------------------------------------------------------------- main region */
 
-/**
- * `.mb-skip-link` alone renders 135.8 x 36.8 — measured, and under the 44px
- * floor invariant 33 makes a hard fail. The class is W1's and is not this
- * workstream's to edit, so the consumption is fixed instead: `.mb-btn-touch`
- * supplies the floor (it is unlayered, so it beats nothing and loses to
- * nothing) and `flex items-center` keeps the words on the box's centre line
- * rather than parked at its top. `.mb-skip-link` sets no `display` of its own,
- * so the utility applies cleanly.
- */
+/* `.mb-skip-link` alone renders under the 44px floor; `.mb-btn-touch`
+   supplies it and `flex items-center` centres the words in the taller box. */
 const SKIP_LINK = "mb-skip-link mb-btn-touch flex items-center";
 
-/** Invariant 3's exact geometry. `max-w` is added only by `variant="public"`. */
+/** `max-w` is added only by `variant="public"`. */
 const MAIN_PADDING = "px-4 py-5 sm:px-6 lg:px-8";
 
 /**
@@ -251,21 +176,10 @@ const PublicBrand = () => (
           height={30}
           priority
         />
-        {/* "Tracker" is `--mb-coral-deep`, NOT `--mb-coral` — the same fix
-            `Sidebar.tsx:86` took, arriving here late because the two lockups
-            were written in different files on different days.
-
-            Measured on `--mb-paper` at this exact step: `--mb-coral` is
-            **3.26:1 at 15.2px/700** against the 4.5:1 floor that applies below
-            18.66px — rubric HF-6, and this is `variant="public"`, so it was
-            live on every share link the product hands to a stranger — the
-            session viewer, the match report, the shared formation, `/login`
-            and `global-error`. The ink twin measures **4.62:1** at the same size,
-            and design language §1.3 declares it for exactly this case: "coral
-            letterforms under 18.66px". The two-tone lockup survives intact.
-
-            Coral job 3 — the masthead's emphasised word — is unaffected: that
-            word ships at 36/48px where the 3:1 large-text floor applies. */}
+        {/* `--mb-coral-deep`, not `--mb-coral`: raw coral fails 4.5:1 at this
+            size on paper; the ink twin clears it. The masthead's emphasised
+            word stays raw coral — it ships at display sizes under the 3:1
+            large-text floor. */}
         <span className="matchbook-display text-[0.95rem] mb-track-title font-bold leading-none">
           <span className="text-mb-navy">Tournament </span>
           <span className="text-mb-coral-deep">Tracker</span>
@@ -329,7 +243,7 @@ export const MatchbookShell = ({
         </a>
         <MbEventBar back={back ?? { href: "/", label: "Exit" }} title={routeName} />
         {/* No padding wrapper and no grid: `children` is whatever the console
-            needs to hand to the Fullscreen API (R4). */}
+            needs to hand to the Fullscreen API. */}
         {main("flex-1")}
         <RouteAnnouncer liveRef={liveRef} />
       </div>
@@ -353,22 +267,18 @@ export const MatchbookShell = ({
   /* -------------------------------------------------------------- console */
   return (
     <div className="matchbook-surface min-h-screen">
-      {/* First focusable node in the document (DoD 12). It is `position: fixed`
-          in the stylesheet, so its place in the DOM costs nothing visually. */}
+      {/* First focusable node in the document; `position: fixed`, so its place
+          in the DOM costs nothing visually. */}
       <a href="#mb-main" className={SKIP_LINK}>
         Skip to content
       </a>
 
       <div className="flex">
         <MatchbookSidebar active={here} cta={cta} />
-        {/* THE THIRD NAVIGATION, and the one that closes N1.
-            A sibling in the same flex row as the sidebar rather than a `fixed`
-            overlay: in normal flow it reserves its own 60px, so nothing needs a
-            matching `padding-left` that could drift away from it — the mistake
-            `CONSOLE_MAIN_PAD` below exists to work around for the bottom bar,
-            which has no choice because it is `fixed`. Exactly one of the three
-            navs is displayed at any (width, height); see the gate table in
-            `globals.css` under "THE LANDSCAPE NAVIGATION GATE". */}
+        {/* A sibling in the flex row, not a `fixed` overlay: in normal flow it
+            reserves its own 60px, so nothing needs a matching `padding-left`
+            that could drift. Exactly one of the three navs is displayed at any
+            (width, height) — see THE LANDSCAPE NAVIGATION GATE in globals.css. */}
         <MatchbookLandscapeRail active={here} />
 
         <div className="flex min-w-0 flex-1 flex-col">

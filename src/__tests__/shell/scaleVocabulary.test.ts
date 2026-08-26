@@ -5,14 +5,11 @@ import { describe, expect, it } from "vitest";
 /* ===========================================================================
    THE SCALE IS DECLARED — THIS MAKES IT IN FORCE.
 
-   Two independent critics measured the same tree and both failed it: a design
-   language that names 25 type steps, 7 gap values and 4 radii, rendering 55
-   type tuples, 12 gap values and 5 radii. None of the excess was a decision.
-   Every one was a call site that reached for the Tailwind value next to the
-   right one — `gap-1` where the vocabulary starts at `gap-1.5`, `gap-5` where
-   the grid gap is `gap-4`, `rounded-[1px]` where the mark radius is 2px — and
-   nothing in review or in the browser sweep said so, because a 1px difference
-   is invisible one call site at a time and only exists as a census.
+   Off-scale values are never a decision — they are call sites reaching for
+   the Tailwind value next to the right one (`gap-1` where the vocabulary
+   starts at `gap-1.5`, `rounded-[1px]` where the mark radius is 2px), and a
+   1px difference is invisible one call site at a time; it only exists as a
+   census.
 
    So the census lives here, in a test that needs no browser and no dev server.
    It reads source, not layout, so it cannot see a value that arrives through a
@@ -37,15 +34,11 @@ const walk = (dir: string, out: string[] = []): string[] => {
 };
 
 /**
- * Not exemptions on the merits. Every file below carries the same residue,
- * measured, and every one is being rewritten by a different agent in this same
- * round; asserting on a file two people are editing turns a guard into a race.
- * Delete a name the moment its owner lands and this test says immediately
- * whether they finished.
- *
- * `court/` is here for a different reason and is not a to-do: its display type
- * is SVG `<text>` inside a `viewBox`, where size and tracking are user units
- * that scale with the diagram. The px ladder does not apply to it.
+ * Files exempt from the census. Most carry measured off-scale residue that
+ * predates it — delete a name once its file is clean and this test enforces
+ * it from then on. `court/` is not a to-do: its display type is SVG `<text>`
+ * inside a `viewBox`, where size and tracking are user units that scale with
+ * the diagram, so the px ladder does not apply.
  */
 const OTHER_SLICES = [
   "components/matchbook/court/",
@@ -82,7 +75,7 @@ const rel = (f: string) => relative(process.cwd(), f).replace(/\\/g, "/");
  * Blank every comment while keeping the line count, so a finding's line number
  * still points at the right line.
  *
- * This kit quotes the design language in prose constantly — `rounded-[1px]`
+ * This kit's comments quote class names in prose constantly — `rounded-[1px]`
  * appears inside the comment explaining why it is no longer used — and a test
  * that fails on its own documentation is a test somebody deletes rather than
  * reads. Stripping has to survive block comments spanning lines, which is why
@@ -106,7 +99,7 @@ const hits = (re: RegExp) => {
   return out;
 };
 
-describe("spacing vocabulary — design language 3.3, 'the complete set, do not add values'", () => {
+describe("spacing vocabulary — the complete set, do not add values", () => {
   /*
    * 3, 6, 8, 10, 12, 16, 24 — form squares, inline icon↔text (1.5/2/2.5/3),
    * the grid gap, and the masthead's column gutter. Nothing else.
@@ -134,7 +127,7 @@ describe("spacing vocabulary — design language 3.3, 'the complete set, do not 
   });
 });
 
-describe("radius vocabulary — design language 3.3", () => {
+describe("radius vocabulary", () => {
   /*
    * 4px panels/buttons/inputs, 3px score and seed boxes, 2px marks, 999px for
    * the four reserved discs. A 1px corner is not a radius, it is a rounding
@@ -154,7 +147,7 @@ describe("radius vocabulary — design language 3.3", () => {
   });
 });
 
-describe("the tracking ladder — design language 2.1a, charter invariant 8", () => {
+describe("the tracking ladder", () => {
   /*
    * `letter-spacing` inherits. A `<span class="matchbook-display font-bold">`
    * with no rung of its own takes whatever the row around it happens to carry,
@@ -190,7 +183,7 @@ describe("the tracking ladder — design language 2.1a, charter invariant 8", ()
   });
 });
 
-describe("type scale — design language 2.1, 'never introduce a size between two steps'", () => {
+describe("type scale — never introduce a size between two steps", () => {
   /** Every named step, in rem, from the display and body tables of 2.1. */
   const NAMED = new Set([
     "0.6",

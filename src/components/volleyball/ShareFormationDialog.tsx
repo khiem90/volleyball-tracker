@@ -18,7 +18,7 @@ import { MbNotice } from "@/components/matchbook/Notice";
    fallback that never surfaced its own failure.
 
    `MbDialog` supplies every one of those, and `MbCopyField` supplies the
-   clipboard chain the charter settled in Appendix A D-8 — `navigator.clipboard`
+   clipboard chain — `navigator.clipboard`
    then `execCommand` then select-on-focus with an explicit hint — and always
    surfaces failure.
 

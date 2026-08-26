@@ -1,48 +1,23 @@
 "use client";
 
 /* ===========================================================================
-   THE TOAST (charter §2.3, GAP-2, W2 / P2b)
-
-   Three exports, one object:
+   THE TOAST — three exports, one object:
 
      MbToast     the paper strip itself — presentational, no state, no timer.
-                 Anything that already owns its own lifecycle (the undo stack)
-                 renders this directly.
      useToast()  { toast, dismiss, dismissAll } — the imperative API.
      ToastHost   the one fixed stack. Mounted once, app-wide.
 
-   ------------------------------------------------------- why a module store
+   The queue is a MODULE-level store read through `useSyncExternalStore`, not
+   a context: `toast()` must be callable outside components (catch blocks,
+   Firestore callbacks); `useToast()` returns the same object every render so
+   it is dependency-array safe; and with no provider there is no provider to
+   forget — a missing `ToastHost` queues silently, the right failure mode for
+   a notification. The cost is that two hosts would render the queue twice,
+   which is why exactly one is mounted (from `GlobalUndoToast`).
 
-   The queue lives in a MODULE-level store read through `useSyncExternalStore`,
-   not in a React context. Three reasons, in order of how much they cost:
-
-     1. `toast()` has to be callable from places that are not a component —
-        a catch block in `src/lib/*`, a Firestore error callback, an event
-        handler defined outside the tree. A context hook cannot be called
-        there; a module function can.
-     2. `useToast()` returns the SAME object on every render (the functions are
-        module constants), so it can sit in a dependency array without being
-        the reason an effect re-runs. A context value has to be memoised by
-        hand and usually is not.
-     3. No provider means no provider to forget. `ToastHost` is the only mount,
-        and if it is missing the toasts queue silently rather than throwing —
-        which is the correct failure mode for a notification, and the opposite
-        of what `useUndo()` does deliberately for a data contract.
-
-   The cost is that two `ToastHost`s would render the same queue twice. That is
-   why the host is mounted exactly once, from `GlobalUndoToast`.
-
-   --------------------------------------------------------------- the motion
-
-   Entrance is `.mb-toast`'s own `mb-enter` keyframe — opacity + translateY,
-   token-timed, and already cancelled under `prefers-reduced-motion` by the
-   block at the end of the Matchbook zone in `globals.css`. There is NO exit
-   animation and that is deliberate rather than unfinished: an exit needs a
-   duration in JS to know when to unmount, `globals.css` is W1-exclusive (H1)
-   so a `[data-leaving]` rule cannot be added from here, and invariant 40
-   forbids a duration literal in a `.tsx`. A toast that leaves instantly is
-   honest; a toast that leaves on a hard-coded 150ms is a token violation that
-   would have to be undone later.
+   There is NO exit animation, deliberately: an exit needs a JS duration to
+   know when to unmount, and duration literals in `.tsx` are banned. A toast
+   that leaves instantly is honest.
    =========================================================================== */
 
 import { useCallback, useSyncExternalStore, type ReactNode } from "react";
@@ -83,11 +58,10 @@ export interface MbToastOptions {
   message: string;
   action?: MbToastAction;
   /**
-   * Milliseconds before the strip removes itself. `0` pins it until it is
-   * dismissed by hand — the right choice for anything carrying an action,
-   * because a 5-second window to read a sentence AND press a button is not a
-   * window. Not a motion duration, so it is not a §2.1 token: it is how long
-   * the message is true for.
+   * Milliseconds before the strip removes itself. `0` pins it until dismissed
+   * by hand — right for anything carrying an action, because a 5-second
+   * window to read a sentence AND press a button is not a window. Not a
+   * motion token: it is how long the message is true for.
    */
   duration?: number;
   slot?: MbToastSlot;
@@ -110,15 +84,10 @@ const MAX_VISIBLE = 3;
 /* --------------------------------------------------------------- tone table */
 
 /**
- * Glyph per tone. `warning` and `danger` MUST NOT share one — that collision
- * is a live hard fail elsewhere in the kit (register D-21, `MbNotice`), and
- * repeating it here would double it.
- *
- * `danger` takes the triangle because the triangle is already the system's
- * failure mark (`MB_STATE_TONES.error` in `Panel.tsx`), so a failed action and
- * a failed page are marked with the same shape. That frees the bell for
- * `warning` — "heads up", not "this broke" — and leaves the two tones
- * different in SHAPE as well as hue, which is what invariant 13 asks for.
+ * Glyph per tone. `warning` and `danger` MUST NOT share one: `danger` takes
+ * the triangle — the system's failure mark (`MB_STATE_TONES.error`) — so a
+ * failed action and a failed page share a shape; the bell means "heads up".
+ * The two tones differ in SHAPE as well as hue.
  */
 const TONE_ICON: Record<MbToastTone, string> = {
   info: "help",
@@ -128,12 +97,9 @@ const TONE_ICON: Record<MbToastTone, string> = {
 };
 
 /**
- * Ink for the GLYPH ONLY. The message keeps navy letterforms, because tone
- * colour on small type is the contrast debt GAP-4 was written to stop: on
- * paper-bright, `--mb-green` is 3.93:1, `--mb-red` 4.20:1 and `--mb-gold`
- * 1.97:1, all under the 4.5:1 floor for text below 18.66px. The tone is
- * carried by the 4px left rule (`.mb-toast[data-tone]`), the glyph and the
- * glyph's ink — three channels, none of them the copy.
+ * Ink for the GLYPH ONLY. The message keeps navy letterforms — tone colour on
+ * small type fails the 4.5:1 floor. The tone rides the 4px left rule, the
+ * glyph and the glyph's ink: three channels, none of them the copy.
  */
 const TONE_INK: Record<MbToastTone, string> = {
   info: "text-mb-navy",
@@ -325,9 +291,9 @@ export const useToast = (): MbToastApi => API;
 
 /**
  * The custom property a fixed bottom bar sets to lift the float stack clear of
- * itself. `MatchbookBottomBar` (W2/P2a) is expected to set it on `:root`; until
- * it exists the fallback is `0px` and the stack sits on the safe-area inset.
- * Declared here so the two sides of the contract are written down in one file.
+ * itself. `MatchbookBottomBar` sets it on `:root`; the `0px` fallback leaves
+ * the stack on the safe-area inset. Declared here so both sides of the
+ * contract are written down in one file.
  */
 export const MB_TOAST_OFFSET_VAR = "--mb-toast-offset";
 

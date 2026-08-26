@@ -7,7 +7,7 @@
 //   - the format predicates inlined in src/components/competitions/new/NameStep.tsx
 //     and AdvancedSettingsPanel.tsx  (the `supports` flags below)
 //
-// Charter H14 / §2.3: nobody writes a fourth table.
+// Nobody writes a fourth table.
 
 import type { CompetitionType } from "@/types/game";
 
@@ -37,17 +37,12 @@ export interface FormatMetaEntry {
   /**
    * THERE IS DELIBERATELY NO COLOUR KEY FOR FORMATS.
    *
-   * An earlier cut gave each format a rail colour lifted from the four-accent
-   * cycle (teal / plum / gold / ink-muted). That was a CATEGORICAL key built
-   * out of LOCKED semantic tokens: design language §1.2 fixes `--mb-teal` to
-   * the rank-#1 rail and `--mb-gold` to Draft, so the same hue meant "leader"
-   * in a standings table and "Round Robin" in the format list — the collision
-   * rubric D3 counts by name. No free hue exists in the closed palette, and
-   * the comment on the old field already conceded formats "are told apart by
-   * icon and label, never by colour alone" — so the key carried no information.
+   * Formats deliberately carry no rail colour: a categorical key would be
+   * built out of locked semantic tokens (`--mb-teal` is the rank-#1 rail,
+   * `--mb-gold` is Draft) and no free hue exists in the closed palette.
    * Identity is the sprite + the label; rails around format rows are the
-   * neutral `--mb-rule` hairline, and selection (the one state a format row
-   * has) is the coral selection mark, same as every other row in the app.
+   * neutral `--mb-rule` hairline, and selection is the coral selection mark,
+   * same as every other row in the app.
    */
   /** Fewest teams the generator accepts. */
   minTeams: number;

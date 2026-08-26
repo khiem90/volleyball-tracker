@@ -60,8 +60,8 @@ const CATEGORY_LABEL: Record<MbFormationCategory, string> = {
 };
 
 /* Two columns, never three. At `xl` the Formation panel is a 7-of-12 column —
-   about 700px — and three cards in it set the description at ~34 characters per
-   line, under the 45-75 band (rubric 1.4). Two cards set it at ~52. */
+   about 700px — and three cards in it set the description at ~34 characters
+   per line, under the readable 45-75 band. Two cards set it at ~52. */
 const CardGrid = ({ children }: { children: React.ReactNode }) => (
   <div className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2">{children}</div>
 );

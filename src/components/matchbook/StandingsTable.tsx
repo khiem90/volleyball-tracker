@@ -7,29 +7,15 @@ import { MbTableScroll } from "./TableScroll";
 import type { MbFormResult, MbTeam } from "./types";
 
 /* ===========================================================================
-   THE STANDINGS TABLE (charter §2.3, W4 / P3a)
-
-   Three tables ship today and none of them agree:
-
-     src/components/Standings.tsx          9 columns, shadcn <Card>, lucide
-                                           medals, emerald/amber/slate ranks,
-                                           no <caption>, no scope, and at 390px
-                                           it pushes **Pts** — the column that
-                                           decides the competition — off the
-                                           right edge behind a scroll nothing
-                                           signals (comp-detail brief BUG-11).
-     src/app/competitions/page.tsx:141-183 8 columns, matchbook, no Pts at all.
-     src/hooks/useSessionPage.ts consumer  a third order and a third column set.
-
-   This is that table, once. The column SET is a prop, the column ORDER is not:
-   `# · Team` lead and `Pts` is the last always-visible column, so the measure a
-   reader came for survives every width. Everything between them degrades by
-   breakpoint, widest-first — P and PD at `sm`, PF/PA at `md`, Form at `lg`.
+   THE STANDINGS TABLE — declared once. The column SET is a prop, the column
+   ORDER is not: `# · Team` lead and `Pts` is the last always-visible column,
+   so the measure a reader came for survives every width; everything between
+   degrades by breakpoint, widest-first (P and PD at `sm`, PF/PA at `md`,
+   Form at `lg`).
 
    Rank is read off the row (`rank` / `sharesRank` from `rankTeams()`), never
-   from the map index, because joint positions are real: two teams level on
-   points, difference, points-for and wins are joint 2nd and the next team is
-   4th. An `index + 1` table has always lied about that.
+   from the map index: joint positions are real — two teams level are joint
+   2nd and the next team is 4th, which an `index + 1` table lies about.
    =========================================================================== */
 
 /** One line of a table, already ranked by `rankTeams()`. */
@@ -91,7 +77,7 @@ interface ColumnSpec {
   full: string;
   /**
    * When the column appears. `""` means always — and `points` is deliberately
-   * the only measure column in that class besides W and L (BUG-11).
+   * the only measure column in that class besides W and L.
    */
   reveal: string;
   /** Display step: a measure a reader scans for is set in the display face. */
@@ -131,14 +117,10 @@ const COLUMN: Record<MbStandingsColumn, ColumnSpec> = {
     strong: true,
   },
   points: { short: "Pts", full: "Competition points", reveal: "", strong: true },
-  /* The comparative column (rubric D4's "who threatens whom"): how many
-     competition points a row is off the top of the table. It reads DOWN from
-     the leader — "−3" is one win of the standard 3 — so the chase is a number
-     rather than a subtraction the reader performs per row. The leader's own
-     cell is EMPTY: it is not behind anything, and a "0"/dash would claim a
-     measure that does not exist for that row. Revealed at `sm` beside PD, so
-     the 320px column set (BUG-11) is untouched; below `sm` it rides the
-     kicker line with the other hidden measures. */
+  /* The comparative column: competition points off the top of the table, so
+     the chase is a number rather than a per-row subtraction. The leader's own
+     cell is EMPTY — it is not behind anything, and a "0"/dash would claim a
+     measure that does not exist for that row. */
   gap: { short: "Gap", full: "Points behind the leader", reveal: "hidden sm:table-cell" },
   form: { short: "Form", full: "Recent form", reveal: "hidden lg:table-cell" },
 };
@@ -203,13 +185,11 @@ const measure = (
 };
 
 /**
- * The rank-movement mark: the printed almanac's margin arrow. Direction is
- * SHAPE (one chevron, rotated), never hue — both directions take the same
- * muted ink, so a desaturated capture reads them identically to a colour one
- * (invariant 13) — and the word lives in `sr-only` with the magnitude the
- * glyph compresses. `movement === 0` and `movement === undefined` both render
- * nothing: a held place needs no announcement, and a table with no previous
- * round has no history to claim.
+ * The rank-movement mark. Direction is SHAPE (one chevron, rotated), never
+ * hue — both directions take the same muted ink — and the word lives in
+ * `sr-only` with the magnitude the glyph compresses. `0` and `undefined` both
+ * render nothing: a held place needs no announcement, and a table with no
+ * previous round has no history to claim.
  */
 const Movement = ({ movement }: { movement?: number }) => {
   if (!movement) return null;
@@ -236,9 +216,8 @@ export const MbStandingsTable = ({
 }: {
   rows: MbStandingLine[];
   /**
-   * Required, and never visually hidden by accident: it is read out before the
-   * table and is the only thing that tells a screen-reader user which
-   * competition's table this is (invariant 47).
+   * Required: it is read out before the table and is the only thing that
+   * tells a screen-reader user which competition's table this is.
    */
   caption: string;
   columns?: readonly MbStandingsColumn[];
@@ -280,9 +259,9 @@ export const MbStandingsTable = ({
       </thead>
       <tbody>
         {rows.map((line) => {
-          /* The leader's rail is teal — design language §1.2 maps "leader" to
-             teal, and coral is reserved for the row the reader chose. A joint
-             first gets it too, which is the whole point of reading `rank`. */
+          /* The leader's rail is teal — coral is reserved for the row the
+             reader chose. A joint first gets it too; that is the point of
+             reading `rank`. */
           const rail =
             line.teamId === highlightTeamId
               ? "var(--mb-coral)"
@@ -297,39 +276,27 @@ export const MbStandingsTable = ({
                 className="matchbook-display pl-3! text-center text-[0.78rem] mb-track-display font-bold tabular-nums"
                 style={rail ? { boxShadow: `inset 3px 0 0 ${rail}` } : undefined}
               >
-                {/* A joint rank is marked with the printed-table "=" rather
-                    than repeating a bare number, so two 2nds do not read as a
-                    sorting bug. The movement chevron stacks INSIDE this cell
-                    rather than taking a column of its own: the rank cell is
-                    already the row's position channel, and a tenth `<th>`
-                    would spend ~14px of the name column at 320 for a 9px
-                    glyph. Stacked, it costs the table nothing — the cell's
-                    content is 27px in a 50px row. */}
+                {/* A joint rank is marked "=" so two 2nds do not read as a
+                    sorting bug. The movement chevron stacks INSIDE this cell —
+                    the rank cell is already the row's position channel, and a
+                    tenth column would spend name-column width on a 9px glyph. */}
                 <span className="block leading-none">
                   {line.sharesRank ? "=" : ""}
                   {line.rank}
                 </span>
                 <Movement movement={line.movement} />
               </th>
-              {/* The ceiling, not just the floor.
-                  `TeamMark` carries `min-w-0` — "I may shrink" — but in
-                  `table-layout: auto` the cell is sized to max-content, so the
-                  elision never fires and the scrollport cuts the string
-                  instead. Measured at 320 on a round robin: two clubs sharing
-                  a prefix both painted "Wolverhampton Wanderers Athleti",
-                  i.e. the table rendered two different teams identically on
-                  the one screen whose job is telling them apart.
-                  The cap goes on the CONTENT, never on the `<td>`: a max-width
-                  on a table cell is advisory and the auto layout ignores it. */}
+              {/* The ceiling, not just the floor: in `table-layout: auto` the
+                  cell sizes to max-content, so the name elision never fires
+                  and the scrollport cuts the string invisibly. The cap goes
+                  on the CONTENT, never the `<td>` — a max-width on a table
+                  cell is fed into auto layout, not honoured as a ceiling. */}
               <td>
                 <div className="max-w-[min(15rem,46vw)] min-w-0">
                   <TeamMark team={line.team} size={compact ? "sm" : "md"} />
                 </div>
-                {/* The route to the columns the breakpoints take away.
-                    P / PF / PA / PD are `display:none` below `sm`, and a
-                    reader on a phone had no way to reach them at all — the
-                    legend still named all seven. They ride the row itself
-                    instead, which needs no scroller and no accordion. */}
+                {/* The hidden columns ride the row itself below `sm` — no
+                    scroller, no accordion, nothing unreachable on a phone. */}
                 <span className="mb-kicker mt-0.5 block tabular-nums sm:hidden">
                   {mobileMeasures(line, columns, leaderPoints)}
                 </span>
@@ -339,16 +306,10 @@ export const MbStandingsTable = ({
                 if (column === "form") {
                   return (
                     <td key={column} className={`text-center ${spec.reveal}`}>
-                      {/* LETTERS, not squares. A W square and an L square are
-                          `--mb-green` (luma 108.8) and `--mb-red` (luma 92.7)
-                          — 1.15:1 apart at 11x11px, so a desaturated capture
-                          showed 3W-0L as the same run of grey blocks as
-                          1W-3L and the column carried its meaning in hue
-                          alone (rubric HF-10). `FormLetters` is the shipped
-                          primitive for exactly this case. The fixed 78px
-                          right-aligned box keeps the column's width constant
-                          whatever the run length — the property the padded
-                          square strip was providing. */}
+                      {/* LETTERS, not coloured squares: green and red squares
+                          are near-identical in greyscale, carrying the run in
+                          hue alone. The fixed right-aligned box keeps the
+                          column's width constant whatever the run length. */}
                       <span className="inline-flex w-[82px] justify-end">
                         <FormLetters form={line.form} />
                       </span>
@@ -376,14 +337,10 @@ export const MbStandingsTable = ({
 };
 
 /**
- * The legend that used to be three coloured medal glyphs. It is a ruled footer
- * strip of `.mb-kicker` pairs instead — the abbreviations are already in the
- * header's `<abbr>` titles, so this is for the pointer user who never hovers.
- *
- * Each entry carries its column's own `reveal` class, so the legend names
- * exactly the columns that are rendered at that width. It used to name all
- * seven at 390px while four of them were `display:none`, which is a caption
- * for a table that is not there.
+ * A ruled footer strip of `.mb-kicker` pairs — the abbreviations are already
+ * in the header's `<abbr>` titles; this is for the pointer user who never
+ * hovers. Each entry carries its column's own `reveal` class, so the legend
+ * names exactly the columns rendered at that width.
  */
 export const MbStandingsLegend = ({
   columns = MB_STANDINGS_COLUMNS,
