@@ -7,12 +7,12 @@ import { afterAll, beforeAll, beforeEach, describe } from "vitest";
 
 const repoRoot = new URL("../../../", import.meta.url);
 
-// firebase.json is the one place the emulator port is set.
+// Read the port from firebase.json rather than repeating it here.
 const firebaseJson = JSON.parse(
   readFileSync(new URL("firebase.json", repoRoot), "utf8"),
 ) as { emulators: { firestore: { port: number } } };
 
-export const firestoreEmulator = {
+const firestoreEmulator = {
   host: "127.0.0.1",
   port: firebaseJson.emulators.firestore.port,
 };
@@ -20,15 +20,17 @@ export const firestoreEmulator = {
 // Not the project id `npm run dev` uses, so wiping data between tests never
 // touches what a developer is looking at in the browser. The demo- prefix keeps
 // the emulator from ever calling real Firebase.
-export const rulesTestProjectId = "demo-tournament-tracker-rules";
+const rulesTestProjectId = "demo-tournament-tracker-rules";
 
-export const skipMessage =
+const skipMessage =
   `Firestore emulator not reachable at ${firestoreEmulator.host}:${firestoreEmulator.port}, ` +
   "skipping rules tests. Run `npm run emulators` first.";
 
 async function probeEmulator(): Promise<boolean> {
   try {
-    // Any HTTP answer on the port means the emulator is up; the status doesn't matter.
+    // Any HTTP answer on the port counts. If some other server holds the port,
+    // the tests run and fail loudly, which beats a quiet skip hiding a broken
+    // harness.
     await fetch(`http://${firestoreEmulator.host}:${firestoreEmulator.port}/`, {
       signal: AbortSignal.timeout(1000),
     });
@@ -38,7 +40,7 @@ async function probeEmulator(): Promise<boolean> {
   }
 }
 
-export const firestoreEmulatorIsUp = await probeEmulator();
+const firestoreEmulatorIsUp = await probeEmulator();
 
 /**
  * A describe block that runs only while the Firestore emulator is up. It loads
