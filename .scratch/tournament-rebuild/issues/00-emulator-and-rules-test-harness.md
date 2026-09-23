@@ -11,7 +11,7 @@ other ticket leans on: without it nothing below can be verified locally.
 - [x] The emulators script starts Auth and Firestore together.
 - [x] A missing JDK produces a clear message pointing at where to get one, and the README says the emulators need Java.
 - [x] The Firebase rules unit-testing package is installed and rules tests run under vitest against the emulator, skipping cleanly with a message when the emulator is not up.
-- [ ] One smoke rules test passes: a signed-out read of an arbitrary document is denied.
+- [x] One smoke rules test passes: a signed-out read of an arbitrary document is denied.
 - [x] The README documents the emulator flag in the env file and the two commands to run.
 
 ## Comments
@@ -24,4 +24,4 @@ other ticket leans on: without it nothing below can be verified locally.
 
 Verified here: the missing-JDK message from both the script and `npm run emulators`; `npm test` runs the 48 existing tests and skips the rules test with the message; typecheck and lint pass.
 
-Not verified here: the smoke test passing against a running emulator. This machine has no JDK, since the winget install noted in the spec never landed, and the emulators cannot start without one. To close the last box, install a JDK 21 or newer, run `npm run emulators`, then `npm test` in another terminal.
+**2026-09-23, later.** Temurin 21 is now installed on this machine through winget. With it, `npm run emulators` brings up Auth and Firestore, and `npm test` runs the smoke test green against them, so every box above is checked. The remaining step is review of the branch.
