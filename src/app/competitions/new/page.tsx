@@ -41,12 +41,13 @@ export default function NewCompetitionPage() {
     teamValidation,
     teams,
     teamsCount,
+    isRosterLoading,
     advancedSettings,
     advancedSettingsHandlers,
   } = useNewCompetitionPage();
 
   // Show loading state while checking auth
-  if (isLoading || !isAuthenticated) {
+  if (isLoading || !isAuthenticated || isRosterLoading) {
     return <PageLoadingSpinner maxWidth="max-w-4xl" />;
   }
 

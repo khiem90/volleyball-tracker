@@ -8,6 +8,7 @@ import {
   useCallback,
   useMemo,
   useRef,
+  useState,
   type ReactNode,
 } from "react";
 import type {
@@ -19,7 +20,15 @@ import type {
   MatchStatus,
 } from "@/types/game";
 // Note: PersistentTeam, CompetitionType, MatchStatus are used in callback signatures
+import { useAuth } from "./AuthContext";
 import { useSession } from "./SessionContext";
+import { db } from "@/lib/firebase";
+import {
+  addRosterTeam,
+  deleteRosterTeam,
+  subscribeToRoster,
+  updateRosterTeam,
+} from "@/lib/roster";
 import {
   appReducer,
   initialState,
@@ -36,6 +45,10 @@ interface AppContextValue {
   // Session info
   isSharedMode: boolean;
   canEdit: boolean;
+  // True until the signed-in account's roster has arrived from Firestore
+  isRosterLoading: boolean;
+  // Set when the roster subscription fails, for example when rules deny it
+  rosterError: string | null;
   // Team actions
   addTeam: (name: string, color?: string) => void;
   updateTeam: (id: string, name: string, color?: string) => void;
@@ -113,8 +126,50 @@ interface AppProviderProps {
 export const AppProvider = ({ children }: AppProviderProps) => {
   const [localState, dispatch] = useReducer(appReducer, initialState);
   const { session, isSharedMode, canEdit, syncAllData } = useSession();
+  const { user, isLoading: isAuthLoading } = useAuth();
+  const uid = user?.uid ?? null;
 
-  // Determine which state to use: session data or local data
+  // The roster is a live subscription to the signed-in account's teams in
+  // Firestore. Guests and unconfigured builds get an empty roster.
+  const [roster, setRoster] = useState<PersistentTeam[]>([]);
+  const [isRosterLoading, setIsRosterLoading] = useState(true);
+  const [rosterError, setRosterError] = useState<string | null>(null);
+
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    if (isAuthLoading) return;
+
+    if (!uid || !db) {
+      setRoster([]);
+      setRosterError(null);
+      setIsRosterLoading(false);
+      return;
+    }
+
+    setIsRosterLoading(true);
+    setRosterError(null);
+    return subscribeToRoster(
+      db,
+      uid,
+      (teams) => {
+        setRoster(teams);
+        setRosterError(null);
+        setIsRosterLoading(false);
+      },
+      (error) => {
+        // onSnapshot errors end the subscription, so say so rather than
+        // presenting an empty roster as the truth.
+        console.error("Failed to load the roster:", error);
+        setRosterError(
+          "The roster did not load. Check your connection and sign-in, then reload the page."
+        );
+        setIsRosterLoading(false);
+      }
+    );
+  }, [uid, isAuthLoading]);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  // Determine which state to use: session data, or the roster plus local data
   const state = useMemo((): AppState => {
     if (isSharedMode && session) {
       return {
@@ -123,8 +178,12 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         matches: session.matches || [],
       };
     }
-    return localState;
-  }, [isSharedMode, session, localState]);
+    return {
+      teams: roster,
+      competitions: localState.competitions,
+      matches: localState.matches,
+    };
+  }, [isSharedMode, session, localState, roster]);
 
   // Memoized maps for O(1) lookups instead of O(n) array finds
   const competitionsMap = useMemo(() => {
@@ -162,7 +221,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
       }
 
       if (stored) {
-        const parsed = JSON.parse(stored) as AppState;
+        const parsed = JSON.parse(stored) as Partial<AppState>;
         dispatch({ type: "LOAD_STATE", state: parsed });
       }
     } catch (error) {
@@ -181,26 +240,28 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     }
   }, [localState, isSharedMode]);
 
-  // Team actions
+  // Team actions. Outside a shared session these write to the account's
+  // roster in Firestore; the subscription above feeds the change back into
+  // state, at once from the local cache and again when the server confirms.
   const addTeam = useCallback(
     (name: string, color?: string) => {
       if (isSharedMode && !canEdit) return;
 
-      const newTeam: PersistentTeam = {
-        id: generateId(),
-        name,
-        color,
-        createdAt: Date.now(),
-      };
-
       if (isSharedMode && session) {
-        const newTeams = [...(session.teams || []), newTeam];
-        syncAllData({ teams: newTeams });
-      } else {
-        dispatch({ type: "ADD_TEAM", name, color });
+        const newTeam: PersistentTeam = {
+          id: generateId(),
+          name,
+          color,
+          createdAt: Date.now(),
+        };
+        syncAllData({ teams: [...(session.teams || []), newTeam] });
+      } else if (uid && db) {
+        addRosterTeam(db, uid, { name, color }).catch((error) => {
+          console.error("Failed to add team:", error);
+        });
       }
     },
-    [isSharedMode, canEdit, session, syncAllData]
+    [isSharedMode, canEdit, session, syncAllData, uid]
   );
 
   const updateTeam = useCallback(
@@ -212,11 +273,13 @@ export const AppProvider = ({ children }: AppProviderProps) => {
           team.id === id ? { ...team, name, color } : team
         );
         syncAllData({ teams: newTeams });
-      } else {
-        dispatch({ type: "UPDATE_TEAM", id, name, color });
+      } else if (uid && db) {
+        updateRosterTeam(db, uid, id, { name, color }).catch((error) => {
+          console.error("Failed to update team:", error);
+        });
       }
     },
-    [isSharedMode, canEdit, session, syncAllData]
+    [isSharedMode, canEdit, session, syncAllData, uid]
   );
 
   const deleteTeam = useCallback(
@@ -226,11 +289,13 @@ export const AppProvider = ({ children }: AppProviderProps) => {
       if (isSharedMode && session) {
         const newTeams = (session.teams || []).filter((team) => team.id !== id);
         syncAllData({ teams: newTeams });
-      } else {
-        dispatch({ type: "DELETE_TEAM", id });
+      } else if (uid && db) {
+        deleteRosterTeam(db, uid, id).catch((error) => {
+          console.error("Failed to delete team:", error);
+        });
       }
     },
-    [isSharedMode, canEdit, session, syncAllData]
+    [isSharedMode, canEdit, session, syncAllData, uid]
   );
 
   const getTeamById = useCallback(
@@ -1084,6 +1149,8 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     state,
     isSharedMode,
     canEdit: isSharedMode ? canEdit : true,
+    isRosterLoading,
+    rosterError,
     addTeam,
     updateTeam,
     deleteTeam,

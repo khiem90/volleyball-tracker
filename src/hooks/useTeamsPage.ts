@@ -3,7 +3,7 @@ import { useApp } from "@/context/AppContext";
 import type { PersistentTeam } from "@/types/game";
 
 export const useTeamsPage = () => {
-  const { state, addTeam, updateTeam, deleteTeam } = useApp();
+  const { state, isRosterLoading, rosterError, addTeam, updateTeam, deleteTeam } = useApp();
   const [formOpen, setFormOpen] = useState(false);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [editingTeam, setEditingTeam] = useState<PersistentTeam | null>(null);
@@ -60,6 +60,8 @@ export const useTeamsPage = () => {
 
   return {
     teams: state.teams,
+    isRosterLoading,
+    rosterError,
     formOpen,
     setFormOpen,
     quickAddOpen,

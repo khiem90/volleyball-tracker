@@ -11,6 +11,8 @@ export const useTeams = () => {
   const {
     state,
     canEdit,
+    isRosterLoading,
+    rosterError,
     addTeam,
     updateTeam,
     deleteTeam,
@@ -38,6 +40,8 @@ export const useTeams = () => {
   return {
     teams,
     canEdit,
+    isRosterLoading,
+    rosterError,
     addTeam,
     updateTeam,
     deleteTeam,

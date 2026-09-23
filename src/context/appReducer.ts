@@ -1,6 +1,5 @@
 import type {
   AppState,
-  PersistentTeam,
   Competition,
   Match,
   CompetitionType,
@@ -21,8 +20,12 @@ export const generateId = (): string => {
 // ============================================
 // Initial State
 // ============================================
-export const initialState: AppState = {
-  teams: [],
+
+// What still lives in localStorage. Teams moved to the Firestore roster (see
+// src/lib/roster.ts); competitions and matches follow in a later ticket.
+export type LocalState = Pick<AppState, "competitions" | "matches">;
+
+export const initialState: LocalState = {
   competitions: [],
   matches: [],
 };
@@ -30,12 +33,6 @@ export const initialState: AppState = {
 // ============================================
 // Action Types
 // ============================================
-
-// Team Actions
-type TeamAction =
-  | { type: "ADD_TEAM"; name: string; color?: string }
-  | { type: "UPDATE_TEAM"; id: string; name: string; color?: string }
-  | { type: "DELETE_TEAM"; id: string };
 
 // Competition Actions
 type CompetitionAction =
@@ -86,51 +83,16 @@ type MatchAction =
 
 // State Actions
 type StateAction =
-  | { type: "LOAD_STATE"; state: AppState }
+  | { type: "LOAD_STATE"; state: Partial<LocalState> }
   | { type: "RESET_STATE" };
 
-export type AppAction =
-  | TeamAction
-  | CompetitionAction
-  | MatchAction
-  | StateAction;
+export type AppAction = CompetitionAction | MatchAction | StateAction;
 
 // ============================================
 // Reducer
 // ============================================
-export const appReducer = (state: AppState, action: AppAction): AppState => {
+export const appReducer = (state: LocalState, action: AppAction): LocalState => {
   switch (action.type) {
-    // ==================
-    // Team Actions
-    // ==================
-    case "ADD_TEAM": {
-      const newTeam: PersistentTeam = {
-        id: generateId(),
-        name: action.name,
-        color: action.color,
-        createdAt: Date.now(),
-      };
-      return { ...state, teams: [...state.teams, newTeam] };
-    }
-
-    case "UPDATE_TEAM": {
-      return {
-        ...state,
-        teams: state.teams.map((team) =>
-          team.id === action.id
-            ? { ...team, name: action.name, color: action.color }
-            : team
-        ),
-      };
-    }
-
-    case "DELETE_TEAM": {
-      return {
-        ...state,
-        teams: state.teams.filter((team) => team.id !== action.id),
-      };
-    }
-
     // ==================
     // Competition Actions
     // ==================
@@ -386,7 +348,12 @@ export const appReducer = (state: AppState, action: AppAction): AppState => {
     // State Actions
     // ==================
     case "LOAD_STATE": {
-      return action.state;
+      // Stored blobs from before the roster moved to Firestore still carry a
+      // `teams` array. The loader drops it rather than migrating it.
+      return {
+        competitions: action.state.competitions ?? [],
+        matches: action.state.matches ?? [],
+      };
     }
 
     case "RESET_STATE": {

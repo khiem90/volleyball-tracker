@@ -130,9 +130,10 @@ export default function QuickMatchPage() {
     handleStartMatch,
     handleSwapTeams,
     homeTeamId,
+    isRosterLoading,
   } = useQuickMatchPage();
 
-  if (isLoading) {
+  if (isLoading || (!isGuest && isRosterLoading)) {
     return <PageLoadingSpinner />;
   }
 

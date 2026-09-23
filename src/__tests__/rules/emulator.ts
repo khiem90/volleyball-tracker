@@ -1,8 +1,10 @@
 import { readFileSync } from "node:fs";
 import {
   initializeTestEnvironment,
+  type RulesTestContext,
   type RulesTestEnvironment,
 } from "@firebase/rules-unit-testing";
+import type { Firestore } from "firebase/firestore";
 import { afterAll, beforeAll, beforeEach, describe } from "vitest";
 
 const repoRoot = new URL("../../../", import.meta.url);
@@ -74,4 +76,13 @@ export function describeFirestoreRules(
 
     body(() => env);
   });
+}
+
+/**
+ * The test context hands back a compat Firestore. The modular functions in
+ * `firebase/firestore` unwrap the compat delegate at runtime, so this only
+ * narrows the type for callers written against the modular API.
+ */
+export function modularFirestore(context: RulesTestContext): Firestore {
+  return context.firestore() as unknown as Firestore;
 }

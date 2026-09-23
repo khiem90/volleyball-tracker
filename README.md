@@ -85,7 +85,14 @@ from Firebase Console > Project Settings > Your apps > Config.
 npm test
 ```
 
-Unit tests always run. The Firestore rules tests in `src/__tests__/rules` need
-the emulators up. When they are down, vitest skips those tests and prints a
-message saying so. The rules tests load `firestore.rules` into their own demo
-project, so wiping data between tests never touches what you see in the browser.
+Unit tests always run. The Firestore rules tests in `src/__tests__/rules` and
+the roster tests in `src/__tests__/roster` need the emulators up. When they are
+down, vitest skips those tests and prints a message saying so. They load
+`firestore.rules` into their own demo project, so wiping data between tests
+never touches what you see in the browser.
+
+### Deploying rules and indexes
+
+Changes to `firestore.rules` or `firestore.indexes.json` reach the real project
+through the Firebase CLI, not through Vercel. The steps are in
+[docs/deploying-firestore-rules.md](docs/deploying-firestore-rules.md).

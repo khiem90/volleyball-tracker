@@ -28,6 +28,8 @@ export default function TeamsPage() {
   const data = useMatchbookTeams();
   const {
     teams,
+    isRosterLoading,
+    rosterError,
     formOpen,
     setFormOpen,
     quickAddOpen,
@@ -61,7 +63,7 @@ export default function TeamsPage() {
   const selectedRow = data.rows.find((row) => row.id === effectiveId) ?? null;
   const selectedTeam = teams.find((team) => team.id === effectiveId) ?? null;
 
-  if (isLoading || !isAuthenticated) {
+  if (isLoading || !isAuthenticated || isRosterLoading) {
     return <PageLoadingSpinner />;
   }
 
@@ -143,6 +145,15 @@ export default function TeamsPage() {
                 </Link>
               </div>
             </header>
+
+            {rosterError && (
+              <p
+                role="alert"
+                className="mb-4 border-[1.5px] border-mb-red px-3 py-2 text-[0.8rem] font-medium text-mb-red"
+              >
+                {rosterError}
+              </p>
+            )}
 
             {/* Panel grid */}
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-12">

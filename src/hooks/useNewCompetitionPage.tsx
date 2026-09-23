@@ -81,7 +81,7 @@ const formatOptions: FormatOption[] = [
 
 export const useNewCompetitionPage = () => {
   const router = useRouter();
-  const { state, addTeam, createCompetition } = useApp();
+  const { state, isRosterLoading, addTeam, createCompetition } = useApp();
   const [step, setStep] = useState<Step>("format");
   const [selectedFormat, setSelectedFormat] = useState<CompetitionType | null>(null);
   const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>([]);
@@ -297,6 +297,7 @@ export const useNewCompetitionPage = () => {
     teamValidation,
     teams: state.teams,
     teamsCount: state.teams.length,
+    isRosterLoading,
     // Advanced settings (grouped)
     advancedSettings: {
       showAdvancedSettings,

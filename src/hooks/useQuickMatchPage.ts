@@ -4,7 +4,7 @@ import { useApp } from "@/context/AppContext";
 
 export const useQuickMatchPage = () => {
   const router = useRouter();
-  const { state, addTeam, addMatch } = useApp();
+  const { state, isRosterLoading, addTeam, addMatch } = useApp();
 
   const [homeTeamId, setHomeTeamId] = useState<string>("");
   const [awayTeamId, setAwayTeamId] = useState<string>("");
@@ -110,5 +110,6 @@ export const useQuickMatchPage = () => {
     handleSwapTeams,
     homeTeam,
     homeTeamId,
+    isRosterLoading,
   };
 };

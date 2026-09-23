@@ -1,8 +1,11 @@
 import { initializeApp, getApps, type FirebaseApp } from "firebase/app";
 import { getAuth, connectAuthEmulator, type Auth } from "firebase/auth";
 import {
-  getFirestore,
   connectFirestoreEmulator,
+  getFirestore,
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
   type Firestore,
 } from "firebase/firestore";
 
@@ -43,6 +46,24 @@ export const isFirebaseConfigured = (): boolean => {
   );
 };
 
+// Offline persistence keeps an account's data readable and writable without
+// signal: reads come from the on-device cache and writes queue until the
+// network is back. The multi-tab manager lets every open tab share that cache.
+// initializeFirestore must be the first Firestore call for the app, and it
+// throws when hot reload evaluates this module again while an instance is
+// live, so that case falls back to the instance that already exists.
+const createFirestore = (firebaseApp: FirebaseApp): Firestore => {
+  try {
+    return initializeFirestore(firebaseApp, {
+      localCache: persistentLocalCache({
+        tabManager: persistentMultipleTabManager(),
+      }),
+    });
+  } catch {
+    return getFirestore(firebaseApp);
+  }
+};
+
 // Initialize Firebase only if configured and on client side
 let app: FirebaseApp | null = null;
 let auth: Auth | null = null;
@@ -56,7 +77,7 @@ if (typeof window !== "undefined" && isFirebaseConfigured()) {
       app = getApps()[0];
     }
     auth = getAuth(app);
-    db = getFirestore(app);
+    db = createFirestore(app);
     if (useEmulator) {
       try {
         connectAuthEmulator(auth, "http://127.0.0.1:9099", {
