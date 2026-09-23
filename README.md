@@ -49,3 +49,42 @@ A modern web application for organizing and tracking matches, tournaments, and c
 - Firebase (Auth, Firestore)
 - Framer Motion
 - Radix UI
+
+## Local development
+
+### Emulators
+
+Sign-in and data can run against the Firebase emulators instead of a real
+project. The emulators are Java programs, so install a JDK 21 or newer first
+(Temurin from https://adoptium.net/temurin/releases/ works) and make sure `java`
+is on your PATH. Without one, `npm run emulators` stops with a message saying so.
+
+1. Put this line in `.env.local`:
+
+   ```
+   NEXT_PUBLIC_FIREBASE_USE_EMULATOR=1
+   ```
+
+2. Start the Auth and Firestore emulators:
+
+   ```bash
+   npm run emulators
+   ```
+
+3. In another terminal, run `npm run dev`. The Emulator UI is at
+   http://127.0.0.1:4000.
+
+Emulator accounts and data are discarded when the emulators stop. To use a real
+project instead, remove the flag and fill in the `NEXT_PUBLIC_FIREBASE_*` keys
+from Firebase Console > Project Settings > Your apps > Config.
+
+### Tests
+
+```bash
+npm test
+```
+
+Unit tests always run. The Firestore rules tests in `src/__tests__/rules` need
+the emulators up; when they are not, those tests are skipped with a message
+saying so. They load `firestore.rules` into their own demo project, so wiping
+data between tests never touches what you see in the browser.
