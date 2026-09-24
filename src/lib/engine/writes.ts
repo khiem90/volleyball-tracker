@@ -2,12 +2,14 @@ import type { Match } from "@/types/game";
 
 /**
  * One document write the engine wants applied. Creates carry a whole match;
- * updates carry only the fields that changed. The data layer turns these into
- * Firestore writes and tests fold them back into an array.
+ * updates carry only the fields that changed; deletes name the match to
+ * remove. The data layer turns these into Firestore writes and tests fold
+ * them back into an array.
  */
 export type MatchWrite =
   | { kind: "create"; match: Match }
-  | { kind: "update"; matchId: string; changes: Partial<Match> };
+  | { kind: "update"; matchId: string; changes: Partial<Match> }
+  | { kind: "delete"; matchId: string };
 
 const MATCH_KEYS = [
   "homeTeamId",
@@ -32,8 +34,9 @@ const MATCH_KEYS = [
 /**
  * Work out the writes that take `before` to `after`. Matches in `after` that
  * `before` does not have become creates; matches whose fields differ become
- * updates carrying just those fields. A field that `after` no longer has is
- * written as undefined so the data layer can delete it.
+ * updates carrying just those fields; matches `after` no longer has become
+ * deletes. A field that `after` no longer has is written as undefined so the
+ * data layer can delete it.
  */
 export const diffMatchWrites = (before: Match[], after: Map<string, Match>): MatchWrite[] => {
   const previous = new Map(before.map((m) => [m.id, m]));
@@ -57,15 +60,23 @@ export const diffMatchWrites = (before: Match[], after: Map<string, Match>): Mat
     if (changed) writes.push({ kind: "update", matchId: match.id, changes });
   }
 
+  for (const match of before) {
+    if (!after.has(match.id)) writes.push({ kind: "delete", matchId: match.id });
+  }
+
   return writes;
 };
 
 /** Fold writes into a match list, the way the database would. */
 export const applyMatchWrites = (matches: Match[], writes: MatchWrite[]): Match[] => {
-  const result = matches.map((m) => ({ ...m }));
+  let result = matches.map((m) => ({ ...m }));
   for (const write of writes) {
     if (write.kind === "create") {
       result.push({ ...write.match });
+      continue;
+    }
+    if (write.kind === "delete") {
+      result = result.filter((m) => m.id !== write.matchId);
       continue;
     }
     const index = result.findIndex((m) => m.id === write.matchId);

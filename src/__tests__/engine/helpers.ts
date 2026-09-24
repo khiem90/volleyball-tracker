@@ -93,6 +93,10 @@ export const find = (world: World, where: Partial<Match>): Match => {
   return match;
 };
 
+/** The match waiting to be played on a court of a rotation tournament. */
+export const openOn = (world: World, court: number): Match =>
+  find(world, { court, status: "pending" });
+
 /** Complete a match with the given winner; the loser gets one point fewer. */
 export const win = (world: World, matchId: string, winnerId: string): World => {
   const match = world.matches.find((m) => m.id === matchId);

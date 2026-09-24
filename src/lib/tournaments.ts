@@ -197,14 +197,6 @@ export const updateMatch = async (
   await updateDoc(matchDoc(db, tournamentId, matchId), toUpdatePayload(changes));
 };
 
-export const deleteMatch = async (
-  db: Firestore,
-  tournamentId: string,
-  matchId: string,
-): Promise<void> => {
-  await deleteDoc(matchDoc(db, tournamentId, matchId));
-};
-
 // ============================================
 // Commands
 // ============================================
@@ -262,6 +254,7 @@ const lostRace = (error: unknown): boolean =>
 interface Writer {
   set: (ref: ReturnType<typeof matchDoc>, data: Match) => void;
   update: (ref: ReturnType<typeof matchDoc>, data: Record<string, unknown>) => void;
+  delete: (ref: ReturnType<typeof matchDoc>) => void;
 }
 
 const writeMatches = (
@@ -271,10 +264,16 @@ const writeMatches = (
   writer: Writer,
 ) => {
   for (const write of writes) {
-    if (write.kind === "create") {
-      writer.set(matchDoc(db, tournamentId, write.match.id), stripUndefined(write.match));
-    } else {
-      writer.update(matchDoc(db, tournamentId, write.matchId), toUpdatePayload(write.changes));
+    switch (write.kind) {
+      case "create":
+        writer.set(matchDoc(db, tournamentId, write.match.id), stripUndefined(write.match));
+        break;
+      case "update":
+        writer.update(matchDoc(db, tournamentId, write.matchId), toUpdatePayload(write.changes));
+        break;
+      case "delete":
+        writer.delete(matchDoc(db, tournamentId, write.matchId));
+        break;
     }
   }
 };
@@ -305,6 +304,7 @@ const commitTournament = async (
         writeMatches(db, tournament.id, matchWrites, {
           set: (matchRef, data) => tx.set(matchRef, data),
           update: (matchRef, data) => tx.update(matchRef, data),
+          delete: (matchRef) => tx.delete(matchRef),
         });
       },
       // Firestore's own retries would rerun the function on the same stale
@@ -320,6 +320,7 @@ const commitTournament = async (
     writeMatches(db, tournament.id, matchWrites, {
       set: (matchRef, data) => batch.set(matchRef, data),
       update: (matchRef, data) => batch.update(matchRef, data),
+      delete: (matchRef) => batch.delete(matchRef),
     });
     // The commit resolves when the server accepts it, which offline is
     // whenever the connection returns. The local cache has it at once.

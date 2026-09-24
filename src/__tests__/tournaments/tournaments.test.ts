@@ -43,6 +43,20 @@ const input = (format: TournamentFormat, name = "Tuesday night"): NewTournamentI
   },
 });
 
+/** Six teams on two courts, so each court has a queue to draw from. */
+const rotationInput = (format: TournamentFormat): NewTournamentInput => {
+  const base = input(format, "Rotation night");
+  return {
+    ...base,
+    teams: [
+      ...roster,
+      { id: "t5", name: "Eagles", color: "#a855f7", createdAt: 5 },
+      { id: "t6", name: "Falcons", color: "#14b8a6", createdAt: 6 },
+    ],
+    settings: { ...base.settings, courts: 2, instantWin: true },
+  };
+};
+
 /** Resolves with the first snapshot from `subscribe` that satisfies `ready`. */
 const when = <T>(
   subscribe: (onChange: (value: T) => void, onError: (error: Error) => void) => Unsubscribe,
@@ -254,6 +268,105 @@ describeFirestoreRules("Tournaments on Firestore", (env) => {
         awayTeamId: "t2",
         status: "pending",
       });
+    });
+
+    it("starting a rotation tournament writes the format state and one match per court", async () => {
+      const db = modularFirestore(env().authenticatedContext(owner));
+      const created = await createTournament(db, owner, rotationInput("win2out"));
+
+      await applyTournamentCommand(db, created.id, { type: "start" });
+
+      const stored = await tournamentDocOf(db, created.id);
+      expect(stored.status).toBe("live");
+      expect(stored.win2outState).toMatchObject({
+        numberOfCourts: 2,
+        queue: ["t5", "t6"],
+        courts: [
+          { courtNumber: 1, teamIds: ["t1", "t2"] },
+          { courtNumber: 2, teamIds: ["t3", "t4"] },
+        ],
+      });
+      const matches = await matchDocsOf(db, created.id);
+      expect(matches.map((m) => [m.court, m.homeTeamId, m.awayTeamId, m.status]).sort()).toEqual([
+        [1, "t1", "t2", "pending"],
+        [2, "t3", "t4", "pending"],
+      ]);
+    });
+
+    it("keeps both results when two courts finish at the same moment", async () => {
+      const db = modularFirestore(env().authenticatedContext(owner));
+      const created = await createTournament(db, owner, rotationInput("win2out"));
+      await applyTournamentCommand(db, created.id, { type: "start" });
+      const before = await matchDocsOf(db, created.id);
+      const court1 = before.find((m) => m.court === 1)!;
+      const court2 = before.find((m) => m.court === 2)!;
+
+      // Two phones, one per court, saving at once. Each loads the same
+      // revision; one of them must lose the race and apply again on top of
+      // the other's result.
+      await Promise.all([
+        applyTournamentCommand(db, created.id, {
+          type: "complete_match",
+          matchId: court1.id,
+          homeScore: 25,
+          awayScore: 20,
+        }),
+        applyTournamentCommand(db, created.id, {
+          type: "complete_match",
+          matchId: court2.id,
+          homeScore: 18,
+          awayScore: 25,
+        }),
+      ]);
+
+      const after = await matchDocsOf(db, created.id);
+      expect(after.find((m) => m.id === court1.id)).toMatchObject({ status: "completed", winnerId: "t1" });
+      expect(after.find((m) => m.id === court2.id)).toMatchObject({ status: "completed", winnerId: "t4" });
+      const open = after.filter((m) => m.status === "pending").sort((a, b) => a.court! - b.court!);
+      expect(open.map((m) => [m.court, m.homeTeamId, m.awayTeamId])).toEqual(
+        expect.arrayContaining([
+          [1, "t1", expect.stringMatching(/^t[56]$/)],
+          [2, "t4", expect.stringMatching(/^t[56]$/)],
+        ]),
+      );
+      expect(new Set(open.map((m) => m.awayTeamId)).size).toBe(2);
+      const stored = await tournamentDocOf(db, created.id);
+      expect(stored.win2outState?.queue.sort()).toEqual(["t2", "t3"]);
+      expect(stored.win2outState?.courts.map((c) => c.teamIds[0])).toEqual(["t1", "t4"]);
+    });
+
+    it("an instant win schedules the court's next match and undo takes it back", async () => {
+      const db = modularFirestore(env().authenticatedContext(owner));
+      const created = await createTournament(db, owner, rotationInput("two_match_rotation"));
+      await applyTournamentCommand(db, created.id, { type: "start" });
+      const live = await tournamentDocOf(db, created.id);
+      const before = await matchDocsOf(db, created.id);
+      const court1 = before.find((m) => m.court === 1)!;
+
+      const outcome = await applyTournamentCommand(db, created.id, {
+        type: "instant_win",
+        matchId: court1.id,
+        winnerId: "t2",
+      });
+
+      const played = await matchDocsOf(db, created.id);
+      expect(played).toHaveLength(3);
+      expect(played.find((m) => m.id === court1.id)).toMatchObject({ status: "completed", winnerId: "t2" });
+      expect(played.find((m) => m.id === outcome.createdMatchIds[0])).toMatchObject({
+        court: 1,
+        homeTeamId: "t2",
+        awayTeamId: "t5",
+        status: "pending",
+      });
+      expect((await tournamentDocOf(db, created.id)).twoMatchRotationState?.queue).toEqual(["t6", "t1"]);
+
+      await applyTournamentCommand(db, created.id, { type: "undo_result", matchId: court1.id });
+
+      const restored = await matchDocsOf(db, created.id);
+      expect(restored.map((m) => m.id).sort()).toEqual(before.map((m) => m.id).sort());
+      expect(restored.find((m) => m.id === court1.id)).toEqual(court1);
+      const stateAfterUndo = (await tournamentDocOf(db, created.id)).twoMatchRotationState;
+      expect({ ...stateAfterUndo, undoRecords: undefined }).toEqual(live.twoMatchRotationState);
     });
 
     it("deleting a tournament removes it and its matches", async () => {

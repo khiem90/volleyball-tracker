@@ -1,29 +1,17 @@
-import type { Match, Tournament } from "@/types/game";
+import { UNDO_DEPTH } from "@/lib/engine/rotation";
+
+/** How many entries the toast keeps: as many as the engine keeps undoable per court. */
+export const MAX_UNDO_STACK_SIZE = UNDO_DEPTH;
 
 /**
- * Maximum number of undo entries to keep in the stack
+ * The actions the undo toast can take back. Both are results on a rotation
+ * court; the engine's undo command puts the court back as it was.
  */
-export const MAX_UNDO_STACK_SIZE = 5;
+export type UndoActionType = "instant_win" | "match_complete";
 
 /**
- * Types of actions that can be undone in competition mode
- */
-export type UndoActionType = "instant_win" | "match_complete" | "match_start";
-
-/**
- * Snapshot of state before an undoable action
- */
-export interface UndoSnapshot {
-  /** The match state before modification */
-  match: Match | null;
-  /** Tournament state before modification (includes win2outState/twoMatchRotationState) */
-  tournament: Tournament | null;
-  /** ID of newly created match that should be deleted on undo */
-  newMatchId: string | null;
-}
-
-/**
- * Undo entry containing snapshot and metadata
+ * One result the undo toast offers to take back. The engine keeps what the
+ * result moved, so an entry only needs to name the result.
  */
 export interface UndoEntry {
   /** Unique identifier for this undo entry */
@@ -32,8 +20,9 @@ export interface UndoEntry {
   actionType: UndoActionType;
   /** Human-readable description of the action */
   description: string;
-  /** State snapshot to restore */
-  snapshot: UndoSnapshot;
+  tournamentId: string;
+  /** The match whose result is undone */
+  matchId: string;
   /** Timestamp when action was performed */
   timestamp: number;
 }

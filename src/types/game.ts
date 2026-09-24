@@ -120,6 +120,9 @@ export interface Match {
 /** A match the engine has scheduled but not yet placed in a tournament. */
 export type MatchDraft = Omit<Match, "id" | "ownerId" | "tournamentId" | "createdAt">;
 
+/** How far a match has got: its status and the points on the board. */
+export type MatchProgress = Pick<Match, "status" | "homeScore" | "awayScore">;
+
 // ============================================
 // Round Robin
 // ============================================
@@ -145,6 +148,32 @@ export interface AppState {
   teams: PersistentTeam[];
   tournaments: Tournament[];
   matches: Match[];
+}
+
+// ============================================
+// Rotation formats
+// ============================================
+
+/**
+ * What one result on a court moved, kept so the result can be undone without
+ * touching the other courts. A rotation state keeps the last few records of
+ * each court, oldest first; only a court's newest record can be undone, and
+ * undoing it makes the one before it the newest. `court` and `teamStatuses`
+ * are copies from before the result: the court itself and the status of every
+ * team the result touched.
+ */
+export interface RotationUndoRecord<TeamStatus, Court> {
+  matchId: string;
+  /** The match the result scheduled on this court, if the queue had teams for it. */
+  nextMatchId?: string;
+  court: Court;
+  /** Teams the result sent from the court to the queue, in the order they joined it. */
+  toQueue: string[];
+  /** Teams the result pulled from the queue onto the court, in the order they left it. */
+  fromQueue: string[];
+  teamStatuses: TeamStatus[];
+  /** The match as it stood before the result, so undo can put its points back. */
+  match: MatchProgress;
 }
 
 // ============================================
@@ -176,6 +205,7 @@ export interface Win2OutState {
   numberOfCourts: number; // Configuration setting
   currentChampionId?: string; // Legacy - kept for single court compatibility
   isComplete: boolean;
+  undoRecords?: RotationUndoRecord<Win2OutTeamStatus, Win2OutCourt>[];
 }
 
 // ============================================
@@ -204,4 +234,5 @@ export interface TwoMatchRotationState {
   courts: TwoMatchRotationCourt[]; // Multiple courts with teams
   numberOfCourts: number; // Configuration setting
   isComplete: boolean;
+  undoRecords?: RotationUndoRecord<TwoMatchRotationTeamStatus, TwoMatchRotationCourt>[];
 }

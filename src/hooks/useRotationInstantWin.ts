@@ -3,7 +3,6 @@
 import { useCallback } from "react";
 import { useApp } from "@/context/AppContext";
 import { useUndo } from "@/components/GlobalUndoToast";
-import { createSnapshot } from "@/lib/undo";
 import type { Match, Tournament } from "@/types/game";
 
 interface UseRotationInstantWinProps {
@@ -13,34 +12,30 @@ interface UseRotationInstantWinProps {
 
 /**
  * Instant win: record a rotation-format result by tapping the winner. The
- * engine scores it 25-0, moves the queue, and schedules the court's next match.
+ * engine scores it, moves the queue, schedules the court's next match, and
+ * keeps what it moved so the undo toast can take the result back.
  */
 export const useRotationInstantWin = ({ tournament, getTeamName }: UseRotationInstantWinProps) => {
-  const { canEdit, completeMatch } = useApp();
+  const { canEdit, instantWin } = useApp();
   const { pushUndo } = useUndo();
 
   const handleInstantWin = useCallback(
     async (winnerId: string, match: Match) => {
       if (!tournament || !canEdit) return;
 
-      // Capture the state before the result so undo can put it back.
-      const snapshot = createSnapshot(match, tournament);
-
       try {
-        const outcome = await completeMatch(match.id, {
-          homeScore: winnerId === match.homeTeamId ? 25 : 0,
-          awayScore: winnerId === match.awayTeamId ? 25 : 0,
-        });
+        await instantWin(match.id, winnerId);
         pushUndo({
           actionType: "instant_win",
           description: `${getTeamName(winnerId)} won`,
-          snapshot: { ...snapshot, newMatchId: outcome.createdMatchIds[0] ?? null },
+          tournamentId: tournament.id,
+          matchId: match.id,
         });
       } catch (error) {
         console.error("Instant win failed:", error);
       }
     },
-    [tournament, canEdit, completeMatch, getTeamName, pushUndo]
+    [tournament, canEdit, instantWin, getTeamName, pushUndo]
   );
 
   return { handleInstantWin, canEdit };

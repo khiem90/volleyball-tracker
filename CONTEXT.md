@@ -70,6 +70,10 @@ The tree of matches in a Single or Double Elimination tournament.
 The teams waiting for a court in Win 2 & Out and Two Match Rotation.
 _Avoid_: Waiting list, line
 
+**Champion**:
+In Win 2 & Out, a team that has just won two matches in a row on a court. It goes to the queue behind the team it beat, and the tournament counts how many times each team has been champion.
+_Avoid_: Crown, king of the court
+
 ### Matches
 
 **Match**:
@@ -85,6 +89,10 @@ A match decided over a best-of-N sequence of games.
 **Instant Win**:
 Recording a match result by tapping the winner, without entering points.
 _Avoid_: Quick result
+
+**Undo**:
+Taking back the latest result on a court in Win 2 & Out or Two Match Rotation. The match is unplayed again, the match it scheduled is removed, and the teams it moved go back where they were. Only a court's latest result can be undone, and only while the court has not moved on.
+_Avoid_: Revert, rollback
 
 **Quick Match**:
 A standalone match between two teams that belongs to no tournament.

@@ -1,4 +1,4 @@
-import type { Match, MatchDraft, Tournament } from "@/types/game";
+import type { Match, MatchDraft, MatchProgress, Tournament } from "@/types/game";
 import { calculateStandings, generateRoundRobinSchedule } from "@/lib/roundRobin";
 import { generateSingleEliminationBracket } from "@/lib/singleElimination";
 import { generateDoubleEliminationBracket } from "@/lib/doubleElimination";
@@ -14,6 +14,12 @@ import {
 } from "@/lib/twoMatchRotation";
 import { formatLabel, isBracketFormat, isRotationFormat, minimumTeams } from "@/lib/formats";
 import { advance, bracketChampion, resolveByes } from "./brackets";
+import {
+  canUndo,
+  recordResult,
+  applyUndo,
+  type RotationStateLike,
+} from "./rotation";
 import { diffMatchWrites, type MatchWrite } from "./writes";
 
 export type { MatchWrite } from "./writes";
@@ -32,6 +38,8 @@ export type EngineCommand =
       homeScore: number;
       awayScore: number;
     }
+  | { type: "instant_win"; matchId: string; winnerId: string }
+  | { type: "undo_result"; matchId: string }
   | { type: "end" };
 
 export interface EngineContext {
@@ -58,7 +66,11 @@ export type EngineErrorCode =
   | "match_not_found"
   | "match_completed"
   | "match_not_ready"
-  | "tie";
+  | "not_in_match"
+  | "tie"
+  | "unsupported_format"
+  | "nothing_to_undo"
+  | "court_moved_on";
 
 export class EngineError extends Error {
   readonly code: EngineErrorCode;
@@ -94,6 +106,12 @@ export const applyCommand = (
       break;
     case "complete_match":
       completeMatch(working, command);
+      break;
+    case "instant_win":
+      instantWin(working, command);
+      break;
+    case "undo_result":
+      undoResult(working, command);
       break;
     case "end":
       end(working);
@@ -219,14 +237,42 @@ const completeMatch = (
   };
   working.matches.set(match.id, completed);
 
-  settle(working, completed);
+  settle(working, completed, match);
+};
+
+/** The score an instant win records for the winner. The loser gets zero. */
+const INSTANT_WIN_SCORE = 25;
+
+/**
+ * Instant win: the scorer taps the winner instead of entering points. The
+ * result is recorded as a full-score win and settled like any other.
+ */
+const instantWin = (
+  working: Working,
+  command: Extract<EngineCommand, { type: "instant_win" }>,
+) => {
+  const match = working.matches.get(command.matchId);
+  if (!match) {
+    throw new EngineError("match_not_found", "That match is not in this tournament.");
+  }
+  if (command.winnerId !== match.homeTeamId && command.winnerId !== match.awayTeamId) {
+    throw new EngineError("not_in_match", "That team is not playing this match.");
+  }
+  const homeWon = command.winnerId === match.homeTeamId;
+  completeMatch(working, {
+    type: "complete_match",
+    matchId: command.matchId,
+    homeScore: homeWon ? INSTANT_WIN_SCORE : 0,
+    awayScore: homeWon ? 0 : INSTANT_WIN_SCORE,
+  });
 };
 
 /**
  * After a result: schedule whatever comes next and finish the tournament if
- * its final has been played.
+ * its final has been played. `previous` is the match as it stood before the
+ * result; the rotation formats keep it so the result can be undone.
  */
-const settle = (working: Working, completed: Match) => {
+const settle = (working: Working, completed: Match, previous: MatchProgress) => {
   const { tournament, options } = working;
 
   switch (tournament.format) {
@@ -242,24 +288,112 @@ const settle = (working: Working, completed: Match) => {
       return;
 
     case "win2out": {
-      if (!tournament.win2outState) return;
-      const { updatedState, nextMatch } = processWin2OutResult(tournament.win2outState, completed);
-      working.tournament = { ...tournament, win2outState: updatedState };
-      if (nextMatch) place(working, nextMatch);
+      const before = tournament.win2outState;
+      if (!before) return;
+      const { updatedState, nextMatch } = processWin2OutResult(before, completed);
+      const placed = nextMatch ? place(working, nextMatch) : null;
+      working.tournament = {
+        ...tournament,
+        win2outState: recordResult(before, updatedState, completed, previous, placed),
+      };
       return;
     }
 
     case "two_match_rotation": {
-      if (!tournament.twoMatchRotationState) return;
-      const { updatedState, nextMatch } = processRotationResult(
-        tournament.twoMatchRotationState,
-        completed,
-      );
-      working.tournament = { ...tournament, twoMatchRotationState: updatedState };
-      if (nextMatch) place(working, nextMatch);
+      const before = tournament.twoMatchRotationState;
+      if (!before) return;
+      const { updatedState, nextMatch } = processRotationResult(before, completed);
+      const placed = nextMatch ? place(working, nextMatch) : null;
+      working.tournament = {
+        ...tournament,
+        twoMatchRotationState: recordResult(before, updatedState, completed, previous, placed),
+      };
       return;
     }
   }
+};
+
+// ============================================
+// Undo result
+// ============================================
+
+/**
+ * Take back the last result on a court in a rotation format. The match goes
+ * back to how it stood, the match the result scheduled is removed, and the
+ * teams the result moved go back where they were, leaving the other courts
+ * alone. Refused once the court has moved on: its next match has points or a
+ * result, or a team the result queued has since been pulled onto a court.
+ */
+const undoResult = (
+  working: Working,
+  command: Extract<EngineCommand, { type: "undo_result" }>,
+) => {
+  const { tournament } = working;
+  if (tournament.status !== "live") {
+    throw new EngineError("not_live", "Only a live tournament can undo a result.");
+  }
+
+  switch (tournament.format) {
+    case "win2out": {
+      if (!tournament.win2outState) throw nothingToUndo();
+      const { state, record } = undoOn(working, tournament.win2outState, command.matchId);
+      working.tournament = {
+        ...tournament,
+        win2outState: { ...state, currentChampionId: record.court.currentChampionId },
+      };
+      return;
+    }
+    case "two_match_rotation": {
+      if (!tournament.twoMatchRotationState) throw nothingToUndo();
+      const { state } = undoOn(working, tournament.twoMatchRotationState, command.matchId);
+      working.tournament = { ...tournament, twoMatchRotationState: state };
+      return;
+    }
+    default:
+      throw new EngineError(
+        "unsupported_format",
+        "Only Win 2 & Out and Two Match Rotation results can be undone.",
+      );
+  }
+};
+
+const nothingToUndo = () =>
+  new EngineError("nothing_to_undo", "That result can no longer be undone.");
+
+/**
+ * Find the court's record of the result, make sure the court has not moved
+ * on, revert the state, and put the matches back.
+ */
+const undoOn = <State extends RotationStateLike>(
+  working: Working,
+  state: State,
+  matchId: string,
+): { state: State; record: NonNullable<State["undoRecords"]>[number] } => {
+  const record = state.undoRecords?.find((r) => r.matchId === matchId);
+  const match = working.matches.get(matchId);
+  if (!record || !match || match.status !== "completed") throw nothingToUndo();
+
+  const next = record.nextMatchId ? working.matches.get(record.nextMatchId) : undefined;
+  const nextHasMovedOn =
+    (record.nextMatchId !== undefined && !next) ||
+    (next !== undefined &&
+      (next.status === "completed" || next.homeScore > 0 || next.awayScore > 0));
+  if (nextHasMovedOn || !canUndo(state, record, next)) {
+    throw new EngineError(
+      "court_moved_on",
+      "That result cannot be undone any more: the court has moved on.",
+    );
+  }
+
+  if (next) working.matches.delete(next.id);
+  working.matches.set(match.id, {
+    ...match,
+    ...record.match,
+    winnerId: undefined,
+    completedAt: undefined,
+  });
+
+  return { state: applyUndo(state, record), record };
 };
 
 /**

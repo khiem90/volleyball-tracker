@@ -21,7 +21,6 @@ import {
 import {
   applyTournamentCommand,
   buildTournament,
-  deleteMatch as deleteTournamentMatch,
   deleteTournament as deleteTournamentDoc,
   saveTournament,
   subscribeToAccountMatches,
@@ -30,18 +29,13 @@ import {
   updateTournament as updateTournamentDoc,
   type NewTournamentInput,
 } from "@/lib/tournaments";
-import {
-  buildQuickMatch,
-  deleteQuickMatch,
-  saveQuickMatch,
-  updateQuickMatch,
-} from "@/lib/quickMatches";
+import { buildQuickMatch, saveQuickMatch, updateQuickMatch } from "@/lib/quickMatches";
 
 /**
  * The app-wide provider: a thin layer over three live Firestore subscriptions,
  * roster, tournaments, and matches, plus the domain actions. Format rules live
  * in the engine. The court and queue edits at the bottom still shape the
- * tournament document here; tickets 03 and 09 move them into engine commands.
+ * tournament document here; ticket 09 moves them into engine commands.
  */
 
 export interface MatchResult {
@@ -52,8 +46,6 @@ export interface MatchResult {
 export interface CompleteMatchOutcome {
   /** False when a best-of series moved to its next game instead of ending. */
   completed: boolean;
-  /** Matches the engine scheduled as a result, if any. */
-  createdMatchIds: string[];
 }
 
 interface AppContextValue {
@@ -86,7 +78,10 @@ interface AppContextValue {
   updateMatch: (matchId: string, updates: Partial<Match>) => void;
   startMatch: (matchId: string) => void;
   completeMatch: (matchId: string, result: MatchResult) => Promise<CompleteMatchOutcome>;
-  deleteMatch: (matchId: string) => void;
+  /** Record a rotation result by naming the winner; the engine scores it. */
+  instantWin: (matchId: string, winnerId: string) => Promise<void>;
+  /** Take back the last result on a court of a rotation tournament. */
+  undoResult: (tournamentId: string, matchId: string) => Promise<void>;
   getMatchById: (id: string) => Match | undefined;
   // Court and queue management for rotation formats
   updateMatchTeams: (matchId: string, homeTeamId: string, awayTeamId: string) => void;
@@ -369,7 +364,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
           winnerId: result.homeScore > result.awayScore ? match.homeTeamId : match.awayTeamId,
           completedAt: Date.now(),
         });
-        return { completed: true, createdMatchIds: [] };
+        return { completed: true };
       }
 
       const outcome = await applyTournamentCommand(account.db, match.tournamentId, {
@@ -381,22 +376,35 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         (w) => w.kind === "update" && w.matchId === matchId
       );
       const completed = own?.kind === "update" && own.changes.status === "completed";
-      return { completed, createdMatchIds: outcome.createdMatchIds };
+      return { completed };
     },
     [requireAccount, matchesById]
   );
 
-  const deleteMatch = useCallback(
-    (matchId: string) => {
-      if (!uid || !db) return;
+  const instantWin = useCallback(
+    async (matchId: string, winnerId: string) => {
+      const account = requireAccount();
       const match = matchesById.get(matchId);
-      if (!match) return;
-      const remove = match.tournamentId
-        ? deleteTournamentMatch(db, match.tournamentId, matchId)
-        : deleteQuickMatch(db, uid, matchId);
-      remove.catch(logFailure("delete match"));
+      if (!match?.tournamentId) throw new Error("Instant win is for tournament matches.");
+      await applyTournamentCommand(account.db, match.tournamentId, {
+        type: "instant_win",
+        matchId,
+        winnerId,
+      });
     },
-    [uid, matchesById]
+    [requireAccount, matchesById]
+  );
+
+  // Applied through the engine in a transaction, so an undo on one court can
+  // never paper over a result another court saved in the meantime.
+  const undoResult = useCallback(
+    async (tournamentId: string, matchId: string) => {
+      await applyTournamentCommand(requireAccount().db, tournamentId, {
+        type: "undo_result",
+        matchId,
+      });
+    },
+    [requireAccount]
   );
 
   const getMatchById = useCallback((id: string) => matchesById.get(id), [matchesById]);
@@ -583,7 +591,8 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     updateMatch,
     startMatch,
     completeMatch,
-    deleteMatch,
+    instantWin,
+    undoResult,
     getMatchById,
     updateMatchTeams,
     swapMatchTeams,

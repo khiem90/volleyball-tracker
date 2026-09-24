@@ -11,6 +11,7 @@ import {
 import { AnimatePresence } from "framer-motion";
 import { UndoToast } from "@/components/UndoToast";
 import { useApp } from "@/context/AppContext";
+import { EngineError } from "@/lib/engine";
 import { generateUndoId } from "@/lib/undo";
 import type { UndoEntry, UndoContextValue } from "@/types/undo";
 import { MAX_UNDO_STACK_SIZE } from "@/types/undo";
@@ -22,7 +23,7 @@ interface GlobalUndoToastProps {
 }
 
 export const GlobalUndoToast = ({ children }: GlobalUndoToastProps) => {
-  const { updateMatch, updateTournament, deleteMatch } = useApp();
+  const { undoResult } = useApp();
   const [undoStack, setUndoStack] = useState<UndoEntry[]>([]);
   const [isUndoing, setIsUndoing] = useState(false);
 
@@ -49,48 +50,26 @@ export const GlobalUndoToast = ({ children }: GlobalUndoToastProps) => {
     setUndoStack([]);
   }, []);
 
-  const performUndo = useCallback(() => {
+  // The engine takes the result back in one transaction: the match, the
+  // match it scheduled, and the teams it moved. An entry is dropped once the
+  // undo has been applied, and also when the engine refuses it because the
+  // court has moved on, since that can never apply later. Any other failure
+  // keeps the entry so the undo can be tried again.
+  const performUndo = useCallback(async () => {
     if (!currentEntry || isUndoing) return;
 
     setIsUndoing(true);
-
+    let spent = true;
     try {
-      const { snapshot } = currentEntry;
-
-      // 1. Delete the newly created match first (if any)
-      if (snapshot.newMatchId) {
-        deleteMatch(snapshot.newMatchId);
-      }
-
-      // 2. Restore the original match state
-      if (snapshot.match) {
-        updateMatch(snapshot.match.id, {
-          status: snapshot.match.status,
-          winnerId: snapshot.match.winnerId,
-          homeScore: snapshot.match.homeScore,
-          awayScore: snapshot.match.awayScore,
-          completedAt: snapshot.match.completedAt,
-          homeWins: snapshot.match.homeWins,
-          awayWins: snapshot.match.awayWins,
-          seriesGame: snapshot.match.seriesGame,
-        });
-      }
-
-      // 3. Restore tournament state (courts, queue, team statuses)
-      if (snapshot.tournament) {
-        updateTournament(snapshot.tournament).catch((error) => {
-          console.error("Undo could not restore the tournament:", error);
-        });
-      }
-
-      // Pop the current entry from the stack
-      setUndoStack((prev) => prev.slice(1));
+      await undoResult(currentEntry.tournamentId, currentEntry.matchId);
     } catch (error) {
       console.error("Undo failed:", error);
+      spent = error instanceof EngineError;
     } finally {
+      if (spent) setUndoStack((prev) => prev.filter((entry) => entry.id !== currentEntry.id));
       setIsUndoing(false);
     }
-  }, [currentEntry, isUndoing, updateMatch, updateTournament, deleteMatch]);
+  }, [currentEntry, isUndoing, undoResult]);
 
   // Keyboard shortcut handler (Ctrl+Z)
   useEffect(() => {
