@@ -6,8 +6,13 @@ import Image from "next/image";
 import { useAuth } from "@/context/AuthContext";
 import { useTeamsPage } from "@/hooks/useTeamsPage";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
-import { PageLoadingSpinner, DeleteConfirmDialog } from "@/components/shared";
+import { PageLoadingSpinner } from "@/components/shared";
 import { TeamForm } from "@/components/dialogs/team-form";
+import {
+  DeleteTeamsDialog,
+  TeamInLiveTournamentDialog,
+  type KeptTeamRow,
+} from "@/components/dialogs/delete-teams";
 import { MatchbookSidebar } from "@/components/matchbook/Sidebar";
 import { MatchbookMobileBar } from "@/components/matchbook/MobileBar";
 import { MbIcon } from "@/components/matchbook/MbIcon";
@@ -19,8 +24,35 @@ import {
   TeamDirectoryPanel,
   TeamProfilePanel,
   TeamReadinessPanel,
+  TeamSelectionBar,
   UpcomingFixturesPanel,
 } from "@/components/matchbook/teamPanels";
+import type { KeptTeam } from "@/lib/entries";
+import { isOffline } from "@/lib/firestoreData";
+import type { DeletedTeams } from "@/lib/roster";
+import { listNames } from "@/lib/utils";
+
+/** The one line the page shows after a delete. */
+const deleteNoticeFor = (outcome: DeletedTeams, nameOf: (id: string) => string): string => {
+  const gone =
+    outcome.deleted.length === 0
+      ? "Nothing deleted."
+      : outcome.deleted.length === 1
+        ? `Deleted ${nameOf(outcome.deleted[0])}.`
+        : `Deleted ${outcome.deleted.length} teams.`;
+  if (outcome.kept.length === 0) return gone;
+  const kept = listNames(outcome.kept.map((team) => nameOf(team.teamId)));
+  return `${gone} Kept ${kept}, still in a live tournament.`;
+};
+
+/** A delete waiting on its confirm, with what the dialog says frozen as it was asked. */
+interface PendingDelete {
+  ids: string[];
+  deleting: string[];
+  kept: KeptTeamRow[];
+}
+
+const nothingPending: PendingDelete = { ids: [], deleting: [], kept: [] };
 
 export default function TeamsPage() {
   const { isLoading, isAuthenticated } = useRequireAuth();
@@ -35,14 +67,27 @@ export default function TeamsPage() {
     editingTeam,
     addTeamsFromText,
     handleEditTeam,
-    handleDeleteTeam,
+    planDeletion,
+    handleDeleteTeams,
     handleFormSubmit,
   } = useTeamsPage();
 
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [revealId, setRevealId] = useState<string | null>(null);
-  const [deleteOpen, setDeleteOpen] = useState(false);
+
+  // Select mode and the delete that follows it. `pending` is the delete
+  // waiting on one confirm; `refusal` is what the refusal shows when nothing
+  // chosen could go. Each dialog keeps its content while it animates closed,
+  // so whether it is open is tracked apart from what it shows.
+  const [selectMode, setSelectMode] = useState(false);
+  const [checked, setChecked] = useState<ReadonlySet<string>>(() => new Set());
+  const [pending, setPending] = useState<PendingDelete>(nothingPending);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [refusal, setRefusal] = useState<KeptTeamRow[]>([]);
+  const [refusalOpen, setRefusalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteNotice, setDeleteNotice] = useState("");
 
   const filteredRows = useMemo(
     () =>
@@ -60,6 +105,28 @@ export default function TeamsPage() {
   const selectedRow = data.rows.find((row) => row.id === effectiveId) ?? null;
   const selectedTeam = teams.find((team) => team.id === effectiveId) ?? null;
 
+  const nameOf = useCallback(
+    (id: string) => teams.find((team) => team.id === id)?.name ?? "a team",
+    [teams]
+  );
+  const rowsOf = useCallback(
+    (kept: KeptTeam[]): KeptTeamRow[] =>
+      kept.map((team) => ({
+        teamId: team.teamId,
+        name: nameOf(team.teamId),
+        tournaments: team.tournaments,
+      })),
+    [nameOf]
+  );
+
+  // Checked ids that are still on the roster; a team deleted elsewhere drops out.
+  const checkedIds = useMemo(
+    () => [...checked].filter((id) => teams.some((team) => team.id === id)),
+    [checked, teams]
+  );
+  const allShownChecked =
+    filteredRows.length > 0 && filteredRows.every((row) => checked.has(row.id));
+
   // The last team added becomes the selection, and the filter is cleared so
   // its row cannot be hidden.
   const handleAddTeams = useCallback(
@@ -75,6 +142,74 @@ export default function TeamsPage() {
     },
     [addTeamsFromText]
   );
+
+  const toggleSelectMode = useCallback(() => {
+    setSelectMode((on) => !on);
+    setChecked(new Set());
+  }, []);
+
+  const toggleChecked = useCallback((id: string) => {
+    setChecked((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const setShownChecked = useCallback(
+    (on: boolean) => {
+      setChecked((current) => {
+        const next = new Set(current);
+        for (const row of filteredRows) {
+          if (on) next.add(row.id);
+          else next.delete(row.id);
+        }
+        return next;
+      });
+    },
+    [filteredRows]
+  );
+
+  // When nothing chosen can go, the refusal says why and points at Withdraw.
+  // Otherwise one confirm covers what can go and names what cannot.
+  const requestDelete = useCallback(
+    (ids: string[]) => {
+      if (ids.length === 0) return;
+      const plan = planDeletion(ids);
+      if (plan.deletable.length === 0) {
+        setRefusal(rowsOf(plan.kept));
+        setRefusalOpen(true);
+        return;
+      }
+      setPending({ ids, deleting: plan.deletable.map(nameOf), kept: rowsOf(plan.kept) });
+      setConfirmOpen(true);
+    },
+    [planDeletion, rowsOf, nameOf]
+  );
+
+  const confirmDelete = useCallback(async () => {
+    if (!confirmOpen || isDeleting) return;
+    setIsDeleting(true);
+    // Names are looked up now, because the deleted teams are gone from the roster after.
+    const names = new Map(teams.map((team) => [team.id, team.name]));
+    try {
+      const outcome = await handleDeleteTeams(pending.ids);
+      setDeleteNotice(deleteNoticeFor(outcome, (id) => names.get(id) ?? "a team"));
+      setChecked(new Set());
+      setSelectMode(false);
+    } catch (error) {
+      console.error("Failed to delete teams:", error);
+      setDeleteNotice(
+        isOffline(error)
+          ? "Deleting a team that is in a tournament needs a connection. Try again when you are back online."
+          : "The teams could not be deleted. Try again."
+      );
+    } finally {
+      setConfirmOpen(false);
+      setIsDeleting(false);
+    }
+  }, [confirmOpen, pending, isDeleting, teams, handleDeleteTeams]);
 
   if (isLoading || !isAuthenticated || isRosterLoading) {
     return <PageLoadingSpinner />;
@@ -152,6 +287,12 @@ export default function TeamsPage() {
               </p>
             )}
 
+            {deleteNotice && (
+              <p role="status" className="mb-4 text-[0.8rem] font-medium text-mb-ink-muted">
+                {deleteNotice}
+              </p>
+            )}
+
             {/* Panel grid */}
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-12">
               <div className="md:col-span-2 xl:col-span-7">
@@ -163,7 +304,31 @@ export default function TeamsPage() {
                   onSelect={setSelectedId}
                   search={search}
                   onSearchChange={setSearch}
-                  addForm={<AddTeamsForm onAdd={handleAddTeams} />}
+                  headerAction={
+                    <button
+                      type="button"
+                      onClick={toggleSelectMode}
+                      className="mb-btn mb-btn-outline-navy px-3 py-1.5 text-[0.72rem]"
+                      aria-pressed={selectMode}
+                    >
+                      <MbIcon id="check" size={13} />
+                      {selectMode ? "Done" : "Select"}
+                    </button>
+                  }
+                  strip={
+                    selectMode ? (
+                      <TeamSelectionBar
+                        count={checkedIds.length}
+                        shown={filteredRows.length}
+                        allChecked={allShownChecked}
+                        onSetAll={setShownChecked}
+                        onDelete={() => requestDelete(checkedIds)}
+                      />
+                    ) : (
+                      <AddTeamsForm onAdd={handleAddTeams} />
+                    )
+                  }
+                  selection={selectMode ? { checked, onToggle: toggleChecked } : undefined}
                 />
               </div>
               <div className="md:col-span-2 xl:col-span-5 flex flex-col gap-4">
@@ -176,7 +341,7 @@ export default function TeamsPage() {
                 <TeamProfilePanel
                   row={selectedRow}
                   onEdit={() => selectedTeam && handleEditTeam(selectedTeam)}
-                  onDelete={() => selectedTeam && setDeleteOpen(true)}
+                  onDelete={() => selectedTeam && requestDelete([selectedTeam.id])}
                 />
               </div>
               <div className="xl:col-span-4">
@@ -198,20 +363,25 @@ export default function TeamsPage() {
         onSubmit={handleFormSubmit}
       />
 
-      {/* Delete confirmation */}
-      <DeleteConfirmDialog
-        open={deleteOpen}
-        onOpenChange={setDeleteOpen}
-        title="Delete Team?"
-        description={
-          selectedRow
-            ? `This permanently removes ${selectedRow.team.name} and cannot be undone.`
-            : "This permanently removes the team and cannot be undone."
-        }
-        onConfirm={() => {
-          if (effectiveId) handleDeleteTeam(effectiveId);
-          setDeleteOpen(false);
+      {/* One confirm for one team or many */}
+      <DeleteTeamsDialog
+        open={confirmOpen}
+        onOpenChange={(open) => {
+          if (!open && !isDeleting) setConfirmOpen(false);
         }}
+        deleting={pending.deleting}
+        kept={pending.kept}
+        onConfirm={confirmDelete}
+        isDeleting={isDeleting}
+      />
+
+      {/* Refused: every team chosen is in a live tournament */}
+      <TeamInLiveTournamentDialog
+        open={refusalOpen}
+        onOpenChange={(open) => {
+          if (!open) setRefusalOpen(false);
+        }}
+        kept={refusal}
       />
     </div>
   );

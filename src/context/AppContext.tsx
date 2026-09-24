@@ -14,10 +14,11 @@ import { useAuth } from "./AuthContext";
 import { db } from "@/lib/firebase";
 import {
   buildRosterTeam,
-  deleteRosterTeam,
+  deleteRosterTeams,
   saveRosterTeams,
   subscribeToRoster,
   updateRosterTeam,
+  type DeletedTeams,
   type TeamInput,
 } from "@/lib/roster";
 import {
@@ -67,8 +68,13 @@ interface AppContextValue {
    * while the save goes on in the background; offline it completes on reconnect.
    */
   addTeams: (inputs: TeamInput[]) => PersistentTeam[];
+  /** Rename or recolor a team; its entries in draft and live tournaments follow. */
   updateTeam: (id: string, name: string, color?: string) => void;
-  deleteTeam: (id: string) => void;
+  /**
+   * Delete teams. A team in a live tournament is kept and named in the
+   * outcome; the others go, and every draft that had one loses that entry.
+   */
+  deleteTeams: (ids: string[]) => Promise<DeletedTeams>;
   getTeamById: (id: string) => PersistentTeam | undefined;
   // Tournament actions
   createTournament: (input: NewTournamentInput) => Promise<string>;
@@ -228,20 +234,24 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     [requireAccount]
   );
 
+  // The tournaments go along so the write can reach the team's entries in
+  // the ones that are a draft or live.
   const updateTeam = useCallback(
     (id: string, name: string, color?: string) => {
       if (!uid || !db) return;
-      updateRosterTeam(db, uid, id, { name, color }).catch(logFailure("update team"));
+      updateRosterTeam(db, uid, id, { name, color }, state.tournaments).catch(
+        logFailure("update team")
+      );
     },
-    [uid]
+    [uid, state.tournaments]
   );
 
-  const deleteTeam = useCallback(
-    (id: string) => {
-      if (!uid || !db) return;
-      deleteRosterTeam(db, uid, id).catch(logFailure("delete team"));
+  const deleteTeams = useCallback(
+    async (ids: string[]) => {
+      const account = requireAccount();
+      return deleteRosterTeams(account.db, account.uid, ids, state.tournaments);
     },
-    [uid]
+    [requireAccount, state.tournaments]
   );
 
   const getTeamById = useCallback(
@@ -587,7 +597,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     tournamentsError,
     addTeams,
     updateTeam,
-    deleteTeam,
+    deleteTeams,
     getTeamById,
     createTournament,
     updateTournament,

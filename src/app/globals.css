@@ -321,6 +321,13 @@
   color: var(--mb-ink-muted);
 }
 
+.mb-checkbox {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--mb-coral);
+  cursor: pointer;
+}
+
 .mb-input {
   display: flex;
   align-items: center;

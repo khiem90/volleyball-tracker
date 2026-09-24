@@ -16,14 +16,19 @@ import {
   type Firestore,
   type Unsubscribe,
 } from "firebase/firestore";
-import { FirebaseError } from "firebase/app";
 import {
   applyCommand,
   type EngineCommand,
   type EngineResult,
   type MatchWrite,
 } from "@/lib/engine";
-import { newToken, stripUndefined, toUpdatePayload } from "@/lib/firestoreData";
+import {
+  isOffline,
+  lostRace,
+  newToken,
+  stripUndefined,
+  toUpdatePayload,
+} from "@/lib/firestoreData";
 import type {
   Entry,
   Match,
@@ -238,18 +243,6 @@ export class StaleTournamentError extends Error {
 }
 
 const MAX_ATTEMPTS = 5;
-
-/** Firestore's ways of saying the client cannot reach the server right now. */
-const isOffline = (error: unknown): boolean =>
-  error instanceof FirebaseError &&
-  (error.code === "unavailable" || error.code === "deadline-exceeded");
-
-/** Firestore's ways of saying the transaction lost a race. */
-const lostRace = (error: unknown): boolean =>
-  error instanceof FirebaseError &&
-  (error.code === "aborted" ||
-    error.code === "failed-precondition" ||
-    error.code === "already-exists");
 
 interface Writer {
   set: (ref: ReturnType<typeof matchDoc>, data: Match) => void;

@@ -1,10 +1,11 @@
 import { useState, useCallback } from "react";
 import { useApp } from "@/context/AppContext";
-import { parseTeamNames, type AddedTeams } from "@/lib/roster";
+import { planTeamDeletion, type TeamDeletionPlan } from "@/lib/entries";
+import { parseTeamNames, type AddedTeams, type DeletedTeams } from "@/lib/roster";
 import type { PersistentTeam } from "@/types/game";
 
 export const useTeamsPage = () => {
-  const { state, isRosterLoading, rosterError, addTeams, updateTeam, deleteTeam } = useApp();
+  const { state, isRosterLoading, rosterError, addTeams, updateTeam, deleteTeams } = useApp();
   const [formOpen, setFormOpen] = useState(false);
   const [editingTeam, setEditingTeam] = useState<PersistentTeam | null>(null);
 
@@ -23,11 +24,19 @@ export const useTeamsPage = () => {
     setFormOpen(true);
   }, []);
 
-  const handleDeleteTeam = useCallback(
-    (id: string) => {
-      deleteTeam(id);
-    },
-    [deleteTeam]
+  /**
+   * What deleting these teams would do, judged from the tournaments this page
+   * can see: which go, which a live tournament keeps back, and which drafts
+   * lose an entry. The write checks again against the stored tournaments.
+   */
+  const planDeletion = useCallback(
+    (ids: string[]): TeamDeletionPlan => planTeamDeletion(ids, state.tournaments),
+    [state.tournaments]
+  );
+
+  const handleDeleteTeams = useCallback(
+    (ids: string[]): Promise<DeletedTeams> => deleteTeams(ids),
+    [deleteTeams]
   );
 
   const handleFormSubmit = useCallback(
@@ -46,7 +55,8 @@ export const useTeamsPage = () => {
     editingTeam,
     addTeamsFromText,
     handleEditTeam,
-    handleDeleteTeam,
+    planDeletion,
+    handleDeleteTeams,
     handleFormSubmit,
   };
 };

@@ -22,6 +22,12 @@ const statusColor = (status: MbTeamRow["status"]) =>
 
 /* ----------------------------- Team directory ----------------------------- */
 
+/** Select mode: rows carry checkboxes and a tap checks a row instead of opening its profile. */
+export interface TeamSelection {
+  checked: ReadonlySet<string>;
+  onToggle: (id: string) => void;
+}
+
 export const TeamDirectoryPanel = ({
   rows,
   totalTeams,
@@ -30,7 +36,9 @@ export const TeamDirectoryPanel = ({
   onSelect,
   search,
   onSearchChange,
-  addForm,
+  headerAction,
+  strip,
+  selection,
 }: {
   rows: MbTeamRow[];
   totalTeams: number;
@@ -40,8 +48,12 @@ export const TeamDirectoryPanel = ({
   onSelect: (id: string) => void;
   search: string;
   onSearchChange: (value: string) => void;
-  /** The add strip shown above the rows. */
-  addForm: ReactNode;
+  /** A control shown in the header beside the filter. */
+  headerAction?: ReactNode;
+  /** The strip shown above the rows: the add form, or the selection bar. */
+  strip: ReactNode;
+  /** Present while in select mode. */
+  selection?: TeamSelection;
 }) => {
   // Runs when the row for revealId mounts, or when revealId moves to it. The
   // table is its own scroll area, so this moves the rows, not the page, and
@@ -55,20 +67,23 @@ export const TeamDirectoryPanel = ({
       title="Team Directory"
       meta={
         totalTeams > 0 ? (
-          <label className="mb-search">
-            <MbIcon id="search" size={13} className="shrink-0 text-mb-ink-muted" />
-            <input
-              type="search"
-              value={search}
-              onChange={(event) => onSearchChange(event.target.value)}
-              placeholder="Filter teams"
-              aria-label="Filter teams by name"
-            />
-          </label>
+          <span className="flex flex-wrap items-center justify-end gap-2">
+            <label className="mb-search">
+              <MbIcon id="search" size={13} className="shrink-0 text-mb-ink-muted" />
+              <input
+                type="search"
+                value={search}
+                onChange={(event) => onSearchChange(event.target.value)}
+                placeholder="Filter teams"
+                aria-label="Filter teams by name"
+              />
+            </label>
+            {headerAction}
+          </span>
         ) : undefined
       }
     >
-      {addForm}
+      {strip}
       {totalTeams === 0 ? (
         <PanelEmpty message="No teams yet. Type a name above and press Enter, or paste a list." />
       ) : rows.length === 0 ? (
@@ -78,7 +93,9 @@ export const TeamDirectoryPanel = ({
           <table className="mb-table w-full border-collapse">
             <thead>
               <tr>
-                <th className="w-8 text-center">#</th>
+                <th className="w-8 text-center">
+                  {selection ? <span className="sr-only">Selected</span> : "#"}
+                </th>
                 <th>Team</th>
                 <th>Entered In</th>
                 <th className="text-center">W</th>
@@ -91,26 +108,41 @@ export const TeamDirectoryPanel = ({
             <tbody>
               {rows.map((row, i) => {
                 const selected = row.id === selectedId;
+                const checked = selection?.checked.has(row.id) ?? false;
                 return (
                   <tr
                     key={row.id}
                     ref={row.id === revealId ? reveal : undefined}
-                    onClick={() => onSelect(row.id)}
+                    onClick={() => (selection ? selection.onToggle(row.id) : onSelect(row.id))}
                     className="cursor-pointer transition-colors hover:bg-[rgba(7,50,77,0.04)]"
-                    aria-current={selected}
+                    aria-current={selection ? undefined : selected}
                   >
-                    <td
-                      className="matchbook-display text-center font-bold"
-                      style={
-                        selected
-                          ? { boxShadow: "inset 3px 0 0 var(--mb-coral)" }
-                          : i === 0
-                            ? { boxShadow: "inset 3px 0 0 var(--mb-teal)" }
-                            : undefined
-                      }
-                    >
-                      {i + 1}
-                    </td>
+                    {selection ? (
+                      <td className="text-center">
+                        <input
+                          type="checkbox"
+                          className="mb-checkbox align-middle"
+                          checked={checked}
+                          onChange={() => selection.onToggle(row.id)}
+                          // The row toggles on click too; one tap must mean one toggle.
+                          onClick={(event) => event.stopPropagation()}
+                          aria-label={`Select ${row.team.name}`}
+                        />
+                      </td>
+                    ) : (
+                      <td
+                        className="matchbook-display text-center font-bold"
+                        style={
+                          selected
+                            ? { boxShadow: "inset 3px 0 0 var(--mb-coral)" }
+                            : i === 0
+                              ? { boxShadow: "inset 3px 0 0 var(--mb-teal)" }
+                              : undefined
+                        }
+                      >
+                        {i + 1}
+                      </td>
+                    )}
                     <td>
                       <TeamMark team={row.team} />
                     </td>
@@ -170,6 +202,52 @@ export const TeamDirectoryPanel = ({
     </Panel>
   );
 };
+
+/**
+ * The strip shown above the rows in select mode: how many are checked, a
+ * select-all for the rows shown, and the delete that covers them all.
+ */
+export const TeamSelectionBar = ({
+  count,
+  shown,
+  allChecked,
+  onSetAll,
+  onDelete,
+}: {
+  /** Checked teams, wherever they are in the list. */
+  count: number;
+  /** Rows on screen after the filter, which is what select all covers. */
+  shown: number;
+  allChecked: boolean;
+  onSetAll: (checked: boolean) => void;
+  onDelete: () => void;
+}) => (
+  <div className="flex flex-wrap items-center gap-2 border-b border-mb-rule px-3 py-2.5">
+    <span
+      role="status"
+      className="matchbook-display text-[0.82rem] font-bold tabular-nums tracking-[0.04em]"
+    >
+      {count} selected
+    </span>
+    <button
+      type="button"
+      onClick={() => onSetAll(!allChecked)}
+      className="mb-btn mb-btn-outline-navy"
+      disabled={shown === 0}
+    >
+      {allChecked ? "Clear all" : shown === 1 ? "Select the one shown" : `Select all ${shown} shown`}
+    </button>
+    <button
+      type="button"
+      onClick={onDelete}
+      className="mb-btn mb-btn-outline ml-auto"
+      disabled={count === 0}
+    >
+      <MbIcon id="warning" size={14} />
+      Delete selected
+    </button>
+  </div>
+);
 
 /* ------------------------------ Club snapshot ----------------------------- */
 
