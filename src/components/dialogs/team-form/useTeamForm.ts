@@ -2,7 +2,7 @@
 
 import { useState, useCallback, type KeyboardEvent, type ChangeEvent } from "react";
 import type { PersistentTeam } from "@/types/game";
-import { DEFAULT_TEAM_COLORS } from "@/components/ui/color-picker";
+import { TEAM_COLORS } from "@/lib/roster";
 
 interface UseTeamFormProps {
   open: boolean;
@@ -13,7 +13,7 @@ interface UseTeamFormProps {
 
 export const useTeamForm = ({ open, team, onSubmit, onClose }: UseTeamFormProps) => {
   const [name, setName] = useState("");
-  const [color, setColor] = useState(DEFAULT_TEAM_COLORS[0]);
+  const [color, setColor] = useState(TEAM_COLORS[0]);
   const [error, setError] = useState("");
 
   const isEditing = !!team;
@@ -25,11 +25,11 @@ export const useTeamForm = ({ open, team, onSubmit, onClose }: UseTeamFormProps)
     if (open) {
       if (team) {
         setName(team.name);
-        setColor(team.color || DEFAULT_TEAM_COLORS[0]);
+        setColor(team.color || TEAM_COLORS[0]);
       } else {
         setName("");
         // eslint-disable-next-line react-hooks/purity -- intentional random default color on dialog open
-        setColor(DEFAULT_TEAM_COLORS[Math.floor(Math.random() * DEFAULT_TEAM_COLORS.length)]);
+        setColor(TEAM_COLORS[Math.floor(Math.random() * TEAM_COLORS.length)]);
       }
       setError("");
     }

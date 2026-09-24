@@ -1,22 +1,22 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback } from "react";
 import { useApp } from "@/context/AppContext";
+import { parseTeamNames, type AddedTeams } from "@/lib/roster";
 import type { PersistentTeam } from "@/types/game";
 
 export const useTeamsPage = () => {
-  const { state, isRosterLoading, rosterError, addTeam, updateTeam, deleteTeam } = useApp();
+  const { state, isRosterLoading, rosterError, addTeams, updateTeam, deleteTeam } = useApp();
   const [formOpen, setFormOpen] = useState(false);
-  const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [editingTeam, setEditingTeam] = useState<PersistentTeam | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
 
-  const handleCreateClick = useCallback(() => {
-    setEditingTeam(null);
-    setFormOpen(true);
-  }, []);
-
-  const handleQuickAddClick = useCallback(() => {
-    setQuickAddOpen(true);
-  }, []);
+  /** Add one team per line of the text, each with a color the roster uses least. */
+  const addTeamsFromText = useCallback(
+    (text: string): AddedTeams => {
+      const { teams, alreadyOnRoster } = parseTeamNames(text, state.teams);
+      const added = teams.length > 0 ? addTeams(teams) : [];
+      return { added, alreadyOnRoster };
+    },
+    [state.teams, addTeams]
+  );
 
   const handleEditTeam = useCallback((team: PersistentTeam) => {
     setEditingTeam(team);
@@ -32,31 +32,10 @@ export const useTeamsPage = () => {
 
   const handleFormSubmit = useCallback(
     (name: string, color: string) => {
-      if (editingTeam) {
-        updateTeam(editingTeam.id, name, color);
-      } else {
-        addTeam(name, color);
-      }
+      if (editingTeam) updateTeam(editingTeam.id, name, color);
     },
-    [editingTeam, addTeam, updateTeam]
+    [editingTeam, updateTeam]
   );
-
-  const handleQuickAddTeams = useCallback(
-    (teams: { name: string; color: string }[]) => {
-      teams.forEach((team) => {
-        addTeam(team.name, team.color);
-      });
-    },
-    [addTeam]
-  );
-
-  const filteredTeams = useMemo(() => {
-    return [...state.teams]
-      .filter((team) =>
-        team.name.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-      .sort((a, b) => b.createdAt - a.createdAt);
-  }, [state.teams, searchQuery]);
 
   return {
     teams: state.teams,
@@ -64,17 +43,10 @@ export const useTeamsPage = () => {
     rosterError,
     formOpen,
     setFormOpen,
-    quickAddOpen,
-    setQuickAddOpen,
     editingTeam,
-    searchQuery,
-    setSearchQuery,
-    filteredTeams,
-    handleCreateClick,
-    handleQuickAddClick,
+    addTeamsFromText,
     handleEditTeam,
     handleDeleteTeam,
     handleFormSubmit,
-    handleQuickAddTeams,
   };
 };

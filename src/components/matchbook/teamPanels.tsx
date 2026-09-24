@@ -1,3 +1,4 @@
+import { useCallback, type ReactNode } from "react";
 import Link from "next/link";
 import { MbIcon } from "./MbIcon";
 import { Crest, FormLetters, FormSquares, Panel, PanelEmpty, TeamMark } from "./Panel";
@@ -25,133 +26,150 @@ export const TeamDirectoryPanel = ({
   rows,
   totalTeams,
   selectedId,
+  revealId,
   onSelect,
   search,
   onSearchChange,
+  addForm,
 }: {
   rows: MbTeamRow[];
   totalTeams: number;
   selectedId: string | null;
+  /** A row to scroll into view when it appears, such as a team just added. */
+  revealId: string | null;
   onSelect: (id: string) => void;
   search: string;
   onSearchChange: (value: string) => void;
-}) => (
-  <Panel
-    title="Team Directory"
-    meta={
-      totalTeams > 0 ? (
-        <label className="mb-search">
-          <MbIcon id="search" size={13} className="shrink-0 text-mb-ink-muted" />
-          <input
-            type="search"
-            value={search}
-            onChange={(event) => onSearchChange(event.target.value)}
-            placeholder="Filter teams"
-            aria-label="Filter teams by name"
-          />
-        </label>
-      ) : undefined
-    }
-  >
-    {totalTeams === 0 ? (
-      <PanelEmpty message="No teams exist yet — add your first team to start the directory." />
-    ) : rows.length === 0 ? (
-      <PanelEmpty message={`No teams match “${search}”.`} />
-    ) : (
-      <div className="overflow-x-auto">
-        <table className="mb-table w-full border-collapse">
-          <thead>
-            <tr>
-              <th className="w-8 text-center">#</th>
-              <th>Team</th>
-              <th>Entered In</th>
-              <th className="text-center">W</th>
-              <th className="text-center">L</th>
-              <th className="text-center">Pts</th>
-              <th>Next Match</th>
-              <th className="text-right">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row, i) => {
-              const selected = row.id === selectedId;
-              return (
-                <tr
-                  key={row.id}
-                  onClick={() => onSelect(row.id)}
-                  className="cursor-pointer transition-colors hover:bg-[rgba(7,50,77,0.04)]"
-                  aria-current={selected}
-                >
-                  <td
-                    className="matchbook-display text-center font-bold"
-                    style={
-                      selected
-                        ? { boxShadow: "inset 3px 0 0 var(--mb-coral)" }
-                        : i === 0
-                          ? { boxShadow: "inset 3px 0 0 var(--mb-teal)" }
-                          : undefined
-                    }
+  /** The add strip shown above the rows. */
+  addForm: ReactNode;
+}) => {
+  // Runs when the row for revealId mounts, or when revealId moves to it. The
+  // table is its own scroll area, so this moves the rows, not the page, and
+  // the add strip above stays put for the next name.
+  const reveal = useCallback((row: HTMLTableRowElement | null) => {
+    row?.scrollIntoView({ block: "nearest" });
+  }, []);
+
+  return (
+    <Panel
+      title="Team Directory"
+      meta={
+        totalTeams > 0 ? (
+          <label className="mb-search">
+            <MbIcon id="search" size={13} className="shrink-0 text-mb-ink-muted" />
+            <input
+              type="search"
+              value={search}
+              onChange={(event) => onSearchChange(event.target.value)}
+              placeholder="Filter teams"
+              aria-label="Filter teams by name"
+            />
+          </label>
+        ) : undefined
+      }
+    >
+      {addForm}
+      {totalTeams === 0 ? (
+        <PanelEmpty message="No teams yet. Type a name above and press Enter, or paste a list." />
+      ) : rows.length === 0 ? (
+        <PanelEmpty message={`No teams match “${search}”.`} />
+      ) : (
+        <div className="max-h-[60vh] overflow-auto">
+          <table className="mb-table w-full border-collapse">
+            <thead>
+              <tr>
+                <th className="w-8 text-center">#</th>
+                <th>Team</th>
+                <th>Entered In</th>
+                <th className="text-center">W</th>
+                <th className="text-center">L</th>
+                <th className="text-center">Pts</th>
+                <th>Next Match</th>
+                <th className="text-right">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, i) => {
+                const selected = row.id === selectedId;
+                return (
+                  <tr
+                    key={row.id}
+                    ref={row.id === revealId ? reveal : undefined}
+                    onClick={() => onSelect(row.id)}
+                    className="cursor-pointer transition-colors hover:bg-[rgba(7,50,77,0.04)]"
+                    aria-current={selected}
                   >
-                    {i + 1}
-                  </td>
-                  <td>
-                    <TeamMark team={row.team} />
-                  </td>
-                  <td className="text-[0.76rem] text-mb-ink-muted">
-                    {row.competitions.length === 0 ? (
-                      <span className="text-mb-ink-muted/70">No competition</span>
-                    ) : (
-                      <span className="whitespace-nowrap">
-                        {row.competitions[0]}
-                        {row.competitions.length > 1 && ` +${row.competitions.length - 1}`}
-                      </span>
-                    )}
-                  </td>
-                  <td className="text-center tabular-nums">{row.won}</td>
-                  <td className="text-center tabular-nums">{row.lost}</td>
-                  <td className="text-center tabular-nums whitespace-nowrap">
-                    {row.played === 0 ? "—" : `${row.pointsFor}–${row.pointsAgainst}`}
-                  </td>
-                  <td className="text-[0.72rem] whitespace-nowrap">
-                    {row.nextMatch ? (
-                      <>
-                        <span className="matchbook-display font-bold tracking-[0.04em]">
-                          {row.nextMatch.date}
-                        </span>{" "}
-                        <span className="text-mb-ink-muted">
-                          {row.nextMatch.isHome ? "vs" : "@"}
-                        </span>{" "}
-                        <span className="matchbook-display font-semibold">
-                          {row.nextMatch.opponent.name}
-                        </span>
-                        <span className="block text-[0.66rem] text-mb-ink-muted">
-                          {row.nextMatch.time} • {row.nextMatch.competition}
-                        </span>
-                      </>
-                    ) : (
-                      <span className="text-mb-ink-muted">Not scheduled</span>
-                    )}
-                  </td>
-                  <td className="text-right">
-                    <span
-                      className="matchbook-display text-[0.66rem] font-bold whitespace-nowrap"
-                      style={{ color: statusColor(row.status) }}
+                    <td
+                      className="matchbook-display text-center font-bold"
+                      style={
+                        selected
+                          ? { boxShadow: "inset 3px 0 0 var(--mb-coral)" }
+                          : i === 0
+                            ? { boxShadow: "inset 3px 0 0 var(--mb-teal)" }
+                            : undefined
+                      }
                     >
-                      {row.status}
-                    </span>
-                    <span className="mt-1 block">
-                      <FormSquares form={row.form} slots={5} warnTint />
-                    </span>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    )}
-  </Panel>
-);
+                      {i + 1}
+                    </td>
+                    <td>
+                      <TeamMark team={row.team} />
+                    </td>
+                    <td className="text-[0.76rem] text-mb-ink-muted">
+                      {row.competitions.length === 0 ? (
+                        <span className="text-mb-ink-muted/70">No competition</span>
+                      ) : (
+                        <span className="whitespace-nowrap">
+                          {row.competitions[0]}
+                          {row.competitions.length > 1 && ` +${row.competitions.length - 1}`}
+                        </span>
+                      )}
+                    </td>
+                    <td className="text-center tabular-nums">{row.won}</td>
+                    <td className="text-center tabular-nums">{row.lost}</td>
+                    <td className="text-center tabular-nums whitespace-nowrap">
+                      {row.played === 0 ? "—" : `${row.pointsFor}–${row.pointsAgainst}`}
+                    </td>
+                    <td className="text-[0.72rem] whitespace-nowrap">
+                      {row.nextMatch ? (
+                        <>
+                          <span className="matchbook-display font-bold tracking-[0.04em]">
+                            {row.nextMatch.date}
+                          </span>{" "}
+                          <span className="text-mb-ink-muted">
+                            {row.nextMatch.isHome ? "vs" : "@"}
+                          </span>{" "}
+                          <span className="matchbook-display font-semibold">
+                            {row.nextMatch.opponent.name}
+                          </span>
+                          <span className="block text-[0.66rem] text-mb-ink-muted">
+                            {row.nextMatch.time} • {row.nextMatch.competition}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-mb-ink-muted">Not scheduled</span>
+                      )}
+                    </td>
+                    <td className="text-right">
+                      <span
+                        className="matchbook-display text-[0.66rem] font-bold whitespace-nowrap"
+                        style={{ color: statusColor(row.status) }}
+                      >
+                        {row.status}
+                      </span>
+                      <span className="mt-1 block">
+                        <FormSquares form={row.form} slots={5} warnTint />
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Panel>
+  );
+};
 
 /* ------------------------------ Club snapshot ----------------------------- */
 

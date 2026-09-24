@@ -4,7 +4,7 @@ import { useApp } from "@/context/AppContext";
 
 export const useQuickMatchPage = () => {
   const router = useRouter();
-  const { state, isRosterLoading, addTeam, addQuickMatch } = useApp();
+  const { state, isRosterLoading, addTeams, addQuickMatch } = useApp();
 
   const [homeTeamId, setHomeTeamId] = useState<string>("");
   const [awayTeamId, setAwayTeamId] = useState<string>("");
@@ -74,8 +74,8 @@ export const useQuickMatchPage = () => {
 
   const handleQuickCreateTeam = useCallback(() => {
     const teamNumber = state.teams.length + 1;
-    addTeam(`Team ${teamNumber}`);
-  }, [state.teams.length, addTeam]);
+    addTeams([{ name: `Team ${teamNumber}` }]);
+  }, [state.teams.length, addTeams]);
 
   const homeTeam = useMemo(
     () => state.teams.find((t) => t.id === homeTeamId),

@@ -2,19 +2,7 @@
 
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-export const DEFAULT_TEAM_COLORS = [
-  "#ef4444", // Red
-  "#f97316", // Orange
-  "#eab308", // Yellow
-  "#22c55e", // Green
-  "#14b8a6", // Teal
-  "#06b6d4", // Cyan
-  "#3b82f6", // Blue
-  "#6366f1", // Indigo
-  "#8b5cf6", // Purple
-  "#ec4899", // Pink
-];
+import { TEAM_COLORS } from "@/lib/roster";
 
 interface ColorPickerProps {
   value: string;
@@ -27,7 +15,7 @@ interface ColorPickerProps {
 export const ColorPicker = ({
   value,
   onChange,
-  colors = DEFAULT_TEAM_COLORS,
+  colors = TEAM_COLORS,
   className,
   size = "default",
 }: ColorPickerProps) => {

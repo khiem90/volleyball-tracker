@@ -3,6 +3,8 @@ import type { Firestore, Unsubscribe } from "firebase/firestore";
 import { describe, expect, it } from "vitest";
 import {
   addRosterTeam,
+  buildRosterTeam,
+  saveRosterTeams,
   deleteRosterTeam,
   subscribeToRoster,
   updateRosterTeam,
@@ -91,6 +93,19 @@ describeFirestoreRules("Roster", (env) => {
 
       const roster = await rosterWhen(db, owner, (teams) => teams.length === names.length);
       expect(roster.map((team) => team.name)).toEqual(names);
+    });
+
+    it("shows every team of a pasted list, in the pasted order, with its color", async () => {
+      const db = modularFirestore(env().authenticatedContext(owner));
+      const names = ["Aces", "Blockers", "Chasers", "Diggers", "Eagles"];
+      const pasted = names.map((name) => buildRosterTeam(db, owner, { name, color: "#22c55e" }));
+
+      await saveRosterTeams(db, owner, pasted);
+
+      const roster = await rosterWhen(db, owner, (teams) => teams.length === names.length);
+      expect(roster.map((team) => team.name)).toEqual(names);
+      expect(roster.map((team) => team.id)).toEqual(pasted.map((team) => team.id));
+      expect(roster.every((team) => team.color === "#22c55e")).toBe(true);
     });
   });
 });

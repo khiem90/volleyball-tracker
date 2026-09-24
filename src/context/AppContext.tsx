@@ -13,10 +13,12 @@ import type { AppState, Match, PersistentTeam, Tournament } from "@/types/game";
 import { useAuth } from "./AuthContext";
 import { db } from "@/lib/firebase";
 import {
-  addRosterTeam,
+  buildRosterTeam,
   deleteRosterTeam,
+  saveRosterTeams,
   subscribeToRoster,
   updateRosterTeam,
+  type TeamInput,
 } from "@/lib/roster";
 import {
   applyTournamentCommand,
@@ -60,7 +62,11 @@ interface AppContextValue {
   isTournamentsLoading: boolean;
   tournamentsError: string | null;
   // Team actions
-  addTeam: (name: string, color?: string) => void;
+  /**
+   * Add teams to the roster in one write. Returns them at once, ids included,
+   * while the save goes on in the background; offline it completes on reconnect.
+   */
+  addTeams: (inputs: TeamInput[]) => PersistentTeam[];
   updateTeam: (id: string, name: string, color?: string) => void;
   deleteTeam: (id: string) => void;
   getTeamById: (id: string) => PersistentTeam | undefined;
@@ -201,16 +207,25 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     [state.matches]
   );
 
+  const requireAccount = useCallback(() => {
+    if (!uid || !db) throw new Error("Sign in to change your teams and tournaments.");
+    return { uid, db };
+  }, [uid]);
+
   // ============================================
   // Teams
   // ============================================
 
-  const addTeam = useCallback(
-    (name: string, color?: string) => {
-      if (!uid || !db) return;
-      addRosterTeam(db, uid, { name, color }).catch(logFailure("add team"));
+  // The ids are known before the write and the subscription shows the new
+  // teams from the local cache at once, so nobody waits for the server.
+  const addTeams = useCallback(
+    (inputs: TeamInput[]): PersistentTeam[] => {
+      const account = requireAccount();
+      const teams = inputs.map((input) => buildRosterTeam(account.db, account.uid, input));
+      saveRosterTeams(account.db, account.uid, teams).catch(logFailure("add teams"));
+      return teams;
     },
-    [uid]
+    [requireAccount]
   );
 
   const updateTeam = useCallback(
@@ -237,11 +252,6 @@ export const AppProvider = ({ children }: AppProviderProps) => {
   // ============================================
   // Tournaments
   // ============================================
-
-  const requireAccount = useCallback(() => {
-    if (!uid || !db) throw new Error("Sign in to change tournaments.");
-    return { uid, db };
-  }, [uid]);
 
   // The id is known before the write, and the subscription shows the new
   // tournament from the local cache at once, so nobody waits for the server.
@@ -575,7 +585,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     rosterError,
     isTournamentsLoading: tournaments === null || matches === null,
     tournamentsError,
-    addTeam,
+    addTeams,
     updateTeam,
     deleteTeam,
     getTeamById,

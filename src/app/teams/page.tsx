@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useAuth } from "@/context/AuthContext";
@@ -8,10 +8,10 @@ import { useTeamsPage } from "@/hooks/useTeamsPage";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { PageLoadingSpinner, DeleteConfirmDialog } from "@/components/shared";
 import { TeamForm } from "@/components/dialogs/team-form";
-import { QuickAddTeams } from "@/components/QuickAddTeams";
 import { MatchbookSidebar } from "@/components/matchbook/Sidebar";
 import { MatchbookMobileBar } from "@/components/matchbook/MobileBar";
 import { MbIcon } from "@/components/matchbook/MbIcon";
+import { AddTeamsForm } from "@/components/matchbook/AddTeamsForm";
 import { useMatchbookTeams } from "@/components/matchbook/useMatchbookTeams";
 import {
   ClubSnapshotPanel,
@@ -32,19 +32,16 @@ export default function TeamsPage() {
     rosterError,
     formOpen,
     setFormOpen,
-    quickAddOpen,
-    setQuickAddOpen,
     editingTeam,
-    handleCreateClick,
-    handleQuickAddClick,
+    addTeamsFromText,
     handleEditTeam,
     handleDeleteTeam,
     handleFormSubmit,
-    handleQuickAddTeams,
   } = useTeamsPage();
 
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [revealId, setRevealId] = useState<string | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
   const filteredRows = useMemo(
@@ -62,6 +59,22 @@ export default function TeamsPage() {
       : data.rows[0]?.id ?? null;
   const selectedRow = data.rows.find((row) => row.id === effectiveId) ?? null;
   const selectedTeam = teams.find((team) => team.id === effectiveId) ?? null;
+
+  // The last team added becomes the selection, and the filter is cleared so
+  // its row cannot be hidden.
+  const handleAddTeams = useCallback(
+    (text: string) => {
+      const outcome = addTeamsFromText(text);
+      const last = outcome.added.at(-1);
+      if (last) {
+        setSelectedId(last.id);
+        setRevealId(last.id);
+        setSearch("");
+      }
+      return outcome;
+    },
+    [addTeamsFromText]
+  );
 
   if (isLoading || !isAuthenticated || isRosterLoading) {
     return <PageLoadingSpinner />;
@@ -107,22 +120,6 @@ export default function TeamsPage() {
               </div>
 
               <div className="ml-auto flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={handleCreateClick}
-                  className="mb-btn mb-btn-navy"
-                >
-                  <MbIcon id="plus" size={14} />
-                  Add Team
-                </button>
-                <button
-                  type="button"
-                  onClick={handleQuickAddClick}
-                  className="mb-btn mb-btn-outline"
-                >
-                  <MbIcon id="import" size={14} />
-                  Quick Add
-                </button>
                 <Link
                   href="/login"
                   className="hidden items-center gap-2.5 md:flex"
@@ -162,9 +159,11 @@ export default function TeamsPage() {
                   rows={filteredRows}
                   totalTeams={data.teamCount}
                   selectedId={effectiveId}
+                  revealId={revealId}
                   onSelect={setSelectedId}
                   search={search}
                   onSearchChange={setSearch}
+                  addForm={<AddTeamsForm onAdd={handleAddTeams} />}
                 />
               </div>
               <div className="md:col-span-2 xl:col-span-5 flex flex-col gap-4">
@@ -191,20 +190,12 @@ export default function TeamsPage() {
         </div>
       </div>
 
-      {/* Create / edit team modal */}
+      {/* Edit team modal */}
       <TeamForm
         open={formOpen}
         onOpenChange={setFormOpen}
         team={editingTeam}
         onSubmit={handleFormSubmit}
-      />
-
-      {/* Bulk add modal */}
-      <QuickAddTeams
-        open={quickAddOpen}
-        onOpenChange={setQuickAddOpen}
-        onAddTeams={handleQuickAddTeams}
-        existingTeamCount={teams.length}
       />
 
       {/* Delete confirmation */}

@@ -81,7 +81,7 @@ const formatOptions: FormatOption[] = [
 
 export const useNewCompetitionPage = () => {
   const router = useRouter();
-  const { state, isRosterLoading, addTeam, createTournament } = useApp();
+  const { state, isRosterLoading, addTeams, createTournament } = useApp();
   const [step, setStep] = useState<Step>("format");
   const [selectedFormat, setSelectedFormat] = useState<TournamentFormat | null>(null);
   const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>([]);
@@ -245,8 +245,8 @@ export const useNewCompetitionPage = () => {
 
   const handleQuickCreateTeam = useCallback(() => {
     const teamNumber = state.teams.length + 1;
-    addTeam(`Team ${teamNumber}`);
-  }, [state.teams.length, addTeam]);
+    addTeams([{ name: `Team ${teamNumber}` }]);
+  }, [state.teams.length, addTeams]);
 
   return {
     competitionName,
