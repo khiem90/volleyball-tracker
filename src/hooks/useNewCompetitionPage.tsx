@@ -3,32 +3,32 @@ import { useRouter } from "next/navigation";
 import { useApp } from "@/context/AppContext";
 import { ArrowPathIcon, Square3Stack3DIcon } from "@heroicons/react/24/outline";
 import { BracketIcon, CrownIcon, RotationIcon } from "@/lib/icons";
-import type { CompetitionType } from "@/types/game";
-import type { CompetitionConfig } from "@/types/competition-config";
-import { DEFAULT_COMPETITION_CONFIG } from "@/types/competition-config";
+import { FORMATS, isRotationFormat, isSeriesFormat } from "@/lib/formats";
+import type { PersistentTeam, TournamentFormat, TournamentSettings } from "@/types/game";
+import {
+  DEFAULT_POINTS_FOR_LOSS,
+  DEFAULT_POINTS_FOR_WIN,
+  DEFAULT_TERMINOLOGY,
+} from "@/types/competition-config";
 
 export type Step = "format" | "teams" | "name";
 
 export type AdvancedSettings = {
   showAdvancedSettings: boolean;
   pointsForWin: number;
-  pointsForTie: number;
   pointsForLoss: number;
-  allowTies: boolean;
   venueName: string;
 };
 
 export type AdvancedSettingsHandlers = {
   onToggleAdvancedSettings: () => void;
   onPointsForWinChange: (value: number) => void;
-  onPointsForTieChange: (value: number) => void;
   onPointsForLossChange: (value: number) => void;
-  onAllowTiesChange: (value: boolean) => void;
   onVenueNameChange: (value: string) => void;
 };
 
 export interface FormatOption {
-  type: CompetitionType;
+  type: TournamentFormat;
   label: string;
   description: string;
   icon: React.ReactNode;
@@ -39,51 +39,51 @@ export interface FormatOption {
 const formatOptions: FormatOption[] = [
   {
     type: "round_robin",
-    label: "Round Robin",
+    label: FORMATS.round_robin.label,
     description: "Every team plays against every other team once. Best for leagues.",
     icon: <ArrowPathIcon className="w-7 h-7" />,
-    minTeams: 3,
+    minTeams: FORMATS.round_robin.minTeams,
     gradient: "from-emerald-500 to-green-600",
   },
   {
     type: "single_elimination",
-    label: "Single Elimination",
+    label: FORMATS.single_elimination.label,
     description: "Lose once and you're out. Fast and exciting tournament format.",
     icon: <BracketIcon className="w-7 h-7" />,
-    minTeams: 2,
+    minTeams: FORMATS.single_elimination.minTeams,
     gradient: "from-violet-500 to-purple-600",
   },
   {
     type: "double_elimination",
-    label: "Double Elimination",
+    label: FORMATS.double_elimination.label,
     description: "Must lose twice to be eliminated. More forgiving tournament format.",
     icon: <Square3Stack3DIcon className="w-7 h-7" />,
-    minTeams: 4,
+    minTeams: FORMATS.double_elimination.minTeams,
     gradient: "from-blue-500 to-indigo-600",
   },
   {
     type: "win2out",
-    label: "Win 2 & Out",
+    label: FORMATS.win2out.label,
     description: "True endless! Winner stays, win 2 = champion & back to queue. Track who gets crowned most!",
     icon: <CrownIcon className="w-7 h-7" />,
-    minTeams: 3,
+    minTeams: FORMATS.win2out.minTeams,
     gradient: "from-primary to-red-400",
   },
   {
     type: "two_match_rotation",
-    label: "2 Match Rotation",
+    label: FORMATS.two_match_rotation.label,
     description: "Play 2 matches then rotate. First match winner stays, then everyone gets 2 games before rotating.",
     icon: <RotationIcon className="w-7 h-7" />,
-    minTeams: 3,
+    minTeams: FORMATS.two_match_rotation.minTeams,
     gradient: "from-rose-500 to-pink-600",
   },
 ];
 
 export const useNewCompetitionPage = () => {
   const router = useRouter();
-  const { state, isRosterLoading, addTeam, createCompetition } = useApp();
+  const { state, isRosterLoading, addTeam, createTournament } = useApp();
   const [step, setStep] = useState<Step>("format");
-  const [selectedFormat, setSelectedFormat] = useState<CompetitionType | null>(null);
+  const [selectedFormat, setSelectedFormat] = useState<TournamentFormat | null>(null);
   const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>([]);
   const [competitionName, setCompetitionName] = useState("");
   const [nameError, setNameError] = useState("");
@@ -91,12 +91,10 @@ export const useNewCompetitionPage = () => {
   const [matchSeriesLength, setMatchSeriesLength] = useState(1);
   const [instantWinEnabled, setInstantWinEnabled] = useState(false);
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
-  // Competition config state
-  const [pointsForWin, setPointsForWin] = useState(DEFAULT_COMPETITION_CONFIG.pointsForWin);
-  const [pointsForTie, setPointsForTie] = useState(0);
-  const [pointsForLoss, setPointsForLoss] = useState(DEFAULT_COMPETITION_CONFIG.pointsForLoss);
-  const [allowTies, setAllowTies] = useState(DEFAULT_COMPETITION_CONFIG.allowTies);
-  const [venueName, setVenueName] = useState(DEFAULT_COMPETITION_CONFIG.terminology.venue);
+  const [isCreating, setIsCreating] = useState(false);
+  const [pointsForWin, setPointsForWin] = useState(DEFAULT_POINTS_FOR_WIN);
+  const [pointsForLoss, setPointsForLoss] = useState(DEFAULT_POINTS_FOR_LOSS);
+  const [venueName, setVenueName] = useState(DEFAULT_TERMINOLOGY.venue);
 
   const currentFormat = useMemo(
     () => formatOptions.find((f) => f.type === selectedFormat),
@@ -147,7 +145,7 @@ export const useNewCompetitionPage = () => {
     return { valid: true, message: `${count} teams selected` };
   }, [currentFormat, selectedTeamIds, isPowerOf2, nextPowerOf2]);
 
-  const handleFormatSelect = useCallback((type: CompetitionType) => {
+  const handleFormatSelect = useCallback((type: TournamentFormat) => {
     setSelectedFormat(type);
   }, []);
 
@@ -190,75 +188,58 @@ export const useNewCompetitionPage = () => {
     return Math.floor(selectedTeamIds.length / 2);
   }, [selectedTeamIds.length]);
 
-  const handleCreateCompetition = useCallback(() => {
+  const handleCreateCompetition = useCallback(async () => {
     const trimmedName = competitionName.trim();
     if (!trimmedName) {
       setNameError("Competition name is required");
       return;
     }
-    if (!selectedFormat) return;
+    if (!selectedFormat || isCreating) return;
 
-    const courtsToUse =
-      selectedFormat === "two_match_rotation" || selectedFormat === "win2out"
-        ? numberOfCourts
-        : undefined;
-    const seriesLengthToUse =
-      selectedFormat === "round_robin" ||
-      selectedFormat === "single_elimination" ||
-      selectedFormat === "double_elimination"
-        ? matchSeriesLength
-        : undefined;
-    const instantWinToUse =
-      selectedFormat === "two_match_rotation" || selectedFormat === "win2out"
-        ? instantWinEnabled
-        : undefined;
+    // Entries follow the order the teams were ticked, which is the seed order.
+    const teams = selectedTeamIds
+      .map((id) => state.teams.find((team) => team.id === id))
+      .filter((team): team is PersistentTeam => Boolean(team));
 
-    // Build config only if user has customized settings
-    const isCustomized =
-      pointsForWin !== DEFAULT_COMPETITION_CONFIG.pointsForWin ||
-      pointsForLoss !== DEFAULT_COMPETITION_CONFIG.pointsForLoss ||
-      allowTies !== DEFAULT_COMPETITION_CONFIG.allowTies ||
-      venueName !== DEFAULT_COMPETITION_CONFIG.terminology.venue;
+    const rotation = isRotationFormat(selectedFormat);
+    const settings: TournamentSettings = {
+      courts: rotation ? numberOfCourts : 1,
+      seriesLength: isSeriesFormat(selectedFormat) ? matchSeriesLength : 1,
+      instantWin: rotation ? instantWinEnabled : false,
+      pointsForWin,
+      pointsForLoss,
+      terminology: {
+        ...DEFAULT_TERMINOLOGY,
+        venue: venueName,
+        venuePlural: venueName + "s",
+      },
+    };
 
-    const config: CompetitionConfig | undefined = isCustomized
-      ? {
-          pointsForWin,
-          pointsForTie: allowTies ? pointsForTie : undefined,
-          pointsForLoss,
-          allowTies,
-          terminology: {
-            venue: venueName,
-            venuePlural: venueName + "s",
-            match: DEFAULT_COMPETITION_CONFIG.terminology.match,
-            matchPlural: DEFAULT_COMPETITION_CONFIG.terminology.matchPlural,
-          },
-        }
-      : undefined;
-
-    createCompetition(
-      trimmedName,
-      selectedFormat,
-      selectedTeamIds,
-      courtsToUse,
-      seriesLengthToUse,
-      instantWinToUse,
-      config
-    );
-
-    router.push("/competitions");
+    setIsCreating(true);
+    try {
+      await createTournament({ name: trimmedName, format: selectedFormat, teams, settings });
+      router.push("/competitions");
+    } catch (error) {
+      console.error("Failed to create the tournament:", error);
+      setNameError(
+        error instanceof Error ? error.message : "The tournament could not be created."
+      );
+    } finally {
+      setIsCreating(false);
+    }
   }, [
     competitionName,
     selectedFormat,
     selectedTeamIds,
+    state.teams,
     numberOfCourts,
     matchSeriesLength,
     instantWinEnabled,
     pointsForWin,
-    pointsForTie,
     pointsForLoss,
-    allowTies,
     venueName,
-    createCompetition,
+    isCreating,
+    createTournament,
     router,
   ]);
 
@@ -280,6 +261,7 @@ export const useNewCompetitionPage = () => {
     handleNext,
     handleQuickCreateTeam,
     handleTeamToggle,
+    isCreating,
     maxCourts,
     nameError,
     numberOfCourts,
@@ -302,17 +284,13 @@ export const useNewCompetitionPage = () => {
     advancedSettings: {
       showAdvancedSettings,
       pointsForWin,
-      pointsForTie,
       pointsForLoss,
-      allowTies,
       venueName,
     } as AdvancedSettings,
     advancedSettingsHandlers: {
       onToggleAdvancedSettings: () => setShowAdvancedSettings((prev) => !prev),
       onPointsForWinChange: setPointsForWin,
-      onPointsForTieChange: setPointsForTie,
       onPointsForLossChange: setPointsForLoss,
-      onAllowTiesChange: setAllowTies,
       onVenueNameChange: setVenueName,
     } as AdvancedSettingsHandlers,
   };

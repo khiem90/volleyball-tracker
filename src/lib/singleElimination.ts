@@ -1,4 +1,4 @@
-import type { Match } from "@/types/game";
+import type { MatchDraft } from "@/types/game";
 
 // Special marker for bye positions
 const BYE_MARKER = "__BYE__";
@@ -112,10 +112,9 @@ const reorderTeamsForByes = (
  */
 export const generateSingleEliminationBracket = (
   teamIds: string[],
-  competitionId: string,
   byeTeamIds?: string[]
-): Omit<Match, "id" | "createdAt">[] => {
-  const matches: Omit<Match, "id" | "createdAt">[] = [];
+): MatchDraft[] => {
+  const matches: MatchDraft[] = [];
   const n = teamIds.length;
 
   if (n < 2) {
@@ -162,7 +161,6 @@ export const generateSingleEliminationBracket = (
 
       // Create a "bye" match that's already completed
       matches.push({
-        competitionId,
         homeTeamId: homeTeam === BYE_MARKER ? "" : homeTeam,
         awayTeamId: awayTeam === BYE_MARKER ? "" : awayTeam,
         homeScore: homeTeam === BYE_MARKER ? 0 : 1,
@@ -176,7 +174,6 @@ export const generateSingleEliminationBracket = (
     } else {
       // Normal match
       matches.push({
-        competitionId,
         homeTeamId: homeTeam,
         awayTeamId: awayTeam,
         homeScore: 0,
@@ -211,7 +208,6 @@ export const generateSingleEliminationBracket = (
       }
 
       matches.push({
-        competitionId,
         homeTeamId,
         awayTeamId,
         homeScore: 0,
@@ -226,88 +222,6 @@ export const generateSingleEliminationBracket = (
   }
 
   return matches;
-};
-
-/**
- * Get the match that a winner advances to.
- */
-const getNextMatchPosition = (
-  round: number,
-  position: number
-): { round: number; position: number; slot: "home" | "away" } => {
-  const nextRound = round + 1;
-  const nextPosition = Math.ceil(position / 2);
-  const slot = position % 2 === 1 ? "home" : "away";
-
-  return { round: nextRound, position: nextPosition, slot };
-};
-
-/**
- * Update bracket after a match is completed.
- * Returns the updated matches array.
- */
-export const advanceWinner = (
-  matches: Match[],
-  completedMatch: Match,
-  winnerId: string
-): Match[] => {
-  const totalRounds = Math.max(...matches.map((m) => m.round));
-
-  // If this is the finals, no advancement needed
-  if (completedMatch.round === totalRounds) {
-    return matches;
-  }
-
-  const next = getNextMatchPosition(completedMatch.round, completedMatch.position);
-
-  return matches.map((match) => {
-    if (match.round === next.round && match.position === next.position) {
-      return {
-        ...match,
-        [next.slot === "home" ? "homeTeamId" : "awayTeamId"]: winnerId,
-      };
-    }
-    return match;
-  });
-};
-
-/**
- * Get bracket structure for visualization.
- */
-export interface BracketMatch {
-  match: Match | null;
-  round: number;
-  position: number;
-  homeTeamId?: string;
-  awayTeamId?: string;
-}
-
-const getBracketStructure = (
-  matches: Match[],
-  totalTeams: number
-): BracketMatch[][] => {
-  // Calculate bracket size as next power of 2 for proper round calculation
-  const bracketSize = nextPowerOf2(totalTeams);
-  const totalRounds = Math.log2(bracketSize);
-  const bracket: BracketMatch[][] = [];
-
-  for (let round = 1; round <= totalRounds; round++) {
-    const roundMatches = matches
-      .filter((m) => m.round === round)
-      .sort((a, b) => a.position - b.position);
-
-    bracket.push(
-      roundMatches.map((match) => ({
-        match,
-        round: match.round,
-        position: match.position,
-        homeTeamId: match.homeTeamId,
-        awayTeamId: match.awayTeamId,
-      }))
-    );
-  }
-
-  return bracket;
 };
 
 /**

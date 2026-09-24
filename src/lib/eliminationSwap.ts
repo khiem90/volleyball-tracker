@@ -42,7 +42,7 @@ export const detectTeamSwap = (
   const otherMatch = allMatches.find(
     (m) =>
       m.id !== currentMatch.id &&
-      m.competitionId === currentMatch.competitionId &&
+      m.tournamentId === currentMatch.tournamentId &&
       (!sameRoundOnly || m.round === currentMatch.round) &&
       m.status === "pending" &&
       !m.isBye &&

@@ -2,26 +2,15 @@
 
 import {
   createContext,
-  useContext,
-  useReducer,
-  useEffect,
   useCallback,
+  useContext,
+  useEffect,
   useMemo,
-  useRef,
   useState,
   type ReactNode,
 } from "react";
-import type {
-  AppState,
-  PersistentTeam,
-  Competition,
-  Match,
-  CompetitionType,
-  MatchStatus,
-} from "@/types/game";
-// Note: PersistentTeam, CompetitionType, MatchStatus are used in callback signatures
+import type { AppState, Match, PersistentTeam, Tournament } from "@/types/game";
 import { useAuth } from "./AuthContext";
-import { useSession } from "./SessionContext";
 import { db } from "@/lib/firebase";
 import {
   addRosterTeam,
@@ -30,110 +19,107 @@ import {
   updateRosterTeam,
 } from "@/lib/roster";
 import {
-  appReducer,
-  initialState,
-  generateId,
-  STORAGE_KEY,
-  OLD_STORAGE_KEY,
-} from "./appReducer";
+  applyTournamentCommand,
+  buildTournament,
+  deleteMatch as deleteTournamentMatch,
+  deleteTournament as deleteTournamentDoc,
+  saveTournament,
+  subscribeToAccountMatches,
+  subscribeToTournaments,
+  updateMatch as updateTournamentMatch,
+  updateTournament as updateTournamentDoc,
+  type NewTournamentInput,
+} from "@/lib/tournaments";
+import {
+  buildQuickMatch,
+  deleteQuickMatch,
+  saveQuickMatch,
+  updateQuickMatch,
+} from "@/lib/quickMatches";
 
-// ============================================
-// Context
-// ============================================
+/**
+ * The app-wide provider: a thin layer over three live Firestore subscriptions,
+ * roster, tournaments, and matches, plus the domain actions. Format rules live
+ * in the engine. The court and queue edits at the bottom still shape the
+ * tournament document here; tickets 03 and 09 move them into engine commands.
+ */
+
+export interface MatchResult {
+  homeScore: number;
+  awayScore: number;
+}
+
+export interface CompleteMatchOutcome {
+  /** False when a best-of series moved to its next game instead of ending. */
+  completed: boolean;
+  /** Matches the engine scheduled as a result, if any. */
+  createdMatchIds: string[];
+}
+
 interface AppContextValue {
   state: AppState;
-  // Session info
-  isSharedMode: boolean;
+  /** Signed-in accounts can change their own data. Guests only watch. */
   canEdit: boolean;
   // True until the signed-in account's roster has arrived from Firestore
   isRosterLoading: boolean;
   // Set when the roster subscription fails, for example when rules deny it
   rosterError: string | null;
+  // True until both the tournaments and the matches have arrived
+  isTournamentsLoading: boolean;
+  tournamentsError: string | null;
   // Team actions
   addTeam: (name: string, color?: string) => void;
   updateTeam: (id: string, name: string, color?: string) => void;
   deleteTeam: (id: string) => void;
   getTeamById: (id: string) => PersistentTeam | undefined;
-  // Competition actions
-  createCompetition: (
-    name: string,
-    type: CompetitionType,
-    teamIds: string[],
-    numberOfCourts?: number,
-    matchSeriesLength?: number,
-    instantWinEnabled?: boolean,
-    config?: Competition["config"]
-  ) => string;
-  updateCompetition: (competition: Competition) => void;
-  deleteCompetition: (id: string) => void;
-  startCompetition: (id: string) => void;
-  startCompetitionWithMatches: (
-    competition: Competition,
-    matches: Omit<Match, "id" | "createdAt">[]
-  ) => void;
-  completeCompetition: (id: string, winnerId?: string) => void;
-  removeCompetitionLocal: (id: string) => void;
-  getCompetitionById: (id: string) => Competition | undefined;
+  // Tournament actions
+  createTournament: (input: NewTournamentInput) => Promise<string>;
+  updateTournament: (tournament: Tournament) => Promise<void>;
+  deleteTournament: (id: string) => Promise<void>;
+  startTournament: (id: string, byeTeamIds?: string[]) => Promise<void>;
+  endTournament: (id: string) => Promise<void>;
+  getTournamentById: (id: string) => Tournament | undefined;
+  getMatchesByTournament: (tournamentId: string) => Match[];
   // Match actions
-  addMatch: (match: Omit<Match, "id" | "createdAt">) => string;
-  addMatches: (matches: Omit<Match, "id" | "createdAt">[]) => void;
-  updateMatchScore: (
-    matchId: string,
-    homeScore: number,
-    awayScore: number
-  ) => void;
+  addQuickMatch: (homeTeamId: string, awayTeamId: string) => Promise<string>;
+  updateMatchScore: (matchId: string, homeScore: number, awayScore: number) => void;
   updateMatch: (matchId: string, updates: Partial<Match>) => void;
   startMatch: (matchId: string) => void;
-  completeMatch: (matchId: string, winnerId: string) => void;
-  completeMatchWithNextMatch: (
-    matchId: string,
-    winnerId: string,
-    updatedCompetition: Competition,
-    nextMatch: Omit<Match, "id" | "createdAt"> | null
-  ) => string | null;
+  completeMatch: (matchId: string, result: MatchResult) => Promise<CompleteMatchOutcome>;
   deleteMatch: (matchId: string) => void;
   getMatchById: (id: string) => Match | undefined;
-  getMatchesByCompetition: (competitionId: string) => Match[];
-  // Admin match management actions
-  updateMatchTeams: (
-    matchId: string,
-    homeTeamId: string,
-    awayTeamId: string
-  ) => void;
+  // Court and queue management for rotation formats
+  updateMatchTeams: (matchId: string, homeTeamId: string, awayTeamId: string) => void;
   swapMatchTeams: (
     updates: { matchId: string; homeTeamId: string; awayTeamId: string }[]
   ) => void;
-  updateMatchCourt: (matchId: string, courtNumber: number) => void;
-  swapCourtTeams: (
-    competitionId: string,
-    court1: number,
-    court2: number
-  ) => void;
-  reorderQueue: (competitionId: string, newQueue: string[]) => void;
-  // Utility
-  resetState: () => void;
+  swapCourtTeams: (tournamentId: string, court1: number, court2: number) => void;
+  reorderQueue: (tournamentId: string, newQueue: string[]) => void;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
 
-// ============================================
-// Provider
-// ============================================
+const emptyState: AppState = { teams: [], tournaments: [], matches: [] };
+
+const logFailure = (what: string) => (error: unknown) => {
+  console.error(`Failed to ${what}:`, error);
+};
+
 interface AppProviderProps {
   children: ReactNode;
 }
 
 export const AppProvider = ({ children }: AppProviderProps) => {
-  const [localState, dispatch] = useReducer(appReducer, initialState);
-  const { session, isSharedMode, canEdit, syncAllData } = useSession();
   const { user, isLoading: isAuthLoading } = useAuth();
   const uid = user?.uid ?? null;
 
-  // The roster is a live subscription to the signed-in account's teams in
-  // Firestore. Guests and unconfigured builds get an empty roster.
   const [roster, setRoster] = useState<PersistentTeam[]>([]);
   const [isRosterLoading, setIsRosterLoading] = useState(true);
   const [rosterError, setRosterError] = useState<string | null>(null);
+
+  const [tournaments, setTournaments] = useState<Tournament[] | null>(null);
+  const [matches, setMatches] = useState<Match[] | null>(null);
+  const [tournamentsError, setTournamentsError] = useState<string | null>(null);
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
@@ -143,12 +129,21 @@ export const AppProvider = ({ children }: AppProviderProps) => {
       setRoster([]);
       setRosterError(null);
       setIsRosterLoading(false);
+      setTournaments([]);
+      setMatches([]);
+      setTournamentsError(null);
       return;
     }
 
     setIsRosterLoading(true);
     setRosterError(null);
-    return subscribeToRoster(
+    setTournaments(null);
+    setMatches(null);
+    setTournamentsError(null);
+
+    // onSnapshot errors end the subscription, so each one says so rather
+    // than presenting an empty list as the truth.
+    const unsubscribeRoster = subscribeToRoster(
       db,
       uid,
       (teams) => {
@@ -157,8 +152,6 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         setIsRosterLoading(false);
       },
       (error) => {
-        // onSnapshot errors end the subscription, so say so rather than
-        // presenting an empty roster as the truth.
         console.error("Failed to load the roster:", error);
         setRosterError(
           "The roster did not load. Check your connection and sign-in, then reload the page."
@@ -166,136 +159,79 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         setIsRosterLoading(false);
       }
     );
+    const failTournaments = (what: string) => (error: Error) => {
+      console.error(`Failed to load ${what}:`, error);
+      setTournamentsError(
+        "Your tournaments did not load. Check your connection and sign-in, then reload the page."
+      );
+      setTournaments((current) => current ?? []);
+      setMatches((current) => current ?? []);
+    };
+    const unsubscribeTournaments = subscribeToTournaments(
+      db,
+      uid,
+      setTournaments,
+      failTournaments("tournaments")
+    );
+    const unsubscribeMatches = subscribeToAccountMatches(
+      db,
+      uid,
+      setMatches,
+      failTournaments("matches")
+    );
+
+    return () => {
+      unsubscribeRoster();
+      unsubscribeTournaments();
+      unsubscribeMatches();
+    };
   }, [uid, isAuthLoading]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  // Determine which state to use: session data, or the roster plus local data
-  const state = useMemo((): AppState => {
-    if (isSharedMode && session) {
-      return {
-        teams: session.teams || [],
-        competitions: session.competition ? [session.competition] : [],
-        matches: session.matches || [],
-      };
-    }
-    return {
+  const state = useMemo(
+    (): AppState => ({
       teams: roster,
-      competitions: localState.competitions,
-      matches: localState.matches,
-    };
-  }, [isSharedMode, session, localState, roster]);
+      tournaments: tournaments ?? emptyState.tournaments,
+      matches: matches ?? emptyState.matches,
+    }),
+    [roster, tournaments, matches]
+  );
 
-  // Memoized maps for O(1) lookups instead of O(n) array finds
-  const competitionsMap = useMemo(() => {
-    const map = new Map<string, Competition>();
-    state.competitions.forEach((comp) => map.set(comp.id, comp));
-    return map;
-  }, [state.competitions]);
+  const tournamentsById = useMemo(
+    () => new Map(state.tournaments.map((t) => [t.id, t])),
+    [state.tournaments]
+  );
+  const matchesById = useMemo(
+    () => new Map(state.matches.map((m) => [m.id, m])),
+    [state.matches]
+  );
 
-  const matchesMap = useMemo(() => {
-    const map = new Map<string, Match>();
-    state.matches.forEach((match) => map.set(match.id, match));
-    return map;
-  }, [state.matches]);
+  // ============================================
+  // Teams
+  // ============================================
 
-  const hasLoadedLocalState = useRef(false);
-
-  // Load state from localStorage on mount (with migration from old key)
-  useEffect(() => {
-    if (hasLoadedLocalState.current) return;
-    hasLoadedLocalState.current = true;
-
-    try {
-      let stored = localStorage.getItem(STORAGE_KEY);
-
-      // Migration: check for old storage key if new key doesn't exist
-      if (!stored && OLD_STORAGE_KEY) {
-        const oldStored = localStorage.getItem(OLD_STORAGE_KEY);
-        if (oldStored) {
-          // Migrate data from old key to new key
-          localStorage.setItem(STORAGE_KEY, oldStored);
-          localStorage.removeItem(OLD_STORAGE_KEY);
-          stored = oldStored;
-          console.log("Migrated data from old storage key to new storage key");
-        }
-      }
-
-      if (stored) {
-        const parsed = JSON.parse(stored) as Partial<AppState>;
-        dispatch({ type: "LOAD_STATE", state: parsed });
-      }
-    } catch (error) {
-      console.error("Failed to load state from localStorage:", error);
-    }
-  }, []);
-
-  // Save state to localStorage whenever it changes (only for local mode)
-  useEffect(() => {
-    if (!isSharedMode) {
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(localState));
-      } catch (error) {
-        console.error("Failed to save state to localStorage:", error);
-      }
-    }
-  }, [localState, isSharedMode]);
-
-  // Team actions. Outside a shared session these write to the account's
-  // roster in Firestore; the subscription above feeds the change back into
-  // state, at once from the local cache and again when the server confirms.
   const addTeam = useCallback(
     (name: string, color?: string) => {
-      if (isSharedMode && !canEdit) return;
-
-      if (isSharedMode && session) {
-        const newTeam: PersistentTeam = {
-          id: generateId(),
-          name,
-          color,
-          createdAt: Date.now(),
-        };
-        syncAllData({ teams: [...(session.teams || []), newTeam] });
-      } else if (uid && db) {
-        addRosterTeam(db, uid, { name, color }).catch((error) => {
-          console.error("Failed to add team:", error);
-        });
-      }
+      if (!uid || !db) return;
+      addRosterTeam(db, uid, { name, color }).catch(logFailure("add team"));
     },
-    [isSharedMode, canEdit, session, syncAllData, uid]
+    [uid]
   );
 
   const updateTeam = useCallback(
     (id: string, name: string, color?: string) => {
-      if (isSharedMode && !canEdit) return;
-
-      if (isSharedMode && session) {
-        const newTeams = (session.teams || []).map((team) =>
-          team.id === id ? { ...team, name, color } : team
-        );
-        syncAllData({ teams: newTeams });
-      } else if (uid && db) {
-        updateRosterTeam(db, uid, id, { name, color }).catch((error) => {
-          console.error("Failed to update team:", error);
-        });
-      }
+      if (!uid || !db) return;
+      updateRosterTeam(db, uid, id, { name, color }).catch(logFailure("update team"));
     },
-    [isSharedMode, canEdit, session, syncAllData, uid]
+    [uid]
   );
 
   const deleteTeam = useCallback(
     (id: string) => {
-      if (isSharedMode && !canEdit) return;
-
-      if (isSharedMode && session) {
-        const newTeams = (session.teams || []).filter((team) => team.id !== id);
-        syncAllData({ teams: newTeams });
-      } else if (uid && db) {
-        deleteRosterTeam(db, uid, id).catch((error) => {
-          console.error("Failed to delete team:", error);
-        });
-      }
+      if (!uid || !db) return;
+      deleteRosterTeam(db, uid, id).catch(logFailure("delete team"));
     },
-    [isSharedMode, canEdit, session, syncAllData, uid]
+    [uid]
   );
 
   const getTeamById = useCallback(
@@ -303,890 +239,361 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     [state.teams]
   );
 
-  // Competition actions
-  const createCompetition = useCallback(
-    (
-      name: string,
-      type: CompetitionType,
-      teamIds: string[],
-      numberOfCourts?: number,
-      matchSeriesLength?: number,
-      instantWinEnabled?: boolean,
-      config?: Competition["config"]
-    ) => {
-      if (isSharedMode && !canEdit) return "";
+  // ============================================
+  // Tournaments
+  // ============================================
 
-      const id = generateId();
-      const newCompetition: Competition = {
-        id,
-        name,
-        type,
-        teamIds,
-        matchIds: [],
-        status: "draft",
-        createdAt: Date.now(),
-        numberOfCourts,
-        matchSeriesLength,
-        instantWinEnabled,
-        config,
-      };
+  const requireAccount = useCallback(() => {
+    if (!uid || !db) throw new Error("Sign in to change tournaments.");
+    return { uid, db };
+  }, [uid]);
 
-      if (isSharedMode && session) {
-        syncAllData({ competition: newCompetition });
-      } else {
-        dispatch({
-          type: "CREATE_COMPETITION",
-          name,
-          competitionType: type,
-          teamIds,
-          numberOfCourts,
-          matchSeriesLength,
-          instantWinEnabled,
-          config,
-        });
-      }
-
-      return id;
+  // The id is known before the write, and the subscription shows the new
+  // tournament from the local cache at once, so nobody waits for the server.
+  // A phone with no signal can still set up a tournament.
+  const createTournament = useCallback(
+    async (input: NewTournamentInput) => {
+      const account = requireAccount();
+      const tournament = buildTournament(account.db, account.uid, input);
+      saveTournament(account.db, tournament).catch(logFailure("save tournament"));
+      return tournament.id;
     },
-    [isSharedMode, canEdit, session, syncAllData]
+    [requireAccount]
   );
 
-  const updateCompetition = useCallback(
-    (competition: Competition) => {
-      if (isSharedMode && !canEdit) return;
-
-      if (isSharedMode && session) {
-        syncAllData({ competition });
-      } else {
-        dispatch({ type: "UPDATE_COMPETITION", competition });
-      }
+  // Guarded on the revision this provider's state was built from, so a queue
+  // reorder or an undo can never paper over a result another court just saved.
+  const updateTournament = useCallback(
+    async (tournament: Tournament) => {
+      const current = tournamentsById.get(tournament.id);
+      if (!current) throw new Error("That tournament no longer exists.");
+      await updateTournamentDoc(requireAccount().db, tournament, current.revision);
     },
-    [isSharedMode, canEdit, session, syncAllData]
+    [requireAccount, tournamentsById]
   );
 
-  const deleteCompetition = useCallback(
-    (id: string) => {
-      if (isSharedMode && !canEdit) return;
-
-      if (isSharedMode && session) {
-        const newMatches = (session.matches || []).filter(
-          (m) => m.competitionId !== id
-        );
-        syncAllData({ competition: null, matches: newMatches });
-      } else {
-        dispatch({ type: "DELETE_COMPETITION", id });
-      }
+  const deleteTournament = useCallback(
+    async (id: string) => {
+      await deleteTournamentDoc(requireAccount().db, id);
     },
-    [isSharedMode, canEdit, session, syncAllData]
+    [requireAccount]
   );
 
-  const startCompetition = useCallback(
-    (id: string) => {
-      if (isSharedMode && !canEdit) return;
-
-      if (isSharedMode && session && session.competition) {
-        syncAllData({
-          competition: { ...session.competition, status: "in_progress" },
-        });
-      } else {
-        dispatch({ type: "START_COMPETITION", id });
-      }
+  const startTournament = useCallback(
+    async (id: string, byeTeamIds?: string[]) => {
+      await applyTournamentCommand(requireAccount().db, id, { type: "start", byeTeamIds });
     },
-    [isSharedMode, canEdit, session, syncAllData]
+    [requireAccount]
   );
 
-  // Atomically start competition with matches (fixes race condition in shared mode)
-  const startCompetitionWithMatches = useCallback(
-    (competition: Competition, matches: Omit<Match, "id" | "createdAt">[]) => {
-      if (isSharedMode && !canEdit) return;
-
-      // Generate IDs for new matches
-      const newMatches: Match[] = matches.map((match) => ({
-        ...match,
-        id: generateId(),
-        createdAt: Date.now(),
-      }));
-
-      // Update competition with match IDs
-      const updatedCompetition: Competition = {
-        ...competition,
-        status: "in_progress",
-        matchIds: [
-          ...(competition.matchIds || []),
-          ...newMatches.map((m) => m.id),
-        ],
-      };
-
-      if (isSharedMode && session) {
-        // Single atomic update for shared mode
-        const allMatches = [...(session.matches || []), ...newMatches];
-        syncAllData({ competition: updatedCompetition, matches: allMatches });
-      } else {
-        // For local mode, dispatch both actions
-        dispatch({
-          type: "UPDATE_COMPETITION",
-          competition: updatedCompetition,
-        });
-        dispatch({ type: "ADD_MATCHES", matches });
-      }
+  const endTournament = useCallback(
+    async (id: string) => {
+      await applyTournamentCommand(requireAccount().db, id, { type: "end" });
     },
-    [isSharedMode, canEdit, session, syncAllData]
+    [requireAccount]
   );
 
-  const completeCompetition = useCallback(
-    (id: string, winnerId?: string) => {
-      if (isSharedMode && !canEdit) return;
-
-      if (isSharedMode && session && session.competition) {
-        syncAllData({
-          competition: {
-            ...session.competition,
-            status: "completed",
-            completedAt: Date.now(),
-            winnerId,
-          },
-        });
-      }
-      dispatch({ type: "COMPLETE_COMPETITION", id, winnerId });
-    },
-    [isSharedMode, canEdit, session, syncAllData]
+  const getTournamentById = useCallback(
+    (id: string) => tournamentsById.get(id),
+    [tournamentsById]
   );
 
-  const removeCompetitionLocal = useCallback((id: string) => {
-    dispatch({ type: "DELETE_COMPETITION", id });
-  }, []);
-
-  const getCompetitionById = useCallback(
-    (id: string) => competitionsMap.get(id),
-    [competitionsMap]
+  const getMatchesByTournament = useCallback(
+    (tournamentId: string) => state.matches.filter((m) => m.tournamentId === tournamentId),
+    [state.matches]
   );
 
-  // Match actions
-  const addMatch = useCallback(
-    (match: Omit<Match, "id" | "createdAt">): string => {
-      if (isSharedMode && !canEdit) return "";
+  // ============================================
+  // Matches
+  // ============================================
 
-      const newMatch: Match = {
-        ...match,
-        id: generateId(),
-        createdAt: Date.now(),
-      };
-
-      if (isSharedMode && session) {
-        const newMatches = [...(session.matches || []), newMatch];
-
-        // Update competition matchIds if applicable
-        let updatedCompetition = session.competition;
-        if (match.competitionId && session.competition) {
-          updatedCompetition = {
-            ...session.competition,
-            matchIds: [...session.competition.matchIds, newMatch.id],
-          };
-        }
-
-        syncAllData({ matches: newMatches, competition: updatedCompetition });
-      } else {
-        dispatch({ type: "ADD_MATCH", match: newMatch });
-      }
-      return newMatch.id;
+  const addQuickMatch = useCallback(
+    async (homeTeamId: string, awayTeamId: string) => {
+      const account = requireAccount();
+      const match = buildQuickMatch(account.db, account.uid, { homeTeamId, awayTeamId });
+      saveQuickMatch(account.db, account.uid, match).catch(logFailure("save quick match"));
+      return match.id;
     },
-    [isSharedMode, canEdit, session, syncAllData]
+    [requireAccount]
   );
 
-  const addMatches = useCallback(
-    (matches: Omit<Match, "id" | "createdAt">[]) => {
-      if (isSharedMode && !canEdit) return;
-
-      const newMatches: Match[] = matches.map((match) => ({
-        ...match,
-        id: generateId(),
-        createdAt: Date.now(),
-      }));
-
-      if (isSharedMode && session) {
-        const allMatches = [...(session.matches || []), ...newMatches];
-
-        // Update competition matchIds if applicable
-        let updatedCompetition = session.competition;
-        if (session.competition) {
-          const newMatchIds = newMatches
-            .filter((m) => m.competitionId === session.competition?.id)
-            .map((m) => m.id);
-          if (newMatchIds.length > 0) {
-            updatedCompetition = {
-              ...session.competition,
-              matchIds: [...session.competition.matchIds, ...newMatchIds],
-            };
-          }
-        }
-
-        syncAllData({ matches: allMatches, competition: updatedCompetition });
-      } else {
-        dispatch({ type: "ADD_MATCHES", matches });
-      }
+  // Tournament matches and quick matches live in different places; the match
+  // itself says which.
+  const writeMatch = useCallback(
+    (matchId: string, changes: Partial<Match>) => {
+      if (!uid || !db) return;
+      const match = matchesById.get(matchId);
+      if (!match) return;
+      const write = match.tournamentId
+        ? updateTournamentMatch(db, match.tournamentId, matchId, changes)
+        : updateQuickMatch(db, uid, matchId, changes);
+      write.catch(logFailure("update match"));
     },
-    [isSharedMode, canEdit, session, syncAllData]
+    [uid, matchesById]
   );
 
   const updateMatchScore = useCallback(
     (matchId: string, homeScore: number, awayScore: number) => {
-      if (isSharedMode && !canEdit) return;
-
-      if (isSharedMode && session) {
-        const newMatches = (session.matches || []).map((match) =>
-          match.id === matchId ? { ...match, homeScore, awayScore } : match
-        );
-        syncAllData({ matches: newMatches });
-      } else {
-        dispatch({ type: "UPDATE_MATCH_SCORE", matchId, homeScore, awayScore });
-      }
+      writeMatch(matchId, { homeScore, awayScore });
     },
-    [isSharedMode, canEdit, session, syncAllData]
+    [writeMatch]
   );
 
   const updateMatch = useCallback(
     (matchId: string, updates: Partial<Match>) => {
-      if (isSharedMode && !canEdit) return;
-
-      if (isSharedMode && session) {
-        const newMatches = (session.matches || []).map((match) =>
-          match.id === matchId ? { ...match, ...updates } : match
-        );
-        syncAllData({ matches: newMatches });
-      } else {
-        dispatch({ type: "UPDATE_MATCH", matchId, updates });
-      }
+      writeMatch(matchId, updates);
     },
-    [isSharedMode, canEdit, session, syncAllData]
+    [writeMatch]
   );
 
   const startMatch = useCallback(
     (matchId: string) => {
-      if (isSharedMode && !canEdit) return;
-
-      if (isSharedMode && session) {
-        const newMatches = (session.matches || []).map((match) =>
-          match.id === matchId
-            ? { ...match, status: "in_progress" as MatchStatus }
-            : match
-        );
-        syncAllData({ matches: newMatches });
-      } else {
-        dispatch({ type: "START_MATCH", matchId });
-      }
+      writeMatch(matchId, { status: "in_progress" });
     },
-    [isSharedMode, canEdit, session, syncAllData]
+    [writeMatch]
   );
 
   const completeMatch = useCallback(
-    (matchId: string, winnerId: string) => {
-      if (isSharedMode && !canEdit) return;
+    async (matchId: string, result: MatchResult): Promise<CompleteMatchOutcome> => {
+      const account = requireAccount();
+      const match = matchesById.get(matchId);
+      if (!match) throw new Error("That match no longer exists.");
 
-      if (isSharedMode && session) {
-        const newMatches = (session.matches || []).map((match) =>
-          match.id === matchId
-            ? {
-                ...match,
-                status: "completed" as MatchStatus,
-                completedAt: Date.now(),
-                winnerId,
-              }
-            : match
-        );
-        syncAllData({ matches: newMatches });
-      } else {
-        dispatch({ type: "COMPLETE_MATCH", matchId, winnerId });
-      }
-    },
-    [isSharedMode, canEdit, session, syncAllData]
-  );
-
-  // Atomically complete a match, update competition, and add next match (for win2out/two_match_rotation)
-  // Returns the new match ID if a next match was created, otherwise null
-  const completeMatchWithNextMatch = useCallback(
-    (
-      matchId: string,
-      winnerId: string,
-      updatedCompetition: Competition,
-      nextMatch: Omit<Match, "id" | "createdAt"> | null
-    ): string | null => {
-      if (isSharedMode && !canEdit) return null;
-
-      // Generate the new match ID upfront so we can return it
-      const newMatchId = nextMatch ? generateId() : null;
-
-      if (isSharedMode && session) {
-        // Update the completed match
-        let newMatches = (session.matches || []).map((match) =>
-          match.id === matchId
-            ? {
-                ...match,
-                status: "completed" as MatchStatus,
-                completedAt: Date.now(),
-                winnerId,
-              }
-            : match
-        );
-
-        // Add the next match if provided
-        if (nextMatch && newMatchId) {
-          const newMatch: Match = {
-            ...nextMatch,
-            id: newMatchId,
-            createdAt: Date.now(),
-          };
-          newMatches = [...newMatches, newMatch];
-
-          // Update competition matchIds
-          updatedCompetition = {
-            ...updatedCompetition,
-            matchIds: [...(updatedCompetition.matchIds || []), newMatch.id],
-          };
+      if (!match.tournamentId) {
+        if (result.homeScore === result.awayScore) {
+          throw new Error("A match cannot end in a tie.");
         }
-
-        // Single atomic update
-        syncAllData({ matches: newMatches, competition: updatedCompetition });
-      } else {
-        // For local mode, dispatch in sequence
-        dispatch({ type: "COMPLETE_MATCH", matchId, winnerId });
-        dispatch({
-          type: "UPDATE_COMPETITION",
-          competition: updatedCompetition,
+        await updateQuickMatch(account.db, account.uid, matchId, {
+          ...result,
+          status: "completed",
+          winnerId: result.homeScore > result.awayScore ? match.homeTeamId : match.awayTeamId,
+          completedAt: Date.now(),
         });
-        if (nextMatch && newMatchId) {
-          dispatch({ type: "ADD_MATCH", match: { ...nextMatch, id: newMatchId } });
-        }
+        return { completed: true, createdMatchIds: [] };
       }
 
-      return newMatchId;
+      const outcome = await applyTournamentCommand(account.db, match.tournamentId, {
+        type: "complete_match",
+        matchId,
+        ...result,
+      });
+      const own = outcome.matchWrites.find(
+        (w) => w.kind === "update" && w.matchId === matchId
+      );
+      const completed = own?.kind === "update" && own.changes.status === "completed";
+      return { completed, createdMatchIds: outcome.createdMatchIds };
     },
-    [isSharedMode, canEdit, session, syncAllData]
+    [requireAccount, matchesById]
   );
 
   const deleteMatch = useCallback(
     (matchId: string) => {
-      if (isSharedMode && !canEdit) return;
-
-      if (isSharedMode && session) {
-        const match = (session.matches || []).find((m) => m.id === matchId);
-        const newMatches = (session.matches || []).filter(
-          (m) => m.id !== matchId
-        );
-
-        // Remove match ID from competition if applicable
-        let updatedCompetition = session.competition;
-        if (match?.competitionId && session.competition) {
-          updatedCompetition = {
-            ...session.competition,
-            matchIds: session.competition.matchIds.filter(
-              (id) => id !== matchId
-            ),
-          };
-        }
-
-        syncAllData({ matches: newMatches, competition: updatedCompetition });
-      } else {
-        dispatch({ type: "DELETE_MATCH", matchId });
-      }
+      if (!uid || !db) return;
+      const match = matchesById.get(matchId);
+      if (!match) return;
+      const remove = match.tournamentId
+        ? deleteTournamentMatch(db, match.tournamentId, matchId)
+        : deleteQuickMatch(db, uid, matchId);
+      remove.catch(logFailure("delete match"));
     },
-    [isSharedMode, canEdit, session, syncAllData]
+    [uid, matchesById]
   );
 
-  // Admin match management - Update teams playing a match
+  const getMatchById = useCallback((id: string) => matchesById.get(id), [matchesById]);
+
+  // ============================================
+  // Courts and queues (rotation formats)
+  // ============================================
+
   const updateMatchTeams = useCallback(
     (matchId: string, homeTeamId: string, awayTeamId: string) => {
-      if (isSharedMode && !canEdit) return;
-
-      // Find the match to get original team IDs
-      const match = isSharedMode
-        ? (session?.matches || []).find((m) => m.id === matchId)
-        : state.matches.find((m) => m.id === matchId);
-
+      const match = matchesById.get(matchId);
       if (!match) return;
+      writeMatch(matchId, { homeTeamId, awayTeamId });
 
-      // Find the competition this match belongs to
-      const competition = isSharedMode
-        ? session?.competition
-        : match.competitionId
-          ? state.competitions.find((c) => c.id === match.competitionId)
-          : null;
+      const tournament = match.tournamentId ? tournamentsById.get(match.tournamentId) : undefined;
+      if (!tournament) return;
 
-      // Calculate which teams are being swapped in/out
+      // Swap the incoming and outgoing teams between the court and the queue.
       const oldTeams = [match.homeTeamId, match.awayTeamId];
       const newTeams = [homeTeamId, awayTeamId];
-      const teamsBeingRemoved = oldTeams.filter((t) => !newTeams.includes(t));
-      const teamsBeingAdded = newTeams.filter((t) => !oldTeams.includes(t));
-
-      // Helper to update queue - swap teams in/out
-      const updateQueue = (currentQueue: string[]): string[] => {
-        const newQueue = [...currentQueue];
-
-        // For each team being added from queue, find its position and replace with removed team
-        for (let i = 0; i < teamsBeingAdded.length; i++) {
-          const addedTeam = teamsBeingAdded[i];
-          const removedTeam = teamsBeingRemoved[i];
-
-          const queueIndex = newQueue.indexOf(addedTeam);
-          if (queueIndex !== -1 && removedTeam) {
-            // Replace the added team's position with the removed team
-            newQueue[queueIndex] = removedTeam;
-          } else if (queueIndex !== -1) {
-            // Just remove the added team from queue
-            newQueue.splice(queueIndex, 1);
-          } else if (removedTeam && !newQueue.includes(removedTeam)) {
-            // Team being removed wasn't in queue, add it to the end
-            newQueue.push(removedTeam);
-          }
-        }
-
-        // Handle case where there are more removed teams than added teams
-        for (let i = teamsBeingAdded.length; i < teamsBeingRemoved.length; i++) {
-          const removedTeam = teamsBeingRemoved[i];
-          if (removedTeam && !newQueue.includes(removedTeam)) {
-            newQueue.push(removedTeam);
-          }
-        }
-
-        return newQueue;
-      };
-
-      if (isSharedMode && session) {
-        // Update the match teams
-        const newMatches = (session.matches || []).map((m) =>
-          m.id === matchId ? { ...m, homeTeamId, awayTeamId } : m
-        );
-
-        // For Win2Out/TwoMatchRotation, also update the court state and queue
-        let updatedCompetition = session.competition;
-        if (updatedCompetition?.win2outState) {
-          const courtIndex = updatedCompetition.win2outState.courts.findIndex(
-            (c) =>
-              c.teamIds.includes(match.homeTeamId) &&
-              c.teamIds.includes(match.awayTeamId)
-          );
-          if (courtIndex !== -1) {
-            const newCourts = [...updatedCompetition.win2outState.courts];
-            newCourts[courtIndex] = {
-              ...newCourts[courtIndex],
-              teamIds: [homeTeamId, awayTeamId],
-            };
-            const newQueue = updateQueue(updatedCompetition.win2outState.queue);
-            updatedCompetition = {
-              ...updatedCompetition,
-              win2outState: {
-                ...updatedCompetition.win2outState,
-                courts: newCourts,
-                queue: newQueue,
-              },
-            };
-          }
-        }
-        if (updatedCompetition?.twoMatchRotationState) {
-          const courtIndex =
-            updatedCompetition.twoMatchRotationState.courts.findIndex(
-              (c) =>
-                c.teamIds.includes(match.homeTeamId) &&
-                c.teamIds.includes(match.awayTeamId)
-            );
-          if (courtIndex !== -1) {
-            const newCourts = [
-              ...updatedCompetition.twoMatchRotationState.courts,
-            ];
-            newCourts[courtIndex] = {
-              ...newCourts[courtIndex],
-              teamIds: [homeTeamId, awayTeamId],
-            };
-            const newQueue = updateQueue(
-              updatedCompetition.twoMatchRotationState.queue
-            );
-            updatedCompetition = {
-              ...updatedCompetition,
-              twoMatchRotationState: {
-                ...updatedCompetition.twoMatchRotationState,
-                courts: newCourts,
-                queue: newQueue,
-              },
-            };
-          }
-        }
-
-        syncAllData({ matches: newMatches, competition: updatedCompetition });
-      } else {
-        // Local mode - update match first
-        dispatch({
-          type: "UPDATE_MATCH_TEAMS",
-          matchId,
-          homeTeamId,
-          awayTeamId,
+      const removed = oldTeams.filter((t) => !newTeams.includes(t));
+      const added = newTeams.filter((t) => !oldTeams.includes(t));
+      const swapInQueue = (queue: string[]): string[] => {
+        const next = [...queue];
+        added.forEach((team, i) => {
+          const leaving = removed[i];
+          const index = next.indexOf(team);
+          if (index !== -1 && leaving) next[index] = leaving;
+          else if (index !== -1) next.splice(index, 1);
+          else if (leaving && !next.includes(leaving)) next.push(leaving);
         });
+        removed.slice(added.length).forEach((team) => {
+          if (!next.includes(team)) next.push(team);
+        });
+        return next;
+      };
+      const isCourtOfMatch = (court: { teamIds: [string, string] }) =>
+        court.teamIds.includes(match.homeTeamId) && court.teamIds.includes(match.awayTeamId);
 
-        // For Win2Out/TwoMatchRotation, also update the competition's court state and queue
-        if (competition) {
-          let updatedCompetition = { ...competition };
-
-          if (updatedCompetition.win2outState) {
-            const courtIndex = updatedCompetition.win2outState.courts.findIndex(
-              (c) =>
-                c.teamIds.includes(match.homeTeamId) &&
-                c.teamIds.includes(match.awayTeamId)
-            );
-            if (courtIndex !== -1) {
-              const newCourts = [...updatedCompetition.win2outState.courts];
-              newCourts[courtIndex] = {
-                ...newCourts[courtIndex],
-                teamIds: [homeTeamId, awayTeamId],
-              };
-              const newQueue = updateQueue(updatedCompetition.win2outState.queue);
-              updatedCompetition = {
-                ...updatedCompetition,
-                win2outState: {
-                  ...updatedCompetition.win2outState,
-                  courts: newCourts,
-                  queue: newQueue,
-                },
-              };
-              dispatch({
-                type: "UPDATE_COMPETITION",
-                competition: updatedCompetition,
-              });
-            }
-          }
-
-          if (updatedCompetition.twoMatchRotationState) {
-            const courtIndex =
-              updatedCompetition.twoMatchRotationState.courts.findIndex(
-                (c) =>
-                  c.teamIds.includes(match.homeTeamId) &&
-                  c.teamIds.includes(match.awayTeamId)
-              );
-            if (courtIndex !== -1) {
-              const newCourts = [
-                ...updatedCompetition.twoMatchRotationState.courts,
-              ];
-              newCourts[courtIndex] = {
-                ...newCourts[courtIndex],
-                teamIds: [homeTeamId, awayTeamId],
-              };
-              const newQueue = updateQueue(
-                updatedCompetition.twoMatchRotationState.queue
-              );
-              updatedCompetition = {
-                ...updatedCompetition,
-                twoMatchRotationState: {
-                  ...updatedCompetition.twoMatchRotationState,
-                  courts: newCourts,
-                  queue: newQueue,
-                },
-              };
-              dispatch({
-                type: "UPDATE_COMPETITION",
-                competition: updatedCompetition,
-              });
-            }
-          }
-        }
+      let updated = tournament;
+      if (tournament.win2outState) {
+        const courts = tournament.win2outState.courts.map((court) =>
+          isCourtOfMatch(court) ? { ...court, teamIds: [homeTeamId, awayTeamId] as [string, string] } : court
+        );
+        updated = {
+          ...updated,
+          win2outState: {
+            ...tournament.win2outState,
+            courts,
+            queue: swapInQueue(tournament.win2outState.queue),
+          },
+        };
+      }
+      if (tournament.twoMatchRotationState) {
+        const courts = tournament.twoMatchRotationState.courts.map((court) =>
+          isCourtOfMatch(court) ? { ...court, teamIds: [homeTeamId, awayTeamId] as [string, string] } : court
+        );
+        updated = {
+          ...updated,
+          twoMatchRotationState: {
+            ...tournament.twoMatchRotationState,
+            courts,
+            queue: swapInQueue(tournament.twoMatchRotationState.queue),
+          },
+        };
+      }
+      if (updated !== tournament) {
+        updateTournament(updated).catch(logFailure("update courts"));
       }
     },
-    [
-      isSharedMode,
-      canEdit,
-      session,
-      state.matches,
-      state.competitions,
-      syncAllData,
-    ]
+    [matchesById, tournamentsById, writeMatch, updateTournament]
   );
 
-  // Admin match management - Swap teams between matches (for elimination brackets)
   const swapMatchTeams = useCallback(
     (updates: { matchId: string; homeTeamId: string; awayTeamId: string }[]) => {
-      if (isSharedMode && !canEdit) return;
-
-      if (isSharedMode && session) {
-        const newMatches = (session.matches || []).map((m) => {
-          const update = updates.find((u) => u.matchId === m.id);
-          return update
-            ? { ...m, homeTeamId: update.homeTeamId, awayTeamId: update.awayTeamId }
-            : m;
-        });
-        syncAllData({ matches: newMatches });
-      } else {
-        dispatch({ type: "SWAP_MATCH_TEAMS", updates });
-      }
+      updates.forEach(({ matchId, homeTeamId, awayTeamId }) => {
+        writeMatch(matchId, { homeTeamId, awayTeamId });
+      });
     },
-    [isSharedMode, canEdit, session, syncAllData]
+    [writeMatch]
   );
 
-  // Admin match management - Update court assignment for a match
-  const updateMatchCourt = useCallback(
-    (matchId: string, courtNumber: number) => {
-      if (isSharedMode && !canEdit) return;
-
-      if (isSharedMode && session) {
-        const newMatches = (session.matches || []).map((m) =>
-          m.id === matchId ? { ...m, position: courtNumber } : m
-        );
-        syncAllData({ matches: newMatches });
-      } else {
-        dispatch({ type: "UPDATE_MATCH_COURT", matchId, courtNumber });
-      }
-    },
-    [isSharedMode, canEdit, session, syncAllData]
-  );
-
-  // Admin match management - Swap teams between two courts (for Win2Out/TwoMatchRotation)
   const swapCourtTeams = useCallback(
-    (competitionId: string, court1: number, court2: number) => {
-      if (isSharedMode && !canEdit) return;
+    (tournamentId: string, court1: number, court2: number) => {
+      const tournament = tournamentsById.get(tournamentId);
+      if (!tournament) return;
 
-      const competition = isSharedMode
-        ? session?.competition
-        : state.competitions.find((c) => c.id === competitionId);
+      const openMatchOnCourt = (courtNumber: number) =>
+        state.matches.find(
+          (m) =>
+            m.tournamentId === tournamentId &&
+            m.status !== "completed" &&
+            (m.court ?? m.position) === courtNumber
+        );
 
-      if (!competition) return;
+      const swapCourts = <T extends { courtNumber: number; teamIds: [string, string] }>(
+        courts: T[]
+      ): T[] | null => {
+        const first = courts.findIndex((c) => c.courtNumber === court1);
+        const second = courts.findIndex((c) => c.courtNumber === court2);
+        if (first === -1 || second === -1) return null;
+        const swapped = [...courts];
+        swapped[first] = { ...courts[first], teamIds: courts[second].teamIds };
+        swapped[second] = { ...courts[second], teamIds: courts[first].teamIds };
+        return swapped;
+      };
 
-      let updatedCompetition = { ...competition };
-      const matchUpdates: { matchId: string; homeTeamId: string; awayTeamId: string }[] = [];
-      const currentMatches = isSharedMode
-        ? session?.matches || []
-        : state.matches;
-
-      // Handle Win2Out
-      if (updatedCompetition.win2outState) {
-        const courts = [...updatedCompetition.win2outState.courts];
-        const courtIndex1 = courts.findIndex((c) => c.courtNumber === court1);
-        const courtIndex2 = courts.findIndex((c) => c.courtNumber === court2);
-
-        if (courtIndex1 !== -1 && courtIndex2 !== -1) {
-          // Swap the team IDs
-          const temp = courts[courtIndex1].teamIds;
-          courts[courtIndex1] = {
-            ...courts[courtIndex1],
-            teamIds: courts[courtIndex2].teamIds,
-          };
-          courts[courtIndex2] = { ...courts[courtIndex2], teamIds: temp };
-
-          // Find and update the matches for these courts
-          const match1 = currentMatches.find(
-            (m) =>
-              m.competitionId === competitionId &&
-              (m.status === "pending" || m.status === "in_progress") &&
-              m.position === court1
-          );
-          const match2 = currentMatches.find(
-            (m) =>
-              m.competitionId === competitionId &&
-              (m.status === "pending" || m.status === "in_progress") &&
-              m.position === court2
-          );
-
-          if (match1) {
-            matchUpdates.push({
-              matchId: match1.id,
-              homeTeamId: courts[courtIndex1].teamIds[0],
-              awayTeamId: courts[courtIndex1].teamIds[1],
-            });
-          }
-          if (match2) {
-            matchUpdates.push({
-              matchId: match2.id,
-              homeTeamId: courts[courtIndex2].teamIds[0],
-              awayTeamId: courts[courtIndex2].teamIds[1],
-            });
-          }
-
-          updatedCompetition = {
-            ...updatedCompetition,
-            win2outState: {
-              ...updatedCompetition.win2outState,
-              courts,
-            },
+      let updated = tournament;
+      let courtsAfter: { courtNumber: number; teamIds: [string, string] }[] | null = null;
+      if (tournament.win2outState) {
+        courtsAfter = swapCourts(tournament.win2outState.courts);
+        if (courtsAfter) {
+          updated = {
+            ...updated,
+            win2outState: { ...tournament.win2outState, courts: courtsAfter as typeof tournament.win2outState.courts },
           };
         }
       }
-
-      // Handle TwoMatchRotation
-      if (updatedCompetition.twoMatchRotationState) {
-        const courts = [...updatedCompetition.twoMatchRotationState.courts];
-        const courtIndex1 = courts.findIndex((c) => c.courtNumber === court1);
-        const courtIndex2 = courts.findIndex((c) => c.courtNumber === court2);
-
-        if (courtIndex1 !== -1 && courtIndex2 !== -1) {
-          // Swap the team IDs
-          const temp = courts[courtIndex1].teamIds;
-          courts[courtIndex1] = {
-            ...courts[courtIndex1],
-            teamIds: courts[courtIndex2].teamIds,
-          };
-          courts[courtIndex2] = { ...courts[courtIndex2], teamIds: temp };
-
-          // Find and update the matches for these courts
-          const match1 = currentMatches.find(
-            (m) =>
-              m.competitionId === competitionId &&
-              (m.status === "pending" || m.status === "in_progress") &&
-              m.position === court1
-          );
-          const match2 = currentMatches.find(
-            (m) =>
-              m.competitionId === competitionId &&
-              (m.status === "pending" || m.status === "in_progress") &&
-              m.position === court2
-          );
-
-          if (match1) {
-            matchUpdates.push({
-              matchId: match1.id,
-              homeTeamId: courts[courtIndex1].teamIds[0],
-              awayTeamId: courts[courtIndex1].teamIds[1],
-            });
-          }
-          if (match2) {
-            matchUpdates.push({
-              matchId: match2.id,
-              homeTeamId: courts[courtIndex2].teamIds[0],
-              awayTeamId: courts[courtIndex2].teamIds[1],
-            });
-          }
-
-          updatedCompetition = {
-            ...updatedCompetition,
+      if (tournament.twoMatchRotationState) {
+        courtsAfter = swapCourts(tournament.twoMatchRotationState.courts);
+        if (courtsAfter) {
+          updated = {
+            ...updated,
             twoMatchRotationState: {
-              ...updatedCompetition.twoMatchRotationState,
-              courts,
+              ...tournament.twoMatchRotationState,
+              courts: courtsAfter as typeof tournament.twoMatchRotationState.courts,
             },
           };
         }
       }
+      if (!courtsAfter) return;
 
-      // Apply updates
-      if (isSharedMode && session) {
-        let newMatches = [...(session.matches || [])];
-        matchUpdates.forEach((update) => {
-          newMatches = newMatches.map((m) =>
-            m.id === update.matchId
-              ? { ...m, homeTeamId: update.homeTeamId, awayTeamId: update.awayTeamId }
-              : m
-          );
-        });
-        syncAllData({ matches: newMatches, competition: updatedCompetition });
-      } else {
-        dispatch({ type: "UPDATE_COMPETITION", competition: updatedCompetition });
-        matchUpdates.forEach((update) => {
-          dispatch({
-            type: "UPDATE_MATCH_TEAMS",
-            matchId: update.matchId,
-            homeTeamId: update.homeTeamId,
-            awayTeamId: update.awayTeamId,
-          });
-        });
+      for (const courtNumber of [court1, court2]) {
+        const court = courtsAfter.find((c) => c.courtNumber === courtNumber);
+        const match = openMatchOnCourt(courtNumber);
+        if (court && match) {
+          writeMatch(match.id, { homeTeamId: court.teamIds[0], awayTeamId: court.teamIds[1] });
+        }
       }
+      updateTournament(updated).catch(logFailure("swap courts"));
     },
-    [isSharedMode, canEdit, session, state.competitions, state.matches, syncAllData]
+    [tournamentsById, state.matches, writeMatch, updateTournament]
   );
 
-  // Admin match management - Reorder the queue (for Win2Out/TwoMatchRotation)
   const reorderQueue = useCallback(
-    (competitionId: string, newQueue: string[]) => {
-      if (isSharedMode && !canEdit) return;
-
-      const competition = isSharedMode
-        ? session?.competition
-        : state.competitions.find((c) => c.id === competitionId);
-
-      if (!competition) return;
-
-      let updatedCompetition = { ...competition };
-
-      if (updatedCompetition.win2outState) {
-        updatedCompetition = {
-          ...updatedCompetition,
-          win2outState: {
-            ...updatedCompetition.win2outState,
-            queue: newQueue,
-          },
+    (tournamentId: string, newQueue: string[]) => {
+      const tournament = tournamentsById.get(tournamentId);
+      if (!tournament) return;
+      let updated = tournament;
+      if (tournament.win2outState) {
+        updated = { ...updated, win2outState: { ...tournament.win2outState, queue: newQueue } };
+      }
+      if (tournament.twoMatchRotationState) {
+        updated = {
+          ...updated,
+          twoMatchRotationState: { ...tournament.twoMatchRotationState, queue: newQueue },
         };
       }
-
-      if (updatedCompetition.twoMatchRotationState) {
-        updatedCompetition = {
-          ...updatedCompetition,
-          twoMatchRotationState: {
-            ...updatedCompetition.twoMatchRotationState,
-            queue: newQueue,
-          },
-        };
-      }
-
-      if (isSharedMode && session) {
-        syncAllData({ competition: updatedCompetition });
-      } else {
-        dispatch({ type: "UPDATE_COMPETITION", competition: updatedCompetition });
-      }
+      updateTournament(updated).catch(logFailure("reorder queue"));
     },
-    [isSharedMode, canEdit, session, state.competitions, syncAllData]
+    [tournamentsById, updateTournament]
   );
-
-  const getMatchById = useCallback(
-    (id: string) => matchesMap.get(id),
-    [matchesMap]
-  );
-
-  const getMatchesByCompetition = useCallback(
-    (competitionId: string) =>
-      state.matches.filter((match) => match.competitionId === competitionId),
-    [state.matches]
-  );
-
-  // Utility
-  const resetState = useCallback(() => {
-    if (!isSharedMode) {
-      dispatch({ type: "RESET_STATE" });
-    }
-  }, [isSharedMode]);
 
   const value: AppContextValue = {
     state,
-    isSharedMode,
-    canEdit: isSharedMode ? canEdit : true,
+    canEdit: Boolean(uid),
     isRosterLoading,
     rosterError,
+    isTournamentsLoading: tournaments === null || matches === null,
+    tournamentsError,
     addTeam,
     updateTeam,
     deleteTeam,
     getTeamById,
-    createCompetition,
-    updateCompetition,
-    deleteCompetition,
-    startCompetition,
-    startCompetitionWithMatches,
-    completeCompetition,
-    removeCompetitionLocal,
-    getCompetitionById,
-    addMatch,
-    addMatches,
+    createTournament,
+    updateTournament,
+    deleteTournament,
+    startTournament,
+    endTournament,
+    getTournamentById,
+    getMatchesByTournament,
+    addQuickMatch,
     updateMatchScore,
     updateMatch,
     startMatch,
     completeMatch,
-    completeMatchWithNextMatch,
     deleteMatch,
     getMatchById,
-    getMatchesByCompetition,
     updateMatchTeams,
     swapMatchTeams,
-    updateMatchCourt,
     swapCourtTeams,
     reorderQueue,
-    resetState,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 };
 
-// ============================================
-// Hook
-// ============================================
 export const useApp = (): AppContextValue => {
   const context = useContext(AppContext);
   if (!context) {

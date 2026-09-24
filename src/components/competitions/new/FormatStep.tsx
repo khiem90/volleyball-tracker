@@ -4,13 +4,13 @@ import { ArrowRightIcon } from "@heroicons/react/24/outline";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import type { CompetitionType } from "@/types/game";
+import type { TournamentFormat } from "@/types/game";
 import type { FormatOption } from "@/hooks/useNewCompetitionPage";
 
 interface FormatStepProps {
   formatOptions: FormatOption[];
-  selectedFormat: CompetitionType | null;
-  onSelectFormat: (type: CompetitionType) => void;
+  selectedFormat: TournamentFormat | null;
+  onSelectFormat: (type: TournamentFormat) => void;
   onNext: () => void;
 }
 

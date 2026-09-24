@@ -1,4 +1,4 @@
-import type { Match } from "@/types/game";
+import type { Match, MatchDraft } from "@/types/game";
 
 // Special marker for bye positions
 const BYE_MARKER = "__BYE__";
@@ -88,10 +88,9 @@ const reorderTeamsForByes = (
  */
 export const generateDoubleEliminationBracket = (
   teamIds: string[],
-  competitionId: string,
   byeTeamIds?: string[]
-): Omit<Match, "id" | "createdAt">[] => {
-  const matches: Omit<Match, "id" | "createdAt">[] = [];
+): MatchDraft[] => {
+  const matches: MatchDraft[] = [];
   const n = teamIds.length;
 
   if (n < 4) {
@@ -140,7 +139,6 @@ export const generateDoubleEliminationBracket = (
 
       // Create a "bye" match that's already completed
       matches.push({
-        competitionId,
         homeTeamId: homeTeam === BYE_MARKER ? "" : homeTeam,
         awayTeamId: awayTeam === BYE_MARKER ? "" : awayTeam,
         homeScore: homeTeam === BYE_MARKER ? 0 : 1,
@@ -154,7 +152,6 @@ export const generateDoubleEliminationBracket = (
       });
     } else {
       matches.push({
-        competitionId,
         homeTeamId: homeTeam,
         awayTeamId: awayTeam,
         homeScore: 0,
@@ -189,7 +186,6 @@ export const generateDoubleEliminationBracket = (
       }
 
       matches.push({
-        competitionId,
         homeTeamId,
         awayTeamId,
         homeScore: 0,
@@ -220,7 +216,6 @@ export const generateDoubleEliminationBracket = (
   // Note: bye matches don't produce losers, so some L1 matches may have pre-filled teams
   for (let pos = 1; pos <= losersMatchCount; pos++) {
     matches.push({
-      competitionId,
       homeTeamId: "",
       awayTeamId: "",
       homeScore: 0,
@@ -240,7 +235,6 @@ export const generateDoubleEliminationBracket = (
     losersRound++;
     for (let pos = 1; pos <= losersMatchCount; pos++) {
       matches.push({
-        competitionId,
         homeTeamId: "",
         awayTeamId: "",
         homeScore: 0,
@@ -257,7 +251,6 @@ export const generateDoubleEliminationBracket = (
     losersMatchCount = losersMatchCount / 2;
     for (let pos = 1; pos <= losersMatchCount; pos++) {
       matches.push({
-        competitionId,
         homeTeamId: "",
         awayTeamId: "",
         homeScore: 0,
@@ -273,7 +266,6 @@ export const generateDoubleEliminationBracket = (
   // Losers Finals (1 match)
   losersRound++;
   matches.push({
-    competitionId,
     homeTeamId: "",
     awayTeamId: "",
     homeScore: 0,
@@ -288,7 +280,6 @@ export const generateDoubleEliminationBracket = (
   // Grand Finals
   // ==================
   matches.push({
-    competitionId,
     homeTeamId: "",
     awayTeamId: "",
     homeScore: 0,

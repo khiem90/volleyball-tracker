@@ -4,7 +4,7 @@ import { useApp } from "@/context/AppContext";
 
 export const useQuickMatchPage = () => {
   const router = useRouter();
-  const { state, isRosterLoading, addTeam, addMatch } = useApp();
+  const { state, isRosterLoading, addTeam, addQuickMatch } = useApp();
 
   const [homeTeamId, setHomeTeamId] = useState<string>("");
   const [awayTeamId, setAwayTeamId] = useState<string>("");
@@ -52,7 +52,7 @@ export const useQuickMatchPage = () => {
     setError("");
   }, [availableTeams]);
 
-  const handleStartMatch = useCallback(() => {
+  const handleStartMatch = useCallback(async () => {
     if (!homeTeamId || !awayTeamId) {
       setError("Please select both teams");
       return;
@@ -63,21 +63,14 @@ export const useQuickMatchPage = () => {
       return;
     }
 
-    const matchId = addMatch({
-      competitionId: null,
-      homeTeamId,
-      awayTeamId,
-      homeScore: 0,
-      awayScore: 0,
-      status: "pending",
-      round: 1,
-      position: 1,
-    });
-
-    if (matchId) {
+    try {
+      const matchId = await addQuickMatch(homeTeamId, awayTeamId);
       router.push(`/match/${matchId}`);
+    } catch (startError) {
+      console.error("Failed to start the quick match:", startError);
+      setError("The match could not be started. Check your connection and try again.");
     }
-  }, [homeTeamId, awayTeamId, addMatch, router]);
+  }, [homeTeamId, awayTeamId, addQuickMatch, router]);
 
   const handleQuickCreateTeam = useCallback(() => {
     const teamNumber = state.teams.length + 1;

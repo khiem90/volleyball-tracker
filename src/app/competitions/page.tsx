@@ -17,7 +17,7 @@ import {
 } from "@/components/matchbook/useMatchbookCompete";
 
 const STATUS_STYLES = {
-  in_progress: { label: "Live", color: "var(--mb-red)" },
+  live: { label: "Live", color: "var(--mb-red)" },
   draft: { label: "Draft", color: "var(--mb-gold)" },
   completed: { label: "Final", color: "var(--mb-green)" },
 } as const;

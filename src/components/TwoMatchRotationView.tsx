@@ -3,7 +3,7 @@
 import { useMemo, useState, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Clock, RotateCw } from "lucide-react";
-import { getTeamsByStatus, getSessionMatchCount, processMatchResult } from "@/lib/twoMatchRotation";
+import { getTeamsByStatus, getSessionMatchCount } from "@/lib/twoMatchRotation";
 import { useApp } from "@/context/AppContext";
 import { useTeamsMap } from "@/hooks/useTeamsMap";
 import { useTerminology, capitalize } from "@/hooks/useTerminology";
@@ -20,14 +20,14 @@ import type {
   Match,
   PersistentTeam,
   TwoMatchRotationState,
-  Competition,
+  Tournament,
 } from "@/types/game";
 
 interface TwoMatchRotationViewProps {
   state: TwoMatchRotationState;
   matches: Match[];
   teams: PersistentTeam[];
-  competition?: Competition | null;
+  competition?: Tournament | null;
   onMatchClick?: (match: Match) => void;
 }
 
@@ -51,10 +51,7 @@ export const TwoMatchRotationView = ({
 
   // Instant win handler using shared hook
   const { handleInstantWin } = useRotationInstantWin({
-    competition,
-    state,
-    stateKey: "twoMatchRotationState",
-    processMatchResult,
+    tournament: competition,
     getTeamName,
   });
 
@@ -173,7 +170,7 @@ export const TwoMatchRotationView = ({
                 getTeamColor={getTeamColor}
                 canEdit={canEdit}
                 canPlayMatch={canPlayMatch}
-                instantWinEnabled={competition?.instantWinEnabled}
+                instantWinEnabled={competition?.settings.instantWin}
                 onMatchClick={onMatchClick}
                 onEditMatch={handleEditMatch}
                 onInstantWin={(winnerId) => handleInstantWin(winnerId, match)}

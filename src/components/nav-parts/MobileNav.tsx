@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
-import type { AuthUser } from "@/types/session";
+import type { AuthUser } from "@/types/auth";
 
 type NavItemDef = {
   href: string;

@@ -1,5 +1,5 @@
-import type { Match, Competition } from "@/types/game";
-import type { UndoSnapshot, UndoActionType } from "@/types/undo";
+import type { Match, Tournament } from "@/types/game";
+import type { UndoSnapshot } from "@/types/undo";
 
 /**
  * Generate a unique ID for undo entries
@@ -9,40 +9,40 @@ export const generateUndoId = (): string => {
 };
 
 /**
- * Deep clone a competition including nested state objects
+ * Deep clone a tournament including nested state objects
  */
-const deepCloneCompetition = (competition: Competition): Competition => {
+const deepCloneTournament = (tournament: Tournament): Tournament => {
   return {
-    ...competition,
-    teamIds: [...competition.teamIds],
-    matchIds: [...competition.matchIds],
-    win2outState: competition.win2outState
+    ...tournament,
+    entries: tournament.entries.map((entry) => ({ ...entry })),
+    teamIds: [...tournament.teamIds],
+    settings: { ...tournament.settings, terminology: { ...tournament.settings.terminology } },
+    win2outState: tournament.win2outState
       ? {
-          ...competition.win2outState,
-          teamStatuses: competition.win2outState.teamStatuses.map((s) => ({
+          ...tournament.win2outState,
+          teamStatuses: tournament.win2outState.teamStatuses.map((s) => ({
             ...s,
           })),
-          queue: [...competition.win2outState.queue],
-          courts: competition.win2outState.courts.map((c) => ({
+          queue: [...tournament.win2outState.queue],
+          courts: tournament.win2outState.courts.map((c) => ({
             ...c,
             teamIds: [...c.teamIds] as [string, string],
           })),
         }
       : undefined,
-    twoMatchRotationState: competition.twoMatchRotationState
+    twoMatchRotationState: tournament.twoMatchRotationState
       ? {
-          ...competition.twoMatchRotationState,
-          teamStatuses: competition.twoMatchRotationState.teamStatuses.map(
+          ...tournament.twoMatchRotationState,
+          teamStatuses: tournament.twoMatchRotationState.teamStatuses.map(
             (s) => ({ ...s })
           ),
-          queue: [...competition.twoMatchRotationState.queue],
-          courts: competition.twoMatchRotationState.courts.map((c) => ({
+          queue: [...tournament.twoMatchRotationState.queue],
+          courts: tournament.twoMatchRotationState.courts.map((c) => ({
             ...c,
             teamIds: [...c.teamIds] as [string, string],
           })),
         }
       : undefined,
-    config: competition.config ? { ...competition.config } : undefined,
   };
 };
 
@@ -51,31 +51,12 @@ const deepCloneCompetition = (competition: Competition): Competition => {
  */
 export const createSnapshot = (
   match: Match | null,
-  competition: Competition | null,
+  tournament: Tournament | null,
   newMatchId: string | null = null
 ): UndoSnapshot => {
   return {
     match: match ? { ...match } : null,
-    competition: competition ? deepCloneCompetition(competition) : null,
+    tournament: tournament ? deepCloneTournament(tournament) : null,
     newMatchId,
   };
-};
-
-/**
- * Create a human-readable description for an undo action
- */
-const createUndoDescription = (
-  actionType: UndoActionType,
-  winnerName?: string
-): string => {
-  switch (actionType) {
-    case "instant_win":
-      return winnerName ? `${winnerName} won` : "Match completed";
-    case "match_complete":
-      return winnerName ? `${winnerName} won` : "Match completed";
-    case "match_start":
-      return "Match started";
-    default:
-      return "Action performed";
-  }
 };

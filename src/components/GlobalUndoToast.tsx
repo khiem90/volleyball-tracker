@@ -22,7 +22,7 @@ interface GlobalUndoToastProps {
 }
 
 export const GlobalUndoToast = ({ children }: GlobalUndoToastProps) => {
-  const { updateMatch, updateCompetition, deleteMatch } = useApp();
+  const { updateMatch, updateTournament, deleteMatch } = useApp();
   const [undoStack, setUndoStack] = useState<UndoEntry[]>([]);
   const [isUndoing, setIsUndoing] = useState(false);
 
@@ -76,9 +76,11 @@ export const GlobalUndoToast = ({ children }: GlobalUndoToastProps) => {
         });
       }
 
-      // 3. Restore competition state (courts, queue, team statuses)
-      if (snapshot.competition) {
-        updateCompetition(snapshot.competition);
+      // 3. Restore tournament state (courts, queue, team statuses)
+      if (snapshot.tournament) {
+        updateTournament(snapshot.tournament).catch((error) => {
+          console.error("Undo could not restore the tournament:", error);
+        });
       }
 
       // Pop the current entry from the stack
@@ -88,7 +90,7 @@ export const GlobalUndoToast = ({ children }: GlobalUndoToastProps) => {
     } finally {
       setIsUndoing(false);
     }
-  }, [currentEntry, isUndoing, updateMatch, updateCompetition, deleteMatch]);
+  }, [currentEntry, isUndoing, updateMatch, updateTournament, deleteMatch]);
 
   // Keyboard shortcut handler (Ctrl+Z)
   useEffect(() => {

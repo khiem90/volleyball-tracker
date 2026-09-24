@@ -46,7 +46,7 @@ const buildTeams = (state: AppState): MbTeamsData => {
     teamRefs.get(teamId) ?? { name: "Unknown", crest: crestForTeam(teamId, "") };
 
   const competitionName = (competitionId: string | null) =>
-    state.competitions.find((c) => c.id === competitionId)?.name ?? "Quick Match";
+    state.tournaments.find((c) => c.id === competitionId)?.name ?? "Quick Match";
 
   const completed = state.matches
     .filter((m) => m.status === "completed")
@@ -59,7 +59,7 @@ const buildTeams = (state: AppState): MbTeamsData => {
 
   // Competitions each team is entered in, for the directory's "Entered In" column.
   const competitionsByTeam = new Map<string, string[]>();
-  for (const competition of state.competitions) {
+  for (const competition of state.tournaments) {
     if (competition.status === "completed") continue;
     for (const teamId of competition.teamIds) {
       const names = competitionsByTeam.get(teamId) ?? [];
@@ -92,7 +92,7 @@ const buildTeams = (state: AppState): MbTeamsData => {
               time: shortTime(next.createdAt),
               opponent: refFor(isHome ? next.awayTeamId : next.homeTeamId),
               isHome,
-              competition: competitionName(next.competitionId),
+              competition: competitionName(next.tournamentId),
             }
           : null,
         status: next ? ("ACTIVE" as const) : ("IDLE" as const),
@@ -125,7 +125,7 @@ const buildTeams = (state: AppState): MbTeamsData => {
     time: shortTime(match.createdAt),
     home: refFor(match.homeTeamId),
     away: refFor(match.awayTeamId),
-    venue: competitionName(match.competitionId),
+    venue: competitionName(match.tournamentId),
   }));
 
   const recentFormRows: MbFormRow[] = rows

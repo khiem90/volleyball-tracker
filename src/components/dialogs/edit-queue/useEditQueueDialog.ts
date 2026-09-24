@@ -1,14 +1,14 @@
 "use client";
 
 import { useState, useMemo, useRef, useCallback } from "react";
-import type { PersistentTeam, Competition } from "@/types/game";
+import type { PersistentTeam, Tournament } from "@/types/game";
 import { useApp } from "@/context/AppContext";
 import { useTeamsMap } from "@/hooks/useTeamsMap";
 import { useTeamsOnCourt } from "@/hooks/useTeamsOnCourt";
 
 interface UseEditQueueDialogProps {
   open: boolean;
-  competition: Competition | null;
+  competition: Tournament | null;
   teams: PersistentTeam[];
   onClose: () => void;
 }

@@ -1,9 +1,9 @@
 "use client";
 
 import { useMemo } from "react";
-import type { Competition } from "@/types/game";
+import type { Tournament } from "@/types/game";
 
-export const useTeamsOnCourt = (competition: Competition | null): Set<string> => {
+export const useTeamsOnCourt = (competition: Tournament | null): Set<string> => {
   return useMemo(() => {
     if (!competition) return new Set<string>();
     const onCourt = new Set<string>();

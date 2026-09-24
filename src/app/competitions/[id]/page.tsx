@@ -4,7 +4,6 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Navigation } from "@/components/Navigation";
-import { CreateSessionDialog } from "@/components/CreateSessionDialog";
 import { CompetitionNotFound } from "@/components/competition-detail/CompetitionNotFound";
 import { CompetitionHeader } from "@/components/competition-detail/CompetitionHeader";
 import { CompetitionWinnerBanner } from "@/components/competition-detail/CompetitionWinnerBanner";
@@ -25,6 +24,7 @@ import { EditMatchDialog } from "@/components/dialogs/edit-match";
 import { useCompetitionDetailPage } from "@/hooks/useCompetitionDetailPage";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { getPlayInMatchCount } from "@/lib/singleElimination";
+import { formatLabel } from "@/lib/formats";
 
 // Lazy load tournament view components - only one is rendered based on competition type
 const Bracket = dynamic(
@@ -44,17 +44,10 @@ const TwoMatchRotationView = dynamic(
   { ssr: false }
 );
 
-const typeLabels: Record<string, string> = {
-  round_robin: "Round Robin",
-  single_elimination: "Single Elimination",
-  double_elimination: "Double Elimination",
-  win2out: "Win 2 & Out",
-  two_match_rotation: "2 Match Rotation",
-};
-
 export default function CompetitionDetailPage() {
-  const { isLoading, isAuthenticated } = useRequireAuth();
+  const { isLoading: isAuthLoading, isAuthenticated } = useRequireAuth();
   const {
+    actionError,
     canEdit,
     competition,
     competitionTeams,
@@ -65,19 +58,17 @@ export default function CompetitionDetailPage() {
     handleStartCompetition,
     handleEndCompetition,
     inProgressMatches,
-    isSharedMode,
-    isCreator,
     isEndingCompetition,
+    isLoading,
+    isStarting,
     matches,
     pendingMatches,
     roundRobinMatches,
     selectedMatch,
     setEditingMatch,
     setSelectedMatch,
-    setShowCreateSession,
     setShowStartConfirm,
     setShowEndConfirm,
-    showCreateSession,
     showStartConfirm,
     showEndConfirm,
     standings,
@@ -85,8 +76,8 @@ export default function CompetitionDetailPage() {
     winner,
   } = useCompetitionDetailPage();
 
-  // Show loading state while checking auth
-  if (isLoading || !isAuthenticated) {
+  // Show loading state while checking auth and until the tournaments arrive
+  if (isAuthLoading || !isAuthenticated || isLoading) {
     return (
       <div className="min-h-screen bg-background">
         <Navigation />
@@ -126,13 +117,18 @@ export default function CompetitionDetailPage() {
         {/* Header */}
         <CompetitionHeader
           competition={competition}
-          typeLabel={typeLabels[competition.type]}
-          isSharedMode={isSharedMode}
-          isCreator={isCreator}
+          typeLabel={formatLabel(competition.format)}
+          canEdit={canEdit}
+          isStarting={isStarting}
           onShowStartConfirm={() => setShowStartConfirm(true)}
-          onShowCreateSession={() => setShowCreateSession(true)}
           onShowEndConfirm={() => setShowEndConfirm(true)}
         />
+
+        {actionError && (
+          <p role="alert" className="mb-6 text-sm text-destructive">
+            {actionError}
+          </p>
+        )}
 
         <CompetitionWinnerBanner winner={winner} />
 
@@ -151,7 +147,7 @@ export default function CompetitionDetailPage() {
 
         {/* Round Robin - Show standings and matches */}
         {competition.status !== "draft" &&
-          competition.type === "round_robin" &&
+          competition.format === "round_robin" &&
           standings && (
             <CompetitionRoundRobinSection
               standings={standings}
@@ -165,7 +161,7 @@ export default function CompetitionDetailPage() {
 
         {/* Single Elimination Bracket */}
         {competition.status !== "draft" &&
-          competition.type === "single_elimination" && (
+          competition.format === "single_elimination" && (
             <Card className="border-border/40 bg-card/30">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -188,7 +184,7 @@ export default function CompetitionDetailPage() {
 
         {/* Double Elimination Bracket */}
         {competition.status !== "draft" &&
-          competition.type === "double_elimination" && (
+          competition.format === "double_elimination" && (
             <Card className="border-border/40 bg-card/30">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -211,7 +207,7 @@ export default function CompetitionDetailPage() {
 
         {/* Win 2 & Out View */}
         {competition.status !== "draft" &&
-          competition.type === "win2out" &&
+          competition.format === "win2out" &&
           competition.win2outState && (
             <Win2OutView
               state={competition.win2outState}
@@ -224,7 +220,7 @@ export default function CompetitionDetailPage() {
 
         {/* Two Match Rotation View */}
         {competition.status !== "draft" &&
-          competition.type === "two_match_rotation" &&
+          competition.format === "two_match_rotation" &&
           competition.twoMatchRotationState && (
             <TwoMatchRotationView
               state={competition.twoMatchRotationState}
@@ -240,10 +236,10 @@ export default function CompetitionDetailPage() {
       <StartCompetitionDialog
         open={showStartConfirm}
         onOpenChange={setShowStartConfirm}
-        typeLabel={typeLabels[competition.type]}
+        typeLabel={formatLabel(competition.format)}
         teamCount={competition.teamIds.length}
         teams={competitionTeams}
-        competitionType={competition.type}
+        competitionType={competition.format}
         playInMatchCount={getPlayInMatchCount(competition.teamIds.length)}
         onStart={handleStartCompetition}
       />
@@ -255,22 +251,6 @@ export default function CompetitionDetailPage() {
         match={selectedMatch}
         teams={competitionTeams}
         onPlayMatch={handlePlayMatch}
-      />
-
-      {/* Create Session Dialog */}
-      <CreateSessionDialog
-        open={showCreateSession}
-        onOpenChange={setShowCreateSession}
-        defaultName={competition?.name}
-        competitionData={
-          competition
-            ? {
-                competition,
-                teams: competitionTeams,
-                matches,
-              }
-            : undefined
-        }
       />
 
       {/* End Competition Confirmation Dialog */}

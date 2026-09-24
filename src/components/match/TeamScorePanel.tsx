@@ -13,7 +13,6 @@ type TeamScorePanelProps = {
   isLeading: boolean;
   isFullscreen: boolean;
   canEdit: boolean;
-  isSharedMode?: boolean;
   onAddPoint: () => void;
   onDeductPoint: () => void;
 };
@@ -25,7 +24,6 @@ export const TeamScorePanel = memo(function TeamScorePanel({
   isLeading,
   isFullscreen,
   canEdit,
-  isSharedMode = false,
   onAddPoint,
   onDeductPoint,
 }: TeamScorePanelProps) {
@@ -60,7 +58,7 @@ export const TeamScorePanel = memo(function TeamScorePanel({
       <div className="absolute top-0 right-0 w-full h-full bg-linear-to-br from-white/10 to-transparent" />
 
       {/* View-only indicator */}
-      {!canEdit && isSharedMode && (
+      {!canEdit && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}

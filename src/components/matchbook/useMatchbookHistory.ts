@@ -91,7 +91,7 @@ export const useMatchbookHistory = (filters: {
       crest: crestForTeam(id, teamName(id)),
     });
     const compName = (id: string | null) =>
-      state.competitions.find((c) => c.id === id)?.name ?? "Quick Match";
+      state.tournaments.find((c) => c.id === id)?.name ?? "Quick Match";
 
     const completed = state.matches
       .filter((m) => m.status === "completed" && !m.isBye)
@@ -99,13 +99,13 @@ export const useMatchbookHistory = (filters: {
 
     const query = filters.query.trim().toLowerCase();
     const filtered = completed.filter((m) => {
-      if (filters.competitionId && (m.competitionId ?? "quick") !== filters.competitionId)
+      if (filters.competitionId && (m.tournamentId ?? "quick") !== filters.competitionId)
         return false;
       if (filters.teamId && m.homeTeamId !== filters.teamId && m.awayTeamId !== filters.teamId)
         return false;
       if (query) {
         const haystack =
-          `${teamName(m.homeTeamId)} ${teamName(m.awayTeamId)} ${compName(m.competitionId)}`.toLowerCase();
+          `${teamName(m.homeTeamId)} ${teamName(m.awayTeamId)} ${compName(m.tournamentId)}`.toLowerCase();
         if (!haystack.includes(query)) return false;
       }
       return true;
@@ -125,7 +125,7 @@ export const useMatchbookHistory = (filters: {
         away: refFor(m.awayTeamId),
         homeScore: m.homeScore,
         awayScore: m.awayScore,
-        competition: compName(m.competitionId),
+        competition: compName(m.tournamentId),
         winner: refFor(homeWon ? m.homeTeamId : m.awayTeamId),
         homeWon,
       };
@@ -202,11 +202,11 @@ export const useMatchbookHistory = (filters: {
       .sort((x, y) => y.played - x.played)
       .slice(0, 4);
 
-    const competitions: MbRecentCompetition[] = [...state.competitions]
+    const competitions: MbRecentCompetition[] = [...state.tournaments]
       .sort((a, b) => b.createdAt - a.createdAt)
       .slice(0, 4)
       .map((c) => {
-        const ms = completed.filter((m) => m.competitionId === c.id);
+        const ms = completed.filter((m) => m.tournamentId === c.id);
         const times = ms.map((m) => m.completedAt ?? 0).filter(Boolean);
         const range =
           times.length > 0
@@ -225,7 +225,7 @@ export const useMatchbookHistory = (filters: {
           String(m.homeScore),
           String(m.awayScore),
           teamName(m.winnerId ?? ""),
-          compName(m.competitionId),
+          compName(m.tournamentId),
         ]),
       ];
       const csv = rows
@@ -252,7 +252,7 @@ export const useMatchbookHistory = (filters: {
       competitions,
       filterOptions: {
         competitions: [
-          ...state.competitions.map((c) => ({ id: c.id, name: c.name })),
+          ...state.tournaments.map((c) => ({ id: c.id, name: c.name })),
           { id: "quick", name: "Quick Matches" },
         ],
         teams: state.teams.map((t) => ({ id: t.id, name: t.name })),

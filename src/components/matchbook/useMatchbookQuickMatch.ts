@@ -62,7 +62,7 @@ export const useMatchbookQuickMatch = (): MbQuickMatchData => {
 
     const tallies = buildTeamTallies(completed);
 
-    const quickMatches = state.matches.filter((m) => m.competitionId === null);
+    const quickMatches = state.matches.filter((m) => m.tournamentId === null);
 
     const recentQuickMatches = quickMatches
       .filter((m) => m.status === "completed")

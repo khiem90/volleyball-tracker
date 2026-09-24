@@ -39,7 +39,7 @@ export default function MatchPage() {
     homeLeading,
     homeTeam,
     isFullscreen,
-    isSharedMode,
+    isLoading,
     match,
     seriesInfo,
     setShowCompleteDialog,
@@ -47,6 +47,18 @@ export default function MatchPage() {
     showCompleteDialog,
     showRotatePrompt,
   } = useMatchPage();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+          className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full"
+        />
+      </div>
+    );
+  }
 
   if (!match || !homeTeam || !awayTeam) {
     return (
@@ -195,7 +207,6 @@ export default function MatchPage() {
           isLeading={homeLeading}
           isFullscreen={isFullscreen}
           canEdit={canEdit}
-          isSharedMode={isSharedMode}
           onAddPoint={() => handleAddPoint("home")}
           onDeductPoint={() => handleDeductPoint("home")}
         />
@@ -211,7 +222,6 @@ export default function MatchPage() {
           isLeading={awayLeading}
           isFullscreen={isFullscreen}
           canEdit={canEdit}
-          isSharedMode={isSharedMode}
           onAddPoint={() => handleAddPoint("away")}
           onDeductPoint={() => handleDeductPoint("away")}
         />

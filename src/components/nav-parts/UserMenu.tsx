@@ -12,7 +12,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
-import type { AuthUser } from "@/types/session";
+import type { AuthUser } from "@/types/auth";
 
 type UserMenuProps = {
   user: AuthUser | null;

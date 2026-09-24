@@ -1,4 +1,4 @@
-import type { Match, Competition } from "@/types/game";
+import type { Match, Tournament } from "@/types/game";
 
 /**
  * Maximum number of undo entries to keep in the stack
@@ -16,8 +16,8 @@ export type UndoActionType = "instant_win" | "match_complete" | "match_start";
 export interface UndoSnapshot {
   /** The match state before modification */
   match: Match | null;
-  /** Competition state before modification (includes win2outState/twoMatchRotationState) */
-  competition: Competition | null;
+  /** Tournament state before modification (includes win2outState/twoMatchRotationState) */
+  tournament: Tournament | null;
   /** ID of newly created match that should be deleted on undo */
   newMatchId: string | null;
 }

@@ -19,10 +19,18 @@ const firestoreEmulator = {
   port: firebaseJson.emulators.firestore.port,
 };
 
-// Not the project id `npm run dev` uses, so wiping data between tests never
-// touches what a developer is looking at in the browser. The demo- prefix keeps
-// the emulator from ever calling real Firebase.
-const rulesTestProjectId = "demo-tournament-tracker-rules";
+// Each test file gets its own project, named after its describe block. Not the
+// project id `npm run dev` uses, so wiping data between tests never touches
+// what a developer is looking at in the browser, and not shared between files,
+// so one file's wipe cannot hit another file running in parallel. The demo-
+// prefix keeps the emulator from ever calling real Firebase.
+const projectIdFor = (name: string): string => {
+  const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  // A short hash keeps two long names apart after the slug is cut down.
+  let hash = 0;
+  for (const char of name) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+  return `demo-tt-${slug.slice(0, 16)}-${hash.toString(36)}`;
+};
 
 const skipMessage =
   `Firestore emulator not reachable at ${firestoreEmulator.host}:${firestoreEmulator.port}, ` +
@@ -63,7 +71,7 @@ export function describeFirestoreRules(
 
     beforeAll(async () => {
       env = await initializeTestEnvironment({
-        projectId: rulesTestProjectId,
+        projectId: projectIdFor(name),
         firestore: {
           ...firestoreEmulator,
           rules: readFileSync(new URL("firestore.rules", repoRoot), "utf8"),

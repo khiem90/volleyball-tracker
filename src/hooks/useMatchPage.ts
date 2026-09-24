@@ -1,13 +1,8 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useApp } from "@/context/AppContext";
-import { useSession } from "@/context/SessionContext";
 import { useFullscreen } from "@/hooks/useFullscreen";
-import { advanceWinner } from "@/lib/singleElimination";
-import { calculateStandings } from "@/lib/roundRobin";
-import { processMatchResult } from "@/lib/win2out";
-import { processMatchResult as processTwoMatchRotationResult } from "@/lib/twoMatchRotation";
-import type { Match } from "@/types/game";
+import { entryTeams } from "@/lib/entries";
 
 export const useMatchPage = () => {
   const params = useParams();
@@ -17,24 +12,21 @@ export const useMatchPage = () => {
   const {
     state,
     getMatchById,
-    getCompetitionById,
+    getTournamentById,
     updateMatchScore,
-    updateMatch,
     startMatch,
     completeMatch,
-    completeMatchWithNextMatch,
-    completeCompetition,
-    updateMatchTeams,
     canEdit,
-    isSharedMode,
+    isTournamentsLoading,
   } = useApp();
 
-  const { role, updateMatches } = useSession();
   const { isFullscreen, toggleFullscreen } = useFullscreen();
 
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
   const [history, setHistory] = useState<{ home: number; away: number }[]>([]);
   const [showRotatePrompt, setShowRotatePrompt] = useState(false);
+  const [isCompleting, setIsCompleting] = useState(false);
+  const [completeError, setCompleteError] = useState<string | null>(null);
 
   const isLandscape = useCallback(() => {
     return window.innerWidth > window.innerHeight;
@@ -72,33 +64,29 @@ export const useMatchPage = () => {
 
   const match = useMemo(() => getMatchById(matchId), [getMatchById, matchId]);
   const competition = useMemo(
-    () =>
-      match?.competitionId ? getCompetitionById(match.competitionId) : null,
-    [match, getCompetitionById]
+    () => (match?.tournamentId ? getTournamentById(match.tournamentId) : null),
+    [match, getTournamentById]
   );
 
+  // A tournament match shows its entries; a quick match shows roster teams.
+  const teams = useMemo(
+    () => (competition ? entryTeams(competition, state.teams) : state.teams),
+    [competition, state.teams]
+  );
   const homeTeam = useMemo(
-    () => state.teams.find((t) => t.id === match?.homeTeamId),
-    [state.teams, match?.homeTeamId]
+    () => teams.find((t) => t.id === match?.homeTeamId),
+    [teams, match?.homeTeamId]
   );
   const awayTeam = useMemo(
-    () => state.teams.find((t) => t.id === match?.awayTeamId),
-    [state.teams, match?.awayTeamId]
+    () => teams.find((t) => t.id === match?.awayTeamId),
+    [teams, match?.awayTeamId]
   );
 
   const seriesInfo = useMemo(() => {
-    const supportsSeries =
-      !!competition &&
-      (competition.type === "round_robin" ||
-        competition.type === "single_elimination" ||
-        competition.type === "double_elimination");
-    const seriesLength = supportsSeries
-      ? match?.seriesLength ?? competition?.matchSeriesLength ?? 1
-      : 1;
-    const isSeries = supportsSeries && seriesLength > 1;
+    const seriesLength = match?.seriesLength ?? 1;
+    const isSeries = seriesLength > 1;
     const homeWins = isSeries ? match?.homeWins ?? 0 : 0;
     const awayWins = isSeries ? match?.awayWins ?? 0 : 0;
-
     const gamesPlayed = homeWins + awayWins;
 
     return {
@@ -113,21 +101,19 @@ export const useMatchPage = () => {
           : gamesPlayed + 1
         : 1,
     };
-  }, [competition, match]);
+  }, [match]);
 
   useEffect(() => {
-    if (match && match.status === "pending") {
+    if (match && match.status === "pending" && canEdit) {
       startMatch(matchId);
     }
-  }, [match, matchId, startMatch]);
+  }, [match, matchId, startMatch, canEdit]);
 
-  const handleAddPoint = useCallback(
-    (team: "home" | "away") => {
-      if (!match || !canEdit || match.status === "completed") return;
+  const recordScore = useCallback(
+    (newHome: number, newAway: number) => {
+      if (!match) return;
       const currentHome = match.homeScore;
       const currentAway = match.awayScore;
-      const newHome = team === "home" ? currentHome + 1 : currentHome;
-      const newAway = team === "away" ? currentAway + 1 : currentAway;
       setHistory((prev) => {
         const seeded =
           prev.length === 0 ? [{ home: currentHome, away: currentAway }] : prev;
@@ -139,30 +125,29 @@ export const useMatchPage = () => {
       });
       updateMatchScore(matchId, newHome, newAway);
     },
-    [match, matchId, updateMatchScore, canEdit]
+    [match, matchId, updateMatchScore]
+  );
+
+  const handleAddPoint = useCallback(
+    (team: "home" | "away") => {
+      if (!match || !canEdit || match.status === "completed") return;
+      recordScore(
+        team === "home" ? match.homeScore + 1 : match.homeScore,
+        team === "away" ? match.awayScore + 1 : match.awayScore
+      );
+    },
+    [match, canEdit, recordScore]
   );
 
   const handleDeductPoint = useCallback(
     (team: "home" | "away") => {
       if (!match || !canEdit || match.status === "completed") return;
-      const currentHome = match.homeScore;
-      const currentAway = match.awayScore;
-      const newHome =
-        team === "home" ? Math.max(0, currentHome - 1) : currentHome;
-      const newAway =
-        team === "away" ? Math.max(0, currentAway - 1) : currentAway;
-      setHistory((prev) => {
-        const seeded =
-          prev.length === 0 ? [{ home: currentHome, away: currentAway }] : prev;
-        const last = seeded[seeded.length - 1];
-        if (!last || last.home !== newHome || last.away !== newAway) {
-          return [...seeded, { home: newHome, away: newAway }];
-        }
-        return seeded;
-      });
-      updateMatchScore(matchId, newHome, newAway);
+      recordScore(
+        team === "home" ? Math.max(0, match.homeScore - 1) : match.homeScore,
+        team === "away" ? Math.max(0, match.awayScore - 1) : match.awayScore
+      );
     },
-    [match, matchId, updateMatchScore, canEdit]
+    [match, canEdit, recordScore]
   );
 
   const handleUndo = useCallback(() => {
@@ -172,285 +157,33 @@ export const useMatchPage = () => {
     updateMatchScore(matchId, prevState.home, prevState.away);
   }, [match, matchId, history, updateMatchScore]);
 
-  const handleCompleteMatch = useCallback(() => {
-    if (!match || match.status === "completed") return;
-
-    const winnerId =
-      match.homeScore > match.awayScore ? match.homeTeamId : match.awayTeamId;
-
-    const supportsSeries =
-      !!competition &&
-      (competition.type === "round_robin" ||
-        competition.type === "single_elimination" ||
-        competition.type === "double_elimination");
-    const seriesLength = supportsSeries
-      ? match.seriesLength ?? competition?.matchSeriesLength ?? 1
-      : 1;
-    const isSeries = supportsSeries && seriesLength > 1;
-    const winsNeeded = Math.ceil(seriesLength / 2);
-    const homeWins = match.homeWins ?? 0;
-    const awayWins = match.awayWins ?? 0;
-    const nextHomeWins =
-      winnerId === match.homeTeamId ? homeWins + 1 : homeWins;
-    const nextAwayWins =
-      winnerId === match.awayTeamId ? awayWins + 1 : awayWins;
-    const seriesUpdates = isSeries
-      ? {
-          seriesLength,
-          homeWins: nextHomeWins,
-          awayWins: nextAwayWins,
-          seriesGame: (match.seriesGame ?? 1) + 1,
-        }
-      : {};
-
-    if (isSeries && nextHomeWins < winsNeeded && nextAwayWins < winsNeeded) {
-      updateMatch(matchId, {
-        ...seriesUpdates,
-        homeScore: 0,
-        awayScore: 0,
-        status: "in_progress",
-        winnerId: undefined,
-        completedAt: undefined,
+  // The engine decides what a result means: the next game of a series, the
+  // next match on a court, a slot in the bracket, or the end of the tournament.
+  const handleCompleteMatch = useCallback(async () => {
+    if (!match || match.status === "completed" || isCompleting) return;
+    setIsCompleting(true);
+    setCompleteError(null);
+    try {
+      const outcome = await completeMatch(matchId, {
+        homeScore: match.homeScore,
+        awayScore: match.awayScore,
       });
-      setHistory([]);
       setShowCompleteDialog(false);
-      return;
-    }
-
-    if (
-      competition &&
-      competition.type === "win2out" &&
-      competition.win2outState
-    ) {
-      const completedMatch = {
-        ...match,
-        winnerId,
-        status: "completed" as const,
-        completedAt: Date.now(),
-        ...seriesUpdates,
-      };
-
-      const { updatedState, nextMatch } = processMatchResult(
-        competition.win2outState,
-        completedMatch
-      );
-
-      const updatedCompetition = {
-        ...competition,
-        win2outState: updatedState,
-        status: updatedState.isComplete
-          ? ("completed" as const)
-          : ("in_progress" as const),
-      };
-
-      completeMatchWithNextMatch(
-        matchId,
-        winnerId,
-        updatedCompetition,
-        nextMatch
-      );
-      setShowCompleteDialog(false);
-      router.push(`/competitions/${competition.id}`);
-      return;
-    }
-
-    if (
-      competition &&
-      competition.type === "two_match_rotation" &&
-      competition.twoMatchRotationState
-    ) {
-      const completedMatch = {
-        ...match,
-        winnerId,
-        status: "completed" as const,
-        completedAt: Date.now(),
-        ...seriesUpdates,
-      };
-
-      const { updatedState, nextMatch } = processTwoMatchRotationResult(
-        competition.twoMatchRotationState,
-        completedMatch
-      );
-
-      const updatedCompetition = {
-        ...competition,
-        twoMatchRotationState: updatedState,
-        status: updatedState.isComplete
-          ? ("completed" as const)
-          : ("in_progress" as const),
-      };
-
-      completeMatchWithNextMatch(
-        matchId,
-        winnerId,
-        updatedCompetition,
-        nextMatch
-      );
-      setShowCompleteDialog(false);
-      router.push(`/competitions/${competition.id}`);
-      return;
-    }
-
-    let completionMatches: Match[] | null = null;
-
-    if (
-      competition &&
-      (competition.type === "single_elimination" ||
-        competition.type === "double_elimination")
-    ) {
-      const completedMatch: Match = {
-        ...match,
-        winnerId,
-        status: "completed",
-        completedAt: Date.now(),
-        ...seriesUpdates,
-      };
-
-      const competitionMatches = state.matches.filter(
-        (m) => m.competitionId === competition.id
-      );
-      const matchesWithCompleted = competitionMatches.map((m) =>
-        m.id === match.id ? completedMatch : m
-      );
-      const updatedMatches = advanceWinner(
-        matchesWithCompleted,
-        completedMatch,
-        winnerId
-      );
-
-      if (isSharedMode) {
-        const updatedMap = new Map(
-          updatedMatches.map((updatedMatch) => [updatedMatch.id, updatedMatch])
-        );
-        const mergedMatches = state.matches.map((m) =>
-          m.competitionId === competition.id
-            ? updatedMap.get(m.id) || m
-            : m
-        );
-        void updateMatches(mergedMatches);
-      } else {
-        if (isSeries) {
-          updateMatch(matchId, seriesUpdates);
-        }
-        completeMatch(matchId, winnerId);
-        updatedMatches.forEach((updatedMatch) => {
-          if (updatedMatch.id !== match.id) {
-            const original = competitionMatches.find(
-              (m) => m.id === updatedMatch.id
-            );
-            if (
-              original &&
-              (original.homeTeamId !== updatedMatch.homeTeamId ||
-                original.awayTeamId !== updatedMatch.awayTeamId)
-            ) {
-              updateMatchTeams(
-                updatedMatch.id,
-                updatedMatch.homeTeamId,
-                updatedMatch.awayTeamId
-              );
-            }
-          }
-        });
+      if (!outcome.completed) {
+        // On to the next game of the series, on the same page.
+        setHistory([]);
+        return;
       }
-
-      completionMatches = matchesWithCompleted;
-    } else {
-      const completedMatch: Match = {
-        ...match,
-        winnerId,
-        status: "completed",
-        completedAt: Date.now(),
-        ...seriesUpdates,
-      };
-
-      if (isSharedMode) {
-        const mergedMatches = state.matches.map((m) =>
-          m.id === match.id ? completedMatch : m
-        );
-        void updateMatches(mergedMatches);
-      } else {
-        if (isSeries) {
-          updateMatch(matchId, seriesUpdates);
-        }
-        completeMatch(matchId, winnerId);
-      }
-
-      if (competition) {
-        completionMatches = state.matches
-          .filter((m) => m.competitionId === competition.id)
-          .map((m) => (m.id === match.id ? completedMatch : m));
-      }
+      router.push(competition ? `/competitions/${competition.id}` : "/");
+    } catch (error) {
+      console.error("Failed to complete the match:", error);
+      setCompleteError(
+        error instanceof Error ? error.message : "The result could not be saved."
+      );
+    } finally {
+      setIsCompleting(false);
     }
-
-    if (
-      competition &&
-      competition.status === "in_progress" &&
-      (competition.type === "round_robin" ||
-        competition.type === "single_elimination" ||
-        competition.type === "double_elimination")
-    ) {
-      const competitionMatches =
-        completionMatches ||
-        state.matches
-          .filter((m) => m.competitionId === competition.id)
-          .map((m) =>
-            m.id === match.id
-              ? { ...m, status: "completed" as const, winnerId }
-              : m
-          );
-
-      const allMatchesComplete =
-        competitionMatches.length > 0 &&
-        competitionMatches.every((m) => m.status === "completed");
-
-      if (allMatchesComplete) {
-        let competitionWinnerId: string | undefined;
-
-        if (competition.type === "round_robin") {
-          const standings = calculateStandings(
-            competition.teamIds,
-            competitionMatches,
-            competition.config
-          );
-          competitionWinnerId = standings[0]?.teamId;
-        } else {
-          const finalMatch = competitionMatches.find((m) => {
-            if (competition.type === "single_elimination") {
-              const totalRounds = Math.log2(competition.teamIds.length);
-              return m.round === totalRounds && !m.bracket;
-            }
-            return m.bracket === "grand_finals";
-          });
-          competitionWinnerId = finalMatch?.winnerId;
-        }
-
-        if (competitionWinnerId) {
-          completeCompetition(competition.id, competitionWinnerId);
-        }
-      }
-    }
-
-    setShowCompleteDialog(false);
-
-    if (competition) {
-      router.push(`/competitions/${competition.id}`);
-    } else {
-      router.push("/");
-    }
-  }, [
-    match,
-    matchId,
-    competition,
-    state.matches,
-    completeMatch,
-    completeMatchWithNextMatch,
-    completeCompetition,
-    updateMatch,
-    updateMatchTeams,
-    updateMatches,
-    isSharedMode,
-    router,
-  ]);
+  }, [match, matchId, competition, completeMatch, isCompleting, router]);
 
   const handleOpenCompleteDialog = useCallback(() => {
     if (!match || match.status === "completed") return;
@@ -484,6 +217,7 @@ export const useMatchPage = () => {
     canComplete,
     canEdit,
     competition,
+    completeError,
     handleAddPoint,
     handleBack,
     handleCompleteMatch,
@@ -495,10 +229,10 @@ export const useMatchPage = () => {
     homeColor,
     homeLeading,
     homeTeam,
+    isCompleting,
     isFullscreen,
-    isSharedMode,
+    isLoading: isTournamentsLoading,
     match,
-    role,
     seriesInfo,
     setShowCompleteDialog,
     setShowRotatePrompt,

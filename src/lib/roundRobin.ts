@@ -1,16 +1,15 @@
-import type { Match, RoundRobinStanding } from "@/types/game";
-import type { CompetitionConfig } from "@/types/competition-config";
-import { DEFAULT_COMPETITION_CONFIG } from "@/types/competition-config";
+import type { Match, MatchDraft, RoundRobinStanding } from "@/types/game";
+import {
+  DEFAULT_POINTS_FOR_LOSS,
+  DEFAULT_POINTS_FOR_WIN,
+} from "@/types/competition-config";
 
 /**
  * Generates a round robin schedule where every team plays every other team once.
  * Uses the circle method for scheduling.
  */
-export const generateRoundRobinSchedule = (
-  teamIds: string[],
-  competitionId: string
-): Omit<Match, "id" | "createdAt">[] => {
-  const matches: Omit<Match, "id" | "createdAt">[] = [];
+export const generateRoundRobinSchedule = (teamIds: string[]): MatchDraft[] => {
+  const matches: MatchDraft[] = [];
   const teams = [...teamIds];
 
   // If odd number of teams, add a "bye" placeholder
@@ -42,7 +41,6 @@ export const generateRoundRobinSchedule = (
       }
 
       matches.push({
-        competitionId,
         homeTeamId,
         awayTeamId,
         homeScore: 0,
@@ -57,24 +55,26 @@ export const generateRoundRobinSchedule = (
   return matches;
 };
 
+export interface ScoringRules {
+  pointsForWin: number;
+  pointsForLoss: number;
+}
+
 /**
- * Calculate standings from completed matches
- * @param teamIds - Array of team IDs in the competition
- * @param matches - Array of matches
- * @param config - Optional competition config for custom scoring rules
+ * Calculate standings from completed matches.
+ *
+ * A forfeit counts as a win for the other team and a loss for the team that
+ * forfeited, and changes nothing else: no points for, against, or difference.
+ * Bye matches are not played and do not count.
  */
 export const calculateStandings = (
   teamIds: string[],
   matches: Match[],
-  config?: CompetitionConfig
+  rules?: Partial<ScoringRules>
 ): RoundRobinStanding[] => {
-  // Use provided config or defaults
-  const pointsForWin = config?.pointsForWin ?? DEFAULT_COMPETITION_CONFIG.pointsForWin;
-  const pointsForTie = config?.pointsForTie ?? 0;
-  const pointsForLoss = config?.pointsForLoss ?? DEFAULT_COMPETITION_CONFIG.pointsForLoss;
-  const allowTies = config?.allowTies ?? DEFAULT_COMPETITION_CONFIG.allowTies;
+  const pointsForWin = rules?.pointsForWin ?? DEFAULT_POINTS_FOR_WIN;
+  const pointsForLoss = rules?.pointsForLoss ?? DEFAULT_POINTS_FOR_LOSS;
 
-  // Initialize standings for all teams
   const standingsMap = new Map<string, RoundRobinStanding>();
 
   teamIds.forEach((teamId) => {
@@ -83,7 +83,7 @@ export const calculateStandings = (
       played: 0,
       won: 0,
       lost: 0,
-      tied: 0,
+      forfeitWins: 0,
       pointsFor: 0,
       pointsAgainst: 0,
       pointsDiff: 0,
@@ -91,50 +91,51 @@ export const calculateStandings = (
     });
   });
 
-  // Process completed matches
   matches
-    .filter((match) => match.status === "completed")
+    .filter((match) => match.status === "completed" && !match.isBye)
     .forEach((match) => {
       const homeStanding = standingsMap.get(match.homeTeamId);
       const awayStanding = standingsMap.get(match.awayTeamId);
 
       if (!homeStanding || !awayStanding) return;
 
-      // Update games played
       homeStanding.played++;
       awayStanding.played++;
 
-      // Update points for/against
+      if (match.forfeitedBy) {
+        const [winner, loser] =
+          match.forfeitedBy === match.homeTeamId
+            ? [awayStanding, homeStanding]
+            : [homeStanding, awayStanding];
+        winner.won++;
+        winner.forfeitWins++;
+        winner.competitionPoints += pointsForWin;
+        loser.lost++;
+        loser.competitionPoints += pointsForLoss;
+        return;
+      }
+
       homeStanding.pointsFor += match.homeScore;
       homeStanding.pointsAgainst += match.awayScore;
       awayStanding.pointsFor += match.awayScore;
       awayStanding.pointsAgainst += match.homeScore;
 
-      // Determine winner
-      if (match.homeScore > match.awayScore) {
-        homeStanding.won++;
-        homeStanding.competitionPoints += pointsForWin;
-        awayStanding.lost++;
-        awayStanding.competitionPoints += pointsForLoss;
-      } else if (match.awayScore > match.homeScore) {
-        awayStanding.won++;
-        awayStanding.competitionPoints += pointsForWin;
-        homeStanding.lost++;
-        homeStanding.competitionPoints += pointsForLoss;
-      } else if (allowTies) {
-        // It's a tie and ties are allowed
-        homeStanding.tied++;
-        awayStanding.tied++;
-        homeStanding.competitionPoints += pointsForTie;
-        awayStanding.competitionPoints += pointsForTie;
-      }
+      // The winner is whoever the match records, falling back to the score.
+      const homeWon = match.winnerId
+        ? match.winnerId === match.homeTeamId
+        : match.homeScore > match.awayScore;
+      const [winner, loser] = homeWon
+        ? [homeStanding, awayStanding]
+        : [awayStanding, homeStanding];
+      winner.won++;
+      winner.competitionPoints += pointsForWin;
+      loser.lost++;
+      loser.competitionPoints += pointsForLoss;
 
-      // Update point differential
       homeStanding.pointsDiff = homeStanding.pointsFor - homeStanding.pointsAgainst;
       awayStanding.pointsDiff = awayStanding.pointsFor - awayStanding.pointsAgainst;
     });
 
-  // Convert to array and sort
   const standings = Array.from(standingsMap.values());
 
   // Sort by: competition points (desc), point diff (desc), points for (desc)
@@ -153,4 +154,3 @@ export const calculateStandings = (
 
 // Re-export the type for convenience
 export type { RoundRobinStanding };
-

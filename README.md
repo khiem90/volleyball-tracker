@@ -30,16 +30,13 @@ A modern web application for organizing and tracking matches, tournaments, and c
 - Multiple court configuration
 - Visual brackets and standings
 
-### Cloud Collaboration
-- Shareable sessions via codes or links
-- Real-time synchronization across devices
-- Admin and viewer access roles
-- Google Sign-in and anonymous access
+### Account and data
+- Roster, tournaments, and matches live in Firestore under the signed-in account
+- Offline persistence keeps scoring working without signal
+- Google Sign-in and email sign-in
 
-### Summaries & History
-- Post-competition statistics and results
-- Complete match history records
-- Shareable competition summaries
+### History
+- Complete match history records with filters and CSV export
 
 ## Tech Stack
 
@@ -49,6 +46,31 @@ A modern web application for organizing and tracking matches, tournaments, and c
 - Firebase (Auth, Firestore)
 - Framer Motion
 - Radix UI
+
+## Data layout
+
+Everything a signed-in account owns is in Firestore, and the rules in
+`firestore.rules` let only that account write it.
+
+| Path | Holds |
+| --- | --- |
+| `users/{uid}/teams/{teamId}` | The roster |
+| `users/{uid}/matches/{matchId}` | Quick matches, with `tournamentId: null` |
+| `tournaments/{tournamentId}` | One tournament: owner, format, status, entries, settings |
+| `tournaments/{tournamentId}/matches/{matchId}` | One document per match |
+
+Tournament ids are random so a link to one cannot be guessed. Every match
+carries `ownerId`, so one collection group query on `matches` returns all of an
+account's matches; that query and the tournament list need the composite
+indexes in `firestore.indexes.json`. A tournament is readable by anyone only
+while its `spectatorEnabled` flag is on.
+
+Format rules live in the engine under `src/lib/engine`. A command (start,
+complete a match, end) plus the tournament and its matches produce the next
+tournament and a list of per-match writes. `src/lib/tournaments.ts` applies
+those writes in a transaction guarded by the tournament's `revision`, so two
+courts finishing at the same moment cannot overwrite each other. With no
+network the same writes go out as a batch that the offline cache queues.
 
 ## Local development
 
@@ -85,11 +107,13 @@ from Firebase Console > Project Settings > Your apps > Config.
 npm test
 ```
 
-Unit tests always run. The Firestore rules tests in `src/__tests__/rules` and
-the roster tests in `src/__tests__/roster` need the emulators up. When they are
-down, vitest skips those tests and prints a message saying so. They load
-`firestore.rules` into their own demo project, so wiping data between tests
-never touches what you see in the browser.
+The engine tests in `src/__tests__/engine` and the volleyball tests always
+run. The Firestore rules tests in `src/__tests__/rules`, the roster tests in
+`src/__tests__/roster`, and the tournament data tests in
+`src/__tests__/tournaments` need the emulators up. When they are down, vitest
+skips those tests and prints a message saying so. Each of those files loads
+`firestore.rules` into its own demo project, so wiping data between tests never
+touches what you see in the browser or what another test file is doing.
 
 ### Deploying rules and indexes
 

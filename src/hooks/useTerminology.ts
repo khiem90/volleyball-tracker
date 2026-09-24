@@ -8,23 +8,23 @@ import { DEFAULT_TERMINOLOGY } from "@/types/competition-config";
  * Falls back to default terminology if no competition or config is provided
  */
 export const useTerminology = (competitionId?: string): CompetitionTerminology => {
-  const { getCompetitionById } = useApp();
+  const { getTournamentById } = useApp();
 
   return useMemo(() => {
     if (!competitionId) {
       return DEFAULT_TERMINOLOGY;
     }
 
-    const competition = getCompetitionById(competitionId);
-    if (!competition?.config?.terminology) {
+    const competition = getTournamentById(competitionId);
+    if (!competition?.settings?.terminology) {
       return DEFAULT_TERMINOLOGY;
     }
 
     return {
       ...DEFAULT_TERMINOLOGY,
-      ...competition.config.terminology,
+      ...competition.settings.terminology,
     };
-  }, [competitionId, getCompetitionById]);
+  }, [competitionId, getTournamentById]);
 };
 
 /**

@@ -1,4 +1,4 @@
-import type { Match, Win2OutState, Win2OutTeamStatus, Win2OutCourt } from "@/types/game";
+import type { Match, MatchDraft, Win2OutState, Win2OutTeamStatus, Win2OutCourt } from "@/types/game";
 
 /**
  * Initialize Win 2 & Out state for a competition.
@@ -6,7 +6,6 @@ import type { Match, Win2OutState, Win2OutTeamStatus, Win2OutCourt } from "@/typ
  * TRUE ENDLESS MODE - everyone goes back to queue, champions behind losers.
  */
 export const initializeWin2OutState = (
-  competitionId: string,
   teamIds: string[],
   numberOfCourts: number = 1
 ): Win2OutState => {
@@ -53,7 +52,6 @@ export const initializeWin2OutState = (
   const queue = teamIds.slice(teamIndex);
 
   return {
-    competitionId,
     teamStatuses,
     queue,
     courts,
@@ -67,16 +65,14 @@ export const initializeWin2OutState = (
  * Generate initial matches for all courts.
  */
 export const generateInitialMatches = (
-  competitionId: string,
   teamIds: string[],
   numberOfCourts: number = 1
-): Omit<Match, "id" | "createdAt">[] => {
-  const matches: Omit<Match, "id" | "createdAt">[] = [];
+): MatchDraft[] => {
+  const matches: MatchDraft[] = [];
   const maxCourts = Math.min(numberOfCourts, Math.floor(teamIds.length / 2));
 
   for (let i = 0; i < maxCourts; i++) {
     matches.push({
-      competitionId,
       homeTeamId: teamIds[i * 2],
       awayTeamId: teamIds[i * 2 + 1],
       homeScore: 0,
@@ -84,20 +80,11 @@ export const generateInitialMatches = (
       status: "pending",
       round: 1,
       position: i + 1, // Position indicates court number
+      court: i + 1,
     });
   }
 
   return matches;
-};
-
-/**
- * Legacy function for single court - generates first match only.
- */
-const generateFirstMatch = (
-  competitionId: string,
-  teamIds: string[]
-): Omit<Match, "id" | "createdAt"> => {
-  return generateInitialMatches(competitionId, teamIds, 1)[0];
 };
 
 /**
@@ -114,7 +101,7 @@ export const processMatchResult = (
   completedMatch: Match
 ): {
   updatedState: Win2OutState;
-  nextMatch: Omit<Match, "id" | "createdAt"> | null;
+  nextMatch: MatchDraft | null;
   newChampions: string[]; // Team IDs that just won 2 in a row
 } => {
   const winnerId = completedMatch.winnerId;
@@ -188,7 +175,7 @@ export const processMatchResult = (
   }
 
   // Determine next match for this court
-  let nextMatch: Omit<Match, "id" | "createdAt"> | null = null;
+  let nextMatch: MatchDraft | null = null;
   let updatedCourts = [...state.courts];
   let newCourtTeamIds: [string, string] | null = null;
   let newCourtChampionId: string | undefined;
@@ -211,7 +198,6 @@ export const processMatchResult = (
       });
 
       nextMatch = {
-        competitionId: state.competitionId,
         homeTeamId: nextTeam1,
         awayTeamId: nextTeam2,
         homeScore: 0,
@@ -219,6 +205,7 @@ export const processMatchResult = (
         status: "pending",
         round: completedMatch.round + 1,
         position: court.courtNumber,
+        court: court.courtNumber,
       };
     } else {
       // Not enough teams in queue
@@ -241,7 +228,6 @@ export const processMatchResult = (
       });
 
       nextMatch = {
-        competitionId: state.competitionId,
         homeTeamId: winnerId,
         awayTeamId: nextChallenger,
         homeScore: 0,
@@ -249,6 +235,7 @@ export const processMatchResult = (
         status: "pending",
         round: completedMatch.round + 1,
         position: court.courtNumber,
+        court: court.courtNumber,
       };
     }
   }
@@ -340,12 +327,3 @@ export const getChampionCount = (state: Win2OutState, teamId: string): number =>
   return status?.eliminatedAt || 0;
 };
 
-/**
- * Get court info for a specific team.
- */
-const getTeamCourt = (
-  state: Win2OutState,
-  teamId: string
-): Win2OutCourt | null => {
-  return state.courts.find((c) => c.teamIds.includes(teamId)) || null;
-};

@@ -2,34 +2,24 @@
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ShareButton } from "@/components/ShareSession";
-import type { Competition } from "@/types/game";
-import {
-  Calendar,
-  Globe,
-  Play,
-  Trash2,
-  Trophy,
-  Users,
-} from "lucide-react";
+import type { Tournament } from "@/types/game";
+import { Calendar, Play, Square, Trophy, Users } from "lucide-react";
 
 interface CompetitionHeaderProps {
-  competition: Competition;
+  competition: Tournament;
   typeLabel: string;
-  isSharedMode: boolean;
-  isCreator: boolean;
+  canEdit: boolean;
+  isStarting: boolean;
   onShowStartConfirm: () => void;
-  onShowCreateSession: () => void;
   onShowEndConfirm: () => void;
 }
 
 export const CompetitionHeader = ({
   competition,
   typeLabel,
-  isSharedMode,
-  isCreator,
+  canEdit,
+  isStarting,
   onShowStartConfirm,
-  onShowCreateSession,
   onShowEndConfirm,
 }: CompetitionHeaderProps) => (
   <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-8">
@@ -41,12 +31,12 @@ export const CompetitionHeader = ({
         <Badge
           className={`
             ${competition.status === "draft" ? "status-draft" : ""}
-            ${competition.status === "in_progress" ? "status-active" : ""}
+            ${competition.status === "live" ? "status-active" : ""}
             ${competition.status === "completed" ? "status-complete" : ""}
           `}
         >
           {competition.status === "draft" && "Draft"}
-          {competition.status === "in_progress" && "Live"}
+          {competition.status === "live" && "Live"}
           {competition.status === "completed" && "Completed"}
         </Badge>
       </div>
@@ -57,7 +47,7 @@ export const CompetitionHeader = ({
         </span>
         <span className="flex items-center gap-1.5">
           <Users className="w-4 h-4" />
-          {competition.teamIds.length} teams
+          {competition.entries.length} teams
         </span>
         <span className="flex items-center gap-1.5">
           <Calendar className="w-4 h-4" />
@@ -66,43 +56,27 @@ export const CompetitionHeader = ({
       </div>
     </div>
 
-    <div className="flex items-center gap-3">
-      {competition.status === "draft" && (
-        <Button
-          onClick={onShowStartConfirm}
-          className="gap-2 shadow-lg shadow-primary/20"
-          size="lg"
-        >
-          <Play className="w-5 h-5" />
-          Start Competition
-        </Button>
-      )}
-
-      {competition.status === "in_progress" &&
-        (isSharedMode ? (
-          <>
-            {isCreator && (
-              <Button
-                variant="destructive"
-                onClick={onShowEndConfirm}
-                className="gap-2"
-              >
-                <Trash2 className="w-4 h-4" />
-                End Competition
-              </Button>
-            )}
-            <ShareButton />
-          </>
-        ) : (
+    {canEdit && (
+      <div className="flex items-center gap-3">
+        {competition.status === "draft" && (
           <Button
-            onClick={onShowCreateSession}
-            variant="outline"
-            className="gap-2 cursor-pointer"
+            onClick={onShowStartConfirm}
+            disabled={isStarting}
+            className="gap-2 shadow-lg shadow-primary/20"
+            size="lg"
           >
-            <Globe className="w-4 h-4" />
-            Share Live
+            <Play className="w-5 h-5" />
+            {isStarting ? "Starting..." : "Start Competition"}
           </Button>
-        ))}
-    </div>
+        )}
+
+        {competition.status === "live" && (
+          <Button variant="destructive" onClick={onShowEndConfirm} className="gap-2">
+            <Square className="w-4 h-4" />
+            End Competition
+          </Button>
+        )}
+      </div>
+    )}
   </div>
 );

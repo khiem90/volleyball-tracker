@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Users, Repeat, AlertCircle } from "lucide-react";
-import type { Match, PersistentTeam, Competition } from "@/types/game";
+import type { Match, PersistentTeam, Tournament } from "@/types/game";
 import { useEditMatchDialog } from "./useEditMatchDialog";
 import { TeamSelectDropdown } from "./TeamSelectDropdown";
 import { MatchPreview } from "./MatchPreview";
@@ -22,7 +22,7 @@ interface EditMatchDialogProps {
   match: Match | null;
   matches?: Match[];
   teams: PersistentTeam[];
-  competition?: Competition | null;
+  competition?: Tournament | null;
 }
 
 export const EditMatchDialog = ({

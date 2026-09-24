@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useMemo, useCallback } from "react";
-import type { Match, PersistentTeam, Competition } from "@/types/game";
+import type { Match, PersistentTeam, Tournament } from "@/types/game";
 import { useApp } from "@/context/AppContext";
 import { useTeamsMap } from "@/hooks/useTeamsMap";
+import { isBracketFormat, isRotationFormat } from "@/lib/formats";
 import {
   detectTeamSwap,
   calculateSwapUpdates,
@@ -13,7 +14,7 @@ interface UseEditMatchDialogProps {
   match: Match | null;
   matches: Match[];
   teams: PersistentTeam[];
-  competition?: Competition | null;
+  competition?: Tournament | null;
   onClose: () => void;
 }
 
@@ -24,7 +25,7 @@ export const useEditMatchDialog = ({
   competition,
   onClose,
 }: UseEditMatchDialogProps) => {
-  const { updateMatchTeams, swapMatchTeams, updateCompetition, canEdit } = useApp();
+  const { updateMatchTeams, swapMatchTeams, updateTournament, canEdit } = useApp();
   const { getTeamName, getTeamColor } = useTeamsMap(teams);
 
   const [homeTeamId, setHomeTeamId] = useState<string>("");
@@ -32,12 +33,8 @@ export const useEditMatchDialog = ({
   const [error, setError] = useState<string>("");
 
   // Check competition type for swap logic
-  const isEliminationBracket =
-    competition?.type === "single_elimination" ||
-    competition?.type === "double_elimination";
-  const isRotationFormat =
-    competition?.type === "win2out" ||
-    competition?.type === "two_match_rotation";
+  const isEliminationBracket = competition ? isBracketFormat(competition.format) : false;
+  const isRotation = competition ? isRotationFormat(competition.format) : false;
 
   // Reset form when match changes (render-time state adjustment)
   const [prevMatch, setPrevMatch] = useState<Match | null>(null);
@@ -66,7 +63,7 @@ export const useEditMatchDialog = ({
       (m) =>
         m.id !== match.id &&
         m.status === "in_progress" &&
-        m.competitionId === match.competitionId
+        m.tournamentId === match.tournamentId
     );
 
     const teamIds = new Set<string>();
@@ -144,7 +141,7 @@ export const useEditMatchDialog = ({
         swapMatchTeams(updates);
 
         // For rotation formats, also update the court state
-        if (isRotationFormat && competition) {
+        if (isRotation && competition) {
           const swappingTeamId = swapInfo.swappingTeamId;
           const displacedTeamId = swapInfo.displacedTeamId;
 
@@ -172,10 +169,10 @@ export const useEditMatchDialog = ({
                   id === swappingTeamId ? displacedTeamId : id
                 ) as [string, string],
               };
-              updateCompetition({
+              updateTournament({
                 ...competition,
                 win2outState: { ...competition.win2outState, courts },
-              });
+              }).catch((error) => console.error("Failed to update courts:", error));
             }
           } else if (competition.twoMatchRotationState) {
             const courts = [...competition.twoMatchRotationState.courts];
@@ -201,10 +198,10 @@ export const useEditMatchDialog = ({
                   id === swappingTeamId ? displacedTeamId : id
                 ) as [string, string],
               };
-              updateCompetition({
+              updateTournament({
                 ...competition,
                 twoMatchRotationState: { ...competition.twoMatchRotationState, courts },
-              });
+              }).catch((error) => console.error("Failed to update courts:", error));
             }
           }
         }
@@ -221,11 +218,11 @@ export const useEditMatchDialog = ({
     awayTeamId,
     swapInfo,
     matches,
-    isRotationFormat,
+    isRotation,
     competition,
     swapMatchTeams,
     updateMatchTeams,
-    updateCompetition,
+    updateTournament,
     onClose,
   ]);
 

@@ -51,7 +51,7 @@ const buildDashboard = (state: AppState): MbDashboardData => {
     teamRefs.get(teamId) ?? { name: "Unknown", crest: crestForTeam(teamId, "") };
 
   const competitionName = (competitionId: string | null) =>
-    state.competitions.find((c) => c.id === competitionId)?.name ?? "Quick Match";
+    state.tournaments.find((c) => c.id === competitionId)?.name ?? "Quick Match";
 
   const completed = state.matches
     .filter((m) => m.status === "completed")
@@ -84,7 +84,7 @@ const buildDashboard = (state: AppState): MbDashboardData => {
   const featuredMatch = completed[0];
   const featured = featuredMatch
     ? {
-        division: competitionName(featuredMatch.competitionId),
+        division: competitionName(featuredMatch.tournamentId),
         time: shortTime(featuredMatch.completedAt),
         home: refFor(featuredMatch.homeTeamId),
         away: refFor(featuredMatch.awayTeamId),
@@ -102,7 +102,7 @@ const buildDashboard = (state: AppState): MbDashboardData => {
     away: refFor(m.awayTeamId),
     homeScore: m.homeScore,
     awayScore: m.awayScore,
-    setLabel: competitionName(m.competitionId),
+    setLabel: competitionName(m.tournamentId),
   }));
 
   const schedule = pending.slice(0, 4).map((m) => ({
@@ -111,7 +111,7 @@ const buildDashboard = (state: AppState): MbDashboardData => {
     time: shortTime(m.createdAt),
     home: refFor(m.homeTeamId),
     away: refFor(m.awayTeamId),
-    venue: competitionName(m.competitionId),
+    venue: competitionName(m.tournamentId),
   }));
 
   const bracket =
@@ -141,7 +141,7 @@ const buildDashboard = (state: AppState): MbDashboardData => {
     homeScore: m.homeScore,
     awayScore: m.awayScore,
     away: refFor(m.awayTeamId),
-    venue: competitionName(m.competitionId),
+    venue: competitionName(m.tournamentId),
     accent: ACCENTS[i % ACCENTS.length],
   }));
 
@@ -159,7 +159,7 @@ const buildDashboard = (state: AppState): MbDashboardData => {
   if (byStreak[0]) leaders.push({ team: refFor(byStreak[0][0]), stat: "Streak", value: String(byStreak[0][1].streak) });
 
   const totalPoints = completed.reduce((sum, m) => sum + m.homeScore + m.awayScore, 0);
-  const activeCompetitions = state.competitions.filter((c) => c.status === "in_progress");
+  const activeCompetitions = state.tournaments.filter((c) => c.status === "live");
 
   return {
     dateLine,

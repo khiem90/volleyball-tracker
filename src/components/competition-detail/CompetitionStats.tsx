@@ -3,10 +3,10 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { CheckCircle2, Clock, Play } from "lucide-react";
-import type { CompetitionStatus } from "@/types/game";
+import type { TournamentStatus } from "@/types/game";
 
 interface CompetitionStatsProps {
-  status: CompetitionStatus;
+  status: TournamentStatus;
   completedMatches: number;
   inProgressMatches: number;
   pendingMatches: number;

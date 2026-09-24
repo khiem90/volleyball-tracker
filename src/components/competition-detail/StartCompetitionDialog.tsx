@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Play, Check } from "lucide-react";
-import type { PersistentTeam, CompetitionType } from "@/types/game";
+import type { PersistentTeam, TournamentFormat } from "@/types/game";
 
 interface StartCompetitionDialogProps {
   open: boolean;
@@ -19,7 +19,7 @@ interface StartCompetitionDialogProps {
   typeLabel: string;
   teamCount: number;
   teams?: PersistentTeam[];
-  competitionType?: CompetitionType;
+  competitionType?: TournamentFormat;
   playInMatchCount?: number;
   onStart: (byeTeamIds?: string[]) => void;
 }

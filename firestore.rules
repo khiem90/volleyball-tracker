@@ -1,53 +1,83 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAccount(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
     // Roster: the teams an account keeps between tournaments. Only that
     // account can see or change them; there is no public path to a roster.
     match /users/{uid}/teams/{teamId} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+      allow read, write: if isAccount(uid);
     }
 
-    // Sessions collection
-    match /sessions/{sessionId} {
-      // Anyone can read sessions (for viewers)
-      allow read: if true;
-      
-      // Only authenticated users who are creator or admin can write
-      // Or anyone with the correct admin token (handled by app logic)
-      allow create: if true; // Anyone can create a session
-      
-      allow update: if 
-        // User is the creator
-        request.auth != null && request.auth.uid == resource.data.creatorId
-        // Or user is in the admin list
-        || (request.auth != null && request.auth.uid in resource.data.adminIds)
-        // For anonymous updates, the app validates the admin token
-        // We allow writes but the app enforces the token check
-        || true;
-      
-      // Delete allowed if:
-      // 1. User is the creator (creatorId matches), OR
-      // 2. User is in adminIds (has admin access), OR
-      // 3. Session was created anonymously (creatorId is null) - app validates admin token
-      allow delete: if 
-        request.auth != null && (
-          request.auth.uid == resource.data.creatorId
-          || request.auth.uid in resource.data.adminIds
-          || resource.data.creatorId == null
-        );
+    // Quick matches belong to no tournament and are private to the account.
+    // They sit in a collection also called "matches" so the account-wide
+    // collection group query below returns them alongside tournament matches.
+    match /users/{uid}/matches/{matchId} {
+      allow read, delete: if isAccount(uid);
+      allow create, update: if
+        isAccount(uid)
+        && request.resource.data.ownerId == uid
+        && request.resource.data.tournamentId == null;
     }
-    
-    // Session summaries collection
-    match /summaries/{summaryId} {
-      // Anyone can read summaries (for sharing)
-      allow read: if true;
 
-      // Only authenticated users can create summaries
-      allow create: if request.auth != null;
+    // Tournaments are owned by the account that created them. Only the owner
+    // writes. Anyone holding the link can read while the spectator link is on;
+    // with it off, nobody but the owner can read the tournament or its matches.
+    match /tournaments/{tournamentId} {
+      function tournament() {
+        return get(/databases/$(database)/documents/tournaments/$(tournamentId)).data;
+      }
 
-      // Only the creator can update or delete summaries
-      allow update, delete: if
-        request.auth != null && request.auth.uid == resource.data.creatorId;
+      function ownsTournament() {
+        return signedIn() && tournament().ownerId == request.auth.uid;
+      }
+
+      allow read: if
+        (signedIn() && resource.data.ownerId == request.auth.uid)
+        || resource.data.spectatorEnabled == true;
+
+      allow create: if
+        signedIn() && request.resource.data.ownerId == request.auth.uid;
+
+      allow update: if
+        signedIn()
+        && resource.data.ownerId == request.auth.uid
+        && request.resource.data.ownerId == resource.data.ownerId;
+
+      allow delete: if
+        signedIn() && resource.data.ownerId == request.auth.uid;
+
+      // One document per match. A match carries its owner and tournament ids
+      // so the account-wide query below can be checked without a parent read.
+      match /matches/{matchId} {
+        allow read: if
+          ownsTournament() || tournament().spectatorEnabled == true;
+
+        allow create: if
+          ownsTournament()
+          && request.resource.data.ownerId == request.auth.uid
+          && request.resource.data.tournamentId == tournamentId;
+
+        allow update: if
+          ownsTournament()
+          && request.resource.data.ownerId == resource.data.ownerId
+          && request.resource.data.tournamentId == resource.data.tournamentId;
+
+        allow delete: if ownsTournament();
+      }
+    }
+
+    // The account-wide match query (History, team records) is a collection
+    // group query, which needs a rule on this wildcard path. The query filters
+    // on ownerId, so the rule can be proven from the filter alone.
+    match /{path=**}/matches/{matchId} {
+      allow read: if signedIn() && resource.data.ownerId == request.auth.uid;
     }
 
     // User formations collection (for custom volleyball formations)
@@ -71,4 +101,3 @@ service cloud.firestore {
     }
   }
 }
-

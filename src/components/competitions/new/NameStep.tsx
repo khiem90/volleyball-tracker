@@ -5,14 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import type { CompetitionType } from "@/types/game";
+import type { TournamentFormat } from "@/types/game";
 import type { FormatOption, AdvancedSettings, AdvancedSettingsHandlers } from "@/hooks/useNewCompetitionPage";
 import { AdvancedSettingsPanel } from "./AdvancedSettingsPanel";
 
 interface NameStepProps {
   competitionName: string;
   currentFormat: FormatOption | undefined;
-  selectedFormat: CompetitionType | null;
+  selectedFormat: TournamentFormat | null;
   selectedTeamIds: string[];
   maxCourts: number;
   numberOfCourts: number;

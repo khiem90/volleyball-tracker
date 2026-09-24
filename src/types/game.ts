@@ -1,6 +1,6 @@
-import type { CompetitionConfig } from "./competition-config";
+import type { CompetitionTerminology } from "./competition-config";
 
-// Persistent team (stored in localStorage)
+// A roster team. Stored under users/{uid}/teams (see src/lib/roster.ts).
 export interface PersistentTeam {
   id: string;
   name: string;
@@ -8,106 +8,149 @@ export interface PersistentTeam {
   color?: string;
 }
 
-// Competition types
-export type CompetitionType = "round_robin" | "single_elimination" | "double_elimination" | "win2out" | "two_match_rotation";
+// ============================================
+// Tournaments
+// ============================================
 
-export type CompetitionStatus = "draft" | "in_progress" | "completed";
+export type TournamentFormat =
+  | "round_robin"
+  | "single_elimination"
+  | "double_elimination"
+  | "win2out"
+  | "two_match_rotation";
+
+export type TournamentStatus = "draft" | "live" | "completed";
+
+/**
+ * A team's place in one tournament. An entry copies the team's name and color
+ * from the roster when it is made, so a completed tournament keeps them as
+ * they were. Withdrawing a team from a live tournament sets `withdrawnAt`.
+ */
+export interface Entry {
+  teamId: string;
+  name: string;
+  color?: string;
+  withdrawnAt?: number;
+}
+
+export interface TournamentSettings {
+  /** Courts in play at once. Only rotation formats use more than one. */
+  courts: number;
+  /** Best-of series length. 1 means a single game decides each match. */
+  seriesLength: number;
+  /** Record a result by tapping the winner instead of scoring points. */
+  instantWin: boolean;
+  /** Standings points for a win and a loss. Ties are not allowed. */
+  pointsForWin: number;
+  pointsForLoss: number;
+  terminology: CompetitionTerminology;
+}
+
+/**
+ * A tournament document at tournaments/{id}. Matches live in the `matches`
+ * subcollection, one document each; the tournament never carries an array of
+ * them. `revision` changes on every write so a command applied on stale data
+ * can be detected and retried.
+ */
+export interface Tournament {
+  id: string;
+  ownerId: string;
+  name: string;
+  format: TournamentFormat;
+  status: TournamentStatus;
+  entries: Entry[];
+  /** Entered team ids, kept flat so queries can filter on them. */
+  teamIds: string[];
+  settings: TournamentSettings;
+  // Rotation format state
+  win2outState?: Win2OutState;
+  twoMatchRotationState?: TwoMatchRotationState;
+  /** Whether the spectator link is on. Off means nobody but the owner can read it. */
+  spectatorEnabled: boolean;
+  revision: string;
+  createdAt: number;
+  updatedAt: number;
+  startedAt?: number;
+  completedAt?: number;
+  winnerId?: string;
+}
+
+// ============================================
+// Matches
+// ============================================
 
 export type MatchStatus = "pending" | "in_progress" | "completed";
 
-// Match within a competition
+export type BracketSide = "winners" | "losers" | "grand_finals";
+
+/**
+ * One match. Tournament matches live at tournaments/{tournamentId}/matches/{id}
+ * and quick matches at users/{uid}/matches/{id} with a null tournamentId. Both
+ * carry ownerId so one collection group query returns an account's matches.
+ * An empty homeTeamId or awayTeamId is a bracket slot nothing has filled yet.
+ */
 export interface Match {
   id: string;
-  competitionId: string | null; // null for quick matches
+  ownerId: string;
+  tournamentId: string | null;
   homeTeamId: string;
   awayTeamId: string;
   homeScore: number;
   awayScore: number;
   status: MatchStatus;
-  round: number; // For brackets/scheduling
-  position: number; // Position within round
-  bracket?: "winners" | "losers" | "grand_finals"; // For double elimination
+  round: number;
+  /** Position within the round. Rotation formats use it as the court number. */
+  position: number;
+  /** Court the match is played on, when the format assigns one. */
+  court?: number;
+  bracket?: BracketSide;
   winnerId?: string;
+  /** Set when the result was awarded because this team withdrew or did not play. */
+  forfeitedBy?: string;
   createdAt: number;
   completedAt?: number;
   seriesLength?: number;
   homeWins?: number;
   awayWins?: number;
   seriesGame?: number;
-  isBye?: boolean; // True if this match was won by bye (opponent didn't exist)
+  /** True when a bye decided the match instead of play. */
+  isBye?: boolean;
 }
 
-// Competition
-export interface Competition {
-  id: string;
-  name: string;
-  type: CompetitionType;
-  teamIds: string[];
-  matchIds: string[];
-  status: CompetitionStatus;
-  createdAt: number;
-  completedAt?: number;
-  winnerId?: string;
-  matchSeriesLength?: number;
-  // Win 2 & Out specific state
-  win2outState?: Win2OutState;
-  // Two Match Rotation specific state
-  twoMatchRotationState?: TwoMatchRotationState;
-  // Number of simultaneous courts (for two_match_rotation)
-  numberOfCourts?: number;
-  // Instant win mode - tap team to declare winner without scoring
-  instantWinEnabled?: boolean;
-  // User-configurable scoring rules and terminology
-  config?: CompetitionConfig;
-}
+/** A match the engine has scheduled but not yet placed in a tournament. */
+export type MatchDraft = Omit<Match, "id" | "ownerId" | "tournamentId" | "createdAt">;
 
-// Round Robin specific
+// ============================================
+// Round Robin
+// ============================================
+
 export interface RoundRobinStanding {
   teamId: string;
   played: number;
   won: number;
   lost: number;
-  tied: number; // Number of tied matches (if ties allowed)
+  /** Wins awarded by forfeit, already counted in `won`. */
+  forfeitWins: number;
   pointsFor: number;
   pointsAgainst: number;
   pointsDiff: number;
-  competitionPoints: number; // Configurable via CompetitionConfig (default: 3 for win, 0 for loss)
+  competitionPoints: number;
 }
 
-// Bracket node for tournament visualization
-export interface BracketNode {
-  matchId: string | null;
-  round: number;
-  position: number;
-  homeTeamId?: string;
-  awayTeamId?: string;
-  winnerId?: string;
-  nextMatchId?: string; // Match winner advances to
-  bracket?: "winners" | "losers" | "grand_finals";
-}
+// ============================================
+// App state
+// ============================================
 
-// App state stored in localStorage
 export interface AppState {
   teams: PersistentTeam[];
-  competitions: Competition[];
+  tournaments: Tournament[];
   matches: Match[];
 }
 
-// Quick match state (for standalone matches)
-export interface QuickMatch {
-  id: string;
-  homeTeamId: string;
-  awayTeamId: string;
-  homeTeamName: string;
-  awayTeamName: string;
-  homeScore: number;
-  awayScore: number;
-  status: MatchStatus;
-  createdAt: number;
-  completedAt?: number;
-}
+// ============================================
+// Win 2 & Out
+// ============================================
 
-// Win 2 & Out format types
 export type Win2OutEliminationReason = "lost" | "champion";
 
 export interface Win2OutTeamStatus {
@@ -127,7 +170,6 @@ export interface Win2OutCourt {
 }
 
 export interface Win2OutState {
-  competitionId: string;
   teamStatuses: Win2OutTeamStatus[];
   queue: string[]; // Team IDs waiting to play
   courts: Win2OutCourt[]; // Multiple courts with teams
@@ -136,7 +178,10 @@ export interface Win2OutState {
   isComplete: boolean;
 }
 
-// Two Match Rotation format types
+// ============================================
+// Two Match Rotation
+// ============================================
+
 export interface TwoMatchRotationTeamStatus {
   teamId: string;
   sessionMatches: number; // Matches played in current session (resets when returning from queue)
@@ -154,7 +199,6 @@ export interface TwoMatchRotationCourt {
 }
 
 export interface TwoMatchRotationState {
-  competitionId: string;
   teamStatuses: TwoMatchRotationTeamStatus[];
   queue: string[]; // Team IDs waiting to play
   courts: TwoMatchRotationCourt[]; // Multiple courts with teams

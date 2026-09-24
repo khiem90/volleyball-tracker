@@ -5,8 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useAuth } from "@/context/AuthContext";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
-import { useSummariesPage } from "@/hooks/useSummariesPage";
-import { PageLoadingSpinner, DeleteConfirmDialog } from "@/components/shared";
+import { PageLoadingSpinner } from "@/components/shared";
 import { MatchbookSidebar } from "@/components/matchbook/Sidebar";
 import { MatchbookMobileBar } from "@/components/matchbook/MobileBar";
 import { MbIcon } from "@/components/matchbook/MbIcon";
@@ -42,7 +41,6 @@ export default function HistoryPage() {
   const [teamId, setTeamId] = useState("");
   const [query, setQuery] = useState("");
   const data = useMatchbookHistory({ competitionId, teamId, query });
-  const shared = useSummariesPage();
 
   if (authLoading || !isAuthenticated) {
     return <PageLoadingSpinner />;
@@ -390,73 +388,11 @@ export default function HistoryPage() {
                     </div>
                   )}
                 </Panel>
-
-                <Panel title="Shared Reports">
-                  {shared.isLoading ? (
-                    <p className="p-4 text-center text-[0.8rem] text-mb-ink-muted">
-                      Loading shared reports…
-                    </p>
-                  ) : shared.summaries.length === 0 ? (
-                    <PanelEmpty message="No shared reports exist yet — end a session with sharing to save one." />
-                  ) : (
-                    <div className="flex flex-col divide-y divide-mb-rule">
-                      {shared.summaries.map((s) => (
-                        <div
-                          key={s.id}
-                          className="grid grid-cols-[auto_1fr_auto_auto_auto] items-center gap-2 px-4 py-2"
-                        >
-                          <MbIcon id="clipboard" size={15} className="text-mb-navy" />
-                          <span className="min-w-0">
-                            <span className="matchbook-display block truncate text-[0.78rem] font-bold">
-                              {s.name}
-                            </span>
-                            <span className="block text-[0.66rem] text-mb-ink-muted">
-                              {shared.formatDate(s.endedAt)}
-                            </span>
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => shared.handleOpenSummary(s.shareCode)}
-                            className="mb-panel-link"
-                          >
-                            Open
-                            <MbIcon id="chevron-right" size={11} />
-                          </button>
-                          <button
-                            type="button"
-                            title="Copy share link"
-                            onClick={() => shared.handleCopyLink(s)}
-                            className="text-mb-ink-muted transition-colors hover:text-mb-navy"
-                          >
-                            <MbIcon id={shared.copiedId === s.id ? "check" : "share"} size={14} />
-                          </button>
-                          <button
-                            type="button"
-                            title="Delete shared report"
-                            onClick={() => shared.setDeleteTarget(s)}
-                            className="text-mb-ink-muted transition-colors hover:text-mb-red"
-                          >
-                            <MbIcon id="warning" size={14} />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </Panel>
               </div>
             </div>
           </main>
         </div>
       </div>
-
-      <DeleteConfirmDialog
-        open={!!shared.deleteTarget}
-        onOpenChange={(open) => !open && shared.setDeleteTarget(null)}
-        title="Delete Shared Report?"
-        description={`This will permanently delete "${shared.deleteTarget?.name ?? ""}" and its share link.`}
-        onConfirm={shared.handleDelete}
-        isDeleting={shared.isDeleting}
-      />
     </div>
   );
 }

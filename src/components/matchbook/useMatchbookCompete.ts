@@ -1,22 +1,17 @@
 import { useMemo, useState } from "react";
 import { useApp } from "@/context/AppContext";
 import { calculateStandings } from "@/lib/roundRobin";
-import type { Competition, CompetitionType, Match } from "@/types/game";
+import { FORMAT_LABELS, isBracketFormat, isRotationFormat } from "@/lib/formats";
+import type { Tournament, Match } from "@/types/game";
 import { crestForTeam, type MbTeam } from "./types";
 
-export const COMPETITION_TYPE_LABELS: Record<CompetitionType, string> = {
-  round_robin: "Round Robin",
-  single_elimination: "Single Elimination",
-  double_elimination: "Double Elimination",
-  win2out: "Win 2 & Out",
-  two_match_rotation: "Two Match Rotation",
-};
+export const COMPETITION_TYPE_LABELS = FORMAT_LABELS;
 
 export interface MbCompetitionRow {
   id: string;
   name: string;
   typeLabel: string;
-  status: Competition["status"];
+  status: Tournament["status"];
   teamCount: number;
   completed: number;
   total: number;
@@ -65,7 +60,7 @@ export interface MbMatchLine {
 }
 
 export interface MbCompeteSelected {
-  competition: Competition;
+  competition: Tournament;
   typeLabel: string;
   isElimination: boolean;
   teamCount: number;
@@ -105,7 +100,7 @@ const roundLabel = (round: number, maxRound: number, cellsInRound: number): stri
 };
 
 export const useMatchbookCompete = (): MbCompeteData => {
-  const { state, deleteCompetition } = useApp();
+  const { state, deleteTournament } = useApp();
   const [manualSelectedId, setManualSelectedId] = useState<string | null>(null);
 
   return useMemo(() => {
@@ -125,11 +120,11 @@ export const useMatchbookCompete = (): MbCompeteData => {
     };
 
     const matchesOf = (competitionId: string): Match[] =>
-      state.matches.filter((m) => m.competitionId === competitionId);
+      state.matches.filter((m) => m.tournamentId === competitionId);
 
-    const competitions = [...state.competitions].sort((a, b) => {
-      const rank = (c: Competition) =>
-        c.status === "in_progress" ? 0 : c.status === "draft" ? 1 : 2;
+    const competitions = [...state.tournaments].sort((a, b) => {
+      const rank = (c: Tournament) =>
+        c.status === "live" ? 0 : c.status === "draft" ? 1 : 2;
       return rank(a) - rank(b) || b.createdAt - a.createdAt;
     });
 
@@ -138,7 +133,7 @@ export const useMatchbookCompete = (): MbCompeteData => {
       return {
         id: c.id,
         name: c.name,
-        typeLabel: COMPETITION_TYPE_LABELS[c.type],
+        typeLabel: COMPETITION_TYPE_LABELS[c.format],
         status: c.status,
         teamCount: c.teamIds.length,
         completed: matches.filter((m) => m.status === "completed").length,
@@ -158,9 +153,8 @@ export const useMatchbookCompete = (): MbCompeteData => {
       const completed = matches.filter((m) => m.status === "completed");
       const live = matches.filter((m) => m.status === "in_progress");
       const pending = matches.filter((m) => m.status === "pending");
-      const isElimination =
-        competition.type === "single_elimination" ||
-        competition.type === "double_elimination";
+      const isElimination = isBracketFormat(competition.format);
+      const isRotation = isRotationFormat(competition.format);
 
       // Compact bracket built from real rounds (winners bracket only for DE).
       let bracket: MbBracketRound[] = [];
@@ -191,7 +185,7 @@ export const useMatchbookCompete = (): MbCompeteData => {
       }
 
       const standings = !isElimination
-        ? calculateStandings(competition.teamIds, matches, competition.config).map(
+        ? calculateStandings(competition.teamIds, matches, competition.settings).map(
             (s) => ({
               team: refFor(s.teamId),
               won: s.won,
@@ -209,7 +203,7 @@ export const useMatchbookCompete = (): MbCompeteData => {
 
       selected = {
         competition,
-        typeLabel: COMPETITION_TYPE_LABELS[competition.type],
+        typeLabel: COMPETITION_TYPE_LABELS[competition.format],
         isElimination,
         teamCount: competition.teamIds.length,
         matchTotal: matches.length,
@@ -218,7 +212,7 @@ export const useMatchbookCompete = (): MbCompeteData => {
           matches.length > 0
             ? Math.round((completed.length / matches.length) * 100)
             : 0,
-        courtCount: competition.numberOfCourts ?? null,
+        courtCount: isRotation ? competition.settings.courts : null,
         winner: competition.winnerId ? refFor(competition.winnerId) : null,
         bracket,
         standings,
@@ -253,8 +247,8 @@ export const useMatchbookCompete = (): MbCompeteData => {
           year: "numeric",
         }),
         seriesLabel:
-          competition.matchSeriesLength && competition.matchSeriesLength > 1
-            ? `Best of ${competition.matchSeriesLength}`
+          competition.settings.seriesLength > 1
+            ? `Best of ${competition.settings.seriesLength}`
             : "Single match",
       };
     }
@@ -265,7 +259,11 @@ export const useMatchbookCompete = (): MbCompeteData => {
       selectedId,
       setSelectedId: setManualSelectedId,
       selected,
-      deleteCompetition,
+      deleteCompetition: (id: string) => {
+        deleteTournament(id).catch((error) => {
+          console.error("Failed to delete tournament:", error);
+        });
+      },
     };
-  }, [state, manualSelectedId, deleteCompetition]);
+  }, [state, manualSelectedId, deleteTournament]);
 };

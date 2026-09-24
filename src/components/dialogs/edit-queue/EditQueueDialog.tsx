@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Users, Clock } from "lucide-react";
-import type { PersistentTeam, Competition } from "@/types/game";
+import type { PersistentTeam, Tournament } from "@/types/game";
 import { useEditQueueDialog } from "./useEditQueueDialog";
 import { QueueTeamItem } from "./QueueTeamItem";
 import { NextUpIndicator } from "./NextUpIndicator";
@@ -18,7 +18,7 @@ import { NextUpIndicator } from "./NextUpIndicator";
 interface EditQueueDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  competition: Competition | null;
+  competition: Tournament | null;
   teams: PersistentTeam[];
 }
 

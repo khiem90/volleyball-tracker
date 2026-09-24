@@ -7,7 +7,6 @@ import {
   getTeamsByStatus,
   getCurrentChampionStreak,
   getChampionCount,
-  processMatchResult,
 } from "@/lib/win2out";
 import { useApp } from "@/context/AppContext";
 import { useTeamsMap } from "@/hooks/useTeamsMap";
@@ -25,14 +24,14 @@ import type {
   Match,
   PersistentTeam,
   Win2OutState,
-  Competition,
+  Tournament,
 } from "@/types/game";
 
 interface Win2OutViewProps {
   state: Win2OutState;
   matches: Match[];
   teams: PersistentTeam[];
-  competition?: Competition | null;
+  competition?: Tournament | null;
   onMatchClick?: (match: Match) => void;
 }
 
@@ -56,10 +55,7 @@ export const Win2OutView = ({
 
   // Instant win handler using shared hook
   const { handleInstantWin } = useRotationInstantWin({
-    competition,
-    state,
-    stateKey: "win2outState",
-    processMatchResult,
+    tournament: competition,
     getTeamName,
   });
 
@@ -175,7 +171,7 @@ export const Win2OutView = ({
                 getTeamColor={getTeamColor}
                 canEdit={canEdit}
                 canPlayMatch={canPlayMatch}
-                instantWinEnabled={competition?.instantWinEnabled}
+                instantWinEnabled={competition?.settings.instantWin}
                 onMatchClick={onMatchClick}
                 onEditMatch={setEditingMatch}
                 onInstantWin={(winnerId) => handleInstantWin(winnerId, match)}

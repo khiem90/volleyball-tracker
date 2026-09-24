@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, memo, useMemo } from "react";
+import { memo, useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -12,7 +12,6 @@ import {
 } from "@heroicons/react/24/outline";
 import { TrophyIcon as TrophySolid } from "@heroicons/react/24/solid";
 import { useAuth } from "@/context/AuthContext";
-import { SessionAuth } from "@/components/auth";
 import { DesktopNav, UserMenu, MobileNav } from "@/components/nav-parts";
 
 const navItems = [
@@ -20,16 +19,15 @@ const navItems = [
   { href: "/teams", label: "Teams", icon: UserGroupIcon, description: "Manage your teams" },
   { href: "/quick-match", label: "Quick", icon: BoltIcon, description: "Start a fast game" },
   { href: "/competitions", label: "Compete", icon: TrophyIcon, description: "Tournaments & leagues" },
-  { href: "/summaries", label: "History", icon: ClockIcon, description: "Session history" },
+  { href: "/summaries", label: "History", icon: ClockIcon, description: "Past matches" },
 ];
 
 export const Navigation = memo(() => {
   const pathname = usePathname();
   const { user, signOut, isConfigured } = useAuth();
-  const [showAuth, setShowAuth] = useState(false);
 
   const shouldHideNav = useMemo(
-    () => pathname.startsWith("/session/") || pathname.startsWith("/summary/"),
+    () => pathname.startsWith("/match/"),
     [pathname]
   );
 
@@ -72,8 +70,6 @@ export const Navigation = memo(() => {
           </div>
         </div>
       </nav>
-
-      <SessionAuth open={showAuth} onOpenChange={setShowAuth} showViewerOption={false} />
     </>
   );
 });

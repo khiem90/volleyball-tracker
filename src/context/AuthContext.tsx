@@ -19,13 +19,7 @@ import {
   type User,
 } from "firebase/auth";
 import { auth, isFirebaseConfigured } from "@/lib/firebase";
-import type { AuthUser } from "@/types/session";
-
-// ============================================
-// Constants
-// ============================================
-const ADMIN_TOKENS_KEY = "tournament-admin-tokens";
-const OLD_ADMIN_TOKENS_KEY = "volleyball-admin-tokens"; // For migration
+import type { AuthUser } from "@/types/auth";
 
 // ============================================
 // Context Types
@@ -41,11 +35,6 @@ interface AuthContextValue {
   signUpWithEmail: (email: string, password: string) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
-  // Admin token management (for anonymous admin access)
-  getAdminToken: (sessionId: string) => string | null;
-  setAdminToken: (sessionId: string, token: string) => void;
-  removeAdminToken: (sessionId: string) => void;
-  hasAdminToken: (sessionId: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -144,70 +133,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     await firebaseSignOut(auth);
   }, [isConfigured]);
 
-  // Admin token management for anonymous admin access
-  const getAdminTokens = useCallback((): Record<string, string> => {
-    if (typeof window === "undefined") return {};
-    try {
-      let stored = localStorage.getItem(ADMIN_TOKENS_KEY);
-
-      // Migration: check for old key if new key doesn't exist
-      if (!stored) {
-        const oldStored = localStorage.getItem(OLD_ADMIN_TOKENS_KEY);
-        if (oldStored) {
-          localStorage.setItem(ADMIN_TOKENS_KEY, oldStored);
-          localStorage.removeItem(OLD_ADMIN_TOKENS_KEY);
-          stored = oldStored;
-        }
-      }
-
-      return stored ? JSON.parse(stored) : {};
-    } catch {
-      return {};
-    }
-  }, []);
-
-  const saveAdminTokens = useCallback((tokens: Record<string, string>) => {
-    if (typeof window === "undefined") return;
-    try {
-      localStorage.setItem(ADMIN_TOKENS_KEY, JSON.stringify(tokens));
-    } catch (error) {
-      console.error("Failed to save admin tokens:", error);
-    }
-  }, []);
-
-  const getAdminToken = useCallback(
-    (sessionId: string): string | null => {
-      const tokens = getAdminTokens();
-      return tokens[sessionId] || null;
-    },
-    [getAdminTokens]
-  );
-
-  const setAdminToken = useCallback(
-    (sessionId: string, token: string) => {
-      const tokens = getAdminTokens();
-      tokens[sessionId] = token;
-      saveAdminTokens(tokens);
-    },
-    [getAdminTokens, saveAdminTokens]
-  );
-
-  const removeAdminToken = useCallback(
-    (sessionId: string) => {
-      const tokens = getAdminTokens();
-      delete tokens[sessionId];
-      saveAdminTokens(tokens);
-    },
-    [getAdminTokens, saveAdminTokens]
-  );
-
-  const hasAdminToken = useCallback(
-    (sessionId: string): boolean => {
-      return getAdminToken(sessionId) !== null;
-    },
-    [getAdminToken]
-  );
-
   const value: AuthContextValue = {
     user,
     isLoading,
@@ -218,10 +143,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     signUpWithEmail,
     resetPassword,
     signOut,
-    getAdminToken,
-    setAdminToken,
-    removeAdminToken,
-    hasAdminToken,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -32,7 +32,7 @@ export const EndCompetitionDialog = ({
           End Competition?
         </DialogTitle>
         <DialogDescription>
-          This will end the competition and close the live session for all viewers. A summary will be created.
+          This ends the tournament as it stands. Results and standings stay as they are, and no more matches can be scored.
         </DialogDescription>
       </DialogHeader>
       <DialogFooter className="flex-row gap-2 sm:gap-2">
