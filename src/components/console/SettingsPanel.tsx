@@ -4,7 +4,7 @@ import { useState, type FormEvent } from "react";
 import { MbIcon } from "@/components/matchbook/MbIcon";
 import { Panel } from "@/components/matchbook/Panel";
 import { courtsWord, type ConsoleAccess } from "@/lib/console";
-import { formatLabel } from "@/lib/formats";
+import { formatLabel, isRotationFormat } from "@/lib/formats";
 import type { Tournament } from "@/types/game";
 
 const longDate = (ts?: number) =>
@@ -73,6 +73,65 @@ const RenameForm = ({ name, onRename }: { name: string; onRename: (name: string)
   );
 };
 
+/**
+ * The courts in play, with a button to close one and a button to open one.
+ * Each tap is saved at once: a closing court sends its teams to the front
+ * of the queue, and an opening court fills from the queue.
+ */
+const CourtsStepper = ({
+  tournament,
+  canAdd,
+  canRemove,
+  busy,
+  onChange,
+}: {
+  tournament: Tournament;
+  canAdd: boolean;
+  canRemove: boolean;
+  busy: boolean;
+  onChange: (courts: number) => void;
+}) => {
+  const { courts } = tournament.settings;
+  const word = courtsWord(tournament, 1);
+  const button = "mb-btn mb-btn-outline-navy min-h-11 min-w-11 px-3 text-[1rem]";
+  return (
+    <div className="flex flex-col gap-1.5 border-b border-mb-rule p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-col gap-0.5">
+          <span className="mb-kicker">In play</span>
+          <span className="text-[0.85rem] font-semibold">
+            {courts} {courtsWord(tournament, courts)}
+          </span>
+        </div>
+        <span className="flex gap-1">
+          <button
+            type="button"
+            onClick={() => onChange(courts - 1)}
+            disabled={busy || !canRemove}
+            aria-label={`Close a ${word}`}
+            className={button}
+          >
+            −
+          </button>
+          <button
+            type="button"
+            onClick={() => onChange(courts + 1)}
+            disabled={busy || !canAdd}
+            aria-label={`Open a ${word}`}
+            className={button}
+          >
+            +
+          </button>
+        </span>
+      </div>
+      <p className="text-[0.72rem] text-mb-ink-muted">
+        Closing a {word} sends its teams to the front of the queue. Opening one fills it from the
+        queue.
+      </p>
+    </div>
+  );
+};
+
 /** One owner action with the line that says what it does. */
 const Action = ({
   icon,
@@ -111,13 +170,17 @@ const Action = ({
 
 /**
  * The Settings tab: the tournament as it was set up, and the owner's
- * actions on it: Rename, Duplicate, End, and Delete. Courts and share links
- * arrive with tickets 09 and 13.
+ * actions on it: Rename, the courts of a live rotation tournament,
+ * Duplicate, End, and Delete. Share links arrive with ticket 13.
  */
 export const SettingsPanel = ({
   tournament,
   access,
   onRename,
+  onChangeCourts,
+  canAddCourt,
+  canRemoveCourt,
+  isApplying,
   onDuplicate,
   isDuplicating,
   onEnd,
@@ -126,15 +189,24 @@ export const SettingsPanel = ({
   tournament: Tournament;
   access: ConsoleAccess;
   onRename: (name: string) => void;
+  onChangeCourts: (courts: number) => void;
+  canAddCourt: boolean;
+  canRemoveCourt: boolean;
+  /** True while a court change is being saved. */
+  isApplying: boolean;
   onDuplicate: () => void;
   isDuplicating: boolean;
   onEnd: () => void;
   onDelete: () => void;
 }) => {
   const { settings } = tournament;
+  const editableCourts = access.canManage && isRotationFormat(tournament.format);
   const facts: [string, string | null][] = [
     ["Format", formatLabel(tournament.format)],
-    ["In play", `${settings.courts} ${courtsWord(tournament, settings.courts)}`],
+    [
+      "In play",
+      editableCourts ? null : `${settings.courts} ${courtsWord(tournament, settings.courts)}`,
+    ],
     [
       "Matches",
       settings.seriesLength > 1 ? `Best of ${settings.seriesLength}` : "One game each",
@@ -154,6 +226,15 @@ export const SettingsPanel = ({
   return (
     <Panel title="Settings">
       {access.canRename && <RenameForm name={tournament.name} onRename={onRename} />}
+      {editableCourts && (
+        <CourtsStepper
+          tournament={tournament}
+          canAdd={canAddCourt}
+          canRemove={canRemoveCourt}
+          busy={isApplying}
+          onChange={onChangeCourts}
+        />
+      )}
       <div className="grid grid-cols-2 gap-x-4 gap-y-3 p-4">
         {facts.map(([label, value]) =>
           value === null ? null : <Fact key={label} label={label} value={value} />,

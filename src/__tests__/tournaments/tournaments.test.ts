@@ -489,6 +489,35 @@ describeFirestoreRules("Tournaments on Firestore", (env) => {
       });
     });
 
+    it("adding, withdrawing, and closing a court on a live rotation tournament write the entries, the queue, and the matches", async () => {
+      const db = modularFirestore(env().authenticatedContext(owner));
+      const created = await createTournament(db, owner, rotationInput("win2out"), { start: true });
+
+      await applyTournamentCommand(db, created.id, { type: "add_team", teamId: "t7", name: "Gulls" });
+
+      const joined = await tournamentDocOf(db, created.id);
+      expect(joined.entries.at(-1)).toEqual({ teamId: "t7", name: "Gulls" });
+      expect(joined.teamIds).toEqual(["t1", "t2", "t3", "t4", "t5", "t6", "t7"]);
+      expect(joined.win2outState?.queue).toEqual(["t5", "t6", "t7"]);
+
+      await applyTournamentCommand(db, created.id, { type: "withdraw", teamId: "t6" });
+
+      const withdrawn = await tournamentDocOf(db, created.id);
+      expect(withdrawn.entries.find((e) => e.teamId === "t6")?.withdrawnAt).toEqual(expect.any(Number));
+      expect(withdrawn.win2outState?.queue).toEqual(["t5", "t7"]);
+
+      const court2 = (await matchDocsOf(db, created.id)).find((m) => m.court === 2)!;
+      await applyTournamentCommand(db, created.id, { type: "change_courts", courts: 1 });
+
+      const narrowed = await tournamentDocOf(db, created.id);
+      expect(narrowed.settings.courts).toBe(1);
+      expect(narrowed.win2outState?.courts.map((c) => c.courtNumber)).toEqual([1]);
+      expect(narrowed.win2outState?.queue).toEqual(["t3", "t4", "t5", "t7"]);
+      const matches = await matchDocsOf(db, created.id);
+      expect(matches).toHaveLength(1);
+      expect(matches[0].id).not.toBe(court2.id);
+    });
+
     it("deleting a tournament removes it and its matches", async () => {
       const db = modularFirestore(env().authenticatedContext(owner));
       const created = await createTournament(db, owner, input("round_robin"));

@@ -11,8 +11,6 @@ import { MatchbookSidebar } from "@/components/matchbook/Sidebar";
 import { MatchbookMobileBar } from "@/components/matchbook/MobileBar";
 import { MbIcon } from "@/components/matchbook/MbIcon";
 import { Crest, Panel, PanelEmpty } from "@/components/matchbook/Panel";
-import { EditMatchDialog } from "@/components/dialogs/edit-match";
-import { EditQueueDialog } from "@/components/dialogs/edit-queue";
 import { BracketPanel } from "@/components/console/BracketPanel";
 import { ConsoleTabs, panelId, tabId, type ConsoleTab } from "@/components/console/ConsoleTabs";
 import { CourtsPanel } from "@/components/console/CourtsPanel";
@@ -22,10 +20,12 @@ import { SettingsPanel } from "@/components/console/SettingsPanel";
 import { StandingsPanel } from "@/components/console/StandingsPanel";
 import { StartTournamentDialog } from "@/components/console/StartTournamentDialog";
 import { TeamsPanel } from "@/components/console/TeamsPanel";
+import { ConfirmDialog } from "@/components/console/ConfirmDialog";
 import { useConsole } from "@/components/console/useConsole";
 import { TOURNAMENT_STATUS } from "@/components/matchbook/tournamentStatus";
-import { courtsWord } from "@/lib/console";
+import { courtLabel, courtsWord } from "@/lib/console";
 import { formatLabel, isRotationFormat } from "@/lib/formats";
+import { UserMinus } from "lucide-react";
 
 const Shell = ({ children }: { children: ReactNode }) => (
   <div className="matchbook-surface min-h-screen">
@@ -191,8 +191,13 @@ export default function TournamentConsolePage() {
               team={page.team}
               access={page.access}
               onInstantWin={page.instantWin}
-              onEditMatch={page.setEditingMatch}
-              onReorderQueue={() => page.setReorderOpen(true)}
+              controls={{
+                swapping: page.swapping,
+                onSwap: page.swap,
+                onCancelSwap: page.cancelSwap,
+                onMove: page.move,
+                busy: page.isApplying,
+              }}
             />
           </Section>
           <Section
@@ -225,13 +230,26 @@ export default function TournamentConsolePage() {
             />
           </Section>
           <Section id="teams" active={page.tab} className="lg:col-span-4">
-            <TeamsPanel rows={page.teamRows} team={page.team} />
+            <TeamsPanel
+              rows={page.teamRows}
+              team={page.team}
+              canEdit={page.canEditTeams}
+              suggestions={page.suggestions}
+              onAdd={page.addTeam}
+              onWithdraw={page.setWithdrawing}
+              onRejoin={page.rejoin}
+              busy={page.isApplying}
+            />
           </Section>
           <Section id="settings" active={page.tab} className="lg:col-span-4">
             <SettingsPanel
               tournament={tournament}
               access={page.access}
               onRename={page.rename}
+              onChangeCourts={page.changeCourts}
+              canAddCourt={page.canAddCourt}
+              canRemoveCourt={page.canRemoveCourt}
+              isApplying={page.isApplying}
               onDuplicate={page.duplicate}
               isDuplicating={page.isDuplicating}
               onEnd={() => page.setEndOpen(true)}
@@ -272,24 +290,34 @@ export default function TournamentConsolePage() {
         onConfirm={page.remove}
       />
 
-      {page.access.canEditCourts && (
-        <>
-          <EditMatchDialog
-            open={page.editingMatch !== null}
-            onOpenChange={(open) => !open && page.setEditingMatch(null)}
-            match={page.editingMatch}
-            matches={page.matches}
-            teams={page.teams}
-            competition={tournament}
-          />
-          <EditQueueDialog
-            open={page.reorderOpen}
-            onOpenChange={page.setReorderOpen}
-            competition={tournament}
-            teams={page.teams}
-          />
-        </>
-      )}
+      <ConfirmDialog
+        open={page.withdrawing !== null}
+        onOpenChange={(open) => {
+          if (!open && !page.isApplying) page.setWithdrawing(null);
+        }}
+        icon={UserMinus}
+        title={`Withdraw ${page.withdrawing?.name ?? "the team"}?`}
+        description="It leaves the queue or its court, and a match it is in is abandoned. The team it was playing stays on. Its played results stay, and it can rejoin later from Teams."
+        confirmLabel="Withdraw"
+        busyLabel="Withdrawing..."
+        isBusy={page.isApplying && page.withdrawing !== null}
+        onConfirm={page.withdraw}
+      />
+
+      <ConfirmDialog
+        open={page.courtsToClose !== null}
+        onOpenChange={(open) => {
+          if (!open && !page.isApplying) page.setCourtsToClose(null);
+        }}
+        title={`Close ${
+          page.courtsToClose ? courtLabel(tournament, page.courtsToClose.inPlay) : "the court"
+        }?`}
+        description={`Its match is in play. Closing the ${courtsWord(tournament, 1)} abandons that match, and both teams go to the front of the queue.`}
+        confirmLabel="Close it"
+        busyLabel="Closing..."
+        isBusy={page.isApplying && page.courtsToClose !== null}
+        onConfirm={page.confirmCloseCourts}
+      />
     </>
   );
 }

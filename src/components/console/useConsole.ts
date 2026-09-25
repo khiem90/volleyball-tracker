@@ -14,18 +14,30 @@ import {
   standingsView,
   teamsView,
   type ConsoleRole,
+  type TeamRow,
 } from "@/lib/console";
 import { entryTeams } from "@/lib/entries";
-import { isBracketFormat } from "@/lib/formats";
+import { isBracketFormat, isRotationFormat, minimumTeams } from "@/lib/formats";
 import { messageOf } from "@/lib/utils";
-import type { Match } from "@/types/game";
+import type { Match, PersistentTeam } from "@/types/game";
 import { consoleTabs, type ConsoleTab } from "./ConsoleTabs";
 import { teamLookup } from "./teamRefs";
+
+// "Aces" and "aces" name the same roster team.
+const nameKey = (name: string) => name.trim().toLowerCase();
+
+/** A court count waiting for the owner to confirm it, because a court with a match in play would close. */
+export interface CourtsToClose {
+  count: number;
+  /** The court whose match is in play. */
+  inPlay: number;
+}
 
 /**
  * Everything the console page needs for one tournament: the tournament and
  * its matches from the provider, the viewer's role and what it allows, the
- * five views, and the actions that live on the shell and in Settings.
+ * five views, the actions on the shell and in Settings, and the court,
+ * queue, and team edits of a live rotation tournament.
  */
 export const useConsole = (tournamentId: string) => {
   const router = useRouter();
@@ -34,11 +46,17 @@ export const useConsole = (tournamentId: string) => {
     state,
     getTournamentById,
     getMatchesByTournament,
+    addTeamsFromText,
     startTournament,
     endTournament,
     renameTournament,
     duplicateTournament,
     deleteTournament,
+    addTeamToTournament,
+    withdrawTeam,
+    changeCourts: changeTournamentCourts,
+    swapTeams,
+    reorderQueue,
     isTournamentsLoading,
   } = useApp();
 
@@ -93,10 +111,6 @@ export const useConsole = (tournamentId: string) => {
     [tournament],
   );
   const [tab, setTab] = useState<ConsoleTab>("courts");
-
-  // Court and queue edits keep their dialogs until ticket 09 gives them tap controls.
-  const [editingMatch, setEditingMatch] = useState<Match | null>(null);
-  const [reorderOpen, setReorderOpen] = useState(false);
 
   const [startOpen, setStartOpen] = useState(false);
   const [endOpen, setEndOpen] = useState(false);
@@ -197,6 +211,155 @@ export const useConsole = (tournamentId: string) => {
     }
   }, [tournament, isDeleting, access.canDelete, deleteTournament, router]);
 
+  // ============================================
+  // Teams, courts, and the queue
+  // ============================================
+
+  // Court, queue, and team edits share one busy flag, so a second tap while
+  // the first is saving does nothing, and one error line. Each resolves
+  // with whether the edit went through.
+  const [isApplying, setIsApplying] = useState(false);
+  const apply = useCallback(
+    async (what: string, action: () => Promise<void>): Promise<boolean> => {
+      if (isApplying) return false;
+      setIsApplying(true);
+      setActionError(null);
+      try {
+        await action();
+        return true;
+      } catch (error) {
+        console.error(`Failed to ${what}:`, error);
+        setActionError(messageOf(error, `Could not ${what}.`));
+        return false;
+      } finally {
+        setIsApplying(false);
+      }
+    },
+    [isApplying],
+  );
+
+  // A swap is two taps: Swap under a team on a court, then Swap under the
+  // team to trade places with. The first tap is dropped if that team has
+  // since left the courts.
+  const [swapFrom, setSwapFrom] = useState<string | null>(null);
+  const swapping = useMemo(() => {
+    if (swapFrom === null || !access.canEditCourts || courts?.kind !== "rotation") return null;
+    return courts.courts.some((court) => court.teamIds.includes(swapFrom)) ? swapFrom : null;
+  }, [swapFrom, access.canEditCourts, courts]);
+
+  const swap = useCallback(
+    (teamId: string) => {
+      if (!tournament || !access.canEditCourts) return;
+      if (swapping === null || swapping === teamId) {
+        setSwapFrom(swapping === null ? teamId : null);
+        return;
+      }
+      const from = swapping;
+      setSwapFrom(null);
+      void apply("swap the teams", () => swapTeams(tournament.id, from, teamId));
+    },
+    [tournament, access.canEditCourts, swapping, apply, swapTeams],
+  );
+  const cancelSwap = useCallback(() => setSwapFrom(null), []);
+
+  const move = useCallback(
+    (teamId: string, position: number) => {
+      if (!tournament || !access.canEditCourts) return;
+      void apply("move the team", () => reorderQueue(tournament.id, teamId, position));
+    },
+    [tournament, access.canEditCourts, apply, reorderQueue],
+  );
+
+  const rotation = tournament ? isRotationFormat(tournament.format) : false;
+  const activeCount = tournament
+    ? tournament.entries.filter((entry) => entry.withdrawnAt === undefined).length
+    : 0;
+  const courtCount = tournament?.settings.courts ?? 1;
+  const canAddCourt =
+    rotation &&
+    tournament !== undefined &&
+    activeCount >= minimumTeams(tournament.format, courtCount + 1);
+  const canRemoveCourt = rotation && courtCount > 1;
+
+  const applyCourts = useCallback(
+    (count: number): Promise<boolean> => {
+      if (!tournament || !access.canManage) return Promise.resolve(false);
+      return apply("change the courts", () => changeTournamentCourts(tournament.id, count));
+    },
+    [tournament, access.canManage, apply, changeTournamentCourts],
+  );
+
+  // Closing a court whose match is in play abandons that match, so the
+  // owner confirms it first. Opening a court, or closing one that is only
+  // waiting, goes through at once.
+  const [courtsToClose, setCourtsToClose] = useState<CourtsToClose | null>(null);
+  const changeCourts = useCallback(
+    (count: number) => {
+      if (courts?.kind !== "rotation") return;
+      const inPlay = courts.courts.find(
+        (court) => court.court > count && court.match?.status === "in_progress",
+      );
+      if (inPlay) setCourtsToClose({ count, inPlay: inPlay.court });
+      else void applyCourts(count);
+    },
+    [courts, applyCourts],
+  );
+  const confirmCloseCourts = useCallback(async () => {
+    if (!courtsToClose) return;
+    await applyCourts(courtsToClose.count);
+    setCourtsToClose(null);
+  }, [courtsToClose, applyCourts]);
+
+  /** Roster teams not entered, offered while typing a name to add. */
+  const suggestions = useMemo(() => {
+    const entered = new Set(tournament?.teamIds ?? []);
+    return state.teams.filter((roster) => !entered.has(roster.id)).map((roster) => roster.name);
+  }, [tournament?.teamIds, state.teams]);
+
+  // A name that matches a roster team, ignoring case, enters that team. Any
+  // other name becomes a new roster team first, as on the Teams page; its
+  // id is known before its write lands, so the entry need not wait for it.
+  // Resolves with the team's name once it is in, or null.
+  const addTeam = useCallback(
+    async (name: string): Promise<string | null> => {
+      if (!tournament || !access.canManage) return null;
+      const known = state.teams.find((roster) => nameKey(roster.name) === nameKey(name));
+      const added = known ?? addTeamsFromText(name).added[0];
+      if (!added) {
+        setActionError("Type a team name to add.");
+        return null;
+      }
+      const ok = await apply("add the team", () => addTeamToTournament(tournament.id, added));
+      return ok ? added.name : null;
+    },
+    [tournament, access.canManage, state.teams, addTeamsFromText, apply, addTeamToTournament],
+  );
+
+  // A withdrawn team comes back through the same command. Its roster team
+  // is normally still there; the entry's own snapshot covers the case where
+  // it is not, so the team never comes back as "Unknown".
+  const rejoin = useCallback(
+    (row: TeamRow) => {
+      if (!tournament || !access.canManage) return;
+      const roster: PersistentTeam = state.teams.find((t) => t.id === row.teamId) ?? {
+        id: row.teamId,
+        name: row.name,
+        createdAt: tournament.createdAt,
+        ...(row.color !== undefined && { color: row.color }),
+      };
+      void apply("bring the team back", () => addTeamToTournament(tournament.id, roster));
+    },
+    [tournament, access.canManage, state.teams, apply, addTeamToTournament],
+  );
+
+  const [withdrawing, setWithdrawing] = useState<TeamRow | null>(null);
+  const withdraw = useCallback(async () => {
+    if (!tournament || !withdrawing || !access.canManage) return;
+    const { teamId } = withdrawing;
+    await apply("withdraw the team", () => withdrawTeam(tournament.id, teamId));
+    setWithdrawing(null);
+  }, [tournament, withdrawing, access.canManage, apply, withdrawTeam]);
+
   return {
     isLoading: isTournamentsLoading,
     tournament,
@@ -214,10 +377,6 @@ export const useConsole = (tournamentId: string) => {
     tabs,
     tab,
     setTab,
-    editingMatch,
-    setEditingMatch,
-    reorderOpen,
-    setReorderOpen,
     startOpen,
     setStartOpen,
     endOpen,
@@ -235,5 +394,27 @@ export const useConsole = (tournamentId: string) => {
     rename,
     duplicate,
     remove,
+    // Courts and queue
+    /** True while a court, queue, or team edit is being saved. */
+    isApplying,
+    swapping,
+    swap,
+    cancelSwap,
+    move,
+    canAddCourt,
+    canRemoveCourt,
+    changeCourts,
+    courtsToClose,
+    setCourtsToClose,
+    confirmCloseCourts,
+    // Teams
+    /** Whether teams can be added and withdrawn here: the owner of a live rotation tournament. */
+    canEditTeams: access.canManage && rotation,
+    suggestions,
+    addTeam,
+    rejoin,
+    withdrawing,
+    setWithdrawing,
+    withdraw,
   };
 };

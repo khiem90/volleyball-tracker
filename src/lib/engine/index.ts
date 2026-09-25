@@ -1,4 +1,4 @@
-import type { Match, MatchDraft, MatchProgress, Tournament } from "@/types/game";
+import type { Entry, Match, MatchDraft, MatchProgress, Tournament } from "@/types/game";
 import { calculateStandings, generateRoundRobinSchedule } from "@/lib/roundRobin";
 import { generateSingleEliminationBracket } from "@/lib/singleElimination";
 import { generateDoubleEliminationBracket } from "@/lib/doubleElimination";
@@ -13,6 +13,7 @@ import {
   processMatchResult as processRotationResult,
 } from "@/lib/twoMatchRotation";
 import {
+  formatLabel,
   isBracketFormat,
   isRotationFormat,
   minimumTeams,
@@ -20,9 +21,22 @@ import {
 } from "@/lib/formats";
 import { advance, bracketChampion, resolveByes } from "./brackets";
 import {
-  canUndo,
-  recordResult,
   applyUndo,
+  canUndo,
+  courtWith,
+  fillCourts,
+  joinQueue,
+  moveInQueue,
+  recordResult,
+  setCourts,
+  swapPlaces,
+  TWO_MATCH_RULES,
+  withdrawTeam,
+  WIN2OUT_RULES,
+  type CourtEdits,
+  type CourtLike,
+  type RotationEdit,
+  type RotationRules,
   type RotationStateLike,
 } from "./rotation";
 import { diffMatchWrites, type MatchWrite } from "./writes";
@@ -45,6 +59,12 @@ export type EngineCommand =
     }
   | { type: "instant_win"; matchId: string; winnerId: string }
   | { type: "undo_result"; matchId: string }
+  | { type: "add_team"; teamId: string; name: string; color?: string }
+  | { type: "withdraw"; teamId: string }
+  | { type: "change_courts"; courts: number }
+  | { type: "swap_teams"; teamId: string; withTeamId: string }
+  /** Move a waiting team to a place in the queue, counted from the front. */
+  | { type: "reorder_queue"; teamId: string; position: number }
   | { type: "end" };
 
 export interface EngineContext {
@@ -75,7 +95,14 @@ export type EngineErrorCode =
   | "tie"
   | "unsupported_format"
   | "nothing_to_undo"
-  | "court_moved_on";
+  | "court_moved_on"
+  | "already_entered"
+  | "not_entered"
+  | "already_withdrawn"
+  | "invalid_courts"
+  | "same_place"
+  | "court_in_play"
+  | "not_in_queue";
 
 export class EngineError extends Error {
   readonly code: EngineErrorCode;
@@ -117,6 +144,21 @@ export const applyCommand = (
       break;
     case "undo_result":
       undoResult(working, command);
+      break;
+    case "add_team":
+      addTeam(working, command);
+      break;
+    case "withdraw":
+      withdraw(working, command);
+      break;
+    case "change_courts":
+      changeCourts(working, command);
+      break;
+    case "swap_teams":
+      swapTeams(working, command);
+      break;
+    case "reorder_queue":
+      reorderQueue(working, command);
       break;
     case "end":
       end(working);
@@ -190,10 +232,8 @@ const completeMatch = (
   working: Working,
   command: Extract<EngineCommand, { type: "complete_match" }>,
 ) => {
-  const { tournament, options } = working;
-  if (tournament.status !== "live") {
-    throw new EngineError("not_live", "Only a live tournament can record results.");
-  }
+  requireLive(working, "record results");
+  const { options } = working;
   const match = working.matches.get(command.matchId);
   if (!match) {
     throw new EngineError("match_not_found", "That match is not in this tournament.");
@@ -333,10 +373,8 @@ const undoResult = (
   working: Working,
   command: Extract<EngineCommand, { type: "undo_result" }>,
 ) => {
+  requireLive(working, "undo a result");
   const { tournament } = working;
-  if (tournament.status !== "live") {
-    throw new EngineError("not_live", "Only a live tournament can undo a result.");
-  }
 
   switch (tournament.format) {
     case "win2out": {
@@ -435,11 +473,265 @@ const finishIfDecided = (working: Working) => {
 
 /** The owner's End: the tournament is over as it stands. */
 const end = (working: Working) => {
+  requireLive(working, "be ended");
   const { tournament, options } = working;
-  if (tournament.status !== "live") {
-    throw new EngineError("not_live", "Only a live tournament can be ended.");
-  }
   working.tournament = { ...tournament, status: "completed", completedAt: options.now };
+};
+
+// ============================================
+// Teams, courts, and the queue (rotation formats)
+// ============================================
+
+const requireLive = (working: Working, what: string) => {
+  if (working.tournament.status !== "live") {
+    throw new EngineError("not_live", `Only a live tournament can ${what}.`);
+  }
+};
+
+/**
+ * Add a team while live. In a rotation format it joins the back of the
+ * queue, and a court the tournament runs but that had gone empty opens if
+ * the queue can now fill it. A team that had withdrawn rejoins the same way
+ * and keeps its record.
+ */
+const addTeam = (working: Working, command: Extract<EngineCommand, { type: "add_team" }>) => {
+  requireLive(working, "take a new team");
+  const { tournament } = working;
+  const entry = tournament.entries.find((e) => e.teamId === command.teamId);
+  if (entry && entry.withdrawnAt === undefined) {
+    throw new EngineError("already_entered", `${entry.name} is already in this tournament.`);
+  }
+  if (!isRotationFormat(tournament.format)) {
+    throw new EngineError(
+      "unsupported_format",
+      `A team cannot be added to a live ${formatLabel(tournament.format)}.`,
+    );
+  }
+  const joined: Entry = {
+    teamId: command.teamId,
+    name: command.name,
+    ...(command.color !== undefined && { color: command.color }),
+  };
+  working.tournament = {
+    ...tournament,
+    entries: entry
+      ? tournament.entries.map((e) => (e.teamId === command.teamId ? joined : e))
+      : [...tournament.entries, joined],
+    teamIds: entry ? tournament.teamIds : [...tournament.teamIds, command.teamId],
+  };
+  editRotation(working, (state, rules) =>
+    fillCourts(joinQueue(state, rules, command.teamId), rules),
+  );
+};
+
+/**
+ * Withdraw a team from a live tournament. Its entry is marked and its
+ * played results stay. In a rotation format it leaves the queue or its
+ * court, and the team it was playing stays where it is.
+ */
+const withdraw = (working: Working, command: Extract<EngineCommand, { type: "withdraw" }>) => {
+  requireLive(working, "withdraw a team");
+  const { tournament, options } = working;
+  const entry = tournament.entries.find((e) => e.teamId === command.teamId);
+  if (!entry) {
+    throw new EngineError("not_entered", "That team is not in this tournament.");
+  }
+  if (entry.withdrawnAt !== undefined) {
+    throw new EngineError("already_withdrawn", `${entry.name} has already withdrawn.`);
+  }
+  if (!isRotationFormat(tournament.format)) {
+    throw new EngineError(
+      "unsupported_format",
+      `A team cannot be withdrawn from a live ${formatLabel(tournament.format)}.`,
+    );
+  }
+  working.tournament = {
+    ...tournament,
+    entries: tournament.entries.map((e) =>
+      e.teamId === command.teamId ? { ...e, withdrawnAt: options.now } : e,
+    ),
+  };
+  editRotation(working, (state, rules) => withdrawTeam(state, rules, command.teamId));
+};
+
+/**
+ * Change how many courts a live rotation tournament runs. The teams must
+ * be enough to fill them, withdrawn ones not counted. Courts that close
+ * send their teams to the front of the queue; courts that open fill from it.
+ */
+const changeCourts = (
+  working: Working,
+  command: Extract<EngineCommand, { type: "change_courts" }>,
+) => {
+  requireLive(working, "change its courts");
+  const { tournament } = working;
+  if (!isRotationFormat(tournament.format)) throw notRotation();
+  const { terminology } = tournament.settings;
+  if (!Number.isInteger(command.courts) || command.courts < 1) {
+    throw new EngineError(
+      "invalid_courts",
+      `A tournament needs at least one ${terminology.venue}.`,
+    );
+  }
+  if (activeTeamIds(tournament).length < minimumTeams(tournament.format, command.courts)) {
+    throw new EngineError(
+      "too_few_teams",
+      minimumTeamsMessage(tournament.format, command.courts, terminology.venuePlural),
+    );
+  }
+  working.tournament = {
+    ...tournament,
+    settings: { ...tournament.settings, courts: command.courts },
+  };
+  editRotation(working, (state, rules) => setCourts(state, rules, command.courts));
+};
+
+/**
+ * Swap two teams' places on a live rotation tournament: between courts,
+ * or between a court and the queue. Both must be in play, and neither court
+ * can have a match in progress.
+ */
+const swapTeams = (working: Working, command: Extract<EngineCommand, { type: "swap_teams" }>) => {
+  requireLive(working, "swap teams");
+  const { tournament } = working;
+  if (!isRotationFormat(tournament.format)) throw notRotation();
+  if (command.teamId === command.withTeamId) {
+    throw new EngineError("same_place", "Pick two different teams to swap.");
+  }
+  for (const teamId of [command.teamId, command.withTeamId]) {
+    const entry = tournament.entries.find((e) => e.teamId === teamId);
+    if (!entry) throw new EngineError("not_entered", "That team is not in this tournament.");
+    if (entry.withdrawnAt !== undefined) {
+      throw new EngineError("already_withdrawn", `${entry.name} has withdrawn.`);
+    }
+  }
+  editRotation(working, (state, rules) => {
+    const courtA = courtWith(state, command.teamId);
+    const courtB = courtWith(state, command.withTeamId);
+    if (!courtA && !courtB) {
+      throw new EngineError(
+        "same_place",
+        "Both teams are waiting in the queue. Reorder the queue instead.",
+      );
+    }
+    if (courtA && courtB && courtA.courtNumber === courtB.courtNumber) {
+      throw new EngineError("same_place", "Those teams are already on the same court.");
+    }
+    for (const court of [courtA, courtB]) {
+      if (court && openMatchOn(working.matches.values(), court.courtNumber)?.status === "in_progress") {
+        throw new EngineError(
+          "court_in_play",
+          `The match on ${tournament.settings.terminology.venue} ${court.courtNumber} is in play.`,
+        );
+      }
+    }
+    return swapPlaces(state, rules, command.teamId, command.withTeamId);
+  });
+};
+
+/** Move a waiting team to a place in the queue of a live rotation tournament. */
+const reorderQueue = (
+  working: Working,
+  command: Extract<EngineCommand, { type: "reorder_queue" }>,
+) => {
+  requireLive(working, "reorder its queue");
+  editRotation(working, (state) => {
+    if (!state.queue.includes(command.teamId)) {
+      throw new EngineError("not_in_queue", "That team is not in the queue.");
+    }
+    return moveInQueue(state, command.teamId, command.position);
+  });
+};
+
+const notRotation = () =>
+  new EngineError(
+    "unsupported_format",
+    "Only Win 2 & Out and Two Match Rotation have courts and a queue to arrange.",
+  );
+
+/**
+ * Run an edit on the rotation state of whichever rotation format the
+ * tournament is, then give the courts it opened, changed, or closed their
+ * matches.
+ */
+const editRotation = (
+  working: Working,
+  edit: <State extends RotationStateLike>(
+    state: State,
+    rules: RotationRules<State>,
+  ) => RotationEdit<State>,
+) => {
+  const { tournament } = working;
+  let edits: CourtEdits;
+  switch (tournament.format) {
+    case "win2out": {
+      if (!tournament.win2outState) throw notRotation();
+      const { state, ...rest } = edit(tournament.win2outState, WIN2OUT_RULES);
+      working.tournament = { ...tournament, win2outState: state };
+      edits = rest;
+      break;
+    }
+    case "two_match_rotation": {
+      if (!tournament.twoMatchRotationState) throw notRotation();
+      const { state, ...rest } = edit(tournament.twoMatchRotationState, TWO_MATCH_RULES);
+      working.tournament = { ...tournament, twoMatchRotationState: state };
+      edits = rest;
+      break;
+    }
+    default:
+      throw notRotation();
+  }
+  applyCourtEdits(working, edits);
+};
+
+/** The match waiting or being played on a court, if any: the newest open one placed there. */
+export const openMatchOn = (matches: Iterable<Match>, court: number): Match | undefined =>
+  [...matches]
+    .filter((m) => m.status !== "completed" && (m.court ?? m.position) === court)
+    .sort((a, b) => b.createdAt - a.createdAt)[0];
+
+/** A fresh match for a court's current pairing, numbered after the court's last. */
+const courtMatch = (working: Working, court: CourtLike): MatchDraft => {
+  const onCourt = [...working.matches.values()].filter(
+    (m) => (m.court ?? m.position) === court.courtNumber,
+  );
+  return {
+    homeTeamId: court.teamIds[0],
+    awayTeamId: court.teamIds[1],
+    homeScore: 0,
+    awayScore: 0,
+    status: "pending",
+    round: Math.max(0, ...onCourt.map((m) => m.round)) + 1,
+    position: court.courtNumber,
+    court: court.courtNumber,
+  };
+};
+
+/**
+ * A closed court loses its open match. A reteamed court's open match starts
+ * over with the new pairing, points and all. An opened court gets a match.
+ */
+const applyCourtEdits = (working: Working, edits: CourtEdits) => {
+  for (const court of edits.closed) {
+    const match = openMatchOn(working.matches.values(), court);
+    if (match) working.matches.delete(match.id);
+  }
+  for (const court of edits.reteamed) {
+    const match = openMatchOn(working.matches.values(), court.courtNumber);
+    if (!match) {
+      place(working, courtMatch(working, court));
+      continue;
+    }
+    working.matches.set(match.id, {
+      ...match,
+      homeTeamId: court.teamIds[0],
+      awayTeamId: court.teamIds[1],
+      status: "pending",
+      homeScore: 0,
+      awayScore: 0,
+    });
+  }
+  for (const court of edits.opened) place(working, courtMatch(working, court));
 };
 
 // ============================================

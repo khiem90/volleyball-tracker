@@ -17,6 +17,21 @@ import type { Match, Tournament } from "@/types/game";
 import { LiveTag, MatchRow, scoringHref, scoringLink } from "./MatchRow";
 import type { TeamLookup } from "./teamRefs";
 
+/** The court and queue controls an owner or scorer gets while a rotation tournament is live. */
+export interface CourtControls {
+  /** The team a swap has started from, if one has. */
+  swapping: string | null;
+  /** Start a swap from a team on a court, or finish one by naming the team to trade places with. */
+  onSwap: (teamId: string) => void;
+  onCancelSwap: () => void;
+  /** Move a waiting team to a place in the queue, counted from the front. */
+  onMove: (teamId: string, position: number) => void;
+  /** True while a court or queue edit is being saved. */
+  busy: boolean;
+}
+
+const SMALL_BUTTON = "mb-btn min-h-11 px-3 text-[0.66rem]";
+
 /** What a court card says under each team: streaks, titles, or where it is in its two-match run. */
 const teamNotes = (tournament: Tournament, court: CourtView, teamId: string): string[] => {
   const notes: string[] = [];
@@ -36,7 +51,39 @@ const teamNotes = (tournament: Tournament, court: CourtView, teamId: string): st
   return notes;
 };
 
-const CourtSide = ({ teamId, notes, team }: { teamId: string; notes: string[]; team: TeamLookup }) => {
+/**
+ * The Swap button under a team on a court. It starts a swap, finishes one
+ * by naming this team as the one to trade places with, or cancels the swap
+ * it started.
+ */
+const SwapButton = ({ teamId, controls }: { teamId: string; controls: CourtControls }) => {
+  const starting = controls.swapping === teamId;
+  return (
+    <button
+      type="button"
+      onClick={() => (starting ? controls.onCancelSwap() : controls.onSwap(teamId))}
+      disabled={controls.busy}
+      aria-pressed={starting}
+      className={`${SMALL_BUTTON} ${starting ? "mb-btn-outline" : "mb-btn-outline-navy"} mt-1`}
+    >
+      <MbIcon id="swap" size={12} />
+      {starting ? "Cancel" : controls.swapping ? "Swap here" : "Swap"}
+    </button>
+  );
+};
+
+const CourtSide = ({
+  teamId,
+  notes,
+  team,
+  swap,
+}: {
+  teamId: string;
+  notes: string[];
+  team: TeamLookup;
+  /** The swap controls, when this team can be swapped. */
+  swap?: CourtControls;
+}) => {
   const ref = team(teamId);
   return (
     <div className="flex min-w-0 flex-col items-center gap-1 text-center">
@@ -49,6 +96,7 @@ const CourtSide = ({ teamId, notes, team }: { teamId: string; notes: string[]; t
           {note}
         </span>
       ))}
+      {swap && <SwapButton teamId={teamId} controls={swap} />}
     </div>
   );
 };
@@ -59,19 +107,25 @@ const CourtCard = ({
   team,
   access,
   onInstantWin,
-  onEditMatch,
+  controls,
 }: {
   tournament: Tournament;
   court: CourtView;
   team: TeamLookup;
   access: ConsoleAccess;
   onInstantWin: (match: Match, winnerId: string) => void;
-  onEditMatch: (match: Match) => void;
+  controls: CourtControls | null;
 }) => {
   const match = court.match;
   const live = match?.status === "in_progress";
   const [homeId, awayId] = match ? [match.homeTeamId, match.awayTeamId] : court.teamIds;
   const instantWin = tournament.settings.instantWin && access.canScore && match;
+  // Teams can be swapped while the court's match is still waiting. A swap
+  // started from one side of a court cannot end on the other side of it.
+  const swapFor = (teamId: string, otherId: string) =>
+    controls !== null && match?.status === "pending" && controls.swapping !== otherId
+      ? controls
+      : undefined;
 
   return (
     <article className="flex flex-col border-[1.5px] border-mb-navy bg-mb-paper-bright">
@@ -79,22 +133,16 @@ const CourtCard = ({
         <span className="matchbook-display text-[0.8rem] font-bold tracking-[0.08em]">
           {courtLabel(tournament, court.court)}
         </span>
-        <span className="flex items-center gap-2">
-          {live ? <LiveTag /> : <span className="mb-kicker">{match ? "Waiting" : "Empty"}</span>}
-          {access.canEditCourts && match?.status === "pending" && (
-            <button
-              type="button"
-              onClick={() => onEditMatch(match)}
-              className="mb-btn mb-btn-outline-navy px-2 py-1 text-[0.66rem]"
-            >
-              Edit
-            </button>
-          )}
-        </span>
+        {live ? <LiveTag /> : <span className="mb-kicker">{match ? "Waiting" : "Empty"}</span>}
       </header>
 
       <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 px-3 py-3">
-        <CourtSide teamId={homeId} notes={teamNotes(tournament, court, homeId)} team={team} />
+        <CourtSide
+          teamId={homeId}
+          notes={teamNotes(tournament, court, homeId)}
+          team={team}
+          swap={swapFor(homeId, awayId)}
+        />
         <div className="flex flex-col items-center gap-1">
           {live && match ? (
             <span className="matchbook-display whitespace-nowrap text-3xl font-bold tabular-nums text-mb-coral">
@@ -104,7 +152,12 @@ const CourtCard = ({
             <span className="mb-score-box px-2 text-[0.7rem] tracking-[0.1em]">VS</span>
           )}
         </div>
-        <CourtSide teamId={awayId} notes={teamNotes(tournament, court, awayId)} team={team} />
+        <CourtSide
+          teamId={awayId}
+          notes={teamNotes(tournament, court, awayId)}
+          team={team}
+          swap={swapFor(awayId, homeId)}
+        />
       </div>
 
       {access.canScore && match && (
@@ -140,16 +193,35 @@ const CourtCard = ({
   );
 };
 
+/** The strip that says a swap is under way and how to finish or cancel it. */
+const SwapNotice = ({ teamName, onCancel }: { teamName: string; onCancel: () => void }) => (
+  <div
+    role="status"
+    className="flex items-center justify-between gap-3 border-b border-mb-rule bg-[rgba(238,75,52,0.06)] px-4 py-2"
+  >
+    <p className="text-[0.8rem]">
+      Swapping <span className="font-semibold">{teamName}</span>. Tap Swap here on the team to
+      trade places with.
+    </p>
+    <button type="button" onClick={onCancel} className={`${SMALL_BUTTON} mb-btn-outline-navy`}>
+      Cancel
+    </button>
+  </div>
+);
+
+/**
+ * The teams waiting for a court, first to play at the top. With controls,
+ * each row has up and down buttons that move the team one place, and while
+ * a swap is under way a button that brings the team onto that court.
+ */
 const Queue = ({
   queue,
   team,
-  canReorder,
-  onReorder,
+  controls,
 }: {
   queue: string[];
   team: TeamLookup;
-  canReorder: boolean;
-  onReorder: () => void;
+  controls: CourtControls | null;
 }) => (
   <div className="border-t border-mb-rule">
     <div className="flex items-center justify-between gap-2 px-4 py-2">
@@ -157,30 +229,56 @@ const Queue = ({
         Queue
         <span className="ml-2 text-mb-ink-muted">{queue.length}</span>
       </span>
-      {canReorder && queue.length > 1 && (
-        <button
-          type="button"
-          onClick={onReorder}
-          className="mb-btn mb-btn-outline-navy px-2.5 py-1 text-[0.66rem]"
-        >
-          <MbIcon id="swap" size={12} />
-          Reorder
-        </button>
-      )}
     </div>
     {queue.length === 0 ? (
       <p className="px-4 pb-3 text-[0.8rem] text-mb-ink-muted">Every team is on a court.</p>
     ) : (
       <ol className="flex flex-col divide-y divide-mb-rule border-t border-mb-rule">
-        {queue.map((teamId, i) => (
-          <li key={`${teamId}-${i}`} className="flex min-h-11 items-center gap-3 px-4 py-1.5">
-            <span className="matchbook-display w-5 text-center text-[0.8rem] font-bold tabular-nums text-mb-ink-muted">
-              {i + 1}
-            </span>
-            <TeamMark team={team(teamId)} size={20} />
-            {i === 0 && <span className="mb-kicker ml-auto text-mb-coral">Next up</span>}
-          </li>
-        ))}
+        {queue.map((teamId, i) => {
+          const ref = team(teamId);
+          return (
+            <li key={teamId} className="flex min-h-11 items-center gap-2 px-4 py-1">
+              <span className="matchbook-display w-5 shrink-0 text-center text-[0.8rem] font-bold tabular-nums text-mb-ink-muted">
+                {i + 1}
+              </span>
+              <TeamMark team={ref} size={20} className="min-w-0 flex-1" />
+              {i === 0 && <span className="mb-kicker shrink-0 text-mb-coral">Next up</span>}
+              {controls &&
+                (controls.swapping ? (
+                  <button
+                    type="button"
+                    onClick={() => controls.onSwap(teamId)}
+                    disabled={controls.busy}
+                    className={`${SMALL_BUTTON} mb-btn-outline-navy shrink-0`}
+                  >
+                    <MbIcon id="swap" size={12} />
+                    Swap here
+                  </button>
+                ) : (
+                  <span className="flex shrink-0 gap-1">
+                    <button
+                      type="button"
+                      onClick={() => controls.onMove(teamId, i - 1)}
+                      disabled={controls.busy || i === 0}
+                      aria-label={`Move ${ref.name} up`}
+                      className="mb-btn mb-btn-outline-navy min-h-11 min-w-11 px-2"
+                    >
+                      <MbIcon id="chevron-down" size={14} className="rotate-180" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => controls.onMove(teamId, i + 1)}
+                      disabled={controls.busy || i === queue.length - 1}
+                      aria-label={`Move ${ref.name} down`}
+                      className="mb-btn mb-btn-outline-navy min-h-11 min-w-11 px-2"
+                    >
+                      <MbIcon id="chevron-down" size={14} />
+                    </button>
+                  </span>
+                ))}
+            </li>
+          );
+        })}
       </ol>
     )}
   </div>
@@ -218,8 +316,10 @@ const MatchList = ({
 
 /**
  * The Courts tab. Rotation formats show each court with the match on it and
- * the queue behind them; the other formats show what is live and what is
- * ready to play. Tapping a match opens scoring for an owner or scorer.
+ * the queue behind them, with tap controls to swap teams and reorder the
+ * queue for anyone who may arrange the courts; the other formats show what
+ * is live and what is ready to play. Tapping a match opens scoring for an
+ * owner or scorer.
  */
 export const CourtsPanel = ({
   tournament,
@@ -227,25 +327,27 @@ export const CourtsPanel = ({
   team,
   access,
   onInstantWin,
-  onEditMatch,
-  onReorderQueue,
+  controls: offered,
 }: {
   tournament: Tournament;
   view: CourtsView;
   team: TeamLookup;
   access: ConsoleAccess;
   onInstantWin: (match: Match, winnerId: string) => void;
-  onEditMatch: (match: Match) => void;
-  onReorderQueue: () => void;
+  controls: CourtControls;
 }) => {
   const courts = courtsWord(tournament, 2);
   const title = capitalize(courts);
   const draft = tournament.status === "draft";
+  const controls = access.canEditCourts ? offered : null;
 
   if (view.kind === "rotation") {
     const live = view.courts.filter((c) => c.match?.status === "in_progress").length;
     return (
       <Panel title={title} meta={live > 0 ? <LiveTag /> : undefined}>
+        {controls?.swapping && (
+          <SwapNotice teamName={team(controls.swapping).name} onCancel={controls.onCancelSwap} />
+        )}
         {draft ? (
           <PanelEmpty message={`Start the tournament to open the ${courts}.`} />
         ) : view.courts.length === 0 ? (
@@ -260,19 +362,12 @@ export const CourtsPanel = ({
                 team={team}
                 access={access}
                 onInstantWin={onInstantWin}
-                onEditMatch={onEditMatch}
+                controls={controls}
               />
             ))}
           </div>
         )}
-        {!draft && (
-          <Queue
-            queue={view.queue}
-            team={team}
-            canReorder={access.canEditCourts}
-            onReorder={onReorderQueue}
-          />
-        )}
+        {!draft && <Queue queue={view.queue} team={team} controls={controls} />}
       </Panel>
     );
   }

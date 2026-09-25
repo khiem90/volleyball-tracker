@@ -15,7 +15,7 @@ All the teams an account has created, kept between tournaments.
 _Avoid_: Team directory, team list
 
 **Withdraw**:
-Take a team out of a live tournament. Its remaining matches are forfeited and its played results stay.
+Take a team out of a live tournament. Its remaining matches are forfeited and its played results stay. In Win 2 & Out and Two Match Rotation, which schedule one match per court at a time, the team leaves the queue or its court instead: a match it is in is abandoned, the team it was playing stays on, and the next team in the queue comes on. A withdrawn team can be added again and rejoins at the back of the queue with its record kept.
 _Avoid_: Remove, delete (for a team in a live tournament)
 
 **Forfeit**:
@@ -73,6 +73,10 @@ _Avoid_: Waiting list, line
 **Champion**:
 In Win 2 & Out, a team that has just won two matches in a row on a court. It goes to the queue behind the team it beat, and the tournament counts how many times each team has been champion.
 _Avoid_: Crown, king of the court
+
+**Swap**:
+Trading the places of two teams in a live Win 2 & Out or Two Match Rotation tournament: between two courts, or between a court and the queue. A team keeps its run when it goes to another court, and starts over when it goes to the queue.
+_Avoid_: Exchange, edit match, move (for a team changing court)
 
 ### Matches
 

@@ -33,7 +33,6 @@ import {
   subscribeToAccountMatches,
   subscribeToTournaments,
   updateMatch as updateTournamentMatch,
-  updateTournament as updateTournamentDoc,
   type CreateTournamentOptions,
   type NewTournamentInput,
 } from "@/lib/tournaments";
@@ -42,8 +41,8 @@ import { buildQuickMatch, saveQuickMatch, updateQuickMatch } from "@/lib/quickMa
 /**
  * The app-wide provider: a thin layer over three live Firestore subscriptions,
  * roster, tournaments, and matches, plus the domain actions. Format rules live
- * in the engine. The court and queue edits at the bottom still shape the
- * tournament document here; ticket 09 moves them into engine commands.
+ * in the engine: every change to a started tournament is an engine command
+ * applied in a transaction.
  */
 
 export interface MatchResult {
@@ -108,7 +107,6 @@ interface AppContextValue {
    * teams. Resolves with the draft's id as soon as the local write is issued.
    */
   duplicateTournament: (id: string) => Promise<string>;
-  updateTournament: (tournament: Tournament) => Promise<void>;
   deleteTournament: (id: string) => Promise<void>;
   startTournament: (id: string, byeTeamIds?: string[]) => Promise<void>;
   endTournament: (id: string) => Promise<void>;
@@ -125,13 +123,17 @@ interface AppContextValue {
   /** Take back the last result on a court of a rotation tournament. */
   undoResult: (tournamentId: string, matchId: string) => Promise<void>;
   getMatchById: (id: string) => Match | undefined;
-  // Court and queue management for rotation formats
-  updateMatchTeams: (matchId: string, homeTeamId: string, awayTeamId: string) => void;
-  swapMatchTeams: (
-    updates: { matchId: string; homeTeamId: string; awayTeamId: string }[]
-  ) => void;
-  swapCourtTeams: (tournamentId: string, court1: number, court2: number) => void;
-  reorderQueue: (tournamentId: string, newQueue: string[]) => void;
+  // Teams, courts, and the queue of a live tournament
+  /** Enter a roster team into a live tournament. In a rotation format it joins the back of the queue. */
+  addTeamToTournament: (tournamentId: string, team: PersistentTeam) => Promise<void>;
+  /** Withdraw a team from a live tournament. Its played results stay. */
+  withdrawTeam: (tournamentId: string, teamId: string) => Promise<void>;
+  /** Change how many courts a live rotation tournament runs. */
+  changeCourts: (tournamentId: string, courts: number) => Promise<void>;
+  /** Swap two teams' places: between courts, or between a court and the queue. */
+  swapTeams: (tournamentId: string, teamId: string, withTeamId: string) => Promise<void>;
+  /** Move a waiting team to a place in the queue, counted from the front. */
+  reorderQueue: (tournamentId: string, teamId: string, position: number) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -337,17 +339,6 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     [createTournament, tournamentsById, state.teams]
   );
 
-  // Guarded on the revision this provider's state was built from, so a queue
-  // reorder or an undo can never paper over a result another court just saved.
-  const updateTournament = useCallback(
-    async (tournament: Tournament) => {
-      const current = tournamentsById.get(tournament.id);
-      if (!current) throw new Error("That tournament no longer exists.");
-      await updateTournamentDoc(requireAccount().db, tournament, current.revision);
-    },
-    [requireAccount, tournamentsById]
-  );
-
   const deleteTournament = useCallback(
     async (id: string) => {
       await deleteTournamentDoc(requireAccount().db, id);
@@ -491,162 +482,61 @@ export const AppProvider = ({ children }: AppProviderProps) => {
   const getMatchById = useCallback((id: string) => matchesById.get(id), [matchesById]);
 
   // ============================================
-  // Courts and queues (rotation formats)
+  // Teams, courts, and the queue (live tournaments)
   // ============================================
 
-  const updateMatchTeams = useCallback(
-    (matchId: string, homeTeamId: string, awayTeamId: string) => {
-      const match = matchesById.get(matchId);
-      if (!match) return;
-      writeMatch(matchId, { homeTeamId, awayTeamId });
-
-      const tournament = match.tournamentId ? tournamentsById.get(match.tournamentId) : undefined;
-      if (!tournament) return;
-
-      // Swap the incoming and outgoing teams between the court and the queue.
-      const oldTeams = [match.homeTeamId, match.awayTeamId];
-      const newTeams = [homeTeamId, awayTeamId];
-      const removed = oldTeams.filter((t) => !newTeams.includes(t));
-      const added = newTeams.filter((t) => !oldTeams.includes(t));
-      const swapInQueue = (queue: string[]): string[] => {
-        const next = [...queue];
-        added.forEach((team, i) => {
-          const leaving = removed[i];
-          const index = next.indexOf(team);
-          if (index !== -1 && leaving) next[index] = leaving;
-          else if (index !== -1) next.splice(index, 1);
-          else if (leaving && !next.includes(leaving)) next.push(leaving);
-        });
-        removed.slice(added.length).forEach((team) => {
-          if (!next.includes(team)) next.push(team);
-        });
-        return next;
-      };
-      const isCourtOfMatch = (court: { teamIds: [string, string] }) =>
-        court.teamIds.includes(match.homeTeamId) && court.teamIds.includes(match.awayTeamId);
-
-      let updated = tournament;
-      if (tournament.win2outState) {
-        const courts = tournament.win2outState.courts.map((court) =>
-          isCourtOfMatch(court) ? { ...court, teamIds: [homeTeamId, awayTeamId] as [string, string] } : court
-        );
-        updated = {
-          ...updated,
-          win2outState: {
-            ...tournament.win2outState,
-            courts,
-            queue: swapInQueue(tournament.win2outState.queue),
-          },
-        };
-      }
-      if (tournament.twoMatchRotationState) {
-        const courts = tournament.twoMatchRotationState.courts.map((court) =>
-          isCourtOfMatch(court) ? { ...court, teamIds: [homeTeamId, awayTeamId] as [string, string] } : court
-        );
-        updated = {
-          ...updated,
-          twoMatchRotationState: {
-            ...tournament.twoMatchRotationState,
-            courts,
-            queue: swapInQueue(tournament.twoMatchRotationState.queue),
-          },
-        };
-      }
-      if (updated !== tournament) {
-        updateTournament(updated).catch(logFailure("update courts"));
-      }
-    },
-    [matchesById, tournamentsById, writeMatch, updateTournament]
-  );
-
-  const swapMatchTeams = useCallback(
-    (updates: { matchId: string; homeTeamId: string; awayTeamId: string }[]) => {
-      updates.forEach(({ matchId, homeTeamId, awayTeamId }) => {
-        writeMatch(matchId, { homeTeamId, awayTeamId });
+  // Each of these is an engine command applied in a transaction, so an edit
+  // built on a stale copy is applied again on the fresh one rather than
+  // papering over a result a court saved in the meantime.
+  const addTeamToTournament = useCallback(
+    async (tournamentId: string, team: PersistentTeam) => {
+      await applyTournamentCommand(requireAccount().db, tournamentId, {
+        type: "add_team",
+        teamId: team.id,
+        name: team.name,
+        ...(team.color !== undefined && { color: team.color }),
       });
     },
-    [writeMatch]
+    [requireAccount]
   );
 
-  const swapCourtTeams = useCallback(
-    (tournamentId: string, court1: number, court2: number) => {
-      const tournament = tournamentsById.get(tournamentId);
-      if (!tournament) return;
-
-      const openMatchOnCourt = (courtNumber: number) =>
-        state.matches.find(
-          (m) =>
-            m.tournamentId === tournamentId &&
-            m.status !== "completed" &&
-            (m.court ?? m.position) === courtNumber
-        );
-
-      const swapCourts = <T extends { courtNumber: number; teamIds: [string, string] }>(
-        courts: T[]
-      ): T[] | null => {
-        const first = courts.findIndex((c) => c.courtNumber === court1);
-        const second = courts.findIndex((c) => c.courtNumber === court2);
-        if (first === -1 || second === -1) return null;
-        const swapped = [...courts];
-        swapped[first] = { ...courts[first], teamIds: courts[second].teamIds };
-        swapped[second] = { ...courts[second], teamIds: courts[first].teamIds };
-        return swapped;
-      };
-
-      let updated = tournament;
-      let courtsAfter: { courtNumber: number; teamIds: [string, string] }[] | null = null;
-      if (tournament.win2outState) {
-        courtsAfter = swapCourts(tournament.win2outState.courts);
-        if (courtsAfter) {
-          updated = {
-            ...updated,
-            win2outState: { ...tournament.win2outState, courts: courtsAfter as typeof tournament.win2outState.courts },
-          };
-        }
-      }
-      if (tournament.twoMatchRotationState) {
-        courtsAfter = swapCourts(tournament.twoMatchRotationState.courts);
-        if (courtsAfter) {
-          updated = {
-            ...updated,
-            twoMatchRotationState: {
-              ...tournament.twoMatchRotationState,
-              courts: courtsAfter as typeof tournament.twoMatchRotationState.courts,
-            },
-          };
-        }
-      }
-      if (!courtsAfter) return;
-
-      for (const courtNumber of [court1, court2]) {
-        const court = courtsAfter.find((c) => c.courtNumber === courtNumber);
-        const match = openMatchOnCourt(courtNumber);
-        if (court && match) {
-          writeMatch(match.id, { homeTeamId: court.teamIds[0], awayTeamId: court.teamIds[1] });
-        }
-      }
-      updateTournament(updated).catch(logFailure("swap courts"));
+  const withdrawTeam = useCallback(
+    async (tournamentId: string, teamId: string) => {
+      await applyTournamentCommand(requireAccount().db, tournamentId, { type: "withdraw", teamId });
     },
-    [tournamentsById, state.matches, writeMatch, updateTournament]
+    [requireAccount]
+  );
+
+  const changeCourts = useCallback(
+    async (tournamentId: string, courts: number) => {
+      await applyTournamentCommand(requireAccount().db, tournamentId, {
+        type: "change_courts",
+        courts,
+      });
+    },
+    [requireAccount]
+  );
+
+  const swapTeams = useCallback(
+    async (tournamentId: string, teamId: string, withTeamId: string) => {
+      await applyTournamentCommand(requireAccount().db, tournamentId, {
+        type: "swap_teams",
+        teamId,
+        withTeamId,
+      });
+    },
+    [requireAccount]
   );
 
   const reorderQueue = useCallback(
-    (tournamentId: string, newQueue: string[]) => {
-      const tournament = tournamentsById.get(tournamentId);
-      if (!tournament) return;
-      let updated = tournament;
-      if (tournament.win2outState) {
-        updated = { ...updated, win2outState: { ...tournament.win2outState, queue: newQueue } };
-      }
-      if (tournament.twoMatchRotationState) {
-        updated = {
-          ...updated,
-          twoMatchRotationState: { ...tournament.twoMatchRotationState, queue: newQueue },
-        };
-      }
-      updateTournament(updated).catch(logFailure("reorder queue"));
+    async (tournamentId: string, teamId: string, position: number) => {
+      await applyTournamentCommand(requireAccount().db, tournamentId, {
+        type: "reorder_queue",
+        teamId,
+        position,
+      });
     },
-    [tournamentsById, updateTournament]
+    [requireAccount]
   );
 
   const value: AppContextValue = {
@@ -664,7 +554,6 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     createTournament,
     renameTournament,
     duplicateTournament,
-    updateTournament,
     deleteTournament,
     startTournament,
     endTournament,
@@ -678,9 +567,10 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     instantWin,
     undoResult,
     getMatchById,
-    updateMatchTeams,
-    swapMatchTeams,
-    swapCourtTeams,
+    addTeamToTournament,
+    withdrawTeam,
+    changeCourts,
+    swapTeams,
     reorderQueue,
   };
 

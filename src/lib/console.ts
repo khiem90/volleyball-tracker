@@ -3,6 +3,7 @@ import {
   getDoubleElimRoundName,
   getTotalWinnersRounds,
 } from "@/lib/doubleElimination";
+import { openMatchOn } from "@/lib/engine";
 import { isBracketFormat, isRotationFormat } from "@/lib/formats";
 import { calculateStandings } from "@/lib/roundRobin";
 import { getRoundName, getTotalRounds } from "@/lib/singleElimination";
@@ -98,8 +99,6 @@ export type CourtsView =
 const rotationState = (tournament: Tournament) =>
   tournament.win2outState ?? tournament.twoMatchRotationState;
 
-const isOpen = (match: Match) => match.status !== "completed";
-
 /** A match a scorer could open: both teams known and not decided by a bye. */
 export const isPlayable = (match: Match): boolean =>
   match.homeTeamId !== "" && match.awayTeamId !== "" && match.isBye !== true;
@@ -111,12 +110,6 @@ export const byPlayOrder = (a: Match, b: Match): number =>
   SIDE_ORDER[a.bracket ?? "winners"] - SIDE_ORDER[b.bracket ?? "winners"] ||
   a.round - b.round ||
   a.position - b.position;
-
-/** The match waiting or being played on a court: the newest open one placed there. */
-const openMatchOn = (matches: Match[], court: number): Match | null =>
-  matches
-    .filter((m) => isOpen(m) && (m.court ?? m.position) === court)
-    .sort((a, b) => b.createdAt - a.createdAt)[0] ?? null;
 
 /**
  * What the Courts tab shows. For rotation formats that is each court with
@@ -133,7 +126,7 @@ export const courtsView = (tournament: Tournament, matches: Match[]): CourtsView
       .map((court) => ({
         court: court.courtNumber,
         teamIds: court.teamIds,
-        match: openMatchOn(matches, court.courtNumber),
+        match: openMatchOn(matches, court.courtNumber) ?? null,
       }));
     return { kind: "rotation", courts, queue: [...state.queue] };
   }
