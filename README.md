@@ -24,7 +24,7 @@ A modern web application for organizing and tracking matches, tournaments, and c
 - **Two Match Rotation** - Multi-court format with team rotation
 
 ### Tournament Management
-- Multi-step competition creation wizard
+- One-page tournament creation: format, name, teams with inline add, and advanced settings, then save as a draft or create and start
 - Customizable scoring rules (points for win/tie/loss)
 - Best-of series match support
 - Multiple court configuration

@@ -12,7 +12,12 @@ import {
   initializeTwoMatchRotationState,
   processMatchResult as processRotationResult,
 } from "@/lib/twoMatchRotation";
-import { formatLabel, isBracketFormat, isRotationFormat, minimumTeams } from "@/lib/formats";
+import {
+  isBracketFormat,
+  isRotationFormat,
+  minimumTeams,
+  minimumTeamsMessage,
+} from "@/lib/formats";
 import { advance, bracketChampion, resolveByes } from "./brackets";
 import {
   canUndo,
@@ -134,11 +139,11 @@ const start = (working: Working, byeTeamIds?: string[]) => {
     throw new EngineError("not_draft", "Only a draft tournament can be started.");
   }
   const teamIds = activeTeamIds(tournament);
-  const minimum = minimumTeams(tournament.format, tournament.settings.courts);
-  if (teamIds.length < minimum) {
+  const { courts, terminology } = tournament.settings;
+  if (teamIds.length < minimumTeams(tournament.format, courts)) {
     throw new EngineError(
       "too_few_teams",
-      `${formatLabel(tournament.format)} needs at least ${minimum} teams.`,
+      minimumTeamsMessage(tournament.format, courts, terminology.venuePlural),
     );
   }
 

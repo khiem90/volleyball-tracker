@@ -1,23 +1,14 @@
 import { useState, useCallback } from "react";
 import { useApp } from "@/context/AppContext";
 import { planTeamDeletion, type TeamDeletionPlan } from "@/lib/entries";
-import { parseTeamNames, type AddedTeams, type DeletedTeams } from "@/lib/roster";
+import type { DeletedTeams } from "@/lib/roster";
 import type { PersistentTeam } from "@/types/game";
 
 export const useTeamsPage = () => {
-  const { state, isRosterLoading, rosterError, addTeams, updateTeam, deleteTeams } = useApp();
+  const { state, isRosterLoading, rosterError, addTeamsFromText, updateTeam, deleteTeams } =
+    useApp();
   const [formOpen, setFormOpen] = useState(false);
   const [editingTeam, setEditingTeam] = useState<PersistentTeam | null>(null);
-
-  /** Add one team per line of the text, each with a color the roster uses least. */
-  const addTeamsFromText = useCallback(
-    (text: string): AddedTeams => {
-      const { teams, alreadyOnRoster } = parseTeamNames(text, state.teams);
-      const added = teams.length > 0 ? addTeams(teams) : [];
-      return { added, alreadyOnRoster };
-    },
-    [state.teams, addTeams]
-  );
 
   const handleEditTeam = useCallback((team: PersistentTeam) => {
     setEditingTeam(team);

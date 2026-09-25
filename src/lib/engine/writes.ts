@@ -67,6 +67,10 @@ export const diffMatchWrites = (before: Match[], after: Map<string, Match>): Mat
   return writes;
 };
 
+/** The matches the writes create, in the order the engine made them. */
+export const createdMatches = (writes: MatchWrite[]): Match[] =>
+  writes.flatMap((write) => (write.kind === "create" ? [write.match] : []));
+
 /** Fold writes into a match list, the way the database would. */
 export const applyMatchWrites = (matches: Match[], writes: MatchWrite[]): Match[] => {
   let result = matches.map((m) => ({ ...m }));

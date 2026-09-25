@@ -434,6 +434,61 @@ describeFirestoreRules("Tournaments on Firestore", (env) => {
       expect((await tournamentDocOf(db, source.id)).status).toBe("completed");
     });
 
+    it("creating and starting in one go writes a live tournament with its first matches", async () => {
+      const db = modularFirestore(env().authenticatedContext(owner));
+
+      const created = await createTournament(db, owner, input("round_robin"), { start: true });
+
+      const stored = await tournamentDocOf(db, created.id);
+      expect(stored).toMatchObject({
+        ownerId: owner,
+        name: "Tuesday night",
+        format: "round_robin",
+        status: "live",
+        teamIds: ["t1", "t2", "t3", "t4"],
+      });
+      expect(stored.startedAt).toBe(stored.createdAt);
+      const matches = await matchDocsOf(db, created.id);
+      expect(matches).toHaveLength(6);
+      expect(matches.every((m) => m.ownerId === owner && m.tournamentId === created.id)).toBe(true);
+      expect(matches.every((m) => m.status === "pending")).toBe(true);
+    });
+
+    it("creating and starting a rotation tournament writes its format state and one match per court", async () => {
+      const db = modularFirestore(env().authenticatedContext(owner));
+
+      const created = await createTournament(db, owner, rotationInput("win2out"), { start: true });
+
+      const stored = await tournamentDocOf(db, created.id);
+      expect(stored.status).toBe("live");
+      expect(stored.win2outState).toMatchObject({
+        numberOfCourts: 2,
+        queue: ["t5", "t6"],
+        courts: [
+          { courtNumber: 1, teamIds: ["t1", "t2"] },
+          { courtNumber: 2, teamIds: ["t3", "t4"] },
+        ],
+      });
+      const matches = await matchDocsOf(db, created.id);
+      expect(matches.map((m) => [m.court, m.homeTeamId, m.awayTeamId, m.status]).sort()).toEqual([
+        [1, "t1", "t2", "pending"],
+        [2, "t3", "t4", "pending"],
+      ]);
+    });
+
+    it("a start the engine refuses is rejected before anything is written", async () => {
+      const db = modularFirestore(env().authenticatedContext(owner));
+
+      await expect(
+        createTournament(db, owner, { ...input("round_robin"), teams: roster.slice(0, 2) }, { start: true }),
+      ).rejects.toThrow(/needs at least 3 teams/);
+
+      await env().withSecurityRulesDisabled(async (unrestricted) => {
+        const raw = modularFirestore(unrestricted);
+        expect((await getDocs(collection(raw, "tournaments"))).size).toBe(0);
+      });
+    });
+
     it("deleting a tournament removes it and its matches", async () => {
       const db = modularFirestore(env().authenticatedContext(owner));
       const created = await createTournament(db, owner, input("round_robin"));

@@ -249,7 +249,7 @@ export default function CompetitionsPage() {
                 )}
                 <Link href="/competitions/new" className="mb-btn mb-btn-coral">
                   <MbIcon id="plus" size={14} />
-                  New Competition
+                  New Tournament
                 </Link>
                 <Link
                   href="/login"
@@ -284,7 +284,7 @@ export default function CompetitionsPage() {
                   {data.rows.length === 0 ? (
                     <PanelEmpty
                       message="No competitions exist yet — create a tournament, round robin, or league to get started."
-                      actionLabel="New competition"
+                      actionLabel="New tournament"
                       href="/competitions/new"
                     />
                   ) : (
@@ -402,7 +402,7 @@ export default function CompetitionsPage() {
                   <Panel title="Championship Bracket">
                     <PanelEmpty
                       message="No bracket exists yet — create a competition to see it here."
-                      actionLabel="New competition"
+                      actionLabel="New tournament"
                       href="/competitions/new"
                     />
                   </Panel>

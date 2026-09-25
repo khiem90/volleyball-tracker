@@ -22,6 +22,7 @@ import {
   type EngineResult,
   type MatchWrite,
 } from "@/lib/engine";
+import { createdMatches } from "@/lib/engine/writes";
 import {
   isOffline,
   lostRace,
@@ -147,15 +148,75 @@ export const saveTournament = async (db: Firestore, tournament: Tournament): Pro
   await setDoc(tournamentDoc(db, tournament.id), stripUndefined(tournament));
 };
 
-/** Build and save a draft. Resolves once the server has accepted the write. */
+export interface CreateTournamentOptions {
+  /** Start the tournament as it is created, so it goes out live with its first matches. */
+  start?: boolean;
+}
+
+/** A tournament and the matches it is saved with: none for a draft, its first ones when started. */
+export interface TournamentToSave {
+  tournament: Tournament;
+  matches: Match[];
+}
+
+/**
+ * A new tournament ready to save: a draft, or with `start` that draft
+ * already started, live with its first matches. The engine runs here on
+ * the draft rather than after a save, so nothing is read back and a phone
+ * with no signal can create and start a tournament. A bracket whose team
+ * count is not a power of two starts with its lowest seeds playing in.
+ * Throws the engine's error, before anything is written, when the format
+ * cannot start with these teams.
+ */
+export const buildTournamentToSave = (
+  db: Firestore,
+  uid: string,
+  input: NewTournamentInput,
+  options: CreateTournamentOptions = {},
+): TournamentToSave => {
+  const draft = buildTournament(db, uid, input);
+  if (!options.start) return { tournament: draft, matches: [] };
+  const result = applyCommand(
+    { tournament: draft, matches: [] },
+    { type: "start" },
+    { now: draft.createdAt, newId: () => doc(matchesCollection(db, draft.id)).id },
+  );
+  return { tournament: result.tournament, matches: createdMatches(result.matchWrites) };
+};
+
+/**
+ * Save a new tournament with its matches. The match rules read the stored
+ * tournament, so it goes out first in its own write and the matches follow
+ * in one batch; the client sends writes in the order they were issued, so
+ * the server has the tournament before it checks a match against it. Both
+ * are queued when offline. Resolves once the server has accepted them.
+ */
+export const saveTournamentAndMatches = async (
+  db: Firestore,
+  { tournament, matches }: TournamentToSave,
+): Promise<void> => {
+  const saved = saveTournament(db, tournament);
+  if (matches.length === 0) return saved;
+  const batch = writeBatch(db);
+  for (const match of matches) {
+    batch.set(matchDoc(db, tournament.id, match.id), stripUndefined(match));
+  }
+  await Promise.all([saved, batch.commit()]);
+};
+
+/**
+ * Build and save a draft, or with `start` a tournament that is already
+ * live. Resolves once the server has accepted the write.
+ */
 export const createTournament = async (
   db: Firestore,
   uid: string,
   input: NewTournamentInput,
+  options: CreateTournamentOptions = {},
 ): Promise<Tournament> => {
-  const tournament = buildTournament(db, uid, input);
-  await saveTournament(db, tournament);
-  return tournament;
+  const built = buildTournamentToSave(db, uid, input, options);
+  await saveTournamentAndMatches(db, built);
+  return built.tournament;
 };
 
 /**
@@ -402,9 +463,7 @@ export const applyTournamentCommand = async (
     return {
       tournament,
       matchWrites: result.matchWrites,
-      createdMatchIds: result.matchWrites
-        .filter((w): w is Extract<MatchWrite, { kind: "create" }> => w.kind === "create")
-        .map((w) => w.match.id),
+      createdMatchIds: createdMatches(result.matchWrites).map((match) => match.id),
     };
   }
 

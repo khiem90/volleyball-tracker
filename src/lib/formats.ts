@@ -45,3 +45,18 @@ export const isSeriesFormat = (format: TournamentFormat): boolean =>
 /** Teams needed to start, given the courts a rotation tournament will run. */
 export const minimumTeams = (format: TournamentFormat, courts = 1): number =>
   Math.max(FORMATS[format].minTeams, isRotationFormat(format) ? courts * 2 : 0);
+
+/**
+ * Why a tournament cannot start with the teams it has: "Round Robin needs
+ * at least 3 teams.", or for a rotation format on several courts "Win 2 &
+ * Out on 2 courts needs at least 4 teams.", in the tournament's own word
+ * for its courts.
+ */
+export const minimumTeamsMessage = (
+  format: TournamentFormat,
+  courts: number,
+  courtsWord: string,
+): string => {
+  const where = isRotationFormat(format) && courts > 1 ? ` on ${courts} ${courtsWord}` : "";
+  return `${formatLabel(format)}${where} needs at least ${minimumTeams(format, courts)} teams.`;
+};

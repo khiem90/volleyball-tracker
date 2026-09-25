@@ -15,23 +15,26 @@ import { db } from "@/lib/firebase";
 import {
   buildRosterTeam,
   deleteRosterTeams,
+  parseTeamNames,
   saveRosterTeams,
   subscribeToRoster,
   updateRosterTeam,
+  type AddedTeams,
   type DeletedTeams,
   type TeamInput,
 } from "@/lib/roster";
 import {
   applyTournamentCommand,
-  buildTournament,
+  buildTournamentToSave,
   deleteTournament as deleteTournamentDoc,
   duplicateInput,
   renameTournament as renameTournamentDoc,
-  saveTournament,
+  saveTournamentAndMatches,
   subscribeToAccountMatches,
   subscribeToTournaments,
   updateMatch as updateTournamentMatch,
   updateTournament as updateTournamentDoc,
+  type CreateTournamentOptions,
   type NewTournamentInput,
 } from "@/lib/tournaments";
 import { buildQuickMatch, saveQuickMatch, updateQuickMatch } from "@/lib/quickMatches";
@@ -70,6 +73,11 @@ interface AppContextValue {
    * while the save goes on in the background; offline it completes on reconnect.
    */
   addTeams: (inputs: TeamInput[]) => PersistentTeam[];
+  /**
+   * Add one team per line of the text, each with a color the roster uses
+   * least, and say which names the roster already had. Saves like addTeams.
+   */
+  addTeamsFromText: (text: string) => AddedTeams;
   /** Rename or recolor a team; its entries in draft and live tournaments follow. */
   updateTeam: (id: string, name: string, color?: string) => void;
   /**
@@ -79,7 +87,16 @@ interface AppContextValue {
   deleteTeams: (ids: string[]) => Promise<DeletedTeams>;
   getTeamById: (id: string) => PersistentTeam | undefined;
   // Tournament actions
-  createTournament: (input: NewTournamentInput) => Promise<string>;
+  /**
+   * Create a draft, or with `start` a tournament that is live from the
+   * moment it exists. Resolves with the id as soon as the local write is
+   * issued; rejects, with nothing written, when the format cannot start
+   * with these teams.
+   */
+  createTournament: (
+    input: NewTournamentInput,
+    options?: CreateTournamentOptions
+  ) => Promise<string>;
   /**
    * Rename a tournament. The new name shows at once from the local cache;
    * the promise settles when the server has the write, and rejects if the
@@ -247,6 +264,15 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     [requireAccount]
   );
 
+  const addTeamsFromText = useCallback(
+    (text: string): AddedTeams => {
+      const { teams, alreadyOnRoster } = parseTeamNames(text, state.teams);
+      const added = teams.length > 0 ? addTeams(teams) : [];
+      return { added, alreadyOnRoster };
+    },
+    [state.teams, addTeams]
+  );
+
   // The tournaments go along so the write can reach the team's entries in
   // the ones that are a draft or live.
   const updateTeam = useCallback(
@@ -278,13 +304,14 @@ export const AppProvider = ({ children }: AppProviderProps) => {
 
   // The id is known before the write, and the subscription shows the new
   // tournament from the local cache at once, so nobody waits for the server.
-  // A phone with no signal can still set up a tournament.
+  // A phone with no signal can still set up a tournament, and start it: the
+  // engine runs here on the draft, so there is nothing to read back.
   const createTournament = useCallback(
-    async (input: NewTournamentInput) => {
+    async (input: NewTournamentInput, options?: CreateTournamentOptions) => {
       const account = requireAccount();
-      const tournament = buildTournament(account.db, account.uid, input);
-      saveTournament(account.db, tournament).catch(logFailure("save tournament"));
-      return tournament.id;
+      const built = buildTournamentToSave(account.db, account.uid, input, options);
+      saveTournamentAndMatches(account.db, built).catch(logFailure("save tournament"));
+      return built.tournament.id;
     },
     [requireAccount]
   );
@@ -630,6 +657,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     isTournamentsLoading: tournaments === null || matches === null,
     tournamentsError,
     addTeams,
+    addTeamsFromText,
     updateTeam,
     deleteTeams,
     getTeamById,

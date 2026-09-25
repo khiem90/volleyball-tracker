@@ -17,12 +17,10 @@ import {
 } from "@/lib/console";
 import { entryTeams } from "@/lib/entries";
 import { isBracketFormat } from "@/lib/formats";
+import { messageOf } from "@/lib/utils";
 import type { Match } from "@/types/game";
 import { consoleTabs, type ConsoleTab } from "./ConsoleTabs";
 import { teamLookup } from "./teamRefs";
-
-const messageOf = (error: unknown, fallback: string) =>
-  error instanceof Error ? error.message : fallback;
 
 /**
  * Everything the console page needs for one tournament: the tournament and
