@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
-import { PageLoadingSpinner } from "@/components/shared";
+import { DeleteConfirmDialog, PageLoadingSpinner } from "@/components/shared";
 import { MatchbookSidebar } from "@/components/matchbook/Sidebar";
 import { MatchbookMobileBar } from "@/components/matchbook/MobileBar";
 import { MbIcon } from "@/components/matchbook/MbIcon";
@@ -79,6 +79,9 @@ export default function TournamentConsolePage() {
 
   const tournament = page.tournament;
   if (!tournament || !page.courts || !page.standings || !page.bracket) {
+    // The tournament leaves the local cache before the delete resolves and
+    // the list opens; the spinner covers that moment.
+    if (page.isDeleting) return <PageLoadingSpinner />;
     return (
       <Shell>
         <Panel title="Tournament not found">
@@ -228,7 +231,11 @@ export default function TournamentConsolePage() {
             <SettingsPanel
               tournament={tournament}
               access={page.access}
+              onRename={page.rename}
+              onDuplicate={page.duplicate}
+              isDuplicating={page.isDuplicating}
               onEnd={() => page.setEndOpen(true)}
+              onDelete={() => page.setDeleteOpen(true)}
             />
           </Section>
         </div>
@@ -252,6 +259,17 @@ export default function TournamentConsolePage() {
         }}
         isEnding={page.isEnding}
         onEnd={page.end}
+      />
+
+      <DeleteConfirmDialog
+        open={page.deleteOpen}
+        onOpenChange={(open) => {
+          if (!open && !page.isDeleting) page.setDeleteOpen(false);
+        }}
+        title="Delete the tournament?"
+        description={`This removes "${tournament.name}" and every match in it. It cannot be undone.`}
+        isDeleting={page.isDeleting}
+        onConfirm={page.remove}
       />
 
       {page.access.canEditCourts && (

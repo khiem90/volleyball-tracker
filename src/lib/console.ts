@@ -35,8 +35,14 @@ export interface ConsoleAccess {
   canScore: boolean;
   /** Reorder the queue and swap courts. Owner and scorer while live. */
   canEditCourts: boolean;
-  /** Rename, end, delete, change teams. Owner while live. */
+  /** End, change teams, change courts. Owner while live. */
   canManage: boolean;
+  /** Rename. Owner while draft or live; a completed tournament keeps its name. */
+  canRename: boolean;
+  /** Make a new draft from this tournament. Owner, in any status. */
+  canDuplicate: boolean;
+  /** Delete the tournament and its matches. Owner, in any status. */
+  canDelete: boolean;
 }
 
 const NO_ACCESS: ConsoleAccess = {
@@ -44,19 +50,32 @@ const NO_ACCESS: ConsoleAccess = {
   canScore: false,
   canEditCourts: false,
   canManage: false,
+  canRename: false,
+  canDuplicate: false,
+  canDelete: false,
 };
 
 /**
- * What a role may do given the tournament's status. A completed tournament
- * is read-only for everyone; a spectator can only ever watch.
+ * What a role may do given the tournament's status. A spectator can only
+ * ever watch. A completed tournament is read-only: nothing in it changes,
+ * though its owner can still duplicate it into a new draft or delete it.
  */
 export const consoleAccess = (role: ConsoleRole, status: TournamentStatus): ConsoleAccess => {
   if (role === "spectator") return NO_ACCESS;
-  if (status === "draft") return { ...NO_ACCESS, canStart: role === "owner" };
+  const owner = role === "owner";
+  const ownerOnly = { canDuplicate: owner, canDelete: owner };
+  if (status === "draft") return { ...NO_ACCESS, ...ownerOnly, canStart: owner, canRename: owner };
   if (status === "live") {
-    return { ...NO_ACCESS, canScore: true, canEditCourts: true, canManage: role === "owner" };
+    return {
+      ...NO_ACCESS,
+      ...ownerOnly,
+      canScore: true,
+      canEditCourts: true,
+      canManage: owner,
+      canRename: owner,
+    };
   }
-  return NO_ACCESS;
+  return { ...NO_ACCESS, ...ownerOnly };
 };
 
 // ============================================

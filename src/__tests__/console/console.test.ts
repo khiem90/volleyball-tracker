@@ -14,39 +14,51 @@ import { draftWorld, find, openOn, started, win } from "../engine/helpers";
 const sorted = (ids: readonly string[]) => [...ids].sort();
 
 describe("consoleAccess", () => {
-  it("lets the owner of a draft start it and nothing else", () => {
+  it("lets the owner of a draft start, rename, duplicate, or delete it, and nothing else", () => {
     expect(consoleAccess("owner", "draft")).toEqual({
       canStart: true,
       canScore: false,
       canEditCourts: false,
       canManage: false,
+      canRename: true,
+      canDuplicate: true,
+      canDelete: true,
     });
   });
 
-  it("lets the owner of a live tournament score, arrange courts, and manage it", () => {
+  it("lets the owner of a live tournament score, arrange courts, manage, rename, duplicate, and delete it", () => {
     expect(consoleAccess("owner", "live")).toEqual({
       canStart: false,
       canScore: true,
       canEditCourts: true,
       canManage: true,
+      canRename: true,
+      canDuplicate: true,
+      canDelete: true,
     });
   });
 
-  it("makes a completed tournament read-only even for its owner", () => {
+  it("makes a completed tournament read-only for its owner, who can still duplicate or delete it", () => {
     expect(consoleAccess("owner", "completed")).toEqual({
       canStart: false,
       canScore: false,
       canEditCourts: false,
       canManage: false,
+      canRename: false,
+      canDuplicate: true,
+      canDelete: true,
     });
   });
 
-  it("lets a scorer score and arrange courts on a live tournament but not manage it", () => {
+  it("lets a scorer score and arrange courts on a live tournament but nothing an owner does", () => {
     expect(consoleAccess("scorer", "live")).toEqual({
       canStart: false,
       canScore: true,
       canEditCourts: true,
       canManage: false,
+      canRename: false,
+      canDuplicate: false,
+      canDelete: false,
     });
   });
 
@@ -63,6 +75,9 @@ describe("consoleAccess", () => {
         canScore: false,
         canEditCourts: false,
         canManage: false,
+        canRename: false,
+        canDuplicate: false,
+        canDelete: false,
       });
     }
   });

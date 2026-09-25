@@ -1,28 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { draftWorld, find, NOW, run, started, win } from "./helpers";
-
-describe("end", () => {
-  it("moves a live rotation tournament to completed, which nothing else does", () => {
-    const live = started("win2out", 4);
-    const afterMatch = win(live, live.matches[0].id, live.matches[0].homeTeamId);
-    expect(afterMatch.tournament.status).toBe("live");
-
-    const world = run(afterMatch, { type: "end" });
-
-    expect(world.tournament.status).toBe("completed");
-    expect(world.tournament.completedAt).toBe(NOW);
-    expect(world.matches).toEqual(afterMatch.matches);
-  });
-
-  it("refuses to end a draft", () => {
-    expect(() => run(draftWorld("round_robin", 3), { type: "end" })).toThrow(/live/);
-  });
-
-  it("refuses to end a tournament twice", () => {
-    const ended = run(started("win2out", 4), { type: "end" });
-    expect(() => run(ended, { type: "end" })).toThrow(/live/);
-  });
-});
+import { draftWorld, find, run, started, win } from "./helpers";
 
 describe("rotation formats", () => {
   it("Win 2 & Out starts one match per court, numbered, and queues the rest", () => {

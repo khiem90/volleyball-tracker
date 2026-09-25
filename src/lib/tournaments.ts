@@ -159,6 +159,43 @@ export const createTournament = async (
 };
 
 /**
+ * What a duplicate of `source` is made from: the same format and settings,
+ * and the same teams in the same order, named as its duplicate. The teams come
+ * from the roster, so each entry takes the team's current name and color
+ * and a team that has since left the roster is left out. A team that had
+ * withdrawn from the source is back in; a new draft has no withdrawals.
+ */
+export const duplicateInput = (source: Tournament, roster: PersistentTeam[]): NewTournamentInput => {
+  const rosterById = new Map(roster.map((team) => [team.id, team]));
+  return {
+    name: `${source.name} (duplicate)`,
+    format: source.format,
+    teams: source.entries.flatMap((entry) => rosterById.get(entry.teamId) ?? []),
+    settings: { ...source.settings, terminology: { ...source.settings.terminology } },
+  };
+};
+
+/**
+ * Rename a tournament. Writes only the name, so a result landing on a court
+ * at the same moment is never overwritten; the revision moves so an engine
+ * command built on the old copy reloads instead of writing the old name
+ * back. Works offline like any field update.
+ */
+export const renameTournament = async (
+  db: Firestore,
+  tournamentId: string,
+  name: string,
+): Promise<void> => {
+  const trimmed = name.trim();
+  if (trimmed.length === 0) throw new Error("A tournament needs a name.");
+  await updateDoc(tournamentDoc(db, tournamentId), {
+    name: trimmed,
+    revision: newToken(),
+    updatedAt: Date.now(),
+  });
+};
+
+/**
  * Replace a tournament document with a new revision, for edits made outside
  * the engine such as reordering a queue or restoring an undo snapshot.
  * `expectedRevision` is the revision the caller's copy was built on; if the

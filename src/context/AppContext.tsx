@@ -25,6 +25,8 @@ import {
   applyTournamentCommand,
   buildTournament,
   deleteTournament as deleteTournamentDoc,
+  duplicateInput,
+  renameTournament as renameTournamentDoc,
   saveTournament,
   subscribeToAccountMatches,
   subscribeToTournaments,
@@ -78,6 +80,17 @@ interface AppContextValue {
   getTeamById: (id: string) => PersistentTeam | undefined;
   // Tournament actions
   createTournament: (input: NewTournamentInput) => Promise<string>;
+  /**
+   * Rename a tournament. The new name shows at once from the local cache;
+   * the promise settles when the server has the write, and rejects if the
+   * server refuses it.
+   */
+  renameTournament: (id: string, name: string) => Promise<void>;
+  /**
+   * Make a new draft from a tournament, with the same format, settings, and
+   * teams. Resolves with the draft's id as soon as the local write is issued.
+   */
+  duplicateTournament: (id: string) => Promise<string>;
   updateTournament: (tournament: Tournament) => Promise<void>;
   deleteTournament: (id: string) => Promise<void>;
   startTournament: (id: string, byeTeamIds?: string[]) => Promise<void>;
@@ -274,6 +287,27 @@ export const AppProvider = ({ children }: AppProviderProps) => {
       return tournament.id;
     },
     [requireAccount]
+  );
+
+  // A field write, so a rename can never paper over a result a court just
+  // saved. The local cache shows the new name before the server answers;
+  // a refused write comes back to the caller as the rejection.
+  const renameTournament = useCallback(
+    async (id: string, name: string) => {
+      await renameTournamentDoc(requireAccount().db, id, name);
+    },
+    [requireAccount]
+  );
+
+  // A duplicate is created like any other draft, so the console can open
+  // it as soon as the id is known.
+  const duplicateTournament = useCallback(
+    async (id: string) => {
+      const source = tournamentsById.get(id);
+      if (!source) throw new Error("That tournament no longer exists.");
+      return createTournament(duplicateInput(source, state.teams));
+    },
+    [createTournament, tournamentsById, state.teams]
   );
 
   // Guarded on the revision this provider's state was built from, so a queue
@@ -600,6 +634,8 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     deleteTeams,
     getTeamById,
     createTournament,
+    renameTournament,
+    duplicateTournament,
     updateTournament,
     deleteTournament,
     startTournament,

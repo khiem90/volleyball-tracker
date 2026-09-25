@@ -48,7 +48,7 @@ A tournament that has started and has matches still to play.
 _Avoid_: In progress, active, running
 
 **Completed**:
-A tournament whose matches are over, either because the format finished or because the owner ended it.
+A tournament whose matches are over, either because the format finished or because the owner ended it. Nothing in it changes after that, though its owner can still duplicate it or delete it.
 _Avoid_: Ended, finished, closed
 
 **End**:

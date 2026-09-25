@@ -183,6 +183,17 @@
   background: rgba(7, 50, 77, 0.06);
   filter: none;
 }
+
+.mb-btn-outline-red {
+  border-color: var(--mb-red);
+  color: var(--mb-red);
+  background: transparent;
+}
+
+.mb-btn-outline-red:hover {
+  background: rgba(207, 63, 50, 0.08);
+  filter: none;
+}
 .mb-btn:disabled {
   opacity: 0.45;
   cursor: not-allowed;

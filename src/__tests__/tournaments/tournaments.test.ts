@@ -6,6 +6,8 @@ import {
   applyTournamentCommand,
   createTournament,
   deleteTournament,
+  duplicateInput,
+  renameTournament,
   StaleTournamentError,
   subscribeToAccountMatches,
   subscribeToTournaments,
@@ -367,6 +369,69 @@ describeFirestoreRules("Tournaments on Firestore", (env) => {
       expect(restored.find((m) => m.id === court1.id)).toEqual(court1);
       const stateAfterUndo = (await tournamentDocOf(db, created.id)).twoMatchRotationState;
       expect({ ...stateAfterUndo, undoRecords: undefined }).toEqual(live.twoMatchRotationState);
+    });
+
+    it("renaming writes the trimmed name and moves the revision, and leaves the rest alone", async () => {
+      const db = modularFirestore(env().authenticatedContext(owner));
+      const created = await createTournament(db, owner, input("round_robin"));
+      await applyTournamentCommand(db, created.id, { type: "start" });
+      const before = await tournamentDocOf(db, created.id);
+      const matchesBefore = await matchDocsOf(db, created.id);
+
+      await renameTournament(db, created.id, "  Wednesday night ");
+
+      const after = await tournamentDocOf(db, created.id);
+      expect(after.name).toBe("Wednesday night");
+      expect(after.revision).not.toBe(before.revision);
+      expect(after.updatedAt).toBeGreaterThanOrEqual(before.updatedAt);
+      expect({ ...after, name: before.name, revision: before.revision, updatedAt: before.updatedAt }).toEqual(before);
+      expect(await matchDocsOf(db, created.id)).toEqual(matchesBefore);
+    });
+
+    it("refuses an empty name and writes nothing", async () => {
+      const db = modularFirestore(env().authenticatedContext(owner));
+      const created = await createTournament(db, owner, input("round_robin"));
+
+      await expect(renameTournament(db, created.id, "   ")).rejects.toThrow(/name/i);
+
+      const stored = await tournamentDocOf(db, created.id);
+      expect(stored.name).toBe("Tuesday night");
+      expect(stored.revision).toBe(created.revision);
+    });
+
+    it("a duplicate of a completed rotation tournament is a fresh draft with its teams and settings and no format state", async () => {
+      const db = modularFirestore(env().authenticatedContext(owner));
+      const source = await createTournament(db, owner, rotationInput("win2out"));
+      await applyTournamentCommand(db, source.id, { type: "start" });
+      const first = (await matchDocsOf(db, source.id)).find((m) => m.court === 1)!;
+      await applyTournamentCommand(db, source.id, {
+        type: "instant_win",
+        matchId: first.id,
+        winnerId: first.homeTeamId,
+      });
+      await applyTournamentCommand(db, source.id, { type: "end" });
+      const completed = await tournamentDocOf(db, source.id);
+      const roster = rotationInput("win2out").teams;
+
+      const duplicate = await createTournament(db, owner, duplicateInput(completed, roster));
+
+      const stored = await tournamentDocOf(db, duplicate.id);
+      expect(stored.id).not.toBe(source.id);
+      expect(stored).toMatchObject({
+        ownerId: owner,
+        name: "Rotation night (duplicate)",
+        format: "win2out",
+        status: "draft",
+        spectatorEnabled: false,
+        teamIds: completed.teamIds,
+        entries: completed.entries,
+        settings: completed.settings,
+      });
+      expect(stored.win2outState).toBeUndefined();
+      expect(stored.startedAt).toBeUndefined();
+      expect(stored.completedAt).toBeUndefined();
+      expect(await matchDocsOf(db, duplicate.id)).toHaveLength(0);
+      expect((await tournamentDocOf(db, source.id)).status).toBe("completed");
     });
 
     it("deleting a tournament removes it and its matches", async () => {

@@ -202,9 +202,11 @@ export const useMatchbookHistory = (filters: {
       .sort((x, y) => y.played - x.played)
       .slice(0, 4);
 
-    const competitions: MbRecentCompetition[] = [...state.tournaments]
-      .sort((a, b) => b.createdAt - a.createdAt)
-      .slice(0, 4)
+    // Completed tournaments only, newest first; live and draft ones are on
+    // the Tournaments tab.
+    const competitions: MbRecentCompetition[] = state.tournaments
+      .filter((c) => c.status === "completed")
+      .sort((a, b) => (b.completedAt ?? b.createdAt) - (a.completedAt ?? a.createdAt))
       .map((c) => {
         const ms = completed.filter((m) => m.tournamentId === c.id);
         const times = ms.map((m) => m.completedAt ?? 0).filter(Boolean);

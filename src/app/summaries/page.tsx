@@ -362,9 +362,9 @@ export default function HistoryPage() {
                   )}
                 </Panel>
 
-                <Panel title="Recent Competitions" action="View All" href="/competitions">
+                <Panel title="Completed Tournaments">
                   {data.competitions.length === 0 ? (
-                    <PanelEmpty message="No competitions exist yet." />
+                    <PanelEmpty message="No tournament has been completed yet." />
                   ) : (
                     <div className="flex flex-col divide-y divide-mb-rule">
                       {data.competitions.map((c) => (

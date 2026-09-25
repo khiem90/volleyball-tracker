@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, type FormEvent } from "react";
 import { MbIcon } from "@/components/matchbook/MbIcon";
 import { Panel } from "@/components/matchbook/Panel";
 import { courtsWord, type ConsoleAccess } from "@/lib/console";
@@ -25,18 +26,110 @@ const Fact = ({ label, value }: { label: string; value: string }) => (
 );
 
 /**
+ * The name field with its Save button. Save is offered once the field holds
+ * a name that differs from the stored one. A rename that arrives from
+ * elsewhere replaces the field unless it is being edited.
+ */
+const RenameForm = ({ name, onRename }: { name: string; onRename: (name: string) => void }) => {
+  const [value, setValue] = useState(name);
+  const [seen, setSeen] = useState(name);
+  if (name !== seen) {
+    setSeen(name);
+    if (value === seen) setValue(name);
+  }
+
+  const trimmed = value.trim();
+  const canSave = trimmed.length > 0 && trimmed !== name;
+
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!canSave) return;
+    setValue(trimmed);
+    onRename(trimmed);
+  };
+
+  return (
+    <form onSubmit={submit} className="flex flex-col gap-1.5 border-b border-mb-rule p-4">
+      <label htmlFor="tournament-name" className="mb-kicker">
+        Name
+      </label>
+      <div className="flex gap-2">
+        <span className="mb-input min-w-0 flex-1 py-[0.45rem]">
+          <input
+            id="tournament-name"
+            type="text"
+            value={value}
+            onChange={(event) => setValue(event.target.value)}
+            maxLength={80}
+            autoComplete="off"
+            enterKeyHint="done"
+          />
+        </span>
+        <button type="submit" className="mb-btn mb-btn-navy min-h-11" disabled={!canSave}>
+          Save
+        </button>
+      </div>
+    </form>
+  );
+};
+
+/** One owner action with the line that says what it does. */
+const Action = ({
+  icon,
+  label,
+  note,
+  onClick,
+  disabled = false,
+  tone = "coral",
+}: {
+  icon: string;
+  label: string;
+  note: string;
+  onClick: () => void;
+  disabled?: boolean;
+  tone?: "coral" | "navy" | "red";
+}) => (
+  <div className="flex flex-col gap-1.5">
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={`mb-btn min-h-11 ${
+        tone === "navy"
+          ? "mb-btn-outline-navy"
+          : tone === "red"
+            ? "mb-btn-outline-red"
+            : "mb-btn-outline"
+      }`}
+    >
+      <MbIcon id={icon} size={14} />
+      {label}
+    </button>
+    <p className="text-[0.72rem] text-mb-ink-muted">{note}</p>
+  </div>
+);
+
+/**
  * The Settings tab: the tournament as it was set up, and the owner's
- * actions on it. End is here now so an endless format can finish; rename,
- * courts, share links, Duplicate, and Delete arrive with tickets 07 and 13.
+ * actions on it: Rename, Duplicate, End, and Delete. Courts and share links
+ * arrive with tickets 09 and 13.
  */
 export const SettingsPanel = ({
   tournament,
   access,
+  onRename,
+  onDuplicate,
+  isDuplicating,
   onEnd,
+  onDelete,
 }: {
   tournament: Tournament;
   access: ConsoleAccess;
+  onRename: (name: string) => void;
+  onDuplicate: () => void;
+  isDuplicating: boolean;
   onEnd: () => void;
+  onDelete: () => void;
 }) => {
   const { settings } = tournament;
   const facts: [string, string | null][] = [
@@ -56,23 +149,45 @@ export const SettingsPanel = ({
     ["Started", longDate(tournament.startedAt)],
     ["Completed", longDate(tournament.completedAt)],
   ];
+  const hasActions = access.canDuplicate || access.canManage || access.canDelete;
 
   return (
     <Panel title="Settings">
+      {access.canRename && <RenameForm name={tournament.name} onRename={onRename} />}
       <div className="grid grid-cols-2 gap-x-4 gap-y-3 p-4">
         {facts.map(([label, value]) =>
           value === null ? null : <Fact key={label} label={label} value={value} />,
         )}
       </div>
-      {access.canManage && (
-        <div className="mt-auto flex flex-col gap-2 border-t border-mb-rule p-4">
-          <button type="button" onClick={onEnd} className="mb-btn mb-btn-outline min-h-11">
-            <MbIcon id="warning" size={14} />
-            End tournament
-          </button>
-          <p className="text-[0.72rem] text-mb-ink-muted">
-            Ends it as it stands. Standings freeze and no more matches can be scored.
-          </p>
+      {hasActions && (
+        <div className="mt-auto flex flex-col gap-4 border-t border-mb-rule p-4">
+          {access.canDuplicate && (
+            <Action
+              icon="clipboard"
+              tone="navy"
+              label={isDuplicating ? "Duplicating..." : "Duplicate"}
+              note="Makes a new draft with the same teams and settings and opens it."
+              onClick={onDuplicate}
+              disabled={isDuplicating}
+            />
+          )}
+          {access.canManage && (
+            <Action
+              icon="warning"
+              label="End tournament"
+              note="Ends it as it stands. Standings freeze and no more matches can be scored."
+              onClick={onEnd}
+            />
+          )}
+          {access.canDelete && (
+            <Action
+              icon="warning"
+              tone="red"
+              label="Delete tournament"
+              note="Removes it and every match in it. This cannot be undone."
+              onClick={onDelete}
+            />
+          )}
         </div>
       )}
     </Panel>
