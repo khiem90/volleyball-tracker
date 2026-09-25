@@ -16,11 +16,7 @@ import {
   type MbCompeteSelected,
 } from "@/components/matchbook/useMatchbookCompete";
 
-const STATUS_STYLES = {
-  live: { label: "Live", color: "var(--mb-red)" },
-  draft: { label: "Draft", color: "var(--mb-gold)" },
-  completed: { label: "Final", color: "var(--mb-green)" },
-} as const;
+import { TOURNAMENT_STATUS } from "@/components/matchbook/tournamentStatus";
 
 const BracketBox = ({ cell }: { cell: MbBracketCell }) => {
   const side = (
@@ -197,8 +193,9 @@ export default function CompetitionsPage() {
   }
 
   const selected = data.selected;
-  const status = selected ? STATUS_STYLES[selected.competition.status] : null;
+  const status = selected ? TOURNAMENT_STATUS[selected.competition.status] : null;
   const deleteTarget = data.rows.find((r) => r.id === deleteId);
+  const liveCount = data.rows.filter((r) => r.status === "live").length;
 
   return (
     <div className="matchbook-surface min-h-screen">
@@ -277,8 +274,12 @@ export default function CompetitionsPage() {
               {/* All events */}
               <div className="xl:col-span-7">
                 <Panel
-                  title="All Events"
-                  meta={<span className="mb-kicker">{data.rows.length} Total</span>}
+                  title="Live & Draft"
+                  meta={
+                    <span className="mb-kicker">
+                      {liveCount} Live • {data.rows.length - liveCount} Draft
+                    </span>
+                  }
                 >
                   {data.rows.length === 0 ? (
                     <PanelEmpty
@@ -289,7 +290,7 @@ export default function CompetitionsPage() {
                   ) : (
                     <div className="flex flex-col divide-y divide-mb-rule">
                       {data.rows.map((row) => {
-                        const rowStatus = STATUS_STYLES[row.status];
+                        const rowStatus = TOURNAMENT_STATUS[row.status];
                         const isSelected = row.id === data.selectedId;
                         return (
                           <div

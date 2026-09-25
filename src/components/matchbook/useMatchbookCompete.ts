@@ -122,13 +122,15 @@ export const useMatchbookCompete = (): MbCompeteData => {
     const matchesOf = (competitionId: string): Match[] =>
       state.matches.filter((m) => m.tournamentId === competitionId);
 
-    const competitions = [...state.tournaments].sort((a, b) => {
-      const rank = (c: Tournament) =>
-        c.status === "live" ? 0 : c.status === "draft" ? 1 : 2;
-      return rank(a) - rank(b) || b.createdAt - a.createdAt;
-    });
+    // Live and draft only; completed tournaments live in History.
+    const tournaments = state.tournaments
+      .filter((t) => t.status !== "completed")
+      .sort((a, b) => {
+        const rank = (t: Tournament) => (t.status === "live" ? 0 : 1);
+        return rank(a) - rank(b) || b.createdAt - a.createdAt;
+      });
 
-    const rows: MbCompetitionRow[] = competitions.map((c) => {
+    const rows: MbCompetitionRow[] = tournaments.map((c) => {
       const matches = matchesOf(c.id);
       return {
         id: c.id,
@@ -142,12 +144,12 @@ export const useMatchbookCompete = (): MbCompeteData => {
     });
 
     const selectedId =
-      manualSelectedId && competitions.some((c) => c.id === manualSelectedId)
+      manualSelectedId && tournaments.some((c) => c.id === manualSelectedId)
         ? manualSelectedId
-        : competitions[0]?.id ?? null;
+        : tournaments[0]?.id ?? null;
 
     let selected: MbCompeteSelected | null = null;
-    const competition = competitions.find((c) => c.id === selectedId);
+    const competition = tournaments.find((c) => c.id === selectedId);
     if (competition) {
       const matches = matchesOf(competition.id);
       const completed = matches.filter((m) => m.status === "completed");
