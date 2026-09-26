@@ -93,6 +93,25 @@ export const find = (world: World, where: Partial<Match>): Match => {
   return match;
 };
 
+export const addTeam = (world: World, teamId: string): World =>
+  run(world, { type: "add_team", teamId, name: `Team ${teamId}`, color: "#111111" });
+
+export const withdraw = (world: World, teamId: string): World =>
+  run(world, { type: "withdraw", teamId });
+
+export const correct = (
+  world: World,
+  matchId: string,
+  homeScore: number,
+  awayScore: number,
+): World => run(world, { type: "correct_result", matchId, homeScore, awayScore });
+
+export const entryOf = (world: World, teamId: string) => {
+  const entry = world.tournament.entries.find((e) => e.teamId === teamId);
+  if (!entry) throw new Error(`No entry for ${teamId}`);
+  return entry;
+};
+
 /** The match waiting to be played on a court of a rotation tournament. */
 export const openOn = (world: World, court: number): Match =>
   find(world, { court, status: "pending" });

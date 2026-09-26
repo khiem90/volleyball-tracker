@@ -15,7 +15,7 @@ All the teams an account has created, kept between tournaments.
 _Avoid_: Team directory, team list
 
 **Withdraw**:
-Take a team out of a live tournament. Its remaining matches are forfeited and its played results stay. In Win 2 & Out and Two Match Rotation, which schedule one match per court at a time, the team leaves the queue or its court instead: a match it is in is abandoned, the team it was playing stays on, and the next team in the queue comes on. A withdrawn team can be added again with its record kept: in Round Robin its forfeited matches reopen and it gets a match against any team that joined meanwhile; in the rotation formats it rejoins at the back of the queue.
+Take a team out of a live tournament. Its remaining matches are forfeited and its played results stay. In a bracket its next match is forfeited to the opponent once the opponent is known. In Double Elimination the losers-bracket match it drops into is forfeited as well. In Win 2 & Out and Two Match Rotation, which schedule one match per court at a time, the team leaves the queue or its court instead: a match it is in is abandoned, the team it was playing stays on, and the next team in the queue comes on. A withdrawn team can be added again with its record kept, except in a bracket: in Round Robin its forfeited matches reopen and it gets a match against any team that joined meanwhile; in the rotation formats it rejoins at the back of the queue.
 _Avoid_: Remove, delete (for a team in a live tournament)
 
 **Forfeit**:
@@ -99,8 +99,8 @@ Taking back the latest result on a court in Win 2 & Out or Two Match Rotation. T
 _Avoid_: Revert, rollback
 
 **Correction**:
-Changing the score of a completed match from Schedule. The owner can correct a Round Robin result while the tournament is live: the winner follows the new score, a forfeit corrected this way counts as played, and the standings recalculate. In a best-of the corrected score is the deciding game's, and a change of winner is refused if it would leave the series undecided.
-_Avoid_: Edit result, override, undo (for a round robin result)
+Changing the score of a completed match from Schedule, or from the Bracket tab in a bracket. The owner can correct a Round Robin or bracket result while the tournament is live: the winner follows the new score. In Round Robin a forfeit corrected this way counts as played, and the standings recalculate. In a bracket a new winner goes through in place of the old one, a bye or forfeit the old winner was then given passes to the new one, and a change of winner is refused once the next match has started; a bye or a forfeit has no score to correct. In a best-of the corrected score is the deciding game's, and a change of winner is refused if it would leave the series undecided.
+_Avoid_: Edit result, override, undo (for a round robin or bracket result)
 
 **Quick Match**:
 A standalone match between two teams that belongs to no tournament.

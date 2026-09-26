@@ -1,7 +1,7 @@
 "use client";
 
 import { Panel, PanelEmpty } from "@/components/matchbook/Panel";
-import type { ConsoleAccess, ScheduleRow } from "@/lib/console";
+import { isCorrectable, type ConsoleAccess, type ScheduleRow } from "@/lib/console";
 import type { Match, Tournament } from "@/types/game";
 import { MatchRow, scoringLink } from "./MatchRow";
 import type { TeamLookup } from "./teamRefs";
@@ -22,7 +22,7 @@ export const SchedulePanel = ({
   rows: ScheduleRow[];
   team: TeamLookup;
   access: ConsoleAccess;
-  /** Offered when completed results can be corrected: the owner of a live round robin. */
+  /** Offered when completed results can be corrected: the owner of a live round robin or bracket. */
   onCorrect?: (match: Match) => void;
 }) => {
   const played = rows.filter((row) => row.match.status === "completed").length;
@@ -55,9 +55,7 @@ export const SchedulePanel = ({
               label={label}
               href={scoringLink(match, access)}
               onCorrect={
-                onCorrect && match.status === "completed" && !match.isBye
-                  ? () => onCorrect(match)
-                  : undefined
+                onCorrect && isCorrectable(tournament, match) ? () => onCorrect(match) : undefined
               }
             />
           ))}

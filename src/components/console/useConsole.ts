@@ -10,12 +10,14 @@ import {
   capitalize,
   consoleAccess,
   courtsView,
+  isCorrectable,
   scheduleView,
   standingsView,
   teamsView,
   type ConsoleRole,
   type TeamRow,
 } from "@/lib/console";
+import { bracketAddRefusal } from "@/lib/engine";
 import { entryTeams } from "@/lib/entries";
 import { isBracketFormat, isRotationFormat, minimumTeams } from "@/lib/formats";
 import { messageOf } from "@/lib/utils";
@@ -36,8 +38,8 @@ export interface CourtsToClose {
 /**
  * Everything the console page needs for one tournament: the tournament and
  * its matches from the provider, the viewer's role and what it allows, the
- * five views, the actions on the shell and in Settings, and the court,
- * queue, and team edits of a live rotation tournament.
+ * five views, the actions on the shell and in Settings, the court, queue,
+ * and team edits of a live tournament, and the correction of its results.
  */
 export const useConsole = (tournamentId: string) => {
   const router = useRouter();
@@ -272,6 +274,7 @@ export const useConsole = (tournamentId: string) => {
   );
 
   const rotation = tournament ? isRotationFormat(tournament.format) : false;
+  const bracketFormat = tournament ? isBracketFormat(tournament.format) : false;
   const activeCount = tournament
     ? tournament.entries.filter((entry) => entry.withdrawnAt === undefined).length
     : 0;
@@ -366,7 +369,7 @@ export const useConsole = (tournamentId: string) => {
   // ============================================
 
   const roundRobin = tournament?.format === "round_robin";
-  const canCorrectResults = access.canManage && roundRobin;
+  const canCorrectResults = access.canManage && (roundRobin || bracketFormat);
 
   // The match being corrected is held by id and read fresh, so the dialog
   // shows the score as it now stands and closes if the match goes away.
@@ -378,11 +381,11 @@ export const useConsole = (tournamentId: string) => {
   );
   const openCorrection = useCallback(
     (match: Match) => {
-      if (!canCorrectResults || match.status !== "completed") return;
+      if (!tournament || !canCorrectResults || !isCorrectable(tournament, match)) return;
       setActionError(null);
       setCorrectingId(match.id);
     },
-    [canCorrectResults],
+    [tournament, canCorrectResults],
   );
   const closeCorrection = useCallback(() => setCorrectingId(null), []);
   const saveCorrection = useCallback(
@@ -444,8 +447,12 @@ export const useConsole = (tournamentId: string) => {
     setCourtsToClose,
     confirmCloseCourts,
     // Teams
-    /** Whether teams can be added and withdrawn here: the owner of a live rotation or round robin tournament. */
-    canEditTeams: access.canManage && (rotation || roundRobin),
+    /** Whether a team can be added or brought back: the owner of a live rotation or round robin tournament. */
+    canAddTeams: access.canManage && (rotation || roundRobin),
+    /** Whether a team can be withdrawn: the owner of any live tournament. */
+    canWithdrawTeams: access.canManage,
+    /** Why a team cannot be added, shown where the add strip would be: a bracket is drawn once. */
+    addRefusal: tournament && bracketFormat ? bracketAddRefusal(tournament.format) : null,
     /** What an added team did: joined the queue, or got its matches. */
     joinedNote: rotation ? "joined the queue" : "is on the schedule",
     suggestions,
@@ -455,7 +462,7 @@ export const useConsole = (tournamentId: string) => {
     setWithdrawing,
     withdraw,
     // Results
-    /** Whether completed results can be corrected from Schedule: the owner of a live round robin. */
+    /** Whether completed results can be corrected: the owner of a live round robin or bracket. */
     canCorrectResults,
     /** The match whose result is being corrected, if one is. */
     correcting,

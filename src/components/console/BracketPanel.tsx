@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { MbIcon } from "@/components/matchbook/MbIcon";
 import { Crest, Panel, PanelEmpty } from "@/components/matchbook/Panel";
-import type { BracketView, ConsoleAccess } from "@/lib/console";
+import { isCorrectable, type BracketView, type ConsoleAccess } from "@/lib/console";
 import type { Match, Tournament } from "@/types/game";
 import { scoringLink } from "./MatchRow";
 import type { TeamLookup } from "./teamRefs";
@@ -55,24 +56,41 @@ const Slot = ({
   );
 };
 
+/**
+ * One match of the bracket. With `href` the cell opens that page, which is
+ * how a tap opens scoring. With `onCorrect` the cell is a button that opens
+ * the correction of its result, and says so under the score.
+ */
 const Cell = ({
   match,
   team,
   href,
+  onCorrect,
 }: {
   match: Match;
   team: TeamLookup;
   href?: string;
+  onCorrect?: () => void;
 }) => {
   const live = match.status === "in_progress";
+  const footer = live || match.forfeitedBy !== undefined || onCorrect !== undefined;
   const body = (
     <>
       <Slot teamId={match.homeTeamId} match={match} team={team} />
-      <Slot teamId={match.awayTeamId} match={match} team={team} last={!live} />
-      {live && (
-        <div className="flex items-center justify-end gap-1 border-t border-mb-rule px-2 py-0.5">
-          <span className="mb-live-dot" />
-          <span className="matchbook-display text-[0.56rem] font-bold text-mb-red">Live</span>
+      <Slot teamId={match.awayTeamId} match={match} team={team} last={!footer} />
+      {footer && (
+        <div className="flex items-center justify-end gap-1.5 border-t border-mb-rule px-2 py-0.5">
+          {live && <span className="mb-live-dot" />}
+          {live && (
+            <span className="matchbook-display text-[0.56rem] font-bold text-mb-red">Live</span>
+          )}
+          {match.forfeitedBy !== undefined && <span className="mb-kicker">Forfeit</span>}
+          {onCorrect && (
+            <>
+              <span className="mb-kicker text-mb-navy">Correct</span>
+              <MbIcon id="chevron-right" size={9} className="text-mb-ink-muted" />
+            </>
+          )}
         </div>
       )}
     </>
@@ -80,31 +98,43 @@ const Cell = ({
   const className = `block w-[156px] shrink-0 bg-mb-paper-bright ${
     match.isBye ? "border-[1.5px] border-dashed border-mb-rule" : "border-[1.5px] border-mb-navy"
   }`;
-  return href ? (
-    <Link href={href} className={`${className} transition-colors hover:bg-[rgba(238,75,52,0.06)]`}>
-      {body}
-    </Link>
-  ) : (
-    <div className={className}>{body}</div>
-  );
+  const tappable = `${className} transition-colors hover:bg-[rgba(238,75,52,0.06)]`;
+  if (href) {
+    return (
+      <Link href={href} className={tappable}>
+        {body}
+      </Link>
+    );
+  }
+  if (onCorrect) {
+    return (
+      <button type="button" onClick={onCorrect} className={`${tappable} text-left`}>
+        {body}
+      </button>
+    );
+  }
+  return <div className={className}>{body}</div>;
 };
 
 /**
  * The Bracket tab: each round as a column, cells spread to line up with the
  * round before. A pending or live match opens scoring for an owner or
- * scorer. A completed cell just shows its result; correcting it arrives with
- * ticket 11.
+ * scorer. With `onCorrect`, a completed match opens the correction of its
+ * result; a bye or a forfeit has no score to correct and stays as it is.
  */
 export const BracketPanel = ({
   tournament,
   view,
   team,
   access,
+  onCorrect,
 }: {
   tournament: Tournament;
   view: BracketView;
   team: TeamLookup;
   access: ConsoleAccess;
+  /** Offered when completed results can be corrected: the owner of a live bracket. */
+  onCorrect?: (match: Match) => void;
 }) => {
   const drawn = view.sections.some((section) =>
     section.rounds.some((round) => round.matches.length > 0),
@@ -132,6 +162,11 @@ export const BracketPanel = ({
                             match={match}
                             team={team}
                             href={scoringLink(match, access)}
+                            onCorrect={
+                              onCorrect && isCorrectable(tournament, match)
+                                ? () => onCorrect(match)
+                                : undefined
+                            }
                           />
                         ))}
                       </div>

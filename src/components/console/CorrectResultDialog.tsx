@@ -57,6 +57,7 @@ const ScoreField = ({
 const ScoreForm = ({
   match,
   team,
+  bracket,
   isBusy,
   error,
   onCancel,
@@ -64,6 +65,7 @@ const ScoreForm = ({
 }: {
   match: Match;
   team: TeamLookup;
+  bracket: boolean;
   isBusy: boolean;
   error: string | null;
   onCancel: () => void;
@@ -90,13 +92,7 @@ const ScoreForm = ({
           <PencilLine className="h-5 w-5" />
           Correct the score
         </DialogTitle>
-        <DialogDescription>
-          {match.forfeitedBy
-            ? "This match was a forfeit. Saving a score records it as played."
-            : series
-              ? "This is the score of the deciding game. Changing its winner moves that game to the other side."
-              : "The winner follows the new score, and the standings recalculate."}
-        </DialogDescription>
+        <DialogDescription>{explanation(match.forfeitedBy !== undefined, series, bracket)}</DialogDescription>
       </DialogHeader>
       <div className="flex items-end gap-3">
         <ScoreField
@@ -139,14 +135,28 @@ const ScoreForm = ({
   );
 };
 
+/** What saving the score will do, for the match at hand. A bracket forfeit never gets here. */
+const explanation = (forfeit: boolean, series: boolean, bracket: boolean): string => {
+  if (forfeit && !bracket) return "This match was a forfeit. Saving a score records it as played.";
+  const game = series
+    ? "This is the score of the deciding game. Changing its winner moves that game to the other side"
+    : "The winner follows the new score";
+  return bracket
+    ? `${game} and goes through in place of the old one. A change of winner is refused once the next match has started.`
+    : `${game}, and the standings recalculate.`;
+};
+
 /**
- * The correction of a completed result, reached from Schedule. Open while
- * `match` is set. The engine has the last word: a score it refuses, such as
- * one that would leave a best-of undecided, comes back as `error`.
+ * The correction of a completed result, reached from Schedule or the
+ * Bracket tab. Open while `match` is set. The engine has the last word: a
+ * score it refuses, such as one that would leave a best-of undecided or
+ * change the winner of a bracket match whose next match has started, comes
+ * back as `error`.
  */
 export const CorrectResultDialog = ({
   match,
   team,
+  bracket,
   isBusy,
   error,
   onClose,
@@ -154,6 +164,8 @@ export const CorrectResultDialog = ({
 }: {
   match: Match | null;
   team: TeamLookup;
+  /** Whether the match is in a bracket, where a new winner goes through. */
+  bracket: boolean;
   isBusy: boolean;
   error: string | null;
   onClose: () => void;
@@ -171,6 +183,7 @@ export const CorrectResultDialog = ({
           key={match.id}
           match={match}
           team={team}
+          bracket={bracket}
           isBusy={isBusy}
           error={error}
           onCancel={onClose}

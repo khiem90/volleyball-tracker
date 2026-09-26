@@ -25,7 +25,7 @@ import { ConfirmDialog } from "@/components/console/ConfirmDialog";
 import { useConsole } from "@/components/console/useConsole";
 import { TOURNAMENT_STATUS } from "@/components/matchbook/tournamentStatus";
 import { courtLabel, courtsWord } from "@/lib/console";
-import { formatLabel, isRotationFormat } from "@/lib/formats";
+import { formatLabel, isBracketFormat, isRotationFormat } from "@/lib/formats";
 import { UserMinus } from "lucide-react";
 
 const Shell = ({ children }: { children: ReactNode }) => (
@@ -98,6 +98,7 @@ export default function TournamentConsolePage() {
 
   const status = TOURNAMENT_STATUS[tournament.status];
   const rotation = isRotationFormat(tournament.format);
+  const bracket = isBracketFormat(tournament.format);
   const winner = tournament.winnerId ? page.team(tournament.winnerId) : null;
 
   return (
@@ -212,6 +213,7 @@ export default function TournamentConsolePage() {
                 view={page.bracket}
                 team={page.team}
                 access={page.access}
+                onCorrect={page.canCorrectResults ? page.openCorrection : undefined}
               />
             ) : (
               <StandingsPanel
@@ -235,7 +237,9 @@ export default function TournamentConsolePage() {
             <TeamsPanel
               rows={page.teamRows}
               team={page.team}
-              canEdit={page.canEditTeams}
+              canAdd={page.canAddTeams}
+              canWithdraw={page.canWithdrawTeams}
+              addRefusal={page.addRefusal}
               suggestions={page.suggestions}
               joinedNote={page.joinedNote}
               onAdd={page.addTeam}
@@ -303,7 +307,9 @@ export default function TournamentConsolePage() {
         description={
           rotation
             ? "It leaves the queue or its court, and a match it is in is abandoned. The team it was playing stays on. Its played results stay, and it can rejoin later from Teams."
-            : "Its matches still to play are forfeited: each counts as a win for the other team, with no points either way. Its played results stay, and it can rejoin later from Teams."
+            : bracket
+              ? "Its next match is forfeited and the other team goes through. Its played results stay. It cannot come back into the bracket."
+              : "Its matches still to play are forfeited: each counts as a win for the other team, with no points either way. Its played results stay, and it can rejoin later from Teams."
         }
         confirmLabel="Withdraw"
         busyLabel="Withdrawing..."
@@ -314,6 +320,7 @@ export default function TournamentConsolePage() {
       <CorrectResultDialog
         match={page.correcting}
         team={page.team}
+        bracket={bracket}
         isBusy={page.isApplying && page.correcting !== null}
         error={page.correcting ? page.actionError : null}
         onClose={page.closeCorrection}

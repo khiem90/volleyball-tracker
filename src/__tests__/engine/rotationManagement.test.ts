@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Match, TournamentFormat } from "@/types/game";
-import { draftWorld, find, NOW, openOn, run, started, win, type World } from "./helpers";
+import { addTeam, draftWorld, entryOf, find, NOW, openOn, run, started, win, withdraw, type World } from "./helpers";
 
 /** The rotation state of whichever rotation format the world is. */
 const stateOf = (world: World) => {
@@ -15,22 +15,11 @@ const statusOf = (world: World, teamId: string) => {
   return status;
 };
 
-const entryOf = (world: World, teamId: string) => {
-  const entry = world.tournament.entries.find((e) => e.teamId === teamId);
-  if (!entry) throw new Error(`No entry for ${teamId}`);
-  return entry;
-};
 
 const courtTeams = (world: World) =>
   [...stateOf(world).courts]
     .sort((a, b) => a.courtNumber - b.courtNumber)
     .map((court) => [court.courtNumber, ...court.teamIds]);
-
-const addTeam = (world: World, teamId: string): World =>
-  run(world, { type: "add_team", teamId, name: `Team ${teamId}`, color: "#111111" });
-
-const withdraw = (world: World, teamId: string): World =>
-  run(world, { type: "withdraw", teamId });
 
 const setCourts = (world: World, courts: number): World =>
   run(world, { type: "change_courts", courts });
@@ -456,18 +445,6 @@ const reordersTheQueue = (format: TournamentFormat) => {
 };
 
 describe("rotation management", () => {
-  it("refuses to add a team to a started bracket", () => {
-    expect(() => addTeam(started("single_elimination", 4), "t9")).toThrow(
-      /cannot be added to a live Single Elimination/,
-    );
-  });
-
-  it("refuses to withdraw from a bracket until ticket 11 gives it a rule", () => {
-    expect(() => withdraw(started("double_elimination", 4), "t1")).toThrow(
-      /cannot be withdrawn from a live Double Elimination/,
-    );
-  });
-
   it("refuses to change courts, swap teams, or reorder for a format without a queue", () => {
     const live = started("round_robin", 3);
 

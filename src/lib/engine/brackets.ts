@@ -1,4 +1,5 @@
 import type { BracketSide, Match } from "@/types/game";
+import { forfeited } from "./forfeit";
 
 /**
  * Where bracket results go. Single elimination is a winners bracket with no
@@ -124,12 +125,18 @@ export const advance = (matches: Map<string, Match>, completed: Match): void => 
 };
 
 /**
- * Settle matches that can never get a second team. Once every match feeding a
- * pending match has finished, a match with one team is won by that team and a
- * match with none is closed. Either way the result flows on, so a bracket
- * with a team count that is not a power of two still reaches its final.
+ * Settle the matches that will not be played. A match whose two teams are
+ * known but one of which has withdrawn is that team's forfeit. Once every
+ * match feeding a pending match has finished, a match with one team left is
+ * won by that team and a match with none is closed. Either way the result
+ * flows on, so a withdrawn team's opponent goes through and a bracket with
+ * a team count that is not a power of two still reaches its final.
  */
-export const resolveByes = (matches: Map<string, Match>, now: number): void => {
+export const settleWithoutPlay = (
+  matches: Map<string, Match>,
+  withdrawn: Set<string>,
+  now: number,
+): void => {
   const feeders = feedersOf([...matches.values()]);
   let changed = true;
   while (changed) {
@@ -138,27 +145,106 @@ export const resolveByes = (matches: Map<string, Match>, now: number): void => {
       // Re-read: an earlier settlement in this pass may have filled a slot.
       const match = matches.get(id);
       if (!match || match.status === "completed") continue;
-      const sources = feeders.get(match.id) ?? [];
-      if (sources.length === 0) continue;
-      if (!sources.every((id) => matches.get(id)?.status === "completed")) continue;
-
-      const teams = [match.homeTeamId, match.awayTeamId].filter(Boolean);
-      if (teams.length === 2) continue;
-
-      const settled: Match = {
-        ...match,
-        status: "completed",
-        isBye: true,
-        homeScore: 0,
-        awayScore: 0,
-        completedAt: now,
-        ...(teams[0] ? { winnerId: teams[0] } : {}),
-      };
+      const settled =
+        forfeitOf(match, withdrawn, now) ?? byeOf(match, matches, feeders, withdrawn, now);
+      if (!settled) continue;
       matches.set(match.id, settled);
       if (settled.winnerId) advance(matches, settled);
       changed = true;
     }
   }
+};
+
+/** The match as a forfeit, when both its teams are known and one has withdrawn. */
+const forfeitOf = (match: Match, withdrawn: Set<string>, now: number): Match | null => {
+  if (!match.homeTeamId || !match.awayTeamId) return null;
+  const gone = [match.homeTeamId, match.awayTeamId].filter((id) => withdrawn.has(id));
+  return gone.length === 1 ? forfeited(match, gone[0], now) : null;
+};
+
+/**
+ * The match settled as a bye, when nothing can fill it further: every match
+ * feeding it has finished and fewer than two of its teams are still in.
+ */
+const byeOf = (
+  match: Match,
+  matches: Map<string, Match>,
+  feeders: Map<string, string[]>,
+  withdrawn: Set<string>,
+  now: number,
+): Match | null => {
+  const sources = feeders.get(match.id) ?? [];
+  if (sources.length === 0) return null;
+  if (!sources.every((id) => matches.get(id)?.status === "completed")) return null;
+
+  const present = [match.homeTeamId, match.awayTeamId].filter((id) => id && !withdrawn.has(id));
+  if (present.length === 2) return null;
+  return {
+    ...match,
+    status: "completed",
+    isBye: true,
+    homeScore: 0,
+    awayScore: 0,
+    completedAt: now,
+    ...(present[0] ? { winnerId: present[0] } : {}),
+  };
+};
+
+/** Settled by a bye or a forfeit rather than by play. */
+const settledWithoutPlay = (match: Match): boolean =>
+  match.status === "completed" && (match.isBye === true || match.forfeitedBy !== undefined);
+
+/** Played, being played, or opened for scoring. A bye or a forfeit has not started. */
+const hasStarted = (match: Match): boolean =>
+  match.status === "in_progress" ||
+  match.homeScore > 0 ||
+  match.awayScore > 0 ||
+  (match.status === "completed" && !settledWithoutPlay(match));
+
+/**
+ * Take back what a result sent onward, so a corrected result can flow
+ * instead. The matches it fed lose the team it sent them. One of those that
+ * was then settled without play, a bye or a forfeit, is reopened as a
+ * fresh match and what it sent on is taken back in turn. Returns the first
+ * match in the way that has started, with nothing changed, when the result
+ * can no longer change.
+ */
+export const takeBack = (matches: Map<string, Match>, from: Match): Match | null => {
+  const list = [...matches.values()];
+  const clear: Slot[] = [];
+  const reopen = new Set<string>();
+  const queue = [from];
+  for (let source = queue.shift(); source; source = queue.shift()) {
+    for (const slot of [winnerDestination(source, list), loserDestination(source, list)]) {
+      if (!slot) continue;
+      const target = matchAt(list, slot);
+      if (!target) continue;
+      if (hasStarted(target)) return target;
+      clear.push(slot);
+      if (target.status === "completed" && !reopen.has(target.id)) {
+        reopen.add(target.id);
+        queue.push(target);
+      }
+    }
+  }
+
+  for (const slot of clear) fillSlot(matches, slot, "");
+  for (const id of reopen) {
+    const target = matches.get(id);
+    if (!target) continue;
+    matches.set(id, {
+      ...target,
+      status: "pending",
+      winnerId: undefined,
+      isBye: undefined,
+      forfeitedBy: undefined,
+      completedAt: undefined,
+      homeScore: 0,
+      awayScore: 0,
+      ...(target.seriesLength !== undefined && { homeWins: 0, awayWins: 0, seriesGame: 1 }),
+    });
+  }
+  return null;
 };
 
 /** The champion once the bracket's last match is done, else undefined. */

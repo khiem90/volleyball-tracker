@@ -103,6 +103,17 @@ const rotationState = (tournament: Tournament) =>
 export const isPlayable = (match: Match): boolean =>
   match.homeTeamId !== "" && match.awayTeamId !== "" && match.isBye !== true;
 
+/**
+ * A completed result the owner could correct. A bye has no score. A
+ * forfeit can be corrected into a played result in a round robin, where the
+ * standings recalculate, but not in a bracket, where the opponent has
+ * already gone through.
+ */
+export const isCorrectable = (tournament: Tournament, match: Match): boolean =>
+  match.status === "completed" &&
+  match.isBye !== true &&
+  (match.forfeitedBy === undefined || tournament.format === "round_robin");
+
 const SIDE_ORDER = { winners: 0, losers: 1, grand_finals: 2 } as const;
 
 /** Play order: bracket side, then round, then position. */

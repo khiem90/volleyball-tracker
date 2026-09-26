@@ -81,14 +81,17 @@ const AddTeamForm = ({
 
 /**
  * The Teams tab: every entry with its record in this tournament. The owner
- * of a live rotation or round robin tournament can add a team here, which
- * joins the back of the queue or gets its matches, withdraw one, and bring
- * a withdrawn one back.
+ * of a live tournament can withdraw a team here. In a rotation or round
+ * robin tournament the owner can also add a team, which joins the back of
+ * the queue or gets its matches, and bring a withdrawn one back; a bracket
+ * takes nobody once it is drawn, and says so where the add strip would be.
  */
 export const TeamsPanel = ({
   rows,
   team,
-  canEdit,
+  canAdd,
+  canWithdraw,
+  addRefusal,
   suggestions,
   joinedNote,
   onAdd,
@@ -98,8 +101,12 @@ export const TeamsPanel = ({
 }: {
   rows: TeamRow[];
   team: TeamLookup;
-  /** Whether teams can be added and withdrawn: the owner of a live rotation or round robin tournament. */
-  canEdit: boolean;
+  /** Whether a team can be added or brought back: the owner of a live rotation or round robin tournament. */
+  canAdd: boolean;
+  /** Whether a team can be withdrawn: the owner of any live tournament. */
+  canWithdraw: boolean;
+  /** Why a team cannot be added, shown in place of the add strip while teams can still be withdrawn. */
+  addRefusal: string | null;
   /** Roster names to offer while typing: teams not yet entered. */
   suggestions: string[];
   /** What the notice says a team did once it is in: "joined the queue". */
@@ -111,8 +118,13 @@ export const TeamsPanel = ({
   busy: boolean;
 }) => (
   <Panel title="Teams" meta={<span className="mb-kicker">{rows.length} entered</span>}>
-    {canEdit && (
+    {canAdd && (
       <AddTeamForm suggestions={suggestions} joinedNote={joinedNote} onAdd={onAdd} busy={busy} />
+    )}
+    {!canAdd && canWithdraw && addRefusal && (
+      <p className="border-b border-mb-rule px-3 py-2.5 text-[0.78rem] font-medium text-mb-ink-muted">
+        {addRefusal}
+      </p>
     )}
     {rows.length === 0 ? (
       <PanelEmpty message="No teams are entered." />
@@ -124,8 +136,8 @@ export const TeamsPanel = ({
               <th className="w-8 pl-3! text-center">#</th>
               <th>Team</th>
               <th className="text-center">W</th>
-              <th className={canEdit ? "text-center" : "pr-3! text-center"}>L</th>
-              {canEdit && (
+              <th className={canWithdraw ? "text-center" : "pr-3! text-center"}>L</th>
+              {canWithdraw && (
                 <th className="pr-3!">
                   <span className="sr-only">Actions</span>
                 </th>
@@ -150,19 +162,30 @@ export const TeamsPanel = ({
                   </span>
                 </td>
                 <td className="text-center tabular-nums">{row.won}</td>
-                <td className={`text-center tabular-nums ${canEdit ? "" : "pr-3!"}`}>{row.lost}</td>
-                {canEdit && (
+                <td className={`text-center tabular-nums ${canWithdraw ? "" : "pr-3!"}`}>{row.lost}</td>
+                {canWithdraw && (
                   <td className="pr-3! text-right">
-                    <button
-                      type="button"
-                      onClick={() => (row.withdrawn ? onRejoin(row) : onWithdraw(row))}
-                      disabled={busy}
-                      className={`mb-btn min-h-11 px-3 text-[0.66rem] ${
-                        row.withdrawn ? "mb-btn-outline-navy" : "mb-btn-outline"
-                      }`}
-                    >
-                      {row.withdrawn ? "Rejoin" : "Withdraw"}
-                    </button>
+                    {row.withdrawn ? (
+                      canAdd && (
+                        <button
+                          type="button"
+                          onClick={() => onRejoin(row)}
+                          disabled={busy}
+                          className="mb-btn mb-btn-outline-navy min-h-11 px-3 text-[0.66rem]"
+                        >
+                          Rejoin
+                        </button>
+                      )
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => onWithdraw(row)}
+                        disabled={busy}
+                        className="mb-btn mb-btn-outline min-h-11 px-3 text-[0.66rem]"
+                      >
+                        Withdraw
+                      </button>
+                    )}
                   </td>
                 )}
               </tr>

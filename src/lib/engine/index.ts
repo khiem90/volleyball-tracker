@@ -1,4 +1,11 @@
-import type { Entry, Match, MatchDraft, MatchProgress, Tournament } from "@/types/game";
+import type {
+  Entry,
+  Match,
+  MatchDraft,
+  MatchProgress,
+  Tournament,
+  TournamentFormat,
+} from "@/types/game";
 import { calculateStandings, generateRoundRobinSchedule } from "@/lib/roundRobin";
 import { generateSingleEliminationBracket } from "@/lib/singleElimination";
 import { generateDoubleEliminationBracket } from "@/lib/doubleElimination";
@@ -19,7 +26,8 @@ import {
   minimumTeams,
   minimumTeamsMessage,
 } from "@/lib/formats";
-import { advance, bracketChampion, resolveByes } from "./brackets";
+import { advance, bracketChampion, settleWithoutPlay, takeBack } from "./brackets";
+import { forfeited } from "./forfeit";
 import {
   applyUndo,
   canUndo,
@@ -106,7 +114,9 @@ export type EngineErrorCode =
   | "invalid_courts"
   | "same_place"
   | "court_in_play"
-  | "not_in_queue";
+  | "not_in_queue"
+  | "not_correctable"
+  | "match_started";
 
 export class EngineError extends Error {
   readonly code: EngineErrorCode;
@@ -225,10 +235,7 @@ const start = (working: Working, byeTeamIds?: string[]) => {
   for (const draft of withSeries(drafts, tournament)) place(working, draft);
   working.tournament = next;
 
-  if (isBracketFormat(tournament.format)) {
-    resolveByes(working.matches, options.now);
-    finishIfDecided(working);
-  }
+  if (isBracketFormat(tournament.format)) settleBracket(working);
 };
 
 // ============================================
@@ -325,7 +332,7 @@ const instantWin = (
  * result; the rotation formats keep it so the result can be undone.
  */
 const settle = (working: Working, completed: Match, previous: MatchProgress) => {
-  const { tournament, options } = working;
+  const { tournament } = working;
 
   switch (tournament.format) {
     case "round_robin":
@@ -335,8 +342,7 @@ const settle = (working: Working, completed: Match, previous: MatchProgress) => 
     case "single_elimination":
     case "double_elimination":
       advance(working.matches, completed);
-      resolveByes(working.matches, options.now);
-      finishIfDecided(working);
+      settleBracket(working);
       return;
 
     case "win2out": {
@@ -365,17 +371,26 @@ const settle = (working: Working, completed: Match, previous: MatchProgress) => 
   }
 };
 
+/**
+ * Settle what a bracket can settle without play, byes and forfeits, and
+ * finish the tournament if that decided its final.
+ */
+const settleBracket = (working: Working) => {
+  settleWithoutPlay(working.matches, withdrawnTeamIds(working.tournament), working.options.now);
+  finishIfDecided(working);
+};
+
 // ============================================
 // Correct result
 // ============================================
 
 /**
- * Correct the score of a completed round robin match. The winner follows
- * the new score, a forfeit becomes a played result, and the standings, which
- * are worked out from the matches, follow on their own. In a best-of the
- * corrected score is the deciding game's: when it changes the winner, that
- * game's win moves to the other side, which is refused if it would leave
- * the series undecided. Brackets get their own rule with ticket 11.
+ * Correct the score of a completed match. The winner follows the new score
+ * and a forfeit becomes a played result. In a round robin the standings,
+ * which are worked out from the matches, follow on their own. In a bracket
+ * a new winner goes through in place of the old one, which is refused once
+ * the next match has started; a bye or a forfeit there has no score to
+ * correct. Rotation results are undone from their court instead.
  */
 const correctResult = (
   working: Working,
@@ -383,10 +398,11 @@ const correctResult = (
 ) => {
   requireLive(working, "have a result corrected");
   const { tournament } = working;
-  if (tournament.format !== "round_robin") {
+  if (isRotationFormat(tournament.format)) {
+    const { venue } = tournament.settings.terminology;
     throw new EngineError(
       "unsupported_format",
-      "Only a Round Robin result can be corrected from the schedule.",
+      `A ${formatLabel(tournament.format)} result is undone from its ${venue}, not corrected.`,
     );
   }
   const match = working.matches.get(command.matchId);
@@ -399,23 +415,50 @@ const correctResult = (
   if (command.homeScore === command.awayScore) {
     throw new EngineError("tie", "A match cannot end in a tie.");
   }
+  const bracket = isBracketFormat(tournament.format);
+  if (bracket && match.isBye) {
+    throw new EngineError("not_correctable", "A bye has no score to correct.");
+  }
+  if (bracket && match.forfeitedBy) {
+    throw new EngineError("not_correctable", "A forfeit in a bracket cannot be corrected.");
+  }
 
-  const winnerId = command.homeScore > command.awayScore ? match.homeTeamId : match.awayTeamId;
-  const corrected: Match = {
-    ...match,
-    winnerId,
-    forfeitedBy: undefined,
-    homeScore: command.homeScore,
-    awayScore: command.awayScore,
-  };
+  const corrected = correctedScore(match, command.homeScore, command.awayScore);
+  if (!bracket || corrected.winnerId === match.winnerId) {
+    working.matches.set(match.id, corrected);
+    return;
+  }
+
+  const started = takeBack(working.matches, match);
+  if (started) {
+    const name = (teamId: string) => entryName(tournament, teamId);
+    throw new EngineError(
+      "match_started",
+      `${name(started.homeTeamId)} v ${name(started.awayTeamId)} has started, so this match's winner cannot change.`,
+    );
+  }
+  working.matches.set(match.id, corrected);
+  advance(working.matches, corrected);
+  settleBracket(working);
+};
+
+/**
+ * The match with its score corrected and the winner following it. In a
+ * best-of the corrected score is the deciding game's: when it changes the
+ * winner, that game's win moves to the other side, which is refused if it
+ * would leave the series undecided. A corrected forfeit never had a
+ * deciding game, so the winner gets the games it needs and the loser keeps
+ * those it already had.
+ */
+const correctedScore = (match: Match, homeScore: number, awayScore: number): Match => {
+  const winnerId = homeScore > awayScore ? match.homeTeamId : match.awayTeamId;
+  const corrected: Match = { ...match, winnerId, forfeitedBy: undefined, homeScore, awayScore };
 
   const seriesLength = match.seriesLength ?? 1;
   if (seriesLength > 1) {
     const winsNeeded = Math.ceil(seriesLength / 2);
     const homeWon = winnerId === match.homeTeamId;
     if (match.forfeitedBy) {
-      // A forfeit never had a deciding game. The corrected score is it: the
-      // winner has the games it needs and the loser those it already had.
       corrected.homeWins = homeWon ? winsNeeded : Math.min(match.homeWins ?? 0, winsNeeded - 1);
       corrected.awayWins = homeWon ? Math.min(match.awayWins ?? 0, winsNeeded - 1) : winsNeeded;
       corrected.seriesGame = corrected.homeWins + corrected.awayWins;
@@ -432,8 +475,7 @@ const correctResult = (
       corrected.awayWins = awayWins;
     }
   }
-
-  working.matches.set(match.id, corrected);
+  return corrected;
 };
 
 // ============================================
@@ -566,11 +608,16 @@ const requireLive = (working: Working, what: string) => {
   }
 };
 
+/** Why a bracket takes no team once live; the console shows it where the add strip would be. */
+export const bracketAddRefusal = (format: TournamentFormat): string =>
+  `A team cannot be added once the ${formatLabel(format)} bracket is drawn.`;
+
 /**
  * Add a team while live. In a rotation format it joins the back of the
  * queue, and a court the tournament runs but that had gone empty opens if
- * the queue can now fill it. A team that had withdrawn rejoins the same way
- * and keeps its record.
+ * the queue can now fill it. In a round robin it gets its matches. A team
+ * that had withdrawn rejoins the same way and keeps its record. A bracket
+ * takes nobody once it is drawn.
  */
 const addTeam = (working: Working, command: Extract<EngineCommand, { type: "add_team" }>) => {
   requireLive(working, "take a new team");
@@ -580,10 +627,7 @@ const addTeam = (working: Working, command: Extract<EngineCommand, { type: "add_
     throw new EngineError("already_entered", `${entry.name} is already in this tournament.`);
   }
   if (isBracketFormat(tournament.format)) {
-    throw new EngineError(
-      "unsupported_format",
-      `A team cannot be added to a live ${formatLabel(tournament.format)}.`,
-    );
+    throw new EngineError("unsupported_format", bracketAddRefusal(tournament.format));
   }
   const joined: Entry = {
     teamId: command.teamId,
@@ -664,8 +708,10 @@ const scheduleAgainstField = (working: Working, teamId: string) => {
 
 /**
  * Withdraw a team from a live tournament. Its entry is marked and its
- * played results stay. In a rotation format it leaves the queue or its
- * court, and the team it was playing stays where it is.
+ * played results stay. In a round robin its matches still to play are
+ * forfeited. In a bracket its next match is forfeited and its opponent goes
+ * through, once that opponent is known. In a rotation format it leaves the
+ * queue or its court, and the team it was playing stays where it is.
  */
 const withdraw = (working: Working, command: Extract<EngineCommand, { type: "withdraw" }>) => {
   requireLive(working, "withdraw a team");
@@ -677,12 +723,6 @@ const withdraw = (working: Working, command: Extract<EngineCommand, { type: "wit
   if (entry.withdrawnAt !== undefined) {
     throw new EngineError("already_withdrawn", `${entry.name} has already withdrawn.`);
   }
-  if (isBracketFormat(tournament.format)) {
-    throw new EngineError(
-      "unsupported_format",
-      `A team cannot be withdrawn from a live ${formatLabel(tournament.format)}.`,
-    );
-  }
   working.tournament = {
     ...tournament,
     entries: tournament.entries.map((e) =>
@@ -692,6 +732,10 @@ const withdraw = (working: Working, command: Extract<EngineCommand, { type: "wit
   if (tournament.format === "round_robin") {
     forfeitRemaining(working, command.teamId);
     finishIfDecided(working);
+    return;
+  }
+  if (isBracketFormat(tournament.format)) {
+    settleBracket(working);
     return;
   }
   editRotation(working, (state, rules) => withdrawTeam(state, rules, command.teamId));
@@ -709,17 +753,6 @@ const forfeitRemaining = (working: Working, teamId: string) => {
     working.matches.set(match.id, forfeited(match, teamId, working.options.now));
   }
 };
-
-/** The match as a forfeit by `teamId`: won by the other side, with no points. */
-const forfeited = (match: Match, teamId: string, now: number): Match => ({
-  ...match,
-  status: "completed",
-  winnerId: match.homeTeamId === teamId ? match.awayTeamId : match.homeTeamId,
-  forfeitedBy: teamId,
-  homeScore: 0,
-  awayScore: 0,
-  completedAt: now,
-});
 
 /**
  * Change how many courts a live rotation tournament runs. The teams must
@@ -907,6 +940,13 @@ const applyCourtEdits = (working: Working, edits: CourtEdits) => {
 
 const activeTeamIds = (tournament: Tournament): string[] =>
   tournament.entries.filter((e) => !e.withdrawnAt).map((e) => e.teamId);
+
+/** The name an entry was given, or "TBD" for a slot nothing has filled. */
+const entryName = (tournament: Tournament, teamId: string): string =>
+  tournament.entries.find((e) => e.teamId === teamId)?.name ?? "TBD";
+
+const withdrawnTeamIds = (tournament: Tournament): Set<string> =>
+  new Set(tournament.entries.filter((e) => e.withdrawnAt !== undefined).map((e) => e.teamId));
 
 /** Give every played match the series fields when the tournament is a best-of. */
 const withSeries = (drafts: MatchDraft[], tournament: Tournament): MatchDraft[] => {

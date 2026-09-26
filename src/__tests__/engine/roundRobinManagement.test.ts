@@ -1,23 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { calculateStandings } from "@/lib/roundRobin";
-import { draftWorld, find, NOW, run, started, win, type World } from "./helpers";
+import { addTeam, correct, draftWorld, entryOf, find, NOW, run, started, win, withdraw, type World } from "./helpers";
 
 const pairing = (home: string, away: string) => [home, away].sort().join(" v ");
 
-const addTeam = (world: World, teamId: string): World =>
-  run(world, { type: "add_team", teamId, name: `Team ${teamId}`, color: "#111111" });
-
-const withdraw = (world: World, teamId: string): World =>
-  run(world, { type: "withdraw", teamId });
-
-const correct = (world: World, matchId: string, homeScore: number, awayScore: number): World =>
-  run(world, { type: "correct_result", matchId, homeScore, awayScore });
-
-const entryOf = (world: World, teamId: string) => {
-  const entry = world.tournament.entries.find((e) => e.teamId === teamId);
-  if (!entry) throw new Error(`No entry for ${teamId}`);
-  return entry;
-};
 
 /** The match between two teams, whichever is home. */
 const between = (world: World, a: string, b: string) => {
@@ -323,15 +309,11 @@ describe("round robin management", () => {
       expect(() => correct(draftWorld("round_robin", 3), "nope", 20, 25)).toThrow(/live/);
     });
 
-    it("is not offered by the other formats", () => {
+    it("is not offered by the rotation formats, whose results are undone instead", () => {
       const rotation = started("win2out", 4);
       const played = win(rotation, rotation.matches[0].id, "t1");
-      expect(() => correct(played, rotation.matches[0].id, 20, 25)).toThrow(/Round Robin/);
-
-      const bracket = started("single_elimination", 4);
-      const semi = find(bracket, { round: 1, position: 1 });
-      expect(() => correct(win(bracket, semi.id, semi.homeTeamId), semi.id, 20, 25)).toThrow(
-        /Round Robin/,
+      expect(() => correct(played, rotation.matches[0].id, 20, 25)).toThrow(
+        /Win 2 & Out result is undone from its court/,
       );
     });
 
