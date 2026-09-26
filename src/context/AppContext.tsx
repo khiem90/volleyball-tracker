@@ -122,6 +122,12 @@ interface AppContextValue {
   instantWin: (matchId: string, winnerId: string) => Promise<void>;
   /** Take back the last result on a court of a rotation tournament. */
   undoResult: (tournamentId: string, matchId: string) => Promise<void>;
+  /** Correct the score of a completed match; the standings follow. */
+  correctMatchResult: (
+    tournamentId: string,
+    matchId: string,
+    result: MatchResult,
+  ) => Promise<void>;
   getMatchById: (id: string) => Match | undefined;
   // Teams, courts, and the queue of a live tournament
   /** Enter a roster team into a live tournament. In a rotation format it joins the back of the queue. */
@@ -479,6 +485,19 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     [requireAccount]
   );
 
+  // Also through the engine in a transaction: a correction never lands on
+  // top of a result a court saved in the meantime.
+  const correctMatchResult = useCallback(
+    async (tournamentId: string, matchId: string, result: MatchResult) => {
+      await applyTournamentCommand(requireAccount().db, tournamentId, {
+        type: "correct_result",
+        matchId,
+        ...result,
+      });
+    },
+    [requireAccount]
+  );
+
   const getMatchById = useCallback((id: string) => matchesById.get(id), [matchesById]);
 
   // ============================================
@@ -566,6 +585,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     completeMatch,
     instantWin,
     undoResult,
+    correctMatchResult,
     getMatchById,
     addTeamToTournament,
     withdrawTeam,

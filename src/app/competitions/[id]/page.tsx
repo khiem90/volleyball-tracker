@@ -14,6 +14,7 @@ import { Crest, Panel, PanelEmpty } from "@/components/matchbook/Panel";
 import { BracketPanel } from "@/components/console/BracketPanel";
 import { ConsoleTabs, panelId, tabId, type ConsoleTab } from "@/components/console/ConsoleTabs";
 import { CourtsPanel } from "@/components/console/CourtsPanel";
+import { CorrectResultDialog } from "@/components/console/CorrectResultDialog";
 import { EndTournamentDialog } from "@/components/console/EndTournamentDialog";
 import { SchedulePanel } from "@/components/console/SchedulePanel";
 import { SettingsPanel } from "@/components/console/SettingsPanel";
@@ -227,6 +228,7 @@ export default function TournamentConsolePage() {
               rows={page.schedule}
               team={page.team}
               access={page.access}
+              onCorrect={page.canCorrectResults ? page.openCorrection : undefined}
             />
           </Section>
           <Section id="teams" active={page.tab} className="lg:col-span-4">
@@ -235,6 +237,7 @@ export default function TournamentConsolePage() {
               team={page.team}
               canEdit={page.canEditTeams}
               suggestions={page.suggestions}
+              joinedNote={page.joinedNote}
               onAdd={page.addTeam}
               onWithdraw={page.setWithdrawing}
               onRejoin={page.rejoin}
@@ -297,11 +300,24 @@ export default function TournamentConsolePage() {
         }}
         icon={UserMinus}
         title={`Withdraw ${page.withdrawing?.name ?? "the team"}?`}
-        description="It leaves the queue or its court, and a match it is in is abandoned. The team it was playing stays on. Its played results stay, and it can rejoin later from Teams."
+        description={
+          rotation
+            ? "It leaves the queue or its court, and a match it is in is abandoned. The team it was playing stays on. Its played results stay, and it can rejoin later from Teams."
+            : "Its matches still to play are forfeited: each counts as a win for the other team, with no points either way. Its played results stay, and it can rejoin later from Teams."
+        }
         confirmLabel="Withdraw"
         busyLabel="Withdrawing..."
         isBusy={page.isApplying && page.withdrawing !== null}
         onConfirm={page.withdraw}
+      />
+
+      <CorrectResultDialog
+        match={page.correcting}
+        team={page.team}
+        isBusy={page.isApplying && page.correcting !== null}
+        error={page.correcting ? page.actionError : null}
+        onClose={page.closeCorrection}
+        onSave={page.saveCorrection}
       />
 
       <ConfirmDialog

@@ -15,10 +15,12 @@ const SUGGESTIONS_ID = "console-roster-names";
  */
 const AddTeamForm = ({
   suggestions,
+  joinedNote,
   onAdd,
   busy,
 }: {
   suggestions: string[];
+  joinedNote: string;
   /** Resolves with the team's name once it is in, or null when it was refused. */
   onAdd: (name: string) => Promise<string | null>;
   busy: boolean;
@@ -33,7 +35,7 @@ const AddTeamForm = ({
     const added = await onAdd(name);
     if (added !== null) {
       setName("");
-      setNotice(`${added} joined the queue.`);
+      setNotice(`${added} ${joinedNote}.`);
     }
     nameInput.current?.focus();
   };
@@ -79,14 +81,16 @@ const AddTeamForm = ({
 
 /**
  * The Teams tab: every entry with its record in this tournament. The owner
- * of a live rotation tournament can add a team here, which joins the back
- * of the queue, withdraw one, and bring a withdrawn one back.
+ * of a live rotation or round robin tournament can add a team here, which
+ * joins the back of the queue or gets its matches, withdraw one, and bring
+ * a withdrawn one back.
  */
 export const TeamsPanel = ({
   rows,
   team,
   canEdit,
   suggestions,
+  joinedNote,
   onAdd,
   onWithdraw,
   onRejoin,
@@ -94,10 +98,12 @@ export const TeamsPanel = ({
 }: {
   rows: TeamRow[];
   team: TeamLookup;
-  /** Whether teams can be added and withdrawn: the owner of a live rotation tournament. */
+  /** Whether teams can be added and withdrawn: the owner of a live rotation or round robin tournament. */
   canEdit: boolean;
   /** Roster names to offer while typing: teams not yet entered. */
   suggestions: string[];
+  /** What the notice says a team did once it is in: "joined the queue". */
+  joinedNote: string;
   onAdd: (name: string) => Promise<string | null>;
   onWithdraw: (row: TeamRow) => void;
   onRejoin: (row: TeamRow) => void;
@@ -105,7 +111,9 @@ export const TeamsPanel = ({
   busy: boolean;
 }) => (
   <Panel title="Teams" meta={<span className="mb-kicker">{rows.length} entered</span>}>
-    {canEdit && <AddTeamForm suggestions={suggestions} onAdd={onAdd} busy={busy} />}
+    {canEdit && (
+      <AddTeamForm suggestions={suggestions} joinedNote={joinedNote} onAdd={onAdd} busy={busy} />
+    )}
     {rows.length === 0 ? (
       <PanelEmpty message="No teams are entered." />
     ) : (

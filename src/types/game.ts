@@ -134,6 +134,8 @@ export interface RoundRobinStanding {
   lost: number;
   /** Wins awarded by forfeit, already counted in `won`. */
   forfeitWins: number;
+  /** Losses by forfeit, already counted in `lost`. */
+  forfeitLosses: number;
   pointsFor: number;
   pointsAgainst: number;
   pointsDiff: number;

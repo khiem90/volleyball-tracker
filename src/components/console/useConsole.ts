@@ -57,6 +57,7 @@ export const useConsole = (tournamentId: string) => {
     changeCourts: changeTournamentCourts,
     swapTeams,
     reorderQueue,
+    correctMatchResult,
     isTournamentsLoading,
   } = useApp();
 
@@ -360,6 +361,41 @@ export const useConsole = (tournamentId: string) => {
     setWithdrawing(null);
   }, [tournament, withdrawing, access.canManage, apply, withdrawTeam]);
 
+  // ============================================
+  // Results
+  // ============================================
+
+  const roundRobin = tournament?.format === "round_robin";
+  const canCorrectResults = access.canManage && roundRobin;
+
+  // The match being corrected is held by id and read fresh, so the dialog
+  // shows the score as it now stands and closes if the match goes away.
+  const [correctingId, setCorrectingId] = useState<string | null>(null);
+  const correcting = useMemo(
+    () =>
+      correctingId === null ? null : (matches.find((m) => m.id === correctingId) ?? null),
+    [correctingId, matches],
+  );
+  const openCorrection = useCallback(
+    (match: Match) => {
+      if (!canCorrectResults || match.status !== "completed") return;
+      setActionError(null);
+      setCorrectingId(match.id);
+    },
+    [canCorrectResults],
+  );
+  const closeCorrection = useCallback(() => setCorrectingId(null), []);
+  const saveCorrection = useCallback(
+    async (homeScore: number, awayScore: number) => {
+      if (!tournament || !correcting || !canCorrectResults) return;
+      const ok = await apply("save the corrected score", () =>
+        correctMatchResult(tournament.id, correcting.id, { homeScore, awayScore }),
+      );
+      if (ok) setCorrectingId(null);
+    },
+    [tournament, correcting, canCorrectResults, apply, correctMatchResult],
+  );
+
   return {
     isLoading: isTournamentsLoading,
     tournament,
@@ -408,13 +444,23 @@ export const useConsole = (tournamentId: string) => {
     setCourtsToClose,
     confirmCloseCourts,
     // Teams
-    /** Whether teams can be added and withdrawn here: the owner of a live rotation tournament. */
-    canEditTeams: access.canManage && rotation,
+    /** Whether teams can be added and withdrawn here: the owner of a live rotation or round robin tournament. */
+    canEditTeams: access.canManage && (rotation || roundRobin),
+    /** What an added team did: joined the queue, or got its matches. */
+    joinedNote: rotation ? "joined the queue" : "is on the schedule",
     suggestions,
     addTeam,
     rejoin,
     withdrawing,
     setWithdrawing,
     withdraw,
+    // Results
+    /** Whether completed results can be corrected from Schedule: the owner of a live round robin. */
+    canCorrectResults,
+    /** The match whose result is being corrected, if one is. */
+    correcting,
+    openCorrection,
+    closeCorrection,
+    saveCorrection,
   };
 };

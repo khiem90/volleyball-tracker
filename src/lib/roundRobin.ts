@@ -84,6 +84,7 @@ export const calculateStandings = (
       won: 0,
       lost: 0,
       forfeitWins: 0,
+      forfeitLosses: 0,
       pointsFor: 0,
       pointsAgainst: 0,
       pointsDiff: 0,
@@ -111,6 +112,7 @@ export const calculateStandings = (
         winner.forfeitWins++;
         winner.competitionPoints += pointsForWin;
         loser.lost++;
+        loser.forfeitLosses++;
         loser.competitionPoints += pointsForLoss;
         return;
       }

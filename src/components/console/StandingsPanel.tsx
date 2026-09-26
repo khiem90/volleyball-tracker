@@ -25,6 +25,24 @@ const TeamCell = ({
   </td>
 );
 
+/**
+ * A win or loss count with, when some of it came by forfeit, how many did.
+ * The legend above the standings says what the mark means.
+ */
+const Tally = ({ count, byForfeit }: { count: number; byForfeit: number }) => (
+  <td className="text-center tabular-nums">
+    {count}
+    {byForfeit > 0 && (
+      <sup
+        className="ml-0.5 text-[0.55rem] font-bold text-mb-ink-muted"
+        title={`${byForfeit} by forfeit`}
+      >
+        {byForfeit}F
+      </sup>
+    )}
+  </td>
+);
+
 /** Where a rotation team is: its court, its place in the queue, or nothing. */
 const where = (
   tournament: Tournament,
@@ -37,9 +55,9 @@ const where = (
       : "";
 
 /**
- * The Standings tab. Round Robin gets the points table; Win 2 & Out ranks
- * by times champion; Two Match Rotation ranks by wins. Withdrawn teams stay
- * in the table, marked.
+ * The Standings tab. Round Robin gets the points table, with wins and
+ * losses by forfeit marked; Win 2 & Out ranks by times champion; Two Match
+ * Rotation ranks by wins. Withdrawn teams stay in the table, marked.
  */
 export const StandingsPanel = ({
   tournament,
@@ -54,12 +72,21 @@ export const StandingsPanel = ({
 }) => {
   const empty =
     tournament.status === "draft" || view.kind === "bracket" || view.rows.length === 0;
+  const hasForfeits =
+    view.kind === "round_robin" && view.rows.some((row) => row.forfeitWins + row.forfeitLosses > 0);
   return (
     <Panel title="Standings">
       {empty ? (
         <PanelEmpty message="Standings fill in once the tournament starts." />
       ) : (
         <div className="overflow-x-auto">
+          {hasForfeits && (
+            <p className="border-b border-mb-rule px-3 py-2 text-[0.72rem] text-mb-ink-muted">
+              <span className="font-bold">F</span> marks wins and losses by forfeit. They count in
+              the record and the points column, and leave points for, against, and difference
+              untouched.
+            </p>
+          )}
           <table className="mb-table mb-table-compact w-full border-collapse">
             {view.kind === "round_robin" && (
               <>
@@ -87,8 +114,8 @@ export const StandingsPanel = ({
                       </td>
                       <TeamCell teamId={row.teamId} team={team} withdrawn={withdrawn.has(row.teamId)} />
                       <td className="text-center tabular-nums">{row.played}</td>
-                      <td className="text-center tabular-nums">{row.won}</td>
-                      <td className="text-center tabular-nums">{row.lost}</td>
+                      <Tally count={row.won} byForfeit={row.forfeitWins} />
+                      <Tally count={row.lost} byForfeit={row.forfeitLosses} />
                       <td className="text-center tabular-nums">{row.pointsFor}</td>
                       <td className="text-center tabular-nums">{row.pointsAgainst}</td>
                       <td className="text-center tabular-nums">

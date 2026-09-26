@@ -55,9 +55,14 @@ const Side = ({
     </span>
   );
 
-/** The middle of a row: the score once there is one, "vs" until then. */
+/** The middle of a row: the score once there is one, "vs" until then. A forfeit has no score. */
 const Outcome = ({ match }: { match: Match }) => {
   if (match.isBye) return <span className="mb-kicker">Bye</span>;
+  if (match.forfeitedBy) {
+    return (
+      <span className="matchbook-display text-[0.95rem] font-bold text-mb-ink-muted">–</span>
+    );
+  }
   if (match.status === "pending") {
     return (
       <span className="matchbook-display text-[0.7rem] font-semibold text-mb-ink-muted">vs</span>
@@ -88,23 +93,27 @@ const Status = ({ match }: { match: Match }) => {
 /**
  * One match as a row: where it sits, its two teams, and its score or
  * status. With `href` the whole row opens that page, which is how a tap on
- * a match opens scoring.
+ * a match opens scoring. With `onCorrect` the whole row is a button that
+ * opens the correction of its result.
  */
 export const MatchRow = ({
   match,
   team,
   label,
   href,
+  onCorrect,
 }: {
   match: Match;
   team: TeamLookup;
   /** Where the match sits: its round or court. */
   label?: string;
   href?: string;
+  onCorrect?: () => void;
 }) => {
   const completed = match.status === "completed";
   const homeLost = completed && !match.isBye && match.winnerId === match.awayTeamId;
   const awayLost = completed && !match.isBye && match.winnerId === match.homeTeamId;
+  const opens = href !== undefined || onCorrect !== undefined;
   const body = (
     <>
       {(label || match.status !== "pending" || match.forfeitedBy) && (
@@ -112,7 +121,8 @@ export const MatchRow = ({
           <span className="mb-kicker">{label}</span>
           <span className="flex items-center gap-2">
             <Status match={match} />
-            {href && <MbIcon id="chevron-right" size={11} className="text-mb-ink-muted" />}
+            {onCorrect && <span className="mb-kicker text-mb-navy">Correct</span>}
+            {opens && <MbIcon id="chevron-right" size={11} className="text-mb-ink-muted" />}
           </span>
         </div>
       )}
@@ -123,12 +133,21 @@ export const MatchRow = ({
   );
   const className =
     "grid min-h-11 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-2 gap-y-1 px-3 py-2";
+  const tappable = `${className} transition-colors hover:bg-[rgba(7,50,77,0.04)]`;
 
-  return href ? (
-    <Link href={href} className={`${className} transition-colors hover:bg-[rgba(7,50,77,0.04)]`}>
-      {body}
-    </Link>
-  ) : (
-    <div className={className}>{body}</div>
-  );
+  if (href) {
+    return (
+      <Link href={href} className={tappable}>
+        {body}
+      </Link>
+    );
+  }
+  if (onCorrect) {
+    return (
+      <button type="button" onClick={onCorrect} className={`${tappable} w-full text-left`}>
+        {body}
+      </button>
+    );
+  }
+  return <div className={className}>{body}</div>;
 };

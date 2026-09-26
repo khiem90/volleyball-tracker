@@ -518,6 +518,57 @@ describeFirestoreRules("Tournaments on Firestore", (env) => {
       expect(matches[0].id).not.toBe(court2.id);
     });
 
+    it("adding, withdrawing, and correcting a result on a live round robin write the entries and the matches", async () => {
+      const db = modularFirestore(env().authenticatedContext(owner));
+      const created = await createTournament(db, owner, input("round_robin"), { start: true });
+
+      await applyTournamentCommand(db, created.id, { type: "add_team", teamId: "t5", name: "Eagles" });
+
+      const joined = await tournamentDocOf(db, created.id);
+      expect(joined.entries.at(-1)).toEqual({ teamId: "t5", name: "Eagles" });
+      expect(joined.teamIds).toEqual(["t1", "t2", "t3", "t4", "t5"]);
+      const afterAdd = await matchDocsOf(db, created.id);
+      expect(afterAdd).toHaveLength(10);
+      expect(afterAdd.filter((m) => m.awayTeamId === "t5").map((m) => m.homeTeamId).sort()).toEqual(
+        ["t1", "t2", "t3", "t4"],
+      );
+
+      await applyTournamentCommand(db, created.id, { type: "withdraw", teamId: "t5" });
+
+      const withdrawn = await tournamentDocOf(db, created.id);
+      expect(withdrawn.entries.at(-1)?.withdrawnAt).toEqual(expect.any(Number));
+      expect(withdrawn.status).toBe("live");
+      const forfeits = (await matchDocsOf(db, created.id)).filter((m) => m.awayTeamId === "t5");
+      expect(forfeits).toHaveLength(4);
+      for (const match of forfeits) {
+        expect(match).toMatchObject({
+          status: "completed",
+          forfeitedBy: "t5",
+          winnerId: match.homeTeamId,
+          homeScore: 0,
+          awayScore: 0,
+        });
+      }
+
+      // A forfeit corrected into a played result loses its forfeit mark in the document.
+      const forfeit = forfeits[0];
+      await applyTournamentCommand(db, created.id, {
+        type: "correct_result",
+        matchId: forfeit.id,
+        homeScore: 21,
+        awayScore: 25,
+      });
+
+      const corrected = (await matchDocsOf(db, created.id)).find((m) => m.id === forfeit.id)!;
+      expect(corrected).toMatchObject({
+        status: "completed",
+        winnerId: "t5",
+        homeScore: 21,
+        awayScore: 25,
+      });
+      expect("forfeitedBy" in corrected).toBe(false);
+    });
+
     it("deleting a tournament removes it and its matches", async () => {
       const db = modularFirestore(env().authenticatedContext(owner));
       const created = await createTournament(db, owner, input("round_robin"));

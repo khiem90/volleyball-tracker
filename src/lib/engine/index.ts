@@ -59,6 +59,8 @@ export type EngineCommand =
     }
   | { type: "instant_win"; matchId: string; winnerId: string }
   | { type: "undo_result"; matchId: string }
+  /** Correct the score of a completed match. */
+  | { type: "correct_result"; matchId: string; homeScore: number; awayScore: number }
   | { type: "add_team"; teamId: string; name: string; color?: string }
   | { type: "withdraw"; teamId: string }
   | { type: "change_courts"; courts: number }
@@ -90,7 +92,9 @@ export type EngineErrorCode =
   | "too_few_teams"
   | "match_not_found"
   | "match_completed"
+  | "match_not_completed"
   | "match_not_ready"
+  | "series_undecided"
   | "not_in_match"
   | "tie"
   | "unsupported_format"
@@ -144,6 +148,9 @@ export const applyCommand = (
       break;
     case "undo_result":
       undoResult(working, command);
+      break;
+    case "correct_result":
+      correctResult(working, command);
       break;
     case "add_team":
       addTeam(working, command);
@@ -359,6 +366,77 @@ const settle = (working: Working, completed: Match, previous: MatchProgress) => 
 };
 
 // ============================================
+// Correct result
+// ============================================
+
+/**
+ * Correct the score of a completed round robin match. The winner follows
+ * the new score, a forfeit becomes a played result, and the standings, which
+ * are worked out from the matches, follow on their own. In a best-of the
+ * corrected score is the deciding game's: when it changes the winner, that
+ * game's win moves to the other side, which is refused if it would leave
+ * the series undecided. Brackets get their own rule with ticket 11.
+ */
+const correctResult = (
+  working: Working,
+  command: Extract<EngineCommand, { type: "correct_result" }>,
+) => {
+  requireLive(working, "have a result corrected");
+  const { tournament } = working;
+  if (tournament.format !== "round_robin") {
+    throw new EngineError(
+      "unsupported_format",
+      "Only a Round Robin result can be corrected from the schedule.",
+    );
+  }
+  const match = working.matches.get(command.matchId);
+  if (!match) {
+    throw new EngineError("match_not_found", "That match is not in this tournament.");
+  }
+  if (match.status !== "completed") {
+    throw new EngineError("match_not_completed", "That match has not been completed yet.");
+  }
+  if (command.homeScore === command.awayScore) {
+    throw new EngineError("tie", "A match cannot end in a tie.");
+  }
+
+  const winnerId = command.homeScore > command.awayScore ? match.homeTeamId : match.awayTeamId;
+  const corrected: Match = {
+    ...match,
+    winnerId,
+    forfeitedBy: undefined,
+    homeScore: command.homeScore,
+    awayScore: command.awayScore,
+  };
+
+  const seriesLength = match.seriesLength ?? 1;
+  if (seriesLength > 1) {
+    const winsNeeded = Math.ceil(seriesLength / 2);
+    const homeWon = winnerId === match.homeTeamId;
+    if (match.forfeitedBy) {
+      // A forfeit never had a deciding game. The corrected score is it: the
+      // winner has the games it needs and the loser those it already had.
+      corrected.homeWins = homeWon ? winsNeeded : Math.min(match.homeWins ?? 0, winsNeeded - 1);
+      corrected.awayWins = homeWon ? Math.min(match.awayWins ?? 0, winsNeeded - 1) : winsNeeded;
+      corrected.seriesGame = corrected.homeWins + corrected.awayWins;
+    } else if (winnerId !== match.winnerId) {
+      const homeWins = (match.homeWins ?? 0) + (homeWon ? 1 : -1);
+      const awayWins = (match.awayWins ?? 0) + (homeWon ? -1 : 1);
+      if (Math.max(homeWins, awayWins) < winsNeeded) {
+        throw new EngineError(
+          "series_undecided",
+          "Changing the winner of that game would leave the series undecided.",
+        );
+      }
+      corrected.homeWins = homeWins;
+      corrected.awayWins = awayWins;
+    }
+  }
+
+  working.matches.set(match.id, corrected);
+};
+
+// ============================================
 // Undo result
 // ============================================
 
@@ -501,7 +579,7 @@ const addTeam = (working: Working, command: Extract<EngineCommand, { type: "add_
   if (entry && entry.withdrawnAt === undefined) {
     throw new EngineError("already_entered", `${entry.name} is already in this tournament.`);
   }
-  if (!isRotationFormat(tournament.format)) {
+  if (isBracketFormat(tournament.format)) {
     throw new EngineError(
       "unsupported_format",
       `A team cannot be added to a live ${formatLabel(tournament.format)}.`,
@@ -519,9 +597,69 @@ const addTeam = (working: Working, command: Extract<EngineCommand, { type: "add_
       : [...tournament.entries, joined],
     teamIds: entry ? tournament.teamIds : [...tournament.teamIds, command.teamId],
   };
+  if (tournament.format === "round_robin") {
+    if (entry) reopenForfeits(working, command.teamId);
+    scheduleAgainstField(working, command.teamId);
+    return;
+  }
   editRotation(working, (state, rules) =>
     fillCourts(joinQueue(state, rules, command.teamId), rules),
   );
+};
+
+/**
+ * Put back the matches a team's withdrawal forfeited, so a team that comes
+ * back plays them after all. One against an opponent that has withdrawn
+ * meanwhile becomes that opponent's forfeit instead. A forfeit since
+ * corrected into a played result is a result and stays.
+ */
+const reopenForfeits = (working: Working, teamId: string) => {
+  const active = new Set(activeTeamIds(working.tournament));
+  for (const match of working.matches.values()) {
+    if (match.forfeitedBy !== teamId) continue;
+    const opponent = match.homeTeamId === teamId ? match.awayTeamId : match.homeTeamId;
+    working.matches.set(
+      match.id,
+      active.has(opponent)
+        ? {
+            ...match,
+            status: "pending",
+            winnerId: undefined,
+            forfeitedBy: undefined,
+            completedAt: undefined,
+            homeScore: 0,
+            awayScore: 0,
+          }
+        : forfeited(match, opponent, working.options.now),
+    );
+  }
+};
+
+/**
+ * Give a team of a live round robin a match against every active entry it
+ * has none against, one new round each, after the rounds already scheduled.
+ */
+const scheduleAgainstField = (working: Working, teamId: string) => {
+  const matches = [...working.matches.values()];
+  const alreadyPlays = new Set(
+    matches
+      .filter((m) => m.homeTeamId === teamId || m.awayTeamId === teamId)
+      .map((m) => (m.homeTeamId === teamId ? m.awayTeamId : m.homeTeamId)),
+  );
+  const opponents = activeTeamIds(working.tournament).filter(
+    (id) => id !== teamId && !alreadyPlays.has(id),
+  );
+  let round = Math.max(0, ...matches.map((m) => m.round));
+  const drafts: MatchDraft[] = opponents.map((opponent) => ({
+    homeTeamId: opponent,
+    awayTeamId: teamId,
+    homeScore: 0,
+    awayScore: 0,
+    status: "pending",
+    round: ++round,
+    position: 1,
+  }));
+  for (const draft of withSeries(drafts, working.tournament)) place(working, draft);
 };
 
 /**
@@ -539,7 +677,7 @@ const withdraw = (working: Working, command: Extract<EngineCommand, { type: "wit
   if (entry.withdrawnAt !== undefined) {
     throw new EngineError("already_withdrawn", `${entry.name} has already withdrawn.`);
   }
-  if (!isRotationFormat(tournament.format)) {
+  if (isBracketFormat(tournament.format)) {
     throw new EngineError(
       "unsupported_format",
       `A team cannot be withdrawn from a live ${formatLabel(tournament.format)}.`,
@@ -551,8 +689,37 @@ const withdraw = (working: Working, command: Extract<EngineCommand, { type: "wit
       e.teamId === command.teamId ? { ...e, withdrawnAt: options.now } : e,
     ),
   };
+  if (tournament.format === "round_robin") {
+    forfeitRemaining(working, command.teamId);
+    finishIfDecided(working);
+    return;
+  }
   editRotation(working, (state, rules) => withdrawTeam(state, rules, command.teamId));
 };
+
+/**
+ * Award every match the team has still to play to its opponent. A forfeit
+ * is a completed match with no points on either side, marked with the team
+ * that forfeited.
+ */
+const forfeitRemaining = (working: Working, teamId: string) => {
+  for (const match of working.matches.values()) {
+    if (match.status === "completed") continue;
+    if (match.homeTeamId !== teamId && match.awayTeamId !== teamId) continue;
+    working.matches.set(match.id, forfeited(match, teamId, working.options.now));
+  }
+};
+
+/** The match as a forfeit by `teamId`: won by the other side, with no points. */
+const forfeited = (match: Match, teamId: string, now: number): Match => ({
+  ...match,
+  status: "completed",
+  winnerId: match.homeTeamId === teamId ? match.awayTeamId : match.homeTeamId,
+  forfeitedBy: teamId,
+  homeScore: 0,
+  awayScore: 0,
+  completedAt: now,
+});
 
 /**
  * Change how many courts a live rotation tournament runs. The teams must

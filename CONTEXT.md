@@ -15,7 +15,7 @@ All the teams an account has created, kept between tournaments.
 _Avoid_: Team directory, team list
 
 **Withdraw**:
-Take a team out of a live tournament. Its remaining matches are forfeited and its played results stay. In Win 2 & Out and Two Match Rotation, which schedule one match per court at a time, the team leaves the queue or its court instead: a match it is in is abandoned, the team it was playing stays on, and the next team in the queue comes on. A withdrawn team can be added again and rejoins at the back of the queue with its record kept.
+Take a team out of a live tournament. Its remaining matches are forfeited and its played results stay. In Win 2 & Out and Two Match Rotation, which schedule one match per court at a time, the team leaves the queue or its court instead: a match it is in is abandoned, the team it was playing stays on, and the next team in the queue comes on. A withdrawn team can be added again with its record kept: in Round Robin its forfeited matches reopen and it gets a match against any team that joined meanwhile; in the rotation formats it rejoins at the back of the queue.
 _Avoid_: Remove, delete (for a team in a live tournament)
 
 **Forfeit**:
@@ -97,6 +97,10 @@ _Avoid_: Quick result
 **Undo**:
 Taking back the latest result on a court in Win 2 & Out or Two Match Rotation. The match is unplayed again, the match it scheduled is removed, and the teams it moved go back where they were. Only a court's latest result can be undone, and only while the court has not moved on.
 _Avoid_: Revert, rollback
+
+**Correction**:
+Changing the score of a completed match from Schedule. The owner can correct a Round Robin result while the tournament is live: the winner follows the new score, a forfeit corrected this way counts as played, and the standings recalculate. In a best-of the corrected score is the deciding game's, and a change of winner is refused if it would leave the series undecided.
+_Avoid_: Edit result, override, undo (for a round robin result)
 
 **Quick Match**:
 A standalone match between two teams that belongs to no tournament.

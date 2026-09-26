@@ -2,25 +2,28 @@
 
 import { Panel, PanelEmpty } from "@/components/matchbook/Panel";
 import type { ConsoleAccess, ScheduleRow } from "@/lib/console";
-import type { Tournament } from "@/types/game";
+import type { Match, Tournament } from "@/types/game";
 import { MatchRow, scoringLink } from "./MatchRow";
 import type { TeamLookup } from "./teamRefs";
 
 /**
  * The Schedule tab: every match in play order with its result. A pending or
- * live match opens scoring for an owner or scorer. Correcting a completed
- * result is reached from here once tickets 10 and 11 land.
+ * live match opens scoring for an owner or scorer. With `onCorrect`, a
+ * completed match opens the correction of its result.
  */
 export const SchedulePanel = ({
   tournament,
   rows,
   team,
   access,
+  onCorrect,
 }: {
   tournament: Tournament;
   rows: ScheduleRow[];
   team: TeamLookup;
   access: ConsoleAccess;
+  /** Offered when completed results can be corrected: the owner of a live round robin. */
+  onCorrect?: (match: Match) => void;
 }) => {
   const played = rows.filter((row) => row.match.status === "completed").length;
   return (
@@ -51,6 +54,11 @@ export const SchedulePanel = ({
               team={team}
               label={label}
               href={scoringLink(match, access)}
+              onCorrect={
+                onCorrect && match.status === "completed" && !match.isBye
+                  ? () => onCorrect(match)
+                  : undefined
+              }
             />
           ))}
         </div>

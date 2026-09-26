@@ -456,15 +456,15 @@ const reordersTheQueue = (format: TournamentFormat) => {
 };
 
 describe("rotation management", () => {
-  it("refuses to add a team to a live round robin", () => {
-    expect(() => addTeam(started("round_robin", 3), "t9")).toThrow(
-      /cannot be added to a live Round Robin/,
+  it("refuses to add a team to a started bracket", () => {
+    expect(() => addTeam(started("single_elimination", 4), "t9")).toThrow(
+      /cannot be added to a live Single Elimination/,
     );
   });
 
-  it("refuses to withdraw from a live round robin", () => {
-    expect(() => withdraw(started("round_robin", 3), "t1")).toThrow(
-      /cannot be withdrawn from a live Round Robin/,
+  it("refuses to withdraw from a bracket until ticket 11 gives it a rule", () => {
+    expect(() => withdraw(started("double_elimination", 4), "t1")).toThrow(
+      /cannot be withdrawn from a live Double Elimination/,
     );
   });
 
