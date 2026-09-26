@@ -11,10 +11,10 @@ import {
   consoleAccess,
   courtsView,
   isCorrectable,
+  roleFor,
   scheduleView,
   standingsView,
   teamsView,
-  type ConsoleRole,
   type TeamRow,
 } from "@/lib/console";
 import { bracketAddRefusal } from "@/lib/engine";
@@ -74,10 +74,7 @@ export const useConsole = (tournamentId: string) => {
   );
   const team = useMemo(() => teamLookup(teams), [teams]);
 
-  // Scorer detection arrives with the scorer link (ticket 13); until then the
-  // role is owner or spectator, and only owners can load a tournament.
-  const role: ConsoleRole =
-    tournament && user && tournament.ownerId === user.uid ? "owner" : "spectator";
+  const role = roleFor(tournament?.ownerId, user?.uid);
   const access = consoleAccess(role, tournament?.status ?? "draft");
 
   const courts = useMemo(

@@ -1,34 +1,33 @@
 "use client";
 
 import { memo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Button } from "@/components/ui/button";
-import {
-  ArrowUturnLeftIcon,
-  CheckIcon,
-  ArrowsPointingInIcon,
-} from "@heroicons/react/24/outline";
+import { AnimatePresence, motion } from "framer-motion";
+import { Flag, Minimize2, Undo2 } from "lucide-react";
 
 type FullscreenControlsProps = {
   isFullscreen: boolean;
-  canEdit?: boolean;
-  canComplete?: boolean;
-  historyLength: number;
+  canScore: boolean;
+  canUndo: boolean;
+  canComplete: boolean;
   endLabel: string;
   onUndo: () => void;
   onOpenCompleteDialog: () => void;
-  onFullscreenToggle: () => void;
+  onExit: () => void;
 };
 
+/**
+ * The floating bar that replaces the header in fullscreen: Undo and End
+ * for a scorer, and Exit for everyone. It sits above the home indicator.
+ */
 export const FullscreenControls = memo(function FullscreenControls({
   isFullscreen,
-  canEdit,
+  canScore,
+  canUndo,
   canComplete,
-  historyLength,
   endLabel,
   onUndo,
   onOpenCompleteDialog,
-  onFullscreenToggle,
+  onExit,
 }: FullscreenControlsProps) {
   return (
     <AnimatePresence>
@@ -37,43 +36,40 @@ export const FullscreenControls = memo(function FullscreenControls({
           initial={{ y: 100, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 100, opacity: 0 }}
-          className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 glass-nav rounded-full px-4 py-2"
+          className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-1/2 z-50 flex -translate-x-1/2 items-center gap-2 rounded-lg border-[1.5px] border-mb-navy bg-mb-paper-bright p-1.5 shadow-lg"
         >
-          {canEdit && (
+          {canScore && (
             <>
-              <Button
-                variant="ghost"
-                size="sm"
+              <button
+                type="button"
                 onClick={onUndo}
-                disabled={historyLength < 2}
-                className="gap-2 rounded-full"
+                disabled={!canUndo}
+                aria-label="Undo the last point"
+                className="mb-btn mb-btn-outline-navy min-h-11 min-w-11 px-3"
               >
-                <ArrowUturnLeftIcon className="w-4 h-4" />
-                Undo
-              </Button>
-              <div className="w-px h-6 bg-border/30" />
-              <Button
-                size="sm"
+                <Undo2 className="h-4 w-4" aria-hidden />
+                <span className="hidden sm:inline">Undo</span>
+              </button>
+              <button
+                type="button"
                 onClick={onOpenCompleteDialog}
                 disabled={!canComplete}
-                className="gap-2 rounded-full btn-teal-gradient"
+                className="mb-btn mb-btn-coral min-h-11 px-4"
               >
-                <CheckIcon className="w-4 h-4" />
+                <Flag className="h-4 w-4" aria-hidden />
                 {endLabel}
-              </Button>
-              <div className="w-px h-6 bg-border/30" />
+              </button>
             </>
           )}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onFullscreenToggle}
-            className="gap-2 rounded-full"
-            title="Exit fullscreen"
+          <button
+            type="button"
+            onClick={onExit}
+            aria-label="Exit fullscreen"
+            className="mb-btn mb-btn-outline-navy min-h-11 min-w-11 px-3"
           >
-            <ArrowsPointingInIcon className="w-4 h-4" />
-            Exit
-          </Button>
+            <Minimize2 className="h-4 w-4" aria-hidden />
+            <span className="hidden sm:inline">Exit</span>
+          </button>
         </motion.div>
       )}
     </AnimatePresence>

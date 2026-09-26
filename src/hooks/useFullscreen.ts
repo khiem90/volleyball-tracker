@@ -1,144 +1,64 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useCallback, useSyncExternalStore } from "react";
+import { fullscreenSupported } from "@/lib/scoring";
 
-interface WakeLockSentinel {
-  released: boolean;
-  release: () => Promise<void>;
-  addEventListener: (type: string, listener: EventListener) => void;
-  removeEventListener: (type: string, listener: EventListener) => void;
-}
+// Safari still prefixes the API; an iPhone has no element fullscreen at all.
+type FullscreenDocument = Document & {
+  webkitFullscreenEnabled?: boolean;
+  webkitFullscreenElement?: Element | null;
+  webkitExitFullscreen?: () => Promise<void> | void;
+};
+type FullscreenRoot = HTMLElement & {
+  webkitRequestFullscreen?: () => Promise<void> | void;
+};
 
-interface NavigatorWithWakeLock {
-  wakeLock?: {
-    request: (type: "screen") => Promise<WakeLockSentinel>;
-  };
-}
+const fullscreenElement = (doc: FullscreenDocument): Element | null =>
+  doc.fullscreenElement ?? doc.webkitFullscreenElement ?? null;
 
-export const useFullscreen = () => {
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const wakeLockRef = useRef<WakeLockSentinel | null>(null);
-
-  // Request wake lock to keep screen awake
-  const requestWakeLock = useCallback(async () => {
-    const nav = navigator as NavigatorWithWakeLock;
-    if ("wakeLock" in navigator && nav.wakeLock) {
-      try {
-        wakeLockRef.current = await nav.wakeLock.request("screen");
-        console.log("Wake Lock acquired");
-        
-        wakeLockRef.current.addEventListener("release", () => {
-          console.log("Wake Lock released");
-        });
-      } catch (err) {
-        console.log("Wake Lock request failed:", err);
-      }
-    }
-  }, []);
-
-  // Release wake lock
-  const releaseWakeLock = useCallback(async () => {
-    if (wakeLockRef.current && !wakeLockRef.current.released) {
-      try {
-        await wakeLockRef.current.release();
-        wakeLockRef.current = null;
-        console.log("Wake Lock released manually");
-      } catch (err) {
-        console.log("Wake Lock release failed:", err);
-      }
-    }
-  }, []);
-
-  // Enter fullscreen
-  const enterFullscreen = useCallback(async () => {
-    try {
-      const elem = document.documentElement;
-      if (elem.requestFullscreen) {
-        await elem.requestFullscreen();
-      } else if ((elem as HTMLElement & { webkitRequestFullscreen?: () => Promise<void> }).webkitRequestFullscreen) {
-        await (elem as HTMLElement & { webkitRequestFullscreen: () => Promise<void> }).webkitRequestFullscreen();
-      } else if ((elem as HTMLElement & { msRequestFullscreen?: () => Promise<void> }).msRequestFullscreen) {
-        await (elem as HTMLElement & { msRequestFullscreen: () => Promise<void> }).msRequestFullscreen();
-      }
-      setIsFullscreen(true);
-      await requestWakeLock();
-    } catch (err) {
-      console.log("Fullscreen request failed:", err);
-    }
-  }, [requestWakeLock]);
-
-  // Exit fullscreen
-  const exitFullscreen = useCallback(async () => {
-    try {
-      if (document.exitFullscreen) {
-        await document.exitFullscreen();
-      } else if ((document as Document & { webkitExitFullscreen?: () => Promise<void> }).webkitExitFullscreen) {
-        await (document as Document & { webkitExitFullscreen: () => Promise<void> }).webkitExitFullscreen();
-      } else if ((document as Document & { msExitFullscreen?: () => Promise<void> }).msExitFullscreen) {
-        await (document as Document & { msExitFullscreen: () => Promise<void> }).msExitFullscreen();
-      }
-      setIsFullscreen(false);
-      await releaseWakeLock();
-    } catch (err) {
-      console.log("Exit fullscreen failed:", err);
-    }
-  }, [releaseWakeLock]);
-
-  // Toggle fullscreen
-  const toggleFullscreen = useCallback(async () => {
-    if (isFullscreen) {
-      await exitFullscreen();
-    } else {
-      await enterFullscreen();
-    }
-  }, [isFullscreen, enterFullscreen, exitFullscreen]);
-
-  // Listen for fullscreen changes (e.g., user presses Escape)
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      const isCurrentlyFullscreen = !!(
-        document.fullscreenElement ||
-        (document as Document & { webkitFullscreenElement?: Element }).webkitFullscreenElement ||
-        (document as Document & { msFullscreenElement?: Element }).msFullscreenElement
-      );
-      setIsFullscreen(isCurrentlyFullscreen);
-      
-      if (!isCurrentlyFullscreen) {
-        releaseWakeLock();
-      }
-    };
-
-    document.addEventListener("fullscreenchange", handleFullscreenChange);
-    document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
-    document.addEventListener("msfullscreenchange", handleFullscreenChange);
-
-    return () => {
-      document.removeEventListener("fullscreenchange", handleFullscreenChange);
-      document.removeEventListener("webkitfullscreenchange", handleFullscreenChange);
-      document.removeEventListener("msfullscreenchange", handleFullscreenChange);
-      releaseWakeLock();
-    };
-  }, [releaseWakeLock]);
-
-  // Re-acquire wake lock when page becomes visible again (required for mobile)
-  useEffect(() => {
-    const handleVisibilityChange = async () => {
-      if (document.visibilityState === "visible" && isFullscreen) {
-        await requestWakeLock();
-      }
-    };
-
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
-  }, [isFullscreen, requestWakeLock]);
-
-  return {
-    isFullscreen,
-    enterFullscreen,
-    exitFullscreen,
-    toggleFullscreen,
+const subscribeToFullscreen = (onChange: () => void) => {
+  document.addEventListener("fullscreenchange", onChange);
+  document.addEventListener("webkitfullscreenchange", onChange);
+  return () => {
+    document.removeEventListener("fullscreenchange", onChange);
+    document.removeEventListener("webkitfullscreenchange", onChange);
   };
 };
 
+// Support never changes while the page is open, so there is nothing to subscribe to.
+const subscribeToNothing = () => () => {};
+
+const readIsFullscreen = () => fullscreenElement(document as FullscreenDocument) !== null;
+const readIsSupported = () => fullscreenSupported(document as FullscreenDocument);
+const readFalse = () => false;
+
+/**
+ * Fullscreen as a bonus. `isSupported` says whether the device has the API
+ * at all, so a page can hide the button where it would do nothing;
+ * `isFullscreen` follows the document, including an exit by the Escape
+ * key; `toggleFullscreen` asks or exits and swallows a refusal.
+ */
+export const useFullscreen = () => {
+  const isSupported = useSyncExternalStore(subscribeToNothing, readIsSupported, readFalse);
+  const isFullscreen = useSyncExternalStore(subscribeToFullscreen, readIsFullscreen, readFalse);
+
+  const toggleFullscreen = useCallback(async () => {
+    const doc = document as FullscreenDocument;
+    const root = document.documentElement as FullscreenRoot;
+    try {
+      if (fullscreenElement(doc)) {
+        await (doc.exitFullscreen ? doc.exitFullscreen() : doc.webkitExitFullscreen?.());
+      } else {
+        await (root.requestFullscreen
+          ? root.requestFullscreen()
+          : root.webkitRequestFullscreen?.());
+      }
+    } catch (error) {
+      // A device that advertises the API and then refuses it, or a request
+      // outside a user gesture, leaves the page as it was.
+      console.warn("Fullscreen was refused:", error);
+    }
+  }, []);
+
+  return { isSupported, isFullscreen, toggleFullscreen };
+};

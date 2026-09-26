@@ -3,6 +3,7 @@ import {
   bracketView,
   consoleAccess,
   courtsView,
+  roleFor,
   scheduleView,
   standingsView,
   teamsView,
@@ -12,6 +13,16 @@ import type { Match } from "@/types/game";
 import { draftWorld, find, openOn, started, win } from "../engine/helpers";
 
 const sorted = (ids: readonly string[]) => [...ids].sort();
+
+describe("roleFor", () => {
+  it("makes the owning account the owner and everyone else, signed in or not, a spectator", () => {
+    expect(roleFor("owner-uid", "owner-uid")).toBe("owner");
+    expect(roleFor("owner-uid", "other-uid")).toBe("spectator");
+    expect(roleFor("owner-uid", null)).toBe("spectator");
+    expect(roleFor("owner-uid", undefined)).toBe("spectator");
+    expect(roleFor(undefined, "owner-uid")).toBe("spectator");
+  });
+});
 
 describe("consoleAccess", () => {
   it("lets the owner of a draft start, rename, duplicate, or delete it, and nothing else", () => {

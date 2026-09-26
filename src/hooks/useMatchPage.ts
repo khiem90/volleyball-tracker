@@ -1,14 +1,42 @@
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useApp } from "@/context/AppContext";
-import { useFullscreen } from "@/hooks/useFullscreen";
+import { useAuth } from "@/context/AuthContext";
+import { roleFor } from "@/lib/console";
 import { entryTeams } from "@/lib/entries";
+import {
+  afterSnapshot,
+  backHref,
+  backLabel,
+  blockMessage,
+  latestScore,
+  matchKind,
+  NO_SCORE,
+  sameScore,
+  scoringAccess,
+  seriesInfo,
+  tapped,
+  winnerSide,
+  type Score,
+  type ScoringAccess,
+  type Side,
+} from "@/lib/scoring";
+import { messageOf } from "@/lib/utils";
 
+const NOT_SCORING: ScoringAccess = { canScore: false, reason: "watch_only" };
+
+/**
+ * Everything the scoring page needs for one match: the match and its
+ * tournament from the provider, the two teams, what the visitor may do and
+ * why not, the point-by-point handlers with their undo history, and the
+ * confirm that records the result through the engine.
+ */
 export const useMatchPage = () => {
   const params = useParams();
   const router = useRouter();
   const matchId = params.id as string;
 
+  const { user } = useAuth();
   const {
     state,
     getMatchById,
@@ -16,227 +44,150 @@ export const useMatchPage = () => {
     updateMatchScore,
     startMatch,
     completeMatch,
-    canEdit,
     isTournamentsLoading,
   } = useApp();
 
-  const { isFullscreen, toggleFullscreen } = useFullscreen();
-
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
-  const [history, setHistory] = useState<{ home: number; away: number }[]>([]);
-  const [showRotatePrompt, setShowRotatePrompt] = useState(false);
+  const [history, setHistory] = useState<Score[]>([]);
   const [isCompleting, setIsCompleting] = useState(false);
   const [completeError, setCompleteError] = useState<string | null>(null);
 
-  const isLandscape = useCallback(() => {
-    return window.innerWidth > window.innerHeight;
-  }, []);
-
-  const handleFullscreenToggle = useCallback(() => {
-    if (isFullscreen) {
-      toggleFullscreen();
-    } else {
-      if (isLandscape()) {
-        toggleFullscreen();
-      } else {
-        setShowRotatePrompt(true);
-      }
-    }
-  }, [isFullscreen, isLandscape, toggleFullscreen]);
-
-  useEffect(() => {
-    if (!isFullscreen) return;
-
-    const handleOrientationChange = () => {
-      if (!isLandscape()) {
-        toggleFullscreen();
-      }
-    };
-
-    window.addEventListener("resize", handleOrientationChange);
-    window.addEventListener("orientationchange", handleOrientationChange);
-
-    return () => {
-      window.removeEventListener("resize", handleOrientationChange);
-      window.removeEventListener("orientationchange", handleOrientationChange);
-    };
-  }, [isFullscreen, isLandscape, toggleFullscreen]);
-
-  const match = useMemo(() => getMatchById(matchId), [getMatchById, matchId]);
-  const competition = useMemo(
-    () => (match?.tournamentId ? getTournamentById(match.tournamentId) : null),
-    [match, getTournamentById]
-  );
+  const match = getMatchById(matchId);
+  const tournament = (match?.tournamentId && getTournamentById(match.tournamentId)) || null;
 
   // A tournament match shows its entries; a quick match shows roster teams.
   const teams = useMemo(
-    () => (competition ? entryTeams(competition, state.teams) : state.teams),
-    [competition, state.teams]
+    () => (tournament ? entryTeams(tournament, state.teams) : state.teams),
+    [tournament, state.teams],
   );
-  const homeTeam = useMemo(
-    () => teams.find((t) => t.id === match?.homeTeamId),
-    [teams, match?.homeTeamId]
-  );
-  const awayTeam = useMemo(
-    () => teams.find((t) => t.id === match?.awayTeamId),
-    [teams, match?.awayTeamId]
-  );
+  const homeTeam = teams.find((t) => t.id === match?.homeTeamId);
+  const awayTeam = teams.find((t) => t.id === match?.awayTeamId);
 
-  const seriesInfo = useMemo(() => {
-    const seriesLength = match?.seriesLength ?? 1;
-    const isSeries = seriesLength > 1;
-    const homeWins = isSeries ? match?.homeWins ?? 0 : 0;
-    const awayWins = isSeries ? match?.awayWins ?? 0 : 0;
-    const gamesPlayed = homeWins + awayWins;
+  const role = roleFor(tournament?.ownerId ?? match?.ownerId, user?.uid);
+  const access = match ? scoringAccess(role, match, tournament) : NOT_SCORING;
+  const canScore = access.canScore;
+  const notice = match && !access.canScore ? blockMessage(access.reason, matchKind(match)) : null;
 
-    return {
-      isSeries,
-      seriesLength,
-      homeWins,
-      awayWins,
-      winsNeeded: isSeries ? Math.ceil(seriesLength / 2) : 1,
-      gameNumber: isSeries
-        ? match?.status === "completed"
-          ? gamesPlayed
-          : gamesPlayed + 1
-        : 1,
-    };
-  }, [match]);
-
+  // Opening a match a scorer may play starts it.
+  const matchStatus = match?.status;
   useEffect(() => {
-    if (match && match.status === "pending" && canEdit) {
-      startMatch(matchId);
-    }
-  }, [match, matchId, startMatch, canEdit]);
+    if (matchStatus === "pending" && canScore) startMatch(matchId);
+  }, [matchStatus, canScore, matchId, startMatch]);
 
-  const recordScore = useCallback(
-    (newHome: number, newAway: number) => {
-      if (!match) return;
-      const currentHome = match.homeScore;
-      const currentAway = match.awayScore;
-      setHistory((prev) => {
-        const seeded =
-          prev.length === 0 ? [{ home: currentHome, away: currentAway }] : prev;
-        const last = seeded[seeded.length - 1];
-        if (!last || last.home !== newHome || last.away !== newAway) {
-          return [...seeded, { home: newHome, away: newAway }];
-        }
-        return seeded;
-      });
-      updateMatchScore(matchId, newHome, newAway);
+  // Scores this page has written that the subscription has not shown yet.
+  // Two taps in quick succession both count because the second builds on
+  // the first's write rather than on the last snapshot.
+  const pending = useRef<Score[]>([]);
+  const shownHome = match?.homeScore;
+  const shownAway = match?.awayScore;
+  useEffect(() => {
+    if (shownHome === undefined || shownAway === undefined) return;
+    pending.current = afterSnapshot(pending.current, { home: shownHome, away: shownAway });
+  }, [shownHome, shownAway]);
+
+  /** The score as the scorer last left it, whether or not it has come back yet. */
+  const current = useCallback(
+    (): Score | null =>
+      shownHome === undefined || shownAway === undefined
+        ? null
+        : latestScore(pending.current, { home: shownHome, away: shownAway }),
+    [shownHome, shownAway],
+  );
+
+  const writeScore = useCallback(
+    (next: (score: Score) => Score) => {
+      const before = current();
+      if (!before) return;
+      const written = next(before);
+      if (sameScore(written, before)) return;
+      pending.current = [...pending.current, written];
+      setHistory((prev) => [...(prev.length === 0 ? [before] : prev), written]);
+      updateMatchScore(matchId, written.home, written.away);
     },
-    [match, matchId, updateMatchScore]
+    [current, matchId, updateMatchScore],
   );
 
   const handleAddPoint = useCallback(
-    (team: "home" | "away") => {
-      if (!match || !canEdit || match.status === "completed") return;
-      recordScore(
-        team === "home" ? match.homeScore + 1 : match.homeScore,
-        team === "away" ? match.awayScore + 1 : match.awayScore
-      );
+    (side: Side) => {
+      if (canScore) writeScore((score) => tapped(score, side, 1));
     },
-    [match, canEdit, recordScore]
+    [canScore, writeScore],
   );
 
   const handleDeductPoint = useCallback(
-    (team: "home" | "away") => {
-      if (!match || !canEdit || match.status === "completed") return;
-      recordScore(
-        team === "home" ? Math.max(0, match.homeScore - 1) : match.homeScore,
-        team === "away" ? Math.max(0, match.awayScore - 1) : match.awayScore
-      );
+    (side: Side) => {
+      if (canScore) writeScore((score) => tapped(score, side, -1));
     },
-    [match, canEdit, recordScore]
+    [canScore, writeScore],
   );
 
   const handleUndo = useCallback(() => {
-    if (!match || history.length < 2 || match.status === "completed") return;
-    const prevState = history[history.length - 2];
+    if (!canScore || history.length < 2) return;
+    const previous = history[history.length - 2];
     setHistory((prev) => prev.slice(0, -1));
-    updateMatchScore(matchId, prevState.home, prevState.away);
-  }, [match, matchId, history, updateMatchScore]);
+    pending.current = [...pending.current, previous];
+    updateMatchScore(matchId, previous.home, previous.away);
+  }, [canScore, matchId, history, updateMatchScore]);
+
+  const handleOpenCompleteDialog = useCallback(() => {
+    const score = current();
+    if (!canScore || !score || score.home === score.away) return;
+    setCompleteError(null);
+    setShowCompleteDialog(true);
+  }, [canScore, current]);
 
   // The engine decides what a result means: the next game of a series, the
-  // next match on a court, a slot in the bracket, or the end of the tournament.
+  // next match on a court, a slot in the bracket, or the end of the
+  // tournament. Once the match is over the page goes back where it came from.
   const handleCompleteMatch = useCallback(async () => {
-    if (!match || match.status === "completed" || isCompleting) return;
+    const score = current();
+    if (!match || !canScore || !score || isCompleting) return;
     setIsCompleting(true);
     setCompleteError(null);
     try {
       const outcome = await completeMatch(matchId, {
-        homeScore: match.homeScore,
-        awayScore: match.awayScore,
+        homeScore: score.home,
+        awayScore: score.away,
       });
       setShowCompleteDialog(false);
       if (!outcome.completed) {
-        // On to the next game of the series, on the same page.
+        // On to the next game of the series, on the same page. The engine
+        // has written a clean board, which counts as the last write here
+        // until the subscription shows it.
         setHistory([]);
+        pending.current = [NO_SCORE];
         return;
       }
-      router.push(competition ? `/competitions/${competition.id}` : "/");
+      router.push(backHref(match));
     } catch (error) {
       console.error("Failed to complete the match:", error);
-      setCompleteError(
-        error instanceof Error ? error.message : "The result could not be saved."
-      );
+      setCompleteError(messageOf(error, "The result could not be saved."));
     } finally {
       setIsCompleting(false);
     }
-  }, [match, matchId, competition, completeMatch, isCompleting, router]);
-
-  const handleOpenCompleteDialog = useCallback(() => {
-    if (!match || match.status === "completed") return;
-    if (match.homeScore === match.awayScore) {
-      return;
-    }
-    setShowCompleteDialog(true);
-  }, [match]);
-
-  const handleBack = useCallback(() => {
-    if (competition) {
-      router.push(`/competitions/${competition.id}`);
-    } else {
-      router.push("/");
-    }
-  }, [competition, router]);
-
-  const canComplete =
-    match &&
-    match.status !== "completed" &&
-    match.homeScore !== match.awayScore;
-  const homeColor = homeTeam?.color || "#3b82f6";
-  const awayColor = awayTeam?.color || "#f97316";
-  const homeLeading = match ? match.homeScore > match.awayScore : false;
-  const awayLeading = match ? match.awayScore > match.homeScore : false;
+  }, [match, canScore, current, matchId, completeMatch, isCompleting, router]);
 
   return {
-    awayColor,
-    awayLeading,
-    awayTeam,
-    canComplete,
-    canEdit,
-    competition,
-    completeError,
-    handleAddPoint,
-    handleBack,
-    handleCompleteMatch,
-    handleDeductPoint,
-    handleFullscreenToggle,
-    handleOpenCompleteDialog,
-    handleUndo,
-    history,
-    homeColor,
-    homeLeading,
-    homeTeam,
-    isCompleting,
-    isFullscreen,
-    isLoading: isTournamentsLoading,
     match,
-    seriesInfo,
-    setShowCompleteDialog,
-    setShowRotatePrompt,
+    tournament,
+    homeTeam,
+    awayTeam,
+    access,
+    notice,
+    series: match ? seriesInfo(match) : null,
+    winner: match ? winnerSide(match) : null,
+    backHref: match ? backHref(match) : "/",
+    backLabel: match ? backLabel(match) : "Home",
+    canUndo: history.length >= 2,
+    isLoading: isTournamentsLoading,
+    handleAddPoint,
+    handleDeductPoint,
+    handleUndo,
+    handleOpenCompleteDialog,
+    handleCompleteMatch,
     showCompleteDialog,
-    showRotatePrompt,
+    setShowCompleteDialog,
+    isCompleting,
+    completeError,
   };
 };

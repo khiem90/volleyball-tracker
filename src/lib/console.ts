@@ -29,6 +29,14 @@ import type {
 /** Who is looking at the console. Only the owner is active until ticket 13. */
 export type ConsoleRole = "owner" | "scorer" | "spectator";
 
+/**
+ * The role of a signed-in account, or of nobody, towards something owned
+ * by `ownerId`. A scorer arrives with the scorer link (ticket 13); until
+ * then anyone but the owner only watches.
+ */
+export const roleFor = (ownerId: string | undefined, uid: string | null | undefined): ConsoleRole =>
+  ownerId !== undefined && uid != null && ownerId === uid ? "owner" : "spectator";
+
 export interface ConsoleAccess {
   /** Start a draft. Owner only. */
   canStart: boolean;
@@ -100,7 +108,7 @@ const rotationState = (tournament: Tournament) =>
   tournament.win2outState ?? tournament.twoMatchRotationState;
 
 /** A match a scorer could open: both teams known and not decided by a bye. */
-export const isPlayable = (match: Match): boolean =>
+export const isPlayable = (match: Pick<Match, "homeTeamId" | "awayTeamId" | "isBye">): boolean =>
   match.homeTeamId !== "" && match.awayTeamId !== "" && match.isBye !== true;
 
 /**

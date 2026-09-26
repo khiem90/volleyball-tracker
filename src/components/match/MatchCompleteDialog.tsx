@@ -1,8 +1,8 @@
 "use client";
 
 import { memo } from "react";
+import { Loader2, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { TrophyIcon } from "@heroicons/react/24/outline";
 import {
   Dialog,
   DialogContent,
@@ -21,12 +21,17 @@ type MatchCompleteDialogProps = {
   awayScore: number;
   homeColor: string;
   awayColor: string;
-  dialogTitle: string;
-  dialogDescription: string;
+  title: string;
+  description: string;
   confirmLabel: string;
+  /** True while the result is being saved. */
+  isBusy: boolean;
+  /** Why the last confirm did not go through, if it did not. */
+  error: string | null;
   onConfirm: () => void;
 };
 
+/** The confirm before a result is recorded: the score, the winner, and a way back to playing. */
 export const MatchCompleteDialog = memo(function MatchCompleteDialog({
   open,
   onOpenChange,
@@ -36,74 +41,71 @@ export const MatchCompleteDialog = memo(function MatchCompleteDialog({
   awayScore,
   homeColor,
   awayColor,
-  dialogTitle,
-  dialogDescription,
+  title,
+  description,
   confirmLabel,
+  isBusy,
+  error,
   onConfirm,
 }: MatchCompleteDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md glass-card border-glass-border">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <TrophyIcon className="w-5 h-5 text-primary" />
-            {dialogTitle}
+            <Trophy className="h-5 w-5 text-primary" aria-hidden />
+            {title}
           </DialogTitle>
-          <DialogDescription>{dialogDescription}</DialogDescription>
+          <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
         <div className="space-y-3 pt-2">
-          <div className="flex items-center justify-center gap-6 p-4 rounded-xl bg-accent/20">
+          <div className="flex items-center justify-center gap-6 rounded-xl bg-accent/20 p-4">
             <div className="text-center">
               <div
-                className="w-12 h-12 rounded-xl mx-auto mb-2 shadow-lg"
-                style={{
-                  backgroundColor: homeColor,
-                  boxShadow: `0 8px 20px ${homeColor}40`,
-                }}
+                className="mx-auto mb-2 h-12 w-12 rounded-xl shadow-lg"
+                style={{ backgroundColor: homeColor, boxShadow: `0 8px 20px ${homeColor}40` }}
               />
-              <p className="text-xs text-muted-foreground mb-1">
-                {homeTeamName}
-              </p>
-              <p className="text-3xl font-bold">{homeScore}</p>
+              <p className="mb-1 text-xs text-muted-foreground">{homeTeamName}</p>
+              <p className="text-3xl font-bold tabular-nums">{homeScore}</p>
             </div>
-            <span className="text-2xl text-muted-foreground font-light">
-              :
-            </span>
+            <span className="text-2xl font-light text-muted-foreground">:</span>
             <div className="text-center">
               <div
-                className="w-12 h-12 rounded-xl mx-auto mb-2 shadow-lg"
-                style={{
-                  backgroundColor: awayColor,
-                  boxShadow: `0 8px 20px ${awayColor}40`,
-                }}
+                className="mx-auto mb-2 h-12 w-12 rounded-xl shadow-lg"
+                style={{ backgroundColor: awayColor, boxShadow: `0 8px 20px ${awayColor}40` }}
               />
-              <p className="text-xs text-muted-foreground mb-1">
-                {awayTeamName}
-              </p>
-              <p className="text-3xl font-bold">{awayScore}</p>
+              <p className="mb-1 text-xs text-muted-foreground">{awayTeamName}</p>
+              <p className="text-3xl font-bold tabular-nums">{awayScore}</p>
             </div>
           </div>
-          <div className="text-center pt-2 pb-2">
-            <p className="text-sm text-muted-foreground mb-1">Winner</p>
-            <p className="font-semibold text-xl text-emerald-400">
+          <div className="pt-2 pb-2 text-center">
+            <p className="mb-1 text-sm text-muted-foreground">Winner</p>
+            <p className="text-xl font-semibold">
               {homeScore > awayScore ? homeTeamName : awayTeamName}
             </p>
           </div>
+          {error && (
+            <p role="alert" className="text-center text-sm text-destructive">
+              {error}
+            </p>
+          )}
         </div>
         <DialogFooter className="flex-row gap-2 sm:gap-2">
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
-            className="flex-1 rounded-xl cursor-pointer"
+            disabled={isBusy}
+            className="min-h-11 flex-1"
           >
-            Continue Playing
+            Keep playing
           </Button>
-          <Button
-            onClick={onConfirm}
-            className="flex-1 gap-2 btn-teal-gradient rounded-xl cursor-pointer"
-          >
-            <TrophyIcon className="w-4 h-4" />
-            {confirmLabel}
+          <Button onClick={onConfirm} disabled={isBusy} className="min-h-11 flex-1 gap-2">
+            {isBusy ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+            ) : (
+              <Trophy className="h-4 w-4" aria-hidden />
+            )}
+            {isBusy ? "Saving..." : confirmLabel}
           </Button>
         </DialogFooter>
       </DialogContent>
