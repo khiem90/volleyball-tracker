@@ -150,7 +150,7 @@ export const ShareFormationDialog = memo(
                     <div className="space-y-3">
                       <div className="flex items-center gap-2">
                         <span className="w-2 h-2 rounded-full bg-green-500" />
-                        <span className="text-sm font-medium text-green-700 dark:text-green-300">
+                        <span className="text-sm font-medium text-green-700">
                           Sharing enabled
                         </span>
                       </div>

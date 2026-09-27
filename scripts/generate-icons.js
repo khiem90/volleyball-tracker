@@ -2,52 +2,67 @@ const sharp = require('sharp');
 const path = require('path');
 const fs = require('fs');
 
-const sourceIcon = path.join(__dirname, '../public/icons/tournament icon.png');
-const outputDir = path.join(__dirname, '../public/icons');
+// Every icon is the matchbook crest. The install icons put it on the paper
+// color; the maskable ones keep it inside the safe zone, the centered
+// circle 80% of the icon's width across that every launcher's mask leaves
+// visible, so no mask clips it.
+const crest = fs.readFileSync(path.join(__dirname, '../public/assets/matchbook/brand/crest.svg'));
+const CREST_HEIGHT = 112; // the crest's viewBox height
+const PAPER = '#f7f0e4';
+const CLEAR = { r: 0, g: 0, b: 0, alpha: 0 };
+
+const iconsDir = path.join(__dirname, '../public/icons');
 const appDir = path.join(__dirname, '../src/app');
 
-const sizes = [
-  { name: 'icon-192x192.png', size: 192, dir: outputDir },
-  { name: 'icon-512x512.png', size: 512, dir: outputDir },
-  { name: 'icon-maskable-192x192.png', size: 192, dir: outputDir },
-  { name: 'icon-maskable-512x512.png', size: 512, dir: outputDir },
-  { name: 'apple-touch-icon.png', size: 180, dir: outputDir },
-  // Next.js 13+ supports icon.png in app folder for favicon
-  { name: 'icon.png', size: 32, dir: appDir },
-  { name: 'apple-icon.png', size: 180, dir: appDir },
-  // Favicon sizes for ICO generation
-  { name: 'favicon-16.png', size: 16, dir: outputDir, temp: true },
-  { name: 'favicon-32.png', size: 32, dir: outputDir, temp: true },
-  { name: 'favicon-48.png', size: 48, dir: outputDir, temp: true },
+// `crest` is the crest's height as a share of the icon's. The crest is 96
+// wide by 112 tall, so at 56% its diagonal is 74% of the icon's width,
+// inside the 80% safe zone.
+const icons = [
+  { name: 'icon-192x192.png', dir: iconsDir, size: 192, crest: 0.8, background: PAPER },
+  { name: 'icon-512x512.png', dir: iconsDir, size: 512, crest: 0.8, background: PAPER },
+  { name: 'icon-maskable-192x192.png', dir: iconsDir, size: 192, crest: 0.56, background: PAPER },
+  { name: 'icon-maskable-512x512.png', dir: iconsDir, size: 512, crest: 0.56, background: PAPER },
+  // iOS rounds the corners of these itself and fills transparency with black.
+  { name: 'apple-touch-icon.png', dir: iconsDir, size: 180, crest: 0.7, background: PAPER },
+  { name: 'apple-icon.png', dir: appDir, size: 180, crest: 0.7, background: PAPER },
+  // The favicon is the crest alone, as large as it fits.
+  { name: 'icon.png', dir: appDir, size: 32, crest: 1, background: CLEAR },
 ];
 
-const generateIcons = async () => {
-  console.log('Generating PWA icons from source-icon.svg...\n');
-
-  for (const { name, size, dir, temp } of sizes) {
-    const outputPath = path.join(dir, name);
-
-    await sharp(sourceIcon)
-      .resize(size, size)
-      .png({ quality: 100 })
-      .toFile(outputPath);
-
-    if (!temp) {
-      console.log(`Generated: ${name} (${size}x${size})`);
-    }
-  }
-
-  // Generate favicon.ico (copy 32x32 PNG - modern browsers handle this)
-  console.log('\nGenerating favicon.ico...');
-  fs.copyFileSync(path.join(appDir, 'icon.png'), path.join(appDir, 'favicon.ico'));
-  console.log('Generated: favicon.ico (32x32)');
-
-  // Clean up temp files
-  fs.unlinkSync(path.join(outputDir, 'favicon-16.png'));
-  fs.unlinkSync(path.join(outputDir, 'favicon-32.png'));
-  fs.unlinkSync(path.join(outputDir, 'favicon-48.png'));
-
-  console.log('\nAll icons generated successfully!');
+const renderIcon = async ({ size, crest: share, background }) => {
+  const height = Math.round(size * share);
+  // Rendered at twice the size and scaled down, for clean edges.
+  const art = await sharp(crest, { density: Math.ceil((72 * height * 2) / CREST_HEIGHT) })
+    .resize({ height })
+    .png()
+    .toBuffer();
+  const { width, height: artHeight } = await sharp(art).metadata();
+  return sharp({ create: { width: size, height: size, channels: 4, background } })
+    .composite([
+      {
+        input: art,
+        left: Math.round((size - width) / 2),
+        top: Math.round((size - artHeight) / 2),
+      },
+    ])
+    .png()
+    .toBuffer();
 };
 
-generateIcons().catch(console.error);
+const generateIcons = async () => {
+  console.log('Generating icons from the matchbook crest...\n');
+
+  for (const icon of icons) {
+    fs.writeFileSync(path.join(icon.dir, icon.name), await renderIcon(icon));
+    console.log(`Generated: ${icon.name} (${icon.size}x${icon.size})`);
+  }
+
+  // favicon.ico is the 32x32 PNG under the old name; browsers read either.
+  fs.copyFileSync(path.join(appDir, 'icon.png'), path.join(appDir, 'favicon.ico'));
+  console.log('Generated: favicon.ico (32x32)');
+};
+
+generateIcons().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

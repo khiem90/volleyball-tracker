@@ -61,7 +61,7 @@ export const FormationCard = memo(
           <span
             className={`px-2 py-0.5 rounded-full text-xs font-medium ${
               formation.visibility === "unlisted"
-                ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                ? "bg-blue-100 text-blue-700"
                 : "bg-muted text-muted-foreground"
             }`}
           >
@@ -159,7 +159,7 @@ export const FormationCard = memo(
                 <button
                   type="button"
                   onClick={onDelete}
-                  className="px-3 py-1.5 rounded-lg text-sm text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                  className="px-3 py-1.5 rounded-lg text-sm text-red-500 hover:text-red-600 hover:bg-red-50 transition-colors"
                   aria-label="Delete formation"
                 >
                   Delete

@@ -20,6 +20,7 @@ import {
   ChartBarIcon,
 } from "@heroicons/react/24/outline";
 import type { PersistentTeam } from "@/types/game";
+import { signInHref } from "@/lib/shell";
 
 interface GuestMatchCompleteProps {
   open: boolean;
@@ -151,7 +152,7 @@ export const GuestMatchComplete = ({
             <ArrowPathIcon className="w-4 h-4" />
             Play again
           </Button>
-          <Link href="/login?redirect=/quick-match" className="w-full">
+          <Link href={signInHref("/quick-match")} className="w-full">
             <Button
               variant="outline"
               className="w-full gap-2 rounded-xl cursor-pointer"

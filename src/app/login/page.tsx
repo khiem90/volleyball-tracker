@@ -58,7 +58,8 @@ const LoginPageContent = () => {
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-2">
       {/* Sign-in half */}
-      <div className="matchbook-surface flex min-h-screen flex-col items-center justify-center px-5 py-6 lg:min-h-0">
+      {/* Clear of the status bar, the notch, and the home indicator under cover fit */}
+      <div className="matchbook-surface flex min-h-screen flex-col items-center justify-center pt-[max(1.5rem,env(safe-area-inset-top))] pr-[max(1.25rem,env(safe-area-inset-right))] pb-[max(1.5rem,env(safe-area-inset-bottom))] pl-[max(1.25rem,env(safe-area-inset-left))] lg:min-h-0">
         <div className="w-full max-w-[460px]">
           {/* Brand lockup */}
           <Link href="/" className="mb-5 flex items-center gap-3">

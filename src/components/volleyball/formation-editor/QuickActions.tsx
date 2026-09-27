@@ -39,7 +39,7 @@ export const QuickActions = memo(function QuickActions({
         <button
           type="button"
           onClick={onResetRotation}
-          className="px-3 py-1.5 text-sm text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded-lg"
+          className="px-3 py-1.5 text-sm text-orange-600 hover:bg-orange-50 rounded-lg"
         >
           Reset Rotation
         </button>

@@ -153,7 +153,7 @@ export const RotationControls = memo(
               focus:outline-none focus:ring-2 focus:ring-offset-1
               ${
                 liberoActive
-                  ? "bg-purple-500/20 border-purple-500/50 text-purple-700 dark:text-purple-300 focus:ring-purple-500"
+                  ? "bg-purple-500/20 border-purple-500/50 text-purple-700 focus:ring-purple-500"
                   : "bg-accent border-border text-muted-foreground hover:border-primary/50 focus:ring-primary"
               }
             `}
@@ -175,7 +175,7 @@ export const RotationControls = memo(
               focus:outline-none focus:ring-2 focus:ring-offset-1
               ${
                 showOverlaps
-                  ? "bg-amber-500/20 border-amber-500/50 text-amber-700 dark:text-amber-300 focus:ring-amber-500"
+                  ? "bg-amber-500/20 border-amber-500/50 text-amber-700 focus:ring-amber-500"
                   : "bg-accent border-border text-muted-foreground hover:border-primary/50 focus:ring-primary"
               }
             `}
@@ -199,7 +199,7 @@ export const RotationControls = memo(
               focus:outline-none focus:ring-2 focus:ring-offset-1
               ${
                 showArrows
-                  ? "bg-blue-500/20 border-blue-500/50 text-blue-700 dark:text-blue-300 focus:ring-blue-500"
+                  ? "bg-blue-500/20 border-blue-500/50 text-blue-700 focus:ring-blue-500"
                   : "bg-accent border-border text-muted-foreground hover:border-primary/50 focus:ring-primary"
               }
             `}

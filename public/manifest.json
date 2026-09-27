@@ -4,9 +4,8 @@
   "description": "Track matches and manage tournaments for any sport",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#0f172a",
-  "orientation": "portrait",
+  "background_color": "#f7f0e4",
+  "theme_color": "#f7f0e4",
   "icons": [
     {
       "src": "/icons/icon-192x192.png",

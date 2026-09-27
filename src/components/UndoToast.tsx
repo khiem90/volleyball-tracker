@@ -46,7 +46,8 @@ export const UndoToast = memo(
         exit="exit"
         variants={toastVariants}
         transition={{ type: "spring", stiffness: 400, damping: 30 }}
-        className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-full max-w-sm px-4"
+        // Above the tab bar where there is one, and the home indicator always.
+        className="fixed bottom-[calc(var(--tab-bar-space)+env(safe-area-inset-bottom)+1rem)] left-1/2 -translate-x-1/2 z-50 w-full max-w-sm px-4"
         role="alert"
         aria-live="polite"
       >

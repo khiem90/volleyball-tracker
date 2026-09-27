@@ -26,11 +26,11 @@ export const ValidationPanel = memo(function ValidationPanel({
       </h3>
 
       {blockingErrors.length > 0 && (
-        <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 text-sm">
-          <p className="font-medium text-red-700 dark:text-red-300 mb-1">
+        <div className="p-3 rounded-lg bg-red-50 text-sm">
+          <p className="font-medium text-red-700 mb-1">
             Errors ({blockingErrors.length})
           </p>
-          <ul className="text-red-600 dark:text-red-400 text-xs space-y-1">
+          <ul className="text-red-600 text-xs space-y-1">
             {blockingErrors.slice(0, 3).map((err, i) => (
               <li key={i}>{err.message}</li>
             ))}

@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { signInHref } from "@/lib/shell";
 
 interface UseRequireAuthOptions {
   redirectTo?: string;
@@ -27,8 +28,7 @@ export const useRequireAuth = (options: UseRequireAuthOptions = {}) => {
 
     // Redirect to login if not authenticated
     if (!user) {
-      const loginUrl = `/login?redirect=${encodeURIComponent(redirectTo)}`;
-      router.push(loginUrl);
+      router.push(signInHref(redirectTo));
     }
   }, [user, isLoading, router, redirectTo]);
 

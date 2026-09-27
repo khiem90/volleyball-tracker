@@ -80,6 +80,21 @@
   --mb-ink-muted: #5d6c70;
   --mb-rule: rgba(7, 50, 77, 0.28);
   --mb-display-font: var(--font-oswald), "Arial Narrow", "Roboto Condensed", Impact, sans-serif;
+
+  /* Light only: native controls, scrollbars, and form fields stay light too. */
+  color-scheme: light;
+
+  /* The phone tab bar's height, above the home indicator. */
+  --tab-bar-height: 3.75rem;
+  /* Room the tab bar takes at the foot of the screen, for anything else fixed there. */
+  --tab-bar-space: 0px;
+}
+
+/* The tab bar shows below lg, on the pages that have it. */
+:root:has([data-tab-bar]) {
+  @variant max-lg {
+    --tab-bar-space: var(--tab-bar-height);
+  }
 }
 
 .matchbook-surface {
@@ -443,6 +458,11 @@ body {
   overflow-x: hidden;
 }
 
+/* Paper shows past the page's edges when it is pulled beyond them. */
+html {
+  background-color: var(--mb-paper);
+}
+
 body {
   font-family: var(--font-sans), system-ui, sans-serif;
 }
@@ -468,15 +488,6 @@ body {
 
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
   background-color: oklch(0.5 0.15 25 / 0.5);
-}
-
-/* Dark mode scrollbar */
-.dark .scrollbar-thin::-webkit-scrollbar-thumb {
-  background-color: oklch(0.4 0.08 25 / 0.4);
-}
-
-.dark .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background-color: oklch(0.5 0.12 25 / 0.6);
 }
 
 /* Prevent text selection on score panels */
@@ -575,88 +586,6 @@ body {
   --card-sage-border: oklch(0.88 0.05 145 / 0.4);
 }
 
-/* ============================================
-   DARK THEME - Cozy Night Atmosphere
-   Deep warm charcoal with red glowing accents
-   ============================================ */
-.dark {
-  --radius: 0.75rem;
-
-  /* Deep warm charcoal backgrounds */
-  --background: oklch(0.14 0.01 50);
-  --foreground: oklch(0.93 0.01 70);
-
-  /* Elevated card surfaces */
-  --card: oklch(0.19 0.01 50);
-  --card-foreground: oklch(0.93 0.01 70);
-  --card-shadow: oklch(0 0 0 / 0.4);
-
-  --popover: oklch(0.17 0.01 50);
-  --popover-foreground: oklch(0.93 0.01 70);
-
-  /* Red primary - enhanced glow for dark */
-  --primary: oklch(0.62 0.2 25);
-  --primary-foreground: oklch(0.98 0.01 25);
-
-  /* Red accent variations */
-  --red-light: oklch(0.35 0.1 25);
-  --red-dark: oklch(0.55 0.18 25);
-
-  /* Muted secondary */
-  --secondary: oklch(0.22 0.01 50);
-  --secondary-foreground: oklch(0.85 0.01 70);
-
-  --muted: oklch(0.2 0.008 50);
-  --muted-foreground: oklch(0.6 0.015 70);
-
-  /* Accent for hover states */
-  --accent: oklch(0.24 0.015 25);
-  --accent-foreground: oklch(0.93 0.01 70);
-
-  /* Destructive - vivid red on dark */
-  --destructive: oklch(0.62 0.22 25);
-  --destructive-light: oklch(0.25 0.08 25);
-
-  /* Borders and inputs */
-  --border: oklch(0.28 0.01 50);
-  --input: oklch(0.2 0.008 50);
-  --ring: oklch(0.62 0.2 25);
-
-  /* Status colors - boosted for dark contrast */
-  --status-draft: oklch(0.65 0.14 250);
-  --status-draft-bg: oklch(0.22 0.04 250);
-  --status-active: oklch(0.65 0.2 25);
-  --status-active-bg: oklch(0.25 0.06 25);
-  --status-complete: oklch(0.65 0.14 145);
-  --status-complete-bg: oklch(0.22 0.04 145);
-  --status-live: oklch(0.65 0.2 25);
-  --status-live-bg: oklch(0.25 0.06 25);
-
-  /* Chart colors - luminous on dark */
-  --chart-1: oklch(0.65 0.2 25);
-  --chart-2: oklch(0.7 0.15 45);
-  --chart-3: oklch(0.65 0.14 145);
-  --chart-4: oklch(0.65 0.14 250);
-  --chart-5: oklch(0.7 0.12 180);
-
-  /* Decorative colors */
-  --wave-light: oklch(0.22 0.03 45);
-  --wave-medium: oklch(0.27 0.05 40);
-  --cloud: oklch(0.2 0.015 50 / 0.5);
-
-  /* Playful card colors - Dark mode (muted versions) */
-  --card-mint: oklch(0.22 0.03 165);
-  --card-mint-border: oklch(0.32 0.04 165 / 0.5);
-  --card-lavender: oklch(0.22 0.025 290);
-  --card-lavender-border: oklch(0.32 0.04 290 / 0.5);
-  --card-sky: oklch(0.22 0.025 235);
-  --card-sky-border: oklch(0.32 0.04 235 / 0.5);
-  --card-peach: oklch(0.24 0.03 55);
-  --card-peach-border: oklch(0.34 0.05 55 / 0.5);
-  --card-sage: oklch(0.22 0.02 145);
-  --card-sage-border: oklch(0.32 0.035 145 / 0.5);
-}
-
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -678,15 +607,6 @@ body {
     oklch(0.94 0.035 60) 100%
   );
   min-height: 100vh;
-}
-
-.dark .bg-tournament {
-  background: linear-gradient(
-    180deg,
-    oklch(0.14 0.01 50) 0%,
-    oklch(0.13 0.012 50) 50%,
-    oklch(0.12 0.015 50) 100%
-  );
 }
 
 /* Decorative wave pattern */
@@ -721,25 +641,12 @@ body {
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
-.dark .soft-card {
-  box-shadow:
-    0 1px 3px oklch(0 0 0 / 0.3),
-    0 4px 12px oklch(0 0 0 / 0.4);
-}
-
 .soft-card-hover:hover {
   border-color: oklch(0.55 0.22 25 / 0.3);
   box-shadow:
     0 2px 8px oklch(0 0 0 / 0.06),
     0 8px 24px oklch(0.55 0.15 25 / 0.1);
   transform: translateY(-2px);
-}
-
-.dark .soft-card-hover:hover {
-  border-color: oklch(0.62 0.2 25 / 0.4);
-  box-shadow:
-    0 2px 8px oklch(0 0 0 / 0.4),
-    0 8px 24px oklch(0.62 0.2 25 / 0.15);
 }
 
 /* Legacy glass-card class for compatibility - now soft card */
@@ -753,25 +660,12 @@ body {
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
-.dark .glass-card {
-  box-shadow:
-    0 1px 3px oklch(0 0 0 / 0.3),
-    0 4px 12px oklch(0 0 0 / 0.4);
-}
-
 .glass-card-hover:hover {
   border-color: oklch(0.55 0.22 25 / 0.3);
   box-shadow:
     0 2px 8px oklch(0 0 0 / 0.06),
     0 8px 24px oklch(0.55 0.15 25 / 0.1);
   transform: translateY(-2px);
-}
-
-.dark .glass-card-hover:hover {
-  border-color: oklch(0.62 0.2 25 / 0.4);
-  box-shadow:
-    0 2px 8px oklch(0 0 0 / 0.4),
-    0 8px 24px oklch(0.62 0.2 25 / 0.15);
 }
 
 /* ============================================
@@ -792,18 +686,6 @@ body {
   box-shadow:
     0 4px 12px oklch(0 0 0 / 0.06),
     0 12px 32px oklch(0.55 0.15 25 / 0.1);
-}
-
-.dark .playful-card {
-  box-shadow:
-    0 2px 8px oklch(0 0 0 / 0.3),
-    0 6px 20px oklch(0 0 0 / 0.4);
-}
-
-.dark .playful-card:hover {
-  box-shadow:
-    0 4px 12px oklch(0 0 0 / 0.4),
-    0 12px 32px oklch(0.62 0.2 25 / 0.15);
 }
 
 /* Mint card variant */
@@ -908,19 +790,8 @@ body {
   box-shadow: none;
 }
 
-.dark .glass-nav {
-  background: var(--background);
-  border-bottom: 1px solid var(--border);
-  box-shadow: none;
-}
-
 /* Flat nav style for redesigned navbar */
 .flat-nav {
-  background: var(--background);
-  border-bottom: 1px solid var(--border);
-}
-
-.dark .flat-nav {
   background: var(--background);
   border-bottom: 1px solid var(--border);
 }
@@ -1459,97 +1330,4 @@ button:active:not(:disabled) {
 ::selection {
   background: oklch(0.55 0.22 25 / 0.2);
   color: oklch(0.18 0.02 60);
-}
-
-.dark ::selection {
-  background: oklch(0.62 0.2 25 / 0.3);
-  color: oklch(0.95 0.01 70);
-}
-
-/* ============================================
-   THEME TOGGLE - Stadium Lighting Control
-   ============================================ */
-.theme-toggle-track {
-  position: relative;
-  width: 44px;
-  height: 24px;
-  border-radius: 12px;
-  background: oklch(0.92 0.04 55);
-  border: 1px solid oklch(0.85 0.06 55 / 0.5);
-  cursor: pointer;
-  overflow: hidden;
-  transition: background 0.3s ease, border-color 0.3s ease;
-  flex-shrink: 0;
-}
-
-.theme-toggle-track:hover {
-  border-color: oklch(0.75 0.1 55);
-}
-
-.theme-toggle-track:focus-visible {
-  outline: 2px solid oklch(0.55 0.22 25);
-  outline-offset: 2px;
-}
-
-.dark .theme-toggle-track {
-  background: oklch(0.22 0.02 50);
-  border-color: oklch(0.35 0.08 25 / 0.5);
-}
-
-.dark .theme-toggle-track:hover {
-  border-color: oklch(0.5 0.15 25);
-}
-
-.theme-toggle-glow {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-.theme-toggle-orb {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow:
-    0 1px 3px oklch(0 0 0 / 0.15),
-    0 2px 6px oklch(0 0 0 / 0.1);
-}
-
-.dark .theme-toggle-orb {
-  box-shadow:
-    0 1px 3px oklch(0 0 0 / 0.3),
-    0 0 8px oklch(0.7 0.1 250 / 0.3);
-}
-
-.theme-toggle-icon {
-  width: 14px;
-  height: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* Sun rays rotation animation */
-@keyframes rotateSunRays {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.sun-rays {
-  transform-origin: center;
-  animation: rotateSunRays 12s linear infinite;
-}
-
-.dark ::placeholder {
-  color: oklch(0.5 0.015 50);
 }

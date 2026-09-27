@@ -78,14 +78,14 @@ export const HelpAccordion = memo(() => {
           </p>
           <ul className="list-disc list-inside pl-2 mt-2 space-y-1">
             <li>
-              <strong className="text-blue-600 dark:text-blue-400">
+              <strong className="text-blue-600">
                 Blue dashed lines (Front/Back):
               </strong>{" "}
               Back-row players must be behind their corresponding front-row
               player
             </li>
             <li>
-              <strong className="text-amber-600 dark:text-amber-400">
+              <strong className="text-amber-600">
                 Orange dotted lines (Left/Right):
               </strong>{" "}
               Middle players must be between their side players

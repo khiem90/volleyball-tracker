@@ -325,7 +325,7 @@ export const DraggablePlayerNode = memo(
           <circle
             r={NODE_RADIUS + 3}
             fill="none"
-            className="stroke-blue-400/60 dark:stroke-blue-300/60"
+            className="stroke-blue-400/60"
             strokeWidth="2"
             strokeDasharray="4 3"
           />

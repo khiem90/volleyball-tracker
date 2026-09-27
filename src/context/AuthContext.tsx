@@ -4,10 +4,12 @@ import {
   createContext,
   useContext,
   useEffect,
+  useRef,
   useState,
   useCallback,
   type ReactNode,
 } from "react";
+import { flushSync } from "react-dom";
 import {
   signInAnonymously,
   signInWithPopup,
@@ -19,7 +21,8 @@ import {
   GoogleAuthProvider,
   type User,
 } from "firebase/auth";
-import { auth, isFirebaseConfigured } from "@/lib/firebase";
+import { auth, db, isFirebaseConfigured } from "@/lib/firebase";
+import { clearDeviceData, UnsyncedChangesError, writesReachedServer } from "@/lib/deviceData";
 import type { AuthUser } from "@/types/auth";
 
 // ============================================
@@ -46,7 +49,13 @@ interface AuthContextValue {
   signInWithEmail: (email: string, password: string) => Promise<void>;
   signUpWithEmail: (email: string, password: string) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
-  signOut: () => Promise<void>;
+  /**
+   * Sign out, clear the account's data from this device, and open the
+   * sign-in page afresh. Rejects with UnsyncedChangesError, leaving the
+   * account signed in, while changes made here have not reached the
+   * server, unless `discardUnsynced` says to lose them.
+   */
+  signOut: (options?: { discardUnsynced?: boolean }) => Promise<void>;
   /**
    * The uid of the current identity, making a silent anonymous one when
    * there is none. What a scorer link needs before it can write its proof.
@@ -79,6 +88,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [identityUid, setIdentityUid] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isConfigured] = useState(() => isFirebaseConfigured());
+  const [isSigningOut, setIsSigningOut] = useState(false);
+  // The account this page last saw, and whether this page is the one signing it out.
+  const accountUid = useRef<string | null>(null);
+  const signingOutHere = useRef(false);
 
   // Listen to auth state changes
   /* eslint-disable react-hooks/set-state-in-effect */
@@ -89,8 +102,17 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
 
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      const account = firebaseUser && !firebaseUser.isAnonymous ? mapFirebaseUser(firebaseUser) : null;
+      // Signed out in another tab. That tab cleared the offline copy, and
+      // Firestore stopped this tab's database with it, so this page loads
+      // afresh rather than go on with a database it cannot use.
+      if (accountUid.current && !account && !signingOutHere.current) {
+        window.location.reload();
+        return;
+      }
+      accountUid.current = account?.uid ?? null;
       setIdentityUid(firebaseUser?.uid ?? null);
-      setUser(firebaseUser && !firebaseUser.isAnonymous ? mapFirebaseUser(firebaseUser) : null);
+      setUser(account);
       setIsLoading(false);
     });
 
@@ -140,13 +162,34 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     [isConfigured]
   );
 
-  // Sign out
-  const signOut = useCallback(async () => {
-    if (!isConfigured || !auth) {
-      return;
-    }
-    await firebaseSignOut(auth);
-  }, [isConfigured]);
+  // Clearing the offline copy would lose writes still queued for the
+  // server, so those are waited for, and the account holder is asked when
+  // they do not land. A failed sign-out comes back to the caller with the
+  // app still up. Once it has gone through, the app below this provider
+  // comes down before the database is cleared, taking its listeners with
+  // it, so nothing reacting to the signed-out account can use the database
+  // after that. The dead database cannot be used again on this page, so it
+  // loads afresh, as the sign-in page rather than one that bounces there.
+  const signOut = useCallback(
+    async ({ discardUnsynced = false }: { discardUnsynced?: boolean } = {}) => {
+      if (!isConfigured || !auth) {
+        return;
+      }
+      if (db && !discardUnsynced && !(await writesReachedServer(db))) {
+        throw new UnsyncedChangesError();
+      }
+      signingOutHere.current = true;
+      await firebaseSignOut(auth).catch((error: unknown) => {
+        signingOutHere.current = false;
+        throw error;
+      });
+      flushSync(() => setIsSigningOut(true));
+      // The app is down by now, so a failure here can only be logged.
+      await clearDeviceData(db).catch((error) => console.error("Clearing this device failed:", error));
+      window.location.replace("/login");
+    },
+    [isConfigured],
+  );
 
   // The account if there is one, else the silent identity, made on the spot
   // if there is none. Silent sign-in needs the Anonymous provider enabled
@@ -174,7 +217,19 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     ensureIdentity,
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {isSigningOut ? (
+        <div className="matchbook-surface flex min-h-dvh items-center justify-center">
+          <p role="status" className="matchbook-display text-[0.9rem] font-bold tracking-[0.1em]">
+            Signing out...
+          </p>
+        </div>
+      ) : (
+        children
+      )}
+    </AuthContext.Provider>
+  );
 };
 
 // ============================================

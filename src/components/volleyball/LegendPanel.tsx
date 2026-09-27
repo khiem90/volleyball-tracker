@@ -37,7 +37,7 @@ export const LegendPanel = memo(
         <div className="p-3 rounded-lg bg-accent/50 border border-border">
           <div className="text-sm">
             <span className="font-medium">Setter position: </span>
-            <span className={isSetterFrontRow(rotation) ? "text-amber-600 dark:text-amber-400" : "text-blue-600 dark:text-blue-400"}>
+            <span className={isSetterFrontRow(rotation) ? "text-amber-600" : "text-blue-600"}>
               {isSetterFrontRow(rotation) ? "Front Row" : "Back Row"}
             </span>
           </div>
@@ -86,7 +86,7 @@ export const LegendPanel = memo(
                         {info.fullName}
                       </span>
                       {player?.isBackRow && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-700 dark:text-blue-300 font-medium">
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-700 font-medium">
                           Back
                         </span>
                       )}
