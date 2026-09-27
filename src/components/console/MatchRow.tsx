@@ -4,18 +4,17 @@ import Link from "next/link";
 import { MbIcon } from "@/components/matchbook/MbIcon";
 import { TeamMark } from "@/components/matchbook/Panel";
 import { isPlayable, type ConsoleAccess } from "@/lib/console";
+import { scoringHref } from "@/lib/scoring";
 import type { Match } from "@/types/game";
 import type { TeamLookup } from "./teamRefs";
 
-export const LiveTag = () => (
+/** The live dot and its word, "Live" unless the place it sits says more. */
+export const LiveTag = ({ label = "Live" }: { label?: string }) => (
   <span className="flex items-center gap-1">
     <span className="mb-live-dot" />
-    <span className="matchbook-display text-[0.62rem] font-bold text-mb-red">Live</span>
+    <span className="matchbook-display text-[0.62rem] font-bold text-mb-red">{label}</span>
   </span>
 );
-
-/** The scoring page for a match. */
-export const scoringHref = (match: Match) => `/match/${match.id}`;
 
 /**
  * Where a tap on the match goes: its scoring page while the role may score

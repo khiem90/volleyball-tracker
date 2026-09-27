@@ -12,9 +12,10 @@ import {
   type CourtView,
   type CourtsView,
 } from "@/lib/console";
+import { scoringHref } from "@/lib/scoring";
 import { getChampionCount } from "@/lib/win2out";
 import type { Match, Tournament } from "@/types/game";
-import { LiveTag, MatchRow, scoringHref, scoringLink } from "./MatchRow";
+import { LiveTag, MatchRow, scoringLink } from "./MatchRow";
 import type { TeamLookup } from "./teamRefs";
 
 /** The court and queue controls an owner or scorer gets while a rotation tournament is live. */

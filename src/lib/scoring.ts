@@ -83,6 +83,9 @@ export const canComplete = (score: Score, access: ScoringAccess): boolean =>
 // Navigation and labels
 // ============================================
 
+/** The scoring page for a match. */
+export const scoringHref = (match: Pick<Match, "id">): string => `/match/${match.id}`;
+
 /** Where Back goes: the tournament's console, or the Quick page for a quick match. */
 export const backHref = (match: Pick<Match, "tournamentId">): string =>
   match.tournamentId ? `/competitions/${match.tournamentId}` : "/quick-match";

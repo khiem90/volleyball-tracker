@@ -1,4 +1,4 @@
-// Matchbook dashboard panel shapes and team-crest helpers.
+// Matchbook panel shapes and team-crest helpers.
 
 export interface MbTeam {
   name: string;
@@ -7,43 +7,6 @@ export interface MbTeam {
 
 export type MbFormResult = "W" | "L";
 
-export interface MbStandingRow {
-  team: MbTeam;
-  played: number;
-  won: number;
-  lost: number;
-  sets: string;
-  points: number;
-  form: MbFormResult[];
-}
-
-export interface MbSetScore {
-  home: number;
-  away: number;
-}
-
-export interface MbFeaturedMatch {
-  division: string;
-  time: string;
-  home: MbTeam;
-  away: MbTeam;
-  homeScore: number;
-  awayScore: number;
-  sets: MbSetScore[];
-  venue: string;
-  attendance?: string;
-}
-
-export interface MbLiveCourt {
-  court: string;
-  time: string;
-  home: MbTeam;
-  away: MbTeam;
-  homeScore: number;
-  awayScore: number;
-  setLabel: string;
-}
-
 export interface MbScheduleItem {
   day: string;
   date: string;
@@ -51,27 +14,6 @@ export interface MbScheduleItem {
   home: MbTeam;
   away: MbTeam;
   venue: string;
-}
-
-export interface MbBracketSeed {
-  seed: number;
-  team: MbTeam;
-}
-
-export interface MbBracket {
-  semifinals: [MbBracketSeed, MbBracketSeed][];
-  finalNote: string;
-  finalVenue: string;
-}
-
-export interface MbRecentResult {
-  date: string;
-  home: MbTeam;
-  homeScore: number;
-  awayScore: number;
-  away: MbTeam;
-  venue: string;
-  accent: string;
 }
 
 export type MbReadinessStatus = "READY" | "GOOD" | "NEEDS ATTN";
@@ -83,30 +25,9 @@ export interface MbReadinessRow {
   status: MbReadinessStatus;
 }
 
-export interface MbLeader {
-  team: MbTeam;
-  stat: string;
-  value: string;
-}
-
 export interface MbStatTotal {
   label: string;
   value: string;
-}
-
-export interface MbDashboardData {
-  dateLine: string;
-  matchesCompleted: number;
-  league: string;
-  standings: MbStandingRow[];
-  featured: MbFeaturedMatch | null;
-  liveCourts: MbLiveCourt[];
-  schedule: MbScheduleItem[];
-  bracket: MbBracket | null;
-  recentResults: MbRecentResult[];
-  readiness: MbReadinessRow[];
-  leaders: MbLeader[];
-  allTimeTotals: MbStatTotal[];
 }
 
 /* ----------------------------- Team directory ----------------------------- */

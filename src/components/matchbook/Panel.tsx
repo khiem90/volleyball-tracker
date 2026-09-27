@@ -147,14 +147,18 @@ export const PanelEmpty = ({
   message,
   actionLabel,
   href,
+  action,
 }: {
   message: string;
   actionLabel?: string;
   href?: string;
+  /** A control of the page's own, in place of the small link that actionLabel and href make. */
+  action?: React.ReactNode;
 }) => (
   <div className="flex flex-col items-center justify-center gap-3 px-4 py-8 text-center flex-1">
     <p className="text-[0.85rem] text-mb-ink-muted">{message}</p>
-    {href && actionLabel && (
+    {action}
+    {!action && href && actionLabel && (
       <Link href={href} className="mb-btn mb-btn-outline text-[0.72rem] px-3 py-1.5">
         {actionLabel}
       </Link>
