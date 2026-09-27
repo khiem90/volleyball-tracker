@@ -103,8 +103,12 @@ Changing the score of a completed match from Schedule, or from the Bracket tab i
 _Avoid_: Edit result, override, undo (for a round robin or bracket result)
 
 **Quick Match**:
-A standalone match between two teams that belongs to no tournament.
+A standalone match between two teams that belongs to no tournament. One left without a result is abandoned and waits on the Quick page until the owner resumes it or discards it. A completed quick match counts in both teams' records.
 _Avoid_: Friendly, casual match
+
+**Discard**:
+Throw away an abandoned quick match. Its score so far goes with it and it counts toward no team's record.
+_Avoid_: Delete, cancel (for a quick match)
 
 ### People and access
 

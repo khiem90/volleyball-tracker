@@ -43,7 +43,13 @@ import {
   type CreateTournamentOptions,
   type NewTournamentInput,
 } from "@/lib/tournaments";
-import { buildQuickMatch, saveQuickMatch, updateQuickMatch } from "@/lib/quickMatches";
+import {
+  buildQuickMatch,
+  completeQuickMatch,
+  discardQuickMatch as discardQuickMatchDoc,
+  saveQuickMatch,
+  updateQuickMatch,
+} from "@/lib/quickMatches";
 import { useLinkedTournaments, type LinkStatus } from "./useLinkedTournaments";
 
 export type { LinkStatus } from "./useLinkedTournaments";
@@ -129,6 +135,11 @@ interface AppContextValue {
   getMatchesByTournament: (tournamentId: string) => Match[];
   // Match actions
   addQuickMatch: (homeTeamId: string, awayTeamId: string) => Promise<string>;
+  /**
+   * Throw away a quick match left mid-way. It goes from the local cache at
+   * once while the delete reaches the server in the background.
+   */
+  discardQuickMatch: (matchId: string) => void;
   updateMatchScore: (matchId: string, homeScore: number, awayScore: number) => void;
   updateMatch: (matchId: string, updates: Partial<Match>) => void;
   startMatch: (matchId: string) => void;
@@ -465,6 +476,16 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     [requireAccount]
   );
 
+  const discardQuickMatch = useCallback(
+    (matchId: string) => {
+      const account = requireAccount();
+      discardQuickMatchDoc(account.db, account.uid, matchId).catch(
+        logFailure("discard quick match")
+      );
+    },
+    [requireAccount]
+  );
+
   // Tournament matches and quick matches live in different places; the match
   // itself says which. A quick match is the account's own.
   const writeMatch = useCallback(
@@ -513,15 +534,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
 
       if (!match.tournamentId) {
         const account = requireAccount();
-        if (result.homeScore === result.awayScore) {
-          throw new Error("A match cannot end in a tie.");
-        }
-        await updateQuickMatch(account.db, account.uid, matchId, {
-          ...result,
-          status: "completed",
-          winnerId: result.homeScore > result.awayScore ? match.homeTeamId : match.awayTeamId,
-          completedAt: Date.now(),
-        });
+        await completeQuickMatch(account.db, account.uid, match, result);
         return { completed: true };
       }
 
@@ -664,6 +677,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     getTournamentById,
     getMatchesByTournament,
     addQuickMatch,
+    discardQuickMatch,
     updateMatchScore,
     updateMatch,
     startMatch,

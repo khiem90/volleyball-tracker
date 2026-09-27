@@ -48,6 +48,9 @@ export default function GuestMatchPage() {
       winner={winnerSide({ winnerId: match.winnerId, ...sides })}
       access={access}
       notice={notice}
+      // Closing the result leaves the completed match on screen, so the
+      // guest can still start the next one from here.
+      noticeAction={status === "completed" ? { label: "Play again", onClick: resetMatch } : undefined}
       backHref="/quick-match"
       backLabel="Quick match"
       tag="Guest"

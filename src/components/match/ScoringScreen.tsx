@@ -43,6 +43,8 @@ export interface ScoringScreenProps {
   access: ScoringAccess;
   /** Why taps do nothing, shown under the header. */
   notice: string | null;
+  /** A button beside the notice, such as the guest's Play again. */
+  noticeAction?: { label: string; onClick: () => void };
   backHref: string;
   backLabel: string;
   /** A word beside the status, such as Guest. */
@@ -78,6 +80,7 @@ export const ScoringScreen = ({
   winner,
   access,
   notice,
+  noticeAction,
   backHref,
   backLabel,
   tag,
@@ -129,12 +132,20 @@ export const ScoringScreen = ({
       )}
 
       {notice && (
-        <p
-          role="status"
-          className="z-20 border-b border-mb-rule bg-mb-paper-bright px-4 py-2 text-center text-[0.85rem] text-mb-navy"
-        >
-          {notice}
-        </p>
+        <div className="z-20 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 border-b border-mb-rule bg-mb-paper-bright px-4 py-2 text-center">
+          <p role="status" className="text-[0.85rem] text-mb-navy">
+            {notice}
+          </p>
+          {noticeAction && (
+            <button
+              type="button"
+              onClick={noticeAction.onClick}
+              className="mb-btn mb-btn-coral min-h-11 px-4"
+            >
+              {noticeAction.label}
+            </button>
+          )}
+        </div>
       )}
 
       <div className="flex flex-1 flex-col landscape:flex-row">

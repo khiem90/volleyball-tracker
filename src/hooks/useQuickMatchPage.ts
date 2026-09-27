@@ -4,11 +4,13 @@ import { useApp } from "@/context/AppContext";
 
 export const useQuickMatchPage = () => {
   const router = useRouter();
-  const { state, isRosterLoading, addTeams, addQuickMatch } = useApp();
+  const { state, isRosterLoading, addTeams, addQuickMatch, discardQuickMatch } = useApp();
 
   const [homeTeamId, setHomeTeamId] = useState<string>("");
   const [awayTeamId, setAwayTeamId] = useState<string>("");
   const [error, setError] = useState("");
+  // The match left mid-way that the Discard confirm is asking about, if any.
+  const [discardingId, setDiscardingId] = useState<string | null>(null);
 
   const availableTeams = state.teams;
 
@@ -77,6 +79,11 @@ export const useQuickMatchPage = () => {
     addTeams([{ name: `Team ${teamNumber}` }]);
   }, [state.teams.length, addTeams]);
 
+  const handleConfirmDiscard = useCallback(() => {
+    if (discardingId) discardQuickMatch(discardingId);
+    setDiscardingId(null);
+  }, [discardingId, discardQuickMatch]);
+
   const homeTeam = useMemo(
     () => state.teams.find((t) => t.id === homeTeamId),
     [state.teams, homeTeamId]
@@ -94,8 +101,10 @@ export const useQuickMatchPage = () => {
     awayTeam,
     awayTeamId,
     canStart,
+    discardingId,
     error,
     handleAwayTeamSelect,
+    handleConfirmDiscard,
     handleHomeTeamSelect,
     handleQuickCreateTeam,
     handleRandomSelect,
@@ -104,5 +113,6 @@ export const useQuickMatchPage = () => {
     homeTeam,
     homeTeamId,
     isRosterLoading,
+    setDiscardingId,
   };
 };

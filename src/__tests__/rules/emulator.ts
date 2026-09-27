@@ -4,7 +4,7 @@ import {
   type RulesTestContext,
   type RulesTestEnvironment,
 } from "@firebase/rules-unit-testing";
-import type { Firestore } from "firebase/firestore";
+import type { Firestore, Unsubscribe } from "firebase/firestore";
 import { afterAll, beforeAll, beforeEach, describe } from "vitest";
 
 const repoRoot = new URL("../../../", import.meta.url);
@@ -94,3 +94,29 @@ export function describeFirestoreRules(
 export function modularFirestore(context: RulesTestContext): Firestore {
   return context.firestore() as unknown as Firestore;
 }
+
+/** Resolves with the first snapshot from `subscribe` that satisfies `ready`. */
+export const when = <T>(
+  subscribe: (onChange: (value: T) => void, onError: (error: Error) => void) => Unsubscribe,
+  ready: (value: T) => boolean,
+): Promise<T> =>
+  new Promise((resolve, reject) => {
+    let unsubscribe: Unsubscribe = () => {};
+    const timer = setTimeout(() => {
+      unsubscribe();
+      reject(new Error("subscription never reached the expected state"));
+    }, 5000);
+    unsubscribe = subscribe(
+      (value) => {
+        if (!ready(value)) return;
+        clearTimeout(timer);
+        unsubscribe();
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        unsubscribe();
+        reject(error);
+      },
+    );
+  });

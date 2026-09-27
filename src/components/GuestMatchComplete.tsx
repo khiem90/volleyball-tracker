@@ -149,7 +149,7 @@ export const GuestMatchComplete = ({
             className="w-full gap-2 btn-teal-gradient rounded-xl"
           >
             <ArrowPathIcon className="w-4 h-4" />
-            Play Again
+            Play again
           </Button>
           <Link href="/login?redirect=/quick-match" className="w-full">
             <Button

@@ -3,15 +3,18 @@
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import { Trash2 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useQuickMatchPage } from "@/hooks/useQuickMatchPage";
 import { PageLoadingSpinner } from "@/components/shared";
+import { ConfirmDialog } from "@/components/console/ConfirmDialog";
 import { MatchbookSidebar } from "@/components/matchbook/Sidebar";
 import { MatchbookMobileBar } from "@/components/matchbook/MobileBar";
 import { MbIcon } from "@/components/matchbook/MbIcon";
 import { Crest, FormLetters, Panel, PanelEmpty, TeamMark } from "@/components/matchbook/Panel";
 import {
   useMatchbookQuickMatch,
+  type MbAbandonedMatchRow,
   type MbTeamFormSummary,
 } from "@/components/matchbook/useMatchbookQuickMatch";
 import { crestForTeam } from "@/components/matchbook/types";
@@ -112,6 +115,47 @@ const FormStatRow = ({
   </div>
 );
 
+/** A quick match left mid-way: the score so far, and Resume or Discard. */
+const AbandonedMatch = ({
+  match,
+  onDiscard,
+}: {
+  match: MbAbandonedMatchRow;
+  onDiscard: () => void;
+}) => (
+  <div className="flex flex-col gap-2 px-3 py-3">
+    <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+      <TeamMark team={match.home} className="justify-self-start" />
+      <span className="matchbook-display whitespace-nowrap text-[0.95rem] font-bold tabular-nums">
+        {match.homeScore} – {match.awayScore}
+      </span>
+      <TeamMark team={match.away} reverse className="justify-self-end" />
+    </div>
+    <div className="flex flex-wrap items-center justify-between gap-2">
+      <p className="mb-kicker">Started {match.started}</p>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={onDiscard}
+          className="mb-btn mb-btn-outline-red min-h-11 px-3 text-[0.72rem]"
+        >
+          <Trash2 className="h-3.5 w-3.5" aria-hidden />
+          Discard
+        </button>
+        {match.resumable && (
+          <Link
+            href={`/match/${match.id}`}
+            className="mb-btn mb-btn-navy min-h-11 px-3 text-[0.72rem]"
+          >
+            <MbIcon id="quick" size={12} />
+            Resume
+          </Link>
+        )}
+      </div>
+    </div>
+  </div>
+);
+
 /* --------------------------------- Page ---------------------------------- */
 
 export default function QuickMatchPage() {
@@ -122,8 +166,10 @@ export default function QuickMatchPage() {
     availableTeams,
     awayTeamId,
     canStart,
+    discardingId,
     error,
     handleAwayTeamSelect,
+    handleConfirmDiscard,
     handleHomeTeamSelect,
     handleQuickCreateTeam,
     handleRandomSelect,
@@ -131,6 +177,7 @@ export default function QuickMatchPage() {
     handleSwapTeams,
     homeTeamId,
     isRosterLoading,
+    setDiscardingId,
   } = useQuickMatchPage();
 
   if (isLoading || (!isGuest && isRosterLoading)) {
@@ -146,6 +193,8 @@ export default function QuickMatchPage() {
   const awaySummary = isGuest
     ? { team: guestAway, form: [], record: "0–0", won: 0, lost: 0, pointsFor: 0, pointsAgainst: 0 }
     : data.summaryFor(awayTeamId || null);
+
+  const discarding = data.abandonedQuickMatches.find((m) => m.id === discardingId);
 
   const startScoring = isGuest ? () => router.push("/match/guest") : handleStartMatch;
   const startEnabled = isGuest || canStart;
@@ -229,6 +278,32 @@ export default function QuickMatchPage() {
 
             {/* Panel grid */}
             <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
+              {/* Quick matches left mid-way */}
+              {!isGuest && data.abandonedQuickMatches.length > 0 && (
+                <div className="xl:col-span-12">
+                  <Panel
+                    title="Left Mid-Way"
+                    meta={
+                      <span className="mb-kicker">
+                        {data.abandonedQuickMatches.length === 1
+                          ? "1 match"
+                          : `${data.abandonedQuickMatches.length} matches`}
+                      </span>
+                    }
+                  >
+                    <div className="flex flex-col divide-y divide-mb-rule">
+                      {data.abandonedQuickMatches.map((m) => (
+                        <AbandonedMatch
+                          key={m.id}
+                          match={m}
+                          onDiscard={() => setDiscardingId(m.id)}
+                        />
+                      ))}
+                    </div>
+                  </Panel>
+                </div>
+              )}
+
               {/* Match setup */}
               <div className="xl:col-span-7">
                 <Panel title="Match Setup">
@@ -457,6 +532,24 @@ export default function QuickMatchPage() {
           </main>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={discarding !== undefined}
+        onOpenChange={(open) => {
+          if (!open) setDiscardingId(null);
+        }}
+        title="Discard this match?"
+        description={
+          discarding
+            ? `${discarding.home.name} ${discarding.homeScore}–${discarding.awayScore} ${discarding.away.name}. The score so far is lost, and the match will not count toward either team's record.`
+            : ""
+        }
+        confirmLabel="Discard"
+        busyLabel="Discarding..."
+        isBusy={false}
+        onConfirm={handleConfirmDiscard}
+        icon={Trash2}
+      />
     </div>
   );
 }

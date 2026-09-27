@@ -67,7 +67,7 @@ export const ScoringHeader = ({
       </Link>
 
       <div className="min-w-0 text-center">
-        <div className="flex items-center justify-center gap-1.5">
+        <div className="flex flex-wrap items-center justify-center gap-1.5">
           <span
             className="matchbook-display inline-flex items-center gap-1.5 border-[2px] px-2 py-1 text-[0.7rem] font-bold leading-none tracking-[0.14em]"
             style={{ borderColor: color, color }}

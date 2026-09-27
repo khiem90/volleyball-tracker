@@ -46,11 +46,14 @@ export const TeamScorePanel = memo(function TeamScorePanel({
       ? "landscape:pl-[max(0.75rem,env(safe-area-inset-left))]"
       : "landscape:pr-[max(0.75rem,env(safe-area-inset-right))]";
 
+  // Clipped rather than hidden. An overflow-hidden panel is still a scroll
+  // container, so a tap that focused a button scrolled the glow into view
+  // and pushed the name and score off center.
   return (
     <motion.section
       whileTap={canScore ? { scale: 0.99 } : undefined}
       aria-label={`${teamName}: ${score}`}
-      className={`relative flex flex-1 select-none flex-col items-center justify-center overflow-hidden p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] landscape:p-3 landscape:pb-[max(0.75rem,env(safe-area-inset-bottom))] ${inset}`}
+      className={`relative flex flex-1 select-none flex-col items-center justify-center overflow-clip p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] landscape:p-3 landscape:pb-[max(0.75rem,env(safe-area-inset-bottom))] ${inset}`}
       style={{ background: `linear-gradient(135deg, ${teamColor}, ${teamColor}bb)` }}
     >
       {/* Decorative light */}

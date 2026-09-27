@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { collection, doc, getDoc, getDocs, type Firestore, type Unsubscribe } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, type Firestore } from "firebase/firestore";
 import { describe, expect, it } from "vitest";
 import { addQuickMatch } from "@/lib/quickMatches";
 import {
@@ -28,7 +28,7 @@ import {
   DEFAULT_TERMINOLOGY,
 } from "@/types/competition-config";
 import type { Match, PersistentTeam, Tournament, TournamentFormat } from "@/types/game";
-import { describeFirestoreRules, modularFirestore } from "../rules/emulator";
+import { describeFirestoreRules, modularFirestore, when } from "../rules/emulator";
 
 const owner = "owner-uid";
 
@@ -66,32 +66,6 @@ const rotationInput = (format: TournamentFormat): NewTournamentInput => {
     settings: { ...base.settings, courts: 2, instantWin: true },
   };
 };
-
-/** Resolves with the first snapshot from `subscribe` that satisfies `ready`. */
-const when = <T>(
-  subscribe: (onChange: (value: T) => void, onError: (error: Error) => void) => Unsubscribe,
-  ready: (value: T) => boolean,
-): Promise<T> =>
-  new Promise((resolve, reject) => {
-    let unsubscribe: Unsubscribe = () => {};
-    const timer = setTimeout(() => {
-      unsubscribe();
-      reject(new Error("subscription never reached the expected state"));
-    }, 5000);
-    unsubscribe = subscribe(
-      (value) => {
-        if (!ready(value)) return;
-        clearTimeout(timer);
-        unsubscribe();
-        resolve(value);
-      },
-      (error) => {
-        clearTimeout(timer);
-        unsubscribe();
-        reject(error);
-      },
-    );
-  });
 
 const matchDocsOf = async (db: Firestore, tournamentId: string): Promise<Match[]> => {
   const snapshot = await getDocs(collection(db, "tournaments", tournamentId, "matches"));

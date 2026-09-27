@@ -26,9 +26,9 @@ interface ConfirmDialogProps {
 }
 
 /**
- * The confirm before a console action that changes a live tournament and
- * cannot be taken back with a tap: withdrawing a team, or closing a court
- * whose match is in play.
+ * The confirm before an action that cannot be taken back with a tap:
+ * withdrawing a team, closing a court whose match is in play, or discarding
+ * a quick match left mid-way.
  */
 export const ConfirmDialog = ({
   open,

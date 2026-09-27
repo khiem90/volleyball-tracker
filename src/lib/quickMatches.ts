@@ -66,7 +66,44 @@ export const updateQuickMatch = async (
   await updateDoc(quickMatchDoc(db, uid, matchId), toUpdatePayload(changes));
 };
 
-export const deleteQuickMatch = async (
+/**
+ * Record a quick match's result. The side with more points wins; ties are
+ * refused. Resolves once the server has the result, which from then on
+ * counts in both teams' all-time records.
+ */
+export const completeQuickMatch = async (
+  db: Firestore,
+  uid: string,
+  match: Pick<Match, "id" | "homeTeamId" | "awayTeamId">,
+  result: Pick<Match, "homeScore" | "awayScore">,
+): Promise<void> => {
+  if (result.homeScore === result.awayScore) {
+    throw new Error("A match cannot end in a tie.");
+  }
+  await updateQuickMatch(db, uid, match.id, {
+    ...result,
+    status: "completed",
+    winnerId: result.homeScore > result.awayScore ? match.homeTeamId : match.awayTeamId,
+    completedAt: Date.now(),
+  });
+};
+
+/**
+ * The quick matches left mid-way, most recently started first: every quick
+ * match without a result, whether or not a point was scored. The Quick page
+ * offers each one to resume or discard, so none stays Live for good.
+ */
+export const abandonedQuickMatches = (matches: Match[]): Match[] =>
+  matches
+    .filter((m) => m.tournamentId === null && m.status !== "completed")
+    .sort((a, b) => b.createdAt - a.createdAt);
+
+/**
+ * Throw away a quick match left mid-way. Its score so far goes with it and it
+ * never counts toward either team's record. Resolves once the server has the
+ * delete.
+ */
+export const discardQuickMatch = async (
   db: Firestore,
   uid: string,
   matchId: string,
