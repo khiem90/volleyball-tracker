@@ -1,11 +1,10 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { DeleteConfirmDialog, PageLoadingSpinner } from "@/components/shared";
 import { MatchbookSidebar } from "@/components/matchbook/Sidebar";
 import { MatchbookMobileBar } from "@/components/matchbook/MobileBar";
@@ -22,13 +21,15 @@ import { StandingsPanel } from "@/components/console/StandingsPanel";
 import { StartTournamentDialog } from "@/components/console/StartTournamentDialog";
 import { TeamsPanel } from "@/components/console/TeamsPanel";
 import { ConfirmDialog } from "@/components/console/ConfirmDialog";
-import { useConsole } from "@/components/console/useConsole";
+import { useConsole, type NotFoundReason } from "@/components/console/useConsole";
 import { TOURNAMENT_STATUS } from "@/components/matchbook/tournamentStatus";
-import { courtLabel, courtsWord } from "@/lib/console";
+import { courtLabel, courtsWord, type ConsoleRole } from "@/lib/console";
+import { STALE_SCORER_LINK } from "@/lib/shareLinks";
 import { formatLabel, isBracketFormat, isRotationFormat } from "@/lib/formats";
 import { UserMinus } from "lucide-react";
 
-const Shell = ({ children }: { children: ReactNode }) => (
+/** The owner's shell puts the app's navigation around the console. */
+const OwnerShell = ({ children }: { children: ReactNode }) => (
   <div className="matchbook-surface min-h-screen">
     <div className="flex">
       <MatchbookSidebar />
@@ -42,6 +43,102 @@ const Shell = ({ children }: { children: ReactNode }) => (
     </div>
   </div>
 );
+
+const ROLE_LABEL: Record<Exclude<ConsoleRole, "owner">, string> = {
+  scorer: "Scorer",
+  spectator: "Spectator",
+};
+
+/**
+ * The shell for a phone that reached the tournament by link. It shows the
+ * brand, what the link makes its holder, and a way to sign in, and no
+ * navigation, since every other page needs an account.
+ */
+const LinkShell = ({
+  role,
+  isGuest,
+  children,
+}: {
+  role: Exclude<ConsoleRole, "owner">;
+  isGuest: boolean;
+  children: ReactNode;
+}) => (
+  <div className="matchbook-surface min-h-screen">
+    <div className="flex items-center justify-between gap-3 border-b border-mb-rule px-4 py-3 sm:px-6">
+      <Link href="/" className="flex items-center gap-2.5">
+        <Image
+          src="/assets/matchbook/brand/crest.svg"
+          alt="Tournament Tracker crest"
+          width={34}
+          height={40}
+          priority
+        />
+        <span className="matchbook-display text-[0.95rem] font-bold leading-none">
+          <span className="text-mb-navy">Tournament </span>
+          <span className="text-mb-coral">Tracker</span>
+        </span>
+      </Link>
+      <div className="flex items-center gap-2">
+        <span className="matchbook-display border-[1.5px] border-mb-navy px-2 py-1.5 text-[0.62rem] font-bold tracking-[0.12em] text-mb-navy">
+          {ROLE_LABEL[role]}
+        </span>
+        <Link href={isGuest ? "/login" : "/"} className="mb-btn mb-btn-outline-navy min-h-11 px-3 text-[0.7rem]">
+          {isGuest ? "Sign in" : "Home"}
+        </Link>
+      </div>
+    </div>
+    <main className="px-4 py-5 sm:px-6 lg:px-8">{children}</main>
+  </div>
+);
+
+/** The owner gets the app around the console; anyone reached by link gets the link shell. */
+const ConsoleShell = ({
+  role,
+  isGuest,
+  children,
+}: {
+  role: ConsoleRole;
+  isGuest: boolean;
+  children: ReactNode;
+}) =>
+  role === "owner" ? (
+    <OwnerShell>{children}</OwnerShell>
+  ) : (
+    <LinkShell role={role} isGuest={isGuest}>
+      {children}
+    </LinkShell>
+  );
+
+/**
+ * Why the console shows nothing. The tournament is not there, or not
+ * shared with this phone, or the scorer link it opened has been replaced.
+ * A signed-in account gets its own app around the message, since it has
+ * somewhere to go; a guest gets the link shell and a way to sign in.
+ */
+const NotFound = ({ reason, isGuest }: { reason: NotFoundReason; isGuest: boolean }) => {
+  const message =
+    reason === "stale_link"
+      ? STALE_SCORER_LINK
+      : isGuest
+        ? "This tournament does not exist or is not being shared. If it is yours, sign in to open it."
+        : "This tournament does not exist, is not being shared, or belongs to another account.";
+  const body = (
+    <Panel title={reason === "stale_link" ? "Scorer link replaced" : "Tournament not found"}>
+      <PanelEmpty
+        message={message}
+        actionLabel={isGuest ? "Sign in" : "Back to tournaments"}
+        href={isGuest ? "/login" : "/competitions"}
+      />
+    </Panel>
+  );
+  return isGuest ? (
+    <LinkShell role="spectator" isGuest>
+      {body}
+    </LinkShell>
+  ) : (
+    <OwnerShell>{body}</OwnerShell>
+  );
+};
 
 /**
  * A section of the console. On a phone only the active tab's section shows;
@@ -68,13 +165,12 @@ const Section = ({
   </section>
 );
 
-export default function TournamentConsolePage() {
-  const { isLoading: isAuthLoading, isAuthenticated } = useRequireAuth();
+const TournamentConsole = () => {
   const { user, isGuest } = useAuth();
   const params = useParams();
   const page = useConsole(params.id as string);
 
-  if (isAuthLoading || !isAuthenticated || page.isLoading) {
+  if (page.isLoading) {
     return <PageLoadingSpinner />;
   }
 
@@ -83,17 +179,7 @@ export default function TournamentConsolePage() {
     // The tournament leaves the local cache before the delete resolves and
     // the list opens; the spinner covers that moment.
     if (page.isDeleting) return <PageLoadingSpinner />;
-    return (
-      <Shell>
-        <Panel title="Tournament not found">
-          <PanelEmpty
-            message="This tournament does not exist or belongs to another account."
-            actionLabel="Back to tournaments"
-            href="/competitions"
-          />
-        </Panel>
-      </Shell>
-    );
+    return <NotFound reason={page.notFoundReason ?? "not_found"} isGuest={isGuest} />;
   }
 
   const status = TOURNAMENT_STATUS[tournament.status];
@@ -103,30 +189,32 @@ export default function TournamentConsolePage() {
 
   return (
     <>
-      <Shell>
+      <ConsoleShell role={page.role} isGuest={isGuest}>
         {/* Masthead */}
         <header className="mb-4 flex flex-col gap-3">
-          <div className="flex items-center justify-between gap-3">
-            <Link href="/competitions" className="mb-panel-link min-h-11">
-              <MbIcon id="chevron-right" size={11} className="rotate-180" />
-              Tournaments
-            </Link>
-            <Link
-              href="/login"
-              className="hidden items-center gap-2.5 md:flex"
-              title={isGuest ? "Sign in" : (user?.email ?? "Account")}
-            >
-              <span className="flex h-10 w-10 items-center justify-center rounded-full border-[1.5px] border-mb-navy bg-mb-paper-bright">
-                <Image src="/assets/matchbook/brand/crest.svg" alt="" width={24} height={28} />
-              </span>
-              <span className="matchbook-display text-[0.72rem] font-bold leading-tight tracking-[0.08em]">
-                My
-                <br />
-                Account
-              </span>
-              <MbIcon id="chevron-down" size={13} className="text-mb-ink-muted" />
-            </Link>
-          </div>
+          {page.role === "owner" && (
+            <div className="flex items-center justify-between gap-3">
+              <Link href="/competitions" className="mb-panel-link min-h-11">
+                <MbIcon id="chevron-right" size={11} className="rotate-180" />
+                Tournaments
+              </Link>
+              <Link
+                href="/login"
+                className="hidden items-center gap-2.5 md:flex"
+                title={user?.email ?? "Account"}
+              >
+                <span className="flex h-10 w-10 items-center justify-center rounded-full border-[1.5px] border-mb-navy bg-mb-paper-bright">
+                  <Image src="/assets/matchbook/brand/crest.svg" alt="" width={24} height={28} />
+                </span>
+                <span className="matchbook-display text-[0.72rem] font-bold leading-tight tracking-[0.08em]">
+                  My
+                  <br />
+                  Account
+                </span>
+                <MbIcon id="chevron-down" size={13} className="text-mb-ink-muted" />
+              </Link>
+            </div>
+          )}
 
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
             <h1 className="matchbook-display min-w-0 max-w-full text-3xl font-bold leading-none tracking-[0.01em] [overflow-wrap:anywhere] sm:text-5xl">
@@ -172,12 +260,12 @@ export default function TournamentConsolePage() {
             </button>
           )}
 
-          {page.actionError && (
+          {(page.actionError ?? page.staleNotice) && (
             <p
               role="alert"
               className="border-[1.5px] border-mb-red px-3 py-2 text-[0.8rem] font-medium text-mb-red"
             >
-              {page.actionError}
+              {page.actionError ?? page.staleNotice}
             </p>
           )}
         </header>
@@ -257,6 +345,10 @@ export default function TournamentConsolePage() {
               canAddCourt={page.canAddCourt}
               canRemoveCourt={page.canRemoveCourt}
               isApplying={page.isApplying}
+              links={page.links}
+              onToggleSpectator={page.toggleSpectatorLink}
+              onRegenerate={() => page.setRegenerateOpen(true)}
+              onCreateScorerLink={page.regenerate}
               onDuplicate={page.duplicate}
               isDuplicating={page.isDuplicating}
               onEnd={() => page.setEndOpen(true)}
@@ -264,7 +356,7 @@ export default function TournamentConsolePage() {
             />
           </Section>
         </div>
-      </Shell>
+      </ConsoleShell>
 
       <StartTournamentDialog
         open={page.startOpen}
@@ -295,6 +387,17 @@ export default function TournamentConsolePage() {
         description={`This removes "${tournament.name}" and every match in it. It cannot be undone.`}
         isDeleting={page.isDeleting}
         onConfirm={page.remove}
+      />
+
+      <ConfirmDialog
+        open={page.regenerateOpen}
+        onOpenChange={page.setRegenerateOpen}
+        title="Regenerate the scorer link?"
+        description="Every phone on the current link is locked out the next time it saves a result. Share the new link with the helpers who should keep scoring."
+        confirmLabel="Regenerate"
+        busyLabel="Regenerating..."
+        isBusy={false}
+        onConfirm={page.regenerate}
       />
 
       <ConfirmDialog
@@ -342,5 +445,14 @@ export default function TournamentConsolePage() {
         onConfirm={page.confirmCloseCourts}
       />
     </>
+  );
+};
+
+// useSearchParams, which reads the scorer key, needs a Suspense boundary.
+export default function TournamentConsolePage() {
+  return (
+    <Suspense fallback={<PageLoadingSpinner />}>
+      <TournamentConsole />
+    </Suspense>
   );
 }

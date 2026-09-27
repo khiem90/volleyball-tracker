@@ -3,6 +3,12 @@ import { collection, doc, getDoc, getDocs, type Firestore, type Unsubscribe } fr
 import { describe, expect, it } from "vitest";
 import { addQuickMatch } from "@/lib/quickMatches";
 import {
+  proveScorer,
+  regenerateScorerKey,
+  setSpectatorEnabled,
+  subscribeToScorerKey,
+} from "@/lib/sharing";
+import {
   applyTournamentCommand,
   createTournament,
   deleteTournament,
@@ -10,6 +16,8 @@ import {
   renameTournament,
   StaleTournamentError,
   subscribeToAccountMatches,
+  subscribeToTournament,
+  subscribeToTournamentMatches,
   subscribeToTournaments,
   updateTournament,
   type NewTournamentInput,
@@ -582,6 +590,189 @@ describeFirestoreRules("Tournaments on Firestore", (env) => {
         const raw = modularFirestore(unrestricted);
         expect((await getDoc(doc(raw, "tournaments", created.id))).exists()).toBe(false);
         expect(await matchDocsOf(raw, created.id)).toHaveLength(0);
+      });
+    });
+  });
+
+  describe("share links", () => {
+    const phoneA = "phone-a-uid";
+    const phoneB = "phone-b-uid";
+    const ownerDb = () => modularFirestore(env().authenticatedContext(owner));
+    /** A phone that opened a link, with a silent anonymous identity and no account. */
+    const phoneDb = (uid: string) =>
+      modularFirestore(
+        env().authenticatedContext(uid, { firebase: { sign_in_provider: "anonymous" } }),
+      );
+
+    /** The key behind the scorer link, as the owner's Settings tab reads it. */
+    const currentScorerKey = (db: Firestore, tournamentId: string) =>
+      when<string | null>(
+        (onChange, onError) => subscribeToScorerKey(db, tournamentId, onChange, onError),
+        (key) => key !== null,
+      );
+
+    /** The owner creates and starts a tournament; each phone opens its scorer link. */
+    const sharedWith = async (phones: string[], tournamentInput: NewTournamentInput) => {
+      const db = ownerDb();
+      const created = await createTournament(db, owner, tournamentInput);
+      await applyTournamentCommand(db, created.id, { type: "start" });
+      const key = (await currentScorerKey(db, created.id))!;
+      for (const uid of phones) await proveScorer(phoneDb(uid), created.id, uid, key);
+      return { id: created.id, key };
+    };
+
+    /** What the rules' refusal looks like to the caller. */
+    const REFUSED = { code: "permission-denied" };
+
+    const winFor = (match: Match, winnerId: string) => ({
+      type: "complete_match" as const,
+      matchId: match.id,
+      homeScore: match.homeTeamId === winnerId ? 25 : 20,
+      awayScore: match.homeTeamId === winnerId ? 20 : 25,
+    });
+
+    it("a new tournament has a scorer key that its owner reads and a phone cannot", async () => {
+      const db = ownerDb();
+      const created = await createTournament(db, owner, input("round_robin"));
+
+      const key = await currentScorerKey(db, created.id);
+
+      expect(key).toEqual(expect.any(String));
+      expect(key!.length).toBeGreaterThanOrEqual(16);
+      await expect(
+        getDoc(doc(phoneDb(phoneA), "tournaments", created.id, "private", "scorerKey")),
+      ).rejects.toMatchObject(REFUSED);
+    });
+
+    it("a phone that opened the scorer link records a result through the engine", async () => {
+      const { id } = await sharedWith([phoneA], input("round_robin"));
+      const db = phoneDb(phoneA);
+      const [match] = await matchDocsOf(db, id);
+
+      await applyTournamentCommand(db, id, winFor(match, match.awayTeamId));
+
+      const stored = (await matchDocsOf(db, id)).find((m) => m.id === match.id);
+      expect(stored).toMatchObject({ status: "completed", winnerId: match.awayTeamId });
+    });
+
+    it("two phones on the scorer link complete matches on different courts at the same time without losing either result", async () => {
+      const { id } = await sharedWith([phoneA, phoneB], rotationInput("win2out"));
+      const before = await matchDocsOf(ownerDb(), id);
+      const court1 = before.find((m) => m.court === 1)!;
+      const court2 = before.find((m) => m.court === 2)!;
+
+      await Promise.all([
+        applyTournamentCommand(phoneDb(phoneA), id, winFor(court1, "t1")),
+        applyTournamentCommand(phoneDb(phoneB), id, winFor(court2, "t4")),
+      ]);
+
+      const after = await matchDocsOf(ownerDb(), id);
+      expect(after.find((m) => m.id === court1.id)).toMatchObject({ status: "completed", winnerId: "t1" });
+      expect(after.find((m) => m.id === court2.id)).toMatchObject({ status: "completed", winnerId: "t4" });
+      const open = after.filter((m) => m.status === "pending");
+      expect(open.map((m) => m.court).sort()).toEqual([1, 2]);
+      expect(new Set(open.map((m) => m.awayTeamId)).size).toBe(2);
+      expect((await tournamentDocOf(ownerDb(), id)).win2outState?.queue.sort()).toEqual(["t2", "t3"]);
+    });
+
+    it("a phone's last result completes a round robin on its own", async () => {
+      const { id } = await sharedWith([phoneA], { ...input("round_robin"), teams: roster.slice(0, 3) });
+      const db = phoneDb(phoneA);
+
+      for (const match of await matchDocsOf(db, id)) {
+        const winner = match.homeTeamId === "t1" || match.awayTeamId === "t1" ? "t1" : match.homeTeamId;
+        await applyTournamentCommand(db, id, winFor(match, winner));
+      }
+
+      const stored = await tournamentDocOf(ownerDb(), id);
+      expect(stored.status).toBe("completed");
+      expect(stored.winnerId).toBe("t1");
+    });
+
+    it("a phone cannot end, rename, delete, change the teams of, or open the spectator link on the tournament", async () => {
+      const { id } = await sharedWith([phoneA], input("round_robin"));
+      const db = phoneDb(phoneA);
+
+      await expect(applyTournamentCommand(db, id, { type: "end" })).rejects.toMatchObject(REFUSED);
+      await expect(renameTournament(db, id, "Hacked")).rejects.toMatchObject(REFUSED);
+      await expect(applyTournamentCommand(db, id, { type: "withdraw", teamId: "t1" })).rejects.toMatchObject(REFUSED);
+      await expect(
+        applyTournamentCommand(db, id, { type: "add_team", teamId: "t9", name: "Gatecrashers" }),
+      ).rejects.toMatchObject(REFUSED);
+      await expect(setSpectatorEnabled(db, id, true)).rejects.toMatchObject(REFUSED);
+      await expect(deleteTournament(db, id)).rejects.toMatchObject(REFUSED);
+
+      const stored = await tournamentDocOf(ownerDb(), id);
+      expect(stored).toMatchObject({ status: "live", name: "Tuesday night", spectatorEnabled: false });
+      expect(stored.entries.every((entry) => entry.withdrawnAt === undefined)).toBe(true);
+      expect(stored.teamIds).toEqual(["t1", "t2", "t3", "t4"]);
+      expect(await matchDocsOf(ownerDb(), id)).toHaveLength(6);
+    });
+
+    it("after the owner regenerates the scorer link, a phone on the old link is refused on its next write and cannot prove itself with the old key", async () => {
+      const { id, key: oldKey } = await sharedWith([phoneA], input("round_robin"));
+      const db = phoneDb(phoneA);
+      const [first, second] = await matchDocsOf(db, id);
+      await applyTournamentCommand(db, id, winFor(first, first.homeTeamId));
+
+      const newKey = await regenerateScorerKey(ownerDb(), id);
+
+      expect(newKey).not.toBe(oldKey);
+      expect(await currentScorerKey(ownerDb(), id)).toBe(newKey);
+      await expect(applyTournamentCommand(db, id, winFor(second, second.homeTeamId))).rejects.toMatchObject(REFUSED);
+      await expect(proveScorer(db, id, phoneA, oldKey)).rejects.toMatchObject(REFUSED);
+      expect((await matchDocsOf(ownerDb(), id)).find((m) => m.id === second.id)?.status).toBe("pending");
+
+      // The new link works on the same phone.
+      await proveScorer(db, id, phoneA, newKey);
+      await applyTournamentCommand(db, id, winFor(second, second.homeTeamId));
+      expect((await matchDocsOf(ownerDb(), id)).find((m) => m.id === second.id)?.status).toBe("completed");
+    });
+
+    it("the spectator link shows the tournament to a signed-out reader while on, and cuts it off when turned off", async () => {
+      const db = ownerDb();
+      const created = await createTournament(db, owner, input("round_robin"));
+      await applyTournamentCommand(db, created.id, { type: "start" });
+      await setSpectatorEnabled(db, created.id, true);
+      const reader = modularFirestore(env().unauthenticatedContext());
+
+      const seen = await when<Tournament | null>(
+        (onChange, onError) => subscribeToTournament(reader, created.id, onChange, onError),
+        (tournament) => tournament !== null,
+      );
+      const matches = await when<Match[]>(
+        (onChange, onError) => subscribeToTournamentMatches(reader, created.id, onChange, onError),
+        (list) => list.length === 6,
+      );
+      expect(seen).toMatchObject({ id: created.id, name: "Tuesday night", status: "live" });
+      expect(matches.every((m) => m.tournamentId === created.id)).toBe(true);
+
+      const cutOff = new Promise<never>((_resolve, reject) => {
+        const unsubscribe = subscribeToTournament(
+          reader,
+          created.id,
+          () => {},
+          (error) => {
+            unsubscribe();
+            reject(error);
+          },
+        );
+      });
+      await setSpectatorEnabled(db, created.id, false);
+      await expect(cutOff).rejects.toMatchObject(REFUSED);
+      expect((await tournamentDocOf(db, created.id)).revision).not.toBe(created.revision);
+    });
+
+    it("deleting a tournament removes its scorer key and every phone's proof with it", async () => {
+      const { id } = await sharedWith([phoneA, phoneB], input("round_robin"));
+
+      await deleteTournament(ownerDb(), id);
+
+      await env().withSecurityRulesDisabled(async (unrestricted) => {
+        const raw = modularFirestore(unrestricted);
+        expect((await getDoc(doc(raw, "tournaments", id, "private", "scorerKey"))).exists()).toBe(false);
+        expect((await getDocs(collection(raw, "tournaments", id, "scorers"))).size).toBe(0);
+        expect((await getDoc(doc(raw, "tournaments", id))).exists()).toBe(false);
       });
     });
   });

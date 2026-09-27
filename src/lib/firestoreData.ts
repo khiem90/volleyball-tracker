@@ -45,6 +45,10 @@ export const isOffline = (error: unknown): boolean =>
   error instanceof FirebaseError &&
   (error.code === "unavailable" || error.code === "deadline-exceeded");
 
+/** Firestore's way of saying the rules refused the read or write. */
+export const isRefused = (error: unknown): boolean =>
+  error instanceof FirebaseError && error.code === "permission-denied";
+
 /** Firestore's ways of saying a transaction lost a race with another write. */
 export const lostRace = (error: unknown): boolean =>
   error instanceof FirebaseError &&

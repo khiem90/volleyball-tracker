@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import {
+  signInAnonymously,
   signInWithPopup,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -25,16 +26,32 @@ import type { AuthUser } from "@/types/auth";
 // Context Types
 // ============================================
 interface AuthContextValue {
+  /**
+   * The signed-in account, or null for a guest. A phone that opened a
+   * scorer link has a silent anonymous identity, which is not an account:
+   * it shows here as null and gets only what the link allows.
+   */
   user: AuthUser | null;
+  /** The uid of whatever identity Firebase holds, the account's or the silent one a scorer link made. */
+  identityUid: string | null;
   isLoading: boolean;
   isConfigured: boolean;
-  isGuest: boolean; // True when not authenticated and not loading
+  /**
+   * True when there is no account and auth has settled. A phone holding a
+   * scorer link is still a guest everywhere outside that tournament.
+   */
+  isGuest: boolean;
   // Auth methods
   signInWithGoogle: () => Promise<void>;
   signInWithEmail: (email: string, password: string) => Promise<void>;
   signUpWithEmail: (email: string, password: string) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
+  /**
+   * The uid of the current identity, making a silent anonymous one when
+   * there is none. What a scorer link needs before it can write its proof.
+   */
+  ensureIdentity: () => Promise<string>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -59,6 +76,7 @@ interface AuthProviderProps {
 
 export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [identityUid, setIdentityUid] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isConfigured] = useState(() => isFirebaseConfigured());
 
@@ -71,11 +89,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
 
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      if (firebaseUser) {
-        setUser(mapFirebaseUser(firebaseUser));
-      } else {
-        setUser(null);
-      }
+      setIdentityUid(firebaseUser?.uid ?? null);
+      setUser(firebaseUser && !firebaseUser.isAnonymous ? mapFirebaseUser(firebaseUser) : null);
       setIsLoading(false);
     });
 
@@ -133,8 +148,21 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     await firebaseSignOut(auth);
   }, [isConfigured]);
 
+  // The account if there is one, else the silent identity, made on the spot
+  // if there is none. Silent sign-in needs the Anonymous provider enabled
+  // on the Firebase project; the emulator has it on.
+  const ensureIdentity = useCallback(async () => {
+    if (!isConfigured || !auth) {
+      throw new Error("Firebase is not configured");
+    }
+    if (auth.currentUser) return auth.currentUser.uid;
+    const credential = await signInAnonymously(auth);
+    return credential.user.uid;
+  }, [isConfigured]);
+
   const value: AuthContextValue = {
     user,
+    identityUid,
     isLoading,
     isConfigured,
     isGuest: !user && !isLoading,
@@ -143,6 +171,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     signUpWithEmail,
     resetPassword,
     signOut,
+    ensureIdentity,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -158,4 +187,3 @@ export const useAuth = (): AuthContextValue => {
   }
   return context;
 };
-

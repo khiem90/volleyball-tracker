@@ -58,12 +58,23 @@ Everything a signed-in account owns is in Firestore, and the rules in
 | `users/{uid}/matches/{matchId}` | Quick matches, with `tournamentId: null` |
 | `tournaments/{tournamentId}` | One tournament: owner, format, status, entries, settings |
 | `tournaments/{tournamentId}/matches/{matchId}` | One document per match |
+| `tournaments/{tournamentId}/private/scorerKey` | The key behind the scorer link; only the owner can read it |
+| `tournaments/{tournamentId}/scorers/{uid}` | A phone's proof that it opened the scorer link |
 
 Tournament ids are random so a link to one cannot be guessed. Every match
 carries `ownerId`, so one collection group query on `matches` returns all of an
 account's matches; that query and the tournament list need the composite
 indexes in `firestore.indexes.json`. A tournament is readable by anyone only
 while its `spectatorEnabled` flag is on.
+
+A scorer link is the tournament's page with `?scorer=<key>`. A phone that
+opens it gets a silent anonymous identity and writes the key under its own
+uid; the rules accept that proof only while the key is the current one, and
+compare it on every write after that, so regenerating the key from Settings
+locks every old phone out at its next write. Scorers can score, record
+results, reorder the queue, and swap courts in a live tournament, and
+nothing else. Silent sign-in needs the Anonymous provider enabled on the project
+(Firebase Console > Authentication > Sign-in method); the emulator has it on.
 
 Format rules live in the engine under `src/lib/engine`. A command (start,
 complete a match, end) plus the tournament and its matches produce the next

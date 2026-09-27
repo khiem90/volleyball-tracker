@@ -109,7 +109,7 @@ _Avoid_: Friendly, casual match
 ### People and access
 
 **Owner**:
-The account that created a tournament. Only the owner can end, delete, or change its teams.
+The account that created a tournament. Only the owner can end, delete, rename, or share it, or change its teams.
 _Avoid_: Creator, admin
 
 **Scorer**:
@@ -129,7 +129,7 @@ A revocable link that makes its holder a spectator for one tournament.
 _Avoid_: Share code, view link
 
 **Guest**:
-Someone using the app without signing in. A guest can play a quick match that is not saved and nothing else.
+Someone using the app without signing in. A guest can play a quick match that is not saved and nothing else, apart from what a tournament's scorer or spectator link gives its holder in that tournament.
 _Avoid_: Anonymous user
 
 ### Records

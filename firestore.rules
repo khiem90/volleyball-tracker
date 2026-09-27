@@ -26,9 +26,12 @@ service cloud.firestore {
         && request.resource.data.tournamentId == null;
     }
 
-    // Tournaments are owned by the account that created them. Only the owner
-    // writes. Anyone holding the link can read while the spectator link is on;
-    // with it off, nobody but the owner can read the tournament or its matches.
+    // Tournaments are owned by the account that created them. The owner
+    // writes anything. A scorer, a phone holding the scorer link, may record
+    // results, reorder the queue, and swap courts while the tournament is
+    // live, and nothing else. Anyone holding the link can read while the spectator link is on;
+    // with it off, only the owner and scorers can read the tournament or its
+    // matches.
     match /tournaments/{tournamentId} {
       function tournament() {
         return get(/databases/$(database)/documents/tournaments/$(tournamentId)).data;
@@ -38,38 +41,105 @@ service cloud.firestore {
         return signedIn() && tournament().ownerId == request.auth.uid;
       }
 
+      function scorerKey() {
+        return get(/databases/$(database)/documents/tournaments/$(tournamentId)/private/scorerKey).data.key;
+      }
+
+      // A scorer is a signed-in identity whose proof carries the current
+      // key. Regenerating the key changes what this compares against, so
+      // every proof written for the old key fails from then on. A missing
+      // proof or key makes the get() fail, which denies.
+      function isScorer() {
+        return signedIn()
+          && get(/databases/$(database)/documents/tournaments/$(tournamentId)/scorers/$(request.auth.uid)).data.key
+            == scorerKey();
+      }
+
+      function isLive() {
+        return tournament().status == 'live';
+      }
+
+      // A result or a court edit may change the tournament's rotation state
+      // and revision. The last result of a round robin or a bracket also
+      // completes the tournament, so a scorer may move one of those to
+      // completed when a winner from its teams comes with it. End names no
+      // winner and stays with the owner, and the rotation formats finish
+      // only through End. The rules cannot see whether every match has
+      // been played, so a scorer writing to Firestore outside the app could
+      // complete a round robin or a bracket early (see ADR-0002).
+      function scorerChange() {
+        let changed = request.resource.data.diff(resource.data).affectedKeys();
+        return changed.hasOnly([
+            'revision', 'updatedAt', 'win2outState', 'twoMatchRotationState',
+            'status', 'completedAt', 'winnerId'
+          ])
+          && (!changed.hasAny(['status', 'completedAt', 'winnerId'])
+            || (request.resource.data.status == 'completed'
+              && resource.data.format in ['round_robin', 'single_elimination', 'double_elimination']
+              && request.resource.data.winnerId in resource.data.teamIds));
+      }
+
       allow read: if
         (signedIn() && resource.data.ownerId == request.auth.uid)
-        || resource.data.spectatorEnabled == true;
+        || resource.data.spectatorEnabled == true
+        || isScorer();
 
       allow create: if
         signedIn() && request.resource.data.ownerId == request.auth.uid;
 
       allow update: if
-        signedIn()
-        && resource.data.ownerId == request.auth.uid
-        && request.resource.data.ownerId == resource.data.ownerId;
+        (signedIn()
+          && resource.data.ownerId == request.auth.uid
+          && request.resource.data.ownerId == resource.data.ownerId)
+        || (resource.data.status == 'live' && isScorer() && scorerChange());
 
       allow delete: if
         signedIn() && resource.data.ownerId == request.auth.uid;
 
+      // The scorer key is the secret behind the scorer link. It lives apart
+      // from the tournament so a spectator, who can read the tournament,
+      // never sees it. Only the owner reads or writes it.
+      match /private/{document} {
+        allow read, write: if ownsTournament();
+      }
+
+      // A scorer's proof is the key from the link the phone opened, written
+      // under that phone's own uid. The rules accept a proof only while its
+      // key is the current one, so a phone on a regenerated link learns at
+      // once that it is stale, and a proof can never hold anything but a
+      // key that was valid when it was written. The owner can list and
+      // remove proofs; a phone sees only its own.
+      match /scorers/{uid} {
+        allow read, delete: if ownsTournament() || isAccount(uid);
+        allow create, update: if
+          isAccount(uid)
+          && request.resource.data.keys().hasOnly(['key', 'updatedAt'])
+          && request.resource.data.key == scorerKey();
+      }
+
       // One document per match. A match carries its owner and tournament ids
       // so the account-wide query below can be checked without a parent read.
+      // A scorer writes matches while the tournament is live: a score, a
+      // result, the next match on a court, and the match an undo removes.
       match /matches/{matchId} {
+        function mayWriteMatches() {
+          return ownsTournament() || (isLive() && isScorer());
+        }
+
         allow read: if
-          ownsTournament() || tournament().spectatorEnabled == true;
+          ownsTournament() || tournament().spectatorEnabled == true || isScorer();
 
         allow create: if
-          ownsTournament()
-          && request.resource.data.ownerId == request.auth.uid
+          mayWriteMatches()
+          && request.resource.data.ownerId == tournament().ownerId
           && request.resource.data.tournamentId == tournamentId;
 
         allow update: if
-          ownsTournament()
+          mayWriteMatches()
           && request.resource.data.ownerId == resource.data.ownerId
           && request.resource.data.tournamentId == resource.data.tournamentId;
 
-        allow delete: if ownsTournament();
+        allow delete: if mayWriteMatches();
       }
     }
 

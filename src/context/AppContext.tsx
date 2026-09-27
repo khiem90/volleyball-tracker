@@ -9,9 +9,11 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import type { Unsubscribe } from "firebase/firestore";
 import type { AppState, Match, PersistentTeam, Tournament } from "@/types/game";
 import { useAuth } from "./AuthContext";
 import { db } from "@/lib/firebase";
+import type { EngineCommand } from "@/lib/engine";
 import {
   buildRosterTeam,
   deleteRosterTeams,
@@ -23,6 +25,11 @@ import {
   type DeletedTeams,
   type TeamInput,
 } from "@/lib/roster";
+import {
+  regenerateScorerKey,
+  setSpectatorEnabled,
+  subscribeToScorerKey as subscribeToScorerKeyDoc,
+} from "@/lib/sharing";
 import {
   applyTournamentCommand,
   buildTournamentToSave,
@@ -37,12 +44,19 @@ import {
   type NewTournamentInput,
 } from "@/lib/tournaments";
 import { buildQuickMatch, saveQuickMatch, updateQuickMatch } from "@/lib/quickMatches";
+import { useLinkedTournaments, type LinkStatus } from "./useLinkedTournaments";
+
+export type { LinkStatus } from "./useLinkedTournaments";
 
 /**
  * The app-wide provider: a thin layer over three live Firestore subscriptions,
  * roster, tournaments, and matches, plus the domain actions. Format rules live
  * in the engine: every change to a started tournament is an engine command
  * applied in a transaction.
+ *
+ * A tournament can also be reached by link, by a phone that does not own
+ * it. Those are watched by useLinkedTournaments and kept apart from the
+ * account's own lists; the getters below answer from either.
  */
 
 export interface MatchResult {
@@ -110,6 +124,7 @@ interface AppContextValue {
   deleteTournament: (id: string) => Promise<void>;
   startTournament: (id: string, byeTeamIds?: string[]) => Promise<void>;
   endTournament: (id: string) => Promise<void>;
+  /** A tournament the account owns, or one this phone reached by link. */
   getTournamentById: (id: string) => Tournament | undefined;
   getMatchesByTournament: (tournamentId: string) => Match[];
   // Match actions
@@ -140,6 +155,32 @@ interface AppContextValue {
   swapTeams: (tournamentId: string, teamId: string, withTeamId: string) => Promise<void>;
   /** Move a waiting team to a place in the queue, counted from the front. */
   reorderQueue: (tournamentId: string, teamId: string, position: number) => Promise<void>;
+  // Share links
+  /** Watch a tournament this account does not own, as its spectator link allows. */
+  watchTournament: (tournamentId: string) => void;
+  /**
+   * Open a scorer link: give the phone a silent identity if it has none,
+   * write the proof, remember the link, and watch the tournament. A refused
+   * proof marks the link stale rather than rejecting.
+   */
+  openScorerLink: (tournamentId: string, key: string) => Promise<void>;
+  linkStatus: (tournamentId: string) => LinkStatus;
+  /** Whether the phone opened a scorer link for the tournament that the owner has since replaced. */
+  isStaleLink: (tournamentId: string) => boolean;
+  /** Whether this phone holds the tournament's scorer link. */
+  holdsScorerLink: (tournamentId: string) => boolean;
+  /** True while a tournament reached by link is still arriving. */
+  isLinkedLoading: boolean;
+  /** Turn a tournament's spectator link on or off. Owner only. */
+  setSpectatorLink: (tournamentId: string, enabled: boolean) => Promise<void>;
+  /** Replace a tournament's scorer link; every phone on the old one loses access. Owner only. */
+  regenerateScorerLink: (tournamentId: string) => Promise<string>;
+  /** The key behind a tournament's scorer link, null while it has none. Owner only. */
+  subscribeToScorerKey: (
+    tournamentId: string,
+    onChange: (key: string | null) => void,
+    onError?: (error: Error) => void,
+  ) => Unsubscribe;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -150,12 +191,17 @@ const logFailure = (what: string) => (error: unknown) => {
   console.error(`Failed to ${what}:`, error);
 };
 
+const requireDb = () => {
+  if (!db) throw new Error("Firebase is not configured.");
+  return db;
+};
+
 interface AppProviderProps {
   children: ReactNode;
 }
 
 export const AppProvider = ({ children }: AppProviderProps) => {
-  const { user, isLoading: isAuthLoading } = useAuth();
+  const { user, identityUid, isLoading: isAuthLoading, ensureIdentity } = useAuth();
   const uid = user?.uid ?? null;
 
   const [roster, setRoster] = useState<PersistentTeam[]>([]);
@@ -246,9 +292,41 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     () => new Map(state.tournaments.map((t) => [t.id, t])),
     [state.tournaments]
   );
-  const matchesById = useMemo(
-    () => new Map(state.matches.map((m) => [m.id, m])),
-    [state.matches]
+
+  // ============================================
+  // Tournaments reached by link
+  // ============================================
+
+  const {
+    watchTournament,
+    openScorerLink,
+    guardScorerWrite,
+    linkStatus,
+    isStaleLink,
+    holdsScorerLink,
+    isLinkedLoading,
+    linkedTournaments,
+    linkedMatches,
+    linkedMatchesOf,
+  } = useLinkedTournaments({ identityUid, isAuthLoading, ensureIdentity });
+
+  // The account's own copy wins over a linked one, for an owner who opened
+  // their own scorer link.
+  const matchesById = useMemo(() => {
+    const byId = new Map(linkedMatches.map((m) => [m.id, m]));
+    for (const match of state.matches) byId.set(match.id, match);
+    return byId;
+  }, [state.matches, linkedMatches]);
+
+  // Every tournament command runs for whatever identity the phone has. The
+  // rules decide whether the owner or a scorer may apply it and refuse the
+  // rest, and a scorer whose link was replaced learns so from the error.
+  const command = useCallback(
+    (tournamentId: string, engineCommand: EngineCommand) =>
+      guardScorerWrite(tournamentId, () =>
+        applyTournamentCommand(requireDb(), tournamentId, engineCommand),
+      ),
+    [guardScorerWrite],
   );
 
   const requireAccount = useCallback(() => {
@@ -327,12 +405,9 @@ export const AppProvider = ({ children }: AppProviderProps) => {
   // A field write, so a rename can never paper over a result a court just
   // saved. The local cache shows the new name before the server answers;
   // a refused write comes back to the caller as the rejection.
-  const renameTournament = useCallback(
-    async (id: string, name: string) => {
-      await renameTournamentDoc(requireAccount().db, id, name);
-    },
-    [requireAccount]
-  );
+  const renameTournament = useCallback(async (id: string, name: string) => {
+    await renameTournamentDoc(requireDb(), id, name);
+  }, []);
 
   // A duplicate is created like any other draft, so the console can open
   // it as soon as the id is known.
@@ -345,35 +420,35 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     [createTournament, tournamentsById, state.teams]
   );
 
-  const deleteTournament = useCallback(
-    async (id: string) => {
-      await deleteTournamentDoc(requireAccount().db, id);
-    },
-    [requireAccount]
-  );
+  const deleteTournament = useCallback(async (id: string) => {
+    await deleteTournamentDoc(requireDb(), id);
+  }, []);
 
   const startTournament = useCallback(
     async (id: string, byeTeamIds?: string[]) => {
-      await applyTournamentCommand(requireAccount().db, id, { type: "start", byeTeamIds });
+      await command(id, { type: "start", byeTeamIds });
     },
-    [requireAccount]
+    [command]
   );
 
   const endTournament = useCallback(
     async (id: string) => {
-      await applyTournamentCommand(requireAccount().db, id, { type: "end" });
+      await command(id, { type: "end" });
     },
-    [requireAccount]
+    [command]
   );
 
   const getTournamentById = useCallback(
-    (id: string) => tournamentsById.get(id),
-    [tournamentsById]
+    (id: string) => tournamentsById.get(id) ?? linkedTournaments.get(id),
+    [tournamentsById, linkedTournaments]
   );
 
   const getMatchesByTournament = useCallback(
-    (tournamentId: string) => state.matches.filter((m) => m.tournamentId === tournamentId),
-    [state.matches]
+    (tournamentId: string) =>
+      tournamentsById.has(tournamentId)
+        ? state.matches.filter((m) => m.tournamentId === tournamentId)
+        : linkedMatchesOf(tournamentId),
+    [tournamentsById, state.matches, linkedMatchesOf]
   );
 
   // ============================================
@@ -391,18 +466,23 @@ export const AppProvider = ({ children }: AppProviderProps) => {
   );
 
   // Tournament matches and quick matches live in different places; the match
-  // itself says which.
+  // itself says which. A quick match is the account's own.
   const writeMatch = useCallback(
     (matchId: string, changes: Partial<Match>) => {
-      if (!uid || !db) return;
+      if (!db) return;
       const match = matchesById.get(matchId);
       if (!match) return;
-      const write = match.tournamentId
-        ? updateTournamentMatch(db, match.tournamentId, matchId, changes)
-        : updateQuickMatch(db, uid, matchId, changes);
-      write.catch(logFailure("update match"));
+      const database = db;
+      const { tournamentId } = match;
+      if (tournamentId) {
+        guardScorerWrite(tournamentId, () =>
+          updateTournamentMatch(database, tournamentId, matchId, changes)
+        ).catch(logFailure("update match"));
+      } else if (uid) {
+        updateQuickMatch(database, uid, matchId, changes).catch(logFailure("update match"));
+      }
     },
-    [uid, matchesById]
+    [uid, matchesById, guardScorerWrite]
   );
 
   const updateMatchScore = useCallback(
@@ -428,11 +508,11 @@ export const AppProvider = ({ children }: AppProviderProps) => {
 
   const completeMatch = useCallback(
     async (matchId: string, result: MatchResult): Promise<CompleteMatchOutcome> => {
-      const account = requireAccount();
       const match = matchesById.get(matchId);
       if (!match) throw new Error("That match no longer exists.");
 
       if (!match.tournamentId) {
+        const account = requireAccount();
         if (result.homeScore === result.awayScore) {
           throw new Error("A match cannot end in a tie.");
         }
@@ -445,7 +525,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         return { completed: true };
       }
 
-      const outcome = await applyTournamentCommand(account.db, match.tournamentId, {
+      const outcome = await command(match.tournamentId, {
         type: "complete_match",
         matchId,
         ...result,
@@ -456,46 +536,34 @@ export const AppProvider = ({ children }: AppProviderProps) => {
       const completed = own?.kind === "update" && own.changes.status === "completed";
       return { completed };
     },
-    [requireAccount, matchesById]
+    [requireAccount, matchesById, command]
   );
 
   const instantWin = useCallback(
     async (matchId: string, winnerId: string) => {
-      const account = requireAccount();
       const match = matchesById.get(matchId);
       if (!match?.tournamentId) throw new Error("Instant win is for tournament matches.");
-      await applyTournamentCommand(account.db, match.tournamentId, {
-        type: "instant_win",
-        matchId,
-        winnerId,
-      });
+      await command(match.tournamentId, { type: "instant_win", matchId, winnerId });
     },
-    [requireAccount, matchesById]
+    [matchesById, command]
   );
 
   // Applied through the engine in a transaction, so an undo on one court can
   // never paper over a result another court saved in the meantime.
   const undoResult = useCallback(
     async (tournamentId: string, matchId: string) => {
-      await applyTournamentCommand(requireAccount().db, tournamentId, {
-        type: "undo_result",
-        matchId,
-      });
+      await command(tournamentId, { type: "undo_result", matchId });
     },
-    [requireAccount]
+    [command]
   );
 
-  // Also through the engine in a transaction: a correction never lands on
-  // top of a result a court saved in the meantime.
+  // Also through the engine in a transaction, so a correction never lands
+  // on top of a result a court saved in the meantime.
   const correctMatchResult = useCallback(
     async (tournamentId: string, matchId: string, result: MatchResult) => {
-      await applyTournamentCommand(requireAccount().db, tournamentId, {
-        type: "correct_result",
-        matchId,
-        ...result,
-      });
+      await command(tournamentId, { type: "correct_result", matchId, ...result });
     },
-    [requireAccount]
+    [command]
   );
 
   const getMatchById = useCallback((id: string) => matchesById.get(id), [matchesById]);
@@ -509,53 +577,70 @@ export const AppProvider = ({ children }: AppProviderProps) => {
   // papering over a result a court saved in the meantime.
   const addTeamToTournament = useCallback(
     async (tournamentId: string, team: PersistentTeam) => {
-      await applyTournamentCommand(requireAccount().db, tournamentId, {
+      await command(tournamentId, {
         type: "add_team",
         teamId: team.id,
         name: team.name,
         ...(team.color !== undefined && { color: team.color }),
       });
     },
-    [requireAccount]
+    [command]
   );
 
   const withdrawTeam = useCallback(
     async (tournamentId: string, teamId: string) => {
-      await applyTournamentCommand(requireAccount().db, tournamentId, { type: "withdraw", teamId });
+      await command(tournamentId, { type: "withdraw", teamId });
     },
-    [requireAccount]
+    [command]
   );
 
   const changeCourts = useCallback(
     async (tournamentId: string, courts: number) => {
-      await applyTournamentCommand(requireAccount().db, tournamentId, {
-        type: "change_courts",
-        courts,
-      });
+      await command(tournamentId, { type: "change_courts", courts });
     },
-    [requireAccount]
+    [command]
   );
 
   const swapTeams = useCallback(
     async (tournamentId: string, teamId: string, withTeamId: string) => {
-      await applyTournamentCommand(requireAccount().db, tournamentId, {
-        type: "swap_teams",
-        teamId,
-        withTeamId,
-      });
+      await command(tournamentId, { type: "swap_teams", teamId, withTeamId });
     },
-    [requireAccount]
+    [command]
   );
 
   const reorderQueue = useCallback(
     async (tournamentId: string, teamId: string, position: number) => {
-      await applyTournamentCommand(requireAccount().db, tournamentId, {
-        type: "reorder_queue",
-        teamId,
-        position,
-      });
+      await command(tournamentId, { type: "reorder_queue", teamId, position });
     },
-    [requireAccount]
+    [command]
+  );
+
+  // ============================================
+  // Share links (owner)
+  // ============================================
+
+  const setSpectatorLink = useCallback(async (tournamentId: string, enabled: boolean) => {
+    await setSpectatorEnabled(requireDb(), tournamentId, enabled);
+  }, []);
+
+  const regenerateScorerLink = useCallback(
+    (tournamentId: string) => regenerateScorerKey(requireDb(), tournamentId),
+    []
+  );
+
+  const subscribeToScorerKey = useCallback(
+    (
+      tournamentId: string,
+      onChange: (key: string | null) => void,
+      onError?: (error: Error) => void,
+    ): Unsubscribe => {
+      if (!db) {
+        onChange(null);
+        return () => {};
+      }
+      return subscribeToScorerKeyDoc(db, tournamentId, onChange, onError);
+    },
+    []
   );
 
   const value: AppContextValue = {
@@ -592,6 +677,15 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     changeCourts,
     swapTeams,
     reorderQueue,
+    watchTournament,
+    openScorerLink,
+    linkStatus,
+    isStaleLink,
+    holdsScorerLink,
+    isLinkedLoading,
+    setSpectatorLink,
+    regenerateScorerLink,
+    subscribeToScorerKey,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

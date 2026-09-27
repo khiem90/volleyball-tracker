@@ -49,6 +49,14 @@ check that the output says they ran.
    composite index as Building until it is ready, which can take several
    minutes on a large collection.
 
+## Once per project: anonymous sign-in
+
+Scorer links sign a phone in anonymously, so the project needs the Anonymous
+provider on. In the Firebase Console open Authentication > Sign-in method,
+add Anonymous, and enable it. This is a console setting, not part of the
+rules deploy, and it only needs doing once. Without it, opening a scorer link
+fails at sign-in and the console reports that the link could not be opened.
+
 ## Notes
 
 - `npx firebase use --add` writes a `.firebaserc` so later commands can skip

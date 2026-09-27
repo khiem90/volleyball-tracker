@@ -22,6 +22,13 @@ describe("roleFor", () => {
     expect(roleFor("owner-uid", undefined)).toBe("spectator");
     expect(roleFor(undefined, "owner-uid")).toBe("spectator");
   });
+
+  it("makes whoever holds the scorer link a scorer, unless they own the tournament", () => {
+    expect(roleFor("owner-uid", "phone-uid", true)).toBe("scorer");
+    expect(roleFor("owner-uid", null, true)).toBe("scorer");
+    expect(roleFor("owner-uid", "owner-uid", true)).toBe("owner");
+    expect(roleFor("owner-uid", "phone-uid", false)).toBe("spectator");
+  });
 });
 
 describe("consoleAccess", () => {
@@ -34,6 +41,7 @@ describe("consoleAccess", () => {
       canRename: true,
       canDuplicate: true,
       canDelete: true,
+      canShare: true,
     });
   });
 
@@ -46,6 +54,7 @@ describe("consoleAccess", () => {
       canRename: true,
       canDuplicate: true,
       canDelete: true,
+      canShare: true,
     });
   });
 
@@ -58,6 +67,7 @@ describe("consoleAccess", () => {
       canRename: false,
       canDuplicate: true,
       canDelete: true,
+      canShare: true,
     });
   });
 
@@ -70,6 +80,7 @@ describe("consoleAccess", () => {
       canRename: false,
       canDuplicate: false,
       canDelete: false,
+      canShare: false,
     });
   });
 
@@ -89,6 +100,7 @@ describe("consoleAccess", () => {
         canRename: false,
         canDuplicate: false,
         canDelete: false,
+        canShare: false,
       });
     }
   });

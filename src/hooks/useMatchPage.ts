@@ -45,6 +45,9 @@ export const useMatchPage = () => {
     startMatch,
     completeMatch,
     isTournamentsLoading,
+    isLinkedLoading,
+    holdsScorerLink,
+    isStaleLink,
   } = useApp();
 
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
@@ -55,6 +58,14 @@ export const useMatchPage = () => {
   const match = getMatchById(matchId);
   const tournament = (match?.tournamentId && getTournamentById(match.tournamentId)) || null;
 
+  // The tournament this page last saw the match in. When a scorer's link is
+  // replaced and the spectator link is off, the match goes away, and this
+  // says why instead of "not found".
+  const [seenTournamentId, setSeenTournamentId] = useState<string | null>(null);
+  if (match?.tournamentId && match.tournamentId !== seenTournamentId) {
+    setSeenTournamentId(match.tournamentId);
+  }
+
   // A tournament match shows its entries; a quick match shows roster teams.
   const teams = useMemo(
     () => (tournament ? entryTeams(tournament, state.teams) : state.teams),
@@ -63,7 +74,13 @@ export const useMatchPage = () => {
   const homeTeam = teams.find((t) => t.id === match?.homeTeamId);
   const awayTeam = teams.find((t) => t.id === match?.awayTeamId);
 
-  const role = roleFor(tournament?.ownerId ?? match?.ownerId, user?.uid);
+  // A phone that opened the tournament's scorer link scores it; the record
+  // of that link outlives the console, so the page knows after a reload.
+  const role = roleFor(
+    tournament?.ownerId ?? match?.ownerId,
+    user?.uid,
+    tournament ? holdsScorerLink(tournament.id) : false,
+  );
   const access = match ? scoringAccess(role, match, tournament) : NOT_SCORING;
   const canScore = access.canScore;
   const notice = match && !access.canScore ? blockMessage(access.reason, matchKind(match)) : null;
@@ -179,7 +196,10 @@ export const useMatchPage = () => {
     backHref: match ? backHref(match) : "/",
     backLabel: match ? backLabel(match) : "Home",
     canUndo: history.length >= 2,
-    isLoading: isTournamentsLoading,
+    // A scorer's phone has no account lists; its match arrives by link.
+    isLoading: isTournamentsLoading || (match === undefined && isLinkedLoading),
+    /** True once the match has gone because the owner replaced this phone's scorer link. */
+    staleLink: match === undefined && seenTournamentId !== null && isStaleLink(seenTournamentId),
     handleAddPoint,
     handleDeductPoint,
     handleUndo,

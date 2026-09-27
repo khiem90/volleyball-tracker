@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import { ScoringScreen } from "@/components/match";
 import { useMatchPage } from "@/hooks/useMatchPage";
+import { STALE_SCORER_LINK } from "@/lib/shareLinks";
 
 /** The paper page behind the spinner and the not-found message. */
 const Frame = ({ children }: { children: ReactNode }) => (
@@ -20,6 +21,18 @@ export default function MatchPage() {
     return (
       <Frame>
         <Loader2 className="h-8 w-8 animate-spin text-mb-navy" aria-label="Loading" />
+      </Frame>
+    );
+  }
+
+  if (page.staleLink) {
+    return (
+      <Frame>
+        <h1 className="matchbook-display text-2xl font-bold text-mb-navy">Scorer link replaced</h1>
+        <p className="mt-2 max-w-sm text-[0.85rem] text-mb-ink-muted">{STALE_SCORER_LINK}</p>
+        <Link href="/" className="mb-btn mb-btn-outline-navy mt-5 min-h-11">
+          Home
+        </Link>
       </Frame>
     );
   }

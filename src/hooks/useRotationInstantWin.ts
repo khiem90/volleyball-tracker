@@ -13,30 +13,27 @@ interface UseRotationInstantWinProps {
 /**
  * Instant win: record a rotation-format result by tapping the winner. The
  * engine scores it, moves the queue, schedules the court's next match, and
- * keeps what it moved so the undo toast can take the result back.
+ * keeps what it moved so the undo toast can take the result back. Whether
+ * the visitor may record results is the caller's check; a refused write
+ * comes back as the rejection.
  */
 export const useRotationInstantWin = ({ tournament, getTeamName }: UseRotationInstantWinProps) => {
-  const { canEdit, instantWin } = useApp();
+  const { instantWin } = useApp();
   const { pushUndo } = useUndo();
 
   const handleInstantWin = useCallback(
     async (winnerId: string, match: Match) => {
-      if (!tournament || !canEdit) return;
-
-      try {
-        await instantWin(match.id, winnerId);
-        pushUndo({
-          actionType: "instant_win",
-          description: `${getTeamName(winnerId)} won`,
-          tournamentId: tournament.id,
-          matchId: match.id,
-        });
-      } catch (error) {
-        console.error("Instant win failed:", error);
-      }
+      if (!tournament) return;
+      await instantWin(match.id, winnerId);
+      pushUndo({
+        actionType: "instant_win",
+        description: `${getTeamName(winnerId)} won`,
+        tournamentId: tournament.id,
+        matchId: match.id,
+      });
     },
-    [tournament, canEdit, instantWin, getTeamName, pushUndo]
+    [tournament, instantWin, getTeamName, pushUndo]
   );
 
-  return { handleInstantWin, canEdit };
+  return { handleInstantWin };
 };

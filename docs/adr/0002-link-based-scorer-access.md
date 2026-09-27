@@ -15,3 +15,4 @@ Helpers keeping score on a court will not create an account, and rotation format
 
 - Anyone who obtains a scorer link can score until the owner regenerates it. The link is the credential.
 - The scorer secret must never be readable through the spectator path, so it cannot live in the same document spectators read.
+- The last result of a round robin or a bracket completes the tournament, so a scorer may mark one of those completed with a winner from its teams. The rules cannot check that every match was played, so someone who writes to Firestore directly with a scorer link could complete a round robin or a bracket early. The rotation formats finish only through End, which stays with the owner. Regenerating the link stops it.

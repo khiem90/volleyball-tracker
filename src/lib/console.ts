@@ -26,16 +26,23 @@ import type {
 // Roles and access
 // ============================================
 
-/** Who is looking at the console. Only the owner is active until ticket 13. */
+/** Who is looking at the console. */
 export type ConsoleRole = "owner" | "scorer" | "spectator";
 
 /**
  * The role of a signed-in account, or of nobody, towards something owned
- * by `ownerId`. A scorer arrives with the scorer link (ticket 13); until
- * then anyone but the owner only watches.
+ * by `ownerId`. The owner is the owner whatever links it holds; anyone else
+ * is a scorer while holding the tournament's scorer link, and otherwise
+ * only watches.
  */
-export const roleFor = (ownerId: string | undefined, uid: string | null | undefined): ConsoleRole =>
-  ownerId !== undefined && uid != null && ownerId === uid ? "owner" : "spectator";
+export const roleFor = (
+  ownerId: string | undefined,
+  uid: string | null | undefined,
+  holdsScorerLink = false,
+): ConsoleRole => {
+  if (ownerId !== undefined && uid != null && ownerId === uid) return "owner";
+  return holdsScorerLink ? "scorer" : "spectator";
+};
 
 export interface ConsoleAccess {
   /** Start a draft. Owner only. */
@@ -52,6 +59,8 @@ export interface ConsoleAccess {
   canDuplicate: boolean;
   /** Delete the tournament and its matches. Owner, in any status. */
   canDelete: boolean;
+  /** Turn the spectator link on or off and regenerate the scorer link. Owner, in any status. */
+  canShare: boolean;
 }
 
 const NO_ACCESS: ConsoleAccess = {
@@ -62,17 +71,19 @@ const NO_ACCESS: ConsoleAccess = {
   canRename: false,
   canDuplicate: false,
   canDelete: false,
+  canShare: false,
 };
 
 /**
  * What a role may do given the tournament's status. A spectator can only
  * ever watch. A completed tournament is read-only: nothing in it changes,
- * though its owner can still duplicate it into a new draft or delete it.
+ * though its owner can still duplicate it into a new draft, delete it, or
+ * share it.
  */
 export const consoleAccess = (role: ConsoleRole, status: TournamentStatus): ConsoleAccess => {
   if (role === "spectator") return NO_ACCESS;
   const owner = role === "owner";
-  const ownerOnly = { canDuplicate: owner, canDelete: owner };
+  const ownerOnly = { canDuplicate: owner, canDelete: owner, canShare: owner };
   if (status === "draft") return { ...NO_ACCESS, ...ownerOnly, canStart: owner, canRename: owner };
   if (status === "live") {
     return {

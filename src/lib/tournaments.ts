@@ -60,6 +60,27 @@ export const matchesCollection = (db: Firestore, tournamentId: string) =>
 export const matchDoc = (db: Firestore, tournamentId: string, matchId: string) =>
   doc(db, "tournaments", tournamentId, "matches", matchId);
 
+/**
+ * The scorer key behind a tournament's scorer link, in a subdocument only
+ * the owner can read; a spectator can read the tournament and must never
+ * see the key. Scorers prove they hold the link by writing the key under
+ * their own uid in the `scorers` subcollection (see src/lib/sharing.ts).
+ */
+export const scorerKeyDoc = (db: Firestore, tournamentId: string) =>
+  doc(db, "tournaments", tournamentId, "private", "scorerKey");
+export const scorerProofsCollection = (db: Firestore, tournamentId: string) =>
+  collection(db, "tournaments", tournamentId, "scorers");
+export const scorerProofDoc = (db: Firestore, tournamentId: string, uid: string) =>
+  doc(scorerProofsCollection(db, tournamentId), uid);
+
+export interface ScorerKey {
+  key: string;
+  updatedAt: number;
+}
+
+/** A fresh, unguessable scorer key. */
+export const newScorerKey = (): ScorerKey => ({ key: newToken(), updatedAt: Date.now() });
+
 // ============================================
 // Subscriptions
 // ============================================
@@ -93,6 +114,41 @@ export const subscribeToAccountMatches = (
 ): Unsubscribe =>
   onSnapshot(
     query(collectionGroup(db, "matches"), where("ownerId", "==", uid), orderBy("createdAt", "asc")),
+    (snapshot) => {
+      onChange(snapshot.docs.map((d) => ({ ...(d.data() as Match), id: d.id })));
+    },
+    (error) => onError?.(error),
+  );
+
+/**
+ * One tournament, for a phone that reached it by link rather than through
+ * the account's list. Delivers null once the tournament is gone, and the
+ * error when the rules refuse it, as they do once the spectator link is
+ * turned off.
+ */
+export const subscribeToTournament = (
+  db: Firestore,
+  tournamentId: string,
+  onChange: (tournament: Tournament | null) => void,
+  onError?: (error: Error) => void,
+): Unsubscribe =>
+  onSnapshot(
+    tournamentDoc(db, tournamentId),
+    (snapshot) => {
+      onChange(snapshot.exists() ? { ...(snapshot.data() as Tournament), id: snapshot.id } : null);
+    },
+    (error) => onError?.(error),
+  );
+
+/** The matches of one tournament, oldest first, for the same phones. */
+export const subscribeToTournamentMatches = (
+  db: Firestore,
+  tournamentId: string,
+  onChange: (matches: Match[]) => void,
+  onError?: (error: Error) => void,
+): Unsubscribe =>
+  onSnapshot(
+    query(matchesCollection(db, tournamentId), orderBy("createdAt", "asc")),
     (snapshot) => {
       onChange(snapshot.docs.map((d) => ({ ...(d.data() as Match), id: d.id })));
     },
@@ -153,10 +209,14 @@ export interface CreateTournamentOptions {
   start?: boolean;
 }
 
-/** A tournament and the matches it is saved with: none for a draft, its first ones when started. */
+/**
+ * A tournament and what it is saved with: its scorer key, and its matches,
+ * none for a draft and its first ones when started.
+ */
 export interface TournamentToSave {
   tournament: Tournament;
   matches: Match[];
+  scorerKey: ScorerKey;
 }
 
 /**
@@ -175,29 +235,31 @@ export const buildTournamentToSave = (
   options: CreateTournamentOptions = {},
 ): TournamentToSave => {
   const draft = buildTournament(db, uid, input);
-  if (!options.start) return { tournament: draft, matches: [] };
+  const scorerKey = newScorerKey();
+  if (!options.start) return { tournament: draft, matches: [], scorerKey };
   const result = applyCommand(
     { tournament: draft, matches: [] },
     { type: "start" },
     { now: draft.createdAt, newId: () => doc(matchesCollection(db, draft.id)).id },
   );
-  return { tournament: result.tournament, matches: createdMatches(result.matchWrites) };
+  return { tournament: result.tournament, matches: createdMatches(result.matchWrites), scorerKey };
 };
 
 /**
- * Save a new tournament with its matches. The match rules read the stored
- * tournament, so it goes out first in its own write and the matches follow
- * in one batch; the client sends writes in the order they were issued, so
- * the server has the tournament before it checks a match against it. Both
- * are queued when offline. Resolves once the server has accepted them.
+ * Save a new tournament with its scorer key and its matches. The rules for
+ * the key and the matches read the stored tournament, so it goes out first
+ * in its own write and the rest follows in one batch; the client sends
+ * writes in the order they were issued, so the server has the tournament
+ * before it checks the others against it. Both are queued when offline.
+ * Resolves once the server has accepted them.
  */
 export const saveTournamentAndMatches = async (
   db: Firestore,
-  { tournament, matches }: TournamentToSave,
+  { tournament, matches, scorerKey }: TournamentToSave,
 ): Promise<void> => {
   const saved = saveTournament(db, tournament);
-  if (matches.length === 0) return saved;
   const batch = writeBatch(db);
+  batch.set(scorerKeyDoc(db, tournament.id), scorerKey);
   for (const match of matches) {
     batch.set(matchDoc(db, tournament.id, match.id), stripUndefined(match));
   }
@@ -276,13 +338,21 @@ export const updateTournament = async (
   );
 };
 
-/** Delete a tournament and every match under it. */
+/**
+ * Delete a tournament with every match under it, its scorer key, and the
+ * proofs of every phone that opened its scorer link.
+ */
 export const deleteTournament = async (db: Firestore, tournamentId: string): Promise<void> => {
-  const matches = await getDocs(matchesCollection(db, tournamentId));
-  // The match rules read the parent tournament, so the matches go first and
-  // the tournament last, in its own write.
+  const [matches, proofs] = await Promise.all([
+    getDocs(matchesCollection(db, tournamentId)),
+    getDocs(scorerProofsCollection(db, tournamentId)),
+  ]);
+  // The rules for everything under the tournament read the tournament
+  // itself, so those go first and the tournament last, in its own write.
   const batch = writeBatch(db);
   matches.docs.forEach((d) => batch.delete(d.ref));
+  proofs.docs.forEach((d) => batch.delete(d.ref));
+  batch.delete(scorerKeyDoc(db, tournamentId));
   await batch.commit();
   await deleteDoc(tournamentDoc(db, tournamentId));
 };

@@ -6,6 +6,8 @@ import { Panel } from "@/components/matchbook/Panel";
 import { courtsWord, type ConsoleAccess } from "@/lib/console";
 import { formatLabel, isRotationFormat } from "@/lib/formats";
 import type { Tournament } from "@/types/game";
+import { ShareLinks } from "./ShareLinks";
+import type { ShareLinksView } from "./useConsole";
 
 const longDate = (ts?: number) =>
   ts
@@ -170,8 +172,9 @@ const Action = ({
 
 /**
  * The Settings tab: the tournament as it was set up, and the owner's
- * actions on it: Rename, the courts of a live rotation tournament,
- * Duplicate, End, and Delete. Share links arrive with ticket 13.
+ * actions on it: Rename, the courts of a live rotation tournament, the
+ * share links, Duplicate, End, and Delete. A scorer or spectator sees the
+ * facts alone.
  */
 export const SettingsPanel = ({
   tournament,
@@ -181,6 +184,10 @@ export const SettingsPanel = ({
   canAddCourt,
   canRemoveCourt,
   isApplying,
+  links,
+  onToggleSpectator,
+  onRegenerate,
+  onCreateScorerLink,
   onDuplicate,
   isDuplicating,
   onEnd,
@@ -194,6 +201,11 @@ export const SettingsPanel = ({
   canRemoveCourt: boolean;
   /** True while a court change is being saved. */
   isApplying: boolean;
+  /** The share links, for the owner; null for anyone else. */
+  links: ShareLinksView | null;
+  onToggleSpectator: () => void;
+  onRegenerate: () => void;
+  onCreateScorerLink: () => void;
   onDuplicate: () => void;
   isDuplicating: boolean;
   onEnd: () => void;
@@ -216,7 +228,6 @@ export const SettingsPanel = ({
       "Standings points",
       `${settings.pointsForWin} for a win, ${settings.pointsForLoss} for a loss`,
     ],
-    ["Spectator link", tournament.spectatorEnabled ? "On" : "Off"],
     ["Created", longDate(tournament.createdAt)],
     ["Started", longDate(tournament.startedAt)],
     ["Completed", longDate(tournament.completedAt)],
@@ -233,6 +244,15 @@ export const SettingsPanel = ({
           canRemove={canRemoveCourt}
           busy={isApplying}
           onChange={onChangeCourts}
+        />
+      )}
+      {links && (
+        <ShareLinks
+          links={links}
+          courts={courtsWord(tournament, 2)}
+          onToggleSpectator={onToggleSpectator}
+          onRegenerate={onRegenerate}
+          onCreateScorerLink={onCreateScorerLink}
         />
       )}
       <div className="grid grid-cols-2 gap-x-4 gap-y-3 p-4">
