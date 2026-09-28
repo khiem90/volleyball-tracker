@@ -1,13 +1,15 @@
 "use client";
 
-import { memo, useState, useCallback, useEffect } from "react";
+import { memo, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { UserFormation } from "@/lib/volleyball/types";
-import { getFormationShareUrl } from "@/lib/volleyball/userFormations";
+import { formationShareLink } from "@/lib/volleyball/formationLinks";
+import { useOrigin } from "@/hooks/useOrigin";
 
 type ShareFormationDialogProps = {
   isOpen: boolean;
   onClose: () => void;
+  /** The live formation from the account's subscription, not a snapshot */
   formation: UserFormation | null;
   onEnableSharing: (formationId: string) => Promise<string>;
   onDisableSharing: (formationId: string) => Promise<void>;
@@ -21,49 +23,42 @@ export const ShareFormationDialog = memo(
     onEnableSharing,
     onDisableSharing,
   }: ShareFormationDialogProps) => {
-    const [isLoading, setIsLoading] = useState(false);
+    const [pending, setPending] = useState<"enable" | "disable" | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [copied, setCopied] = useState(false);
-    const [shareUrl, setShareUrl] = useState<string | null>(null);
+    const origin = useOrigin();
 
-    // Update share URL when formation changes
-    useEffect(() => {
-      if (formation?.shareId) {
-        setShareUrl(getFormationShareUrl(formation.shareId));
-      } else {
-        setShareUrl(null);
-      }
-    }, [formation?.shareId]);
+    // The subscription applies local writes at once, so the link appears or
+    // goes away as soon as sharing changes, before the server confirms it.
+    const shareUrl = formation ? formationShareLink(origin, formation) : null;
 
     const handleEnableSharing = useCallback(async () => {
       if (!formation) return;
 
-      setIsLoading(true);
+      setPending("enable");
       setError(null);
 
       try {
-        const shareId = await onEnableSharing(formation.id);
-        setShareUrl(getFormationShareUrl(shareId));
+        await onEnableSharing(formation.id);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to enable sharing");
       } finally {
-        setIsLoading(false);
+        setPending(null);
       }
     }, [formation, onEnableSharing]);
 
     const handleDisableSharing = useCallback(async () => {
       if (!formation) return;
 
-      setIsLoading(true);
+      setPending("disable");
       setError(null);
 
       try {
         await onDisableSharing(formation.id);
-        setShareUrl(null);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to disable sharing");
       } finally {
-        setIsLoading(false);
+        setPending(null);
       }
     }, [formation, onDisableSharing]);
 
@@ -88,8 +83,6 @@ export const ShareFormationDialog = memo(
     }, [shareUrl]);
 
     if (!isOpen || !formation) return null;
-
-    const isShared = formation.visibility === "unlisted" && !!formation.shareId;
 
     return (
       <AnimatePresence>
@@ -146,7 +139,7 @@ export const ShareFormationDialog = memo(
 
                 {/* Sharing Status */}
                 <div className="p-4 rounded-lg bg-accent/50">
-                  {isShared ? (
+                  {shareUrl ? (
                     <div className="space-y-3">
                       <div className="flex items-center gap-2">
                         <span className="w-2 h-2 rounded-full bg-green-500" />
@@ -159,7 +152,7 @@ export const ShareFormationDialog = memo(
                       <div className="flex items-center gap-2">
                         <input
                           type="text"
-                          value={shareUrl || ""}
+                          value={shareUrl}
                           readOnly
                           className="flex-1 min-h-11 px-3 py-2 text-sm bg-background border border-border rounded-lg"
                         />
@@ -188,10 +181,10 @@ export const ShareFormationDialog = memo(
                       <button
                         type="button"
                         onClick={handleEnableSharing}
-                        disabled={isLoading}
+                        disabled={pending !== null}
                         className="min-h-11 px-4 py-2 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
                       >
-                        {isLoading ? "Enabling..." : "Enable Sharing"}
+                        {pending === "enable" ? "Enabling..." : "Enable Sharing"}
                       </button>
                     </div>
                   )}
@@ -203,15 +196,15 @@ export const ShareFormationDialog = memo(
                 )}
 
                 {/* Disable Sharing */}
-                {isShared && (
+                {shareUrl && (
                   <div className="pt-2 border-t border-border">
                     <button
                       type="button"
                       onClick={handleDisableSharing}
-                      disabled={isLoading}
+                      disabled={pending !== null}
                       className="min-h-11 text-sm text-red-500 hover:text-red-600 disabled:opacity-50"
                     >
-                      {isLoading ? "Disabling..." : "Make Private"}
+                      {pending === "disable" ? "Disabling..." : "Make Private"}
                     </button>
                     <p className="text-xs text-muted-foreground mt-1">
                       This will revoke access for anyone with the share link

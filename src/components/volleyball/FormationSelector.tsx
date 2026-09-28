@@ -7,8 +7,9 @@ import type {
   FormationCategory,
   UserFormation,
 } from "@/lib/volleyball/types";
-import { getFormations } from "@/lib/volleyball/formations";
+import { getFormations, isBuiltinFormation } from "@/lib/volleyball/formations";
 import { getTemplateFormations } from "@/lib/volleyball/templateFormations";
+import { resolveFormation } from "@/lib/volleyball/formationChoice";
 import { FormationCategoryTabs } from "./FormationCategoryTabs";
 import { FormationCard } from "./FormationCard";
 
@@ -118,9 +119,10 @@ const EnhancedFormationSelector = memo((props: EnhancedModeProps) => {
   } = props;
 
   const [activeCategory, setActiveCategory] = useState<FormationCategory>(() => {
-    // Default to shared if there's a shared formation, otherwise builtin
+    // Open on the tab holding the formation the page starts with. A saved
+    // formation may not have loaded yet, so anything unresolved is custom.
     if (sharedFormation) return "shared";
-    return "builtin";
+    return resolveFormation(formation, userFormations)?.source ?? "custom";
   });
 
   const builtinFormations = getFormations();
@@ -133,14 +135,9 @@ const EnhancedFormationSelector = memo((props: EnhancedModeProps) => {
     custom: userFormations.length,
   };
 
-  // Check if formation is a builtin type
-  const isBuiltinFormation = (f: string): f is FormationType => {
-    return ["traditional", "stack", "spread", "rightSlant", "leftSlant"].includes(f);
-  };
-
   // Get selected formation info based on category
   const getSelectedInfo = () => {
-    if (activeCategory === "builtin" && isBuiltinFormation(formation as string)) {
+    if (activeCategory === "builtin" && isBuiltinFormation(formation)) {
       const f = builtinFormations.find((b) => b.id === formation);
       return f ? { name: f.name, tradeoffs: f.tradeoffs } : null;
     }

@@ -281,16 +281,6 @@ export const disableSharing = async (formationId: string): Promise<void> => {
   });
 };
 
-/**
- * Get the shareable URL for a formation
- */
-export const getFormationShareUrl = (shareId: string): string => {
-  if (typeof window !== "undefined") {
-    return `${window.location.origin}/tools/volleyball-rotations/shared/${shareId}`;
-  }
-  return `/tools/volleyball-rotations/shared/${shareId}`;
-};
-
 // ============================================
 // Delete Operations
 // ============================================

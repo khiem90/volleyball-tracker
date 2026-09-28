@@ -14,7 +14,7 @@ const TOOLS = [
   {
     icon: "court",
     title: "Rotation Designer",
-    description: "Design 5-1 and 6-2 volleyball rotations and check overlap rules.",
+    description: "Design 5-1 volleyball rotations and check overlap rules.",
     href: "/tools/volleyball-rotations",
   },
   {

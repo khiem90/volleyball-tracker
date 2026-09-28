@@ -8,7 +8,7 @@ opens the formation, and the tools page no longer advertises 6-2 rotations.
 
 **Status:** ready-for-agent
 
-- [ ] Picking a template changes the court.
-- [ ] Enabling sharing shows the link immediately; making it private hides it; Copy copies the current link.
-- [ ] Select in My Formations opens the formation in the editor.
-- [ ] The 6-2 claim is removed from the tools page.
+- [x] Picking a template changes the court.
+- [x] Enabling sharing shows the link immediately; making it private hides it; Copy copies the current link.
+- [x] Select in My Formations opens the formation in the editor.
+- [x] The 6-2 claim is removed from the tools page.

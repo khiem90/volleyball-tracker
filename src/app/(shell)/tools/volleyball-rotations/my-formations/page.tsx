@@ -2,15 +2,18 @@
 
 import { useState, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { FormationCard, FormationEditorModal, ShareFormationDialog } from "@/components/volleyball";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { useUserFormations } from "@/hooks/useUserFormations";
 import { getTemplateFormations } from "@/lib/volleyball/templateFormations";
+import { formationDesignerHref } from "@/lib/volleyball/formationLinks";
 import type { UserFormation, FormationData, FormationVisibility } from "@/lib/volleyball/types";
 import { MotionDiv, slideUp } from "@/components/motion";
 import { PageLoadingSpinner } from "@/components/shared";
 
 export default function MyFormationsPage() {
+  const router = useRouter();
   const { isLoading: authLoading, isAuthenticated } = useRequireAuth();
   const {
     formations,
@@ -21,6 +24,7 @@ export default function MyFormationsPage() {
     remove,
     share,
     unshare,
+    getById,
   } = useUserFormations();
 
   // Editor modal state
@@ -29,9 +33,10 @@ export default function MyFormationsPage() {
   const [editingFormation, setEditingFormation] = useState<UserFormation | null>(null);
   const [initialTemplateId, setInitialTemplateId] = useState<string | undefined>();
 
-  // Share dialog state
-  const [shareDialogOpen, setShareDialogOpen] = useState(false);
-  const [sharingFormation, setSharingFormation] = useState<UserFormation | null>(null);
+  // Share dialog state. The dialog gets the live formation by id so it sees
+  // sharing turn on and off.
+  const [sharingFormationId, setSharingFormationId] = useState<string | null>(null);
+  const sharingFormation = sharingFormationId ? getById(sharingFormationId) ?? null : null;
 
   // Delete confirmation state
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -97,8 +102,7 @@ export default function MyFormationsPage() {
 
   // Handle share
   const handleOpenShare = useCallback((formation: UserFormation) => {
-    setSharingFormation(formation);
-    setShareDialogOpen(true);
+    setSharingFormationId(formation.id);
   }, []);
 
   // Handle delete
@@ -217,7 +221,7 @@ export default function MyFormationsPage() {
                     formation={formation}
                     isSelected={false}
                     isOwner={true}
-                    onSelect={() => {}}
+                    onSelect={() => router.push(formationDesignerHref(formation.id))}
                     onEdit={() => handleEdit(formation)}
                     onDuplicate={() => handleDuplicate(formation)}
                     onShare={() => handleOpenShare(formation)}
@@ -266,11 +270,8 @@ export default function MyFormationsPage() {
 
       {/* Share Dialog */}
       <ShareFormationDialog
-        isOpen={shareDialogOpen}
-        onClose={() => {
-          setShareDialogOpen(false);
-          setSharingFormation(null);
-        }}
+        isOpen={sharingFormation !== null}
+        onClose={() => setSharingFormationId(null)}
         formation={sharingFormation}
         onEnableSharing={share}
         onDisableSharing={unshare}

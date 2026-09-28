@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState, useCallback, useMemo } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { MbIcon } from "@/components/matchbook/MbIcon";
 import { Panel } from "@/components/matchbook/Panel";
@@ -17,10 +17,16 @@ import {
 import { useVolleyballRotation } from "@/hooks/useVolleyballRotation";
 import { useUserFormations } from "@/hooks/useUserFormations";
 import type { FormationType, UserFormation, FormationData, FormationVisibility } from "@/lib/volleyball/types";
+import { isBuiltinFormation } from "@/lib/volleyball/formations";
+import { resolveFormation } from "@/lib/volleyball/formationChoice";
+import { formationIdIn } from "@/lib/volleyball/formationLinks";
 import { signInHref } from "@/lib/shell";
+import { PageLoadingSpinner } from "@/components/shared";
 
-export default function VolleyballRotationsPage() {
+const RotationLab = () => {
   const router = useRouter();
+  // My Formations opens a saved formation here by its id.
+  const linkedFormationId = formationIdIn(useSearchParams());
   const {
     formations: userFormations,
     isAuthenticated,
@@ -32,16 +38,19 @@ export default function VolleyballRotationsPage() {
     getById,
   } = useUserFormations();
 
-  // Currently selected formation (can be builtin type or custom ID)
-  const [selectedFormationId, setSelectedFormationId] = useState<FormationType | string>("traditional");
+  // Currently selected formation (a builtin type, a template ID, or a custom ID)
+  const [selectedFormationId, setSelectedFormationId] = useState<FormationType | string>(
+    linkedFormationId ?? "traditional"
+  );
 
-  // Get custom formation data if a custom formation is selected
-  const selectedCustomFormation = useMemo(() => {
-    if (["traditional", "stack", "spread", "rightSlant", "leftSlant"].includes(selectedFormationId)) {
-      return null;
-    }
-    return getById(selectedFormationId);
-  }, [selectedFormationId, getById]);
+  // Template and custom formations carry their own positions; builtins are
+  // drawn from the rotation chart by the hook's formation type.
+  const chosenFormation = useMemo(
+    () => resolveFormation(selectedFormationId, userFormations),
+    [selectedFormationId, userFormations]
+  );
+  const templateOrCustom =
+    chosenFormation && chosenFormation.source !== "builtin" ? chosenFormation : null;
 
   const {
     rotation,
@@ -57,7 +66,8 @@ export default function VolleyballRotationsPage() {
     nextRotation,
     prevRotation,
   } = useVolleyballRotation({
-    customFormationData: selectedCustomFormation?.data || null,
+    initialFormation: chosenFormation?.source === "builtin" ? chosenFormation.type : undefined,
+    customFormationData: templateOrCustom?.data ?? null,
   });
 
   const [selectedPlayer, setSelectedPlayer] = useState<string | null>(null);
@@ -70,16 +80,17 @@ export default function VolleyballRotationsPage() {
   const [editingFormation, setEditingFormation] = useState<UserFormation | null>(null);
   const [initialTemplateId, setInitialTemplateId] = useState<string | undefined>();
 
-  // Share dialog state
-  const [shareDialogOpen, setShareDialogOpen] = useState(false);
-  const [sharingFormation, setSharingFormation] = useState<UserFormation | null>(null);
+  // Share dialog state. The dialog gets the live formation by id so it sees
+  // sharing turn on and off.
+  const [sharingFormationId, setSharingFormationId] = useState<string | null>(null);
+  const sharingFormation = sharingFormationId ? getById(sharingFormationId) ?? null : null;
 
-  // Handle formation change (builtin or custom)
+  // Handle formation change (builtin, template, or custom)
   const handleFormationChange = useCallback((f: FormationType | string) => {
     setSelectedFormationId(f);
     // If it's a builtin formation, also update the hook's formation
-    if (["traditional", "stack", "spread", "rightSlant", "leftSlant"].includes(f)) {
-      setFormation(f as FormationType);
+    if (isBuiltinFormation(f)) {
+      setFormation(f);
     }
   }, [setFormation]);
 
@@ -112,8 +123,7 @@ export default function VolleyballRotationsPage() {
 
   // Handle share formation
   const handleShareFormation = useCallback((formation: UserFormation) => {
-    setSharingFormation(formation);
-    setShareDialogOpen(true);
+    setSharingFormationId(formation.id);
   }, []);
 
   // Handle delete formation
@@ -231,18 +241,20 @@ export default function VolleyballRotationsPage() {
         </div>
       </div>
 
-      {/* Custom formation indicator */}
-      {selectedCustomFormation && (
+      {/* Template or custom formation indicator */}
+      {templateOrCustom && (
         <div className="mb-panel mb-4 h-auto">
           <div className="flex flex-wrap items-center justify-between gap-3 p-4">
             <div>
-              <p className="mb-kicker">Custom Formation</p>
-              <p className="matchbook-display text-[1rem] font-bold">
-                {selectedCustomFormation.name}
+              <p className="mb-kicker">
+                {templateOrCustom.source === "template" ? "Template Formation" : "Custom Formation"}
               </p>
-              {selectedCustomFormation.description && (
+              <p className="matchbook-display text-[1rem] font-bold">
+                {templateOrCustom.name}
+              </p>
+              {templateOrCustom.description && (
                 <p className="text-[0.76rem] text-mb-ink-muted">
-                  {selectedCustomFormation.description}
+                  {templateOrCustom.description}
                 </p>
               )}
             </div>
@@ -330,15 +342,21 @@ export default function VolleyballRotationsPage() {
 
       {/* Share Dialog */}
       <ShareFormationDialog
-        isOpen={shareDialogOpen}
-        onClose={() => {
-          setShareDialogOpen(false);
-          setSharingFormation(null);
-        }}
+        isOpen={sharingFormation !== null}
+        onClose={() => setSharingFormationId(null)}
         formation={sharingFormation}
         onEnableSharing={share}
         onDisableSharing={unshare}
       />
     </>
+  );
+};
+
+// useSearchParams, which reads the linked formation, needs a Suspense boundary.
+export default function VolleyballRotationsPage() {
+  return (
+    <Suspense fallback={<PageLoadingSpinner />}>
+      <RotationLab />
+    </Suspense>
   );
 }

@@ -124,7 +124,8 @@ export type UserFormation = {
   description?: string;
   tags?: string[];
   visibility: FormationVisibility;
-  shareId?: string;
+  /** Null once sharing has been turned off */
+  shareId?: string | null;
   baseSource?: FormationSource;
   data: FormationData;
   createdAt: number;

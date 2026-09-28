@@ -61,6 +61,13 @@ export const getFormation = (id: FormationType): FormationConfig => {
 };
 
 /**
+ * Check whether an id names a built-in formation
+ */
+export const isBuiltinFormation = (id: string): id is FormationType => {
+  return Object.keys(FORMATIONS).includes(id);
+};
+
+/**
  * Get formation options for dropdown
  */
 export const getFormationOptions = (): Array<{ value: FormationType; label: string }> => {
