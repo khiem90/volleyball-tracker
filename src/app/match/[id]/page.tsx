@@ -30,7 +30,7 @@ export default function MatchPage() {
       <Frame>
         <h1 className="matchbook-display text-2xl font-bold text-mb-navy">Scorer link replaced</h1>
         <p className="mt-2 max-w-sm text-[0.85rem] text-mb-ink-muted">{STALE_SCORER_LINK}</p>
-        <Link href="/" className="mb-btn mb-btn-outline-navy mt-5 min-h-11">
+        <Link href="/" className="mb-btn mb-btn-outline-navy mt-5">
           Home
         </Link>
       </Frame>
@@ -45,7 +45,7 @@ export default function MatchPage() {
         <p className="mt-2 max-w-sm text-[0.85rem] text-mb-ink-muted">
           This match does not exist or belongs to another account.
         </p>
-        <Link href="/" className="mb-btn mb-btn-outline-navy mt-5 min-h-11">
+        <Link href="/" className="mb-btn mb-btn-outline-navy mt-5">
           Home
         </Link>
       </Frame>

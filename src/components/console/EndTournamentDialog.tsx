@@ -42,7 +42,7 @@ export const EndTournamentDialog = ({
           variant="outline"
           onClick={() => onOpenChange(false)}
           disabled={isEnding}
-          className="min-h-11 flex-1"
+          className="flex-1"
         >
           Cancel
         </Button>
@@ -50,7 +50,7 @@ export const EndTournamentDialog = ({
           variant="destructive"
           onClick={onEnd}
           disabled={isEnding}
-          className="min-h-11 flex-1 gap-2"
+          className="flex-1 gap-2"
         >
           {isEnding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Square className="h-4 w-4" />}
           {isEnding ? "Ending..." : "End tournament"}

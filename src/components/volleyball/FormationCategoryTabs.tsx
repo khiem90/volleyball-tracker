@@ -55,7 +55,7 @@ export const FormationCategoryTabs = memo(
               type="button"
               onClick={() => onCategoryChange(category.id)}
               className={`
-                px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200
+                min-h-11 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200
                 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1
                 ${
                   isActive

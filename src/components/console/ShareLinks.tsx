@@ -31,7 +31,7 @@ const CopyButton = ({ value, label }: { value: string; label: string }) => {
       type="button"
       onClick={copy}
       aria-label={copied ? "Copied" : label}
-      className="mb-btn mb-btn-outline-navy min-h-11 shrink-0"
+      className="mb-btn mb-btn-outline-navy shrink-0"
     >
       <MbIcon id={copied ? "check" : "clipboard"} size={14} />
       {copied ? "Copied" : "Copy"}
@@ -45,7 +45,7 @@ const CopyButton = ({ value, label }: { value: string; label: string }) => {
  */
 const LinkField = ({ id, value, label }: { id: string; value: string; label: string }) => (
   <div className="flex gap-2">
-    <span className="mb-input min-w-0 flex-1 py-[0.45rem]">
+    <span className="mb-input min-w-0 flex-1">
       <input
         id={id}
         type="text"
@@ -125,7 +125,7 @@ export const ShareLinks = ({
           <button
             type="button"
             onClick={links.scorerLink ? onRegenerate : onCreateScorerLink}
-            className="mb-btn mb-btn-outline min-h-11 self-start"
+            className="mb-btn mb-btn-outline self-start"
           >
             <MbIcon id="swap" size={14} />
             {links.scorerLink ? "Regenerate" : "Create scorer link"}

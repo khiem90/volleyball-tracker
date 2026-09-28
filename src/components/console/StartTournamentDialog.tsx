@@ -145,11 +145,11 @@ export const StartTournamentDialog = ({
             variant="outline"
             onClick={() => onOpenChange(false)}
             disabled={isStarting}
-            className="min-h-11 flex-1"
+            className="flex-1"
           >
             Cancel
           </Button>
-          <Button onClick={handleStart} disabled={!canStart} className="min-h-11 flex-1 gap-2">
+          <Button onClick={handleStart} disabled={!canStart} className="flex-1 gap-2">
             <Play className="h-4 w-4" />
             {isStarting ? "Starting..." : "Start"}
           </Button>

@@ -48,26 +48,26 @@ export const RotationControls = memo(
 
     return (
       <div className="space-y-4">
-        {/* Rotation Stepper */}
-        <div className="flex items-center justify-center gap-3">
+        {/* Rotation Stepper. On a phone the six rotations take a row of their own. */}
+        <div className="flex flex-wrap items-center justify-center gap-3">
           <Button
             variant="outline"
             size="icon"
             onClick={onPrev}
-            className="rounded-full h-10 w-10"
+            className="rounded-full"
             aria-label="Previous rotation"
           >
             <ChevronLeftIcon className="w-5 h-5" />
           </Button>
 
-          <div className="flex items-center gap-1.5">
+          <div className="order-first flex w-full items-center justify-center gap-1.5 sm:order-none sm:w-auto">
             {([1, 2, 3, 4, 5, 6] as RotationNumber[]).map((r) => (
               <button
                 key={r}
                 type="button"
                 onClick={() => onRotationChange(r)}
                 className={`
-                  w-10 h-10 rounded-full font-bold text-lg transition-all duration-200
+                  w-11 h-11 rounded-full font-bold text-lg transition-all duration-200
                   focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2
                   ${
                     rotation === r
@@ -87,7 +87,7 @@ export const RotationControls = memo(
             variant="outline"
             size="icon"
             onClick={onNext}
-            className="rounded-full h-10 w-10"
+            className="rounded-full"
             aria-label="Next rotation"
           >
             <ChevronRightIcon className="w-5 h-5" />
@@ -114,7 +114,7 @@ export const RotationControls = memo(
               type="button"
               onClick={() => onModeChange("serving")}
               className={`
-                px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200
+                min-h-11 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200
                 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1
                 ${
                   mode === "serving"
@@ -130,7 +130,7 @@ export const RotationControls = memo(
               type="button"
               onClick={() => onModeChange("receiving")}
               className={`
-                px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200
+                min-h-11 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200
                 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1
                 ${
                   mode === "receiving"
@@ -149,7 +149,7 @@ export const RotationControls = memo(
             type="button"
             onClick={() => onLiberoToggle(!liberoActive)}
             className={`
-              px-4 py-2 rounded-xl text-sm font-semibold border-2 transition-all duration-200
+              min-h-11 px-4 py-2 rounded-xl text-sm font-semibold border-2 transition-all duration-200
               focus:outline-none focus:ring-2 focus:ring-offset-1
               ${
                 liberoActive
@@ -170,7 +170,7 @@ export const RotationControls = memo(
             type="button"
             onClick={() => onShowOverlapsToggle(!showOverlaps)}
             className={`
-              px-3 py-1.5 rounded-lg text-xs font-medium border transition-all duration-200
+              min-h-11 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all duration-200
               flex items-center gap-1.5
               focus:outline-none focus:ring-2 focus:ring-offset-1
               ${
@@ -194,7 +194,7 @@ export const RotationControls = memo(
             type="button"
             onClick={() => onShowArrowsToggle(!showArrows)}
             className={`
-              px-3 py-1.5 rounded-lg text-xs font-medium border transition-all duration-200
+              min-h-11 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all duration-200
               flex items-center gap-1.5
               focus:outline-none focus:ring-2 focus:ring-offset-1
               ${

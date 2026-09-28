@@ -134,21 +134,21 @@ const MainPanel = ({ selected }: { selected: MbCompeteSelected }) => {
           <table className="mb-table mb-table-compact w-full border-collapse">
             <thead>
               <tr>
-                <th className="w-8 pl-3! text-center">#</th>
+                <th className="w-8 pl-3 text-center">#</th>
                 <th>Team</th>
                 <th className="text-center">W</th>
                 <th className="text-center">L</th>
                 <th className="text-center">Pct</th>
                 <th className="text-center">PF</th>
                 <th className="text-center">PA</th>
-                <th className="pr-3! text-center">PD</th>
+                <th className="pr-3 text-center">PD</th>
               </tr>
             </thead>
             <tbody>
               {selected.standings.map((line, i) => (
                 <tr key={line.team.name + i}>
                   <td
-                    className="matchbook-display pl-3! text-center font-bold"
+                    className="matchbook-display pl-3 text-center font-bold"
                     style={
                       i === 0
                         ? { boxShadow: "inset 3px 0 0 var(--mb-teal)" }
@@ -165,7 +165,7 @@ const MainPanel = ({ selected }: { selected: MbCompeteSelected }) => {
                   <td className="text-center tabular-nums">{line.pct}</td>
                   <td className="text-center tabular-nums">{line.pointsFor}</td>
                   <td className="text-center tabular-nums">{line.pointsAgainst}</td>
-                  <td className="matchbook-display pr-3! text-center font-bold tabular-nums">
+                  <td className="matchbook-display pr-3 text-center font-bold tabular-nums">
                     {line.diff}
                   </td>
                 </tr>
@@ -196,8 +196,8 @@ export default function CompetitionsPage() {
     <>
       {/* Masthead */}
       <header className="mb-5 flex flex-wrap items-center gap-x-6 gap-y-4">
-        <div className="flex min-w-0 items-center gap-4">
-          <h1 className="matchbook-display min-w-0 truncate text-4xl font-bold leading-none tracking-[0.01em] sm:text-5xl">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2">
+          <h1 className="matchbook-display min-w-0 text-4xl font-bold leading-none tracking-[0.01em] [overflow-wrap:anywhere] sm:text-5xl">
             {selected ? (
               selected.competition.name
             ) : (
@@ -222,17 +222,17 @@ export default function CompetitionsPage() {
           )}
         </div>
 
-        <div className="ml-auto flex items-center gap-3">
+        <div className="flex w-full flex-wrap gap-3 sm:ml-auto sm:w-auto">
           {selected && (
             <Link
               href={`/competitions/${selected.competition.id}`}
-              className="mb-btn mb-btn-navy"
+              className="mb-btn mb-btn-navy flex-1 sm:flex-none"
             >
               <MbIcon id="settings" size={14} />
               Manage Event
             </Link>
           )}
-          <Link href="/competitions/new" className="mb-btn mb-btn-coral">
+          <Link href="/competitions/new" className="mb-btn mb-btn-coral flex-1 sm:flex-none">
             <MbIcon id="plus" size={14} />
             New Tournament
           </Link>
@@ -299,7 +299,7 @@ export default function CompetitionsPage() {
                       <button
                         type="button"
                         title="Delete competition"
-                        className="text-mb-ink-muted transition-colors hover:text-mb-red"
+                        className="-mr-2.5 flex size-11 shrink-0 items-center justify-center text-mb-ink-muted transition-colors hover:text-mb-red"
                         onClick={(e) => {
                           e.stopPropagation();
                           setDeleteId(row.id);

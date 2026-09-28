@@ -78,7 +78,7 @@ const LoginPageContent = () => {
 
           {/* Masthead */}
           <div className="mb-3 flex items-center gap-3 sm:gap-4">
-            <h1 className="matchbook-display whitespace-nowrap text-[2rem] font-bold leading-none tracking-[0.01em] sm:text-[2.9rem]">
+            <h1 className="matchbook-display min-w-0 text-[2rem] font-bold leading-none tracking-[0.01em] sm:text-[2.9rem]">
               {isSignUp ? (
                 <>
                   Join <span className="text-mb-coral">the Club</span>
@@ -105,7 +105,7 @@ const LoginPageContent = () => {
           </p>
 
           {/* Form panel */}
-          <div className="mb-panel h-auto!">
+          <div className="mb-panel h-auto">
             <div className="flex flex-col gap-4 p-5" onKeyDown={handleKeyDown}>
               {error && (
                 <p
@@ -185,7 +185,7 @@ const LoginPageContent = () => {
                       type="button"
                       onClick={handleForgotPassword}
                       disabled={isSubmitting}
-                      className="matchbook-display text-[0.68rem] font-bold tracking-[0.1em] text-mb-navy hover:text-mb-coral"
+                      className="matchbook-display min-h-11 text-[0.68rem] font-bold tracking-[0.1em] text-mb-navy hover:text-mb-coral"
                     >
                       Forgot Password?
                     </button>
@@ -212,7 +212,7 @@ const LoginPageContent = () => {
                 <button
                   type="button"
                   onClick={toggleMode}
-                  className="font-bold text-mb-coral hover:underline"
+                  className="min-h-11 font-bold text-mb-coral hover:underline"
                 >
                   {isSignUp ? "Sign In" : "Sign Up"}
                 </button>

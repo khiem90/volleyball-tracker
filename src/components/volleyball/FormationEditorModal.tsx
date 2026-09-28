@@ -205,7 +205,7 @@ export const FormationEditorModal = memo(
                   <button
                     type="button"
                     onClick={handleClose}
-                    className="p-2 rounded-lg hover:bg-accent transition-colors"
+                    className="flex size-11 items-center justify-center rounded-lg hover:bg-accent transition-colors"
                     aria-label="Close editor"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -326,7 +326,7 @@ export const FormationEditorModal = memo(
                   <button
                     type="button"
                     onClick={handleClose}
-                    className="px-4 py-2 rounded-lg text-sm font-medium hover:bg-accent transition-colors"
+                    className="min-h-11 px-4 py-2 rounded-lg text-sm font-medium hover:bg-accent transition-colors"
                   >
                     Cancel
                   </button>
@@ -334,7 +334,7 @@ export const FormationEditorModal = memo(
                     type="button"
                     onClick={handleSave}
                     disabled={isSaving || !editor.metadata.name.trim()}
-                    className="px-6 py-2 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="min-h-11 px-6 py-2 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     {isSaving ? "Saving..." : mode === "edit" ? "Update" : "Save"}
                   </button>

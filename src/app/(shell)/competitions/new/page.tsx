@@ -30,7 +30,7 @@ export default function NewTournamentPage() {
   return (
     <>
       <header className="mb-4 flex flex-col gap-3">
-        <Link href="/competitions" className="mb-panel-link min-h-11 self-start">
+        <Link href="/competitions" className="mb-panel-link self-start">
           <MbIcon id="chevron-right" size={11} className="rotate-180" />
           Tournaments
         </Link>
@@ -56,7 +56,7 @@ export default function NewTournamentPage() {
             <label htmlFor="tournament-name" className="mb-kicker">
               What to call it
             </label>
-            <span className="mb-input py-[0.45rem]">
+            <span className="mb-input">
               <input
                 id="tournament-name"
                 type="text"
@@ -110,7 +110,7 @@ export default function NewTournamentPage() {
               type="button"
               onClick={() => page.create("draft")}
               disabled={page.busy !== null}
-              className="mb-btn mb-btn-outline-navy min-h-11 min-w-0 flex-1 px-2!"
+              className="mb-btn mb-btn-outline-navy min-w-0 flex-1 px-2"
             >
               <MbIcon id="save" size={14} />
               {page.busy === "draft" ? "Saving..." : "Save as draft"}
@@ -119,7 +119,7 @@ export default function NewTournamentPage() {
               type="button"
               onClick={() => page.create("start")}
               disabled={page.busy !== null}
-              className="mb-btn mb-btn-coral min-h-11 min-w-0 flex-1 px-2!"
+              className="mb-btn mb-btn-coral min-w-0 flex-1 px-2"
             >
               <MbIcon id="live" size={14} />
               {page.busy === "start" ? "Starting..." : "Create and start"}

@@ -56,7 +56,7 @@ const RenameForm = ({ name, onRename }: { name: string; onRename: (name: string)
         Name
       </label>
       <div className="flex gap-2">
-        <span className="mb-input min-w-0 flex-1 py-[0.45rem]">
+        <span className="mb-input min-w-0 flex-1">
           <input
             id="tournament-name"
             type="text"
@@ -67,7 +67,7 @@ const RenameForm = ({ name, onRename }: { name: string; onRename: (name: string)
             enterKeyHint="done"
           />
         </span>
-        <button type="submit" className="mb-btn mb-btn-navy min-h-11" disabled={!canSave}>
+        <button type="submit" className="mb-btn mb-btn-navy" disabled={!canSave}>
           Save
         </button>
       </div>
@@ -95,7 +95,7 @@ const CourtsStepper = ({
 }) => {
   const { courts } = tournament.settings;
   const word = courtsWord(tournament, 1);
-  const button = "mb-btn mb-btn-outline-navy min-h-11 min-w-11 px-3 text-[1rem]";
+  const button = "mb-btn mb-btn-outline-navy min-w-11 px-3 text-[1rem]";
   return (
     <div className="flex flex-col gap-1.5 border-b border-mb-rule p-4">
       <div className="flex items-center justify-between gap-3">

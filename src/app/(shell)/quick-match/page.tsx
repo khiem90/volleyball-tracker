@@ -136,7 +136,7 @@ const AbandonedMatch = ({
         <button
           type="button"
           onClick={onDiscard}
-          className="mb-btn mb-btn-outline-red min-h-11 px-3 text-[0.72rem]"
+          className="mb-btn mb-btn-outline-red px-3 text-[0.72rem]"
         >
           <Trash2 className="h-3.5 w-3.5" aria-hidden />
           Discard
@@ -144,7 +144,7 @@ const AbandonedMatch = ({
         {match.resumable && (
           <Link
             href={`/match/${match.id}`}
-            className="mb-btn mb-btn-navy min-h-11 px-3 text-[0.72rem]"
+            className="mb-btn mb-btn-navy px-3 text-[0.72rem]"
           >
             <MbIcon id="quick" size={12} />
             Resume
@@ -202,8 +202,8 @@ export default function QuickMatchPage() {
     <>
       {/* Masthead */}
       <header className="mb-5 flex flex-wrap items-center gap-x-6 gap-y-4">
-        <div className="flex items-center gap-4">
-          <h1 className="matchbook-display whitespace-nowrap text-4xl font-bold leading-none tracking-[0.01em] sm:text-5xl">
+        <div className="flex min-w-0 items-center gap-4">
+          <h1 className="matchbook-display min-w-0 text-4xl font-bold leading-none tracking-[0.01em] sm:text-5xl">
             Quick <span className="text-mb-coral">Match</span>
           </h1>
           {!isGuest && (
@@ -227,12 +227,12 @@ export default function QuickMatchPage() {
           </div>
         </div>
 
-        <div className="ml-auto flex items-center gap-3">
+        <div className="flex w-full flex-wrap gap-3 sm:ml-auto sm:w-auto">
           <button
             type="button"
             onClick={startScoring}
             disabled={!startEnabled}
-            className="mb-btn mb-btn-coral disabled:cursor-not-allowed disabled:opacity-40"
+            className="mb-btn mb-btn-coral flex-1 disabled:cursor-not-allowed disabled:opacity-40 sm:flex-none"
           >
             <MbIcon id="quick" size={14} />
             Start Match

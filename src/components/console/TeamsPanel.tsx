@@ -43,7 +43,7 @@ const AddTeamForm = ({
   return (
     <div className="border-b border-mb-rule">
       <form onSubmit={submit} className="flex items-center gap-2 px-3 py-2.5">
-        <label className="mb-input min-w-0 flex-1 py-[0.45rem]">
+        <label className="mb-input min-w-0 flex-1">
           <MbIcon id="plus" size={14} className="shrink-0 text-mb-ink-muted" />
           <input
             ref={nameInput}
@@ -64,7 +64,7 @@ const AddTeamForm = ({
         </datalist>
         <button
           type="submit"
-          className="mb-btn mb-btn-navy min-h-11"
+          className="mb-btn mb-btn-navy"
           disabled={busy || name.trim().length === 0}
         >
           Add
@@ -133,12 +133,12 @@ export const TeamsPanel = ({
         <table className="mb-table mb-table-compact w-full border-collapse">
           <thead>
             <tr>
-              <th className="w-8 pl-3! text-center">#</th>
+              <th className="w-8 pl-3 text-center">#</th>
               <th>Team</th>
               <th className="text-center">W</th>
-              <th className={canWithdraw ? "text-center" : "pr-3! text-center"}>L</th>
+              <th className={canWithdraw ? "text-center" : "pr-3 text-center"}>L</th>
               {canWithdraw && (
-                <th className="pr-3!">
+                <th className="pr-3">
                   <span className="sr-only">Actions</span>
                 </th>
               )}
@@ -147,7 +147,7 @@ export const TeamsPanel = ({
           <tbody>
             {rows.map((row, i) => (
               <tr key={row.teamId} className={row.withdrawn ? "opacity-60" : undefined}>
-                <td className="matchbook-display pl-3! text-center font-bold">{i + 1}</td>
+                <td className="matchbook-display pl-3 text-center font-bold">{i + 1}</td>
                 <td>
                   <span className="flex items-center gap-2">
                     {row.color && (
@@ -162,16 +162,16 @@ export const TeamsPanel = ({
                   </span>
                 </td>
                 <td className="text-center tabular-nums">{row.won}</td>
-                <td className={`text-center tabular-nums ${canWithdraw ? "" : "pr-3!"}`}>{row.lost}</td>
+                <td className={`text-center tabular-nums ${canWithdraw ? "" : "pr-3"}`}>{row.lost}</td>
                 {canWithdraw && (
-                  <td className="pr-3! text-right">
+                  <td className="pr-3 text-right">
                     {row.withdrawn ? (
                       canAdd && (
                         <button
                           type="button"
                           onClick={() => onRejoin(row)}
                           disabled={busy}
-                          className="mb-btn mb-btn-outline-navy min-h-11 px-3 text-[0.66rem]"
+                          className="mb-btn mb-btn-outline-navy px-3 text-[0.66rem]"
                         >
                           Rejoin
                         </button>
@@ -181,7 +181,7 @@ export const TeamsPanel = ({
                         type="button"
                         onClick={() => onWithdraw(row)}
                         disabled={busy}
-                        className="mb-btn mb-btn-outline min-h-11 px-3 text-[0.66rem]"
+                        className="mb-btn mb-btn-outline px-3 text-[0.66rem]"
                       >
                         Withdraw
                       </button>

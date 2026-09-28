@@ -45,7 +45,7 @@ export const FullscreenControls = memo(function FullscreenControls({
                 onClick={onUndo}
                 disabled={!canUndo}
                 aria-label="Undo the last point"
-                className="mb-btn mb-btn-outline-navy min-h-11 min-w-11 px-3"
+                className="mb-btn mb-btn-outline-navy min-w-11 px-3"
               >
                 <Undo2 className="h-4 w-4" aria-hidden />
                 <span className="hidden sm:inline">Undo</span>
@@ -54,7 +54,7 @@ export const FullscreenControls = memo(function FullscreenControls({
                 type="button"
                 onClick={onOpenCompleteDialog}
                 disabled={!canComplete}
-                className="mb-btn mb-btn-coral min-h-11 px-4"
+                className="mb-btn mb-btn-coral px-4"
               >
                 <Flag className="h-4 w-4" aria-hidden />
                 {endLabel}
@@ -65,7 +65,7 @@ export const FullscreenControls = memo(function FullscreenControls({
             type="button"
             onClick={onExit}
             aria-label="Exit fullscreen"
-            className="mb-btn mb-btn-outline-navy min-h-11 min-w-11 px-3"
+            className="mb-btn mb-btn-outline-navy min-w-11 px-3"
           >
             <Minimize2 className="h-4 w-4" aria-hidden />
             <span className="hidden sm:inline">Exit</span>

@@ -92,7 +92,7 @@ export const StandingsPanel = ({
               <>
                 <thead>
                   <tr>
-                    <th className="w-8 pl-3! text-center">#</th>
+                    <th className="w-8 pl-3 text-center">#</th>
                     <th>Team</th>
                     <th className="text-center">P</th>
                     <th className="text-center">W</th>
@@ -100,14 +100,14 @@ export const StandingsPanel = ({
                     <th className="text-center">PF</th>
                     <th className="text-center">PA</th>
                     <th className="text-center">PD</th>
-                    <th className="pr-3! text-center">Pts</th>
+                    <th className="pr-3 text-center">Pts</th>
                   </tr>
                 </thead>
                 <tbody>
                   {view.rows.map((row, i) => (
                     <tr key={row.teamId}>
                       <td
-                        className="matchbook-display pl-3! text-center font-bold"
+                        className="matchbook-display pl-3 text-center font-bold"
                         style={i === 0 ? leader : undefined}
                       >
                         {i + 1}
@@ -122,7 +122,7 @@ export const StandingsPanel = ({
                         {row.pointsDiff > 0 ? "+" : ""}
                         {row.pointsDiff}
                       </td>
-                      <td className="matchbook-display pr-3! text-center font-bold tabular-nums">
+                      <td className="matchbook-display pr-3 text-center font-bold tabular-nums">
                         {row.competitionPoints}
                       </td>
                     </tr>
@@ -135,18 +135,18 @@ export const StandingsPanel = ({
               <>
                 <thead>
                   <tr>
-                    <th className="w-8 pl-3! text-center">#</th>
+                    <th className="w-8 pl-3 text-center">#</th>
                     <th>Team</th>
                     <th className="text-center">Champion</th>
                     <th className="text-center">Played</th>
-                    <th className="pr-3! text-right">Where</th>
+                    <th className="pr-3 text-right">Where</th>
                   </tr>
                 </thead>
                 <tbody>
                   {view.rows.map((row, i) => (
                     <tr key={row.teamId}>
                       <td
-                        className="matchbook-display pl-3! text-center font-bold"
+                        className="matchbook-display pl-3 text-center font-bold"
                         style={i === 0 ? leader : undefined}
                       >
                         {i + 1}
@@ -156,7 +156,7 @@ export const StandingsPanel = ({
                         {row.championCount > 0 ? `×${row.championCount}` : "–"}
                       </td>
                       <td className="text-center tabular-nums">{row.matchesPlayed}</td>
-                      <td className="pr-3! text-right text-[0.72rem] text-mb-ink-muted">
+                      <td className="pr-3 text-right text-[0.72rem] text-mb-ink-muted">
                         {where(tournament, row)}
                       </td>
                     </tr>
@@ -169,19 +169,19 @@ export const StandingsPanel = ({
               <>
                 <thead>
                   <tr>
-                    <th className="w-8 pl-3! text-center">#</th>
+                    <th className="w-8 pl-3 text-center">#</th>
                     <th>Team</th>
                     <th className="text-center">P</th>
                     <th className="text-center">W</th>
                     <th className="text-center">L</th>
-                    <th className="pr-3! text-right">Where</th>
+                    <th className="pr-3 text-right">Where</th>
                   </tr>
                 </thead>
                 <tbody>
                   {view.rows.map((row, i) => (
                     <tr key={row.teamId}>
                       <td
-                        className="matchbook-display pl-3! text-center font-bold"
+                        className="matchbook-display pl-3 text-center font-bold"
                         style={i === 0 ? leader : undefined}
                       >
                         {i + 1}
@@ -192,7 +192,7 @@ export const StandingsPanel = ({
                         {row.won}
                       </td>
                       <td className="text-center tabular-nums">{row.lost}</td>
-                      <td className="pr-3! text-right text-[0.72rem] text-mb-ink-muted">
+                      <td className="pr-3 text-right text-[0.72rem] text-mb-ink-muted">
                         {where(tournament, row)}
                       </td>
                     </tr>

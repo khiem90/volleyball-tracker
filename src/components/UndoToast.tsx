@@ -67,7 +67,6 @@ export const UndoToast = memo(
             {/* Undo button */}
             <Button
               variant="ghost"
-              size="sm"
               onClick={handleUndo}
               onKeyDown={handleKeyDown}
               disabled={isUndoing}
@@ -86,7 +85,7 @@ export const UndoToast = memo(
             {/* Dismiss button */}
             <Button
               variant="ghost"
-              size="icon-sm"
+              size="icon"
               onClick={onDismiss}
               className="shrink-0 text-muted-foreground hover:text-foreground"
               aria-label="Dismiss notification and clear undo history"

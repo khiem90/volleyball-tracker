@@ -213,8 +213,8 @@ export default function TeamsPage() {
     <>
       {/* Masthead */}
       <header className="mb-5 flex flex-wrap items-center gap-x-6 gap-y-4">
-        <div className="flex items-center gap-4">
-          <h1 className="matchbook-display text-4xl font-bold leading-none tracking-[0.01em] sm:text-5xl">
+        <div className="flex min-w-0 items-center gap-4">
+          <h1 className="matchbook-display min-w-0 text-4xl font-bold leading-none tracking-[0.01em] sm:text-5xl">
             Team <span className="text-mb-coral">Directory</span>
           </h1>
           <div className="flex flex-col items-center border-[2px] border-mb-coral px-2.5 py-1 text-mb-coral">

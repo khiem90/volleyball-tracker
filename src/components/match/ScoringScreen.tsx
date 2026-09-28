@@ -11,6 +11,7 @@ import {
   type Side,
 } from "@/lib/scoring";
 import type { MatchStatus } from "@/types/game";
+import { UpdateBanner } from "@/components/shell/UpdateBanner";
 import { FullscreenControls } from "./FullscreenControls";
 import { MatchCompleteDialog } from "./MatchCompleteDialog";
 import { ScoringHeader } from "./ScoringHeader";
@@ -130,6 +131,7 @@ export const ScoringScreen = ({
           onOpenCompleteDialog={onOpenCompleteDialog}
         />
       )}
+      {!isFullscreen && <UpdateBanner />}
 
       {notice && (
         <div className="z-20 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 border-b border-mb-rule bg-mb-paper-bright px-4 py-2 text-center">
@@ -140,7 +142,7 @@ export const ScoringScreen = ({
             <button
               type="button"
               onClick={noticeAction.onClick}
-              className="mb-btn mb-btn-coral min-h-11 px-4"
+              className="mb-btn mb-btn-coral px-4"
             >
               {noticeAction.label}
             </button>

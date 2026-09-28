@@ -172,8 +172,8 @@ export default function VolleyballRotationsPage() {
     <>
       {/* Masthead */}
       <header className="mb-5 flex flex-wrap items-center gap-x-6 gap-y-4">
-        <div className="flex items-center gap-4">
-          <h1 className="matchbook-display whitespace-nowrap text-4xl font-bold leading-none tracking-[0.01em] sm:text-5xl">
+        <div className="flex min-w-0 items-center gap-4">
+          <h1 className="matchbook-display min-w-0 text-4xl font-bold leading-none tracking-[0.01em] sm:text-5xl">
             5-1 <span className="text-mb-coral">Rotation Lab</span>
           </h1>
           <div className="flex flex-col items-center border-[2px] border-mb-coral px-2.5 py-1 text-mb-coral">
@@ -190,11 +190,11 @@ export default function VolleyballRotationsPage() {
           </p>
         </div>
 
-        <div className="ml-auto flex items-center gap-3">
+        <div className="flex w-full flex-wrap gap-3 sm:ml-auto sm:w-auto">
           {isAuthenticated && (
             <Link
               href="/tools/volleyball-rotations/my-formations"
-              className="mb-btn mb-btn-navy"
+              className="mb-btn mb-btn-navy flex-1 sm:flex-none"
             >
               <MbIcon id="save" size={14} />
               My Formations
@@ -203,7 +203,7 @@ export default function VolleyballRotationsPage() {
           <button
             type="button"
             onClick={isAuthenticated ? handleCreateFormation : handleSignInClick}
-            className="mb-btn mb-btn-coral"
+            className="mb-btn mb-btn-coral flex-1 sm:flex-none"
           >
             <MbIcon id="plus" size={14} />
             Create Formation
@@ -212,7 +212,7 @@ export default function VolleyballRotationsPage() {
       </header>
 
       {/* Rotation controls strip */}
-      <div className="mb-panel mb-4 h-auto!">
+      <div className="mb-panel mb-4 h-auto">
         <div className="p-4">
           <RotationControls
             rotation={rotation}
@@ -233,7 +233,7 @@ export default function VolleyballRotationsPage() {
 
       {/* Custom formation indicator */}
       {selectedCustomFormation && (
-        <div className="mb-panel mb-4 h-auto!">
+        <div className="mb-panel mb-4 h-auto">
           <div className="flex flex-wrap items-center justify-between gap-3 p-4">
             <div>
               <p className="mb-kicker">Custom Formation</p>

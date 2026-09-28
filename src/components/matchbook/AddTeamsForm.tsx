@@ -87,7 +87,7 @@ export const AddTeamsForm = ({ onAdd }: AddTeamsFormProps) => {
   return (
     <div className="border-b border-mb-rule">
       <form onSubmit={submitName} className="flex flex-wrap items-center gap-2 px-3 py-2.5">
-        <label className="mb-input min-w-[12rem] flex-1 py-[0.45rem]">
+        <label className="mb-input min-w-[12rem] flex-1">
           <MbIcon id="plus" size={14} className="shrink-0 text-mb-ink-muted" />
           <input
             ref={nameInput}

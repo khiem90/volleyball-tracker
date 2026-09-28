@@ -7,10 +7,13 @@ const withPWA = withPWAInit({
   disable: process.env.NODE_ENV === "development",
   cacheOnFrontEndNav: true,
   aggressiveFrontEndNavCaching: true,
-  reloadOnOnline: true,
+  // Reloading on reconnect could land in the middle of a match. A new
+  // version waits instead, and the reload banner lets it in on a tap
+  // (AppUpdateProvider sends it SKIP_WAITING).
+  reloadOnOnline: false,
   workboxOptions: {
     disableDevLogs: true,
-    skipWaiting: true,
+    skipWaiting: false,
     clientsClaim: true,
   },
 });

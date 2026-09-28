@@ -34,7 +34,7 @@ const ScoreField = ({
 }) => (
   <label htmlFor={id} className="flex min-w-0 flex-1 flex-col gap-1.5">
     <span className="matchbook-display truncate text-[0.78rem] font-bold">{label}</span>
-    <span className="mb-input py-[0.45rem]">
+    <span className="mb-input">
       <input
         id={id}
         type="number"
@@ -122,11 +122,11 @@ const ScoreForm = ({
           variant="outline"
           onClick={onCancel}
           disabled={isBusy}
-          className="min-h-11 flex-1"
+          className="flex-1"
         >
           Cancel
         </Button>
-        <Button type="submit" disabled={!canSave} className="min-h-11 flex-1 gap-2">
+        <Button type="submit" disabled={!canSave} className="flex-1 gap-2">
           {isBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <PencilLine className="h-4 w-4" />}
           {isBusy ? "Saving..." : "Save score"}
         </Button>

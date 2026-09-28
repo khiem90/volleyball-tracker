@@ -8,6 +8,7 @@ import { useAuth } from "@/context/AuthContext";
 import { SHELL_TABS, tabFor, tabHref, type ShellTab } from "@/lib/shell";
 import { MbIcon } from "@/components/matchbook/MbIcon";
 import { AccountMenu } from "./AccountMenu";
+import { UpdateBanner } from "./UpdateBanner";
 
 // Side padding that clears a landscape phone's notch and rounded corners.
 const GUTTER =
@@ -66,7 +67,7 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
     <div className="matchbook-surface min-h-screen">
       <header className="sticky top-0 z-40 border-b-[1.5px] border-mb-navy bg-mb-paper pt-[env(safe-area-inset-top)]">
         <div className={`flex h-14 items-center gap-3 ${GUTTER}`}>
-          <Link href="/" className="flex min-w-0 items-center gap-2.5" aria-label="Tournament Tracker home">
+          <Link href="/" className="flex min-h-11 min-w-0 items-center gap-2.5" aria-label="Tournament Tracker home">
             <Image
               src="/assets/matchbook/brand/crest.svg"
               alt=""
@@ -94,6 +95,7 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
             <AccountMenu />
           </div>
         </div>
+        <UpdateBanner />
       </header>
 
       <main

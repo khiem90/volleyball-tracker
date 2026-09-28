@@ -24,7 +24,7 @@ export const QuickActions = memo(function QuickActions({
         <button
           type="button"
           onClick={onCopyFrame}
-          className="px-3 py-1.5 text-sm bg-accent rounded-lg hover:bg-accent/80"
+          className="min-h-11 px-3 py-1.5 text-sm bg-accent rounded-lg hover:bg-accent/80"
         >
           Copy Frame
         </button>
@@ -32,14 +32,14 @@ export const QuickActions = memo(function QuickActions({
           type="button"
           onClick={onPasteFrame}
           disabled={!hasCopiedFrame}
-          className="px-3 py-1.5 text-sm bg-accent rounded-lg hover:bg-accent/80 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="min-h-11 px-3 py-1.5 text-sm bg-accent rounded-lg hover:bg-accent/80 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Paste Frame
         </button>
         <button
           type="button"
           onClick={onResetRotation}
-          className="px-3 py-1.5 text-sm text-orange-600 hover:bg-orange-50 rounded-lg"
+          className="min-h-11 px-3 py-1.5 text-sm text-orange-600 hover:bg-orange-50 rounded-lg"
         >
           Reset Rotation
         </button>

@@ -73,8 +73,8 @@ export default function ToolsPage() {
     <>
       {/* Masthead */}
       <header className="mb-5 flex flex-wrap items-center gap-x-6 gap-y-4">
-        <div className="flex items-center gap-4">
-          <h1 className="matchbook-display whitespace-nowrap text-4xl font-bold leading-none tracking-[0.01em] sm:text-5xl">
+        <div className="flex min-w-0 items-center gap-4">
+          <h1 className="matchbook-display min-w-0 text-4xl font-bold leading-none tracking-[0.01em] sm:text-5xl">
             Tournament <span className="text-mb-coral">Toolkit</span>
           </h1>
           <div className="flex flex-col items-center border-[2px] border-mb-coral px-2.5 py-1 text-mb-coral">
@@ -87,8 +87,8 @@ export default function ToolsPage() {
           </div>
         </div>
 
-        <div className="ml-auto flex items-center gap-3">
-          <Link href="/tools/volleyball-rotations" className="mb-btn mb-btn-coral">
+        <div className="flex w-full flex-wrap gap-3 sm:ml-auto sm:w-auto">
+          <Link href="/tools/volleyball-rotations" className="mb-btn mb-btn-coral flex-1 sm:flex-none">
             <MbIcon id="court" size={14} />
             Open Designer
           </Link>
@@ -116,7 +116,7 @@ export default function ToolsPage() {
                   <span className="text-[0.76rem] leading-snug text-mb-ink-muted">
                     {tool.description}
                   </span>
-                  <span className="mb-panel-link mt-auto pt-1 group-hover:text-mb-coral">
+                  <span className="mb-panel-link mt-auto min-h-0 pt-1 group-hover:text-mb-coral">
                     Open Tool
                     <MbIcon id="chevron-right" size={11} />
                   </span>

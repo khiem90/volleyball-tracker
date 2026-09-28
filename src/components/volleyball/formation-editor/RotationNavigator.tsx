@@ -31,13 +31,13 @@ export const RotationNavigator = memo(function RotationNavigator({
       {/* Rotation Selector */}
       <div>
         <label className="block text-sm font-medium mb-1">Rotation</label>
-        <div className="flex gap-1">
+        <div className="flex gap-0.5">
           {ROTATION_BUTTONS.map((r) => (
             <button
               key={r}
               type="button"
               onClick={() => onRotationChange(r)}
-              className={`flex-1 px-3 py-2 rounded-lg text-sm font-bold transition-colors ${
+              className={`flex-1 min-h-11 px-3 py-2 rounded-lg text-sm font-bold transition-colors ${
                 currentRotation === r
                   ? "bg-primary text-primary-foreground"
                   : "bg-accent hover:bg-accent/80"
@@ -56,7 +56,7 @@ export const RotationNavigator = memo(function RotationNavigator({
           <button
             type="button"
             onClick={() => onModeChange("serving")}
-            className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+            className={`flex-1 min-h-11 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
               currentMode === "serving"
                 ? "bg-primary text-primary-foreground"
                 : "bg-accent hover:bg-accent/80"
@@ -67,7 +67,7 @@ export const RotationNavigator = memo(function RotationNavigator({
           <button
             type="button"
             onClick={() => onModeChange("receiving")}
-            className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+            className={`flex-1 min-h-11 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
               currentMode === "receiving"
                 ? "bg-primary text-primary-foreground"
                 : "bg-accent hover:bg-accent/80"
@@ -80,7 +80,7 @@ export const RotationNavigator = memo(function RotationNavigator({
 
       {/* Libero Toggle */}
       <div>
-        <label className="flex items-center gap-2 cursor-pointer">
+        <label className="flex min-h-11 items-center gap-2 cursor-pointer">
           <input
             type="checkbox"
             checked={liberoActive}

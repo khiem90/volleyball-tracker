@@ -60,7 +60,7 @@ export const ScoringHeader = ({
       <Link
         href={backHref}
         aria-label={`Back to ${backLabel}`}
-        className="mb-btn mb-btn-outline-navy min-h-11 min-w-11 shrink-0 px-2.5 sm:px-3"
+        className="mb-btn mb-btn-outline-navy min-w-11 shrink-0 px-2.5 sm:px-3"
       >
         <ChevronLeft className="h-5 w-5" aria-hidden />
         <span className="hidden sm:inline">{backLabel}</span>
@@ -95,7 +95,7 @@ export const ScoringHeader = ({
             type="button"
             onClick={onFullscreen}
             aria-label="Fullscreen"
-            className="mb-btn mb-btn-outline-navy min-h-11 min-w-11 px-2.5"
+            className="mb-btn mb-btn-outline-navy min-w-11 px-2.5"
           >
             <Maximize2 className="h-4 w-4" aria-hidden />
           </button>
@@ -107,7 +107,7 @@ export const ScoringHeader = ({
               onClick={onUndo}
               disabled={!canUndo}
               aria-label="Undo the last point"
-              className="mb-btn mb-btn-outline-navy min-h-11 min-w-11 px-2.5 sm:px-3"
+              className="mb-btn mb-btn-outline-navy min-w-11 px-2.5 sm:px-3"
             >
               <Undo2 className="h-4 w-4" aria-hidden />
               <span className="hidden sm:inline">Undo</span>
@@ -117,7 +117,7 @@ export const ScoringHeader = ({
               onClick={onOpenCompleteDialog}
               disabled={!canComplete}
               aria-label={endLabel}
-              className="mb-btn mb-btn-coral min-h-11 px-3"
+              className="mb-btn mb-btn-coral px-3"
             >
               <Flag className="h-4 w-4" aria-hidden />
               <span className="sm:hidden">End</span>

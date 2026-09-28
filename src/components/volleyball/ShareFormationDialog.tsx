@@ -113,7 +113,7 @@ export const ShareFormationDialog = memo(
                 <button
                   type="button"
                   onClick={onClose}
-                  className="p-2 rounded-lg hover:bg-accent transition-colors"
+                  className="flex size-11 items-center justify-center rounded-lg hover:bg-accent transition-colors"
                   aria-label="Close dialog"
                 >
                   <svg
@@ -161,12 +161,12 @@ export const ShareFormationDialog = memo(
                           type="text"
                           value={shareUrl || ""}
                           readOnly
-                          className="flex-1 px-3 py-2 text-sm bg-background border border-border rounded-lg focus:outline-none"
+                          className="flex-1 min-h-11 px-3 py-2 text-sm bg-background border border-border rounded-lg"
                         />
                         <button
                           type="button"
                           onClick={handleCopyLink}
-                          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          className={`min-h-11 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                             copied
                               ? "bg-green-500 text-white"
                               : "bg-primary text-primary-foreground hover:bg-primary/90"
@@ -189,7 +189,7 @@ export const ShareFormationDialog = memo(
                         type="button"
                         onClick={handleEnableSharing}
                         disabled={isLoading}
-                        className="px-4 py-2 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                        className="min-h-11 px-4 py-2 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
                       >
                         {isLoading ? "Enabling..." : "Enable Sharing"}
                       </button>
@@ -209,7 +209,7 @@ export const ShareFormationDialog = memo(
                       type="button"
                       onClick={handleDisableSharing}
                       disabled={isLoading}
-                      className="text-sm text-red-500 hover:text-red-600 disabled:opacity-50"
+                      className="min-h-11 text-sm text-red-500 hover:text-red-600 disabled:opacity-50"
                     >
                       {isLoading ? "Disabling..." : "Make Private"}
                     </button>
@@ -225,7 +225,7 @@ export const ShareFormationDialog = memo(
                 <button
                   type="button"
                   onClick={onClose}
-                  className="px-4 py-2 rounded-lg text-sm font-medium hover:bg-accent transition-colors"
+                  className="min-h-11 px-4 py-2 rounded-lg text-sm font-medium hover:bg-accent transition-colors"
                 >
                   Close
                 </button>

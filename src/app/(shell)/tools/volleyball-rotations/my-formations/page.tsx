@@ -134,7 +134,7 @@ export default function MyFormationsPage() {
           <div className="flex items-center justify-between mb-2">
             <Link
               href="/tools/volleyball-rotations"
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              className="inline-flex min-h-11 items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               &larr; Back to Rotations
             </Link>
@@ -204,7 +204,7 @@ export default function MyFormationsPage() {
               <button
                 type="button"
                 onClick={() => handleCreateNew()}
-                className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 font-medium"
+                className="min-h-11 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 font-medium"
               >
                 Create Your First Formation
               </button>
@@ -232,14 +232,14 @@ export default function MyFormationsPage() {
                           <button
                             type="button"
                             onClick={() => setDeletingId(null)}
-                            className="px-3 py-1 text-sm bg-accent rounded-lg"
+                            className="min-h-11 px-3 py-1 text-sm bg-accent rounded-lg"
                           >
                             Cancel
                           </button>
                           <button
                             type="button"
                             onClick={() => handleDelete(formation.id)}
-                            className="px-3 py-1 text-sm bg-red-500 text-white rounded-lg"
+                            className="min-h-11 px-3 py-1 text-sm bg-red-500 text-white rounded-lg"
                           >
                             Delete
                           </button>

@@ -107,7 +107,7 @@ export const FormationCard = memo(
             type="button"
             onClick={onSelect}
             className={`
-              px-3 py-1.5 rounded-lg text-sm font-medium transition-colors
+              min-h-11 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors
               ${
                 isSelected
                   ? "bg-primary text-primary-foreground"
@@ -126,7 +126,7 @@ export const FormationCard = memo(
                 <button
                   type="button"
                   onClick={onEdit}
-                  className="px-3 py-1.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                  className="min-h-11 px-3 py-1.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
                   aria-label="Edit formation"
                 >
                   Edit
@@ -137,7 +137,7 @@ export const FormationCard = memo(
                 <button
                   type="button"
                   onClick={onDuplicate}
-                  className="px-3 py-1.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                  className="min-h-11 px-3 py-1.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
                   aria-label="Duplicate formation"
                 >
                   Duplicate
@@ -148,7 +148,7 @@ export const FormationCard = memo(
                 <button
                   type="button"
                   onClick={onShare}
-                  className="px-3 py-1.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                  className="min-h-11 px-3 py-1.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
                   aria-label="Share formation"
                 >
                   Share
@@ -159,7 +159,7 @@ export const FormationCard = memo(
                 <button
                   type="button"
                   onClick={onDelete}
-                  className="px-3 py-1.5 rounded-lg text-sm text-red-500 hover:text-red-600 hover:bg-red-50 transition-colors"
+                  className="min-h-11 px-3 py-1.5 rounded-lg text-sm text-red-500 hover:text-red-600 hover:bg-red-50 transition-colors"
                   aria-label="Delete formation"
                 >
                   Delete
@@ -173,7 +173,7 @@ export const FormationCard = memo(
             <button
               type="button"
               onClick={onDuplicate}
-              className="px-3 py-1.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+              className="min-h-11 px-3 py-1.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
               aria-label="Copy to My Formations"
             >
               Copy to My Formations

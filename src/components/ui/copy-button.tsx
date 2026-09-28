@@ -10,7 +10,7 @@ interface CopyButtonProps {
   className?: string;
   resetDelay?: number;
   variant?: "outline" | "ghost" | "default";
-  size?: "default" | "sm" | "icon" | "icon-sm";
+  size?: "default" | "icon";
   disabled?: boolean;
   "aria-label"?: string;
 }

@@ -55,7 +55,7 @@ export const ConfirmDialog = ({
           variant="outline"
           onClick={() => onOpenChange(false)}
           disabled={isBusy}
-          className="min-h-11 flex-1"
+          className="flex-1"
         >
           Cancel
         </Button>
@@ -63,7 +63,7 @@ export const ConfirmDialog = ({
           variant="destructive"
           onClick={onConfirm}
           disabled={isBusy}
-          className="min-h-11 flex-1 gap-2"
+          className="flex-1 gap-2"
         >
           {isBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Icon className="h-4 w-4" />}
           {isBusy ? busyLabel : confirmLabel}

@@ -285,15 +285,15 @@ export const TeamReadinessPanel = ({ rows }: { rows: MbReadinessRow[] }) => (
         <table className="mb-table mb-table-compact w-full border-collapse">
           <thead>
             <tr>
-              <th className="pl-3!">Team</th>
+              <th className="pl-3">Team</th>
               <th>Ready %</th>
-              <th className="pr-3! text-right">Status</th>
+              <th className="pr-3 text-right">Status</th>
             </tr>
           </thead>
           <tbody>
             {rows.map((row) => (
               <tr key={row.team.name}>
-                <td className="pl-3! matchbook-display text-[0.8rem] font-semibold">
+                <td className="pl-3 matchbook-display text-[0.8rem] font-semibold">
                   {row.team.name}
                 </td>
                 <td>
@@ -313,7 +313,7 @@ export const TeamReadinessPanel = ({ rows }: { rows: MbReadinessRow[] }) => (
                   </span>
                 </td>
                 <td
-                  className="matchbook-display pr-3! text-right text-[0.66rem] font-bold"
+                  className="matchbook-display pr-3 text-right text-[0.66rem] font-bold"
                   style={{ color: readinessColor(row.percent) }}
                 >
                   {row.status}

@@ -95,11 +95,11 @@ export const MatchCompleteDialog = memo(function MatchCompleteDialog({
             variant="outline"
             onClick={() => onOpenChange(false)}
             disabled={isBusy}
-            className="min-h-11 flex-1"
+            className="flex-1"
           >
             Keep playing
           </Button>
-          <Button onClick={onConfirm} disabled={isBusy} className="min-h-11 flex-1 gap-2">
+          <Button onClick={onConfirm} disabled={isBusy} className="flex-1 gap-2">
             {isBusy ? (
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
             ) : (

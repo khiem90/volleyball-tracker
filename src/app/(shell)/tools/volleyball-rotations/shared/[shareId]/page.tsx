@@ -178,7 +178,7 @@ export default function SharedFormationPage() {
           </p>
           <Link
             href="/tools/volleyball-rotations"
-            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
+            className="inline-flex min-h-11 items-center px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
           >
             Go to Rotations Tool
           </Link>
@@ -199,7 +199,7 @@ export default function SharedFormationPage() {
         <div className="flex items-center justify-between mb-2">
           <Link
             href="/tools/volleyball-rotations"
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            className="inline-flex min-h-11 items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             &larr; Back to Rotations
           </Link>
@@ -246,7 +246,7 @@ export default function SharedFormationPage() {
               type="button"
               onClick={handleCopyToMyFormations}
               disabled={isCopying || copied}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              className={`min-h-11 px-4 py-2 rounded-lg font-medium transition-colors ${
                 copied
                   ? "bg-green-500 text-white"
                   : "bg-primary text-primary-foreground hover:bg-primary/90"
@@ -265,7 +265,7 @@ export default function SharedFormationPage() {
             </div>
             <Link
               href={signInHref(`/tools/volleyball-rotations/shared/${shareId}`)}
-              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 font-medium"
+              className="min-h-11 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 font-medium"
             >
               Sign In
             </Link>

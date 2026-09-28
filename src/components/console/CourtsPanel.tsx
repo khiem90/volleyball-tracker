@@ -31,7 +31,7 @@ export interface CourtControls {
   busy: boolean;
 }
 
-const SMALL_BUTTON = "mb-btn min-h-11 px-3 text-[0.66rem]";
+const SMALL_BUTTON = "mb-btn px-3 text-[0.66rem]";
 
 /** What a court card says under each team: streaks, titles, or where it is in its two-match run. */
 const teamNotes = (tournament: Tournament, court: CourtView, teamId: string): string[] => {
@@ -168,14 +168,14 @@ const CourtCard = ({
               <button
                 type="button"
                 onClick={() => onInstantWin(match, match.homeTeamId)}
-                className="mb-btn mb-btn-outline-navy min-h-11 min-w-0 flex-1 whitespace-normal py-1.5 leading-tight"
+                className="mb-btn mb-btn-outline-navy min-w-0 flex-1 whitespace-normal py-1.5 leading-tight"
               >
                 {team(match.homeTeamId).name} won
               </button>
               <button
                 type="button"
                 onClick={() => onInstantWin(match, match.awayTeamId)}
-                className="mb-btn mb-btn-outline-navy min-h-11 min-w-0 flex-1 whitespace-normal py-1.5 leading-tight"
+                className="mb-btn mb-btn-outline-navy min-w-0 flex-1 whitespace-normal py-1.5 leading-tight"
               >
                 {team(match.awayTeamId).name} won
               </button>
@@ -262,7 +262,7 @@ const Queue = ({
                       onClick={() => controls.onMove(teamId, i - 1)}
                       disabled={controls.busy || i === 0}
                       aria-label={`Move ${ref.name} up`}
-                      className="mb-btn mb-btn-outline-navy min-h-11 min-w-11 px-2"
+                      className="mb-btn mb-btn-outline-navy min-w-11 px-2"
                     >
                       <MbIcon id="chevron-down" size={14} className="rotate-180" />
                     </button>
@@ -271,7 +271,7 @@ const Queue = ({
                       onClick={() => controls.onMove(teamId, i + 1)}
                       disabled={controls.busy || i === queue.length - 1}
                       aria-label={`Move ${ref.name} down`}
-                      className="mb-btn mb-btn-outline-navy min-h-11 min-w-11 px-2"
+                      className="mb-btn mb-btn-outline-navy min-w-11 px-2"
                     >
                       <MbIcon id="chevron-down" size={14} />
                     </button>

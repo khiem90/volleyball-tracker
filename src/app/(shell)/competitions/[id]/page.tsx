@@ -112,7 +112,7 @@ const TournamentConsole = () => {
       {/* Masthead */}
       <header className="mb-4 flex flex-col gap-3">
         {page.role === "owner" && (
-          <Link href={back.href} className="mb-panel-link min-h-11 self-start">
+          <Link href={back.href} className="mb-panel-link self-start">
             <MbIcon id="chevron-right" size={11} className="rotate-180" />
             {back.label}
           </Link>
@@ -160,7 +160,7 @@ const TournamentConsole = () => {
             type="button"
             onClick={() => page.setStartOpen(true)}
             disabled={page.isStarting}
-            className="mb-btn mb-btn-coral min-h-11 self-start"
+            className="mb-btn mb-btn-coral self-start"
           >
             <MbIcon id="live" size={14} />
             {page.isStarting ? "Starting..." : "Start tournament"}

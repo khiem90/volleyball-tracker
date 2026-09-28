@@ -44,7 +44,7 @@ export const AccountMenu = () => {
     return (
       <Link
         href={signInHref(pathname)}
-        className="mb-btn mb-btn-outline-navy min-h-11 px-3 text-[0.72rem]"
+        className="mb-btn mb-btn-outline-navy px-3 text-[0.72rem]"
       >
         Sign in
       </Link>

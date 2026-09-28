@@ -178,7 +178,7 @@ const EnhancedFormationSelector = memo((props: EnhancedModeProps) => {
             <button
               type="button"
               onClick={onCreateFormation}
-              className="px-3 py-1 text-xs font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+              className="min-h-11 px-3 py-1 text-xs font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
             >
               + Create
             </button>
@@ -187,7 +187,7 @@ const EnhancedFormationSelector = memo((props: EnhancedModeProps) => {
             <button
               type="button"
               onClick={onSignInClick}
-              className="px-3 py-1 text-xs font-medium bg-accent text-foreground rounded-lg hover:bg-accent/80 transition-colors"
+              className="min-h-11 px-3 py-1 text-xs font-medium bg-accent text-foreground rounded-lg hover:bg-accent/80 transition-colors"
             >
               Sign in to create
             </button>
@@ -274,7 +274,7 @@ const EnhancedFormationSelector = memo((props: EnhancedModeProps) => {
                   <button
                     type="button"
                     onClick={onSignInClick}
-                    className="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
+                    className="min-h-11 px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
                   >
                     Sign In
                   </button>
@@ -289,7 +289,7 @@ const EnhancedFormationSelector = memo((props: EnhancedModeProps) => {
                   <button
                     type="button"
                     onClick={onCreateFormation}
-                    className="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
+                    className="min-h-11 px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
                   >
                     Create Your First Formation
                   </button>

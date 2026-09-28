@@ -34,7 +34,7 @@ export const FormationDetails = memo(function FormationDetails({
       <button
         type="button"
         onClick={onToggleExpanded}
-        className="w-full flex items-center justify-between text-left"
+        className="w-full min-h-11 flex items-center justify-between text-left"
         aria-expanded={expanded}
         aria-controls="formation-details-content"
       >
@@ -72,7 +72,7 @@ export const FormationDetails = memo(function FormationDetails({
                   value={name}
                   onChange={(e) => onNameChange(e.target.value)}
                   placeholder="My Custom Formation"
-                  className="w-full px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full min-h-11 px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
 
@@ -87,7 +87,7 @@ export const FormationDetails = memo(function FormationDetails({
                   onChange={(e) => onDescriptionChange(e.target.value)}
                   placeholder="Notes about this formation..."
                   rows={3}
-                  className="w-full px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                  className="w-full min-h-11 px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary resize-none"
                 />
               </div>
 
@@ -109,7 +109,7 @@ export const FormationDetails = memo(function FormationDetails({
                     )
                   }
                   placeholder="stack, 4-pass, advanced"
-                  className="w-full px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full min-h-11 px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
 
@@ -120,7 +120,7 @@ export const FormationDetails = memo(function FormationDetails({
                   <button
                     type="button"
                     onClick={() => onVisibilityChange("private")}
-                    className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    className={`flex-1 min-h-11 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                       visibility === "private"
                         ? "bg-primary text-primary-foreground"
                         : "bg-accent hover:bg-accent/80"
@@ -131,7 +131,7 @@ export const FormationDetails = memo(function FormationDetails({
                   <button
                     type="button"
                     onClick={() => onVisibilityChange("unlisted")}
-                    className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    className={`flex-1 min-h-11 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                       visibility === "unlisted"
                         ? "bg-primary text-primary-foreground"
                         : "bg-accent hover:bg-accent/80"

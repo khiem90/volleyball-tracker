@@ -53,7 +53,7 @@ const LiveRow = ({ row }: { row: LiveTournament }) => {
         </p>
         {inPlay > 0 && <LiveTag label={`${inPlay} being scored`} />}
       </div>
-      <span className="mb-btn mb-btn-navy min-h-11 px-3 text-[0.72rem]">
+      <span className="mb-btn mb-btn-navy px-3 text-[0.72rem]">
         Resume
         <MbIcon id="chevron-right" size={11} />
       </span>
@@ -87,7 +87,7 @@ const LivePanel = ({
       <PanelEmpty
         message={`Nothing is live. ${plural(drafts, "draft")} ${drafts === 1 ? "is" : "are"} ready to start.`}
         action={
-          <Link href="/competitions" className="mb-btn mb-btn-outline-navy min-h-11">
+          <Link href="/competitions" className="mb-btn mb-btn-outline-navy">
             <MbIcon id="compete" size={14} />
             Open tournaments
           </Link>
@@ -97,7 +97,7 @@ const LivePanel = ({
       <PanelEmpty
         message="Nothing is live. Create a tournament and start it to see it here."
         action={
-          <Link href="/competitions/new" className="mb-btn mb-btn-outline-navy min-h-11">
+          <Link href="/competitions/new" className="mb-btn mb-btn-outline-navy">
             <MbIcon id="plus" size={14} />
             New tournament
           </Link>
@@ -113,7 +113,7 @@ const GuestPanel = () => (
     <PanelEmpty
       message="Sign in to keep a roster, run tournaments, and see your results here. As a guest you can score a quick match, which is not saved."
       action={
-        <Link href={signInHref("/")} className="mb-btn mb-btn-navy min-h-11">
+        <Link href={signInHref("/")} className="mb-btn mb-btn-navy">
           <MbIcon id="login" size={14} />
           Sign in
         </Link>

@@ -69,7 +69,7 @@ const PointsField = ({
 }) => (
   <label htmlFor={id} className="flex flex-col gap-1.5">
     <span className="mb-kicker">{label}</span>
-    <span className="mb-input py-[0.45rem]">
+    <span className="mb-input">
       <input
         id={id}
         type="number"
@@ -111,7 +111,7 @@ export const AdvancedSettings = ({
         onClick={onToggle}
         aria-expanded={open}
         aria-controls="advanced-settings"
-        className={`mb-panel-head min-h-11 w-full text-left ${open ? "" : "border-b-0!"}`}
+        className={`mb-panel-head min-h-11 w-full text-left ${open ? "" : "border-b-0"}`}
       >
         <span className="matchbook-display flex items-center gap-2 text-[0.95rem] font-bold tracking-[0.05em]">
           <MbIcon id="settings" size={16} />
@@ -188,7 +188,7 @@ export const AdvancedSettings = ({
           )}
           <label htmlFor="court-word" className="flex flex-col gap-1.5">
             <span className="mb-kicker">Call a court a</span>
-            <span className="mb-input py-[0.45rem]">
+            <span className="mb-input">
               <input
                 id="court-word"
                 type="text"

@@ -217,7 +217,7 @@ const LedgerPanel = ({ rows, error }: { rows: LedgerRow[]; error: string | null 
         <PanelEmpty
           message="No results yet. Every completed match from your tournaments and quick matches is listed here."
           action={
-            <Link href="/quick-match" className="mb-btn mb-btn-outline-navy min-h-11">
+            <Link href="/quick-match" className="mb-btn mb-btn-outline-navy">
               <MbIcon id="quick" size={14} />
               Quick match
             </Link>
@@ -242,14 +242,12 @@ const LedgerPanel = ({ rows, error }: { rows: LedgerRow[]; error: string | null 
             />
             <label className="flex min-w-0 flex-col gap-1 sm:col-span-2">
               <span className="mb-kicker">Search</span>
-              {/* Inline, since .mb-input's own padding outranks a utility; the field matches the selects. */}
-              <span className="mb-input min-h-11" style={{ paddingBlock: 0 }}>
+              <span className="mb-input">
                 <input
                   type="search"
                   placeholder="Team, tournament, or month"
                   value={filters.query}
                   onChange={(e) => filter({ query: e.target.value })}
-                  className="self-stretch"
                 />
                 <MbIcon id="search" size={15} className="shrink-0 text-mb-navy" />
               </span>
@@ -259,7 +257,7 @@ const LedgerPanel = ({ rows, error }: { rows: LedgerRow[]; error: string | null 
                 type="button"
                 onClick={exportCsv}
                 disabled={filtered.length === 0}
-                className="mb-btn mb-btn-navy min-h-11 flex-1 disabled:cursor-not-allowed disabled:opacity-40 sm:flex-none"
+                className="mb-btn mb-btn-navy flex-1 disabled:cursor-not-allowed disabled:opacity-40 sm:flex-none"
               >
                 <MbIcon id="export" size={14} />
                 Export CSV
@@ -268,7 +266,7 @@ const LedgerPanel = ({ rows, error }: { rows: LedgerRow[]; error: string | null 
                 <button
                   type="button"
                   onClick={clear}
-                  className="mb-btn mb-btn-outline-navy min-h-11 flex-1 sm:flex-none"
+                  className="mb-btn mb-btn-outline-navy flex-1 sm:flex-none"
                 >
                   Clear filters
                 </button>
