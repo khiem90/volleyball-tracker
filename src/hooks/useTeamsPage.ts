@@ -5,8 +5,15 @@ import type { DeletedTeams } from "@/lib/roster";
 import type { PersistentTeam } from "@/types/game";
 
 export const useTeamsPage = () => {
-  const { state, isRosterLoading, rosterError, addTeamsFromText, updateTeam, deleteTeams } =
-    useApp();
+  const {
+    roster,
+    tournaments,
+    isRosterLoading,
+    rosterError,
+    addTeamsFromText,
+    updateTeam,
+    deleteTeams,
+  } = useApp();
   const [formOpen, setFormOpen] = useState(false);
   const [editingTeam, setEditingTeam] = useState<PersistentTeam | null>(null);
 
@@ -21,8 +28,8 @@ export const useTeamsPage = () => {
    * lose an entry. The write checks again against the stored tournaments.
    */
   const planDeletion = useCallback(
-    (ids: string[]): TeamDeletionPlan => planTeamDeletion(ids, state.tournaments),
-    [state.tournaments]
+    (ids: string[]): TeamDeletionPlan => planTeamDeletion(ids, tournaments),
+    [tournaments]
   );
 
   const handleDeleteTeams = useCallback(
@@ -38,7 +45,7 @@ export const useTeamsPage = () => {
   );
 
   return {
-    teams: state.teams,
+    teams: roster,
     isRosterLoading,
     rosterError,
     formOpen,

@@ -185,17 +185,18 @@ const ToolsPanel = () => (
  */
 export default function HomePage() {
   const { isGuest, isLoading } = useAuth();
-  const { state, isRosterLoading, isTournamentsLoading, tournamentsError } = useApp();
+  const { roster, tournaments, matches, isRosterLoading, isTournamentsLoading, tournamentsError } =
+    useApp();
 
   const live = useMemo(
-    () => liveTournaments(state.tournaments, state.matches),
-    [state.tournaments, state.matches],
+    () => liveTournaments(tournaments, matches),
+    [tournaments, matches],
   );
   const results = useMemo(
-    () => recentResults(state.tournaments, state.matches, state.teams),
-    [state.tournaments, state.matches, state.teams],
+    () => recentResults(tournaments, matches, roster),
+    [tournaments, matches, roster],
   );
-  const drafts = state.tournaments.filter((t) => t.status === "draft").length;
+  const drafts = tournaments.filter((t) => t.status === "draft").length;
 
   if (isLoading || (!isGuest && (isRosterLoading || isTournamentsLoading))) {
     return <PageLoadingSpinner />;

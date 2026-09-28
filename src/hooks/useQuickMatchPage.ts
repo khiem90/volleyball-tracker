@@ -1,10 +1,10 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useApp } from "@/context/AppContext";
 
 export const useQuickMatchPage = () => {
   const router = useRouter();
-  const { state, isRosterLoading, addTeams, addQuickMatch, discardQuickMatch } = useApp();
+  const { roster, isRosterLoading, addTeams, addQuickMatch, discardQuickMatch } = useApp();
 
   const [homeTeamId, setHomeTeamId] = useState<string>("");
   const [awayTeamId, setAwayTeamId] = useState<string>("");
@@ -12,7 +12,7 @@ export const useQuickMatchPage = () => {
   // The match left mid-way that the Discard confirm is asking about, if any.
   const [discardingId, setDiscardingId] = useState<string | null>(null);
 
-  const availableTeams = state.teams;
+  const availableTeams = roster;
 
   const handleHomeTeamSelect = useCallback(
     (teamId: string) => {
@@ -75,30 +75,19 @@ export const useQuickMatchPage = () => {
   }, [homeTeamId, awayTeamId, addQuickMatch, router]);
 
   const handleQuickCreateTeam = useCallback(() => {
-    const teamNumber = state.teams.length + 1;
+    const teamNumber = roster.length + 1;
     addTeams([{ name: `Team ${teamNumber}` }]);
-  }, [state.teams.length, addTeams]);
+  }, [roster.length, addTeams]);
 
   const handleConfirmDiscard = useCallback(() => {
     if (discardingId) discardQuickMatch(discardingId);
     setDiscardingId(null);
   }, [discardingId, discardQuickMatch]);
 
-  const homeTeam = useMemo(
-    () => state.teams.find((t) => t.id === homeTeamId),
-    [state.teams, homeTeamId]
-  );
-
-  const awayTeam = useMemo(
-    () => state.teams.find((t) => t.id === awayTeamId),
-    [state.teams, awayTeamId]
-  );
-
   const canStart = homeTeamId && awayTeamId && homeTeamId !== awayTeamId;
 
   return {
     availableTeams,
-    awayTeam,
     awayTeamId,
     canStart,
     discardingId,
@@ -110,7 +99,6 @@ export const useQuickMatchPage = () => {
     handleRandomSelect,
     handleStartMatch,
     handleSwapTeams,
-    homeTeam,
     homeTeamId,
     isRosterLoading,
     setDiscardingId,

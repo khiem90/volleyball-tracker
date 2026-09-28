@@ -1,6 +1,9 @@
-const sharp = require('sharp');
-const path = require('path');
-const fs = require('fs');
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import sharp from 'sharp';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Every icon is the matchbook crest. The install icons put it on the paper
 // color; the maskable ones keep it inside the safe zone, the centered

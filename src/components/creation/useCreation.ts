@@ -28,7 +28,7 @@ export type CreationAction = "draft" | "start";
  */
 export const useCreation = () => {
   const router = useRouter();
-  const { state, isRosterLoading, addTeamsFromText: addToRoster, createTournament } = useApp();
+  const { roster, isRosterLoading, addTeamsFromText: addToRoster, createTournament } = useApp();
   const [setup, setSetup] = useState<TournamentSetup>(emptySetup);
   const [attempted, setAttempted] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
@@ -36,11 +36,11 @@ export const useCreation = () => {
   const [error, setError] = useState<string | null>(null);
   const [revealId, setRevealId] = useState<string | null>(null);
 
-  const problems = useMemo(() => setupProblems(setup, state.teams), [setup, state.teams]);
+  const problems = useMemo(() => setupProblems(setup, roster), [setup, roster]);
   const ticked = useMemo(() => new Set(setup.teamIds), [setup.teamIds]);
   const enteredCount = useMemo(
-    () => enteredTeams(setup, state.teams).length,
-    [setup, state.teams],
+    () => enteredTeams(setup, roster).length,
+    [setup, roster],
   );
 
   // Every edit clears the last write's error: the setup it was about is gone.
@@ -74,11 +74,11 @@ export const useCreation = () => {
         teamIds: on
           ? [
               ...current.teamIds,
-              ...state.teams.map((team) => team.id).filter((id) => !current.teamIds.includes(id)),
+              ...roster.map((team) => team.id).filter((id) => !current.teamIds.includes(id)),
             ]
           : [],
       })),
-    [edit, state.teams],
+    [edit, roster],
   );
 
   /** Add one team per line to the roster, tick each, and reveal the last. */
@@ -104,7 +104,7 @@ export const useCreation = () => {
       setBusy(action);
       setError(null);
       try {
-        const id = await createTournament(setupInput(setup, state.teams), {
+        const id = await createTournament(setupInput(setup, roster), {
           start: action === "start",
         });
         router.push(`/competitions/${id}`);
@@ -114,12 +114,12 @@ export const useCreation = () => {
         setBusy(null);
       }
     },
-    [busy, problems, setup, state.teams, createTournament, router],
+    [busy, problems, setup, roster, createTournament, router],
   );
 
   return {
     isRosterLoading,
-    roster: state.teams,
+    roster,
     setup,
     change,
     ticked,

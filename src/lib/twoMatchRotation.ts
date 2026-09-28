@@ -326,14 +326,3 @@ export const getTeamsByStatus = (state: TwoMatchRotationState) => {
   return { onCourt, inQueue, leaderboard };
 };
 
-/**
- * Get session match count for a specific team.
- */
-export const getSessionMatchCount = (
-  state: TwoMatchRotationState,
-  teamId: string
-): number => {
-  const status = state.teamStatuses.find((s) => s.teamId === teamId);
-  return status?.sessionMatches || 0;
-};
-

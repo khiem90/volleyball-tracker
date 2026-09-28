@@ -5,8 +5,6 @@ import { FORMAT_LABELS, isBracketFormat, isRotationFormat } from "@/lib/formats"
 import type { Tournament, Match } from "@/types/game";
 import { crestForTeam, type MbTeam } from "./types";
 
-export const COMPETITION_TYPE_LABELS = FORMAT_LABELS;
-
 export interface MbCompetitionRow {
   id: string;
   name: string;
@@ -100,7 +98,7 @@ const roundLabel = (round: number, maxRound: number, cellsInRound: number): stri
 };
 
 export const useMatchbookCompete = (): MbCompeteData => {
-  const { state, deleteTournament } = useApp();
+  const { roster, tournaments: ownTournaments, matches: ownMatches, deleteTournament } = useApp();
   const [manualSelectedId, setManualSelectedId] = useState<string | null>(null);
 
   return useMemo(() => {
@@ -112,18 +110,18 @@ export const useMatchbookCompete = (): MbCompeteData => {
     });
 
     const refFor = (teamId: string): MbTeam => {
-      const team = state.teams.find((t) => t.id === teamId);
+      const team = roster.find((t) => t.id === teamId);
       return {
         name: team?.name ?? "Unknown",
         crest: crestForTeam(teamId, team?.name ?? ""),
       };
     };
 
-    const matchesOf = (competitionId: string): Match[] =>
-      state.matches.filter((m) => m.tournamentId === competitionId);
+    const matchesOf = (tournamentId: string): Match[] =>
+      ownMatches.filter((m) => m.tournamentId === tournamentId);
 
     // Live and draft only; completed tournaments live in History.
-    const tournaments = state.tournaments
+    const tournaments = ownTournaments
       .filter((t) => t.status !== "completed")
       .sort((a, b) => {
         const rank = (t: Tournament) => (t.status === "live" ? 0 : 1);
@@ -135,7 +133,7 @@ export const useMatchbookCompete = (): MbCompeteData => {
       return {
         id: c.id,
         name: c.name,
-        typeLabel: COMPETITION_TYPE_LABELS[c.format],
+        typeLabel: FORMAT_LABELS[c.format],
         status: c.status,
         teamCount: c.teamIds.length,
         completed: matches.filter((m) => m.status === "completed").length,
@@ -205,7 +203,7 @@ export const useMatchbookCompete = (): MbCompeteData => {
 
       selected = {
         competition,
-        typeLabel: COMPETITION_TYPE_LABELS[competition.format],
+        typeLabel: FORMAT_LABELS[competition.format],
         isElimination,
         teamCount: competition.teamIds.length,
         matchTotal: matches.length,
@@ -267,5 +265,5 @@ export const useMatchbookCompete = (): MbCompeteData => {
         });
       },
     };
-  }, [state, manualSelectedId, deleteTournament]);
+  }, [roster, ownTournaments, ownMatches, manualSelectedId, deleteTournament]);
 };

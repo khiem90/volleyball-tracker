@@ -143,16 +143,6 @@ export interface RoundRobinStanding {
 }
 
 // ============================================
-// App state
-// ============================================
-
-export interface AppState {
-  teams: PersistentTeam[];
-  tournaments: Tournament[];
-  matches: Match[];
-}
-
-// ============================================
 // Rotation formats
 // ============================================
 

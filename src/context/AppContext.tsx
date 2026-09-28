@@ -10,7 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import type { Unsubscribe } from "firebase/firestore";
-import type { AppState, Match, PersistentTeam, Tournament } from "@/types/game";
+import type { Match, PersistentTeam, Tournament } from "@/types/game";
 import { useAuth } from "./AuthContext";
 import { db } from "@/lib/firebase";
 import type { EngineCommand } from "@/lib/engine";
@@ -52,8 +52,6 @@ import {
 } from "@/lib/quickMatches";
 import { useLinkedTournaments, type LinkStatus } from "./useLinkedTournaments";
 
-export type { LinkStatus } from "./useLinkedTournaments";
-
 /**
  * The app-wide provider: a thin layer over three live Firestore subscriptions,
  * roster, tournaments, and matches, plus the domain actions. Format rules live
@@ -76,9 +74,12 @@ export interface CompleteMatchOutcome {
 }
 
 interface AppContextValue {
-  state: AppState;
-  /** Signed-in accounts can change their own data. Guests only watch. */
-  canEdit: boolean;
+  /** The signed-in account's teams; empty for a guest. */
+  roster: PersistentTeam[];
+  /** The tournaments the account owns. One reached by link is read with getTournamentById. */
+  tournaments: Tournament[];
+  /** Every match the account owns: its tournaments' and its quick matches. */
+  matches: Match[];
   // True until the signed-in account's roster has arrived from Firestore
   isRosterLoading: boolean;
   // Set when the roster subscription fails, for example when rules deny it
@@ -104,7 +105,6 @@ interface AppContextValue {
    * outcome; the others go, and every draft that had one loses that entry.
    */
   deleteTeams: (ids: string[]) => Promise<DeletedTeams>;
-  getTeamById: (id: string) => PersistentTeam | undefined;
   // Tournament actions
   /**
    * Create a draft, or with `start` a tournament that is live from the
@@ -140,8 +140,9 @@ interface AppContextValue {
    * once while the delete reaches the server in the background.
    */
   discardQuickMatch: (matchId: string) => void;
+  /** Write the score of a match in play. A field write, not an engine command. */
   updateMatchScore: (matchId: string, homeScore: number, awayScore: number) => void;
-  updateMatch: (matchId: string, updates: Partial<Match>) => void;
+  /** Mark a pending match as in play. A field write, not an engine command. */
   startMatch: (matchId: string) => void;
   completeMatch: (matchId: string, result: MatchResult) => Promise<CompleteMatchOutcome>;
   /** Record a rotation result by naming the winner; the engine scores it. */
@@ -196,7 +197,9 @@ interface AppContextValue {
 
 const AppContext = createContext<AppContextValue | null>(null);
 
-const emptyState: AppState = { teams: [], tournaments: [], matches: [] };
+// Stable empties for the lists while their subscriptions have not answered.
+const NO_TOURNAMENTS: Tournament[] = [];
+const NO_MATCHES: Match[] = [];
 
 const logFailure = (what: string) => (error: unknown) => {
   console.error(`Failed to ${what}:`, error);
@@ -290,18 +293,12 @@ export const AppProvider = ({ children }: AppProviderProps) => {
   }, [uid, isAuthLoading]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  const state = useMemo(
-    (): AppState => ({
-      teams: roster,
-      tournaments: tournaments ?? emptyState.tournaments,
-      matches: matches ?? emptyState.matches,
-    }),
-    [roster, tournaments, matches]
-  );
+  const ownTournaments = tournaments ?? NO_TOURNAMENTS;
+  const ownMatches = matches ?? NO_MATCHES;
 
   const tournamentsById = useMemo(
-    () => new Map(state.tournaments.map((t) => [t.id, t])),
-    [state.tournaments]
+    () => new Map(ownTournaments.map((t) => [t.id, t])),
+    [ownTournaments]
   );
 
   // ============================================
@@ -325,9 +322,9 @@ export const AppProvider = ({ children }: AppProviderProps) => {
   // their own scorer link.
   const matchesById = useMemo(() => {
     const byId = new Map(linkedMatches.map((m) => [m.id, m]));
-    for (const match of state.matches) byId.set(match.id, match);
+    for (const match of ownMatches) byId.set(match.id, match);
     return byId;
-  }, [state.matches, linkedMatches]);
+  }, [ownMatches, linkedMatches]);
 
   // Every tournament command runs for whatever identity the phone has. The
   // rules decide whether the owner or a scorer may apply it and refuse the
@@ -363,11 +360,11 @@ export const AppProvider = ({ children }: AppProviderProps) => {
 
   const addTeamsFromText = useCallback(
     (text: string): AddedTeams => {
-      const { teams, alreadyOnRoster } = parseTeamNames(text, state.teams);
+      const { teams, alreadyOnRoster } = parseTeamNames(text, roster);
       const added = teams.length > 0 ? addTeams(teams) : [];
       return { added, alreadyOnRoster };
     },
-    [state.teams, addTeams]
+    [roster, addTeams]
   );
 
   // The tournaments go along so the write can reach the team's entries in
@@ -375,24 +372,19 @@ export const AppProvider = ({ children }: AppProviderProps) => {
   const updateTeam = useCallback(
     (id: string, name: string, color?: string) => {
       if (!uid || !db) return;
-      updateRosterTeam(db, uid, id, { name, color }, state.tournaments).catch(
+      updateRosterTeam(db, uid, id, { name, color }, ownTournaments).catch(
         logFailure("update team")
       );
     },
-    [uid, state.tournaments]
+    [uid, ownTournaments]
   );
 
   const deleteTeams = useCallback(
     async (ids: string[]) => {
       const account = requireAccount();
-      return deleteRosterTeams(account.db, account.uid, ids, state.tournaments);
+      return deleteRosterTeams(account.db, account.uid, ids, ownTournaments);
     },
-    [requireAccount, state.tournaments]
-  );
-
-  const getTeamById = useCallback(
-    (id: string) => state.teams.find((team) => team.id === id),
-    [state.teams]
+    [requireAccount, ownTournaments]
   );
 
   // ============================================
@@ -426,9 +418,9 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     async (id: string) => {
       const source = tournamentsById.get(id);
       if (!source) throw new Error("That tournament no longer exists.");
-      return createTournament(duplicateInput(source, state.teams));
+      return createTournament(duplicateInput(source, roster));
     },
-    [createTournament, tournamentsById, state.teams]
+    [createTournament, tournamentsById, roster]
   );
 
   const deleteTournament = useCallback(async (id: string) => {
@@ -457,9 +449,9 @@ export const AppProvider = ({ children }: AppProviderProps) => {
   const getMatchesByTournament = useCallback(
     (tournamentId: string) =>
       tournamentsById.has(tournamentId)
-        ? state.matches.filter((m) => m.tournamentId === tournamentId)
+        ? ownMatches.filter((m) => m.tournamentId === tournamentId)
         : linkedMatchesOf(tournamentId),
-    [tournamentsById, state.matches, linkedMatchesOf]
+    [tournamentsById, ownMatches, linkedMatchesOf]
   );
 
   // ============================================
@@ -509,13 +501,6 @@ export const AppProvider = ({ children }: AppProviderProps) => {
   const updateMatchScore = useCallback(
     (matchId: string, homeScore: number, awayScore: number) => {
       writeMatch(matchId, { homeScore, awayScore });
-    },
-    [writeMatch]
-  );
-
-  const updateMatch = useCallback(
-    (matchId: string, updates: Partial<Match>) => {
-      writeMatch(matchId, updates);
     },
     [writeMatch]
   );
@@ -657,8 +642,9 @@ export const AppProvider = ({ children }: AppProviderProps) => {
   );
 
   const value: AppContextValue = {
-    state,
-    canEdit: Boolean(uid),
+    roster,
+    tournaments: ownTournaments,
+    matches: ownMatches,
     isRosterLoading,
     rosterError,
     isTournamentsLoading: tournaments === null || matches === null,
@@ -667,7 +653,6 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     addTeamsFromText,
     updateTeam,
     deleteTeams,
-    getTeamById,
     createTournament,
     renameTournament,
     duplicateTournament,
@@ -679,7 +664,6 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     addQuickMatch,
     discardQuickMatch,
     updateMatchScore,
-    updateMatch,
     startMatch,
     completeMatch,
     instantWin,

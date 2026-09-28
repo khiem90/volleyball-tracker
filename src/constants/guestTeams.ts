@@ -19,14 +19,5 @@ const GUEST_TEAMS: readonly PersistentTeam[] = [
   },
 ] as const;
 
-const GUEST_TEAM_IDS = GUEST_TEAMS.map((team) => team.id);
-
 export const GUEST_HOME_TEAM = GUEST_TEAMS[0];
 export const GUEST_AWAY_TEAM = GUEST_TEAMS[1];
-
-/**
- * Check if a team ID belongs to a guest team
- */
-const isGuestTeamId = (teamId: string): boolean => {
-  return GUEST_TEAM_IDS.includes(teamId);
-};

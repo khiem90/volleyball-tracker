@@ -12,6 +12,13 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Service-worker files next-pwa writes on each build.
+    "public/sw.js",
+    "public/workbox-*.js",
+    "public/swe-worker-*.js",
+    // Claude Code's local settings and worktrees, each with its own node_modules and build.
+    // A directory pattern, so ESLint skips the folder instead of walking every file in it.
+    ".claude/",
   ]),
 ]);
 

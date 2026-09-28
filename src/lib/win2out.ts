@@ -296,30 +296,6 @@ export const getTeamsByStatus = (state: Win2OutState) => {
 };
 
 /**
- * Get the current champion's win streak on a specific court.
- */
-export const getCurrentChampionStreak = (state: Win2OutState, courtNumber?: number): number => {
-  if (courtNumber) {
-    const court = state.courts.find((c) => c.courtNumber === courtNumber);
-    if (!court?.currentChampionId) return 0;
-
-    const champion = state.teamStatuses.find(
-      (s) => s.teamId === court.currentChampionId
-    );
-    return champion?.winStreak || 0;
-  }
-
-  // Legacy: use first court or currentChampionId
-  if (!state.currentChampionId && state.courts.length === 0) return 0;
-  
-  const championId = state.currentChampionId || state.courts[0]?.currentChampionId;
-  if (!championId) return 0;
-
-  const champion = state.teamStatuses.find((s) => s.teamId === championId);
-  return champion?.winStreak || 0;
-};
-
-/**
  * Get total champion crowns for a team.
  */
 export const getChampionCount = (state: Win2OutState, teamId: string): number => {

@@ -70,7 +70,7 @@ export const useConsole = (tournamentId: string) => {
   const linkKey = scorerKeyIn(useSearchParams());
   const { user, isLoading: isAuthLoading } = useAuth();
   const {
-    state,
+    roster,
     getTournamentById,
     getMatchesByTournament,
     addTeamsFromText,
@@ -102,8 +102,8 @@ export const useConsole = (tournamentId: string) => {
     [getMatchesByTournament, tournamentId],
   );
   const teams = useMemo(
-    () => (tournament ? entryTeams(tournament, state.teams) : []),
-    [tournament, state.teams],
+    () => (tournament ? entryTeams(tournament, roster) : []),
+    [tournament, roster],
   );
   const team = useMemo(() => teamLookup(teams), [teams]);
 
@@ -454,8 +454,8 @@ export const useConsole = (tournamentId: string) => {
   /** Roster teams not entered, offered while typing a name to add. */
   const suggestions = useMemo(() => {
     const entered = new Set(tournament?.teamIds ?? []);
-    return state.teams.filter((roster) => !entered.has(roster.id)).map((roster) => roster.name);
-  }, [tournament?.teamIds, state.teams]);
+    return roster.filter((t) => !entered.has(t.id)).map((t) => t.name);
+  }, [tournament?.teamIds, roster]);
 
   // A name that matches a roster team, ignoring case, enters that team. Any
   // other name becomes a new roster team first, as on the Teams page; its
@@ -464,7 +464,7 @@ export const useConsole = (tournamentId: string) => {
   const addTeam = useCallback(
     async (name: string): Promise<string | null> => {
       if (!tournament || !access.canManage) return null;
-      const known = state.teams.find((roster) => nameKey(roster.name) === nameKey(name));
+      const known = roster.find((t) => nameKey(t.name) === nameKey(name));
       const added = known ?? addTeamsFromText(name).added[0];
       if (!added) {
         setActionError("Type a team name to add.");
@@ -473,7 +473,7 @@ export const useConsole = (tournamentId: string) => {
       const ok = await apply("add the team", () => addTeamToTournament(tournament.id, added));
       return ok ? added.name : null;
     },
-    [tournament, access.canManage, state.teams, addTeamsFromText, apply, addTeamToTournament],
+    [tournament, access.canManage, roster, addTeamsFromText, apply, addTeamToTournament],
   );
 
   // A withdrawn team comes back through the same command. Its roster team
@@ -482,15 +482,15 @@ export const useConsole = (tournamentId: string) => {
   const rejoin = useCallback(
     (row: TeamRow) => {
       if (!tournament || !access.canManage) return;
-      const roster: PersistentTeam = state.teams.find((t) => t.id === row.teamId) ?? {
+      const rosterTeam: PersistentTeam = roster.find((t) => t.id === row.teamId) ?? {
         id: row.teamId,
         name: row.name,
         createdAt: tournament.createdAt,
         ...(row.color !== undefined && { color: row.color }),
       };
-      void apply("bring the team back", () => addTeamToTournament(tournament.id, roster));
+      void apply("bring the team back", () => addTeamToTournament(tournament.id, rosterTeam));
     },
-    [tournament, access.canManage, state.teams, apply, addTeamToTournament],
+    [tournament, access.canManage, roster, apply, addTeamToTournament],
   );
 
   const [withdrawing, setWithdrawing] = useState<TeamRow | null>(null);

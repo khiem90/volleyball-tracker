@@ -38,7 +38,7 @@ export const useMatchPage = () => {
 
   const { user } = useAuth();
   const {
-    state,
+    roster,
     getMatchById,
     getTournamentById,
     updateMatchScore,
@@ -68,8 +68,8 @@ export const useMatchPage = () => {
 
   // A tournament match shows its entries; a quick match shows roster teams.
   const teams = useMemo(
-    () => (tournament ? entryTeams(tournament, state.teams) : state.teams),
-    [tournament, state.teams],
+    () => (tournament ? entryTeams(tournament, roster) : roster),
+    [tournament, roster],
   );
   const homeTeam = teams.find((t) => t.id === match?.homeTeamId);
   const awayTeam = teams.find((t) => t.id === match?.awayTeamId);
@@ -186,7 +186,6 @@ export const useMatchPage = () => {
 
   return {
     match,
-    tournament,
     homeTeam,
     awayTeam,
     access,

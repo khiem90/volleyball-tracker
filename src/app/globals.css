@@ -410,26 +410,6 @@
   }
 }
 
-
-/* Mobile landscape mode - when height is limited, optimize for score visibility */
-@media (max-height: 500px) {
-  .hide-landscape {
-    display: none !important;
-  }
-
-  .hide-landscape-divider {
-    display: none !important;
-  }
-
-  .show-landscape {
-    display: block !important;
-  }
-
-  .landscape-row {
-    flex-direction: row !important;
-  }
-}
-
 * {
   box-sizing: border-box;
 }
@@ -511,10 +491,6 @@ body {
   --primary: oklch(0.55 0.22 25);
   --primary-foreground: oklch(0.99 0 0);
 
-  /* Red accent variations */
-  --red-light: oklch(0.92 0.06 25);
-  --red-dark: oklch(0.45 0.2 25);
-
   /* Warm beige secondary */
   --secondary: oklch(0.94 0.02 70);
   --secondary-foreground: oklch(0.25 0.02 60);
@@ -528,22 +504,11 @@ body {
 
   /* Destructive - stays red */
   --destructive: oklch(0.55 0.22 25);
-  --destructive-light: oklch(0.95 0.04 25);
 
   /* Borders and inputs - warm grey */
   --border: oklch(0.88 0.015 70);
   --input: oklch(0.96 0.015 70);
   --ring: oklch(0.55 0.22 25);
-
-  /* Status colors - warm theme friendly */
-  --status-draft: oklch(0.55 0.12 250);
-  --status-draft-bg: oklch(0.94 0.03 250);
-  --status-active: oklch(0.55 0.22 25);
-  --status-active-bg: oklch(0.95 0.04 25);
-  --status-complete: oklch(0.55 0.12 145);
-  --status-complete-bg: oklch(0.94 0.03 145);
-  --status-live: oklch(0.55 0.22 25);
-  --status-live-bg: oklch(0.95 0.05 25);
 
   /* Chart colors - warm gradient palette */
   --chart-1: oklch(0.55 0.22 25);
@@ -551,23 +516,6 @@ body {
   --chart-3: oklch(0.55 0.12 145);
   --chart-4: oklch(0.55 0.12 250);
   --chart-5: oklch(0.6 0.12 180);
-
-  /* Decorative colors */
-  --wave-light: oklch(0.94 0.04 55);
-  --wave-medium: oklch(0.9 0.06 45);
-  --cloud: oklch(1 0 0 / 0.8);
-
-  /* Playful card colors - Warm & Cozy palette */
-  --card-mint: oklch(0.94 0.045 165);
-  --card-mint-border: oklch(0.88 0.06 165 / 0.4);
-  --card-lavender: oklch(0.94 0.04 290);
-  --card-lavender-border: oklch(0.85 0.06 290 / 0.4);
-  --card-sky: oklch(0.95 0.04 235);
-  --card-sky-border: oklch(0.88 0.06 235 / 0.4);
-  --card-peach: oklch(0.95 0.05 55);
-  --card-peach-border: oklch(0.88 0.07 55 / 0.4);
-  --card-sage: oklch(0.94 0.035 145);
-  --card-sage-border: oklch(0.88 0.05 145 / 0.4);
 }
 
 /*
@@ -599,59 +547,8 @@ body {
 }
 
 /* ============================================
-   DECORATIVE BACKGROUND
-   ============================================ */
-.bg-tournament {
-  position: relative;
-  background: linear-gradient(
-    180deg,
-    oklch(0.96 0.025 70) 0%,
-    oklch(0.95 0.03 65) 50%,
-    oklch(0.94 0.035 60) 100%
-  );
-  min-height: 100vh;
-}
-
-/* Decorative wave pattern */
-.bg-waves {
-  position: relative;
-  overflow: hidden;
-}
-
-.bg-waves::before {
-  content: "";
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 200px;
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 320'%3E%3Cpath fill='%2399d6e5' fill-opacity='0.15' d='M0,192L48,197.3C96,203,192,213,288,229.3C384,245,480,267,576,250.7C672,235,768,181,864,181.3C960,181,1056,235,1152,234.7C1248,235,1344,181,1392,154.7L1440,128L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z'%3E%3C/path%3E%3C/svg%3E") no-repeat bottom;
-  background-size: cover;
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* ============================================
    SOFT CARD STYLES (replaces glassmorphism)
    ============================================ */
-.soft-card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-2xl);
-  box-shadow:
-    0 1px 3px oklch(0 0 0 / 0.04),
-    0 4px 12px oklch(0.55 0.1 25 / 0.06);
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-}
-
-.soft-card-hover:hover {
-  border-color: oklch(0.55 0.22 25 / 0.3);
-  box-shadow:
-    0 2px 8px oklch(0 0 0 / 0.06),
-    0 8px 24px oklch(0.55 0.15 25 / 0.1);
-  transform: translateY(-2px);
-}
-
 /* Legacy glass-card class for compatibility - now soft card */
 .glass-card {
   background: var(--card);
@@ -661,84 +558,6 @@ body {
     0 1px 3px oklch(0 0 0 / 0.04),
     0 4px 12px oklch(0.55 0.1 25 / 0.06);
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-}
-
-.glass-card-hover:hover {
-  border-color: oklch(0.55 0.22 25 / 0.3);
-  box-shadow:
-    0 2px 8px oklch(0 0 0 / 0.06),
-    0 8px 24px oklch(0.55 0.15 25 / 0.1);
-  transform: translateY(-2px);
-}
-
-/* ============================================
-   PLAYFUL CARD VARIANTS - Warm & Cozy
-   ============================================ */
-.playful-card {
-  background: var(--card);
-  border: 2px solid var(--border);
-  border-radius: var(--radius-3xl);
-  box-shadow:
-    0 2px 8px oklch(0 0 0 / 0.04),
-    0 6px 20px oklch(0.55 0.1 25 / 0.06);
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-}
-
-.playful-card:hover {
-  transform: translateY(-3px) scale(1.01);
-  box-shadow:
-    0 4px 12px oklch(0 0 0 / 0.06),
-    0 12px 32px oklch(0.55 0.15 25 / 0.1);
-}
-
-/* Mint card variant */
-.playful-card-mint {
-  background: var(--card-mint);
-  border-color: var(--card-mint-border);
-}
-
-.playful-card-mint:hover {
-  border-color: oklch(0.75 0.1 165 / 0.6);
-}
-
-/* Lavender card variant */
-.playful-card-lavender {
-  background: var(--card-lavender);
-  border-color: var(--card-lavender-border);
-}
-
-.playful-card-lavender:hover {
-  border-color: oklch(0.75 0.08 290 / 0.6);
-}
-
-/* Sky card variant */
-.playful-card-sky {
-  background: var(--card-sky);
-  border-color: var(--card-sky-border);
-}
-
-.playful-card-sky:hover {
-  border-color: oklch(0.75 0.1 235 / 0.6);
-}
-
-/* Peach card variant */
-.playful-card-peach {
-  background: var(--card-peach);
-  border-color: var(--card-peach-border);
-}
-
-.playful-card-peach:hover {
-  border-color: oklch(0.75 0.1 55 / 0.6);
-}
-
-/* Sage card variant */
-.playful-card-sage {
-  background: var(--card-sage);
-  border-color: var(--card-sage-border);
-}
-
-.playful-card-sage:hover {
-  border-color: oklch(0.75 0.08 145 / 0.6);
 }
 
 /* ============================================
@@ -766,81 +585,6 @@ body {
   transform: translateY(0) scale(0.98);
 }
 
-/* Text highlight effect - subtle underline style */
-.text-highlight {
-  position: relative;
-  display: inline;
-  background: linear-gradient(to top, oklch(0.55 0.22 25 / 0.15) 0%, oklch(0.55 0.22 25 / 0.15) 40%, transparent 40%);
-  padding: 0 0.15em;
-}
-
-.text-highlight-mint {
-  background: linear-gradient(to top, oklch(0.8 0.08 165 / 0.3) 0%, oklch(0.8 0.08 165 / 0.3) 40%, transparent 40%);
-}
-
-.text-highlight-lavender {
-  background: linear-gradient(to top, oklch(0.8 0.06 290 / 0.3) 0%, oklch(0.8 0.06 290 / 0.3) 40%, transparent 40%);
-}
-
-.text-highlight-sky {
-  background: linear-gradient(to top, oklch(0.8 0.08 235 / 0.3) 0%, oklch(0.8 0.08 235 / 0.3) 40%, transparent 40%);
-}
-
-/* Navigation bar - flat, warm background */
-.glass-nav {
-  background: var(--background);
-  border-bottom: 1px solid var(--border);
-  box-shadow: none;
-}
-
-/* Flat nav style for redesigned navbar */
-.flat-nav {
-  background: var(--background);
-  border-bottom: 1px solid var(--border);
-}
-
-/* Input fields - warm theme */
-.glass-input {
-  background: var(--input);
-  border: 1px solid var(--border);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-
-.glass-input:focus {
-  border-color: oklch(0.55 0.22 25 / 0.5);
-  box-shadow: 0 0 0 3px oklch(0.55 0.22 25 / 0.12);
-}
-
-/* ============================================
-   SCORE PANEL GRADIENTS - Light Theme
-   ============================================ */
-.team-blue-gradient {
-  background: linear-gradient(
-    135deg,
-    oklch(0.55 0.16 220) 0%,
-    oklch(0.5 0.14 225) 50%,
-    oklch(0.45 0.12 230) 100%
-  );
-}
-
-.team-orange-gradient {
-  background: linear-gradient(
-    135deg,
-    oklch(0.65 0.18 45) 0%,
-    oklch(0.6 0.16 48) 50%,
-    oklch(0.55 0.14 52) 100%
-  );
-}
-
-.team-red-gradient {
-  background: linear-gradient(
-    135deg,
-    oklch(0.55 0.22 25) 0%,
-    oklch(0.5 0.2 22) 50%,
-    oklch(0.45 0.18 20) 100%
-  );
-}
-
 /* ============================================
    SOFT SHADOW UTILITIES
    ============================================ */
@@ -852,202 +596,11 @@ body {
   box-shadow: 0 1px 3px oklch(0 0 0 / 0.04), 0 4px 12px oklch(0.55 0.1 25 / 0.06);
 }
 
-.shadow-soft-md {
-  box-shadow: 0 2px 8px oklch(0 0 0 / 0.05), 0 8px 20px oklch(0.55 0.1 25 / 0.08);
-}
-
-.shadow-soft-lg {
-  box-shadow: 0 4px 16px oklch(0 0 0 / 0.06), 0 12px 32px oklch(0.55 0.15 25 / 0.1);
-}
-
-/* Red glow for primary elements */
-.glow-red {
-  box-shadow: 0 0 20px -5px oklch(0.55 0.22 25 / 0.35);
-}
-
-.glow-primary {
-  box-shadow: 0 0 20px -5px oklch(0.55 0.22 25 / 0.35);
-}
-
-.glow-amber {
-  box-shadow: 0 0 20px -5px oklch(0.65 0.15 55 / 0.35);
-}
-
-.glow-success {
-  box-shadow: 0 0 15px -5px oklch(0.55 0.12 145 / 0.35);
-}
-
-.glow-live {
-  box-shadow: 0 0 15px oklch(0.55 0.22 25 / 0.4);
-}
-
-/* ============================================
-   ANIMATED GRADIENTS - Subtle for warm theme
-   ============================================ */
-.animated-gradient {
-  background: linear-gradient(
-    -45deg,
-    oklch(0.95 0.03 55 / 0.5),
-    oklch(0.96 0.025 65 / 0.3),
-    oklch(0.96 0.02 70 / 0.2),
-    oklch(0.96 0.025 70)
-  );
-  background-size: 400% 400%;
-  animation: gradientShift 15s ease infinite;
-}
-
-.animated-gradient-subtle {
-  background: linear-gradient(
-    135deg,
-    oklch(0.55 0.22 25 / 0.05) 0%,
-    transparent 50%,
-    oklch(0.6 0.15 45 / 0.03) 100%
-  );
-  background-size: 200% 200%;
-  animation: gradientShift 20s ease infinite;
-}
-
-@keyframes gradientShift {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
-  }
-}
-
-/* ============================================
-   SHINE/SHIMMER EFFECTS - Light theme
-   ============================================ */
-.shine-hover {
-  position: relative;
-  overflow: hidden;
-}
-
-.shine-hover::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    115deg,
-    transparent 0%,
-    transparent 40%,
-    oklch(1 0 0 / 0.6) 50%,
-    transparent 60%,
-    transparent 100%
-  );
-  transform: translateX(-100%);
-  transition: transform 0.6s ease;
-}
-
-.shine-hover:hover::after {
-  transform: translateX(100%);
-}
-
-/* ============================================
-   CARD INTERACTIONS
-   ============================================ */
-.card-lift {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.card-lift:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 30px -10px oklch(0.55 0.15 25 / 0.2);
-}
-
-/* ============================================
-   COLOR TRANSITIONS
-   ============================================ */
-.color-transition {
-  transition: color 0.15s ease, background-color 0.15s ease,
-    border-color 0.15s ease;
-}
-
-/* ============================================
-   STATUS BADGES - Light Theme
-   ============================================ */
-.status-draft {
-  background: var(--status-draft-bg);
-  color: var(--status-draft);
-}
-
-.status-active {
-  background: var(--status-active-bg);
-  color: var(--status-active);
-}
-
-.status-complete {
-  background: var(--status-complete-bg);
-  color: var(--status-complete);
-}
-
-.status-live {
-  background: var(--status-live-bg);
-  color: var(--status-live);
-  animation: livePulse 2s ease-in-out infinite;
-}
-
-@keyframes livePulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.7;
-  }
-}
-
-/* ============================================
-   LIVE INDICATOR DOT
-   ============================================ */
-.live-dot {
-  position: relative;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--status-live);
-}
-
-.live-dot::before {
-  content: "";
-  position: absolute;
-  inset: -3px;
-  border-radius: 50%;
-  background: oklch(0.55 0.18 30 / 0.3);
-  animation: liveDotPulse 1.5s ease-in-out infinite;
-}
-
-@keyframes liveDotPulse {
-  0%,
-  100% {
-    transform: scale(1);
-    opacity: 0.3;
-  }
-  50% {
-    transform: scale(1.5);
-    opacity: 0;
-  }
-}
-
 /* ============================================
    BUTTON STATES
    ============================================ */
 button:active:not(:disabled) {
   transform: scale(0.98);
-}
-
-/* ============================================
-   ICON CONTAINER
-   ============================================ */
-.icon-container {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--radius-lg);
 }
 
 /* ============================================
@@ -1098,51 +651,11 @@ button:active:not(:disabled) {
   transform: translateY(0) scale(0.98);
 }
 
-/* Soft button variant */
-.btn-soft {
-  background: var(--accent);
-  color: var(--accent-foreground);
-  border: 1px solid var(--border);
-  transition: all 0.2s ease;
-}
-
-.btn-soft:hover {
-  background: oklch(0.92 0.035 70);
-  border-color: oklch(0.55 0.22 25 / 0.3);
-}
-
-/* ============================================
-   VS DIVIDER STYLING - Warm theme
-   ============================================ */
-.vs-divider {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.vs-divider::before,
-.vs-divider::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: linear-gradient(
-    to right,
-    transparent,
-    oklch(0.55 0.22 25 / 0.3),
-    transparent
-  );
-}
-
 /* ============================================
    SCORE DISPLAY - Warm theme
    ============================================ */
 .score-text {
   text-shadow: 0 2px 10px oklch(0 0 0 / 0.1);
-}
-
-.score-glow {
-  filter: drop-shadow(0 0 10px oklch(0.55 0.22 25 / 0.2));
 }
 
 /* ============================================
@@ -1158,155 +671,15 @@ button:active:not(:disabled) {
     scroll-behavior: auto !important;
   }
 
-  .glass-card-hover:hover,
-  .soft-card-hover:hover {
+  .btn-teal-gradient:hover {
     transform: none;
-  }
-
-  .card-lift:hover {
-    transform: none;
-  }
-
-  .btn-teal-gradient:hover,
-  .btn-orange-gradient:hover {
-    transform: none;
-  }
-
-  .shine-hover::after {
-    display: none;
-  }
-
-  .animated-gradient,
-  .animated-gradient-subtle {
-    animation: none;
-    background-size: 100% 100%;
   }
 }
 
 /* ============================================
    GPU ACCELERATION HINTS
    ============================================ */
-.soft-card,
-.glass-card,
-.glass-nav,
-.glass-input {
+.glass-card {
   will-change: auto;
   transform: translateZ(0);
-}
-
-/* ============================================
-   SIMPLE CSS ANIMATIONS
-   ============================================ */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.animate-fade-in {
-  animation: fadeIn 0.4s ease-out forwards;
-}
-
-.animate-fade-in-delay-1 {
-  animation: fadeIn 0.4s ease-out 0.1s forwards;
-  opacity: 0;
-}
-
-.animate-fade-in-delay-2 {
-  animation: fadeIn 0.4s ease-out 0.2s forwards;
-  opacity: 0;
-}
-
-.animate-fade-in-delay-3 {
-  animation: fadeIn 0.4s ease-out 0.3s forwards;
-  opacity: 0;
-}
-
-/* Stagger animation classes */
-.stagger-1 { animation-delay: 0.05s; }
-.stagger-2 { animation-delay: 0.1s; }
-.stagger-3 { animation-delay: 0.15s; }
-.stagger-4 { animation-delay: 0.2s; }
-.stagger-5 { animation-delay: 0.25s; }
-.stagger-6 { animation-delay: 0.3s; }
-
-/* ============================================
-   DECORATIVE ELEMENTS
-   ============================================ */
-.decorative-circle {
-  position: absolute;
-  border-radius: 50%;
-  background: linear-gradient(
-    135deg,
-    oklch(0.55 0.22 25 / 0.08),
-    oklch(0.6 0.15 45 / 0.04)
-  );
-  pointer-events: none;
-}
-
-.decorative-blob {
-  position: absolute;
-  border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
-  background: linear-gradient(
-    135deg,
-    oklch(0.92 0.05 55 / 0.4),
-    oklch(0.94 0.04 70 / 0.25)
-  );
-  pointer-events: none;
-  filter: blur(50px);
-}
-
-/* Playful blob variants - warm colors */
-.decorative-blob:nth-child(1) {
-  background: linear-gradient(135deg, oklch(0.92 0.06 55 / 0.35), oklch(0.94 0.05 70 / 0.2));
-}
-
-.decorative-blob:nth-child(2) {
-  background: linear-gradient(135deg, oklch(0.92 0.05 45 / 0.3), oklch(0.94 0.04 60 / 0.2));
-}
-
-.decorative-blob:nth-child(3) {
-  background: linear-gradient(135deg, oklch(0.94 0.04 65 / 0.25), oklch(0.95 0.03 75 / 0.15));
-}
-
-/* ============================================
-   ILLUSTRATION COLORS
-   ============================================ */
-.illustration-primary {
-  fill: oklch(0.55 0.22 25);
-}
-
-.illustration-secondary {
-  fill: oklch(0.85 0.08 25);
-}
-
-.illustration-accent {
-  fill: oklch(0.65 0.15 45);
-}
-
-.illustration-light {
-  fill: oklch(0.95 0.03 70);
-}
-
-/* ============================================
-   RANK BADGE COLORS
-   ============================================ */
-.rank-gold {
-  background: linear-gradient(135deg, oklch(0.8 0.12 85), oklch(0.7 0.14 75));
-  color: oklch(0.3 0.08 70);
-}
-
-.rank-silver {
-  background: linear-gradient(135deg, oklch(0.85 0.01 250), oklch(0.75 0.02 250));
-  color: oklch(0.35 0.02 250);
-}
-
-.rank-bronze {
-  background: linear-gradient(135deg, oklch(0.65 0.1 55), oklch(0.55 0.12 50));
-  color: oklch(0.95 0.02 55);
 }

@@ -62,7 +62,7 @@ const dateAndTime = (ts: number) =>
   });
 
 export const useMatchbookQuickMatch = (): MbQuickMatchData => {
-  const { state } = useApp();
+  const { roster, matches } = useApp();
 
   return useMemo(() => {
     const dateLine = new Date().toLocaleDateString("en-US", {
@@ -73,20 +73,20 @@ export const useMatchbookQuickMatch = (): MbQuickMatchData => {
     });
 
     const refFor = (teamId: string): MbTeam => {
-      const team = state.teams.find((t) => t.id === teamId);
+      const team = roster.find((t) => t.id === teamId);
       return {
         name: team?.name ?? "Unknown",
         crest: crestForTeam(teamId, team?.name ?? ""),
       };
     };
 
-    const completed = state.matches
+    const completed = matches
       .filter((m) => m.status === "completed")
       .sort((a, b) => (b.completedAt ?? 0) - (a.completedAt ?? 0));
 
     const tallies = buildTeamTallies(completed);
 
-    const quickMatches = state.matches.filter((m) => m.tournamentId === null);
+    const quickMatches = matches.filter((m) => m.tournamentId === null);
 
     const recentQuickMatches = quickMatches
       .filter((m) => m.status === "completed")
@@ -101,8 +101,8 @@ export const useMatchbookQuickMatch = (): MbQuickMatchData => {
         homeWon: m.winnerId === m.homeTeamId,
       }));
 
-    const onRoster = (teamId: string) => state.teams.some((t) => t.id === teamId);
-    const abandoned = abandonedQuickMatches(state.matches).map((m) => ({
+    const onRoster = (teamId: string) => roster.some((t) => t.id === teamId);
+    const abandoned = abandonedQuickMatches(matches).map((m) => ({
       id: m.id,
       home: refFor(m.homeTeamId),
       homeScore: m.homeScore,
@@ -135,5 +135,5 @@ export const useMatchbookQuickMatch = (): MbQuickMatchData => {
       abandonedQuickMatches: abandoned,
       summaryFor,
     };
-  }, [state]);
+  }, [roster, matches]);
 };

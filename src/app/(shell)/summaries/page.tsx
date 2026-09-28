@@ -318,23 +318,24 @@ const LedgerPanel = ({ rows, error }: { rows: LedgerRow[]; error: string | null 
  */
 export default function HistoryPage() {
   const { isLoading: authLoading, isAuthenticated } = useRequireAuth();
-  const { state, isRosterLoading, isTournamentsLoading, tournamentsError } = useApp();
+  const { roster, tournaments, matches, isRosterLoading, isTournamentsLoading, tournamentsError } =
+    useApp();
 
   const items = useMemo(
-    () => historyItems(state.tournaments, state.matches, state.teams),
-    [state.tournaments, state.matches, state.teams],
+    () => historyItems(tournaments, matches, roster),
+    [tournaments, matches, roster],
   );
   const rows = useMemo(
-    () => ledgerRows(state.tournaments, state.matches, state.teams),
-    [state.tournaments, state.matches, state.teams],
+    () => ledgerRows(tournaments, matches, roster),
+    [tournaments, matches, roster],
   );
 
   if (authLoading || !isAuthenticated || isRosterLoading || isTournamentsLoading) {
     return <PageLoadingSpinner />;
   }
 
-  const tournaments = items.filter((item) => item.kind === "tournament").length;
-  const quickMatches = items.length - tournaments;
+  const tournamentCount = items.filter((item) => item.kind === "tournament").length;
+  const quickMatchCount = items.length - tournamentCount;
 
   return (
     <>
@@ -345,8 +346,8 @@ export default function HistoryPage() {
         </h1>
         <p className="matchbook-display text-[0.74rem] font-bold tracking-[0.1em]">
           {[
-            plural(tournaments, "tournament"),
-            plural(quickMatches, "quick match", "quick matches"),
+            plural(tournamentCount, "tournament"),
+            plural(quickMatchCount, "quick match", "quick matches"),
             plural(rows.length, "result"),
           ].join(" • ")}
         </p>
