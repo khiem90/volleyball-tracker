@@ -1,363 +1,366 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useApp } from "@/context/AppContext";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { PageLoadingSpinner } from "@/components/shared";
 import { MbIcon } from "@/components/matchbook/MbIcon";
-import { Crest, Panel, PanelEmpty, TeamMark } from "@/components/matchbook/Panel";
-import { useMatchbookHistory } from "@/components/matchbook/useMatchbookHistory";
+import { PANEL_ROW, Panel, PanelEmpty, PanelError } from "@/components/matchbook/Panel";
+import { MatchRow } from "@/components/console/MatchRow";
+import { teamLookup } from "@/components/console/teamRefs";
+import {
+  filterLedger,
+  historyItems,
+  ledgerCsv,
+  ledgerDays,
+  ledgerFileName,
+  ledgerFilterOptions,
+  ledgerRows,
+  playedIn,
+  type FilterOption,
+  type CompletedQuickMatch,
+  type CompletedTournament,
+  type HistoryItem,
+  type LedgerFilters,
+  type LedgerRow,
+} from "@/lib/history";
+import { csvFile, saveFile } from "@/lib/saveFile";
+import { plural } from "@/lib/utils";
 
-const SummaryStat = ({
-  icon,
-  label,
-  value,
-}: {
-  icon: string;
-  label: string;
-  value: string;
-}) => (
-  <div className="flex items-center gap-3">
-    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-[1.5px] border-mb-navy text-mb-navy">
-      <MbIcon id={icon} size={16} />
-    </span>
-    <div>
-      <p className="mb-kicker">{label}</p>
-      <p className="matchbook-display text-[1.15rem] font-bold leading-tight tabular-nums">
-        {value}
-      </p>
-    </div>
-  </div>
+/** How many rows a list shows before Show more, and how many more each tap adds. */
+const ITEMS_PAGE = 10;
+const LEDGER_PAGE = 25;
+
+const NO_FILTERS: LedgerFilters = { tournamentId: "", teamId: "", query: "" };
+
+/** "Sep 27, 2026": History reaches back past this year. */
+const dateLabel = (ts: number) =>
+  new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+
+/** "7:42 PM": the ledger's day heading already gives the date. */
+const timeLabel = (ts: number | undefined) =>
+  ts ? new Date(ts).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : "";
+
+const ShowMore = ({ hidden, onClick }: { hidden: number; onClick: () => void }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className={`mb-panel-link w-full justify-center border-t border-mb-rule ${PANEL_ROW}`}
+  >
+    Show more ({hidden} left)
+    <MbIcon id="chevron-down" size={11} />
+  </button>
 );
 
+/* ------------------------ Tournaments & quick matches ----------------------- */
+
+const TournamentRow = ({ item }: { item: CompletedTournament }) => {
+  const { tournament, format, entered, played, winner, completedAt, href } = item;
+  return (
+    <Link href={href} className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 ${PANEL_ROW}`}>
+      <div className="flex min-w-0 flex-col gap-1">
+        <p className="matchbook-display text-[0.95rem] font-bold leading-tight [overflow-wrap:anywhere]">
+          {tournament.name}
+        </p>
+        <p className="text-[0.72rem] text-mb-ink-muted">
+          {[
+            format,
+            plural(entered, "team"),
+            plural(played, "match", "matches"),
+            dateLabel(completedAt),
+          ].join(
+            " • ",
+          )}
+        </p>
+        {winner && (
+          <p className="flex min-w-0 items-center gap-1.5 text-[0.72rem] font-semibold">
+            <MbIcon id="star" size={12} className="shrink-0 text-mb-gold" />
+            <span className="min-w-0 [overflow-wrap:anywhere]">Winner: {winner.name}</span>
+          </p>
+        )}
+      </div>
+      <MbIcon id="chevron-right" size={11} className="shrink-0 text-mb-ink-muted" />
+    </Link>
+  );
+};
+
+const QuickMatchRow = ({ item }: { item: CompletedQuickMatch }) => (
+  <MatchRow
+    match={item.match}
+    team={teamLookup([item.home, item.away])}
+    label={`Quick match • ${dateLabel(item.completedAt)}`}
+    href={item.href}
+  />
+);
+
+const CompletedPanel = ({ items, error }: { items: HistoryItem[]; error: string | null }) => {
+  const [shown, setShown] = useState(ITEMS_PAGE);
+  return (
+    <Panel
+      title="Tournaments & quick matches"
+      icon="history"
+      meta={items.length > 0 ? <span className="mb-kicker">{items.length}</span> : undefined}
+    >
+      {error ? (
+        <PanelError message={error} />
+      ) : items.length === 0 ? (
+        <PanelEmpty message="Nothing here yet. Completed tournaments and quick matches with a result show here, newest first." />
+      ) : (
+        <>
+          <div className="flex flex-col divide-y divide-mb-rule">
+            {items.slice(0, shown).map((item) =>
+              item.kind === "tournament" ? (
+                <TournamentRow key={item.tournament.id} item={item} />
+              ) : (
+                <QuickMatchRow key={item.match.id} item={item} />
+              ),
+            )}
+          </div>
+          {items.length > shown && (
+            <ShowMore hidden={items.length - shown} onClick={() => setShown(shown + ITEMS_PAGE)} />
+          )}
+        </>
+      )}
+    </Panel>
+  );
+};
+
+/* --------------------------------- Ledger --------------------------------- */
+
+const FilterSelect = ({
+  label,
+  all,
+  options,
+  value,
+  onChange,
+}: {
+  label: string;
+  all: string;
+  options: FilterOption[];
+  value: string;
+  onChange: (value: string) => void;
+}) => (
+  <label className="flex min-w-0 flex-col gap-1">
+    <span className="mb-kicker">{label}</span>
+    <span className="relative">
+      <select
+        className="mb-select-native min-h-11"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      >
+        <option value="">{all}</option>
+        {options.map((option) => (
+          <option key={option.id} value={option.id}>
+            {option.name}
+          </option>
+        ))}
+      </select>
+      <MbIcon
+        id="chevron-down"
+        size={13}
+        className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-mb-ink-muted"
+      />
+    </span>
+  </label>
+);
+
+const LedgerRowView = ({ row }: { row: LedgerRow }) => (
+  <MatchRow
+    match={row.match}
+    team={teamLookup([row.home, row.away])}
+    label={`${playedIn(row)} • ${timeLabel(row.match.completedAt)}`}
+    href={row.href}
+  />
+);
+
+const LedgerPanel = ({ rows, error }: { rows: LedgerRow[]; error: string | null }) => {
+  const [filters, setFilters] = useState<LedgerFilters>(NO_FILTERS);
+  const [shown, setShown] = useState(LEDGER_PAGE);
+  const options = useMemo(() => ledgerFilterOptions(rows), [rows]);
+  const filtered = useMemo(() => filterLedger(rows, filters), [rows, filters]);
+  const days = useMemo(() => ledgerDays(filtered.slice(0, shown)), [filtered, shown]);
+  const filtering = filters.tournamentId !== "" || filters.teamId !== "" || filters.query !== "";
+
+  // A new filter starts the list from the top again.
+  const filter = (changes: Partial<LedgerFilters>) => {
+    setFilters({ ...filters, ...changes });
+    setShown(LEDGER_PAGE);
+  };
+  const clear = () => {
+    setFilters(NO_FILTERS);
+    setShown(LEDGER_PAGE);
+  };
+
+  // Straight from the tap: the share sheet an iPhone home screen app uses needs one.
+  const exportCsv = () => {
+    saveFile(csvFile(ledgerFileName(Date.now()), ledgerCsv(filtered))).catch((cause) =>
+      console.error("Failed to save the ledger", cause),
+    );
+  };
+
+  return (
+    <Panel
+      title="Ledger"
+      icon="clipboard"
+      meta={
+        rows.length > 0 ? (
+          <span className="mb-kicker">
+            {filtering ? `${filtered.length} of ${rows.length}` : plural(rows.length, "result")}
+          </span>
+        ) : undefined
+      }
+    >
+      {error ? (
+        <PanelError message={error} />
+      ) : rows.length === 0 ? (
+        <PanelEmpty
+          message="No results yet. Every completed match from your tournaments and quick matches is listed here."
+          action={
+            <Link href="/quick-match" className="mb-btn mb-btn-outline-navy min-h-11">
+              <MbIcon id="quick" size={14} />
+              Quick match
+            </Link>
+          }
+        />
+      ) : (
+        <>
+          <div className="grid grid-cols-1 gap-3 border-b border-mb-rule p-4 sm:grid-cols-2">
+            <FilterSelect
+              label="Tournament"
+              all="All tournaments"
+              options={options.tournaments}
+              value={filters.tournamentId}
+              onChange={(tournamentId) => filter({ tournamentId })}
+            />
+            <FilterSelect
+              label="Team"
+              all="All teams"
+              options={options.teams}
+              value={filters.teamId}
+              onChange={(teamId) => filter({ teamId })}
+            />
+            <label className="flex min-w-0 flex-col gap-1 sm:col-span-2">
+              <span className="mb-kicker">Search</span>
+              {/* Inline, since .mb-input's own padding outranks a utility; the field matches the selects. */}
+              <span className="mb-input min-h-11" style={{ paddingBlock: 0 }}>
+                <input
+                  type="search"
+                  placeholder="Team, tournament, or month"
+                  value={filters.query}
+                  onChange={(e) => filter({ query: e.target.value })}
+                  className="self-stretch"
+                />
+                <MbIcon id="search" size={15} className="shrink-0 text-mb-navy" />
+              </span>
+            </label>
+            <div className="flex flex-wrap gap-2 sm:col-span-2">
+              <button
+                type="button"
+                onClick={exportCsv}
+                disabled={filtered.length === 0}
+                className="mb-btn mb-btn-navy min-h-11 flex-1 disabled:cursor-not-allowed disabled:opacity-40 sm:flex-none"
+              >
+                <MbIcon id="export" size={14} />
+                Export CSV
+              </button>
+              {filtering && (
+                <button
+                  type="button"
+                  onClick={clear}
+                  className="mb-btn mb-btn-outline-navy min-h-11 flex-1 sm:flex-none"
+                >
+                  Clear filters
+                </button>
+              )}
+            </div>
+          </div>
+
+          {filtered.length === 0 ? (
+            <PanelEmpty message="No results match these filters." />
+          ) : (
+            <div className="flex flex-col">
+              {days.map((day) => (
+                <div key={day.label}>
+                  <div className="flex items-center justify-between gap-2 border-b border-mb-rule bg-[rgba(7,50,77,0.05)] px-4 py-1.5">
+                    <p className="matchbook-display text-[0.7rem] font-bold tracking-[0.08em]">
+                      {day.label}
+                    </p>
+                    <p className="mb-kicker">{plural(day.rows.length, "match", "matches")}</p>
+                  </div>
+                  <div className="flex flex-col divide-y divide-mb-rule border-b border-mb-rule">
+                    {day.rows.map((row) => (
+                      <LedgerRowView key={row.match.id} row={row} />
+                    ))}
+                  </div>
+                </div>
+              ))}
+              {filtered.length > shown && (
+                <ShowMore
+                  hidden={filtered.length - shown}
+                  onClick={() => setShown(shown + LEDGER_PAGE)}
+                />
+              )}
+            </div>
+          )}
+        </>
+      )}
+    </Panel>
+  );
+};
+
+/* ---------------------------------- Page ---------------------------------- */
+
+/**
+ * History: the account's completed tournaments and past quick matches, and
+ * the ledger of every result, all from the one account-wide match query.
+ * A completed tournament opens its console read-only; a quick match opens
+ * its own page. The ledger filters by tournament, team, and search, and
+ * exports what the filters show as CSV.
+ */
 export default function HistoryPage() {
   const { isLoading: authLoading, isAuthenticated } = useRequireAuth();
-  const [competitionId, setCompetitionId] = useState("");
-  const [teamId, setTeamId] = useState("");
-  const [query, setQuery] = useState("");
-  const data = useMatchbookHistory({ competitionId, teamId, query });
+  const { state, isRosterLoading, isTournamentsLoading, tournamentsError } = useApp();
 
-  if (authLoading || !isAuthenticated) {
+  const items = useMemo(
+    () => historyItems(state.tournaments, state.matches, state.teams),
+    [state.tournaments, state.matches, state.teams],
+  );
+  const rows = useMemo(
+    () => ledgerRows(state.tournaments, state.matches, state.teams),
+    [state.tournaments, state.matches, state.teams],
+  );
+
+  if (authLoading || !isAuthenticated || isRosterLoading || isTournamentsLoading) {
     return <PageLoadingSpinner />;
   }
 
-  const report = data.report;
+  const tournaments = items.filter((item) => item.kind === "tournament").length;
+  const quickMatches = items.length - tournaments;
 
   return (
     <>
       {/* Masthead */}
-      <header className="mb-5 flex flex-wrap items-center gap-x-6 gap-y-4">
-        <div className="flex items-center gap-4">
-          <h1 className="matchbook-display whitespace-nowrap text-4xl font-bold leading-none tracking-[0.01em] sm:text-5xl">
-            Match <span className="text-mb-coral">Archive</span>
-          </h1>
-          <div className="flex flex-col items-center border-[2px] border-mb-coral px-2.5 py-1 text-mb-coral">
-            <span className="matchbook-display text-2xl font-bold leading-none tabular-nums">
-              {data.totalResults}
-            </span>
-            <span className="matchbook-display text-[0.6rem] font-bold tracking-[0.22em]">
-              Results
-            </span>
-          </div>
-          <div className="hidden sm:block">
-            <p className="matchbook-display text-[0.74rem] font-bold tracking-[0.1em]">
-              All-Time Archive
-            </p>
-            <p className="mb-kicker" suppressHydrationWarning>
-              {data.dateLine}
-            </p>
-          </div>
-        </div>
-
-        <div className="ml-auto flex items-center gap-3">
-          <button
-            type="button"
-            onClick={data.downloadCsv}
-            disabled={data.filteredCount === 0}
-            className="mb-btn mb-btn-navy disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            <MbIcon id="export" size={14} />
-            Export CSV
-          </button>
-        </div>
+      <header className="mb-5 flex flex-col gap-2">
+        <h1 className="matchbook-display text-4xl font-bold leading-none tracking-[0.01em] sm:text-5xl">
+          History
+        </h1>
+        <p className="matchbook-display text-[0.74rem] font-bold tracking-[0.1em]">
+          {[
+            plural(tournaments, "tournament"),
+            plural(quickMatches, "quick match", "quick matches"),
+            plural(rows.length, "result"),
+          ].join(" • ")}
+        </p>
       </header>
 
-      {/* Filter bar */}
-      <div className="mb-4 flex flex-wrap items-end gap-3 border-y-[1.5px] border-mb-navy py-3">
-        <div className="w-44">
-          <p className="mb-kicker mb-1">Competition</p>
-          <div className="relative">
-            <select
-              className="mb-select-native"
-              value={competitionId}
-              onChange={(e) => setCompetitionId(e.target.value)}
-              aria-label="Filter by competition"
-            >
-              <option value="">All Competitions</option>
-              {data.filterOptions.competitions.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-            <MbIcon
-              id="chevron-down"
-              size={13}
-              className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-mb-ink-muted"
-            />
-          </div>
+      {/* Start-aligned so each panel is as tall as its rows, not its column. */}
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-12">
+        <div className="lg:col-span-5">
+          <CompletedPanel items={items} error={tournamentsError} />
         </div>
-        <div className="w-40">
-          <p className="mb-kicker mb-1">Team</p>
-          <div className="relative">
-            <select
-              className="mb-select-native"
-              value={teamId}
-              onChange={(e) => setTeamId(e.target.value)}
-              aria-label="Filter by team"
-            >
-              <option value="">All Teams</option>
-              {data.filterOptions.teams.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
-            <MbIcon
-              id="chevron-down"
-              size={13}
-              className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-mb-ink-muted"
-            />
-          </div>
-        </div>
-        <div className="min-w-[200px] flex-1">
-          <p className="mb-kicker mb-1">Search</p>
-          <div className="mb-input py-[0.45rem]">
-            <input
-              type="text"
-              placeholder="Search matches, teams, competitions..."
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-            <MbIcon id="search" size={15} className="shrink-0 text-mb-navy" />
-          </div>
-        </div>
-      </div>
-
-      {/* Panel grid */}
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
-        {/* Left column */}
-        <div className="flex flex-col gap-4 xl:col-span-7">
-          <Panel
-            title="Results Ledger"
-            meta={<span className="mb-kicker">{data.filteredCount} Results</span>}
-          >
-            {data.days.length === 0 ? (
-              <PanelEmpty
-                message="No results exist yet — finished matches will be recorded here."
-                actionLabel="Play a match"
-                href="/quick-match"
-              />
-            ) : (
-              <div className="flex flex-col">
-                {data.days.map((day) => (
-                  <div key={day.label}>
-                    <div className="flex items-center justify-between border-b border-mb-rule bg-[rgba(7,50,77,0.05)] px-4 py-1.5">
-                      <p className="matchbook-display text-[0.7rem] font-bold tracking-[0.08em]">
-                        {day.label}
-                      </p>
-                      <p className="mb-kicker">
-                        {day.entries.length}{" "}
-                        {day.entries.length === 1 ? "match" : "matches"}
-                      </p>
-                    </div>
-                    {day.entries.map((entry) => (
-                      <button
-                        key={entry.id}
-                        type="button"
-                        onClick={() => data.selectMatch(entry.id)}
-                        className="grid w-full cursor-pointer grid-cols-[52px_1fr_auto_1fr_auto] items-center gap-2 border-b border-mb-rule px-4 py-2 text-left transition-colors hover:bg-[rgba(7,50,77,0.04)]"
-                        style={
-                          entry.id === data.selectedId
-                            ? { boxShadow: "inset 3px 0 0 var(--mb-coral)" }
-                            : undefined
-                        }
-                      >
-                        <span className="text-[0.68rem] text-mb-ink-muted">
-                          {entry.time}
-                        </span>
-                        <TeamMark team={entry.home} size={18} className="justify-self-start" />
-                        <span className="matchbook-display whitespace-nowrap text-[0.9rem] font-bold tabular-nums">
-                          {entry.homeScore} – {entry.awayScore}
-                        </span>
-                        <TeamMark team={entry.away} size={18} reverse className="justify-self-end" />
-                        <span className="hidden w-24 truncate text-right text-[0.64rem] text-mb-ink-muted lg:block">
-                          {entry.competition}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                ))}
-                {data.filteredCount > 25 && (
-                  <p className="px-4 py-2 text-center text-[0.7rem] text-mb-ink-muted">
-                    Showing 25 of {data.filteredCount} results — refine filters or
-                    export the full CSV.
-                  </p>
-                )}
-              </div>
-            )}
-          </Panel>
-
-          <Panel title="Match Report">
-            {!report ? (
-              <PanelEmpty message="No match report exists yet — pick a result from the ledger to see its report." />
-            ) : (
-              <div className="flex flex-1 flex-col gap-4 p-5 sm:flex-row sm:items-center">
-                <div className="flex flex-1 items-center justify-center gap-4">
-                  <div className="flex flex-col items-center gap-1.5">
-                    <Crest team={report.entry.home} size={56} />
-                    <span className="matchbook-display text-[0.85rem] font-bold">
-                      {report.entry.home.name}
-                    </span>
-                    <span className="mb-kicker">({report.homeRecord})</span>
-                  </div>
-                  <div className="text-center">
-                    <p className="matchbook-display text-5xl font-bold tabular-nums">
-                      {report.entry.homeScore} – {report.entry.awayScore}
-                    </p>
-                    <p className="mb-kicker mt-1">Final</p>
-                  </div>
-                  <div className="flex flex-col items-center gap-1.5">
-                    <Crest team={report.entry.away} size={56} />
-                    <span className="matchbook-display text-[0.85rem] font-bold">
-                      {report.entry.away.name}
-                    </span>
-                    <span className="mb-kicker">({report.awayRecord})</span>
-                  </div>
-                </div>
-                <div className="flex flex-1 flex-col gap-2.5 border-t border-mb-rule pt-3 sm:border-l sm:border-t-0 sm:pl-5 sm:pt-0">
-                  <div className="flex items-center gap-2.5">
-                    <MbIcon id="calendar" size={15} className="shrink-0 text-mb-navy" />
-                    <span className="text-[0.78rem] font-semibold">{report.date}</span>
-                  </div>
-                  <div className="flex items-center gap-2.5">
-                    <MbIcon id="clock" size={15} className="shrink-0 text-mb-navy" />
-                    <span className="text-[0.78rem] font-semibold">
-                      {report.entry.time}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2.5">
-                    <MbIcon id="compete" size={15} className="shrink-0 text-mb-navy" />
-                    <span className="text-[0.78rem] font-semibold">
-                      {report.entry.competition}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2.5">
-                    <MbIcon id="check" size={15} className="shrink-0 text-mb-green" />
-                    <span className="text-[0.78rem] font-semibold">
-                      Winner: {report.entry.winner.name}
-                    </span>
-                  </div>
-                  <p className="mb-kicker pt-1">
-                    All-time points — {report.entry.home.name}: {report.homePoints} ·{" "}
-                    {report.entry.away.name}: {report.awayPoints}
-                  </p>
-                </div>
-              </div>
-            )}
-          </Panel>
-        </div>
-
-        {/* Right column */}
-        <div className="flex flex-col gap-4 xl:col-span-5">
-          <Panel title="Archive Summary" tone="navy" icon="chart">
-            {data.summary.matches === 0 ? (
-              <PanelEmpty message="No archive exists yet — stats appear once matches are recorded." />
-            ) : (
-              <div className="grid grid-cols-2 gap-4 p-5">
-                <SummaryStat
-                  icon="calendar"
-                  label="Matches Played"
-                  value={String(data.summary.matches)}
-                />
-                <SummaryStat
-                  icon="volleyball"
-                  label="Total Points"
-                  value={data.summary.points.toLocaleString("en-US")}
-                />
-                <SummaryStat icon="teams" label="Teams" value={String(data.summary.teams)} />
-                <SummaryStat
-                  icon="chart"
-                  label="Avg Points / Match"
-                  value={data.summary.avgPoints}
-                />
-              </div>
-            )}
-          </Panel>
-
-          <Panel
-            title="Top Matchups"
-            meta={<span className="mb-kicker">By Games Played</span>}
-          >
-            {data.matchups.length === 0 ? (
-              <PanelEmpty message="No matchups exist yet — rivalries build as teams replay each other." />
-            ) : (
-              <div className="flex flex-col divide-y divide-mb-rule">
-                {data.matchups.map((m, i) => (
-                  <div
-                    key={i}
-                    className="grid grid-cols-[18px_auto_1fr_auto] items-center gap-2 px-4 py-2"
-                  >
-                    <span className="matchbook-display text-[0.8rem] font-bold text-mb-ink-muted">
-                      {i + 1}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Crest team={m.a} size={20} />
-                      <Crest team={m.b} size={20} />
-                    </span>
-                    <span className="min-w-0">
-                      <span className="matchbook-display block truncate text-[0.78rem] font-bold">
-                        {m.a.name} vs {m.b.name}
-                      </span>
-                      <span className="block text-[0.66rem] text-mb-ink-muted">
-                        {m.leader}
-                      </span>
-                    </span>
-                    <span className="matchbook-display text-[0.9rem] font-bold tabular-nums">
-                      {m.pct}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </Panel>
-
-          <Panel title="Completed Tournaments">
-            {data.competitions.length === 0 ? (
-              <PanelEmpty message="No tournament has been completed yet." />
-            ) : (
-              <div className="flex flex-col divide-y divide-mb-rule">
-                {data.competitions.map((c) => (
-                  <Link
-                    key={c.id}
-                    href={`/competitions/${c.id}`}
-                    className="grid grid-cols-[auto_1fr_auto] items-center gap-2.5 px-4 py-2 transition-colors hover:bg-[rgba(7,50,77,0.04)]"
-                  >
-                    <MbIcon id="compete" size={16} className="text-mb-gold" />
-                    <span className="min-w-0">
-                      <span className="matchbook-display block truncate text-[0.78rem] font-bold">
-                        {c.name}
-                      </span>
-                      <span className="block text-[0.66rem] text-mb-ink-muted">
-                        {c.range}
-                      </span>
-                    </span>
-                    <span className="mb-kicker">{c.matches} Matches</span>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </Panel>
+        <div className="lg:col-span-7">
+          <LedgerPanel rows={rows} error={tournamentsError} />
         </div>
       </div>
     </>

@@ -6,11 +6,12 @@ import { useApp } from "@/context/AppContext";
 import { useAuth } from "@/context/AuthContext";
 import { PageLoadingSpinner } from "@/components/shared";
 import { MbIcon } from "@/components/matchbook/MbIcon";
-import { Panel, PanelEmpty } from "@/components/matchbook/Panel";
+import { PANEL_ROW, Panel, PanelEmpty, PanelError } from "@/components/matchbook/Panel";
 import { LiveTag, MatchRow } from "@/components/console/MatchRow";
 import { teamLookup } from "@/components/console/teamRefs";
 import { courtsWord } from "@/lib/console";
 import { formatLabel, isRotationFormat } from "@/lib/formats";
+import { playedIn } from "@/lib/history";
 import {
   liveTournaments,
   recentResults,
@@ -18,10 +19,7 @@ import {
   type RecentResult,
 } from "@/lib/home";
 import { signInHref } from "@/lib/shell";
-
-const ROW = "min-h-11 px-4 py-3 transition-colors hover:bg-[rgba(7,50,77,0.04)]";
-
-const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? "" : "s"}`;
+import { plural } from "@/lib/utils";
 
 /** "7:42 PM" for a result today, "Sep 27" for one before. */
 const whenLabel = (ts: number | undefined) => {
@@ -31,16 +29,6 @@ const whenLabel = (ts: number | undefined) => {
     ? date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
     : date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 };
-
-/** Why a panel has nothing to show: the account's tournaments and matches did not load. */
-const LoadError = ({ message }: { message: string }) => (
-  <p
-    role="alert"
-    className="m-4 border-[1.5px] border-mb-red px-3 py-2 text-[0.8rem] font-medium text-mb-red"
-  >
-    {message}
-  </p>
-);
 
 /* ---------------------------- Live tournaments ---------------------------- */
 
@@ -54,7 +42,7 @@ const LiveRow = ({ row }: { row: LiveTournament }) => {
   return (
     <Link
       href={`/competitions/${tournament.id}`}
-      className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 ${ROW}`}
+      className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 ${PANEL_ROW}`}
     >
       <div className="flex min-w-0 flex-col gap-1">
         <p className="matchbook-display text-[0.95rem] font-bold leading-tight [overflow-wrap:anywhere]">
@@ -88,7 +76,7 @@ const LivePanel = ({
     meta={rows.length > 0 ? <span className="mb-kicker">{rows.length} live</span> : undefined}
   >
     {error ? (
-      <LoadError message={error} />
+      <PanelError message={error} />
     ) : rows.length > 0 ? (
       <div className="flex flex-col divide-y divide-mb-rule">
         {rows.map((row) => (
@@ -140,7 +128,7 @@ const ResultRow = ({ result }: { result: RecentResult }) => (
   <MatchRow
     match={result.match}
     team={teamLookup([result.home, result.away])}
-    label={`${result.tournament?.name ?? "Quick match"} • ${whenLabel(result.match.completedAt)}`}
+    label={`${playedIn(result)} • ${whenLabel(result.match.completedAt)}`}
     href={result.href}
   />
 );
@@ -148,7 +136,7 @@ const ResultRow = ({ result }: { result: RecentResult }) => (
 const ResultsPanel = ({ results, error }: { results: RecentResult[]; error: string | null }) => (
   <Panel title="Recent results">
     {error ? (
-      <LoadError message={error} />
+      <PanelError message={error} />
     ) : results.length > 0 ? (
       <div className="flex flex-col divide-y divide-mb-rule">
         {results.map((result) => (
@@ -160,7 +148,7 @@ const ResultsPanel = ({ results, error }: { results: RecentResult[]; error: stri
     )}
     <Link
       href="/summaries"
-      className={`mb-panel-link justify-center border-t border-mb-rule ${ROW}`}
+      className={`mb-panel-link justify-center border-t border-mb-rule ${PANEL_ROW}`}
     >
       Every result in History
       <MbIcon id="chevron-right" size={11} />
@@ -172,7 +160,7 @@ const ResultsPanel = ({ results, error }: { results: RecentResult[]; error: stri
 
 const ToolsPanel = () => (
   <Panel title="Tools" icon="tools">
-    <Link href="/tools" className={`flex items-center gap-3 ${ROW}`}>
+    <Link href="/tools" className={`flex items-center gap-3 ${PANEL_ROW}`}>
       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-[1.5px] border-mb-navy text-mb-navy">
         <MbIcon id="court" size={18} />
       </span>

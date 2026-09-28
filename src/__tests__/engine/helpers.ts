@@ -112,6 +112,18 @@ export const entryOf = (world: World, teamId: string) => {
   return entry;
 };
 
+/** A world's tournament under another id, its matches going with it. */
+export const withId = (world: World, id: string, changes: Partial<Tournament> = {}): World => ({
+  tournament: { ...world.tournament, id, ...changes },
+  matches: world.matches.map((m) => ({ ...m, tournamentId: id })),
+});
+
+/** Several worlds as one account sees them: all the tournaments, all the matches. */
+export const together = (...worlds: World[]) => ({
+  tournaments: worlds.map((w) => w.tournament),
+  matches: worlds.flatMap((w) => w.matches),
+});
+
 /** The match waiting to be played on a court of a rotation tournament. */
 export const openOn = (world: World, court: number): Match =>
   find(world, { court, status: "pending" });

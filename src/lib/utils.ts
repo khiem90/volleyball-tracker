@@ -9,6 +9,10 @@ export function cn(...inputs: ClassValue[]) {
 export const messageOf = (error: unknown, fallback: string): string =>
   error instanceof Error ? error.message : fallback;
 
+/** "1 team", "3 teams", or with the plural given, "2 quick matches". */
+export const plural = (count: number, one: string, many = `${one}s`): string =>
+  `${count} ${count === 1 ? one : many}`;
+
 /** "Aces", "Aces and Blockers", "Aces, Blockers and Chasers". */
 export const listNames = (names: string[]): string =>
   names.length <= 1

@@ -101,15 +101,20 @@ const TournamentConsole = () => {
   const rotation = isRotationFormat(tournament.format);
   const bracket = isBracketFormat(tournament.format);
   const winner = tournament.winnerId ? page.team(tournament.winnerId) : null;
+  // A completed tournament is listed in History, not Tournaments.
+  const back =
+    tournament.status === "completed"
+      ? { href: "/summaries", label: "History" }
+      : { href: "/competitions", label: "Tournaments" };
 
   return (
     <>
       {/* Masthead */}
       <header className="mb-4 flex flex-col gap-3">
         {page.role === "owner" && (
-          <Link href="/competitions" className="mb-panel-link min-h-11 self-start">
+          <Link href={back.href} className="mb-panel-link min-h-11 self-start">
             <MbIcon id="chevron-right" size={11} className="rotate-180" />
-            Tournaments
+            {back.label}
           </Link>
         )}
 

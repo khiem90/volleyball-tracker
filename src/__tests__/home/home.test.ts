@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { liveTournaments, recentResults } from "@/lib/home";
-import type { Match, PersistentTeam, Tournament } from "@/types/game";
+import type { Match, PersistentTeam } from "@/types/game";
 import {
   NOW,
   OWNER,
@@ -8,21 +8,12 @@ import {
   openOn,
   playThrough,
   started,
+  together,
   win,
+  withId,
   withdraw,
   type World,
 } from "../engine/helpers";
-
-/** A world's tournament under another id, its matches going with it. */
-const withId = (world: World, id: string, changes: Partial<Tournament> = {}): World => ({
-  tournament: { ...world.tournament, id, ...changes },
-  matches: world.matches.map((m) => ({ ...m, tournamentId: id })),
-});
-
-const together = (...worlds: World[]) => ({
-  tournaments: worlds.map((w) => w.tournament),
-  matches: worlds.flatMap((w) => w.matches),
-});
 
 describe("liveTournaments", () => {
   it("lists only live tournaments, the most recently started first", () => {

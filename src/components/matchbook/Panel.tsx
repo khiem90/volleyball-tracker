@@ -143,6 +143,19 @@ export const FormLetters = ({ form }: { form: MbFormResult[] }) => (
   </span>
 );
 
+/** A tappable row in a panel's list: 44px at least, with the hover tint. */
+export const PANEL_ROW = "min-h-11 px-4 py-3 transition-colors hover:bg-[rgba(7,50,77,0.04)]";
+
+/** Why a panel has nothing to show: its data did not load. */
+export const PanelError = ({ message }: { message: string }) => (
+  <p
+    role="alert"
+    className="m-4 border-[1.5px] border-mb-red px-3 py-2 text-[0.8rem] font-medium text-mb-red"
+  >
+    {message}
+  </p>
+);
+
 export const PanelEmpty = ({
   message,
   actionLabel,
