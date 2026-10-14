@@ -9,11 +9,11 @@ into the rules, where every later ticket relies on it (ADR-0003).
 
 **Status:** ready-for-agent
 
-- [ ] The tournament document carries a `basedOn` field on every write that changes `revision`.
-- [ ] The rules refuse an owner's update that changes `revision` without a `basedOn` equal to the stored revision.
-- [ ] The rules refuse a scorer's update that changes `revision` without a matching `basedOn`, and refuse a scorer's update that leaves `revision` unchanged; `basedOn` joins the scorer's field allow-list.
-- [ ] A write that does not touch `revision` is unaffected.
-- [ ] Engine commands, the direct tournament replace, and rename all send their base, and every existing tournament and rules test still passes.
-- [ ] A rename refused because the tournament moved on is rebuilt on the fresh copy and lands; a rename racing a result loses neither.
-- [ ] Rules tests cover each refusal and acceptance above for both the owner and a scorer phone.
-- [ ] Existing tournament documents need no migration: the first write after deploy bases on their current revision.
+- [x] The tournament document carries a `basedOn` field on every write that changes `revision`.
+- [x] The rules refuse an owner's update that changes `revision` without a `basedOn` equal to the stored revision.
+- [x] The rules refuse a scorer's update that changes `revision` without a matching `basedOn`, and refuse a scorer's update that leaves `revision` unchanged; `basedOn` joins the scorer's field allow-list.
+- [x] A write that does not touch `revision` is unaffected.
+- [x] Engine commands, the direct tournament replace, and rename all send their base, and every existing tournament and rules test still passes.
+- [x] A rename refused because the tournament moved on is rebuilt on the fresh copy and lands; a rename racing a result loses neither.
+- [x] Rules tests cover each refusal and acceptance above for both the owner and a scorer phone.
+- [x] Existing tournament documents need no migration: the first write after deploy bases on their current revision.
