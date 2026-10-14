@@ -3,10 +3,12 @@ import {
   getDoubleElimRoundName,
   getTotalWinnersRounds,
 } from "@/lib/doubleElimination";
+import { ReversedCommandError } from "@/lib/commandQueue";
 import { openMatchOn } from "@/lib/engine";
 import { isBracketFormat, isRotationFormat } from "@/lib/formats";
 import { calculateStandings } from "@/lib/roundRobin";
 import { getRoundName, getTotalRounds } from "@/lib/singleElimination";
+import { messageOf } from "@/lib/utils";
 import { getChampionCount } from "@/lib/win2out";
 import type {
   Match,
@@ -183,6 +185,18 @@ export const courtsWord = (tournament: Tournament, count: number): string =>
   count === 1
     ? tournament.settings.terminology.venue
     : tournament.settings.terminology.venuePlural;
+
+/**
+ * What the console's error line says when a command failed. A result taken
+ * back because another phone recorded the same court first names that
+ * court, in the tournament's own words: "Court 2 was already recorded by
+ * another scorer." Every other failure keeps its message, or the fallback
+ * when it has none.
+ */
+export const failureNotice = (tournament: Tournament, error: unknown, fallback: string): string =>
+  error instanceof ReversedCommandError && error.court !== undefined
+    ? `${courtLabel(tournament, error.court)} was already recorded by another scorer.`
+    : messageOf(error, fallback);
 
 // ============================================
 // The win-button guard

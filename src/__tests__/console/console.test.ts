@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { ReversedCommandError } from "@/lib/commandQueue";
 import {
   bracketView,
   consoleAccess,
   courtsView,
+  failureNotice,
   roleFor,
   scheduleView,
   standingsView,
@@ -10,8 +12,9 @@ import {
   WIN_TAP_GUARD_MS,
   winTapGuard,
 } from "@/lib/console";
+import { EngineError } from "@/lib/engine";
 import { DEFAULT_TERMINOLOGY } from "@/types/competition-config";
-import type { Match } from "@/types/game";
+import type { Match, Tournament } from "@/types/game";
 import { draftWorld, find, openOn, started, win } from "../engine/helpers";
 
 const sorted = (ids: readonly string[]) => [...ids].sort();
@@ -431,5 +434,48 @@ describe("winTapGuard", () => {
     guard.accept(1, 1000 + WIN_TAP_GUARD_MS - 1);
 
     expect(guard.accept(1, 1000 + WIN_TAP_GUARD_MS)).toBe(true);
+  });
+});
+
+describe("failureNotice", () => {
+  const tournament = started("win2out", 6, { courts: 2 }).tournament;
+  const onFields: Tournament = {
+    ...tournament,
+    settings: {
+      ...tournament.settings,
+      terminology: { ...DEFAULT_TERMINOLOGY, venue: "field", venuePlural: "fields" },
+    },
+  };
+  const reversed = (court: number | undefined) =>
+    new ReversedCommandError(
+      new EngineError("match_completed", "That match has already been completed."),
+      court,
+    );
+
+  it("says which court another scorer recorded first when a win was taken back", () => {
+    expect(failureNotice(tournament, reversed(2), "The result could not be recorded.")).toBe(
+      "Court 2 was already recorded by another scorer.",
+    );
+  });
+
+  it("names the court in the tournament's own words", () => {
+    expect(failureNotice(onFields, reversed(1), "The result could not be recorded.")).toBe(
+      "Field 1 was already recorded by another scorer.",
+    );
+  });
+
+  it("falls back to the error's own message for a reversed change that concerned no court", () => {
+    const error = reversed(undefined);
+
+    expect(failureNotice(tournament, error, "The change could not be made.")).toBe(error.message);
+  });
+
+  it("keeps the wording of every other failure: the error's message, or the fallback when it has none", () => {
+    expect(failureNotice(tournament, new Error("No signal."), "The result could not be recorded.")).toBe(
+      "No signal.",
+    );
+    expect(failureNotice(tournament, "nope", "The result could not be recorded.")).toBe(
+      "The result could not be recorded.",
+    );
   });
 });
