@@ -7,7 +7,7 @@ separate offline fallback are deleted, so online and offline share one write pat
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** ready-for-human
 
 - [x] Every engine command the app issues goes through the command queue.
 - [x] The scoring page navigates on the engine's local result; a later reversal shows on the console's error line.
