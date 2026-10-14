@@ -1,0 +1,19 @@
+# 01: Base revision in rules and writes
+
+**What to build:** Nothing changes on screen. Every write that moves a tournament's revision now
+says which revision it was built on, and the Firestore rules refuse it when that base is no
+longer the stored revision. This moves the concurrency check out of the client transaction and
+into the rules, where every later ticket relies on it (ADR-0003).
+
+**Blocked by:** None (can start immediately)
+
+**Status:** ready-for-agent
+
+- [ ] The tournament document carries a `basedOn` field on every write that changes `revision`.
+- [ ] The rules refuse an owner's update that changes `revision` without a `basedOn` equal to the stored revision.
+- [ ] The rules refuse a scorer's update that changes `revision` without a matching `basedOn`, and refuse a scorer's update that leaves `revision` unchanged; `basedOn` joins the scorer's field allow-list.
+- [ ] A write that does not touch `revision` is unaffected.
+- [ ] Engine commands, the direct tournament replace, and rename all send their base, and every existing tournament and rules test still passes.
+- [ ] A rename refused because the tournament moved on is rebuilt on the fresh copy and lands; a rename racing a result loses neither.
+- [ ] Rules tests cover each refusal and acceptance above for both the owner and a scorer phone.
+- [ ] Existing tournament documents need no migration: the first write after deploy bases on their current revision.
