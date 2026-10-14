@@ -58,8 +58,9 @@ import type { Match, Tournament } from "@/types/game";
  * the refused writes rolled back, and replays every unacknowledged command
  * on it in order, each as a new write. A replayed command the engine
  * refuses, such as a win on a court another phone already recorded, is
- * dropped and its promise rejects with a ReversedCommandError. Nothing new
- * is written while a replay is under way.
+ * dropped and its promise rejects with a ReversedCommandError, and so is
+ * every command behind it on the same match, such as an undo of that win.
+ * Nothing new is written while a replay is under way.
  */
 
 export interface CommandOutcome extends EngineResult {
@@ -281,11 +282,15 @@ const readStoredTournament = (db: Firestore, tournamentId: string): Promise<Tour
     { maxAttempts: 1 },
   );
 
+/** The match a command concerns, when it concerns one. */
+const matchOf = (command: EngineCommand): string | undefined =>
+  "matchId" in command ? command.matchId : undefined;
+
 /** The court a command concerns, from the copy it was built on. */
-const courtOf = (command: EngineCommand, basis: TournamentSnapshot): number | undefined =>
-  "matchId" in command
-    ? basis.matches.find((match) => match.id === command.matchId)?.court
-    : undefined;
+const courtOf = (command: EngineCommand, basis: TournamentSnapshot): number | undefined => {
+  const matchId = matchOf(command);
+  return matchId === undefined ? undefined : basis.matches.find((match) => match.id === matchId)?.court;
+};
 
 class CommandQueue {
   private readonly pending: Pending[] = [];
@@ -456,10 +461,27 @@ class CommandQueue {
     }
     if (this.pending.length === 0) return;
 
+    // A command behind a reversed one on the same match was built on a
+    // result that no longer exists, so it goes with it: an undo of a win
+    // another phone's result replaced must not undo that result, which the
+    // engine cannot tell apart from the win it was tapped on.
+    const reversedMatches = new Map<string, ReversedCommandError>();
+    const reverse = (pending: Pending, cause: unknown, court: number | undefined) => {
+      const reversed = new ReversedCommandError(cause, court);
+      const matchId = matchOf(pending.command);
+      if (matchId !== undefined) reversedMatches.set(matchId, reversed);
+      this.drop(pending);
+      pending.reject(reversed);
+    };
     for (const pending of [...this.pending]) {
+      const matchId = matchOf(pending.command);
+      const before = matchId === undefined ? undefined : reversedMatches.get(matchId);
+      if (before) {
+        reverse(pending, before.cause, before.court);
+        continue;
+      }
       if (pending.attempts >= MAX_ATTEMPTS) {
-        this.drop(pending);
-        pending.reject(new ReversedCommandError(error, courtOf(pending.command, pending.basis)));
+        reverse(pending, error, courtOf(pending.command, pending.basis));
         continue;
       }
       let result: EngineResult;
@@ -474,12 +496,12 @@ class CommandQueue {
           },
         });
       } catch (engineError) {
-        this.drop(pending);
-        pending.reject(
-          engineError instanceof EngineError
-            ? new ReversedCommandError(engineError, courtOf(pending.command, pending.basis))
-            : engineError,
-        );
+        if (engineError instanceof EngineError) {
+          reverse(pending, engineError, courtOf(pending.command, pending.basis));
+        } else {
+          this.drop(pending);
+          pending.reject(engineError);
+        }
         continue;
       }
       this.issue(pending, copy, result);
