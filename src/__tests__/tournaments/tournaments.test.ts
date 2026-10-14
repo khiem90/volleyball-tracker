@@ -366,8 +366,61 @@ describeFirestoreRules("Tournaments on Firestore", (env) => {
       expect(after.name).toBe("Wednesday night");
       expect(after.revision).not.toBe(before.revision);
       expect(after.updatedAt).toBeGreaterThanOrEqual(before.updatedAt);
-      expect({ ...after, name: before.name, revision: before.revision, updatedAt: before.updatedAt }).toEqual(before);
+      expect({
+        ...after,
+        name: before.name,
+        revision: before.revision,
+        basedOn: before.basedOn,
+        updatedAt: before.updatedAt,
+      }).toEqual(before);
       expect(await matchDocsOf(db, created.id)).toEqual(matchesBefore);
+    });
+
+    it("every write that moves the revision says which revision it was built on", async () => {
+      const db = modularFirestore(env().authenticatedContext(owner));
+      const created = await createTournament(db, owner, input("round_robin"));
+
+      await applyTournamentCommand(db, created.id, { type: "start" });
+      const started = await tournamentDocOf(db, created.id);
+      expect(started.basedOn).toBe(created.revision);
+
+      await renameTournament(db, created.id, "Wednesday night");
+      const renamed = await tournamentDocOf(db, created.id);
+      expect(renamed.basedOn).toBe(started.revision);
+
+      await setSpectatorEnabled(db, created.id, true);
+      const shared = await tournamentDocOf(db, created.id);
+      expect(shared.basedOn).toBe(renamed.revision);
+
+      await updateTournament(db, { ...shared, name: "Thursday night" }, shared.revision);
+      const replaced = await tournamentDocOf(db, created.id);
+      expect(replaced.basedOn).toBe(shared.revision);
+      expect(replaced.revision).not.toBe(shared.revision);
+    });
+
+    it("a rename racing a result loses neither", async () => {
+      const db = modularFirestore(env().authenticatedContext(owner));
+      const created = await createTournament(db, owner, input("round_robin"));
+      await applyTournamentCommand(db, created.id, { type: "start" });
+      const [match] = await matchDocsOf(db, created.id);
+
+      await Promise.all([
+        applyTournamentCommand(db, created.id, {
+          type: "complete_match",
+          matchId: match.id,
+          homeScore: 25,
+          awayScore: 19,
+        }),
+        renameTournament(db, created.id, "Renamed mid-match"),
+      ]);
+
+      const stored = await tournamentDocOf(db, created.id);
+      expect(stored.name).toBe("Renamed mid-match");
+      expect(stored.status).toBe("live");
+      expect((await matchDocsOf(db, created.id)).find((m) => m.id === match.id)).toMatchObject({
+        status: "completed",
+        winnerId: match.homeTeamId,
+      });
     });
 
     it("refuses an empty name and writes nothing", async () => {

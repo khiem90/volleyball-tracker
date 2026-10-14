@@ -49,8 +49,11 @@ export interface TournamentSettings {
 /**
  * A tournament document at tournaments/{id}. Matches live in the `matches`
  * subcollection, one document each; the tournament never carries an array of
- * them. `revision` changes on every write so a command applied on stale data
- * can be detected and retried.
+ * them. `revision` changes on every write, and the write says in `basedOn`
+ * which revision it was built on; the rules refuse it when that is no
+ * longer the stored revision, so a command applied on stale data is caught
+ * and retried. Documents written before `basedOn` existed lack it until
+ * their next write.
  */
 export interface Tournament {
   id: string;
@@ -68,6 +71,8 @@ export interface Tournament {
   /** Whether the spectator link is on. Off means nobody but the owner can read it. */
   spectatorEnabled: boolean;
   revision: string;
+  /** The revision the last write was built on. Absent until a tournament's first write after it was added. */
+  basedOn?: string;
   createdAt: number;
   updatedAt: number;
   startedAt?: number;

@@ -19,7 +19,7 @@ import {
   type KeptTeam,
   type TeamChange,
 } from "@/lib/entries";
-import { isOffline, lostRace, newToken, stripUndefined } from "@/lib/firestoreData";
+import { isOffline, isRefused, lostRace, newToken, stripUndefined } from "@/lib/firestoreData";
 import { tournamentDoc } from "@/lib/tournaments";
 import type { PersistentTeam, Tournament } from "@/types/game";
 
@@ -185,8 +185,10 @@ const MAX_ATTEMPTS = 5;
 
 /**
  * Run `write` in a transaction, and again if another write got in first.
- * Rejects with Firestore's error when the client is offline, so each caller
- * can decide what a phone with no signal should do.
+ * Another write getting in first shows up as the transaction's own abort or,
+ * when it moved a tournament's revision, as the rules refusing the base the
+ * fan-out was built on. Rejects with Firestore's error when the client is
+ * offline, so each caller can decide what a phone with no signal should do.
  */
 const transact = async (
   db: Firestore,
@@ -199,19 +201,21 @@ const transact = async (
       await runTransaction(db, write, { maxAttempts: 1 });
       return;
     } catch (error) {
-      if (lostRace(error) && attempt < MAX_ATTEMPTS) continue;
+      if ((lostRace(error) || isRefused(error)) && attempt < MAX_ATTEMPTS) continue;
       throw error;
     }
   }
 };
 
 /**
- * The tournament fields a roster change writes. The revision moves on so an
- * engine command built on the old copy reloads instead of writing over it.
+ * The tournament fields a roster change writes. The revision moves on, built
+ * on the stored copy's revision as the rules require, so an engine command
+ * built on the old copy reloads instead of writing over it.
  */
-const tournamentFields = (update: EntriesUpdate, now: number) => ({
+const tournamentFields = (update: EntriesUpdate, basedOn: string, now: number) => ({
   entries: stripUndefined(update.entries),
   teamIds: update.teamIds,
+  basedOn,
   revision: newToken(),
   updatedAt: now,
 });
@@ -226,6 +230,22 @@ const freshCopies = async (
   return snapshots
     .filter((snapshot) => snapshot.exists())
     .map((snapshot) => ({ ...(snapshot.data() as Tournament), id: snapshot.id }));
+};
+
+/** Write each update onto its tournament, based on the fresh copy it was planned from. */
+const writeEntriesUpdates = (
+  tx: Transaction,
+  db: Firestore,
+  updates: EntriesUpdate[],
+  fresh: Tournament[],
+  now: number,
+) => {
+  const revisionOf = new Map(fresh.map((t) => [t.id, t.revision]));
+  for (const update of updates) {
+    const basedOn = revisionOf.get(update.tournamentId);
+    if (basedOn === undefined) continue;
+    tx.update(tournamentDoc(db, update.tournamentId), tournamentFields(update, basedOn, now));
+  }
 };
 
 /**
@@ -259,10 +279,8 @@ export const updateRosterTeam = async (
 
   try {
     await transact(db, async (tx) => {
-      const now = Date.now();
-      for (const update of fanOutTeamChange(teamId, changes, await freshCopies(tx, db, candidates))) {
-        tx.update(tournamentDoc(db, update.tournamentId), tournamentFields(update, now));
-      }
+      const fresh = await freshCopies(tx, db, candidates);
+      writeEntriesUpdates(tx, db, fanOutTeamChange(teamId, changes, fresh), fresh, Date.now());
       tx.update(ref, fields);
     });
   } catch (error) {
@@ -307,11 +325,9 @@ export const deleteRosterTeams = async (
 
   let plan = planTeamDeletion(teamIds, candidates);
   await transact(db, async (tx) => {
-    plan = planTeamDeletion(teamIds, await freshCopies(tx, db, candidates));
-    const now = Date.now();
-    for (const update of plan.draftUpdates) {
-      tx.update(tournamentDoc(db, update.tournamentId), tournamentFields(update, now));
-    }
+    const fresh = await freshCopies(tx, db, candidates);
+    plan = planTeamDeletion(teamIds, fresh);
+    writeEntriesUpdates(tx, db, plan.draftUpdates, fresh, Date.now());
     for (const teamId of plan.deletable) tx.delete(teamDoc(db, uid, teamId));
   });
   return { deleted: plan.deletable, kept: plan.kept };
