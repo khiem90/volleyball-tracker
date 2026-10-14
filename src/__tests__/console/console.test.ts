@@ -13,8 +13,10 @@ import {
   winTapGuard,
 } from "@/lib/console";
 import { EngineError } from "@/lib/engine";
+import { stackAfterFailure, stackAfterUndo } from "@/lib/undo";
 import { DEFAULT_TERMINOLOGY } from "@/types/competition-config";
 import type { Match, Tournament } from "@/types/game";
+import type { UndoEntry } from "@/types/undo";
 import { draftWorld, find, openOn, started, win } from "../engine/helpers";
 
 const sorted = (ids: readonly string[]) => [...ids].sort();
@@ -477,5 +479,60 @@ describe("failureNotice", () => {
     expect(failureNotice(tournament, "nope", "The result could not be recorded.")).toBe(
       "The result could not be recorded.",
     );
+  });
+});
+
+describe("the undo stack", () => {
+  const reversed = (court: number) =>
+    new ReversedCommandError(
+      new EngineError("match_completed", "That match has already been completed."),
+      court,
+    );
+  const entry = (id: string, tournamentId: string, matchId: string): UndoEntry => ({
+    id,
+    actionType: "instant_win",
+    description: `${id} won`,
+    tournamentId,
+    matchId,
+    timestamp: 1,
+  });
+  // Newest first, as the toast keeps it: a win on court 2, then court 1, then
+  // court 1 again in another tournament.
+  const stack = [entry("u3", "tour-a", "m-court2"), entry("u2", "tour-a", "m-court1"), entry("u1", "tour-b", "m-court1")];
+
+  describe("stackAfterFailure", () => {
+    it("drops the entry of a win that was taken back and keeps the others", () => {
+      expect(stackAfterFailure(stack, "tour-a", "m-court1", reversed(1)).map((e) => e.id)).toEqual([
+        "u3",
+        "u1",
+      ]);
+    });
+
+    it("keeps every entry when the win failed for another reason, so the result it names is still there", () => {
+      expect(stackAfterFailure(stack, "tour-a", "m-court1", new Error("No signal."))).toBe(stack);
+      expect(stackAfterFailure(stack, "tour-a", "m-court1", { code: "permission-denied" })).toBe(stack);
+    });
+  });
+
+  describe("stackAfterUndo", () => {
+    const undone = stack[1];
+
+    it("drops the entry once its undo has been applied on this phone", () => {
+      expect(stackAfterUndo(stack, undone, null).map((e) => e.id)).toEqual(["u3", "u1"]);
+    });
+
+    it("drops the entry when the engine refused the undo because the court moved on, since it can never apply later", () => {
+      const refused = new EngineError("court_moved_on", "That result cannot be undone any more.");
+
+      expect(stackAfterUndo(stack, undone, refused).map((e) => e.id)).toEqual(["u3", "u1"]);
+    });
+
+    it("drops the entry when the undo was taken back with the win it was queued behind", () => {
+      expect(stackAfterUndo(stack, undone, reversed(1)).map((e) => e.id)).toEqual(["u3", "u1"]);
+    });
+
+    it("keeps the entry after any other failure, so the undo can be tried again", () => {
+      expect(stackAfterUndo(stack, undone, new Error("No signal."))).toBe(stack);
+    });
   });
 });
