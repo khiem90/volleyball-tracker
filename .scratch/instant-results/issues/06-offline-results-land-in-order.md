@@ -9,8 +9,8 @@ can no longer overwrite results from other phones.
 
 **Status:** ready-for-agent
 
-- [ ] With the network disabled, several Instant Wins across courts show at once and the queue holds them in order.
-- [ ] On reconnect they land in tap order and the documents match what the phone showed.
-- [ ] A queued result on a court another phone recorded meanwhile is reversed with the notice; results on untouched courts land silently.
-- [ ] Emulator tests disable and re-enable the network to cover both outcomes.
-- [ ] The release note mentions that offline results are now checked on reconnect.
+- [x] With the network disabled, several Instant Wins across courts show at once and the queue holds them in order.
+- [x] On reconnect they land in tap order and the documents match what the phone showed.
+- [x] A queued result on a court another phone recorded meanwhile is reversed with the notice; results on untouched courts land silently.
+- [x] Emulator tests disable and re-enable the network to cover both outcomes.
+- [x] The release note mentions that offline results are now checked on reconnect.

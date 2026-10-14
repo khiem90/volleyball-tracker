@@ -131,3 +131,11 @@ touches what you see in the browser or what another test file is doing.
 Changes to `firestore.rules` or `firestore.indexes.json` reach the real project
 through the Firebase CLI, not through Vercel. The steps are in
 [docs/deploying-firestore-rules.md](docs/deploying-firestore-rules.md).
+
+## Release notes
+
+- Results recorded on a phone with no signal are now checked against what
+  landed meanwhile when the phone reconnects, the same as any other result.
+  They land in the order they were tapped; a result on a court another phone
+  recorded in the meantime is taken back with a notice naming the court, so a
+  reconnecting phone can no longer overwrite other phones' results.
