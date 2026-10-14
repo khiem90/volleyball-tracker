@@ -7,6 +7,8 @@ import {
   scheduleView,
   standingsView,
   teamsView,
+  WIN_TAP_GUARD_MS,
+  winTapGuard,
 } from "@/lib/console";
 import { DEFAULT_TERMINOLOGY } from "@/types/competition-config";
 import type { Match } from "@/types/game";
@@ -387,5 +389,47 @@ describe("bracketView", () => {
     const world = started("round_robin", 4);
 
     expect(bracketView(world.tournament, world.matches)).toEqual({ sections: [] });
+  });
+});
+
+describe("winTapGuard", () => {
+  it("ignores a second tap on the same court inside the guard window", () => {
+    const guard = winTapGuard();
+
+    expect(guard.accept(1, 1000)).toBe(true);
+    expect(guard.accept(1, 1000 + WIN_TAP_GUARD_MS / 2)).toBe(false);
+  });
+
+  it("records a tap on another court inside the window", () => {
+    const guard = winTapGuard();
+
+    guard.accept(1, 1000);
+
+    expect(guard.accept(2, 1000 + WIN_TAP_GUARD_MS / 2)).toBe(true);
+  });
+
+  it("records a tap on the same court once the window has passed", () => {
+    const guard = winTapGuard();
+
+    guard.accept(1, 1000);
+
+    expect(guard.accept(1, 1000 + WIN_TAP_GUARD_MS + 1)).toBe(true);
+  });
+
+  it("records a tap exactly one window after the last one: the window is half-open", () => {
+    const guard = winTapGuard();
+
+    guard.accept(1, 1000);
+
+    expect(guard.accept(1, 1000 + WIN_TAP_GUARD_MS)).toBe(true);
+  });
+
+  it("measures the window from the last accepted tap, not from an ignored one", () => {
+    const guard = winTapGuard();
+
+    guard.accept(1, 1000);
+    guard.accept(1, 1000 + WIN_TAP_GUARD_MS - 1);
+
+    expect(guard.accept(1, 1000 + WIN_TAP_GUARD_MS)).toBe(true);
   });
 });
