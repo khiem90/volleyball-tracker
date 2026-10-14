@@ -51,6 +51,12 @@ export interface UndoContextValue {
   pushUndo: (entry: Omit<UndoEntry, "id" | "timestamp">) => void;
   /** Clear all undo entries */
   clearUndo: () => void;
+  /**
+   * A result's write failed with `error`. A result the server took back
+   * loses its entry, since there is nothing left to undo; any other
+   * failure leaves it.
+   */
+  resultFailed: (tournamentId: string, matchId: string, error: unknown) => void;
   /** Stack of undo entries (most recent first) */
   undoStack: UndoEntry[];
   /** Number of available undos in the stack */
