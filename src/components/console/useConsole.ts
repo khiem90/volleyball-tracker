@@ -87,6 +87,8 @@ export const useConsole = (tournamentId: string) => {
     swapTeams,
     reorderQueue,
     correctMatchResult,
+    lateFailure,
+    clearLateFailure,
     isTournamentsLoading,
     watchTournament,
     openScorerLink,
@@ -152,6 +154,18 @@ export const useConsole = (tournamentId: string) => {
     },
     [tournament],
   );
+
+  // A result confirmed from the scoring page is answered by the server after
+  // the page has come back here, so its failure arrives through the
+  // tournament's late failure rather than a promise of this console's own.
+  // It is shown once, then cleared, and the next action clears the line as
+  // for any other failure.
+  const late = lateFailure(tournamentId);
+  useEffect(() => {
+    if (!late) return;
+    reportFailure("The result could not be saved.", late.error);
+    clearLateFailure(tournamentId);
+  }, [late, tournamentId, reportFailure, clearLateFailure]);
 
   // ============================================
   // Views

@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { collection, doc, getDoc, getDocs, type Firestore } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, setDoc, type Firestore } from "firebase/firestore";
 import { describe, expect, it } from "vitest";
 import {
   applyTournamentCommand,
@@ -20,12 +20,10 @@ import {
   deleteTournament,
   duplicateInput,
   renameTournament,
-  StaleTournamentError,
   subscribeToAccountMatches,
   subscribeToTournament,
   subscribeToTournamentMatches,
   subscribeToTournaments,
-  updateTournament,
   type NewTournamentInput,
   type TournamentSnapshot,
 } from "@/lib/tournaments";
@@ -220,27 +218,21 @@ describeFirestoreRules("Tournaments on Firestore", (env) => {
       expect(await matchDocsOf(db, created.id)).toEqual(before);
     });
 
-    it("a direct update is refused when the tournament has moved past the revision it was built on", async () => {
-      const db = modularFirestore(env().authenticatedContext(owner));
-      const created = await createTournament(db, owner, input("round_robin"));
-
-      await updateTournament(db, { ...created, name: "Renamed" }, created.revision);
-      await expect(
-        updateTournament(db, { ...created, name: "Overwritten" }, created.revision),
-      ).rejects.toBeInstanceOf(StaleTournamentError);
-
-      expect((await tournamentDocOf(db, created.id)).name).toBe("Renamed");
-    });
-
-    it("a stale direct update cannot undo a result the engine just saved", async () => {
+    it("a write built on the pre-start copy cannot undo a result the engine just saved", async () => {
       const db = modularFirestore(env().authenticatedContext(owner));
       const created = await createTournament(db, owner, input("round_robin"));
       const started = await applyTournamentCommand(db, created.id, { type: "start" });
 
-      // Someone with the pre-start copy tries to write it back.
+      // Someone with the pre-start copy writes it back, naming the revision
+      // they built on as every write does; the rules see it has moved on.
       await expect(
-        updateTournament(db, { ...created, name: "Back to draft" }, created.revision),
-      ).rejects.toBeInstanceOf(StaleTournamentError);
+        setDoc(doc(db, "tournaments", created.id), {
+          ...created,
+          name: "Back to draft",
+          basedOn: created.revision,
+          revision: "a-revision-built-on-the-draft",
+        }),
+      ).rejects.toMatchObject({ code: "permission-denied" });
 
       const stored = await tournamentDocOf(db, created.id);
       expect(stored.status).toBe("live");
@@ -429,10 +421,16 @@ describeFirestoreRules("Tournaments on Firestore", (env) => {
       const shared = await tournamentDocOf(db, created.id);
       expect(shared.basedOn).toBe(renamed.revision);
 
-      await updateTournament(db, { ...shared, name: "Thursday night" }, shared.revision);
-      const replaced = await tournamentDocOf(db, created.id);
-      expect(replaced.basedOn).toBe(shared.revision);
-      expect(replaced.revision).not.toBe(shared.revision);
+      const [match] = await matchDocsOf(db, created.id);
+      await applyTournamentCommand(db, created.id, {
+        type: "complete_match",
+        matchId: match.id,
+        homeScore: 25,
+        awayScore: 20,
+      });
+      const played = await tournamentDocOf(db, created.id);
+      expect(played.basedOn).toBe(shared.revision);
+      expect(played.revision).not.toBe(shared.revision);
     });
 
     it("a rename racing a result loses neither", async () => {
@@ -655,6 +653,155 @@ describeFirestoreRules("Tournaments on Firestore", (env) => {
         expect((await getDoc(doc(raw, "tournaments", created.id))).exists()).toBe(false);
         expect(await matchDocsOf(raw, created.id)).toHaveLength(0);
       });
+    });
+  });
+
+  describe("every command through the queue", () => {
+    /** Watches `done`, so a test can ask whether the server had answered yet. */
+    const acknowledgement = (done: Promise<void>) => {
+      let settled = false;
+      const wait = done.then(() => {
+        settled = true;
+      });
+      return { settled: () => settled, wait };
+    };
+
+    it("a Start shows its first matches locally before the server has answered, and they land after", async () => {
+      const db = modularFirestore(env().authenticatedContext(owner));
+      const created = await createTournament(db, owner, input("round_robin"));
+      const matches = watchMatches(db, created.id);
+
+      const applied = await queueTournamentCommand(db, created.id, { type: "start" });
+      const ack = acknowledgement(applied.done);
+
+      expect(ack.settled()).toBe(false);
+      expect(applied.outcome.tournament.status).toBe("live");
+      expect(applied.outcome.createdMatchIds).toHaveLength(6);
+      const shown = await matches.until((list) => list.length === 6);
+      matches.stop();
+      expect(shown.map((m) => m.id).sort()).toEqual([...applied.outcome.createdMatchIds].sort());
+
+      await ack.wait;
+      const stored = await tournamentDocOf(db, created.id);
+      expect(stored.status).toBe("live");
+      expect(stored.basedOn).toBe(created.revision);
+      expect(await matchDocsOf(db, created.id)).toHaveLength(6);
+    });
+
+    it("an End completes the tournament locally before the server has answered, and the document follows", async () => {
+      const db = modularFirestore(env().authenticatedContext(owner));
+      const created = await createTournament(db, owner, rotationInput("win2out"), { start: true });
+      const live = await when<Tournament | null>(
+        (onChange, onError) => subscribeToTournament(db, created.id, onChange, onError),
+        (t) => t?.status === "live",
+      );
+
+      const applied = await queueTournamentCommand(db, created.id, { type: "end" });
+      const ack = acknowledgement(applied.done);
+
+      expect(ack.settled()).toBe(false);
+      expect(applied.outcome.tournament.status).toBe("completed");
+      const shown = await when<Tournament | null>(
+        (onChange, onError) => subscribeToTournament(db, created.id, onChange, onError),
+        (t) => t?.status === "completed",
+      );
+      expect(shown?.completedAt).toEqual(expect.any(Number));
+
+      await ack.wait;
+      const stored = await tournamentDocOf(db, created.id);
+      expect(stored.status).toBe("completed");
+      expect(stored.basedOn).toBe(live!.revision);
+    });
+
+    it("a correction shows the new score locally before the server has answered, and the match document follows", async () => {
+      const db = modularFirestore(env().authenticatedContext(owner));
+      const created = await createTournament(db, owner, input("round_robin"), { start: true });
+      const matches = watchMatches(db, created.id);
+      const [match] = await matches.until((list) => list.length === 6);
+      await applyTournamentCommand(db, created.id, {
+        type: "complete_match",
+        matchId: match.id,
+        homeScore: 25,
+        awayScore: 20,
+      });
+
+      const applied = await queueTournamentCommand(db, created.id, {
+        type: "correct_result",
+        matchId: match.id,
+        homeScore: 21,
+        awayScore: 25,
+      });
+      const ack = acknowledgement(applied.done);
+
+      expect(ack.settled()).toBe(false);
+      const shown = await matches.until(
+        (list) => list.find((m) => m.id === match.id)?.winnerId === match.awayTeamId,
+      );
+      matches.stop();
+      expect(shown.find((m) => m.id === match.id)).toMatchObject({ homeScore: 21, awayScore: 25 });
+
+      await ack.wait;
+      expect((await matchDocsOf(db, created.id)).find((m) => m.id === match.id)).toMatchObject({
+        status: "completed",
+        homeScore: 21,
+        awayScore: 25,
+        winnerId: match.awayTeamId,
+      });
+    });
+
+    it("two phones finishing matches on different courts from the scoring page both move on at once, and both results land", async () => {
+      const ownerDb = modularFirestore(env().authenticatedContext(owner));
+      const created = await createTournament(ownerDb, owner, rotationInput("win2out"), { start: true });
+      const key = (
+        await when<string | null>(
+          (onChange, onError) => subscribeToScorerKey(ownerDb, created.id, onChange, onError),
+          (k) => k !== null,
+        )
+      )!;
+      const phones = ["phone-a-uid", "phone-b-uid"].map((uid) =>
+        modularFirestore(env().authenticatedContext(uid, { firebase: { sign_in_provider: "anonymous" } })),
+      );
+      await Promise.all([
+        proveScorer(phones[0], created.id, "phone-a-uid", key),
+        proveScorer(phones[1], created.id, "phone-b-uid", key),
+      ]);
+      const before = await matchDocsOf(ownerDb, created.id);
+      const court1 = before.find((m) => m.court === 1)!;
+      const court2 = before.find((m) => m.court === 2)!;
+
+      // Each phone shows the same copy; each scoring page confirms a result and
+      // leaves as soon as its own phone has applied it.
+      const basis = { tournament: await tournamentDocOf(ownerDb, created.id), matches: before };
+      const [onA, onB] = await Promise.all([
+        queueTournamentCommand(
+          phones[0],
+          created.id,
+          { type: "complete_match", matchId: court1.id, homeScore: 25, awayScore: 20 },
+          { basis },
+        ),
+        queueTournamentCommand(
+          phones[1],
+          created.id,
+          { type: "complete_match", matchId: court2.id, homeScore: 18, awayScore: 25 },
+          { basis },
+        ),
+      ]);
+      const acks = [acknowledgement(onA.done), acknowledgement(onB.done)];
+
+      expect(acks.map((ack) => ack.settled())).toEqual([false, false]);
+      expect(onA.outcome.matchWrites).toContainEqual(
+        expect.objectContaining({ kind: "update", matchId: court1.id, changes: expect.objectContaining({ status: "completed" }) }),
+      );
+      expect(onB.outcome.matchWrites).toContainEqual(
+        expect.objectContaining({ kind: "update", matchId: court2.id, changes: expect.objectContaining({ status: "completed" }) }),
+      );
+
+      await Promise.all(acks.map((ack) => ack.wait));
+      const after = await matchDocsOf(ownerDb, created.id);
+      expect(after.find((m) => m.id === court1.id)).toMatchObject({ status: "completed", winnerId: "t1" });
+      expect(after.find((m) => m.id === court2.id)).toMatchObject({ status: "completed", winnerId: "t4" });
+      expect(after.filter((m) => m.status === "pending").map((m) => m.court).sort()).toEqual([1, 2]);
+      expect((await tournamentDocOf(ownerDb, created.id)).win2outState?.queue.sort()).toEqual(["t2", "t3"]);
     });
   });
 
