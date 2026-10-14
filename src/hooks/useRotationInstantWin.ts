@@ -15,12 +15,13 @@ interface UseRotationInstantWinProps {
  * engine scores it, moves the queue, schedules the court's next match, and
  * keeps what it moved so the undo toast can take the result back. The undo
  * entry is offered as soon as the win shows on this phone, before the
- * server has answered. Whether the visitor may record results is the
- * caller's check; a refused or reversed write comes back as the rejection.
+ * server has answered, and withdrawn if the server takes the win back.
+ * Whether the visitor may record results is the caller's check; a refused
+ * or reversed write comes back as the rejection.
  */
 export const useRotationInstantWin = ({ tournament, getTeamName }: UseRotationInstantWinProps) => {
   const { instantWin } = useApp();
-  const { pushUndo } = useUndo();
+  const { pushUndo, resultFailed } = useUndo();
 
   const handleInstantWin = useCallback(
     async (winnerId: string, match: Match) => {
@@ -32,9 +33,14 @@ export const useRotationInstantWin = ({ tournament, getTeamName }: UseRotationIn
         tournamentId: tournament.id,
         matchId: match.id,
       });
-      await done;
+      try {
+        await done;
+      } catch (error) {
+        resultFailed(tournament.id, match.id, error);
+        throw error;
+      }
     },
-    [tournament, instantWin, getTeamName, pushUndo]
+    [tournament, instantWin, getTeamName, pushUndo, resultFailed]
   );
 
   return { handleInstantWin };

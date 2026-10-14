@@ -8,10 +8,10 @@ and an undo that was already queued behind it is dropped with it, so a court is 
 
 **Status:** ready-for-agent
 
-- [ ] Undo runs through the command queue and the court goes back from the local cache at once.
-- [ ] An undo on an unconfirmed win queues behind that win and the server sees the same order.
-- [ ] A reversed win's entry is removed from the undo toast.
-- [ ] An undo queued behind a reversed win is reported as reversed too and leaves no entry.
-- [ ] An undo the engine refuses because the court moved on still drops its entry, as today.
-- [ ] Emulator tests: a win followed by its undo on one phone lands as unplayed; a win that loses a race takes its queued undo down with it.
-- [ ] Console tests: the undo stack dropping a reversed win's entry.
+- [x] Undo runs through the command queue and the court goes back from the local cache at once.
+- [x] An undo on an unconfirmed win queues behind that win and the server sees the same order.
+- [x] A reversed win's entry is removed from the undo toast.
+- [x] An undo queued behind a reversed win is reported as reversed too and leaves no entry.
+- [x] An undo the engine refuses because the court moved on still drops its entry, as today.
+- [x] Emulator tests: a win followed by its undo on one phone lands as unplayed; a win that loses a race takes its queued undo down with it.
+- [x] Console tests: the undo stack dropping a reversed win's entry.

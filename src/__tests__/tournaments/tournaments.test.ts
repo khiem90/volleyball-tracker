@@ -1133,5 +1133,77 @@ describeFirestoreRules("Tournaments on Firestore", (env) => {
         expect(after.find((m) => m.id === court1.id)).toMatchObject({ status: "pending" });
       });
     });
+
+    describe("undo through the queue", () => {
+      const undoOn = (match: Match) => ({ type: "undo_result" as const, matchId: match.id });
+
+      it("a win followed at once by its undo goes back on the phone before the server answers, and lands as unplayed", async () => {
+        const { id } = await sharedWith([phoneA], rotationInput("win2out"));
+        const db = phoneDb(phoneA);
+        const before = await copyOf(db, id);
+        const court1 = before.matches.find((m) => m.court === 1)!;
+        const matches = watchMatches(db, id);
+        await matches.until((list) => list.length === 2);
+
+        // The undo is tapped while the win is still on its way to the server.
+        let acknowledged = false;
+        let acknowledgedWhenBack: boolean | null = null;
+        const win = await queueTournamentCommand(db, id, winOn(court1, "t1"));
+        const winDone = win.done.then(() => {
+          acknowledged = true;
+        });
+        const undo = await queueTournamentCommand(db, id, undoOn(court1));
+        await matches.until((list) => {
+          if (list.length !== 2 || list.find((m) => m.id === court1.id)?.status !== "pending") return false;
+          acknowledgedWhenBack = acknowledged;
+          return true;
+        });
+        matches.stop();
+        await Promise.all([winDone, undo.done]);
+
+        expect(acknowledgedWhenBack).toBe(false);
+        expect(undo.outcome.tournament.basedOn).toBe(win.outcome.tournament.revision);
+        const after = await matchDocsOf(ownerDb(), id);
+        expect(after).toHaveLength(2);
+        expect(after.find((m) => m.id === court1.id)).toMatchObject({
+          status: court1.status,
+          homeScore: court1.homeScore,
+          awayScore: court1.awayScore,
+        });
+        expect(after.find((m) => m.id === court1.id)?.winnerId).toBeUndefined();
+        const stored = await tournamentDocOf(ownerDb(), id);
+        expect(stored.revision).toBe(undo.outcome.tournament.revision);
+        expect(stored.win2outState?.queue).toEqual(before.tournament.win2outState?.queue);
+        expect(stored.win2outState?.courts).toEqual(before.tournament.win2outState?.courts);
+      });
+
+      it("a win that loses a race takes the undo queued behind it down with it, so the result that stood is not undone", async () => {
+        const { id } = await sharedWith([phoneA, phoneB], rotationInput("win2out"));
+        const stale = await copyOf(ownerDb(), id);
+        const court1 = stale.matches.find((m) => m.court === 1)!;
+        // Phone B's result reaches the server first. Phone A has not seen it
+        // when it taps the other team, then taps Undo straight away.
+        await applyTournamentCommand(phoneDb(phoneB), id, winOn(court1, "t2"));
+        const db = phoneDb(phoneA);
+        const win = await queueTournamentCommand(db, id, winOn(court1, "t1"), { basis: stale });
+        const undo = await queueTournamentCommand(db, id, undoOn(court1));
+
+        const [winDone, undoDone] = await Promise.allSettled([win.done, undo.done]);
+
+        expect(winDone.status).toBe("rejected");
+        expect((winDone as PromiseRejectedResult).reason).toBeInstanceOf(ReversedCommandError);
+        expect((winDone as PromiseRejectedResult).reason).toMatchObject({ court: 1, reversed: true });
+        expect(undoDone.status).toBe("rejected");
+        expect((undoDone as PromiseRejectedResult).reason).toBeInstanceOf(ReversedCommandError);
+        expect((undoDone as PromiseRejectedResult).reason).toMatchObject({ court: 1, reversed: true });
+        const after = await matchDocsOf(ownerDb(), id);
+        expect(after).toHaveLength(3);
+        expect(after.find((m) => m.id === court1.id)).toMatchObject({ status: "completed", winnerId: "t2" });
+        expect(after.filter((m) => m.court === 1 && m.status === "pending")).toHaveLength(1);
+        expect(
+          (await tournamentDocOf(ownerDb(), id)).win2outState?.courts.find((c) => c.courtNumber === 1)?.teamIds[0],
+        ).toBe("t2");
+      });
+    });
   });
 });

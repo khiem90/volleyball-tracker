@@ -172,7 +172,7 @@ interface AppContextValue {
    */
   instantWin: (matchId: string, winnerId: string) => Promise<AppliedCommand>;
   /** Take back the last result on a court of a rotation tournament. */
-  undoResult: (tournamentId: string, matchId: string) => Promise<void>;
+  undoResult: (tournamentId: string, matchId: string) => Promise<AppliedCommand>;
   /** Correct the score of a completed match; the standings follow. */
   correctMatchResult: (
     tournamentId: string,
@@ -643,10 +643,9 @@ export const AppProvider = ({ children }: AppProviderProps) => {
   // rules, so an undo on one court can never paper over a result another
   // court saved in the meantime.
   const undoResult = useCallback(
-    async (tournamentId: string, matchId: string) => {
-      await acknowledged(tournamentId, { type: "undo_result", matchId });
-    },
-    [acknowledged]
+    (tournamentId: string, matchId: string) =>
+      command(tournamentId, { type: "undo_result", matchId }),
+    [command]
   );
 
   // Also through the engine, so a correction never lands on top of a
