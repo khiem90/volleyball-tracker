@@ -12,6 +12,7 @@ import {
   capitalize,
   consoleAccess,
   courtsView,
+  failureNotice,
   isCorrectable,
   roleFor,
   scheduleView,
@@ -141,10 +142,16 @@ export const useConsole = (tournamentId: string) => {
     own || tournament ? null : stale ? "stale_link" : "not_found";
 
   // Every failure lands on the one error line. A scorer whose link the
-  // owner has replaced gets a StaleScorerLinkError, whose message says so.
-  const reportFailure = useCallback((fallback: string, error: unknown) => {
-    setActionError(messageOf(error, fallback));
-  }, []);
+  // owner has replaced gets a StaleScorerLinkError, whose message says so;
+  // a result another phone recorded first names the court it was on.
+  const reportFailure = useCallback(
+    (fallback: string, error: unknown) => {
+      setActionError(
+        tournament ? failureNotice(tournament, error, fallback) : messageOf(error, fallback),
+      );
+    },
+    [tournament],
+  );
 
   // ============================================
   // Views
@@ -205,6 +212,9 @@ export const useConsole = (tournamentId: string) => {
   // so the second tap would land on a different match. It lives in a ref so
   // that nothing on screen changes and nothing re-renders.
   const winTaps = useRef(winTapGuard());
+  // The court moves on as soon as the tap is applied locally; what the
+  // server says about it, a refusal or a result another phone recorded
+  // first, arrives later and lands on the error line.
   const instantWin = useCallback(
     (match: Match, winnerId: string) => {
       if (!access.canScore) return;

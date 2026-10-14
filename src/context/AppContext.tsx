@@ -30,7 +30,7 @@ import {
   setSpectatorEnabled,
   subscribeToScorerKey as subscribeToScorerKeyDoc,
 } from "@/lib/sharing";
-import { applyTournamentCommand } from "@/lib/commandQueue";
+import { queueTournamentCommand, type AppliedCommand } from "@/lib/commandQueue";
 import {
   buildTournamentToSave,
   deleteTournament as deleteTournamentDoc,
@@ -55,8 +55,10 @@ import { useLinkedTournaments, type LinkStatus } from "./useLinkedTournaments";
 /**
  * The app-wide provider: a thin layer over three live Firestore subscriptions,
  * roster, tournaments, and matches, plus the domain actions. Format rules live
- * in the engine: every change to a started tournament is an engine command
- * applied in a transaction.
+ * in the engine: every change to a started tournament is an engine command,
+ * applied to the copy this phone shows and written through the command
+ * queue (src/lib/commandQueue.ts), so it shows at once and is checked by
+ * the rules in the background.
  *
  * A tournament can also be reached by link, by a phone that does not own
  * it. Those are watched by useLinkedTournaments and kept apart from the
@@ -145,8 +147,13 @@ interface AppContextValue {
   /** Mark a pending match as in play. A field write, not an engine command. */
   startMatch: (matchId: string) => void;
   completeMatch: (matchId: string, result: MatchResult) => Promise<CompleteMatchOutcome>;
-  /** Record a rotation result by naming the winner; the engine scores it. */
-  instantWin: (matchId: string, winnerId: string) => Promise<void>;
+  /**
+   * Record a rotation result by naming the winner; the engine scores it.
+   * Resolves as soon as the court has moved on locally, with the server's
+   * acknowledgement in `done`, which rejects when the result was taken
+   * back or refused.
+   */
+  instantWin: (matchId: string, winnerId: string) => Promise<AppliedCommand>;
   /** Take back the last result on a court of a rotation tournament. */
   undoResult: (tournamentId: string, matchId: string) => Promise<void>;
   /** Correct the score of a completed match; the standings follow. */
@@ -329,12 +336,37 @@ export const AppProvider = ({ children }: AppProviderProps) => {
   // Every tournament command runs for whatever identity the phone has. The
   // rules decide whether the owner or a scorer may apply it and refuse the
   // rest, and a scorer whose link was replaced learns so from the error.
+  // The command is applied to the copy this phone is showing, so the first
+  // tap on a tournament waits for nothing; it resolves once the result is
+  // in the local cache and `done` once the server has accepted it.
   const command = useCallback(
-    (tournamentId: string, engineCommand: EngineCommand) =>
-      guardScorerWrite(tournamentId, () =>
-        applyTournamentCommand(requireDb(), tournamentId, engineCommand),
-      ),
-    [guardScorerWrite],
+    async (tournamentId: string, engineCommand: EngineCommand): Promise<AppliedCommand> => {
+      const database = requireDb();
+      const tournament = tournamentsById.get(tournamentId) ?? linkedTournaments.get(tournamentId);
+      const matches = tournamentsById.has(tournamentId)
+        ? ownMatches.filter((m) => m.tournamentId === tournamentId)
+        : linkedMatchesOf(tournamentId);
+      const applied = await guardScorerWrite(tournamentId, () =>
+        queueTournamentCommand(database, tournamentId, engineCommand, {
+          basis: tournament ? { tournament, matches } : undefined,
+        }),
+      );
+      return {
+        outcome: applied.outcome,
+        done: guardScorerWrite(tournamentId, () => applied.done),
+      };
+    },
+    [guardScorerWrite, tournamentsById, linkedTournaments, ownMatches, linkedMatchesOf],
+  );
+
+  /** A command whose caller has nothing to show before the server has accepted it. */
+  const acknowledged = useCallback(
+    async (tournamentId: string, engineCommand: EngineCommand) => {
+      const applied = await command(tournamentId, engineCommand);
+      await applied.done;
+      return applied.outcome;
+    },
+    [command],
   );
 
   const requireAccount = useCallback(() => {
@@ -429,16 +461,16 @@ export const AppProvider = ({ children }: AppProviderProps) => {
 
   const startTournament = useCallback(
     async (id: string, byeTeamIds?: string[]) => {
-      await command(id, { type: "start", byeTeamIds });
+      await acknowledged(id, { type: "start", byeTeamIds });
     },
-    [command]
+    [acknowledged]
   );
 
   const endTournament = useCallback(
     async (id: string) => {
-      await command(id, { type: "end" });
+      await acknowledged(id, { type: "end" });
     },
-    [command]
+    [acknowledged]
   );
 
   const getTournamentById = useCallback(
@@ -523,7 +555,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         return { completed: true };
       }
 
-      const outcome = await command(match.tournamentId, {
+      const outcome = await acknowledged(match.tournamentId, {
         type: "complete_match",
         matchId,
         ...result,
@@ -534,34 +566,35 @@ export const AppProvider = ({ children }: AppProviderProps) => {
       const completed = own?.kind === "update" && own.changes.status === "completed";
       return { completed };
     },
-    [requireAccount, matchesById, command]
+    [requireAccount, matchesById, acknowledged]
   );
 
   const instantWin = useCallback(
     async (matchId: string, winnerId: string) => {
       const match = matchesById.get(matchId);
       if (!match?.tournamentId) throw new Error("Instant win is for tournament matches.");
-      await command(match.tournamentId, { type: "instant_win", matchId, winnerId });
+      return command(match.tournamentId, { type: "instant_win", matchId, winnerId });
     },
     [matchesById, command]
   );
 
-  // Applied through the engine in a transaction, so an undo on one court can
-  // never paper over a result another court saved in the meantime.
+  // Applied through the engine on this phone's copy and checked by the
+  // rules, so an undo on one court can never paper over a result another
+  // court saved in the meantime.
   const undoResult = useCallback(
     async (tournamentId: string, matchId: string) => {
-      await command(tournamentId, { type: "undo_result", matchId });
+      await acknowledged(tournamentId, { type: "undo_result", matchId });
     },
-    [command]
+    [acknowledged]
   );
 
-  // Also through the engine in a transaction, so a correction never lands
-  // on top of a result a court saved in the meantime.
+  // Also through the engine, so a correction never lands on top of a
+  // result a court saved in the meantime.
   const correctMatchResult = useCallback(
     async (tournamentId: string, matchId: string, result: MatchResult) => {
-      await command(tournamentId, { type: "correct_result", matchId, ...result });
+      await acknowledged(tournamentId, { type: "correct_result", matchId, ...result });
     },
-    [command]
+    [acknowledged]
   );
 
   const getMatchById = useCallback((id: string) => matchesById.get(id), [matchesById]);
@@ -570,47 +603,47 @@ export const AppProvider = ({ children }: AppProviderProps) => {
   // Teams, courts, and the queue (live tournaments)
   // ============================================
 
-  // Each of these is an engine command applied in a transaction, so an edit
+  // Each of these is an engine command checked by the rules, so an edit
   // built on a stale copy is applied again on the fresh one rather than
   // papering over a result a court saved in the meantime.
   const addTeamToTournament = useCallback(
     async (tournamentId: string, team: PersistentTeam) => {
-      await command(tournamentId, {
+      await acknowledged(tournamentId, {
         type: "add_team",
         teamId: team.id,
         name: team.name,
         ...(team.color !== undefined && { color: team.color }),
       });
     },
-    [command]
+    [acknowledged]
   );
 
   const withdrawTeam = useCallback(
     async (tournamentId: string, teamId: string) => {
-      await command(tournamentId, { type: "withdraw", teamId });
+      await acknowledged(tournamentId, { type: "withdraw", teamId });
     },
-    [command]
+    [acknowledged]
   );
 
   const changeCourts = useCallback(
     async (tournamentId: string, courts: number) => {
-      await command(tournamentId, { type: "change_courts", courts });
+      await acknowledged(tournamentId, { type: "change_courts", courts });
     },
-    [command]
+    [acknowledged]
   );
 
   const swapTeams = useCallback(
     async (tournamentId: string, teamId: string, withTeamId: string) => {
-      await command(tournamentId, { type: "swap_teams", teamId, withTeamId });
+      await acknowledged(tournamentId, { type: "swap_teams", teamId, withTeamId });
     },
-    [command]
+    [acknowledged]
   );
 
   const reorderQueue = useCallback(
     async (tournamentId: string, teamId: string, position: number) => {
-      await command(tournamentId, { type: "reorder_queue", teamId, position });
+      await acknowledged(tournamentId, { type: "reorder_queue", teamId, position });
     },
-    [command]
+    [acknowledged]
   );
 
   // ============================================

@@ -46,9 +46,10 @@ import type {
  * the stored revision (ADR-0003). Two scorers finishing matches on two
  * courts at the same moment therefore cannot overwrite each other: the loser
  * of the race is refused and builds again on the fresh copy. Engine commands
- * still commit in a transaction that checks the same thing client side and
- * reloads on a StaleTournamentError; field updates such as a rename re-read
- * and retry when the rules refuse them.
+ * go through the command queue in src/lib/commandQueue.ts, which writes
+ * them as batches and replays a refused one; field updates such as a rename
+ * re-read and retry when the rules refuse them. The direct replace below
+ * still commits in a transaction that checks the same thing client side.
  */
 
 export const tournamentsCollection = (db: Firestore) => collection(db, "tournaments");
@@ -414,28 +415,11 @@ export const updateMatch = async (
 // Commands
 // ============================================
 
+/** A tournament and its matches as one phone sees them: what the engine works on. */
 export interface TournamentSnapshot {
   tournament: Tournament;
   matches: Match[];
 }
-
-/**
- * Read a tournament and then its matches. The tournament comes first on
- * purpose: a change that lands between the two reads bumps the revision the
- * transaction later checks, so it can never be missed.
- */
-export const loadTournament = async (
-  db: Firestore,
-  tournamentId: string,
-): Promise<TournamentSnapshot | null> => {
-  const tournamentSnapshot = await getDoc(tournamentDoc(db, tournamentId));
-  if (!tournamentSnapshot.exists()) return null;
-  const matchesSnapshot = await getDocs(matchesCollection(db, tournamentId));
-  return {
-    tournament: { ...(tournamentSnapshot.data() as Tournament), id: tournamentSnapshot.id },
-    matches: matchesSnapshot.docs.map((d) => ({ ...(d.data() as Match), id: d.id })),
-  };
-};
 
 /** The stored tournament moved on while a write was being prepared. */
 export class StaleTournamentError extends Error {
