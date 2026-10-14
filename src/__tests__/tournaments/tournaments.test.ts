@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { collection, doc, getDoc, getDocs, type Firestore } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, setDoc, type Firestore } from "firebase/firestore";
 import { describe, expect, it } from "vitest";
 import {
   applyTournamentCommand,
@@ -20,12 +20,10 @@ import {
   deleteTournament,
   duplicateInput,
   renameTournament,
-  StaleTournamentError,
   subscribeToAccountMatches,
   subscribeToTournament,
   subscribeToTournamentMatches,
   subscribeToTournaments,
-  updateTournament,
   type NewTournamentInput,
   type TournamentSnapshot,
 } from "@/lib/tournaments";
@@ -220,27 +218,21 @@ describeFirestoreRules("Tournaments on Firestore", (env) => {
       expect(await matchDocsOf(db, created.id)).toEqual(before);
     });
 
-    it("a direct update is refused when the tournament has moved past the revision it was built on", async () => {
-      const db = modularFirestore(env().authenticatedContext(owner));
-      const created = await createTournament(db, owner, input("round_robin"));
-
-      await updateTournament(db, { ...created, name: "Renamed" }, created.revision);
-      await expect(
-        updateTournament(db, { ...created, name: "Overwritten" }, created.revision),
-      ).rejects.toBeInstanceOf(StaleTournamentError);
-
-      expect((await tournamentDocOf(db, created.id)).name).toBe("Renamed");
-    });
-
-    it("a stale direct update cannot undo a result the engine just saved", async () => {
+    it("a write built on the pre-start copy cannot undo a result the engine just saved", async () => {
       const db = modularFirestore(env().authenticatedContext(owner));
       const created = await createTournament(db, owner, input("round_robin"));
       const started = await applyTournamentCommand(db, created.id, { type: "start" });
 
-      // Someone with the pre-start copy tries to write it back.
+      // Someone with the pre-start copy writes it back, naming the revision
+      // they built on as every write does; the rules see it has moved on.
       await expect(
-        updateTournament(db, { ...created, name: "Back to draft" }, created.revision),
-      ).rejects.toBeInstanceOf(StaleTournamentError);
+        setDoc(doc(db, "tournaments", created.id), {
+          ...created,
+          name: "Back to draft",
+          basedOn: created.revision,
+          revision: "a-revision-built-on-the-draft",
+        }),
+      ).rejects.toMatchObject({ code: "permission-denied" });
 
       const stored = await tournamentDocOf(db, created.id);
       expect(stored.status).toBe("live");
@@ -429,10 +421,16 @@ describeFirestoreRules("Tournaments on Firestore", (env) => {
       const shared = await tournamentDocOf(db, created.id);
       expect(shared.basedOn).toBe(renamed.revision);
 
-      await updateTournament(db, { ...shared, name: "Thursday night" }, shared.revision);
-      const replaced = await tournamentDocOf(db, created.id);
-      expect(replaced.basedOn).toBe(shared.revision);
-      expect(replaced.revision).not.toBe(shared.revision);
+      const [match] = await matchDocsOf(db, created.id);
+      await applyTournamentCommand(db, created.id, {
+        type: "complete_match",
+        matchId: match.id,
+        homeScore: 25,
+        awayScore: 20,
+      });
+      const played = await tournamentDocOf(db, created.id);
+      expect(played.basedOn).toBe(shared.revision);
+      expect(played.revision).not.toBe(shared.revision);
     });
 
     it("a rename racing a result loses neither", async () => {

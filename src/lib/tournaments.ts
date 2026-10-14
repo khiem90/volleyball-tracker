@@ -8,7 +8,6 @@ import {
   onSnapshot,
   orderBy,
   query,
-  runTransaction,
   setDoc,
   updateDoc,
   where,
@@ -18,14 +17,7 @@ import {
 } from "firebase/firestore";
 import { applyCommand, type MatchWrite } from "@/lib/engine";
 import { createdMatches } from "@/lib/engine/writes";
-import {
-  isOffline,
-  isRefused,
-  lostRace,
-  newToken,
-  stripUndefined,
-  toUpdatePayload,
-} from "@/lib/firestoreData";
+import { isRefused, newToken, stripUndefined, toUpdatePayload } from "@/lib/firestoreData";
 import type {
   Entry,
   Match,
@@ -45,11 +37,13 @@ import type {
  * revision it was built on, and the rules refuse it when that is no longer
  * the stored revision (ADR-0003). Two scorers finishing matches on two
  * courts at the same moment therefore cannot overwrite each other: the loser
- * of the race is refused and builds again on the fresh copy. Engine commands
- * go through the command queue in src/lib/commandQueue.ts, which writes
- * them as batches and replays a refused one; field updates such as a rename
- * re-read and retry when the rules refuse them. The direct replace below
- * still commits in a transaction that checks the same thing client side.
+ * of the race is refused and builds again on the fresh copy. There is one
+ * write path, online or offline: a batch the local cache shows at once and
+ * the rules check when it reaches the server. Engine commands go through
+ * the command queue in src/lib/commandQueue.ts, which writes each as one
+ * batch and replays a refused one on the fresh copy; field updates such as
+ * a rename re-read and retry when the rules refuse them. Nothing here runs
+ * a transaction or checks a revision on the client.
  */
 
 export const tournamentsCollection = (db: Firestore) => collection(db, "tournaments");
@@ -365,21 +359,6 @@ export const renameTournament = async (
 };
 
 /**
- * Replace a tournament document with a new revision, for edits made outside
- * the engine such as reordering a queue or restoring an undo snapshot.
- * `expectedRevision` is the revision the caller's copy was built on; if the
- * stored tournament has moved past it the write is refused with a
- * StaleTournamentError and nothing changes.
- */
-export const updateTournament = async (
-  db: Firestore,
-  tournament: Tournament,
-  expectedRevision: string,
-): Promise<void> => {
-  await commitTournament(db, nextRevision(tournament, expectedRevision, Date.now()), []);
-};
-
-/**
  * Delete a tournament with every match under it, its scorer key, and the
  * proofs of every phone that opened its scorer link.
  */
@@ -421,15 +400,7 @@ export interface TournamentSnapshot {
   matches: Match[];
 }
 
-/** The stored tournament moved on while a write was being prepared. */
-export class StaleTournamentError extends Error {
-  constructor() {
-    super("The tournament changed while the change was being saved. Try again.");
-    this.name = "StaleTournamentError";
-  }
-}
-
-/** Where match writes go: a batch, or a transaction. */
+/** Where match writes go: the batch a command is written as. */
 export interface MatchWriter {
   set: (ref: ReturnType<typeof matchDoc>, data: Match) => void;
   update: (ref: ReturnType<typeof matchDoc>, data: Record<string, unknown>) => void;
@@ -455,57 +426,5 @@ export const writeMatches = (
         writer.delete(matchDoc(db, tournamentId, write.matchId));
         break;
     }
-  }
-};
-
-/**
- * Write a tournament and its match writes together, provided the stored
- * tournament still carries the revision in `tournament.basedOn`. With no
- * network the writes go out as a batch instead, queued by the offline cache
- * until the connection is back, so a phone with no signal keeps scoring; the
- * batch carries the same base, so the rules check it on reconnect like any
- * other write, and the cache rolls it back if it is refused.
- */
-const commitTournament = async (
-  db: Firestore,
-  tournament: BasedTournament,
-  matchWrites: MatchWrite[],
-): Promise<void> => {
-  const ref = tournamentDoc(db, tournament.id);
-  try {
-    await runTransaction(
-      db,
-      async (tx) => {
-        const current = await tx.get(ref);
-        if (!current.exists() || current.data().revision !== tournament.basedOn) {
-          throw new StaleTournamentError();
-        }
-        tx.set(ref, stripUndefined(tournament));
-        writeMatches(db, tournament.id, matchWrites, {
-          set: (matchRef, data) => tx.set(matchRef, data),
-          update: (matchRef, data) => tx.update(matchRef, data),
-          delete: (matchRef) => tx.delete(matchRef),
-        });
-      },
-      // Firestore's own retries would rerun the function on the same stale
-      // input; callers reload and retry instead.
-      { maxAttempts: 1 },
-    );
-  } catch (error) {
-    if (lostRace(error)) throw new StaleTournamentError();
-    if (!isOffline(error)) throw error;
-
-    const batch = writeBatch(db);
-    batch.set(ref, stripUndefined(tournament));
-    writeMatches(db, tournament.id, matchWrites, {
-      set: (matchRef, data) => batch.set(matchRef, data),
-      update: (matchRef, data) => batch.update(matchRef, data),
-      delete: (matchRef) => batch.delete(matchRef),
-    });
-    // The commit resolves when the server accepts it, which offline is
-    // whenever the connection returns. The local cache has it at once.
-    batch.commit().catch((commitError) => {
-      console.error("Queued tournament write failed:", commitError);
-    });
   }
 };
