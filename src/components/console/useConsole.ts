@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useApp } from "@/context/AppContext";
@@ -17,6 +17,7 @@ import {
   scheduleView,
   standingsView,
   teamsView,
+  winTapGuard,
   type TeamRow,
 } from "@/lib/console";
 import { bracketAddRefusal } from "@/lib/engine";
@@ -198,9 +199,16 @@ export const useConsole = (tournamentId: string) => {
 
   const getTeamName = useCallback((id: string) => team(id).name, [team]);
   const { handleInstantWin } = useRotationInstantWin({ tournament, getTeamName });
+  // A double tap on a court records one result, not two: for a moment after
+  // a tap, that court's win buttons ignore taps. The guard is keyed by court
+  // because the court shows its next match the instant a result is recorded,
+  // so the second tap would land on a different match. It lives in a ref so
+  // that nothing on screen changes and nothing re-renders.
+  const winTaps = useRef(winTapGuard());
   const instantWin = useCallback(
     (match: Match, winnerId: string) => {
       if (!access.canScore) return;
+      if (!winTaps.current.accept(match.court ?? match.id, Date.now())) return;
       setActionError(null);
       handleInstantWin(winnerId, match).catch((error: unknown) => {
         console.error("Instant win failed:", error);
