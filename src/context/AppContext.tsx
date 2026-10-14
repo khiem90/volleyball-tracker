@@ -30,8 +30,8 @@ import {
   setSpectatorEnabled,
   subscribeToScorerKey as subscribeToScorerKeyDoc,
 } from "@/lib/sharing";
+import { applyTournamentCommand } from "@/lib/commandQueue";
 import {
-  applyTournamentCommand,
   buildTournamentToSave,
   deleteTournament as deleteTournamentDoc,
   duplicateInput,

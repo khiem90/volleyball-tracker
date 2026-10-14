@@ -9,7 +9,8 @@ import {
   subscribeToRoster,
   updateRosterTeam,
 } from "@/lib/roster";
-import { applyTournamentCommand, createTournament } from "@/lib/tournaments";
+import { applyTournamentCommand } from "@/lib/commandQueue";
+import { createTournament } from "@/lib/tournaments";
 import {
   DEFAULT_POINTS_FOR_LOSS,
   DEFAULT_POINTS_FOR_WIN,
