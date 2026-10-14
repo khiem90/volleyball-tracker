@@ -1298,6 +1298,46 @@ describeFirestoreRules("Tournaments on Firestore", (env) => {
         },
         OFFLINE_TIMEOUT,
       );
+
+      it(
+        "a reconnecting phone's result on a court another phone recorded meanwhile is taken back, and its result on an untouched court lands",
+        async () => {
+          const { id } = await sharedWith([phoneA, phoneB], rotationInput("win2out"));
+          const db = phoneDb(phoneA);
+          const before = await copyOf(db, id);
+          const court1 = before.matches.find((m) => m.court === 1)!;
+          const court2 = before.matches.find((m) => m.court === 2)!;
+
+          let onCourt1: Awaited<ReturnType<typeof queueTournamentCommand>>;
+          let onCourt2: Awaited<ReturnType<typeof queueTournamentCommand>>;
+          try {
+            await disableNetwork(db);
+            onCourt1 = await queueTournamentCommand(db, id, winOn(court1, "t1"), { basis: before });
+            onCourt2 = await queueTournamentCommand(db, id, winOn(court2, "t4"));
+            // Phone B records court 1 while A has no signal.
+            await applyTournamentCommand(phoneDb(phoneB), id, winOn(court1, "t2"));
+          } finally {
+            await enableNetwork(db);
+          }
+
+          const [first, second] = await Promise.allSettled([onCourt1.done, onCourt2.done]);
+
+          expect(first.status).toBe("rejected");
+          expect((first as PromiseRejectedResult).reason).toBeInstanceOf(ReversedCommandError);
+          expect((first as PromiseRejectedResult).reason).toMatchObject({ court: 1, reversed: true });
+          expect((first as PromiseRejectedResult).reason.cause).toBeInstanceOf(EngineError);
+          expect(second.status).toBe("fulfilled");
+          const after = await matchDocsOf(ownerDb(), id);
+          expect(after).toHaveLength(4);
+          expect(after.find((m) => m.id === court1.id)).toMatchObject({ status: "completed", winnerId: "t2" });
+          expect(after.find((m) => m.id === court2.id)).toMatchObject({ status: "completed", winnerId: "t4" });
+          expect(after.filter((m) => m.status === "pending").map((m) => m.court).sort()).toEqual([1, 2]);
+          const stored = await tournamentDocOf(ownerDb(), id);
+          expect(stored.win2outState?.courts.map((c) => c.teamIds[0])).toEqual(["t2", "t4"]);
+          expect(stored.win2outState?.queue.sort()).toEqual(["t1", "t3"]);
+        },
+        OFFLINE_TIMEOUT,
+      );
     });
   });
 });
