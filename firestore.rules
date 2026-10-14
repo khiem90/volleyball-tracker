@@ -29,9 +29,10 @@ service cloud.firestore {
     // Tournaments are owned by the account that created them. The owner
     // writes anything. A scorer, a phone holding the scorer link, may record
     // results, reorder the queue, and swap courts while the tournament is
-    // live, and nothing else. Anyone holding the link can read while the spectator link is on;
-    // with it off, only the owner and scorers can read the tournament or its
-    // matches.
+    // live, and nothing else. Either one's write that moves the revision
+    // must be built on the stored revision. Anyone holding the link can read
+    // while the spectator link is on; with it off, only the owner and
+    // scorers can read the tournament or its matches.
     match /tournaments/{tournamentId} {
       function tournament() {
         return get(/databases/$(database)/documents/tournaments/$(tournamentId)).data;
@@ -59,18 +60,35 @@ service cloud.firestore {
         return tournament().status == 'live';
       }
 
+      // Every write that moves the revision says which revision it was
+      // built on, in `basedOn`, and is refused when that is no longer the
+      // stored one. This is the concurrency check for the whole tournament
+      // (see ADR-0003): a phone that built a result on a copy another phone
+      // has since moved past loses here, not by overwriting. A write that
+      // leaves the revision alone is not asked for a base.
+      function movesRevision() {
+        return request.resource.data.revision != resource.data.revision;
+      }
+
+      function basedOnStoredRevision() {
+        return !movesRevision()
+          || request.resource.data.get('basedOn', null) == resource.data.revision;
+      }
+
       // A result or a court edit may change the tournament's rotation state
-      // and revision. The last result of a round robin or a bracket also
-      // completes the tournament, so a scorer may move one of those to
-      // completed when a winner from its teams comes with it. End names no
-      // winner and stays with the owner, and the rotation formats finish
-      // only through End. The rules cannot see whether every match has
-      // been played, so a scorer writing to Firestore outside the app could
-      // complete a round robin or a bracket early (see ADR-0002).
+      // and must move the revision, with its base, so it is checked above
+      // like every other result. The last result of a round robin or a
+      // bracket also completes the tournament, so a scorer may move one of
+      // those to completed when a winner from its teams comes with it. End
+      // names no winner and stays with the owner, and the rotation formats
+      // finish only through End. The rules cannot see whether every match
+      // has been played, so a scorer writing to Firestore outside the app
+      // could complete a round robin or a bracket early (see ADR-0002).
       function scorerChange() {
         let changed = request.resource.data.diff(resource.data).affectedKeys();
-        return changed.hasOnly([
-            'revision', 'updatedAt', 'win2outState', 'twoMatchRotationState',
+        return movesRevision()
+          && changed.hasOnly([
+            'revision', 'basedOn', 'updatedAt', 'win2outState', 'twoMatchRotationState',
             'status', 'completedAt', 'winnerId'
           ])
           && (!changed.hasAny(['status', 'completedAt', 'winnerId'])
@@ -88,10 +106,11 @@ service cloud.firestore {
         signedIn() && request.resource.data.ownerId == request.auth.uid;
 
       allow update: if
-        (signedIn()
-          && resource.data.ownerId == request.auth.uid
-          && request.resource.data.ownerId == resource.data.ownerId)
-        || (resource.data.status == 'live' && isScorer() && scorerChange());
+        basedOnStoredRevision()
+        && ((signedIn()
+            && resource.data.ownerId == request.auth.uid
+            && request.resource.data.ownerId == resource.data.ownerId)
+          || (resource.data.status == 'live' && isScorer() && scorerChange()));
 
       allow delete: if
         signedIn() && resource.data.ownerId == request.auth.uid;

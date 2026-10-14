@@ -1,11 +1,10 @@
-import { onSnapshot, setDoc, updateDoc, type Firestore, type Unsubscribe } from "firebase/firestore";
-import { newToken } from "@/lib/firestoreData";
+import { onSnapshot, setDoc, type Firestore, type Unsubscribe } from "firebase/firestore";
 import { STALE_SCORER_LINK } from "@/lib/shareLinks";
 import {
   newScorerKey,
   scorerKeyDoc,
   scorerProofDoc,
-  tournamentDoc,
+  updateTournamentFields,
   type ScorerKey,
 } from "@/lib/tournaments";
 
@@ -49,20 +48,16 @@ export const regenerateScorerKey = async (db: Firestore, tournamentId: string): 
 
 /**
  * Turn the spectator link on or off. Like a rename, this writes the one
- * field with a fresh revision, so a result landing at the same moment is
- * never overwritten and an engine command built on the old copy reloads
- * rather than writing the old flag back.
+ * field with a fresh revision built on the stored one, so a result landing
+ * at the same moment is never overwritten and an engine command built on
+ * the old copy reloads rather than writing the old flag back.
  */
 export const setSpectatorEnabled = async (
   db: Firestore,
   tournamentId: string,
   enabled: boolean,
 ): Promise<void> => {
-  await updateDoc(tournamentDoc(db, tournamentId), {
-    spectatorEnabled: enabled,
-    revision: newToken(),
-    updatedAt: Date.now(),
-  });
+  await updateTournamentFields(db, tournamentId, { spectatorEnabled: enabled });
 };
 
 // ============================================
