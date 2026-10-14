@@ -75,6 +75,16 @@ export interface CompleteMatchOutcome {
   completed: boolean;
 }
 
+/**
+ * A command's failure that arrived after its caller had moved on: a result
+ * confirmed from the scoring page that the server refused or another phone
+ * recorded first. The console puts it on its error line.
+ */
+export interface LateFailure {
+  error: unknown;
+  at: number;
+}
+
 interface AppContextValue {
   /** The signed-in account's teams; empty for a guest. */
   roster: PersistentTeam[];
@@ -146,6 +156,13 @@ interface AppContextValue {
   updateMatchScore: (matchId: string, homeScore: number, awayScore: number) => void;
   /** Mark a pending match as in play. A field write, not an engine command. */
   startMatch: (matchId: string) => void;
+  /**
+   * Record a match's result. Resolves as soon as the engine has applied it
+   * on this phone, so the scoring page can leave at once; what the server
+   * says about a tournament match arrives later, and a refusal or a result
+   * another phone recorded first is kept as the tournament's lateFailure.
+   * A quick match resolves once it is saved.
+   */
   completeMatch: (matchId: string, result: MatchResult) => Promise<CompleteMatchOutcome>;
   /**
    * Record a rotation result by naming the winner; the engine scores it.
@@ -163,6 +180,10 @@ interface AppContextValue {
     result: MatchResult,
   ) => Promise<void>;
   getMatchById: (id: string) => Match | undefined;
+  /** The tournament's latest late failure, until the console has shown it. */
+  lateFailure: (tournamentId: string) => LateFailure | null;
+  /** The console has shown the tournament's late failure. */
+  clearLateFailure: (tournamentId: string) => void;
   // Teams, courts, and the queue of a live tournament
   /** Enter a roster team into a live tournament. In a rotation format it joins the back of the queue. */
   addTeamToTournament: (tournamentId: string, team: PersistentTeam) => Promise<void>;
@@ -544,6 +565,41 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     [writeMatch]
   );
 
+  // ============================================
+  // Late failures
+  // ============================================
+
+  // A command the scoring page confirmed is acknowledged after the page has
+  // gone back to the console, so its failure cannot come back through the
+  // page's own promise. It is kept per tournament for the console to show.
+  const [lateFailures, setLateFailures] = useState<ReadonlyMap<string, LateFailure>>(
+    () => new Map(),
+  );
+
+  const failLater = useCallback((tournamentId: string, error: unknown) => {
+    setLateFailures((current) =>
+      new Map(current).set(tournamentId, { error, at: Date.now() }),
+    );
+  }, []);
+
+  const lateFailure = useCallback(
+    (tournamentId: string) => lateFailures.get(tournamentId) ?? null,
+    [lateFailures],
+  );
+
+  const clearLateFailure = useCallback((tournamentId: string) => {
+    setLateFailures((current) => {
+      if (!current.has(tournamentId)) return current;
+      const next = new Map(current);
+      next.delete(tournamentId);
+      return next;
+    });
+  }, []);
+
+  // The page moves on with the engine's local result, the same as an
+  // instant win on the console. The server's answer, a refusal or a result
+  // another phone recorded first, arrives after the page has gone and is
+  // kept for the console's error line.
   const completeMatch = useCallback(
     async (matchId: string, result: MatchResult): Promise<CompleteMatchOutcome> => {
       const match = matchesById.get(matchId);
@@ -555,18 +611,23 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         return { completed: true };
       }
 
-      const outcome = await acknowledged(match.tournamentId, {
+      const { tournamentId } = match;
+      const applied = await command(tournamentId, {
         type: "complete_match",
         matchId,
         ...result,
       });
-      const own = outcome.matchWrites.find(
+      applied.done.catch((error: unknown) => {
+        console.error("Failed to save the result:", error);
+        failLater(tournamentId, error);
+      });
+      const own = applied.outcome.matchWrites.find(
         (w) => w.kind === "update" && w.matchId === matchId
       );
       const completed = own?.kind === "update" && own.changes.status === "completed";
       return { completed };
     },
-    [requireAccount, matchesById, acknowledged]
+    [requireAccount, matchesById, command, failLater]
   );
 
   const instantWin = useCallback(
@@ -703,6 +764,8 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     undoResult,
     correctMatchResult,
     getMatchById,
+    lateFailure,
+    clearLateFailure,
     addTeamToTournament,
     withdrawTeam,
     changeCourts,

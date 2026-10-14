@@ -50,7 +50,8 @@ export const regenerateScorerKey = async (db: Firestore, tournamentId: string): 
  * Turn the spectator link on or off. Like a rename, this writes the one
  * field with a fresh revision built on the stored one, so a result landing
  * at the same moment is never overwritten and an engine command built on
- * the old copy reloads rather than writing the old flag back.
+ * the old copy is refused and replays on the fresh one rather than writing
+ * the old flag back.
  */
 export const setSpectatorEnabled = async (
   db: Firestore,

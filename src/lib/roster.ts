@@ -210,7 +210,8 @@ const transact = async (
 /**
  * The tournament fields a roster change writes. The revision moves on, built
  * on the stored copy's revision as the rules require, so an engine command
- * built on the old copy reloads instead of writing over it.
+ * built on the old copy is refused and replays on the fresh one instead of
+ * writing over it.
  */
 const tournamentFields = (update: EntriesUpdate, basedOn: string, now: number) => ({
   entries: stripUndefined(update.entries),
