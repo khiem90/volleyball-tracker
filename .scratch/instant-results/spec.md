@@ -1,6 +1,6 @@
 # Instant results
 
-Status: ready-for-agent
+Status: ready-for-human
 
 Agreed in a grilling session on 2026-10-14. Vocabulary is in `CONTEXT.md`. The
 structural decision, moving the concurrency check from a client transaction into

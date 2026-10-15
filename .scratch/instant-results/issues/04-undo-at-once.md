@@ -6,7 +6,7 @@ and an undo that was already queued behind it is dropped with it, so a court is 
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [x] Undo runs through the command queue and the court goes back from the local cache at once.
 - [x] An undo on an unconfirmed win queues behind that win and the server sees the same order.
@@ -15,3 +15,7 @@ and an undo that was already queued behind it is dropped with it, so a court is 
 - [x] An undo the engine refuses because the court moved on still drops its entry, as today.
 - [x] Emulator tests: a win followed by its undo on one phone lands as unplayed; a win that loses a race takes its queued undo down with it.
 - [x] Console tests: the undo stack dropping a reversed win's entry.
+
+## Comments
+
+- 2026-10-15: Implemented test-first on the integration branch `claude/instant-results` (merge 74b75b1); code-review fixes landed in a3ae899. All acceptance boxes ticked; the full suite (572 tests) passes against the emulator.

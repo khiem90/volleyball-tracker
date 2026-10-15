@@ -9,7 +9,7 @@ courts never clash.
 
 **Blocked by:** 01
 
-**Status:** ready-for-human
+**Status:** resolved
 
 - [x] A command queue lives in the data module with no React in it: it holds the commands the server has not yet acknowledged, in order, and the copy of the tournament and matches they produced.
 - [x] Instant Win applies the engine to the queue's copy when commands are pending, otherwise to the subscribed copy, and writes the result as a single batched write carrying `basedOn`.
@@ -32,3 +32,5 @@ the same document, which stays authorized after the scorer link goes stale. The 
 listeners once nothing is pending; a listener left open at process exit made the emulator's clear
 endpoint answer 500 for the next run. The existing regenerated-link test now expects
 `StaleScorerLinkError` from the data module, since the queue classifies the refusal itself.
+
+- 2026-10-15: Implemented test-first on the integration branch `claude/instant-results` (merge a5b0a23); code-review fixes landed in a3ae899. All acceptance boxes ticked; the full suite (572 tests) passes against the emulator.

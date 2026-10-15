@@ -7,7 +7,7 @@ into the rules, where every later ticket relies on it (ADR-0003).
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [x] The tournament document carries a `basedOn` field on every write that changes `revision`.
 - [x] The rules refuse an owner's update that changes `revision` without a `basedOn` equal to the stored revision.
@@ -17,3 +17,7 @@ into the rules, where every later ticket relies on it (ADR-0003).
 - [x] A rename refused because the tournament moved on is rebuilt on the fresh copy and lands; a rename racing a result loses neither.
 - [x] Rules tests cover each refusal and acceptance above for both the owner and a scorer phone.
 - [x] Existing tournament documents need no migration: the first write after deploy bases on their current revision.
+
+## Comments
+
+- 2026-10-15: Implemented test-first on the integration branch `claude/instant-results` (merge b44b5e6); code-review fixes landed in a3ae899. All acceptance boxes ticked; the full suite (572 tests) passes against the emulator.

@@ -7,7 +7,7 @@ separate offline fallback are deleted, so online and offline share one write pat
 
 **Blocked by:** 02
 
-**Status:** ready-for-human
+**Status:** resolved
 
 - [x] Every engine command the app issues goes through the command queue.
 - [x] The scoring page navigates on the engine's local result; a later reversal shows on the console's error line.
@@ -15,3 +15,7 @@ separate offline fallback are deleted, so online and offline share one write pat
 - [x] Comments that describe commands as running "in a transaction", on the command runner, undo, and correction, are rewritten.
 - [x] The existing tournament suite passes unchanged in what it asserts about documents.
 - [x] Emulator tests: a Start, an End, and a correction each land through the queue; two phones completing matches on different courts from the scoring page both land.
+
+## Comments
+
+- 2026-10-15: Implemented test-first on the integration branch `claude/instant-results` (merge 55ffd9e); code-review fixes landed in a3ae899. All acceptance boxes ticked; the full suite (572 tests) passes against the emulator.
