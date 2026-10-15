@@ -1141,6 +1141,27 @@ describeFirestoreRules("Tournaments on Firestore", (env) => {
         expect(after).toHaveLength(3);
         expect(after.find((m) => m.id === court1.id)).toMatchObject({ status: "pending" });
       });
+
+      it("a phone with no copy of the tournament is not told it is gone: its result waits for the server's copy and lands", async () => {
+        const { id } = await sharedWith([phoneA], rotationInput("win2out"));
+        const court1 = (await matchDocsOf(ownerDb(), id)).find((m) => m.court === 1)!;
+        // This phone has never read the tournament, so its cache holds no
+        // copy; while it has no signal, the cache is all its listeners can
+        // answer from, and they answer that there is no such document.
+        const db = phoneDb(phoneA);
+        await disableNetwork(db);
+
+        const applied = queueTournamentCommand(db, id, winOn(court1, "t1"));
+        await enableNetwork(db);
+        const win = await applied;
+        await win.done;
+
+        expect(win.outcome.tournament.basedOn).toBe((await copyOf(ownerDb(), id)).tournament.basedOn);
+        const after = await matchDocsOf(ownerDb(), id);
+        expect(after).toHaveLength(3);
+        expect(after.find((m) => m.id === court1.id)).toMatchObject({ status: "completed", winnerId: "t1" });
+        expect(after.find((m) => m.id === win.outcome.createdMatchIds[0])).toMatchObject({ court: 1, status: "pending" });
+      });
     });
 
     describe("undo through the queue", () => {
