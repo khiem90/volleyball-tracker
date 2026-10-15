@@ -1071,6 +1071,29 @@ describeFirestoreRules("Tournaments on Firestore", (env) => {
         ).toBe(stoodFor);
       });
 
+      it("two phones tapping wins on different courts at the same moment both land, and neither is taken back", async () => {
+        const { id } = await sharedWith([phoneA, phoneB], rotationInput("win2out"));
+        const basis = await copyOf(ownerDb(), id);
+        const court1 = basis.matches.find((m) => m.court === 1)!;
+        const court2 = basis.matches.find((m) => m.court === 2)!;
+
+        // Both phones show the same copy and tap at the same moment, each on its own court.
+        const [onA, onB] = await Promise.all([
+          queueTournamentCommand(phoneDb(phoneA), id, winOn(court1, "t1"), { basis }),
+          queueTournamentCommand(phoneDb(phoneB), id, winOn(court2, "t4"), { basis }),
+        ]);
+        await Promise.all([onA.done, onB.done]);
+
+        const after = await matchDocsOf(ownerDb(), id);
+        expect(after).toHaveLength(4);
+        expect(after.find((m) => m.id === court1.id)).toMatchObject({ status: "completed", winnerId: "t1" });
+        expect(after.find((m) => m.id === court2.id)).toMatchObject({ status: "completed", winnerId: "t4" });
+        expect(after.filter((m) => m.status === "pending").map((m) => m.court).sort()).toEqual([1, 2]);
+        const stored = await tournamentDocOf(ownerDb(), id);
+        expect(stored.win2outState?.courts.map((c) => c.teamIds[0])).toEqual(["t1", "t4"]);
+        expect(stored.win2outState?.queue.sort()).toEqual(["t2", "t3"]);
+      });
+
       it("a result built on a stale copy is refused and lands on replay when its court is untouched", async () => {
         const { id } = await sharedWith([phoneA], rotationInput("win2out"));
         const stale = await copyOf(ownerDb(), id);
