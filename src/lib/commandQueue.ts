@@ -42,10 +42,15 @@ import type { Match, Tournament } from "@/types/game";
  * the app does from the copy it is already showing. Otherwise the queue
  * listens to the tournament document and its matches itself, which
  * Firestore shares with the app's listeners on the same targets, and
- * waits for the first snapshot. The queue's listeners live while commands
- * are pending or a lost race is being recovered from, and are released
- * once the queue is empty, so a tournament the phone has stopped scoring
- * is not watched for the rest of the night.
+ * waits for the two listeners to show a copy in step: both from the
+ * phone's cache, which is what a phone without signal has, or both from
+ * the server. A listener's first snapshot comes from the cache whenever
+ * the cache holds anything for it, and a cached "no such document" only
+ * says the phone has no copy yet; only the server can say the tournament
+ * is gone. The queue's listeners live while commands are pending or a
+ * lost race is being recovered from, and are released once the queue is
+ * empty, so a tournament the phone has stopped scoring is not watched for
+ * the rest of the night.
  *
  * A refused write means the stored revision moved past the write's base,
  * or the phone's scorer link is stale, or the write is one this identity
@@ -143,9 +148,18 @@ class Feed {
     private readonly tournamentId: string,
   ) {}
 
-  /** The subscribed copy, or null while either listener has yet to deliver. */
+  /**
+   * The subscribed copy, or null while either listener has yet to deliver
+   * or the two are out of step. The listeners sync with the server one at
+   * a time, and until both have, the one that did would pair the server's
+   * tournament with the matches the other still shows from the cache, a
+   * copy no state of the tournament ever had. A copy is both listeners'
+   * cached snapshots, as on a phone without signal, or both their
+   * server-confirmed ones.
+   */
   latest(): TournamentSnapshot | null {
     if (!this.tournament?.value || !this.matches) return null;
+    if (this.tournament.fromCache !== this.matches.fromCache) return null;
     return { tournament: this.tournament.value, matches: this.matches.value };
   }
 
@@ -202,9 +216,13 @@ class Feed {
     }
   }
 
+  // Only the server can say the tournament is gone. A cached "no such
+  // document" says that the phone holds no copy: a phone that never read
+  // the tournament has none, and one whose only writes to it the server
+  // has just refused is left with none once they are rolled back.
   private check() {
     if (this.failure !== null) throw this.failure;
-    if (this.tournament && this.tournament.value === null) {
+    if (this.tournament && this.tournament.value === null && !this.tournament.fromCache) {
       throw new Error("That tournament no longer exists.");
     }
   }
