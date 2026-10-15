@@ -501,16 +501,15 @@ describe("the undo stack", () => {
   const stack = [entry("u3", "tour-a", "m-court2"), entry("u2", "tour-a", "m-court1"), entry("u1", "tour-b", "m-court1")];
 
   describe("stackAfterFailure", () => {
-    it("drops the entry of a win that was taken back and keeps the others", () => {
-      expect(stackAfterFailure(stack, "tour-a", "m-court1", reversed(1)).map((e) => e.id)).toEqual([
+    it("drops the entry of a win whose write failed, whatever the failure, since the result has been rolled back, and keeps the others", () => {
+      expect(stackAfterFailure(stack, "tour-a", "m-court1").map((e) => e.id)).toEqual([
         "u3",
         "u1",
       ]);
     });
 
-    it("keeps every entry when the win failed for another reason, so the result it names is still there", () => {
-      expect(stackAfterFailure(stack, "tour-a", "m-court1", new Error("No signal."))).toBe(stack);
-      expect(stackAfterFailure(stack, "tour-a", "m-court1", { code: "permission-denied" })).toBe(stack);
+    it("leaves the stack alone when the failed result has no entry", () => {
+      expect(stackAfterFailure(stack, "tour-a", "m-court9")).toEqual(stack);
     });
   });
 
