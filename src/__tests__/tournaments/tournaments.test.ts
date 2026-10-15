@@ -91,6 +91,21 @@ const tournamentDocOf = async (db: Firestore, id: string): Promise<Tournament> =
   return snapshot.data() as Tournament;
 };
 
+/** The tournament and matches as a phone's screen shows them. */
+const copyOf = async (db: Firestore, tournamentId: string): Promise<TournamentSnapshot> => ({
+  tournament: await tournamentDocOf(db, tournamentId),
+  matches: await matchDocsOf(db, tournamentId),
+});
+
+/** Watches `done`, so a test can ask whether the server had answered yet. */
+const acknowledgement = (done: Promise<void>) => {
+  let settled = false;
+  const wait = done.then(() => {
+    settled = true;
+  });
+  return { settled: () => settled, wait };
+};
+
 /**
  * A live subscription to a tournament's matches that stays open across
  * writes, so what a phone's own listener shows can be awaited step by step:
@@ -666,15 +681,6 @@ describeFirestoreRules("Tournaments on Firestore", (env) => {
   });
 
   describe("every command through the queue", () => {
-    /** Watches `done`, so a test can ask whether the server had answered yet. */
-    const acknowledgement = (done: Promise<void>) => {
-      let settled = false;
-      const wait = done.then(() => {
-        settled = true;
-      });
-      return { settled: () => settled, wait };
-    };
-
     it("a Start shows its first matches locally before the server has answered, and they land after", async () => {
       const db = modularFirestore(env().authenticatedContext(owner));
       const created = await createTournament(db, owner, input("round_robin"));
@@ -774,13 +780,12 @@ describeFirestoreRules("Tournaments on Firestore", (env) => {
         proveScorer(phones[0], created.id, "phone-a-uid", key),
         proveScorer(phones[1], created.id, "phone-b-uid", key),
       ]);
-      const before = await matchDocsOf(ownerDb, created.id);
-      const court1 = before.find((m) => m.court === 1)!;
-      const court2 = before.find((m) => m.court === 2)!;
+      const basis = await copyOf(ownerDb, created.id);
+      const court1 = basis.matches.find((m) => m.court === 1)!;
+      const court2 = basis.matches.find((m) => m.court === 2)!;
 
       // Each phone shows the same copy; each scoring page confirms a result and
       // leaves as soon as its own phone has applied it.
-      const basis = { tournament: await tournamentDocOf(ownerDb, created.id), matches: before };
       const [onA, onB] = await Promise.all([
         queueTournamentCommand(
           phones[0],
@@ -843,12 +848,6 @@ describeFirestoreRules("Tournaments on Firestore", (env) => {
 
     /** What the rules' refusal looks like to the caller. */
     const REFUSED = { code: "permission-denied" };
-
-    /** The tournament and matches as a phone's screen shows them. */
-    const copyOf = async (db: Firestore, tournamentId: string): Promise<TournamentSnapshot> => ({
-      tournament: await tournamentDocOf(db, tournamentId),
-      matches: await matchDocsOf(db, tournamentId),
-    });
 
     const winOn = (match: Match, winnerId: string) => ({
       type: "instant_win" as const,
@@ -1291,15 +1290,6 @@ describeFirestoreRules("Tournaments on Firestore", (env) => {
 
     describe("offline results land in order", () => {
       const OFFLINE_TIMEOUT = 20_000;
-
-      /** Watches `done`, so a test can ask whether the server had answered yet. */
-      const acknowledgement = (done: Promise<void>) => {
-        let settled = false;
-        const wait = done.then(() => {
-          settled = true;
-        });
-        return { settled: () => settled, wait };
-      };
 
       /** The tournament as a phone's own subscription shows it once `ready` holds. */
       const shownTournament = (db: Firestore, id: string, ready: (t: Tournament) => boolean) =>

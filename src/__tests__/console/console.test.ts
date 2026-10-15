@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ReversedCommandError } from "@/lib/commandQueue";
+import { ReversedCommandError } from "@/lib/commandErrors";
 import {
   bracketView,
   consoleAccess,
@@ -20,6 +20,13 @@ import type { UndoEntry } from "@/types/undo";
 import { draftWorld, find, openOn, started, win } from "../engine/helpers";
 
 const sorted = (ids: readonly string[]) => [...ids].sort();
+
+/** A win taken back because another phone recorded `court` first. */
+const reversed = (court: number | undefined) =>
+  new ReversedCommandError(
+    new EngineError("match_completed", "That match has already been completed."),
+    court,
+  );
 
 describe("roleFor", () => {
   it("makes the owning account the owner and everyone else, signed in or not, a spectator", () => {
@@ -448,12 +455,6 @@ describe("failureNotice", () => {
       terminology: { ...DEFAULT_TERMINOLOGY, venue: "field", venuePlural: "fields" },
     },
   };
-  const reversed = (court: number | undefined) =>
-    new ReversedCommandError(
-      new EngineError("match_completed", "That match has already been completed."),
-      court,
-    );
-
   it("says which court another scorer recorded first when a win was taken back", () => {
     expect(failureNotice(tournament, reversed(2), "The result could not be recorded.")).toBe(
       "Court 2 was already recorded by another scorer.",
@@ -483,11 +484,6 @@ describe("failureNotice", () => {
 });
 
 describe("the undo stack", () => {
-  const reversed = (court: number) =>
-    new ReversedCommandError(
-      new EngineError("match_completed", "That match has already been completed."),
-      court,
-    );
   const entry = (id: string, tournamentId: string, matchId: string): UndoEntry => ({
     id,
     actionType: "instant_win",
