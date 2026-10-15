@@ -307,6 +307,14 @@ const readStoredTournament = (db: Firestore, tournamentId: string): Promise<Tour
     { maxAttempts: 1 },
   );
 
+/**
+ * How long, in milliseconds, a recovery waits before reading the stored
+ * tournament again after a read that failed for a reason other than the
+ * rules. A tuning value: a connection that drops as a refusal arrives is
+ * usually back within a few of these.
+ */
+const RECOVERY_RETRY_MS = 1000;
+
 /** The match a command concerns, when it concerns one. */
 const matchOf = (command: EngineCommand): string | undefined =>
   "matchId" in command ? command.matchId : undefined;
@@ -454,11 +462,28 @@ class CommandQueue {
   /** Tell what the refusal meant, then replay what is still pending on the fresh copy. */
   private async recover(refused: Pending, error: unknown): Promise<void> {
     let stored: Tournament | null;
-    try {
-      stored = await readStoredTournament(this.db, this.tournamentId);
-    } catch (readError) {
-      this.failAll(isRefused(readError) ? new StaleScorerLinkError() : readError);
-      return;
+    for (;;) {
+      try {
+        stored = await readStoredTournament(this.db, this.tournamentId);
+        break;
+      } catch (readError) {
+        if (isRefused(readError)) {
+          this.failAll(new StaleScorerLinkError());
+          return;
+        }
+        // The read failed for another reason, such as the connection
+        // dropping as the refusal arrived. The commands stay pending, since
+        // the SDK still holds the batches behind the refused one and would
+        // have them refused on reconnect, and the read is tried again after
+        // a short wait; each try counts as an attempt of the refused
+        // command, so only a failure that persists drops them.
+        refused.attempts += 1;
+        if (refused.attempts >= MAX_ATTEMPTS) {
+          this.failAll(readError);
+          return;
+        }
+        await new Promise((resolve) => setTimeout(resolve, RECOVERY_RETRY_MS));
+      }
     }
     if (stored === null) {
       this.failAll(new Error("That tournament no longer exists."));
