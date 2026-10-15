@@ -91,6 +91,21 @@ const tournamentDocOf = async (db: Firestore, id: string): Promise<Tournament> =
   return snapshot.data() as Tournament;
 };
 
+/** The tournament and matches as a phone's screen shows them. */
+const copyOf = async (db: Firestore, tournamentId: string): Promise<TournamentSnapshot> => ({
+  tournament: await tournamentDocOf(db, tournamentId),
+  matches: await matchDocsOf(db, tournamentId),
+});
+
+/** Watches `done`, so a test can ask whether the server had answered yet. */
+const acknowledgement = (done: Promise<void>) => {
+  let settled = false;
+  const wait = done.then(() => {
+    settled = true;
+  });
+  return { settled: () => settled, wait };
+};
+
 /**
  * A live subscription to a tournament's matches that stays open across
  * writes, so what a phone's own listener shows can be awaited step by step:
@@ -666,15 +681,6 @@ describeFirestoreRules("Tournaments on Firestore", (env) => {
   });
 
   describe("every command through the queue", () => {
-    /** Watches `done`, so a test can ask whether the server had answered yet. */
-    const acknowledgement = (done: Promise<void>) => {
-      let settled = false;
-      const wait = done.then(() => {
-        settled = true;
-      });
-      return { settled: () => settled, wait };
-    };
-
     it("a Start shows its first matches locally before the server has answered, and they land after", async () => {
       const db = modularFirestore(env().authenticatedContext(owner));
       const created = await createTournament(db, owner, input("round_robin"));
@@ -774,13 +780,12 @@ describeFirestoreRules("Tournaments on Firestore", (env) => {
         proveScorer(phones[0], created.id, "phone-a-uid", key),
         proveScorer(phones[1], created.id, "phone-b-uid", key),
       ]);
-      const before = await matchDocsOf(ownerDb, created.id);
-      const court1 = before.find((m) => m.court === 1)!;
-      const court2 = before.find((m) => m.court === 2)!;
+      const basis = await copyOf(ownerDb, created.id);
+      const court1 = basis.matches.find((m) => m.court === 1)!;
+      const court2 = basis.matches.find((m) => m.court === 2)!;
 
       // Each phone shows the same copy; each scoring page confirms a result and
       // leaves as soon as its own phone has applied it.
-      const basis = { tournament: await tournamentDocOf(ownerDb, created.id), matches: before };
       const [onA, onB] = await Promise.all([
         queueTournamentCommand(
           phones[0],
@@ -843,12 +848,6 @@ describeFirestoreRules("Tournaments on Firestore", (env) => {
 
     /** What the rules' refusal looks like to the caller. */
     const REFUSED = { code: "permission-denied" };
-
-    /** The tournament and matches as a phone's screen shows them. */
-    const copyOf = async (db: Firestore, tournamentId: string): Promise<TournamentSnapshot> => ({
-      tournament: await tournamentDocOf(db, tournamentId),
-      matches: await matchDocsOf(db, tournamentId),
-    });
 
     const winOn = (match: Match, winnerId: string) => ({
       type: "instant_win" as const,
@@ -1071,6 +1070,29 @@ describeFirestoreRules("Tournaments on Firestore", (env) => {
         ).toBe(stoodFor);
       });
 
+      it("two phones tapping wins on different courts at the same moment both land, and neither is taken back", async () => {
+        const { id } = await sharedWith([phoneA, phoneB], rotationInput("win2out"));
+        const basis = await copyOf(ownerDb(), id);
+        const court1 = basis.matches.find((m) => m.court === 1)!;
+        const court2 = basis.matches.find((m) => m.court === 2)!;
+
+        // Both phones show the same copy and tap at the same moment, each on its own court.
+        const [onA, onB] = await Promise.all([
+          queueTournamentCommand(phoneDb(phoneA), id, winOn(court1, "t1"), { basis }),
+          queueTournamentCommand(phoneDb(phoneB), id, winOn(court2, "t4"), { basis }),
+        ]);
+        await Promise.all([onA.done, onB.done]);
+
+        const after = await matchDocsOf(ownerDb(), id);
+        expect(after).toHaveLength(4);
+        expect(after.find((m) => m.id === court1.id)).toMatchObject({ status: "completed", winnerId: "t1" });
+        expect(after.find((m) => m.id === court2.id)).toMatchObject({ status: "completed", winnerId: "t4" });
+        expect(after.filter((m) => m.status === "pending").map((m) => m.court).sort()).toEqual([1, 2]);
+        const stored = await tournamentDocOf(ownerDb(), id);
+        expect(stored.win2outState?.courts.map((c) => c.teamIds[0])).toEqual(["t1", "t4"]);
+        expect(stored.win2outState?.queue.sort()).toEqual(["t2", "t3"]);
+      });
+
       it("a result built on a stale copy is refused and lands on replay when its court is untouched", async () => {
         const { id } = await sharedWith([phoneA], rotationInput("win2out"));
         const stale = await copyOf(ownerDb(), id);
@@ -1162,6 +1184,36 @@ describeFirestoreRules("Tournaments on Firestore", (env) => {
         expect(after.find((m) => m.id === court1.id)).toMatchObject({ status: "completed", winnerId: "t1" });
         expect(after.find((m) => m.id === win.outcome.createdMatchIds[0])).toMatchObject({ court: 1, status: "pending" });
       });
+
+      it("after the engine refuses a command on an idle queue, the next command is built on the caller's copy, since the queue holds none", async () => {
+        const { id } = await sharedWith([phoneA], rotationInput("win2out"));
+        const db = phoneDb(phoneA);
+        const matches = watchMatches(db, id);
+        const before = await matches.until((list) => list.length === 2);
+        const court1 = before.find((m) => m.court === 1)!;
+        const court2 = before.find((m) => m.court === 2)!;
+
+        // A tap for a team that is not on the court, with no copy passed in,
+        // so the queue has to find one of its own before it can refuse it.
+        await expect(queueTournamentCommand(db, id, winOn(court1, "t9"))).rejects.toBeInstanceOf(EngineError);
+
+        // The owner records court 2, and this phone sees it land; the copy
+        // its next tap is built on is the one from before.
+        const stale = await copyOf(db, id);
+        await applyTournamentCommand(ownerDb(), id, winOn(court2, "t4"));
+        await matches.until((list) => list.find((m) => m.id === court2.id)?.status === "completed");
+        matches.stop();
+        await new Promise((resolve) => setTimeout(resolve, 50));
+
+        const win = await queueTournamentCommand(db, id, winOn(court1, "t1"), { basis: stale });
+        await win.done;
+
+        expect(win.outcome.tournament.basedOn).toBe(stale.tournament.revision);
+        const after = await matchDocsOf(ownerDb(), id);
+        expect(after.find((m) => m.id === court1.id)).toMatchObject({ status: "completed", winnerId: "t1" });
+        expect(after.find((m) => m.id === court2.id)).toMatchObject({ status: "completed", winnerId: "t4" });
+        expect(after.filter((m) => m.status === "pending").map((m) => m.court).sort()).toEqual([1, 2]);
+      });
     });
 
     describe("undo through the queue", () => {
@@ -1238,15 +1290,6 @@ describeFirestoreRules("Tournaments on Firestore", (env) => {
 
     describe("offline results land in order", () => {
       const OFFLINE_TIMEOUT = 20_000;
-
-      /** Watches `done`, so a test can ask whether the server had answered yet. */
-      const acknowledgement = (done: Promise<void>) => {
-        let settled = false;
-        const wait = done.then(() => {
-          settled = true;
-        });
-        return { settled: () => settled, wait };
-      };
 
       /** The tournament as a phone's own subscription shows it once `ready` holds. */
       const shownTournament = (db: Firestore, id: string, ready: (t: Tournament) => boolean) =>

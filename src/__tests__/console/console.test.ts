@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ReversedCommandError } from "@/lib/commandQueue";
+import { ReversedCommandError } from "@/lib/commandErrors";
 import {
   bracketView,
   consoleAccess,
@@ -20,6 +20,13 @@ import type { UndoEntry } from "@/types/undo";
 import { draftWorld, find, openOn, started, win } from "../engine/helpers";
 
 const sorted = (ids: readonly string[]) => [...ids].sort();
+
+/** A win taken back because another phone recorded `court` first. */
+const reversed = (court: number | undefined) =>
+  new ReversedCommandError(
+    new EngineError("match_completed", "That match has already been completed."),
+    court,
+  );
 
 describe("roleFor", () => {
   it("makes the owning account the owner and everyone else, signed in or not, a spectator", () => {
@@ -448,12 +455,6 @@ describe("failureNotice", () => {
       terminology: { ...DEFAULT_TERMINOLOGY, venue: "field", venuePlural: "fields" },
     },
   };
-  const reversed = (court: number | undefined) =>
-    new ReversedCommandError(
-      new EngineError("match_completed", "That match has already been completed."),
-      court,
-    );
-
   it("says which court another scorer recorded first when a win was taken back", () => {
     expect(failureNotice(tournament, reversed(2), "The result could not be recorded.")).toBe(
       "Court 2 was already recorded by another scorer.",
@@ -483,11 +484,6 @@ describe("failureNotice", () => {
 });
 
 describe("the undo stack", () => {
-  const reversed = (court: number) =>
-    new ReversedCommandError(
-      new EngineError("match_completed", "That match has already been completed."),
-      court,
-    );
   const entry = (id: string, tournamentId: string, matchId: string): UndoEntry => ({
     id,
     actionType: "instant_win",
@@ -501,16 +497,15 @@ describe("the undo stack", () => {
   const stack = [entry("u3", "tour-a", "m-court2"), entry("u2", "tour-a", "m-court1"), entry("u1", "tour-b", "m-court1")];
 
   describe("stackAfterFailure", () => {
-    it("drops the entry of a win that was taken back and keeps the others", () => {
-      expect(stackAfterFailure(stack, "tour-a", "m-court1", reversed(1)).map((e) => e.id)).toEqual([
+    it("drops the entry of a win whose write failed, whatever the failure, since the result has been rolled back, and keeps the others", () => {
+      expect(stackAfterFailure(stack, "tour-a", "m-court1").map((e) => e.id)).toEqual([
         "u3",
         "u1",
       ]);
     });
 
-    it("keeps every entry when the win failed for another reason, so the result it names is still there", () => {
-      expect(stackAfterFailure(stack, "tour-a", "m-court1", new Error("No signal."))).toBe(stack);
-      expect(stackAfterFailure(stack, "tour-a", "m-court1", { code: "permission-denied" })).toBe(stack);
+    it("leaves the stack alone when the failed result has no entry", () => {
+      expect(stackAfterFailure(stack, "tour-a", "m-court9")).toEqual(stack);
     });
   });
 

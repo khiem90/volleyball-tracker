@@ -20,7 +20,7 @@ import {
   type TeamChange,
 } from "@/lib/entries";
 import { isOffline, isRefused, lostRace, newToken, stripUndefined } from "@/lib/firestoreData";
-import { tournamentDoc } from "@/lib/tournaments";
+import { MAX_ATTEMPTS, tournamentDoc } from "@/lib/tournaments";
 import type { PersistentTeam, Tournament } from "@/types/game";
 
 /**
@@ -180,8 +180,6 @@ export const addRosterTeam = async (
 // ============================================
 // Writes that reach tournaments
 // ============================================
-
-const MAX_ATTEMPTS = 5;
 
 /**
  * Run `write` in a transaction, and again if another write got in first.

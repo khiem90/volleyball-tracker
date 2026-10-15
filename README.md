@@ -78,10 +78,14 @@ nothing else. Silent sign-in needs the Anonymous provider enabled on the project
 
 Format rules live in the engine under `src/lib/engine`. A command (start,
 complete a match, end) plus the tournament and its matches produce the next
-tournament and a list of per-match writes. `src/lib/tournaments.ts` applies
-those writes in a transaction guarded by the tournament's `revision`, so two
-courts finishing at the same moment cannot overwrite each other. With no
-network the same writes go out as a batch that the offline cache queues.
+tournament and a list of per-match writes. There is one write path, online or
+offline: the command queue in `src/lib/commandQueue.ts` applies the command to
+the phone's own copy and writes the result as one batched write that names in
+`basedOn` the revision it was built on. The local cache shows it at once, the
+Firestore rules refuse it when the stored revision has moved on, and the queue
+replays the command on the fresh copy, so two courts finishing at the same
+moment cannot overwrite each other (ADR-0003). Field updates such as a rename
+move the revision the same way and are retried on the fresh copy if refused.
 
 ## Local development
 

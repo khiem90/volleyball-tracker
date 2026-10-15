@@ -15,7 +15,8 @@ interface UseRotationInstantWinProps {
  * engine scores it, moves the queue, schedules the court's next match, and
  * keeps what it moved so the undo toast can take the result back. The undo
  * entry is offered as soon as the win shows on this phone, before the
- * server has answered, and withdrawn if the server takes the win back.
+ * server has answered, and withdrawn if the win's write fails, since the
+ * win is then rolled back.
  * Whether the visitor may record results is the caller's check; a refused
  * or reversed write comes back as the rejection.
  */
@@ -36,7 +37,7 @@ export const useRotationInstantWin = ({ tournament, getTeamName }: UseRotationIn
       try {
         await done;
       } catch (error) {
-        resultFailed(tournament.id, match.id, error);
+        resultFailed(tournament.id, match.id);
         throw error;
       }
     },

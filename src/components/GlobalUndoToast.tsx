@@ -49,8 +49,8 @@ export const GlobalUndoToast = ({ children }: GlobalUndoToastProps) => {
     setUndoStack([]);
   }, []);
 
-  const resultFailed = useCallback((tournamentId: string, matchId: string, error: unknown) => {
-    setUndoStack((prev) => stackAfterFailure(prev, tournamentId, matchId, error));
+  const resultFailed = useCallback((tournamentId: string, matchId: string) => {
+    setUndoStack((prev) => stackAfterFailure(prev, tournamentId, matchId));
   }, []);
 
   // The engine takes the result back as one command: the match, the match

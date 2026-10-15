@@ -1,4 +1,4 @@
-import { ReversedCommandError } from "@/lib/commandQueue";
+import { ReversedCommandError } from "@/lib/commandErrors";
 import { EngineError } from "@/lib/engine";
 import type { UndoEntry } from "@/types/undo";
 
@@ -14,18 +14,18 @@ const withoutResult = (stack: UndoEntry[], tournamentId: string, matchId: string
   stack.filter((entry) => !(entry.tournamentId === tournamentId && entry.matchId === matchId));
 
 /**
- * The stack once a result's write has failed. A result the server took
- * back, because another scorer got to its court first, no longer exists,
- * so its entry goes: nobody is offered an undo of it. Any other failure
- * leaves the result in place on this phone, and its entry with it.
+ * The stack once a result's write has failed, whatever the failure: the
+ * server took the result back because another scorer got to its court
+ * first, the rules refused it, the scorer link had gone stale, or the
+ * write was dropped. In every case the result has been rolled back on
+ * this phone and no longer exists, so its entry goes: nobody is offered
+ * an undo of it.
  */
 export const stackAfterFailure = (
   stack: UndoEntry[],
   tournamentId: string,
   matchId: string,
-  error: unknown,
-): UndoEntry[] =>
-  error instanceof ReversedCommandError ? withoutResult(stack, tournamentId, matchId) : stack;
+): UndoEntry[] => withoutResult(stack, tournamentId, matchId);
 
 /**
  * Whether an undo is over and done with, whatever the toast heard back:

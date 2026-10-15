@@ -8,6 +8,7 @@ import {
   type Firestore,
   type Unsubscribe,
 } from "firebase/firestore";
+import { ReversedCommandError } from "@/lib/commandErrors";
 import { applyCommand, EngineError, type EngineCommand, type EngineResult } from "@/lib/engine";
 import { applyMatchWrites, createdMatches } from "@/lib/engine/writes";
 import { isRefused, stripUndefined } from "@/lib/firestoreData";
@@ -66,6 +67,14 @@ import type { Match, Tournament } from "@/types/game";
  * dropped and its promise rejects with a ReversedCommandError, and so is
  * every command behind it on the same match, such as an undo of that win.
  * Nothing new is written while a replay is under way.
+ *
+ * A known limitation: the recovery from a lost race needs the server's
+ * fresh copy, so a phone that loses its signal mid-recovery cannot record
+ * on that tournament until the connection returns. Its pending commands
+ * wait for the fresh copy, and a new tap waits behind them. A read of the
+ * tournament that keeps failing for a reason other than the rules, such
+ * as a connection that stays down, drops the pending commands after a
+ * bounded number of tries.
  */
 
 export interface CommandOutcome extends EngineResult {
@@ -88,24 +97,7 @@ export interface ApplyOptions {
   basis?: TournamentSnapshot;
 }
 
-/**
- * A command that showed on the phone and was then taken back: another
- * phone's write got to the server first and, on the fresh copy, the
- * engine refused this one (or it ran out of attempts). `court` is the
- * court the command concerned, when it concerned one.
- */
-export class ReversedCommandError extends Error {
-  readonly reversed = true as const;
-  readonly court: number | undefined;
-  readonly cause: unknown;
-
-  constructor(cause: unknown, court: number | undefined) {
-    super("That change was taken back: another scorer got there first.");
-    this.name = "ReversedCommandError";
-    this.cause = cause;
-    this.court = court;
-  }
-}
+export { ReversedCommandError } from "@/lib/commandErrors";
 
 /** A command waiting for the server, with what its promise needs. */
 interface Pending {
@@ -113,8 +105,8 @@ interface Pending {
   now: number;
   /** The copy the command was last built on. */
   basis: TournamentSnapshot;
-  /** The revision its last write produced. */
-  produced: string;
+  /** The revision its last write produced; null until it has been written. */
+  produced: string | null;
   /** The ids the engine was handed for the matches it created; a replay hands out the same ones. */
   createdMatchIds: string[];
   /** How many times it has been written. */
@@ -307,6 +299,14 @@ const readStoredTournament = (db: Firestore, tournamentId: string): Promise<Tour
     { maxAttempts: 1 },
   );
 
+/**
+ * How long, in milliseconds, a recovery waits before reading the stored
+ * tournament again after a read that failed for a reason other than the
+ * rules. A tuning value: a connection that drops as a refusal arrives is
+ * usually back within a few of these.
+ */
+const RECOVERY_RETRY_MS = 1000;
+
 /** The match a command concerns, when it concerns one. */
 const matchOf = (command: EngineCommand): string | undefined =>
   "matchId" in command ? command.matchId : undefined;
@@ -354,14 +354,22 @@ class CommandQueue {
       }
       const now = options.now ?? Date.now();
       const createdMatchIds: string[] = [];
-      const result = applyCommand(basis, command, {
-        now,
-        newId: () => {
-          const id = doc(matchesCollection(this.db, this.tournamentId)).id;
-          createdMatchIds.push(id);
-          return id;
-        },
-      });
+      let result: EngineResult;
+      try {
+        result = applyCommand(basis, command, {
+          now,
+          newId: () => {
+            const id = doc(matchesCollection(this.db, this.tournamentId)).id;
+            createdMatchIds.push(id);
+            return id;
+          },
+        });
+      } catch (engineError) {
+        // Nothing is written, and a queue with nothing pending has no
+        // reason to keep the listeners it may have started for the copy.
+        this.settleDown();
+        throw engineError;
+      }
       let settle: Pick<Pending, "resolve" | "reject"> = { resolve: () => {}, reject: () => {} };
       const done = new Promise<void>((resolve, reject) => {
         settle = { resolve, reject };
@@ -370,7 +378,7 @@ class CommandQueue {
         command,
         now,
         basis,
-        produced: basis.tournament.revision,
+        produced: null,
         createdMatchIds,
         attempts: 0,
         writeId: 0,
@@ -454,11 +462,28 @@ class CommandQueue {
   /** Tell what the refusal meant, then replay what is still pending on the fresh copy. */
   private async recover(refused: Pending, error: unknown): Promise<void> {
     let stored: Tournament | null;
-    try {
-      stored = await readStoredTournament(this.db, this.tournamentId);
-    } catch (readError) {
-      this.failAll(isRefused(readError) ? new StaleScorerLinkError() : readError);
-      return;
+    for (;;) {
+      try {
+        stored = await readStoredTournament(this.db, this.tournamentId);
+        break;
+      } catch (readError) {
+        if (isRefused(readError)) {
+          this.failAll(new StaleScorerLinkError());
+          return;
+        }
+        // The read failed for another reason, such as the connection
+        // dropping as the refusal arrived. The commands stay pending, since
+        // the SDK still holds the batches behind the refused one and would
+        // have them refused on reconnect, and the read is tried again after
+        // a short wait; each try counts as an attempt of the refused
+        // command, so only a failure that persists drops them.
+        refused.attempts += 1;
+        if (refused.attempts >= MAX_ATTEMPTS) {
+          this.failAll(readError);
+          return;
+        }
+        await new Promise((resolve) => setTimeout(resolve, RECOVERY_RETRY_MS));
+      }
     }
     if (stored === null) {
       this.failAll(new Error("That tournament no longer exists."));
@@ -476,7 +501,10 @@ class CommandQueue {
 
     // Revisions the fresh copy cannot be at: the one the server moved past,
     // and the ones the pending writes produced, which were never stored.
-    const stale = new Set([basedOn, ...this.pending.map((p) => p.produced)]);
+    const stale = new Set([
+      basedOn,
+      ...this.pending.flatMap((p) => (p.produced === null ? [] : [p.produced])),
+    ]);
     let copy: TournamentSnapshot;
     try {
       copy = await this.feed.fresh(stored.revision, stale);

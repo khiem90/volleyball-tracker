@@ -194,23 +194,29 @@ export const useLinkedTournaments = ({
   );
 
   /**
-   * Run a write against a tournament. When the rules refuse it because the
-   * phone's scorer link has been replaced, the phone forgets the link and
-   * the write rejects with a StaleScorerLinkError; any other failure comes
-   * back as it was.
+   * Run a write against a tournament. When it fails because the phone's
+   * scorer link has been replaced, the phone forgets the link and the write
+   * rejects with a StaleScorerLinkError: the command queue says so itself
+   * once it has read the tournament, and a refusal that reaches here as the
+   * rules' own error is told apart by proving the link again. Any other
+   * failure comes back as it was.
    */
   const guardScorerWrite = useCallback(
     async <T,>(tournamentId: string, write: () => Promise<T>): Promise<T> => {
       try {
         return await write();
       } catch (error) {
+        if (error instanceof StaleScorerLinkError) {
+          markStale(tournamentId);
+          throw error;
+        }
         if (isRefused(error) && (await linkWentStale(tournamentId))) {
           throw new StaleScorerLinkError();
         }
         throw error;
       }
     },
-    [linkWentStale],
+    [markStale, linkWentStale],
   );
 
   const linkStatus = useCallback(
