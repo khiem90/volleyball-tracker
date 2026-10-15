@@ -79,7 +79,7 @@ export const newScorerKey = (): ScorerKey => ({ key: newToken(), updatedAt: Date
 export const MAX_ATTEMPTS = 5;
 
 /** A tournament whose write names the revision it was built on. */
-export type BasedTournament = Tournament & { basedOn: string };
+type BasedTournament = Tournament & { basedOn: string };
 
 /**
  * `tournament` as its next revision: a fresh revision token, the revision
