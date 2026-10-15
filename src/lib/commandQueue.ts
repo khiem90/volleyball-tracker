@@ -362,14 +362,22 @@ class CommandQueue {
       }
       const now = options.now ?? Date.now();
       const createdMatchIds: string[] = [];
-      const result = applyCommand(basis, command, {
-        now,
-        newId: () => {
-          const id = doc(matchesCollection(this.db, this.tournamentId)).id;
-          createdMatchIds.push(id);
-          return id;
-        },
-      });
+      let result: EngineResult;
+      try {
+        result = applyCommand(basis, command, {
+          now,
+          newId: () => {
+            const id = doc(matchesCollection(this.db, this.tournamentId)).id;
+            createdMatchIds.push(id);
+            return id;
+          },
+        });
+      } catch (engineError) {
+        // Nothing is written, and a queue with nothing pending has no
+        // reason to keep the listeners it may have started for the copy.
+        this.settleDown();
+        throw engineError;
+      }
       let settle: Pick<Pending, "resolve" | "reject"> = { resolve: () => {}, reject: () => {} };
       const done = new Promise<void>((resolve, reject) => {
         settle = { resolve, reject };

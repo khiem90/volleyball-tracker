@@ -1162,6 +1162,36 @@ describeFirestoreRules("Tournaments on Firestore", (env) => {
         expect(after.find((m) => m.id === court1.id)).toMatchObject({ status: "completed", winnerId: "t1" });
         expect(after.find((m) => m.id === win.outcome.createdMatchIds[0])).toMatchObject({ court: 1, status: "pending" });
       });
+
+      it("after the engine refuses a command on an idle queue, the next command is built on the caller's copy, since the queue holds none", async () => {
+        const { id } = await sharedWith([phoneA], rotationInput("win2out"));
+        const db = phoneDb(phoneA);
+        const matches = watchMatches(db, id);
+        const before = await matches.until((list) => list.length === 2);
+        const court1 = before.find((m) => m.court === 1)!;
+        const court2 = before.find((m) => m.court === 2)!;
+
+        // A tap for a team that is not on the court, with no copy passed in,
+        // so the queue has to find one of its own before it can refuse it.
+        await expect(queueTournamentCommand(db, id, winOn(court1, "t9"))).rejects.toBeInstanceOf(EngineError);
+
+        // The owner records court 2, and this phone sees it land; the copy
+        // its next tap is built on is the one from before.
+        const stale = await copyOf(db, id);
+        await applyTournamentCommand(ownerDb(), id, winOn(court2, "t4"));
+        await matches.until((list) => list.find((m) => m.id === court2.id)?.status === "completed");
+        matches.stop();
+        await new Promise((resolve) => setTimeout(resolve, 50));
+
+        const win = await queueTournamentCommand(db, id, winOn(court1, "t1"), { basis: stale });
+        await win.done;
+
+        expect(win.outcome.tournament.basedOn).toBe(stale.tournament.revision);
+        const after = await matchDocsOf(ownerDb(), id);
+        expect(after.find((m) => m.id === court1.id)).toMatchObject({ status: "completed", winnerId: "t1" });
+        expect(after.find((m) => m.id === court2.id)).toMatchObject({ status: "completed", winnerId: "t4" });
+        expect(after.filter((m) => m.status === "pending").map((m) => m.court).sort()).toEqual([1, 2]);
+      });
     });
 
     describe("undo through the queue", () => {
