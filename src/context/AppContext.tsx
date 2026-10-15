@@ -82,7 +82,6 @@ export interface CompleteMatchOutcome {
  */
 export interface LateFailure {
   error: unknown;
-  at: number;
 }
 
 interface AppContextValue {
@@ -567,9 +566,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
   );
 
   const failLater = useCallback((tournamentId: string, error: unknown) => {
-    setLateFailures((current) =>
-      new Map(current).set(tournamentId, { error, at: Date.now() }),
-    );
+    setLateFailures((current) => new Map(current).set(tournamentId, { error }));
   }, []);
 
   const lateFailure = useCallback(
