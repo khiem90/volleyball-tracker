@@ -1,4 +1,4 @@
-import { ReversedCommandError } from "@/lib/commandQueue";
+import { ReversedCommandError } from "@/lib/commandErrors";
 import { EngineError } from "@/lib/engine";
 import type { UndoEntry } from "@/types/undo";
 

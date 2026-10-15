@@ -3,7 +3,7 @@ import {
   getDoubleElimRoundName,
   getTotalWinnersRounds,
 } from "@/lib/doubleElimination";
-import { ReversedCommandError } from "@/lib/commandQueue";
+import { ReversedCommandError } from "@/lib/commandErrors";
 import { openMatchOn } from "@/lib/engine";
 import { isBracketFormat, isRotationFormat } from "@/lib/formats";
 import { calculateStandings } from "@/lib/roundRobin";

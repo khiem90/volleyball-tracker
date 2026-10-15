@@ -8,6 +8,7 @@ import {
   type Firestore,
   type Unsubscribe,
 } from "firebase/firestore";
+import { ReversedCommandError } from "@/lib/commandErrors";
 import { applyCommand, EngineError, type EngineCommand, type EngineResult } from "@/lib/engine";
 import { applyMatchWrites, createdMatches } from "@/lib/engine/writes";
 import { isRefused, stripUndefined } from "@/lib/firestoreData";
@@ -96,24 +97,7 @@ export interface ApplyOptions {
   basis?: TournamentSnapshot;
 }
 
-/**
- * A command that showed on the phone and was then taken back: another
- * phone's write got to the server first and, on the fresh copy, the
- * engine refused this one (or it ran out of attempts). `court` is the
- * court the command concerned, when it concerned one.
- */
-export class ReversedCommandError extends Error {
-  readonly reversed = true as const;
-  readonly court: number | undefined;
-  readonly cause: unknown;
-
-  constructor(cause: unknown, court: number | undefined) {
-    super("That change was taken back: another scorer got there first.");
-    this.name = "ReversedCommandError";
-    this.cause = cause;
-    this.court = court;
-  }
-}
+export { ReversedCommandError } from "@/lib/commandErrors";
 
 /** A command waiting for the server, with what its promise needs. */
 interface Pending {
@@ -121,8 +105,8 @@ interface Pending {
   now: number;
   /** The copy the command was last built on. */
   basis: TournamentSnapshot;
-  /** The revision its last write produced. */
-  produced: string;
+  /** The revision its last write produced; null until it has been written. */
+  produced: string | null;
   /** The ids the engine was handed for the matches it created; a replay hands out the same ones. */
   createdMatchIds: string[];
   /** How many times it has been written. */
@@ -394,7 +378,7 @@ class CommandQueue {
         command,
         now,
         basis,
-        produced: basis.tournament.revision,
+        produced: null,
         createdMatchIds,
         attempts: 0,
         writeId: 0,
@@ -517,7 +501,10 @@ class CommandQueue {
 
     // Revisions the fresh copy cannot be at: the one the server moved past,
     // and the ones the pending writes produced, which were never stored.
-    const stale = new Set([basedOn, ...this.pending.map((p) => p.produced)]);
+    const stale = new Set([
+      basedOn,
+      ...this.pending.flatMap((p) => (p.produced === null ? [] : [p.produced])),
+    ]);
     let copy: TournamentSnapshot;
     try {
       copy = await this.feed.fresh(stored.revision, stale);
