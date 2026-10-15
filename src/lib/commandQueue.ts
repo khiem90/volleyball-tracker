@@ -166,9 +166,14 @@ class Feed {
 
   /**
    * The subscribed copy once it is fresh after a lost race: the local
-   * writes have been rolled back and the tournament is at `serverRevision`
-   * or at a server-confirmed revision that is not one of the `stale`
-   * ones. Rejects when a listener failed or the tournament is gone.
+   * writes have been rolled back, both listeners are in step with the
+   * server, and the tournament is at `serverRevision` or at a revision
+   * that is not one of the `stale` ones. A cache-only snapshot from either
+   * listener is not fresh: after a phone reconnects, the tournament can
+   * arrive from the server while its matches are still the cached ones
+   * from before the signal dropped, and a command replayed on that pair
+   * would be judged against the wrong courts. Rejects when a listener
+   * failed or the tournament is gone.
    */
   async fresh(serverRevision: string, stale: ReadonlySet<string>): Promise<TournamentSnapshot> {
     for (;;) {
@@ -182,7 +187,9 @@ class Feed {
         revision !== undefined &&
         !tournament.hasPendingWrites &&
         !matches.hasPendingWrites &&
-        (revision === serverRevision || (!tournament.fromCache && !stale.has(revision)))
+        !tournament.fromCache &&
+        !matches.fromCache &&
+        (revision === serverRevision || !stale.has(revision))
       ) {
         // The two listeners deliver one after the other, each in its own
         // turn of the event loop. A breath lets the matches arrive with
