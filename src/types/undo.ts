@@ -51,6 +51,11 @@ export interface UndoContextValue {
   pushUndo: (entry: Omit<UndoEntry, "id" | "timestamp">) => void;
   /** Clear all undo entries */
   clearUndo: () => void;
+  /**
+   * A result's write failed, so the result has been rolled back on this
+   * phone and its entry goes: there is nothing left to undo.
+   */
+  resultFailed: (tournamentId: string, matchId: string) => void;
   /** Stack of undo entries (most recent first) */
   undoStack: UndoEntry[];
   /** Number of available undos in the stack */

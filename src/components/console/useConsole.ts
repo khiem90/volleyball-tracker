@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useApp } from "@/context/AppContext";
@@ -12,13 +12,16 @@ import {
   capitalize,
   consoleAccess,
   courtsView,
+  failureNotice,
   isCorrectable,
   roleFor,
   scheduleView,
   standingsView,
   teamsView,
+  winTapGuard,
   type TeamRow,
 } from "@/lib/console";
+import type { AppliedCommand } from "@/lib/commandQueue";
 import { bracketAddRefusal } from "@/lib/engine";
 import { entryTeams } from "@/lib/entries";
 import { isBracketFormat, isRotationFormat, minimumTeams } from "@/lib/formats";
@@ -85,6 +88,8 @@ export const useConsole = (tournamentId: string) => {
     swapTeams,
     reorderQueue,
     correctMatchResult,
+    lateFailure,
+    clearLateFailure,
     isTournamentsLoading,
     watchTournament,
     openScorerLink,
@@ -140,10 +145,41 @@ export const useConsole = (tournamentId: string) => {
     own || tournament ? null : stale ? "stale_link" : "not_found";
 
   // Every failure lands on the one error line. A scorer whose link the
-  // owner has replaced gets a StaleScorerLinkError, whose message says so.
-  const reportFailure = useCallback((fallback: string, error: unknown) => {
-    setActionError(messageOf(error, fallback));
-  }, []);
+  // owner has replaced gets a StaleScorerLinkError, whose message says so;
+  // a result another phone recorded first names the court it was on.
+  const reportFailure = useCallback(
+    (fallback: string, error: unknown) => {
+      setActionError(
+        tournament ? failureNotice(tournament, error, fallback) : messageOf(error, fallback),
+      );
+    },
+    [tournament],
+  );
+
+  // Every command shows at once from this phone's copy and is answered by
+  // the server later; the answer, a refusal or a change another phone's
+  // result took back, lands on the error line when it comes.
+  const reportLater = useCallback(
+    (fallback: string, done: Promise<void>) => {
+      done.catch((error: unknown) => {
+        console.error(fallback, error);
+        reportFailure(fallback, error);
+      });
+    },
+    [reportFailure],
+  );
+
+  // A result confirmed from the scoring page is answered by the server after
+  // the page has come back here, so its failure arrives through the
+  // tournament's late failure rather than a promise of this console's own.
+  // It is shown once, then cleared, and the next action clears the line as
+  // for any other failure.
+  const late = lateFailure(tournamentId);
+  useEffect(() => {
+    if (!late) return;
+    reportFailure("The result could not be saved.", late.error);
+    clearLateFailure(tournamentId);
+  }, [late, tournamentId, reportFailure, clearLateFailure]);
 
   // ============================================
   // Views
@@ -198,9 +234,19 @@ export const useConsole = (tournamentId: string) => {
 
   const getTeamName = useCallback((id: string) => team(id).name, [team]);
   const { handleInstantWin } = useRotationInstantWin({ tournament, getTeamName });
+  // A double tap on a court records one result, not two: for a moment after
+  // a tap, that court's win buttons ignore taps. The guard is keyed by court
+  // because the court shows its next match the instant a result is recorded,
+  // so the second tap would land on a different match. It lives in a ref so
+  // that nothing on screen changes and nothing re-renders.
+  const winTaps = useRef(winTapGuard());
+  // The court moves on as soon as the tap is applied locally; what the
+  // server says about it, a refusal or a result another phone recorded
+  // first, arrives later and lands on the error line.
   const instantWin = useCallback(
     (match: Match, winnerId: string) => {
       if (!access.canScore) return;
+      if (!winTaps.current.accept(match.court ?? match.id, Date.now())) return;
       setActionError(null);
       handleInstantWin(winnerId, match).catch((error: unknown) => {
         console.error("Instant win failed:", error);
@@ -210,14 +256,18 @@ export const useConsole = (tournamentId: string) => {
     [access.canScore, handleInstantWin, reportFailure],
   );
 
+  // Start and End close their dialogs as soon as the engine has applied
+  // them on this phone: the first matches, or the final standings, are
+  // already showing. The server's answer is reported if it is a refusal.
   const start = useCallback(
     async (byeTeamIds?: string[]) => {
       if (!tournament || isStarting || !access.canStart) return;
       setIsStarting(true);
       setActionError(null);
       try {
-        await startTournament(tournament.id, byeTeamIds);
+        const { done } = await startTournament(tournament.id, byeTeamIds);
         setStartOpen(false);
+        reportLater("The tournament could not be started.", done);
       } catch (error) {
         console.error("Failed to start the tournament:", error);
         reportFailure("The tournament could not be started.", error);
@@ -225,7 +275,7 @@ export const useConsole = (tournamentId: string) => {
         setIsStarting(false);
       }
     },
-    [tournament, isStarting, access.canStart, startTournament, reportFailure],
+    [tournament, isStarting, access.canStart, startTournament, reportLater, reportFailure],
   );
 
   const end = useCallback(async () => {
@@ -233,15 +283,16 @@ export const useConsole = (tournamentId: string) => {
     setIsEnding(true);
     setActionError(null);
     try {
-      await endTournament(tournament.id);
+      const { done } = await endTournament(tournament.id);
       setEndOpen(false);
+      reportLater("The tournament could not be ended.", done);
     } catch (error) {
       console.error("Failed to end the tournament:", error);
       reportFailure("The tournament could not be ended.", error);
     } finally {
       setIsEnding(false);
     }
-  }, [tournament, isEnding, access.canManage, endTournament, reportFailure]);
+  }, [tournament, isEnding, access.canManage, endTournament, reportLater, reportFailure]);
 
   // The new name shows everywhere as soon as the local write lands, so
   // nothing waits on the server; a refused write is reported when it comes.
@@ -356,16 +407,18 @@ export const useConsole = (tournamentId: string) => {
   // ============================================
 
   // Court, queue, and team edits share one busy flag, so a second tap while
-  // the first is saving does nothing, and one error line. Each resolves
-  // with whether the edit went through.
+  // the first is being applied does nothing, and one error line. Each
+  // resolves with whether the edit showed on this phone; the server's
+  // answer is reported later if it is a refusal.
   const [isApplying, setIsApplying] = useState(false);
   const apply = useCallback(
-    async (what: string, action: () => Promise<void>): Promise<boolean> => {
+    async (what: string, action: () => Promise<AppliedCommand>): Promise<boolean> => {
       if (isApplying) return false;
       setIsApplying(true);
       setActionError(null);
       try {
-        await action();
+        const { done } = await action();
+        reportLater(`Could not ${what}.`, done);
         return true;
       } catch (error) {
         console.error(`Failed to ${what}:`, error);
@@ -375,7 +428,7 @@ export const useConsole = (tournamentId: string) => {
         setIsApplying(false);
       }
     },
-    [isApplying, reportFailure],
+    [isApplying, reportLater, reportFailure],
   );
 
   // A swap is two taps: Swap under a team on a court, then Swap under the

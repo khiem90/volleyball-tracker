@@ -8,7 +8,6 @@ import {
   onSnapshot,
   orderBy,
   query,
-  runTransaction,
   setDoc,
   updateDoc,
   where,
@@ -16,20 +15,9 @@ import {
   type Firestore,
   type Unsubscribe,
 } from "firebase/firestore";
-import {
-  applyCommand,
-  type EngineCommand,
-  type EngineResult,
-  type MatchWrite,
-} from "@/lib/engine";
+import { applyCommand, type MatchWrite } from "@/lib/engine";
 import { createdMatches } from "@/lib/engine/writes";
-import {
-  isOffline,
-  lostRace,
-  newToken,
-  stripUndefined,
-  toUpdatePayload,
-} from "@/lib/firestoreData";
+import { isRefused, newToken, stripUndefined, toUpdatePayload } from "@/lib/firestoreData";
 import type {
   Entry,
   Match,
@@ -45,11 +33,17 @@ import type {
  * `tournaments/{id}/matches`. Every function takes the Firestore instance so
  * the same code runs in the app and against the rules test emulator.
  *
- * Every write to a tournament document goes through `commitTournament`, which
- * checks inside a transaction that the tournament's revision is still the one
- * the caller built on. Two scorers finishing matches on two courts at the
- * same moment therefore cannot overwrite each other: the loser of the race
- * gets a StaleTournamentError, and engine commands reload and try again.
+ * Every write that moves a tournament's revision says in `basedOn` which
+ * revision it was built on, and the rules refuse it when that is no longer
+ * the stored revision (ADR-0003). Two scorers finishing matches on two
+ * courts at the same moment therefore cannot overwrite each other: the loser
+ * of the race is refused and builds again on the fresh copy. There is one
+ * write path, online or offline: a batch the local cache shows at once and
+ * the rules check when it reaches the server. Engine commands go through
+ * the command queue in src/lib/commandQueue.ts, which writes each as one
+ * batch and replays a refused one on the fresh copy; field updates such as
+ * a rename re-read and retry when the rules refuse them. Nothing here runs
+ * a transaction or checks a revision on the client.
  */
 
 export const tournamentsCollection = (db: Firestore) => collection(db, "tournaments");
@@ -80,6 +74,23 @@ export interface ScorerKey {
 
 /** A fresh, unguessable scorer key. */
 export const newScorerKey = (): ScorerKey => ({ key: newToken(), updatedAt: Date.now() });
+
+/** How many times a write is rebuilt on the fresh copy after the tournament moved past its base. */
+export const MAX_ATTEMPTS = 5;
+
+/** A tournament whose write names the revision it was built on. */
+type BasedTournament = Tournament & { basedOn: string };
+
+/**
+ * `tournament` as its next revision: a fresh revision token, the revision
+ * it was built on in `basedOn`, and the time of the write.
+ */
+export const nextRevision = (tournament: Tournament, basedOn: string, now: number): BasedTournament => ({
+  ...tournament,
+  basedOn,
+  revision: newToken(),
+  updatedAt: now,
+});
 
 // ============================================
 // Subscriptions
@@ -299,11 +310,45 @@ export const duplicateInput = (source: Tournament, roster: PersistentTeam[]): Ne
 };
 
 /**
- * Rename a tournament. Writes only the name, so a result landing on a court
- * at the same moment is never overwritten; the revision moves so an engine
- * command built on the old copy reloads instead of writing the old name
- * back. Works offline like any field update.
+ * Write a few fields of a tournament with a fresh revision, for edits made
+ * outside the engine that touch nothing a result touches: a rename, the
+ * spectator flag. Only those fields are written, so a result landing on a
+ * court at the same moment is never overwritten, and the revision moves so
+ * an engine command built on the old copy is refused and replays on the
+ * fresh one instead of writing the old fields back. The stored revision is
+ * read first and sent as the base;
+ * when the rules refuse the write because the tournament moved on meanwhile,
+ * the fields are rebuilt on the fresh copy, a bounded number of times. A
+ * refusal that persists, such as a scorer's attempt at an owner-only field,
+ * rejects with Firestore's error. Offline, the base comes from the cache and
+ * the write waits for the connection like any field update.
  */
+export const updateTournamentFields = async (
+  db: Firestore,
+  tournamentId: string,
+  fields: Record<string, unknown>,
+): Promise<void> => {
+  const ref = tournamentDoc(db, tournamentId);
+  let refused: { on: string; error: unknown } | null = null;
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    const current = await getDoc(ref);
+    if (!current.exists()) throw new Error("That tournament no longer exists.");
+    const basedOn = (current.data() as Tournament).revision;
+    // A refusal on a base the tournament has not moved past is not a race
+    // lost but a write the rules would never accept.
+    if (refused !== null && refused.on === basedOn) throw refused.error;
+    try {
+      await updateDoc(ref, { ...fields, basedOn, revision: newToken(), updatedAt: Date.now() });
+      return;
+    } catch (error) {
+      if (!isRefused(error)) throw error;
+      refused = { on: basedOn, error };
+    }
+  }
+  throw refused?.error ?? new Error("The tournament kept changing; try again.");
+};
+
+/** Rename a tournament. See updateTournamentFields for what a racing result means for it. */
 export const renameTournament = async (
   db: Firestore,
   tournamentId: string,
@@ -311,31 +356,7 @@ export const renameTournament = async (
 ): Promise<void> => {
   const trimmed = name.trim();
   if (trimmed.length === 0) throw new Error("A tournament needs a name.");
-  await updateDoc(tournamentDoc(db, tournamentId), {
-    name: trimmed,
-    revision: newToken(),
-    updatedAt: Date.now(),
-  });
-};
-
-/**
- * Replace a tournament document with a new revision, for edits made outside
- * the engine such as reordering a queue or restoring an undo snapshot.
- * `expectedRevision` is the revision the caller's copy was built on; if the
- * stored tournament has moved past it the write is refused with a
- * StaleTournamentError and nothing changes.
- */
-export const updateTournament = async (
-  db: Firestore,
-  tournament: Tournament,
-  expectedRevision: string,
-): Promise<void> => {
-  await commitTournament(
-    db,
-    expectedRevision,
-    { ...tournament, revision: newToken(), updatedAt: Date.now() },
-    [],
-  );
+  await updateTournamentFields(db, tournamentId, { name: trimmed });
 };
 
 /**
@@ -374,55 +395,25 @@ export const updateMatch = async (
 // Commands
 // ============================================
 
+/** A tournament and its matches as one phone sees them: what the engine works on. */
 export interface TournamentSnapshot {
   tournament: Tournament;
   matches: Match[];
 }
 
-/**
- * Read a tournament and then its matches. The tournament comes first on
- * purpose: a change that lands between the two reads bumps the revision the
- * transaction later checks, so it can never be missed.
- */
-export const loadTournament = async (
-  db: Firestore,
-  tournamentId: string,
-): Promise<TournamentSnapshot | null> => {
-  const tournamentSnapshot = await getDoc(tournamentDoc(db, tournamentId));
-  if (!tournamentSnapshot.exists()) return null;
-  const matchesSnapshot = await getDocs(matchesCollection(db, tournamentId));
-  return {
-    tournament: { ...(tournamentSnapshot.data() as Tournament), id: tournamentSnapshot.id },
-    matches: matchesSnapshot.docs.map((d) => ({ ...(d.data() as Match), id: d.id })),
-  };
-};
-
-export interface CommandOutcome extends EngineResult {
-  /** Ids of the matches the command created, in the order the engine made them. */
-  createdMatchIds: string[];
-}
-
-/** The stored tournament moved on while a write was being prepared. */
-export class StaleTournamentError extends Error {
-  constructor() {
-    super("The tournament changed while the change was being saved. Try again.");
-    this.name = "StaleTournamentError";
-  }
-}
-
-const MAX_ATTEMPTS = 5;
-
-interface Writer {
+/** Where match writes go: the batch a command is written as. */
+export interface MatchWriter {
   set: (ref: ReturnType<typeof matchDoc>, data: Match) => void;
   update: (ref: ReturnType<typeof matchDoc>, data: Record<string, unknown>) => void;
   delete: (ref: ReturnType<typeof matchDoc>) => void;
 }
 
-const writeMatches = (
+/** Put the engine's match writes on a writer, in the engine's order. */
+export const writeMatches = (
   db: Firestore,
   tournamentId: string,
   writes: MatchWrite[],
-  writer: Writer,
+  writer: MatchWriter,
 ) => {
   for (const write of writes) {
     switch (write.kind) {
@@ -437,105 +428,4 @@ const writeMatches = (
         break;
     }
   }
-};
-
-/**
- * Write a tournament and its match writes together, provided the stored
- * tournament still carries `expectedRevision`. With no network the writes go
- * out as a batch instead, queued by the offline cache until the connection
- * is back, so a phone with no signal keeps scoring; the revision check is
- * then left to the server on reconnect, which is the best offline allows.
- */
-const commitTournament = async (
-  db: Firestore,
-  expectedRevision: string,
-  tournament: Tournament,
-  matchWrites: MatchWrite[],
-): Promise<void> => {
-  const ref = tournamentDoc(db, tournament.id);
-  try {
-    await runTransaction(
-      db,
-      async (tx) => {
-        const current = await tx.get(ref);
-        if (!current.exists() || current.data().revision !== expectedRevision) {
-          throw new StaleTournamentError();
-        }
-        tx.set(ref, stripUndefined(tournament));
-        writeMatches(db, tournament.id, matchWrites, {
-          set: (matchRef, data) => tx.set(matchRef, data),
-          update: (matchRef, data) => tx.update(matchRef, data),
-          delete: (matchRef) => tx.delete(matchRef),
-        });
-      },
-      // Firestore's own retries would rerun the function on the same stale
-      // input; callers reload and retry instead.
-      { maxAttempts: 1 },
-    );
-  } catch (error) {
-    if (lostRace(error)) throw new StaleTournamentError();
-    if (!isOffline(error)) throw error;
-
-    const batch = writeBatch(db);
-    batch.set(ref, stripUndefined(tournament));
-    writeMatches(db, tournament.id, matchWrites, {
-      set: (matchRef, data) => batch.set(matchRef, data),
-      update: (matchRef, data) => batch.update(matchRef, data),
-      delete: (matchRef) => batch.delete(matchRef),
-    });
-    // The commit resolves when the server accepts it, which offline is
-    // whenever the connection returns. The local cache has it at once.
-    batch.commit().catch((commitError) => {
-      console.error("Queued tournament write failed:", commitError);
-    });
-  }
-};
-
-/**
- * Apply an engine command to a tournament.
- *
- * Reads the tournament and its matches, runs the engine, then commits the
- * result against the revision it read. If the tournament changed in between,
- * the whole thing runs again on the fresh state, up to a few times.
- *
- * Rejects with an EngineError when the command is not allowed, in which case
- * nothing is written.
- */
-export const applyTournamentCommand = async (
-  db: Firestore,
-  tournamentId: string,
-  command: EngineCommand,
-  options: { now?: number } = {},
-): Promise<CommandOutcome> => {
-  let lastError: unknown = null;
-
-  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-    const loaded = await loadTournament(db, tournamentId);
-    if (!loaded) throw new Error("That tournament no longer exists.");
-
-    const now = options.now ?? Date.now();
-    const result = applyCommand(loaded, command, {
-      now,
-      newId: () => doc(matchesCollection(db, tournamentId)).id,
-    });
-    const tournament: Tournament = { ...result.tournament, revision: newToken(), updatedAt: now };
-
-    try {
-      await commitTournament(db, loaded.tournament.revision, tournament, result.matchWrites);
-    } catch (error) {
-      if (error instanceof StaleTournamentError) {
-        lastError = error;
-        continue;
-      }
-      throw error;
-    }
-
-    return {
-      tournament,
-      matchWrites: result.matchWrites,
-      createdMatchIds: createdMatches(result.matchWrites).map((match) => match.id),
-    };
-  }
-
-  throw lastError ?? new Error("The tournament kept changing; try again.");
 };

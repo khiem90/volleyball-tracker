@@ -158,6 +158,45 @@ describeFirestoreRules("Firestore rules", (env) => {
         await assertFails(updateDoc(tournamentAt(db, "tourn-1"), { ownerId: otherAccount }));
       });
 
+      describe("moving the revision", () => {
+        const moved = { revision: "r2", updatedAt: 1_700_000_000_001 };
+
+        it("is refused when basedOn is not the stored revision", async () => {
+          await seedTournament("tourn-1");
+          const db = modularFirestore(env().authenticatedContext(owner));
+          await assertFails(updateDoc(tournamentAt(db, "tourn-1"), { ...moved, basedOn: "r0" }));
+        });
+
+        it("is refused when basedOn is missing", async () => {
+          await seedTournament("tourn-1");
+          const db = modularFirestore(env().authenticatedContext(owner));
+          await assertFails(updateDoc(tournamentAt(db, "tourn-1"), moved));
+        });
+
+        it("is accepted when basedOn is the stored revision, and the stored revision moves on with it", async () => {
+          await seedTournament("tourn-1");
+          const db = modularFirestore(env().authenticatedContext(owner));
+          await assertSucceeds(updateDoc(tournamentAt(db, "tourn-1"), { ...moved, basedOn: "r1" }));
+          await assertFails(updateDoc(tournamentAt(db, "tourn-1"), { revision: "r3", basedOn: "r1" }));
+          await assertSucceeds(updateDoc(tournamentAt(db, "tourn-1"), { revision: "r3", basedOn: "r2" }));
+        });
+
+        it("is accepted for a rename built on the stored revision", async () => {
+          await seedTournament("tourn-1");
+          const db = modularFirestore(env().authenticatedContext(owner));
+          await assertSucceeds(
+            updateDoc(tournamentAt(db, "tourn-1"), { name: "Renamed", ...moved, basedOn: "r1" }),
+          );
+        });
+
+        it("is not asked of an update that leaves the revision alone", async () => {
+          await seedTournament("tourn-1");
+          const db = modularFirestore(env().authenticatedContext(owner));
+          await assertSucceeds(updateDoc(tournamentAt(db, "tourn-1"), { name: "Renamed" }));
+          await assertSucceeds(updateDoc(tournamentAt(db, "tourn-1"), { name: "Again", basedOn: "r0" }));
+        });
+      });
+
       it("can list its own tournaments", async () => {
         await seedTournament("tourn-1");
         const db = modularFirestore(env().authenticatedContext(owner));
@@ -404,7 +443,7 @@ describeFirestoreRules("Firestore rules", (env) => {
       const seedWithProof = (options: Parameters<typeof seedShared>[1] = {}) =>
         seedShared("tourn-1", { ...options, proofs: { [phoneA]: currentKey } });
       const played = { win2outState: { queue: ["t2"], courts: [], teamStatuses: [], numberOfCourts: 1, isComplete: false } };
-      const moved = { revision: "r2", updatedAt: 1_700_000_000_001 };
+      const moved = { revision: "r2", basedOn: "r1", updatedAt: 1_700_000_000_001 };
 
       it("can read the tournament and its matches while the spectator link is off", async () => {
         await seedWithProof();
@@ -433,6 +472,20 @@ describeFirestoreRules("Firestore rules", (env) => {
       it("can move the rotation state and the revision of a live tournament", async () => {
         await seedWithProof();
         await assertSucceeds(updateDoc(tournamentAt(asScorer(), "tourn-1"), { ...played, ...moved }));
+      });
+
+      it("is refused when its result was built on a revision the tournament has moved past", async () => {
+        await seedWithProof();
+        const ref = tournamentAt(asScorer(), "tourn-1");
+        await assertFails(updateDoc(ref, { ...played, ...moved, basedOn: "r0" }));
+        await assertFails(updateDoc(ref, { ...played, revision: "r2", updatedAt: 1_700_000_000_001 }));
+      });
+
+      it("cannot write a result that leaves the revision where it is", async () => {
+        await seedWithProof();
+        const ref = tournamentAt(asScorer(), "tourn-1");
+        await assertFails(updateDoc(ref, { ...played, updatedAt: 1_700_000_000_001 }));
+        await assertFails(updateDoc(ref, { ...played, basedOn: "r1", updatedAt: 1_700_000_000_001 }));
       });
 
       it("can complete the tournament with a winner from its teams, as the last result does", async () => {

@@ -3,10 +3,12 @@ import {
   getDoubleElimRoundName,
   getTotalWinnersRounds,
 } from "@/lib/doubleElimination";
+import { ReversedCommandError } from "@/lib/commandErrors";
 import { openMatchOn } from "@/lib/engine";
 import { isBracketFormat, isRotationFormat } from "@/lib/formats";
 import { calculateStandings } from "@/lib/roundRobin";
 import { getRoundName, getTotalRounds } from "@/lib/singleElimination";
+import { messageOf } from "@/lib/utils";
 import { getChampionCount } from "@/lib/win2out";
 import type {
   Match,
@@ -183,6 +185,54 @@ export const courtsWord = (tournament: Tournament, count: number): string =>
   count === 1
     ? tournament.settings.terminology.venue
     : tournament.settings.terminology.venuePlural;
+
+/**
+ * What the console's error line says when a command failed. A result taken
+ * back because another phone recorded the same court first names that
+ * court, in the tournament's own words: "Court 2 was already recorded by
+ * another scorer." Every other failure keeps its message, or the fallback
+ * when it has none.
+ */
+export const failureNotice = (tournament: Tournament, error: unknown, fallback: string): string =>
+  error instanceof ReversedCommandError && error.court !== undefined
+    ? `${courtLabel(tournament, error.court)} was already recorded by another scorer.`
+    : messageOf(error, fallback);
+
+// ============================================
+// The win-button guard
+// ============================================
+
+/**
+ * How long after a tap a court's win buttons ignore further taps, in
+ * milliseconds. A tuning value, not a contract: long enough that a double
+ * tap cannot record the court's next match by accident, short enough that
+ * nobody waits for it.
+ */
+export const WIN_TAP_GUARD_MS = 500;
+
+/**
+ * The guard on a court's win buttons. `accept` says whether a tap on the
+ * court under `key` at time `now` counts, and remembers it when it does.
+ * A tap inside the window after the last accepted tap on the same court is
+ * ignored; other courts are unaffected. The guard is keyed by court, not
+ * by match, because the court shows its next match the moment a result is
+ * recorded and that is exactly the match a double tap would finish.
+ */
+export interface WinTapGuard {
+  accept: (key: number | string, now: number) => boolean;
+}
+
+export const winTapGuard = (guardMs: number = WIN_TAP_GUARD_MS): WinTapGuard => {
+  const lastTapAt = new Map<number | string, number>();
+  return {
+    accept: (key, now) => {
+      const last = lastTapAt.get(key);
+      if (last !== undefined && now - last < guardMs) return false;
+      lastTapAt.set(key, now);
+      return true;
+    },
+  };
+};
 
 // ============================================
 // Schedule

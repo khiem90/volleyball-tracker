@@ -24,12 +24,18 @@ const firestoreEmulator = {
 // what a developer is looking at in the browser, and not shared between files,
 // so one file's wipe cannot hit another file running in parallel. The demo-
 // prefix keeps the emulator from ever calling real Firebase.
+// EMULATOR_PROJECT_SUFFIX lets two checkouts run the same file against one
+// emulator at the same time, each in its own project.
 const projectIdFor = (name: string): string => {
   const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
   // A short hash keeps two long names apart after the slug is cut down.
   let hash = 0;
   for (const char of name) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
-  return `demo-tt-${slug.slice(0, 16)}-${hash.toString(36)}`;
+  const suffix = (process.env.EMULATOR_PROJECT_SUFFIX ?? "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .slice(0, 12);
+  return `demo-tt-${slug.slice(0, 16)}-${hash.toString(36)}${suffix ? `-${suffix}` : ""}`;
 };
 
 const skipMessage =

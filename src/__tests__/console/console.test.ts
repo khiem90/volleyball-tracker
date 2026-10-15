@@ -1,18 +1,32 @@
 import { describe, expect, it } from "vitest";
+import { ReversedCommandError } from "@/lib/commandErrors";
 import {
   bracketView,
   consoleAccess,
   courtsView,
+  failureNotice,
   roleFor,
   scheduleView,
   standingsView,
   teamsView,
+  WIN_TAP_GUARD_MS,
+  winTapGuard,
 } from "@/lib/console";
+import { EngineError } from "@/lib/engine";
+import { stackAfterFailure, stackAfterUndo } from "@/lib/undo";
 import { DEFAULT_TERMINOLOGY } from "@/types/competition-config";
-import type { Match } from "@/types/game";
+import type { Match, Tournament } from "@/types/game";
+import type { UndoEntry } from "@/types/undo";
 import { draftWorld, find, openOn, started, win } from "../engine/helpers";
 
 const sorted = (ids: readonly string[]) => [...ids].sort();
+
+/** A win taken back because another phone recorded `court` first. */
+const reversed = (court: number | undefined) =>
+  new ReversedCommandError(
+    new EngineError("match_completed", "That match has already been completed."),
+    court,
+  );
 
 describe("roleFor", () => {
   it("makes the owning account the owner and everyone else, signed in or not, a spectator", () => {
@@ -387,5 +401,133 @@ describe("bracketView", () => {
     const world = started("round_robin", 4);
 
     expect(bracketView(world.tournament, world.matches)).toEqual({ sections: [] });
+  });
+});
+
+describe("winTapGuard", () => {
+  it("ignores a second tap on the same court inside the guard window", () => {
+    const guard = winTapGuard();
+
+    expect(guard.accept(1, 1000)).toBe(true);
+    expect(guard.accept(1, 1000 + WIN_TAP_GUARD_MS / 2)).toBe(false);
+  });
+
+  it("records a tap on another court inside the window", () => {
+    const guard = winTapGuard();
+
+    guard.accept(1, 1000);
+
+    expect(guard.accept(2, 1000 + WIN_TAP_GUARD_MS / 2)).toBe(true);
+  });
+
+  it("records a tap on the same court once the window has passed", () => {
+    const guard = winTapGuard();
+
+    guard.accept(1, 1000);
+
+    expect(guard.accept(1, 1000 + WIN_TAP_GUARD_MS + 1)).toBe(true);
+  });
+
+  it("records a tap exactly one window after the last one: the window is half-open", () => {
+    const guard = winTapGuard();
+
+    guard.accept(1, 1000);
+
+    expect(guard.accept(1, 1000 + WIN_TAP_GUARD_MS)).toBe(true);
+  });
+
+  it("measures the window from the last accepted tap, not from an ignored one", () => {
+    const guard = winTapGuard();
+
+    guard.accept(1, 1000);
+    guard.accept(1, 1000 + WIN_TAP_GUARD_MS - 1);
+
+    expect(guard.accept(1, 1000 + WIN_TAP_GUARD_MS)).toBe(true);
+  });
+});
+
+describe("failureNotice", () => {
+  const tournament = started("win2out", 6, { courts: 2 }).tournament;
+  const onFields: Tournament = {
+    ...tournament,
+    settings: {
+      ...tournament.settings,
+      terminology: { ...DEFAULT_TERMINOLOGY, venue: "field", venuePlural: "fields" },
+    },
+  };
+  it("says which court another scorer recorded first when a win was taken back", () => {
+    expect(failureNotice(tournament, reversed(2), "The result could not be recorded.")).toBe(
+      "Court 2 was already recorded by another scorer.",
+    );
+  });
+
+  it("names the court in the tournament's own words", () => {
+    expect(failureNotice(onFields, reversed(1), "The result could not be recorded.")).toBe(
+      "Field 1 was already recorded by another scorer.",
+    );
+  });
+
+  it("falls back to the error's own message for a reversed change that concerned no court", () => {
+    const error = reversed(undefined);
+
+    expect(failureNotice(tournament, error, "The change could not be made.")).toBe(error.message);
+  });
+
+  it("keeps the wording of every other failure: the error's message, or the fallback when it has none", () => {
+    expect(failureNotice(tournament, new Error("No signal."), "The result could not be recorded.")).toBe(
+      "No signal.",
+    );
+    expect(failureNotice(tournament, "nope", "The result could not be recorded.")).toBe(
+      "The result could not be recorded.",
+    );
+  });
+});
+
+describe("the undo stack", () => {
+  const entry = (id: string, tournamentId: string, matchId: string): UndoEntry => ({
+    id,
+    actionType: "instant_win",
+    description: `${id} won`,
+    tournamentId,
+    matchId,
+    timestamp: 1,
+  });
+  // Newest first, as the toast keeps it: a win on court 2, then court 1, then
+  // court 1 again in another tournament.
+  const stack = [entry("u3", "tour-a", "m-court2"), entry("u2", "tour-a", "m-court1"), entry("u1", "tour-b", "m-court1")];
+
+  describe("stackAfterFailure", () => {
+    it("drops the entry of a win whose write failed, whatever the failure, since the result has been rolled back, and keeps the others", () => {
+      expect(stackAfterFailure(stack, "tour-a", "m-court1").map((e) => e.id)).toEqual([
+        "u3",
+        "u1",
+      ]);
+    });
+
+    it("leaves the stack alone when the failed result has no entry", () => {
+      expect(stackAfterFailure(stack, "tour-a", "m-court9")).toEqual(stack);
+    });
+  });
+
+  describe("stackAfterUndo", () => {
+    const undone = stack[1];
+
+    it("drops the entry once its undo has been applied on this phone", () => {
+      expect(stackAfterUndo(stack, undone, null).map((e) => e.id)).toEqual(["u3", "u1"]);
+    });
+
+    it("drops the entry when the engine refused the undo because the court moved on, since it can never apply later", () => {
+      const refused = new EngineError("court_moved_on", "That result cannot be undone any more.");
+
+      expect(stackAfterUndo(stack, undone, refused).map((e) => e.id)).toEqual(["u3", "u1"]);
+    });
+
+    it("drops the entry when the undo was taken back with the win it was queued behind", () => {
+      expect(stackAfterUndo(stack, undone, reversed(1)).map((e) => e.id)).toEqual(["u3", "u1"]);
+    });
+
+    it("keeps the entry after any other failure, so the undo can be tried again", () => {
+      expect(stackAfterUndo(stack, undone, new Error("No signal."))).toBe(stack);
+    });
   });
 });
