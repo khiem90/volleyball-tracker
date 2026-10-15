@@ -314,8 +314,9 @@ export const duplicateInput = (source: Tournament, roster: PersistentTeam[]): Ne
  * outside the engine that touch nothing a result touches: a rename, the
  * spectator flag. Only those fields are written, so a result landing on a
  * court at the same moment is never overwritten, and the revision moves so
- * an engine command built on the old copy reloads instead of writing the
- * old fields back. The stored revision is read first and sent as the base;
+ * an engine command built on the old copy is refused and replays on the
+ * fresh one instead of writing the old fields back. The stored revision is
+ * read first and sent as the base;
  * when the rules refuse the write because the tournament moved on meanwhile,
  * the fields are rebuilt on the fresh copy, a bounded number of times. A
  * refusal that persists, such as a scorer's attempt at an owner-only field,
