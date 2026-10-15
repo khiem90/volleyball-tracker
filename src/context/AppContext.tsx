@@ -140,8 +140,14 @@ interface AppContextValue {
    */
   duplicateTournament: (id: string) => Promise<string>;
   deleteTournament: (id: string) => Promise<void>;
-  startTournament: (id: string, byeTeamIds?: string[]) => Promise<void>;
-  endTournament: (id: string) => Promise<void>;
+  /**
+   * Start a draft, or end a live tournament. Like every engine command,
+   * each resolves as soon as the engine has applied it on this phone, with
+   * the server's acknowledgement in `done`, which rejects when the command
+   * was refused or taken back.
+   */
+  startTournament: (id: string, byeTeamIds?: string[]) => Promise<AppliedCommand>;
+  endTournament: (id: string) => Promise<AppliedCommand>;
   /** A tournament the account owns, or one this phone reached by link. */
   getTournamentById: (id: string) => Tournament | undefined;
   getMatchesByTournament: (tournamentId: string) => Match[];
@@ -178,23 +184,24 @@ interface AppContextValue {
     tournamentId: string,
     matchId: string,
     result: MatchResult,
-  ) => Promise<void>;
+  ) => Promise<AppliedCommand>;
   getMatchById: (id: string) => Match | undefined;
   /** The tournament's latest late failure, until the console has shown it. */
   lateFailure: (tournamentId: string) => LateFailure | null;
   /** The console has shown the tournament's late failure. */
   clearLateFailure: (tournamentId: string) => void;
-  // Teams, courts, and the queue of a live tournament
+  // Teams, courts, and the queue of a live tournament. Each resolves on the
+  // local apply, with the server's acknowledgement in `done`.
   /** Enter a roster team into a live tournament. In a rotation format it joins the back of the queue. */
-  addTeamToTournament: (tournamentId: string, team: PersistentTeam) => Promise<void>;
+  addTeamToTournament: (tournamentId: string, team: PersistentTeam) => Promise<AppliedCommand>;
   /** Withdraw a team from a live tournament. Its played results stay. */
-  withdrawTeam: (tournamentId: string, teamId: string) => Promise<void>;
+  withdrawTeam: (tournamentId: string, teamId: string) => Promise<AppliedCommand>;
   /** Change how many courts a live rotation tournament runs. */
-  changeCourts: (tournamentId: string, courts: number) => Promise<void>;
+  changeCourts: (tournamentId: string, courts: number) => Promise<AppliedCommand>;
   /** Swap two teams' places: between courts, or between a court and the queue. */
-  swapTeams: (tournamentId: string, teamId: string, withTeamId: string) => Promise<void>;
+  swapTeams: (tournamentId: string, teamId: string, withTeamId: string) => Promise<AppliedCommand>;
   /** Move a waiting team to a place in the queue, counted from the front. */
-  reorderQueue: (tournamentId: string, teamId: string, position: number) => Promise<void>;
+  reorderQueue: (tournamentId: string, teamId: string, position: number) => Promise<AppliedCommand>;
   // Share links
   /** Watch a tournament this account does not own, as its spectator link allows. */
   watchTournament: (tournamentId: string) => void;
@@ -380,16 +387,6 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     [guardScorerWrite, tournamentsById, linkedTournaments, ownMatches, linkedMatchesOf],
   );
 
-  /** A command whose caller has nothing to show before the server has accepted it. */
-  const acknowledged = useCallback(
-    async (tournamentId: string, engineCommand: EngineCommand) => {
-      const applied = await command(tournamentId, engineCommand);
-      await applied.done;
-      return applied.outcome;
-    },
-    [command],
-  );
-
   const requireAccount = useCallback(() => {
     if (!uid || !db) throw new Error("Sign in to change your teams and tournaments.");
     return { uid, db };
@@ -481,18 +478,11 @@ export const AppProvider = ({ children }: AppProviderProps) => {
   }, []);
 
   const startTournament = useCallback(
-    async (id: string, byeTeamIds?: string[]) => {
-      await acknowledged(id, { type: "start", byeTeamIds });
-    },
-    [acknowledged]
+    (id: string, byeTeamIds?: string[]) => command(id, { type: "start", byeTeamIds }),
+    [command]
   );
 
-  const endTournament = useCallback(
-    async (id: string) => {
-      await acknowledged(id, { type: "end" });
-    },
-    [acknowledged]
-  );
+  const endTournament = useCallback((id: string) => command(id, { type: "end" }), [command]);
 
   const getTournamentById = useCallback(
     (id: string) => tournamentsById.get(id) ?? linkedTournaments.get(id),
@@ -651,10 +641,9 @@ export const AppProvider = ({ children }: AppProviderProps) => {
   // Also through the engine, so a correction never lands on top of a
   // result a court saved in the meantime.
   const correctMatchResult = useCallback(
-    async (tournamentId: string, matchId: string, result: MatchResult) => {
-      await acknowledged(tournamentId, { type: "correct_result", matchId, ...result });
-    },
-    [acknowledged]
+    (tournamentId: string, matchId: string, result: MatchResult) =>
+      command(tournamentId, { type: "correct_result", matchId, ...result }),
+    [command]
   );
 
   const getMatchById = useCallback((id: string) => matchesById.get(id), [matchesById]);
@@ -665,45 +654,39 @@ export const AppProvider = ({ children }: AppProviderProps) => {
 
   // Each of these is an engine command checked by the rules, so an edit
   // built on a stale copy is applied again on the fresh one rather than
-  // papering over a result a court saved in the meantime.
+  // papering over a result a court saved in the meantime. Each shows at
+  // once, like a result.
   const addTeamToTournament = useCallback(
-    async (tournamentId: string, team: PersistentTeam) => {
-      await acknowledged(tournamentId, {
+    (tournamentId: string, team: PersistentTeam) =>
+      command(tournamentId, {
         type: "add_team",
         teamId: team.id,
         name: team.name,
         ...(team.color !== undefined && { color: team.color }),
-      });
-    },
-    [acknowledged]
+      }),
+    [command]
   );
 
   const withdrawTeam = useCallback(
-    async (tournamentId: string, teamId: string) => {
-      await acknowledged(tournamentId, { type: "withdraw", teamId });
-    },
-    [acknowledged]
+    (tournamentId: string, teamId: string) => command(tournamentId, { type: "withdraw", teamId }),
+    [command]
   );
 
   const changeCourts = useCallback(
-    async (tournamentId: string, courts: number) => {
-      await acknowledged(tournamentId, { type: "change_courts", courts });
-    },
-    [acknowledged]
+    (tournamentId: string, courts: number) => command(tournamentId, { type: "change_courts", courts }),
+    [command]
   );
 
   const swapTeams = useCallback(
-    async (tournamentId: string, teamId: string, withTeamId: string) => {
-      await acknowledged(tournamentId, { type: "swap_teams", teamId, withTeamId });
-    },
-    [acknowledged]
+    (tournamentId: string, teamId: string, withTeamId: string) =>
+      command(tournamentId, { type: "swap_teams", teamId, withTeamId }),
+    [command]
   );
 
   const reorderQueue = useCallback(
-    async (tournamentId: string, teamId: string, position: number) => {
-      await acknowledged(tournamentId, { type: "reorder_queue", teamId, position });
-    },
-    [acknowledged]
+    (tournamentId: string, teamId: string, position: number) =>
+      command(tournamentId, { type: "reorder_queue", teamId, position }),
+    [command]
   );
 
   // ============================================
