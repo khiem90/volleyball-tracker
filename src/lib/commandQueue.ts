@@ -66,6 +66,14 @@ import type { Match, Tournament } from "@/types/game";
  * dropped and its promise rejects with a ReversedCommandError, and so is
  * every command behind it on the same match, such as an undo of that win.
  * Nothing new is written while a replay is under way.
+ *
+ * A known limitation: the recovery from a lost race needs the server's
+ * fresh copy, so a phone that loses its signal mid-recovery cannot record
+ * on that tournament until the connection returns. Its pending commands
+ * wait for the fresh copy, and a new tap waits behind them. A read of the
+ * tournament that keeps failing for a reason other than the rules, such
+ * as a connection that stays down, drops the pending commands after a
+ * bounded number of tries.
  */
 
 export interface CommandOutcome extends EngineResult {
