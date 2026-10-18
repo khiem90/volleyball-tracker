@@ -89,11 +89,6 @@ export const ZONE_POSITIONS: Record<CourtZone, CourtPosition> = {
 };
 
 /**
- * Front row zones (near net)
- */
-const FRONT_ROW_ZONES: CourtZone[] = [2, 3, 4];
-
-/**
  * Back row zones (near endline)
  */
 export const BACK_ROW_ZONES: CourtZone[] = [1, 5, 6];

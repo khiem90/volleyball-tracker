@@ -1,7 +1,6 @@
 import {
   collection,
   doc,
-  getDoc,
   getDocs,
   setDoc,
   updateDoc,
@@ -142,23 +141,6 @@ export const duplicateFormation = async (
 // ============================================
 
 /**
- * Get a formation by ID
- */
-const getFormationById = async (
-  formationId: string
-): Promise<UserFormation | null> => {
-  if (!db) return null;
-
-  const docRef = doc(db, FORMATIONS_COLLECTION, formationId);
-  const docSnap = await getDoc(docRef);
-
-  if (docSnap.exists()) {
-    return docSnap.data() as UserFormation;
-  }
-  return null;
-};
-
-/**
  * Get a formation by share ID (for unlisted formations)
  */
 export const getFormationByShareId = async (
@@ -218,30 +200,6 @@ export const updateFormation = async (
     updatedAt: Date.now(),
   });
   await updateDoc(docRef, sanitized);
-};
-
-/**
- * Update formation data (positions/arrows)
- */
-const updateFormationData = async (
-  formationId: string,
-  data: FormationData
-): Promise<void> => {
-  await updateFormation(formationId, { data });
-};
-
-/**
- * Update formation metadata
- */
-const updateFormationMetadata = async (
-  formationId: string,
-  metadata: {
-    name?: string;
-    description?: string;
-    tags?: string[];
-  }
-): Promise<void> => {
-  await updateFormation(formationId, metadata);
 };
 
 // ============================================
@@ -331,80 +289,4 @@ export const subscribeToUserFormations = (
       onError?.(error);
     }
   );
-};
-
-/**
- * Subscribe to a single formation (real-time updates)
- */
-const subscribeToFormation = (
-  formationId: string,
-  callback: (formation: UserFormation | null) => void,
-  onError?: (error: Error) => void
-): Unsubscribe => {
-  if (!db) {
-    callback(null);
-    return () => {};
-  }
-
-  const docRef = doc(db, FORMATIONS_COLLECTION, formationId);
-
-  return onSnapshot(
-    docRef,
-    (docSnap) => {
-      if (docSnap.exists()) {
-        callback(docSnap.data() as UserFormation);
-      } else {
-        callback(null);
-      }
-    },
-    (error) => {
-      console.error("Error subscribing to formation:", error);
-      onError?.(error);
-    }
-  );
-};
-
-// ============================================
-// Permission Helpers
-// ============================================
-
-/**
- * Check if a user owns a formation
- */
-const isFormationOwner = (
-  formation: UserFormation,
-  userId: string | null
-): boolean => {
-  return userId !== null && formation.ownerUserId === userId;
-};
-
-/**
- * Check if a formation can be viewed by a user
- */
-const canViewFormation = (
-  formation: UserFormation,
-  userId: string | null
-): boolean => {
-  // Owner can always view
-  if (isFormationOwner(formation, userId)) {
-    return true;
-  }
-
-  // Unlisted formations can be viewed by anyone with the link
-  if (formation.visibility === "unlisted") {
-    return true;
-  }
-
-  // Private formations can only be viewed by owner
-  return false;
-};
-
-/**
- * Check if a formation can be edited by a user
- */
-const canEditFormation = (
-  formation: UserFormation,
-  userId: string | null
-): boolean => {
-  return isFormationOwner(formation, userId);
 };
