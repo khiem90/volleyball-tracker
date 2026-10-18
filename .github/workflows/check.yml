@@ -1,0 +1,33 @@
+name: check
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # The Firestore emulator is a Java program; firebase-tools 15 needs 21+.
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # emulators:exec starts the Firestore emulator on the port in
+      # firebase.json, runs the command, and stops it. REQUIRE_EMULATOR=1 makes
+      # the emulator-backed tests fail instead of skip if it is not reachable,
+      # so a green run here means every test actually ran.
+      - run: npx firebase emulators:exec --only firestore --project demo-tournament-tracker "npm run check"
+        env:
+          REQUIRE_EMULATOR: "1"

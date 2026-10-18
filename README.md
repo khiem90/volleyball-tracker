@@ -130,6 +130,12 @@ skips those tests and prints a message saying so. Each of those files loads
 `firestore.rules` into its own demo project, so wiping data between tests never
 touches what you see in the browser or what another test file is doing.
 
+`npm run check` is what CI runs: the type check, the lint with warnings counted
+as errors, and the whole suite, in that order. The workflow in
+`.github/workflows/check.yml` runs it under `firebase emulators:exec` with
+`REQUIRE_EMULATOR=1` set, which turns the skip above into a failure, so a run
+can never come back green with the emulator tests never executed.
+
 ### Deploying rules and indexes
 
 Changes to `firestore.rules` or `firestore.indexes.json` reach the real project

@@ -38,8 +38,10 @@ const projectIdFor = (name: string): string => {
   return `demo-tt-${slug.slice(0, 16)}-${hash.toString(36)}${suffix ? `-${suffix}` : ""}`;
 };
 
+const emulatorAddress = `${firestoreEmulator.host}:${firestoreEmulator.port}`;
+
 const skipMessage =
-  `Firestore emulator not reachable at ${firestoreEmulator.host}:${firestoreEmulator.port}, ` +
+  `Firestore emulator not reachable at ${emulatorAddress}, ` +
   "skipping rules tests. Run `npm run emulators` first.";
 
 async function probeEmulator(): Promise<boolean> {
@@ -47,7 +49,7 @@ async function probeEmulator(): Promise<boolean> {
     // Any HTTP answer on the port counts. If some other server holds the port,
     // the tests run and fail loudly, which beats a quiet skip hiding a broken
     // harness.
-    await fetch(`http://${firestoreEmulator.host}:${firestoreEmulator.port}/`, {
+    await fetch(`http://${emulatorAddress}/`, {
       signal: AbortSignal.timeout(1000),
     });
     return true;
@@ -57,6 +59,20 @@ async function probeEmulator(): Promise<boolean> {
 }
 
 const firestoreEmulatorIsUp = await probeEmulator();
+
+// Skipping is right on a developer's machine, where the emulator is often down
+// and the engine tests are what matters. It is wrong in CI, where a run with the
+// emulator down would come back green having never executed a single rules
+// test. So CI sets REQUIRE_EMULATOR=1, and under that flag an unreachable
+// emulator throws here, which fails every test file that imports this module
+// instead of quietly skipping it.
+if (!firestoreEmulatorIsUp && process.env.REQUIRE_EMULATOR === "1") {
+  throw new Error(
+    `Firestore emulator not reachable at ${emulatorAddress} and REQUIRE_EMULATOR=1 is set, ` +
+      "so the rules tests cannot be skipped. Start it with `npm run emulators`, run under " +
+      "`firebase emulators:exec`, or unset REQUIRE_EMULATOR to skip them instead.",
+  );
+}
 
 /**
  * A describe block that runs only while the Firestore emulator is up. It loads
