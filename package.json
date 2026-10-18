@@ -10,7 +10,8 @@
     "lint": "eslint",
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "test:coverage": "vitest --coverage"
+    "test:coverage": "vitest --coverage",
+    "test:emulated": "node scripts/check-java.mjs && firebase emulators:exec --only firestore --project demo-tournament-tracker \"vitest run\""
   },
   "dependencies": {
     "@ducanh2912/next-pwa": "^10.2.9",

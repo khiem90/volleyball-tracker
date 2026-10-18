@@ -130,6 +130,16 @@ skips those tests and prints a message saying so. Each of those files loads
 `firestore.rules` into its own demo project, so wiping data between tests never
 touches what you see in the browser or what another test file is doing.
 
+To run everything in one go without keeping an emulator terminal open:
+
+```bash
+npm run test:emulated
+```
+
+This starts the Firestore emulator, runs every test including the rules and
+tournament suites, and stops the emulator when vitest finishes. It needs the
+same JDK as the emulators section above describes.
+
 ### Deploying rules and indexes
 
 Changes to `firestore.rules` or `firestore.indexes.json` reach the real project
