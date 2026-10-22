@@ -157,7 +157,7 @@ export const AdvancedSettings = ({
               note={
                 setup.instantWin
                   ? "Tap the winner to record a result, with no points entered. An instant win counts as 25 – 0."
-                  : "Score each match point by point."
+                  : "Score each match point by point. An instant win counts as 25 – 0."
               }
               value={setup.instantWin}
               options={[

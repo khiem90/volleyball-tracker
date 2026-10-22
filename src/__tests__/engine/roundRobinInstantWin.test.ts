@@ -133,6 +133,23 @@ describe("Undo of a Round Robin instant win", () => {
     );
   });
 
+  it("refuses a bye, a scheduled empty slot that was never tapped", () => {
+    const live = started("round_robin", 3, { instantWin: true });
+    const match = live.matches[0];
+    // Round Robin schedules no bye row of its own, so the slot is built as the
+    // engine settles a bye: completed without play, one team id missing.
+    const withBye: World = {
+      ...live,
+      matches: live.matches.map((m) =>
+        m.id === match.id
+          ? { ...m, status: "completed", isBye: true, awayTeamId: "", winnerId: match.homeTeamId }
+          : m,
+      ),
+    };
+
+    expect(() => undo(withBye, match.id, match.homeTeamId)).toThrow(/no longer be undone/);
+  });
+
   it("refuses once the tournament is completed", () => {
     let world = started("round_robin", 3, { instantWin: true });
     for (const match of world.matches) world = tap(world, match.id, match.homeTeamId);
