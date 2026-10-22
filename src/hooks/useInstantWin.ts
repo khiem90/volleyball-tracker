@@ -30,19 +30,23 @@ export const useInstantWin = ({ tournament, getTeamName }: UseInstantWinProps) =
     async (winnerId: string, match: Match) => {
       if (!tournament) return;
       const { outcome, done } = await instantWin(match.id, winnerId);
-      if (outcome.tournament.status === "live") {
-        pushUndo({
-          actionType: "instant_win",
-          description: `${getTeamName(winnerId)} won`,
-          tournamentId: tournament.id,
-          matchId: match.id,
-          winnerId,
-        });
-      }
+      // Only this tap's entry is withdrawn on failure: an earlier game of
+      // the same best-of still stands. A tap that completed the tournament
+      // pushed no entry, so there is nothing to withdraw.
+      const entryId =
+        outcome.tournament.status === "live"
+          ? pushUndo({
+              actionType: "instant_win",
+              description: `${getTeamName(winnerId)} won`,
+              tournamentId: tournament.id,
+              matchId: match.id,
+              winnerId,
+            })
+          : null;
       try {
         await done;
       } catch (error) {
-        resultFailed(tournament.id, match.id);
+        if (entryId !== null) resultFailed(entryId);
         throw error;
       }
     },

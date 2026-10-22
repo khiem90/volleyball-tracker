@@ -50,15 +50,17 @@ export interface UndoToastProps {
  * Context value for global undo management
  */
 export interface UndoContextValue {
-  /** Push a new undoable action */
-  pushUndo: (entry: Omit<UndoEntry, "id" | "timestamp">) => void;
+  /** Push a new undoable action; returns the new entry's id. */
+  pushUndo: (entry: Omit<UndoEntry, "id" | "timestamp">) => string;
   /** Clear all undo entries */
   clearUndo: () => void;
   /**
-   * A result's write failed, so the result has been rolled back on this
-   * phone and its entry goes: there is nothing left to undo.
+   * The write of the result behind entry `entryId` failed, so that result
+   * has been rolled back on this phone and its entry goes: there is
+   * nothing left to undo. Other entries, including an earlier game of the
+   * same best-of, stay.
    */
-  resultFailed: (tournamentId: string, matchId: string) => void;
+  resultFailed: (entryId: string) => void;
   /** Stack of undo entries (most recent first) */
   undoStack: UndoEntry[];
   /** Number of available undos in the stack */

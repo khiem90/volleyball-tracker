@@ -30,7 +30,7 @@ export const GlobalUndoToast = ({ children }: GlobalUndoToastProps) => {
   const currentEntry = undoStack.length > 0 ? undoStack[0] : null;
 
   const pushUndo = useCallback(
-    (entry: Omit<UndoEntry, "id" | "timestamp">) => {
+    (entry: Omit<UndoEntry, "id" | "timestamp">): string => {
       const newEntry: UndoEntry = {
         ...entry,
         id: generateUndoId(),
@@ -41,6 +41,7 @@ export const GlobalUndoToast = ({ children }: GlobalUndoToastProps) => {
         const newStack = [newEntry, ...prev];
         return newStack.slice(0, MAX_UNDO_STACK_SIZE);
       });
+      return newEntry.id;
     },
     []
   );
@@ -49,8 +50,8 @@ export const GlobalUndoToast = ({ children }: GlobalUndoToastProps) => {
     setUndoStack([]);
   }, []);
 
-  const resultFailed = useCallback((tournamentId: string, matchId: string) => {
-    setUndoStack((prev) => stackAfterFailure(prev, tournamentId, matchId));
+  const resultFailed = useCallback((entryId: string) => {
+    setUndoStack((prev) => stackAfterFailure(prev, entryId));
   }, []);
 
   // The engine takes the result back as one command: the match, the match

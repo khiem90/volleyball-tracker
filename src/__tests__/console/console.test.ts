@@ -501,14 +501,18 @@ describe("the undo stack", () => {
 
   describe("stackAfterFailure", () => {
     it("drops the entry of a win whose write failed, whatever the failure, since the result has been rolled back, and keeps the others", () => {
-      expect(stackAfterFailure(stack, "tour-a", "m-court1").map((e) => e.id)).toEqual([
-        "u3",
-        "u1",
-      ]);
+      expect(stackAfterFailure(stack, "u2").map((e) => e.id)).toEqual(["u3", "u1"]);
     });
 
     it("leaves the stack alone when the failed result has no entry", () => {
-      expect(stackAfterFailure(stack, "tour-a", "m-court9")).toEqual(stack);
+      expect(stackAfterFailure(stack, "u9")).toEqual(stack);
+    });
+
+    it("keeps the earlier game of a Round Robin best-of when the later tap on the same match is reversed, since game 1 still stands and is undoable", () => {
+      // Game 1 tapped Reds and landed; game 2 tapped Reds and the server took it back.
+      const bestOf = [entry("game2", "tour-a", "m-series"), entry("game1", "tour-a", "m-series")];
+
+      expect(stackAfterFailure(bestOf, "game2").map((e) => e.id)).toEqual(["game1"]);
     });
   });
 
