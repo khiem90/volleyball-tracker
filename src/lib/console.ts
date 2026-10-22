@@ -7,7 +7,7 @@ import { ReversedCommandError } from "@/lib/commandErrors";
 import { openMatchOn } from "@/lib/engine";
 import { isBracketFormat, isRotationFormat } from "@/lib/formats";
 import { calculateStandings } from "@/lib/roundRobin";
-import { seriesInfo } from "@/lib/scoring";
+import { seriesInfo } from "@/lib/series";
 import { getRoundName, getTotalRounds } from "@/lib/singleElimination";
 import { messageOf } from "@/lib/utils";
 import { getChampionCount } from "@/lib/win2out";
