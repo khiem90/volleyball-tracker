@@ -226,7 +226,7 @@ const TournamentConsole = () => {
             team={page.team}
             access={page.access}
             onCorrect={page.canCorrectResults ? page.openCorrection : undefined}
-            onInstantWin={page.scheduleInstantWin ? page.instantWin : undefined}
+            onInstantWin={page.offersInstantWin ? page.instantWin : undefined}
           />
         </Section>
         <Section id="teams" active={page.tab} className="lg:col-span-4">

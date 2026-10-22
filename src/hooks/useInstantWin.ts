@@ -27,7 +27,7 @@ export const useInstantWin = ({ tournament, getTeamName }: UseInstantWinProps) =
   const { pushUndo, resultFailed } = useUndo();
 
   const handleInstantWin = useCallback(
-    async (winnerId: string, match: Match) => {
+    async (match: Match, winnerId: string) => {
       if (!tournament) return;
       const { outcome, done } = await instantWin(match.id, winnerId);
       // Only this tap's entry is withdrawn on failure: an earlier game of

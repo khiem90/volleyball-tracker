@@ -7,6 +7,7 @@ import { ReversedCommandError } from "@/lib/commandErrors";
 import { openMatchOn } from "@/lib/engine";
 import { isBracketFormat, isRotationFormat } from "@/lib/formats";
 import { calculateStandings } from "@/lib/roundRobin";
+import { seriesInfo } from "@/lib/scoring";
 import { getRoundName, getTotalRounds } from "@/lib/singleElimination";
 import { messageOf } from "@/lib/utils";
 import { getChampionCount } from "@/lib/win2out";
@@ -263,10 +264,9 @@ export const completesTournament = (
 ): boolean => {
   if (tournament.format !== "round_robin") return false;
   if (matches.some((m) => m.id !== match.id && m.status !== "completed")) return false;
-  const seriesLength = match.seriesLength ?? 1;
-  if (seriesLength <= 1) return true;
-  const games = (winnerId === match.homeTeamId ? match.homeWins : match.awayWins) ?? 0;
-  return games + 1 >= Math.ceil(seriesLength / 2);
+  const series = seriesInfo(match);
+  const games = winnerId === match.homeTeamId ? series.homeWins : series.awayWins;
+  return games + 1 >= series.winsNeeded;
 };
 
 // ============================================

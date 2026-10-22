@@ -249,7 +249,7 @@ export const useConsole = (tournamentId: string) => {
   const recordInstantWin = useCallback(
     (match: Match, winnerId: string) => {
       setActionError(null);
-      handleInstantWin(winnerId, match).catch((error: unknown) => {
+      handleInstantWin(match, winnerId).catch((error: unknown) => {
         console.error("Instant win failed:", error);
         reportFailure("The result could not be recorded.", error);
       });
@@ -646,7 +646,7 @@ export const useConsole = (tournamentId: string) => {
     actionError,
     instantWin,
     /** Whether the Schedule tab offers instant win buttons: a live Round Robin with Instant win on, to a role that may score. */
-    scheduleInstantWin: tournament ? scheduleInstantWin(tournament, access) : false,
+    offersInstantWin: tournament ? scheduleInstantWin(tournament, access) : false,
     /** The tap that would complete the tournament, held until it is confirmed. */
     decidingTap,
     confirmDecidingTap,
