@@ -93,7 +93,8 @@ const Status = ({ match }: { match: Match }) => {
  * One match as a row: where it sits, its two teams, and its score or
  * status. With `href` the whole row opens that page, which is how a tap on
  * a match opens scoring. With `onCorrect` the whole row is a button that
- * opens the correction of its result.
+ * opens the correction of its result. With `onInstantWin` the row ends in
+ * a button per team that records that team as the winner.
  */
 export const MatchRow = ({
   match,
@@ -101,6 +102,7 @@ export const MatchRow = ({
   label,
   href,
   onCorrect,
+  onInstantWin,
 }: {
   match: Match;
   team: TeamLookup;
@@ -108,6 +110,7 @@ export const MatchRow = ({
   label?: string;
   href?: string;
   onCorrect?: () => void;
+  onInstantWin?: (winnerId: string) => void;
 }) => {
   const completed = match.status === "completed";
   const homeLost = completed && !match.isBye && match.winnerId === match.awayTeamId;
@@ -134,19 +137,37 @@ export const MatchRow = ({
     "grid min-h-11 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-2 gap-y-1 px-3 py-2";
   const tappable = `${className} transition-colors hover:bg-[rgba(7,50,77,0.04)]`;
 
-  if (href) {
-    return (
-      <Link href={href} className={tappable}>
-        {body}
-      </Link>
-    );
-  }
-  if (onCorrect) {
-    return (
-      <button type="button" onClick={onCorrect} className={`${tappable} w-full text-left`}>
-        {body}
-      </button>
-    );
-  }
-  return <div className={className}>{body}</div>;
+  const row = href ? (
+    <Link href={href} className={tappable}>
+      {body}
+    </Link>
+  ) : onCorrect ? (
+    <button type="button" onClick={onCorrect} className={`${tappable} w-full text-left`}>
+      {body}
+    </button>
+  ) : (
+    <div className={className}>{body}</div>
+  );
+
+  if (!onInstantWin) return row;
+  return (
+    <div className="flex flex-col">
+      {row}
+      <div className="flex gap-2 px-3 pb-2">
+        <WinButton name={team(match.homeTeamId).name} onClick={() => onInstantWin(match.homeTeamId)} />
+        <WinButton name={team(match.awayTeamId).name} onClick={() => onInstantWin(match.awayTeamId)} />
+      </div>
+    </div>
+  );
 };
+
+/** "Reds won": the instant win button for one side of a match. */
+const WinButton = ({ name, onClick }: { name: string; onClick: () => void }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className="mb-btn mb-btn-outline-navy min-w-0 flex-1 whitespace-normal py-1.5 leading-tight"
+  >
+    {name} won
+  </button>
+);

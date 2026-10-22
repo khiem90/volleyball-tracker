@@ -9,23 +9,18 @@ export const generateUndoId = (): string => {
   return `undo_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
 };
 
-/** The stack without the entries for one result. */
-const withoutResult = (stack: UndoEntry[], tournamentId: string, matchId: string): UndoEntry[] =>
-  stack.filter((entry) => !(entry.tournamentId === tournamentId && entry.matchId === matchId));
-
 /**
- * The stack once a result's write has failed, whatever the failure: the
- * server took the result back because another scorer got to its court
- * first, the rules refused it, the scorer link had gone stale, or the
- * write was dropped. In every case the result has been rolled back on
- * this phone and no longer exists, so its entry goes: nobody is offered
- * an undo of it.
+ * The stack once the write of the result behind entry `entryId` has
+ * failed, whatever the failure: the server took the result back because
+ * another scorer got to its court first, the rules refused it, the scorer
+ * link had gone stale, or the write was dropped. In every case that
+ * result has been rolled back on this phone and no longer exists, so its
+ * entry goes: nobody is offered an undo of it. Only that entry goes: an
+ * earlier game of the same Round Robin best-of still stands and keeps its
+ * entry.
  */
-export const stackAfterFailure = (
-  stack: UndoEntry[],
-  tournamentId: string,
-  matchId: string,
-): UndoEntry[] => withoutResult(stack, tournamentId, matchId);
+export const stackAfterFailure = (stack: UndoEntry[], entryId: string): UndoEntry[] =>
+  stack.filter((entry) => entry.id !== entryId);
 
 /**
  * Whether an undo is over and done with, whatever the toast heard back:
