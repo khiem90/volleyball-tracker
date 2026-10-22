@@ -234,6 +234,41 @@ export const winTapGuard = (guardMs: number = WIN_TAP_GUARD_MS): WinTapGuard => 
   };
 };
 
+/**
+ * Whether the Schedule tab offers instant win buttons: a live Round Robin
+ * with Instant win on, to a role that may score. Rotation formats offer
+ * theirs on the court cards instead.
+ */
+export const scheduleInstantWin = (tournament: Tournament, access: ConsoleAccess): boolean =>
+  tournament.format === "round_robin" &&
+  tournament.status === "live" &&
+  tournament.settings.instantWin &&
+  access.canScore;
+
+/** A row that can take an instant win: still to be played, with both teams known. */
+export const takesInstantWin = (match: Match): boolean =>
+  match.status !== "completed" && isPlayable(match);
+
+/**
+ * Whether giving `winnerId` the next game of `match` would complete a Round
+ * Robin: every other match is played, and this game decides the match. The
+ * console asks before that tap, since nothing in a completed tournament
+ * changes afterwards.
+ */
+export const completesTournament = (
+  tournament: Tournament,
+  matches: Match[],
+  match: Match,
+  winnerId: string,
+): boolean => {
+  if (tournament.format !== "round_robin") return false;
+  if (matches.some((m) => m.id !== match.id && m.status !== "completed")) return false;
+  const seriesLength = match.seriesLength ?? 1;
+  if (seriesLength <= 1) return true;
+  const games = (winnerId === match.homeTeamId ? match.homeWins : match.awayWins) ?? 0;
+  return games + 1 >= Math.ceil(seriesLength / 2);
+};
+
 // ============================================
 // Schedule
 // ============================================

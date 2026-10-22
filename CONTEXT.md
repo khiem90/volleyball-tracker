@@ -91,16 +91,16 @@ One scored leg inside a match played as a series. A match that is not a series h
 A match decided over a best-of-N sequence of games.
 
 **Instant Win**:
-Recording a match result by tapping the winner, without entering points.
+Recording a match result by tapping the winner, without entering points. It counts as 25 to 0. Offered in Win 2 & Out, Two Match Rotation, and Round Robin when the tournament is set up with it; in a best-of each tap records one game.
 _Avoid_: Quick result
 
 **Undo**:
-Taking back the latest result on a court in Win 2 & Out or Two Match Rotation. The match is unplayed again, the match it scheduled is removed, and the teams it moved go back where they were. Only a court's latest result can be undone, and only while the court has not moved on.
+Taking back a result from the toast offered after an instant win. On a court in Win 2 & Out or Two Match Rotation the match is unplayed again, the match it scheduled is removed, and the teams it moved go back where they were; only a court's latest result can be undone, and only while the court has not moved on. In Round Robin an instant win is put back one game, as long as its score has not been corrected since. The tap that would complete a tournament asks for confirmation instead, since a completed tournament cannot be undone into.
 _Avoid_: Revert, rollback
 
 **Correction**:
 Changing the score of a completed match from Schedule, or from the Bracket tab in a bracket. The owner can correct a Round Robin or bracket result while the tournament is live: the winner follows the new score. In Round Robin a forfeit corrected this way counts as played, and the standings recalculate. In a bracket a new winner goes through in place of the old one, a bye or forfeit the old winner was then given passes to the new one, and a change of winner is refused once the next match has started; a bye or a forfeit has no score to correct. In a best-of the corrected score is the deciding game's, and a change of winner is refused if it would leave the series undecided.
-_Avoid_: Edit result, override, undo (for a round robin or bracket result)
+_Avoid_: Edit result, override, undo (for a scored round robin result or a bracket result)
 
 **Quick Match**:
 A standalone match between two teams that belongs to no tournament. One left without a result is abandoned and waits on the Quick page until the owner resumes it or discards it. A completed quick match counts in both teams' records.

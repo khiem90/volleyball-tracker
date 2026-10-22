@@ -24,7 +24,7 @@ import { courtLabel, courtsWord, type ConsoleRole } from "@/lib/console";
 import { STALE_SCORER_LINK } from "@/lib/shareLinks";
 import { signInHref } from "@/lib/shell";
 import { formatLabel, isBracketFormat, isRotationFormat } from "@/lib/formats";
-import { UserMinus } from "lucide-react";
+import { Trophy, UserMinus } from "lucide-react";
 
 const ROLE_LABEL: Record<Exclude<ConsoleRole, "owner">, string> = {
   scorer: "Scorer",
@@ -226,6 +226,7 @@ const TournamentConsole = () => {
             team={page.team}
             access={page.access}
             onCorrect={page.canCorrectResults ? page.openCorrection : undefined}
+            onInstantWin={page.scheduleInstantWin ? page.instantWin : undefined}
           />
         </Section>
         <Section id="teams" active={page.tab} className="lg:col-span-4">
@@ -304,6 +305,22 @@ const TournamentConsole = () => {
         busyLabel="Regenerating..."
         isBusy={false}
         onConfirm={page.regenerate}
+      />
+
+      <ConfirmDialog
+        open={page.decidingTap !== null}
+        onOpenChange={(open) => {
+          if (!open) page.cancelDecidingTap();
+        }}
+        icon={Trophy}
+        title="This is the last match"
+        description={`Recording ${
+          page.decidingTap ? page.team(page.decidingTap.winnerId).name : "this team"
+        } as the winner completes the tournament. Nothing in it can be changed after that.`}
+        confirmLabel={`${page.decidingTap ? page.team(page.decidingTap.winnerId).name : "Team"} won`}
+        busyLabel="Recording..."
+        isBusy={false}
+        onConfirm={page.confirmDecidingTap}
       />
 
       <ConfirmDialog

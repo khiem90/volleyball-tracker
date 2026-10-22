@@ -68,7 +68,7 @@ export const GlobalUndoToast = ({ children }: GlobalUndoToastProps) => {
 
     setIsUndoing(true);
     try {
-      const { done } = await undoResult(entry.tournamentId, entry.matchId);
+      const { done } = await undoResult(entry.tournamentId, entry.matchId, entry.winnerId);
       setUndoStack((prev) => stackAfterUndo(prev, entry, null));
       done.catch((error: unknown) => {
         console.error("Undo was not accepted:", error);

@@ -187,11 +187,17 @@ describe("undo result", () => {
     isRefusedWhenTheCourtHasMovedOn("two_match_rotation");
   });
 
-  it("is refused for formats without a queue", () => {
+  it("is refused in a bracket, and for a scored round robin result", () => {
+    const bracket = started("single_elimination", 4);
+    const bracketMatch = bracket.matches[0];
+    const bracketPlayed = win(bracket, bracketMatch.id, bracketMatch.homeTeamId);
+    expect(() => undo(bracketPlayed, bracketMatch.id)).toThrow(/Only Round Robin, Win 2 & Out/);
+
     const live = started("round_robin", 3);
     const matchId = live.matches[0].id;
     const played = win(live, matchId, live.matches[0].homeTeamId);
-
-    expect(() => undo(played, matchId)).toThrow(/Only Win 2 & Out and Two Match Rotation/);
+    expect(() =>
+      run(played, { type: "undo_result", matchId, winnerId: live.matches[0].homeTeamId }),
+    ).toThrow(/no longer be undone/);
   });
 });

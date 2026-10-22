@@ -8,6 +8,9 @@ import {
   roleFor,
   scheduleView,
   standingsView,
+  completesTournament,
+  scheduleInstantWin,
+  takesInstantWin,
   teamsView,
   WIN_TAP_GUARD_MS,
   winTapGuard,
@@ -529,5 +532,74 @@ describe("the undo stack", () => {
     it("keeps the entry after any other failure, so the undo can be tried again", () => {
       expect(stackAfterUndo(stack, undone, new Error("No signal."))).toBe(stack);
     });
+  });
+});
+
+describe("completesTournament", () => {
+  const liveRoundRobin = (settings = {}) => started("round_robin", 3, { instantWin: true, ...settings });
+
+  it("is true for the last unplayed match of a single-game round robin", () => {
+    let world = liveRoundRobin();
+    const [first, second, third] = world.matches;
+    world = win(world, first.id, first.homeTeamId);
+    world = win(world, second.id, second.homeTeamId);
+
+    expect(completesTournament(world.tournament, world.matches, third, third.homeTeamId)).toBe(true);
+    expect(completesTournament(world.tournament, world.matches, third, third.awayTeamId)).toBe(true);
+  });
+
+  it("is false while another match is still to be played", () => {
+    const world = liveRoundRobin();
+    const [first] = world.matches;
+
+    expect(completesTournament(world.tournament, world.matches, first, first.homeTeamId)).toBe(false);
+  });
+
+  it("in a best-of, is true only for the tap that decides the last match", () => {
+    let world = liveRoundRobin({ seriesLength: 3 });
+    const [first, second, third] = world.matches;
+    for (const m of [first, second]) {
+      world = win(world, m.id, m.homeTeamId);
+      world = win(world, m.id, m.homeTeamId);
+    }
+    expect(completesTournament(world.tournament, world.matches, third, third.homeTeamId)).toBe(false);
+
+    world = win(world, third.id, third.homeTeamId);
+    const live = find(world, { id: third.id });
+    expect(completesTournament(world.tournament, world.matches, live, live.homeTeamId)).toBe(true);
+    expect(completesTournament(world.tournament, world.matches, live, live.awayTeamId)).toBe(false);
+  });
+
+  it("is never true outside Round Robin", () => {
+    const world = started("win2out", 3, { instantWin: true });
+    const match = world.matches[0];
+
+    expect(completesTournament(world.tournament, world.matches, match, match.homeTeamId)).toBe(false);
+  });
+});
+
+describe("scheduleInstantWin and takesInstantWin", () => {
+  it("offers the buttons on a live Round Robin with Instant win on, to a role that may score", () => {
+    const world = started("round_robin", 3, { instantWin: true });
+    const scorer = consoleAccess("scorer", "live");
+    const spectator = consoleAccess("spectator", "live");
+
+    expect(scheduleInstantWin(world.tournament, scorer)).toBe(true);
+    expect(scheduleInstantWin(world.tournament, spectator)).toBe(false);
+    expect(scheduleInstantWin({ ...world.tournament, settings: { ...world.tournament.settings, instantWin: false } }, scorer)).toBe(false);
+    expect(scheduleInstantWin(started("win2out", 3, { instantWin: true }).tournament, scorer)).toBe(false);
+    expect(scheduleInstantWin({ ...world.tournament, status: "completed" }, scorer)).toBe(false);
+  });
+
+  it("puts the buttons on pending and live rows, not on completed ones", () => {
+    const world = started("round_robin", 3, { instantWin: true, seriesLength: 3 });
+    const match = world.matches[0];
+    expect(takesInstantWin(match)).toBe(true);
+
+    const mid = win(world, match.id, match.homeTeamId);
+    expect(takesInstantWin(find(mid, { id: match.id }))).toBe(true);
+
+    const done = win(mid, match.id, match.homeTeamId);
+    expect(takesInstantWin(find(done, { id: match.id }))).toBe(false);
   });
 });

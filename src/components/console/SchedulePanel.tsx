@@ -1,7 +1,12 @@
 "use client";
 
 import { Panel, PanelEmpty } from "@/components/matchbook/Panel";
-import { isCorrectable, type ConsoleAccess, type ScheduleRow } from "@/lib/console";
+import {
+  isCorrectable,
+  takesInstantWin,
+  type ConsoleAccess,
+  type ScheduleRow,
+} from "@/lib/console";
 import type { Match, Tournament } from "@/types/game";
 import { MatchRow, scoringLink } from "./MatchRow";
 import type { TeamLookup } from "./teamRefs";
@@ -9,7 +14,9 @@ import type { TeamLookup } from "./teamRefs";
 /**
  * The Schedule tab: every match in play order with its result. A pending or
  * live match opens scoring for an owner or scorer. With `onCorrect`, a
- * completed match opens the correction of its result.
+ * completed match opens the correction of its result. With `onInstantWin`,
+ * a match still to be played carries a button per team that records that
+ * team as the winner.
  */
 export const SchedulePanel = ({
   tournament,
@@ -17,6 +24,7 @@ export const SchedulePanel = ({
   team,
   access,
   onCorrect,
+  onInstantWin,
 }: {
   tournament: Tournament;
   rows: ScheduleRow[];
@@ -24,6 +32,8 @@ export const SchedulePanel = ({
   access: ConsoleAccess;
   /** Offered when completed results can be corrected: the owner of a live round robin or bracket. */
   onCorrect?: (match: Match) => void;
+  /** Offered when a Round Robin with Instant win on is live and the role may score. */
+  onInstantWin?: (match: Match, winnerId: string) => void;
 }) => {
   const played = rows.filter((row) => row.match.status === "completed").length;
   return (
@@ -56,6 +66,11 @@ export const SchedulePanel = ({
               href={scoringLink(match, access)}
               onCorrect={
                 onCorrect && isCorrectable(tournament, match) ? () => onCorrect(match) : undefined
+              }
+              onInstantWin={
+                onInstantWin && takesInstantWin(match)
+                  ? (winnerId) => onInstantWin(match, winnerId)
+                  : undefined
               }
             />
           ))}

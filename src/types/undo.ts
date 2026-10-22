@@ -4,8 +4,9 @@ import { UNDO_DEPTH } from "@/lib/engine/rotation";
 export const MAX_UNDO_STACK_SIZE = UNDO_DEPTH;
 
 /**
- * The actions the undo toast can take back. Both are results on a rotation
- * court; the engine's undo command puts the court back as it was.
+ * The actions the undo toast can take back: a result on a rotation court,
+ * which the engine's undo command puts back as it was, or an instant win in
+ * Round Robin, which it reopens.
  */
 export type UndoActionType = "instant_win" | "match_complete";
 
@@ -23,6 +24,8 @@ export interface UndoEntry {
   tournamentId: string;
   /** The match whose result is undone */
   matchId: string;
+  /** The team the result was given to; a Round Robin undo names it so a changed result is left alone. */
+  winnerId?: string;
   /** Timestamp when action was performed */
   timestamp: number;
 }

@@ -24,7 +24,7 @@ export interface TournamentSetup {
   courts: number;
   /** Best-of series length. Rotation formats always play single games. */
   seriesLength: number;
-  /** Record results by tapping the winner. Rotation formats only. */
+  /** Record results by tapping the winner. Rotation formats and Round Robin. */
   instantWin: boolean;
   /** Standings points for a win and a loss. Round Robin only. */
   pointsForWin: number;
@@ -63,7 +63,7 @@ export const settingsUsedBy = (format: TournamentFormat): SettingsUsed => {
   return {
     courts: rotation,
     series: isSeriesFormat(format),
-    instantWin: rotation,
+    instantWin: rotation || format === "round_robin",
     points: format === "round_robin",
   };
 };

@@ -6,15 +6,17 @@ import { useAuth } from "@/context/AuthContext";
 import { useApp } from "@/context/AppContext";
 import { isLinkPending } from "@/context/useLinkedTournaments";
 import { useOrigin } from "@/hooks/useOrigin";
-import { useRotationInstantWin } from "@/hooks/useRotationInstantWin";
+import { useInstantWin } from "@/hooks/useInstantWin";
 import {
   bracketView,
   capitalize,
+  completesTournament,
   consoleAccess,
   courtsView,
   failureNotice,
   isCorrectable,
   roleFor,
+  scheduleInstantWin,
   scheduleView,
   standingsView,
   teamsView,
@@ -233,28 +235,49 @@ export const useConsole = (tournamentId: string) => {
   const [isDeleting, setIsDeleting] = useState(false);
 
   const getTeamName = useCallback((id: string) => team(id).name, [team]);
-  const { handleInstantWin } = useRotationInstantWin({ tournament, getTeamName });
+  const { handleInstantWin } = useInstantWin({ tournament, getTeamName });
   // A double tap on a court records one result, not two: for a moment after
   // a tap, that court's win buttons ignore taps. The guard is keyed by court
   // because the court shows its next match the instant a result is recorded,
-  // so the second tap would land on a different match. It lives in a ref so
+  // so the second tap would land on a different match. A Round Robin match
+  // has no court, so its guard is the match itself. It lives in a ref so
   // that nothing on screen changes and nothing re-renders.
   const winTaps = useRef(winTapGuard());
   // The court moves on as soon as the tap is applied locally; what the
   // server says about it, a refusal or a result another phone recorded
   // first, arrives later and lands on the error line.
-  const instantWin = useCallback(
+  const recordInstantWin = useCallback(
     (match: Match, winnerId: string) => {
-      if (!access.canScore) return;
-      if (!winTaps.current.accept(match.court ?? match.id, Date.now())) return;
       setActionError(null);
       handleInstantWin(winnerId, match).catch((error: unknown) => {
         console.error("Instant win failed:", error);
         reportFailure("The result could not be recorded.", error);
       });
     },
-    [access.canScore, handleInstantWin, reportFailure],
+    [handleInstantWin, reportFailure],
   );
+  // The tap that would complete a Round Robin is held and confirmed first,
+  // since nothing in a completed tournament can be undone. Every other tap
+  // records at once.
+  const [decidingTap, setDecidingTap] = useState<{ match: Match; winnerId: string } | null>(null);
+  const instantWin = useCallback(
+    (match: Match, winnerId: string) => {
+      if (!tournament || !access.canScore) return;
+      if (!winTaps.current.accept(match.court ?? match.id, Date.now())) return;
+      if (completesTournament(tournament, matches, match, winnerId)) {
+        setDecidingTap({ match, winnerId });
+        return;
+      }
+      recordInstantWin(match, winnerId);
+    },
+    [tournament, matches, access.canScore, recordInstantWin],
+  );
+  const confirmDecidingTap = useCallback(() => {
+    if (!decidingTap) return;
+    setDecidingTap(null);
+    recordInstantWin(decidingTap.match, decidingTap.winnerId);
+  }, [decidingTap, recordInstantWin]);
+  const cancelDecidingTap = useCallback(() => setDecidingTap(null), []);
 
   // Start and End close their dialogs as soon as the engine has applied
   // them on this phone: the first matches, or the final standings, are
@@ -622,6 +645,12 @@ export const useConsole = (tournamentId: string) => {
     isDeleting,
     actionError,
     instantWin,
+    /** Whether the Schedule tab offers instant win buttons: a live Round Robin with Instant win on, to a role that may score. */
+    scheduleInstantWin: tournament ? scheduleInstantWin(tournament, access) : false,
+    /** The tap that would complete the tournament, held until it is confirmed. */
+    decidingTap,
+    confirmDecidingTap,
+    cancelDecidingTap,
     start,
     end,
     rename,
