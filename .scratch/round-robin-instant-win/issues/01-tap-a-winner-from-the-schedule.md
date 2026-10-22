@@ -23,3 +23,4 @@ tap records one result. No undo toast and no confirm yet: a wrong tap is correct
 ## Comments
 
 - 2026-10-22: Landed on `claude/festive-fermat-zsq53w` in commit 66a01be together with 02 and 03.
+- 2026-10-22: Reviewed and merged onto the integration branch `claude/sleepy-mendel-xe4rxq`. Code review: the "counts as 25 – 0" sentence now shows under both Results choices, so the owner reads it before picking (5178ebf); the `completesTournament` helper reuses `seriesInfo` so the best-of arithmetic has one home (90148c8).

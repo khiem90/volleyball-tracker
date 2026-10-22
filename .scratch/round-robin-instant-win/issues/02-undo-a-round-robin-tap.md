@@ -22,3 +22,4 @@ the server reverses drops its toast entry.
 ## Comments
 
 - 2026-10-22: Landed on `claude/festive-fermat-zsq53w` in commit 66a01be.
+- 2026-10-22: Reviewed and merged onto the integration branch `claude/sleepy-mendel-xe4rxq`. Code review found that a reversed tap withdrew every undo entry for its match, so in a best-of a reversed game 2 lost game 1's entry although game 1 still stood; a failed write now withdraws only its own entry (17acd19). The bye refusal the checklist claimed is now pinned by an engine test (5178ebf).

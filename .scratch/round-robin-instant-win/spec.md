@@ -3,7 +3,8 @@
 Status: ready-for-agent
 
 Agreed in a grilling session on 2026-10-22 and built on `claude/festive-fermat-zsq53w`
-the same day; the tickets under `issues/` record what landed. Vocabulary is in
+the same day, then reviewed and merged onto `claude/sleepy-mendel-xe4rxq`; the tickets
+under `issues/` record what landed and what the review changed. Vocabulary is in
 `CONTEXT.md`. Results travel through the command queue and are checked by the
 Firestore rules as ADR-0003 describes; nothing here changes that.
 
