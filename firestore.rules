@@ -204,11 +204,12 @@ service cloud.firestore {
 
         function rsvpFieldsAreValid(data) {
           return data.keys().hasAll(['uid', 'name', 'createdAt'])
-            && data.keys().hasOnly(['uid', 'name', 'createdAt', 'note'])
+            && data.keys().hasOnly(['uid', 'name', 'createdAt', 'note', 'noticesReadAt'])
             && data.name is string
             && data.name.size() >= 1
             && data.name.size() <= 40
-            && (!('note' in data) || (data.note is string && data.note.size() <= 140));
+            && (!('note' in data) || (data.note is string && data.note.size() <= 140))
+            && (!('noticesReadAt' in data) || data.noticesReadAt is timestamp);
         }
 
         allow read: if mayReadRsvps();
@@ -220,6 +221,35 @@ service cloud.firestore {
           && rsvpFieldsAreValid(request.resource.data)
           && request.resource.data.createdAt == request.time
           && rsvpsAreOpen();
+
+        // When the account last opened the RSVP page, which Home compares
+        // with the newest notice. Only the RSVP's own account records it,
+        // always as the server's time, and nothing else changes with it.
+        allow update: if
+          realAccount()
+          && rsvpId == request.auth.uid
+          && resource.data.uid == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['noticesReadAt'])
+          && request.resource.data.noticesReadAt == request.time;
+      }
+
+      // A notice is a short message the owner posts for everyone on the
+      // list, confirmed or waiting. Only the owner posts or deletes one,
+      // nobody edits one, and they are read by whoever may read the RSVPs.
+      // The server's time is the posting time, so it compares honestly with
+      // the time an account last opened the RSVP page.
+      match /notices/{noticeId} {
+        allow read: if ownsTournament() || (realAccount() && rsvpLinkOn(tournament()));
+
+        allow create: if
+          ownsTournament()
+          && request.resource.data.keys().hasOnly(['body', 'createdAt'])
+          && request.resource.data.body is string
+          && request.resource.data.body.size() >= 1
+          && request.resource.data.body.size() <= 500
+          && request.resource.data.createdAt == request.time;
+
+        allow delete: if ownsTournament();
       }
 
       // One document per match. A match carries its owner and tournament ids

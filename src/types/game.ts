@@ -95,6 +95,20 @@ export interface Rsvp {
   note?: string;
   /** The arrival time, written by the server, which decides the order. */
   createdAt: ServerTime;
+  /** When the account last opened the RSVP page, written by the server. Absent until it first does. */
+  noticesReadAt?: ServerTime;
+}
+
+/**
+ * A short message the owner posts on a tournament for everyone on its
+ * list, stored in the tournament's `notices` subcollection.
+ */
+export interface Notice {
+  id: string;
+  /** One to five hundred characters. */
+  body: string;
+  /** When it was posted, written by the server. */
+  createdAt: ServerTime;
 }
 
 export interface Tournament {

@@ -4,7 +4,7 @@
  * touches the database or React. See CONTEXT.md under "RSVP" and ADR-0004.
  */
 
-import type { Tournament } from "@/types/game";
+import type { ServerTime, Tournament } from "@/types/game";
 
 // ============================================
 // Setup
@@ -291,3 +291,22 @@ export const rsvpEntryProblems = (entry: RsvpEntry): RsvpEntryProblems => {
   }
   return problems;
 };
+
+// ============================================
+// Notices
+// ============================================
+
+/** The longest notice the owner can post. The rules hold the same limit. */
+export const NOTICE_BODY_MAX = 500;
+
+/** Why a notice cannot be posted yet, judged on the body as it is saved, trimmed; null when it can. */
+export const noticeProblem = (body: string): string | null => {
+  const trimmed = body.trim();
+  if (trimmed.length === 0) return "Write the notice first.";
+  if (trimmed.length > NOTICE_BODY_MAX) return `Keep the notice to ${NOTICE_BODY_MAX} characters.`;
+  return null;
+};
+
+/** A time the server wrote, in epoch milliseconds, for showing it on a clock. */
+export const millisOf = (time: ServerTime): number =>
+  time.seconds * 1000 + Math.floor(time.nanoseconds / 1_000_000);

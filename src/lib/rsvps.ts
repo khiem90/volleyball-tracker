@@ -1,5 +1,7 @@
 import {
+  addDoc,
   collection,
+  deleteDoc,
   deleteField,
   doc,
   getDoc,
@@ -8,12 +10,14 @@ import {
   orderBy,
   query,
   serverTimestamp,
+  updateDoc,
   writeBatch,
   type Firestore,
   type Unsubscribe,
 } from "firebase/firestore";
 import { isRefused } from "@/lib/firestoreData";
 import {
+  noticeProblem,
   refusedRsvpMessage,
   rsvpEntryProblems,
   rsvpPageState,
@@ -21,8 +25,8 @@ import {
   type RsvpEntry,
   type RsvpSetup,
 } from "@/lib/rsvp";
-import { tournamentDoc, updateTournamentFields } from "@/lib/tournaments";
-import type { Rsvp, RsvpSettings, Tournament } from "@/types/game";
+import { noticesCollection, tournamentDoc, updateTournamentFields } from "@/lib/tournaments";
+import type { Notice, Rsvp, RsvpSettings, Tournament } from "@/types/game";
 
 /**
  * RSVPs on Firestore: the owner's RSVP settings on the tournament document,
@@ -179,3 +183,58 @@ export const readRememberedName = async (db: Firestore, uid: string): Promise<st
   const name: unknown = snapshot.data()?.rsvpName;
   return typeof name === "string" && name.length > 0 ? name : null;
 };
+
+// ============================================
+// Notices
+// ============================================
+
+/**
+ * A tournament's notices, newest first, for the owner, or for any signed-in
+ * account while the RSVP link is on. A notice this phone has just posted
+ * shows with the server time estimated until the server answers. Calls
+ * `onError` when the rules refuse the list, as they do once the owner
+ * turns the link off.
+ */
+export const subscribeToNotices = (
+  db: Firestore,
+  tournamentId: string,
+  onChange: (notices: Notice[]) => void,
+  onError?: (error: Error) => void,
+): Unsubscribe =>
+  onSnapshot(
+    query(noticesCollection(db, tournamentId), orderBy("createdAt", "desc")),
+    (snapshot) => {
+      onChange(
+        snapshot.docs.map((d) => ({
+          ...(d.data({ serverTimestamps: "estimate" }) as Omit<Notice, "id">),
+          id: d.id,
+        })),
+      );
+    },
+    (error) => onError?.(error),
+  );
+
+/**
+ * Post a notice on a tournament, trimmed, at the server's time. A body the
+ * rules would refuse is thrown before anything is written. Owner only.
+ */
+export const postNotice = async (db: Firestore, tournamentId: string, body: string): Promise<void> => {
+  const problem = noticeProblem(body);
+  if (problem) throw new Error(problem);
+  await addDoc(noticesCollection(db, tournamentId), {
+    body: body.trim(),
+    createdAt: serverTimestamp(),
+  });
+};
+
+/** Delete a notice posted by mistake. Owner only. */
+export const deleteNotice = (db: Firestore, tournamentId: string, noticeId: string): Promise<void> =>
+  deleteDoc(doc(noticesCollection(db, tournamentId), noticeId));
+
+/**
+ * Record on the account's own RSVP that it has seen the tournament's
+ * notices up to now, by the server's clock, which Home compares with the
+ * newest notice. Refused for an account without an RSVP to the tournament.
+ */
+export const markNoticesRead = (db: Firestore, tournamentId: string, uid: string): Promise<void> =>
+  updateDoc(rsvpDoc(db, tournamentId, uid), { noticesReadAt: serverTimestamp() });

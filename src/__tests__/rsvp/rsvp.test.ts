@@ -3,7 +3,9 @@ import {
   countdown,
   DEFAULT_CAPACITY,
   epochToWallClock,
+  millisOf,
   NOT_OPEN_YET,
+  noticeProblem,
   prefillName,
   refusedRsvpMessage,
   rsvpEntryProblems,
@@ -247,5 +249,18 @@ describe("the RSVP form", () => {
 
   it("judges the name as it will be saved, without the spaces around it", () => {
     expect(rsvpEntryProblems({ name: ` ${"x".repeat(40)} `, note: "" })).toEqual({});
+  });
+});
+
+describe("a notice", () => {
+  it("takes one to five hundred characters, judged as it will be saved, trimmed", () => {
+    expect(noticeProblem("We moved to 7:30.")).toBeNull();
+    expect(noticeProblem(` ${"x".repeat(500)} `)).toBeNull();
+    expect(noticeProblem("  \n ")).toBe("Write the notice first.");
+    expect(noticeProblem("x".repeat(501))).toBe("Keep the notice to 500 characters.");
+  });
+
+  it("is shown at the time the server posted it, to the millisecond", () => {
+    expect(millisOf({ seconds: 1_800_000_000, nanoseconds: 123_456_789 })).toBe(1_800_000_000_123);
   });
 });

@@ -67,6 +67,9 @@ export const scorerProofsCollection = (db: Firestore, tournamentId: string) =>
   collection(db, "tournaments", tournamentId, "scorers");
 export const scorerProofDoc = (db: Firestore, tournamentId: string, uid: string) =>
   doc(scorerProofsCollection(db, tournamentId), uid);
+/** The owner's notices to everyone on the RSVP list (see src/lib/rsvps.ts). */
+export const noticesCollection = (db: Firestore, tournamentId: string) =>
+  collection(db, "tournaments", tournamentId, "notices");
 
 export interface ScorerKey {
   key: string;
@@ -377,15 +380,17 @@ export const renameTournament = async (
  * proofs of every phone that opened its scorer link.
  */
 export const deleteTournament = async (db: Firestore, tournamentId: string): Promise<void> => {
-  const [matches, proofs] = await Promise.all([
+  const [matches, proofs, notices] = await Promise.all([
     getDocs(matchesCollection(db, tournamentId)),
     getDocs(scorerProofsCollection(db, tournamentId)),
+    getDocs(noticesCollection(db, tournamentId)),
   ]);
   // The rules for everything under the tournament read the tournament
   // itself, so those go first and the tournament last, in its own write.
   const batch = writeBatch(db);
   matches.docs.forEach((d) => batch.delete(d.ref));
   proofs.docs.forEach((d) => batch.delete(d.ref));
+  notices.docs.forEach((d) => batch.delete(d.ref));
   batch.delete(scorerKeyDoc(db, tournamentId));
   await batch.commit();
   await deleteDoc(tournamentDoc(db, tournamentId));

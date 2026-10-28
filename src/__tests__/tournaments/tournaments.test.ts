@@ -17,6 +17,7 @@ import {
 } from "@/lib/commandQueue";
 import { EngineError } from "@/lib/engine";
 import { addQuickMatch } from "@/lib/quickMatches";
+import { postNotice } from "@/lib/rsvps";
 import {
   proveScorer,
   regenerateScorerKey,
@@ -663,10 +664,12 @@ describeFirestoreRules("Tournaments on Firestore", (env) => {
       expect("forfeitedBy" in corrected).toBe(false);
     });
 
-    it("deleting a tournament removes it and its matches", async () => {
+    it("deleting a tournament removes it, its matches, and its notices", async () => {
       const db = modularFirestore(env().authenticatedContext(owner));
       const created = await createTournament(db, owner, input("round_robin"));
       await applyTournamentCommand(db, created.id, { type: "start" });
+      await postNotice(db, created.id, "Courts 3 and 4 tonight.");
+      await postNotice(db, created.id, "We moved to 7:30.");
 
       await deleteTournament(db, created.id);
 
@@ -676,6 +679,7 @@ describeFirestoreRules("Tournaments on Firestore", (env) => {
         const raw = modularFirestore(unrestricted);
         expect((await getDoc(doc(raw, "tournaments", created.id))).exists()).toBe(false);
         expect(await matchDocsOf(raw, created.id)).toHaveLength(0);
+        expect((await getDocs(collection(raw, "tournaments", created.id, "notices"))).size).toBe(0);
       });
     });
   });
