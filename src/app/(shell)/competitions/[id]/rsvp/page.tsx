@@ -5,6 +5,7 @@ import { PageLoadingSpinner } from "@/components/shared";
 import { MbIcon } from "@/components/matchbook/MbIcon";
 import { Panel, PanelEmpty, PanelError } from "@/components/matchbook/Panel";
 import { NotFound } from "@/components/console/NotFound";
+import { NoticeList } from "@/components/rsvp/NoticeList";
 import { RsvpDialog } from "@/components/rsvp/RsvpDialog";
 import { useRsvpPage } from "@/components/rsvp/useRsvpPage";
 import { NOT_OPEN_YET, refusedRsvpMessage } from "@/lib/rsvp";
@@ -53,7 +54,8 @@ const RsvpList = ({ rsvps, uid }: { rsvps: Rsvp[]; uid: string | null }) => (
 /**
  * The RSVP link. A signed-in person sees the night: its name, when it is,
  * the capacity and how many have RSVP'd, and everyone on the list by name
- * in arrival order. Before the open time it counts down over a disabled
+ * in arrival order, under the owner's notices, newest first, when there
+ * are any. Before the open time it counts down over a disabled
  * button; from then the button opens the RSVP dialog. With the link off it
  * shows the same not found as the console.
  */
@@ -92,6 +94,12 @@ export default function RsvpPage() {
           </p>
         )}
       </header>
+
+      {page.notices && page.notices.length > 0 && (
+        <Panel title="Notices" icon="bell" className="mb-4">
+          <NoticeList notices={page.notices} />
+        </Panel>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-12 lg:items-start">
         <Panel title="The night" icon="calendar" className="lg:col-span-5">

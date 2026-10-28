@@ -106,6 +106,8 @@ export const useRsvpPage = (tournamentId: string) => {
     countdown: opensAt === null ? null : countdown(opensAt - now),
     rsvps,
     listError: night.listError,
+    /** The owner's notices, newest first; null until they arrive. */
+    notices: night.notices,
     /** This account's RSVP, or null while it has none. */
     mine,
     canRsvp,

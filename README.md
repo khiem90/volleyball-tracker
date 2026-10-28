@@ -62,6 +62,7 @@ Everything a signed-in account owns is in Firestore, and the rules in
 | `tournaments/{tournamentId}/private/scorerKey` | The key behind the scorer link; only the owner can read it |
 | `tournaments/{tournamentId}/scorers/{uid}` | A phone's proof that it opened the scorer link |
 | `tournaments/{tournamentId}/rsvps/{uid}` | One account's RSVP: `uid`, `name`, `note`, and `createdAt`, the server's time |
+| `tournaments/{tournamentId}/notices/{noticeId}` | A notice from the owner to everyone on the list: `body` and `createdAt`, the server's time |
 
 A tournament may also carry `scheduledAt`, when the owner says it will be
 played, in epoch milliseconds, with `scheduledZone`, the IANA zone it was
@@ -80,6 +81,12 @@ the list is open and the tournament is a draft, and only with `createdAt`
 equal to the request's time, a Firestore timestamp unlike every other time
 in the app. Who is confirmed and who waits is never stored; it follows from
 the arrival order and the capacity (ADR-0004).
+
+Only the owner posts or deletes a notice, and nobody edits one. Whoever can
+read the RSVPs can read the notices. Opening the RSVP page sets
+`noticesReadAt` on the account's own RSVP to the server's time, and only that
+account can write it, so a notice newer than it has not been seen. Deleting a
+tournament deletes its notices with it.
 
 Tournament ids are random so a link to one cannot be guessed. Every match
 carries `ownerId`, so one collection group query on `matches` returns all of an

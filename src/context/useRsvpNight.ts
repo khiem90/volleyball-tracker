@@ -3,14 +3,15 @@
 import { useCallback, useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
 import type { RsvpEntry } from "@/lib/rsvp";
-import { readRememberedName, rsvp, subscribeToRsvps } from "@/lib/rsvps";
+import { markNoticesRead, readRememberedName, rsvp, subscribeToRsvps } from "@/lib/rsvps";
+import { useNotices } from "./useNotices";
 import { subscribeToTournament } from "@/lib/tournaments";
 import type { Rsvp, Tournament } from "@/types/game";
 
 /**
  * One night as its RSVP page sees it, for the signed-in account `uid`: the
- * tournament, its RSVPs in arrival order, the name the account last RSVP'd
- * under, and the RSVP action. Kept apart from the tournaments a phone
+ * tournament, its RSVPs in arrival order, the owner's notices newest first,
+ * the name the account last RSVP'd under, and the RSVP action. Kept apart from the tournaments a phone
  * reaches by spectator or scorer link, because an RSVP holder may read the
  * tournament but not, before it starts, its matches.
  *
@@ -63,6 +64,21 @@ export const useRsvpNight = (tournamentId: string, uid: string | null) => {
   }, [uid]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
+  const { notices, error: noticesError } = useNotices(tournamentId, !!uid && linkOn);
+
+  // Opening the page records that this account has seen the notices, which
+  // clears the mark Home puts on a newer one. Only an account on the list
+  // has an RSVP to record it on. A notice that arrives while the page is
+  // open has been seen too, so the newest one's id keys the write.
+  const hasRsvp = !!uid && rsvps?.some((r) => r.uid === uid) === true;
+  const newestNotice = notices === null ? null : (notices[0]?.id ?? "none");
+  useEffect(() => {
+    if (!uid || !db || !hasRsvp || newestNotice === null) return;
+    markNoticesRead(db, tournamentId, uid).catch((error: unknown) => {
+      console.warn("Could not record that the notices were read:", error);
+    });
+  }, [tournamentId, uid, hasRsvp, newestNotice]);
+
   /** RSVP as this account. Rejects with an RsvpRefusedError saying why the rules refused it. */
   const rsvpAs = useCallback(
     async (entry: RsvpEntry) => {
@@ -77,6 +93,9 @@ export const useRsvpNight = (tournamentId: string, uid: string | null) => {
     tournament,
     rsvps,
     listError,
+    /** The owner's notices, newest first; null until they arrive. */
+    notices,
+    noticesError,
     rememberedName,
     rsvp: rsvpAs,
   };
