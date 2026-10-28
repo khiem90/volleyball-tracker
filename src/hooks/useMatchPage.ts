@@ -155,7 +155,11 @@ export const useMatchPage = () => {
 
   // The engine decides what a result means: the next game of a series, the
   // next match on a court, a slot in the bracket, or the end of the
-  // tournament. Once the match is over the page goes back where it came from.
+  // tournament. Once the match is over the page goes back where it came
+  // from, as soon as this phone has applied the result: the server answers
+  // later, and a result it refuses or another phone recorded first is
+  // reported on the console's error line, not here. Only a result the
+  // engine refuses outright, such as a tie, stays on this page.
   const handleCompleteMatch = useCallback(async () => {
     const score = current();
     if (!match || !canScore || !score || isCompleting) return;

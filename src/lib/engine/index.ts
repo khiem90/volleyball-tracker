@@ -66,7 +66,11 @@ export type EngineCommand =
       awayScore: number;
     }
   | { type: "instant_win"; matchId: string; winnerId: string }
-  | { type: "undo_result"; matchId: string }
+  /**
+   * Take back a result. In Round Robin `winnerId` names the instant win
+   * being taken back, so a result changed since is left alone.
+   */
+  | { type: "undo_result"; matchId: string; winnerId?: string }
   /** Correct the score of a completed match. */
   | { type: "correct_result"; matchId: string; homeScore: number; awayScore: number }
   | { type: "add_team"; teamId: string; name: string; color?: string }
@@ -483,11 +487,12 @@ const correctedScore = (match: Match, homeScore: number, awayScore: number): Mat
 // ============================================
 
 /**
- * Take back the last result on a court in a rotation format. The match goes
- * back to how it stood, the match the result scheduled is removed, and the
- * teams the result moved go back where they were, leaving the other courts
- * alone. Refused once the court has moved on: its next match has points or a
+ * Take back a result. On a court in a rotation format the match goes back
+ * to how it stood, the match the result scheduled is removed, and the teams
+ * the result moved go back where they were, leaving the other courts alone;
+ * refused once the court has moved on: its next match has points or a
  * result, or a team the result queued has since been pulled onto a court.
+ * In Round Robin an instant win is put back one game; see `undoInstantWin`.
  */
 const undoResult = (
   working: Working,
@@ -512,16 +517,74 @@ const undoResult = (
       working.tournament = { ...tournament, twoMatchRotationState: state };
       return;
     }
+    case "round_robin":
+      undoInstantWin(working, command);
+      return;
     default:
       throw new EngineError(
         "unsupported_format",
-        "Only Win 2 & Out and Two Match Rotation results can be undone.",
+        "Only Round Robin, Win 2 & Out, and Two Match Rotation results can be undone.",
       );
   }
 };
 
 const nothingToUndo = () =>
   new EngineError("nothing_to_undo", "That result can no longer be undone.");
+
+/**
+ * Take back an instant win in Round Robin: the match is put back one game,
+ * which reopens a single-game match and sets a best-of back to the game
+ * before. Matches are independent here, so nothing else moves. Refused
+ * unless the result still stands as the tap made it: the named winner at
+ * full score to nothing on a completed match, or still holding the game in
+ * a series whose next game has no points yet. A score the owner has
+ * corrected since is newer intent and stays. A forfeit or a bye was never
+ * tapped and cannot be undone.
+ */
+const undoInstantWin = (
+  working: Working,
+  command: Extract<EngineCommand, { type: "undo_result" }>,
+) => {
+  const match = working.matches.get(command.matchId);
+  if (!match) {
+    throw new EngineError("match_not_found", "That match is not in this tournament.");
+  }
+  const { winnerId } = command;
+  if (!winnerId || (winnerId !== match.homeTeamId && winnerId !== match.awayTeamId)) {
+    throw nothingToUndo();
+  }
+  if (match.forfeitedBy || match.isBye) throw nothingToUndo();
+
+  const homeWon = winnerId === match.homeTeamId;
+  const seriesLength = match.seriesLength ?? 1;
+  const [winnerScore, loserScore] = homeWon
+    ? [match.homeScore, match.awayScore]
+    : [match.awayScore, match.homeScore];
+  const winnerGames = (homeWon ? match.homeWins : match.awayWins) ?? 0;
+
+  if (match.status === "completed") {
+    if (match.winnerId !== winnerId || winnerScore !== INSTANT_WIN_SCORE || loserScore !== 0) {
+      throw nothingToUndo();
+    }
+  } else if (match.status === "in_progress" && seriesLength > 1) {
+    if (match.homeScore !== 0 || match.awayScore !== 0 || winnerGames < 1) throw nothingToUndo();
+  } else {
+    throw nothingToUndo();
+  }
+
+  const reopened: Match = { ...match, homeScore: 0, awayScore: 0, status: "pending" };
+  delete reopened.winnerId;
+  delete reopened.completedAt;
+  if (seriesLength > 1) {
+    const homeWins = (match.homeWins ?? 0) - (homeWon ? 1 : 0);
+    const awayWins = (match.awayWins ?? 0) - (homeWon ? 0 : 1);
+    reopened.homeWins = homeWins;
+    reopened.awayWins = awayWins;
+    reopened.seriesGame = homeWins + awayWins + 1;
+    reopened.status = homeWins + awayWins === 0 ? "pending" : "in_progress";
+  }
+  working.matches.set(match.id, reopened);
+};
 
 /**
  * Find the court's record of the result, make sure the court has not moved

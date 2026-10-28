@@ -11,8 +11,7 @@ import {
 import { AnimatePresence } from "framer-motion";
 import { UndoToast } from "@/components/UndoToast";
 import { useApp } from "@/context/AppContext";
-import { EngineError } from "@/lib/engine";
-import { generateUndoId } from "@/lib/undo";
+import { generateUndoId, stackAfterFailure, stackAfterUndo } from "@/lib/undo";
 import type { UndoEntry, UndoContextValue } from "@/types/undo";
 import { MAX_UNDO_STACK_SIZE } from "@/types/undo";
 
@@ -31,7 +30,7 @@ export const GlobalUndoToast = ({ children }: GlobalUndoToastProps) => {
   const currentEntry = undoStack.length > 0 ? undoStack[0] : null;
 
   const pushUndo = useCallback(
-    (entry: Omit<UndoEntry, "id" | "timestamp">) => {
+    (entry: Omit<UndoEntry, "id" | "timestamp">): string => {
       const newEntry: UndoEntry = {
         ...entry,
         id: generateUndoId(),
@@ -42,6 +41,7 @@ export const GlobalUndoToast = ({ children }: GlobalUndoToastProps) => {
         const newStack = [newEntry, ...prev];
         return newStack.slice(0, MAX_UNDO_STACK_SIZE);
       });
+      return newEntry.id;
     },
     []
   );
@@ -50,23 +50,34 @@ export const GlobalUndoToast = ({ children }: GlobalUndoToastProps) => {
     setUndoStack([]);
   }, []);
 
-  // The engine takes the result back in one transaction: the match, the
-  // match it scheduled, and the teams it moved. An entry is dropped once the
-  // undo has been applied, and also when the engine refuses it because the
-  // court has moved on, since that can never apply later. Any other failure
-  // keeps the entry so the undo can be tried again.
+  const resultFailed = useCallback((entryId: string) => {
+    setUndoStack((prev) => stackAfterFailure(prev, entryId));
+  }, []);
+
+  // The engine takes the result back as one command: the match, the match
+  // it scheduled, and the teams it moved. The court goes back from the
+  // local cache the moment the command is applied on this phone, and that
+  // is when the entry leaves the toast; the server's answer arrives later
+  // and is reported in the background. An undo queued behind a win that
+  // was taken back is taken back with it, which leaves nothing to show:
+  // its entry is already gone. An undo the engine refuses because the
+  // court has moved on can never apply later, so its entry goes too; any
+  // other failure keeps the entry so the undo can be tried again.
   const performUndo = useCallback(async () => {
     if (!currentEntry || isUndoing) return;
+    const entry = currentEntry;
 
     setIsUndoing(true);
-    let spent = true;
     try {
-      await undoResult(currentEntry.tournamentId, currentEntry.matchId);
+      const { done } = await undoResult(entry.tournamentId, entry.matchId, entry.winnerId);
+      setUndoStack((prev) => stackAfterUndo(prev, entry, null));
+      done.catch((error: unknown) => {
+        console.error("Undo was not accepted:", error);
+      });
     } catch (error) {
       console.error("Undo failed:", error);
-      spent = error instanceof EngineError;
+      setUndoStack((prev) => stackAfterUndo(prev, entry, error));
     } finally {
-      if (spent) setUndoStack((prev) => prev.filter((entry) => entry.id !== currentEntry.id));
       setIsUndoing(false);
     }
   }, [currentEntry, isUndoing, undoResult]);
@@ -94,6 +105,7 @@ export const GlobalUndoToast = ({ children }: GlobalUndoToastProps) => {
   const contextValue: UndoContextValue = {
     pushUndo,
     clearUndo,
+    resultFailed,
     undoStack,
     stackSize,
   };

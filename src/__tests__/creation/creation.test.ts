@@ -115,7 +115,7 @@ describe("setupInput", () => {
     expect(league.settings).toEqual({
       courts: 1,
       seriesLength: 3,
-      instantWin: false,
+      instantWin: true,
       pointsForWin: 2,
       pointsForLoss: 1,
       terminology: DEFAULT_TERMINOLOGY,
