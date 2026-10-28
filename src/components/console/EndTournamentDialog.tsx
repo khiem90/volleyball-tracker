@@ -1,6 +1,5 @@
 "use client";
 
-import { Loader2, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -10,6 +9,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { MbIcon } from "@/components/matchbook/MbIcon";
+import { InlineSpinner } from "@/components/shared";
 
 interface EndTournamentDialogProps {
   open: boolean;
@@ -18,7 +19,10 @@ interface EndTournamentDialogProps {
   onEnd: () => void;
 }
 
-/** The confirm before a live tournament is ended as it stands. */
+/**
+ * The confirm before a live tournament is ended as it stands. The sprite's
+ * trophy stands for the tournament; only the End button is red.
+ */
 export const EndTournamentDialog = ({
   open,
   onOpenChange,
@@ -28,8 +32,8 @@ export const EndTournamentDialog = ({
   <Dialog open={open} onOpenChange={onOpenChange}>
     <DialogContent className="sm:max-w-md">
       <DialogHeader>
-        <DialogTitle className="flex items-center gap-2 text-destructive">
-          <Square className="h-5 w-5" />
+        <DialogTitle>
+          <MbIcon id="compete" size={18} className="shrink-0" />
           End the tournament?
         </DialogTitle>
         <DialogDescription>
@@ -37,12 +41,12 @@ export const EndTournamentDialog = ({
           matches can be scored.
         </DialogDescription>
       </DialogHeader>
-      <DialogFooter className="flex-row gap-2 sm:gap-2">
+      <DialogFooter>
         <Button
           variant="outline"
           onClick={() => onOpenChange(false)}
           disabled={isEnding}
-          className="flex-1"
+          className="sm:flex-1"
         >
           Cancel
         </Button>
@@ -50,9 +54,9 @@ export const EndTournamentDialog = ({
           variant="destructive"
           onClick={onEnd}
           disabled={isEnding}
-          className="flex-1 gap-2"
+          className="sm:flex-1"
         >
-          {isEnding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Square className="h-4 w-4" />}
+          {isEnding ? <InlineSpinner /> : <MbIcon id="compete" size={14} />}
           {isEnding ? "Ending..." : "End tournament"}
         </Button>
       </DialogFooter>

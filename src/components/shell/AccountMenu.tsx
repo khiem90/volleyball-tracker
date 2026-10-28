@@ -128,7 +128,7 @@ export const AccountMenu = () => {
         onOpenChange={(open) => {
           if (!open && signOutState === "unsynced") setSignOutState("idle");
         }}
-        icon={LogOut}
+        icon="logout"
         title="Sign out and lose unsaved changes?"
         description="Some changes made on this device have not reached the server yet. Signing out clears them from the device, so they are lost. Stay signed in until you are back online to keep them."
         confirmLabel="Sign out anyway"

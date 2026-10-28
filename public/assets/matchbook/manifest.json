@@ -33,6 +33,7 @@
     "print", "save", "search", "filter", "calendar", "clock", "location",
     "volleyball", "bracket", "chart", "swap", "court", "check",
     "warning", "live", "menu", "chevron-right", "chevron-down", "clipboard", "star",
-    "mail", "lock", "login", "cloud", "close", "trash"
+    "mail", "lock", "login", "cloud", "close", "trash",
+    "play", "pencil", "remove-user"
   ]
 }

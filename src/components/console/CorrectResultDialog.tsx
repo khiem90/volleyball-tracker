@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { Loader2, PencilLine } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -11,6 +10,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { MbIcon } from "@/components/matchbook/MbIcon";
+import { InlineSpinner } from "@/components/shared";
 import type { Match } from "@/types/game";
 import type { TeamLookup } from "./teamRefs";
 
@@ -88,8 +89,8 @@ const ScoreForm = ({
   return (
     <form onSubmit={submit} className="flex flex-col gap-4">
       <DialogHeader>
-        <DialogTitle className="flex items-center gap-2">
-          <PencilLine className="h-5 w-5" />
+        <DialogTitle>
+          <MbIcon id="pencil" size={18} className="shrink-0" />
           Correct the score
         </DialogTitle>
         <DialogDescription>{explanation(match.forfeitedBy !== undefined, series, bracket)}</DialogDescription>
@@ -116,18 +117,18 @@ const ScoreForm = ({
           {error ?? "A match cannot end in a tie."}
         </p>
       )}
-      <DialogFooter className="flex-row gap-2 sm:gap-2">
+      <DialogFooter>
         <Button
           type="button"
           variant="outline"
           onClick={onCancel}
           disabled={isBusy}
-          className="flex-1"
+          className="sm:flex-1"
         >
           Cancel
         </Button>
-        <Button type="submit" disabled={!canSave} className="flex-1 gap-2">
-          {isBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <PencilLine className="h-4 w-4" />}
+        <Button type="submit" disabled={!canSave} className="sm:flex-1">
+          {isBusy ? <InlineSpinner /> : <MbIcon id="pencil" size={14} />}
           {isBusy ? "Saving..." : "Save score"}
         </Button>
       </DialogFooter>
