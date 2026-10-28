@@ -56,7 +56,7 @@ export const SchedulePanel = ({
           }
         />
       ) : (
-        <div className="flex max-h-[70vh] flex-col divide-y divide-mb-rule overflow-y-auto">
+        <div className="max-h-[70vh] divide-y divide-mb-rule overflow-y-auto">
           {rows.map(({ match, label }) => (
             <MatchRow
               key={match.id}
