@@ -1,10 +1,12 @@
 "use client";
 
 import { MbIcon } from "@/components/matchbook/MbIcon";
+import { CapacityField, DateTimeField } from "@/components/rsvp/RsvpFields";
 import {
   ALL_SETTINGS,
   courtTerminology,
   settingsUsedBy,
+  type SetupProblems,
   type TournamentSetup,
 } from "@/lib/creation";
 
@@ -88,15 +90,20 @@ const PointsField = ({
 /**
  * The settings most tournaments never touch, behind one disclosure. Only
  * the ones the chosen format uses are shown; with no format chosen yet,
- * all of them are.
+ * all of them are. The RSVP section closes it: the link, the scheduled
+ * time, the open time, and the capacity, with the times entered on this
+ * phone's clock.
  */
 export const AdvancedSettings = ({
   setup,
+  problems,
   open,
   onToggle,
   onChange,
 }: {
   setup: TournamentSetup;
+  /** The setup's problems, shown under the RSVP fields they concern. */
+  problems: SetupProblems;
   open: boolean;
   onToggle: () => void;
   onChange: (changes: Partial<TournamentSetup>) => void;
@@ -204,6 +211,45 @@ export const AdvancedSettings = ({
               Field or table, if that fits your sport.
             </span>
           </label>
+          <div className="flex flex-col gap-5 border-t border-mb-rule pt-4">
+            <Choice
+              id="rsvp-link"
+              label="RSVP link"
+              note={
+                setup.rsvpEnabled
+                  ? "Anyone you send the link to can sign in and RSVP from the open time."
+                  : "Off keeps the night private. You can turn it on later from the RSVP tab."
+              }
+              value={setup.rsvpEnabled}
+              options={[
+                { value: false, label: "Off" },
+                { value: true, label: "On" },
+              ]}
+              onChange={(rsvpEnabled) => onChange({ rsvpEnabled })}
+            />
+            <DateTimeField
+              id="scheduled-at"
+              label="Scheduled for"
+              value={setup.scheduledAt}
+              zone={setup.zone}
+              problem={problems.scheduledAt}
+              onChange={(scheduledAt) => onChange({ scheduledAt })}
+            />
+            <DateTimeField
+              id="opens-at"
+              label="RSVPs open"
+              value={setup.opensAt}
+              zone={setup.zone}
+              problem={problems.opensAt}
+              onChange={(opensAt) => onChange({ opensAt })}
+            />
+            <CapacityField
+              id="capacity"
+              value={setup.capacity}
+              problem={problems.capacity}
+              onChange={(capacity) => onChange({ capacity })}
+            />
+          </div>
         </div>
       )}
     </section>

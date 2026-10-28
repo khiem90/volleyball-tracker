@@ -5,6 +5,7 @@ import { MbIcon } from "@/components/matchbook/MbIcon";
 import { Panel } from "@/components/matchbook/Panel";
 import { courtsWord, type ConsoleAccess } from "@/lib/console";
 import { formatLabel, isRotationFormat } from "@/lib/formats";
+import { deviceZone, timeLabel } from "@/lib/rsvp";
 import type { Tournament } from "@/types/game";
 import { ShareLinks } from "./ShareLinks";
 import type { ShareLinksView } from "./useConsole";
@@ -19,6 +20,16 @@ const longDate = (ts?: number) =>
         minute: "2-digit",
       })
     : null;
+
+/**
+ * A scheduled time on this phone's clock, with the wall clock of the zone
+ * it was set in beside it when that reads differently.
+ */
+const scheduled = (ts: number | undefined, setZone: string | undefined) => {
+  if (ts === undefined) return null;
+  const label = timeLabel(ts, setZone, deviceZone());
+  return label.owner ? `${label.viewer}, ${label.owner} where it was set` : label.viewer;
+};
 
 const Fact = ({ label, value }: { label: string; value: string }) => (
   <div className="flex flex-col gap-0.5">
@@ -227,6 +238,11 @@ export const SettingsPanel = ({
     [
       "Standings points",
       `${settings.pointsForWin} for a win, ${settings.pointsForLoss} for a loss`,
+    ],
+    ["Scheduled", scheduled(tournament.scheduledAt, tournament.scheduledZone)],
+    [
+      "RSVPs open",
+      tournament.rsvp?.enabled ? scheduled(tournament.rsvp.opensAt, tournament.scheduledZone) : null,
     ],
     ["Created", longDate(tournament.createdAt)],
     ["Started", longDate(tournament.startedAt)],

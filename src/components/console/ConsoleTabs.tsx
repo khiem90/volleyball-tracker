@@ -2,8 +2,18 @@
 
 import { MbIcon } from "@/components/matchbook/MbIcon";
 
-/** The five sections of the console. A tournament has Standings or a Bracket, never both. */
-export type ConsoleTab = "courts" | "schedule" | "standings" | "bracket" | "teams" | "settings";
+/**
+ * The sections of the console. A tournament has Standings or a Bracket,
+ * never both, and the owner gets RSVP while the tournament is a draft or live.
+ */
+export type ConsoleTab =
+  | "courts"
+  | "schedule"
+  | "standings"
+  | "bracket"
+  | "teams"
+  | "settings"
+  | "rsvp";
 
 export interface ConsoleTabSpec {
   id: ConsoleTab;
@@ -14,10 +24,13 @@ export interface ConsoleTabSpec {
 export const consoleTabs = ({
   hasBracket,
   courtsLabel,
+  hasRsvp,
 }: {
   hasBracket: boolean;
   /** "Courts", or "Fields" when the tournament calls them that. */
   courtsLabel: string;
+  /** Whether the RSVP tab is offered: to the owner while the tournament is a draft or live. */
+  hasRsvp: boolean;
 }): ConsoleTabSpec[] => [
   { id: "courts", label: courtsLabel, icon: "court" },
   { id: "schedule", label: "Schedule", icon: "calendar" },
@@ -25,6 +38,7 @@ export const consoleTabs = ({
     ? { id: "bracket", label: "Bracket", icon: "bracket" }
     : { id: "standings", label: "Standings", icon: "chart" },
   { id: "teams", label: "Teams", icon: "teams" },
+  ...(hasRsvp ? [{ id: "rsvp" as const, label: "RSVP", icon: "check" }] : []),
   { id: "settings", label: "Settings", icon: "settings" },
 ];
 
@@ -32,9 +46,9 @@ export const tabId = (tab: ConsoleTab) => `console-tab-${tab}`;
 export const panelId = (tab: ConsoleTab) => `console-panel-${tab}`;
 
 /**
- * The phone tab strip. Five tabs in a fixed grid so they fit a 375px screen
- * without scrolling; each is at least 48px tall for a thumb. Hidden from lg
- * up, where every section is on screen at once.
+ * The phone tab strip. Five or six tabs in a fixed grid so they fit a 375px
+ * screen without scrolling; each is at least 48px tall for a thumb. Hidden
+ * from lg up, where every section is on screen at once.
  */
 export const ConsoleTabs = ({
   tabs,
@@ -48,7 +62,7 @@ export const ConsoleTabs = ({
   <div
     role="tablist"
     aria-label="Tournament sections"
-    className="mb-4 grid grid-cols-5 border-b-[1.5px] border-mb-navy lg:hidden"
+    className={`mb-4 grid ${tabs.length > 5 ? "grid-cols-6" : "grid-cols-5"} border-b-[1.5px] border-mb-navy lg:hidden`}
   >
     {tabs.map((tab) => {
       const selected = tab.id === active;

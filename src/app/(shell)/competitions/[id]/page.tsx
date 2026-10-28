@@ -13,6 +13,7 @@ import { CourtsPanel } from "@/components/console/CourtsPanel";
 import { CorrectResultDialog } from "@/components/console/CorrectResultDialog";
 import { EndTournamentDialog } from "@/components/console/EndTournamentDialog";
 import { SchedulePanel } from "@/components/console/SchedulePanel";
+import { RsvpPanel } from "@/components/console/RsvpPanel";
 import { SettingsPanel } from "@/components/console/SettingsPanel";
 import { StandingsPanel } from "@/components/console/StandingsPanel";
 import { StartTournamentDialog } from "@/components/console/StartTournamentDialog";
@@ -243,6 +244,11 @@ const TournamentConsole = () => {
             busy={page.isApplying}
           />
         </Section>
+        {page.access.canManageRsvp && (
+          <Section id="rsvp" active={page.tab} className="lg:col-span-4">
+            <RsvpPanel tournament={tournament} onSave={page.saveRsvp} />
+          </Section>
+        )}
         <Section id="settings" active={page.tab} className="lg:col-span-4">
           <SettingsPanel
             tournament={tournament}
