@@ -2,8 +2,8 @@
 
 import { memo } from "react";
 import { motion } from "framer-motion";
-import { Check, X, Undo2, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { MbIcon } from "@/components/matchbook/MbIcon";
+import { InlineSpinner } from "@/components/shared";
 import type { UndoToastProps } from "@/types/undo";
 
 const toastVariants = {
@@ -12,6 +12,12 @@ const toastVariants = {
   exit: { opacity: 0, y: 20, scale: 0.95 },
 };
 
+/**
+ * The offer to take back an instant win on a rotation court: a navy bar in
+ * the shape of the reload banner, with the saved result in paper, a coral
+ * Undo, and a paper X. It renders outside .matchbook-surface, so it carries
+ * the body font itself.
+ */
 export const UndoToast = memo(
   ({
     entry,
@@ -47,53 +53,39 @@ export const UndoToast = memo(
         variants={toastVariants}
         transition={{ type: "spring", stiffness: 400, damping: 30 }}
         // Above the tab bar where there is one, and the home indicator always.
-        className="fixed bottom-[calc(var(--tab-bar-space)+env(safe-area-inset-bottom)+1rem)] left-1/2 -translate-x-1/2 z-50 w-full max-w-sm px-4"
+        className="fixed bottom-[calc(var(--tab-bar-space)+env(safe-area-inset-bottom)+1rem)] left-1/2 -translate-x-1/2 z-50 w-full max-w-sm px-4 font-sans"
         role="alert"
         aria-live="polite"
       >
-        <div className="bg-card/95 backdrop-blur-md border border-border/50 rounded-xl shadow-lg">
-          {/* Content */}
-          <div className="flex items-center gap-3 p-3">
-            {/* Check icon */}
-            <div className="shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-              <Check className="w-4 h-4 text-primary" aria-hidden="true" />
-            </div>
+        <div className="flex items-center gap-2 rounded-[4px] border-[1.5px] border-mb-navy bg-mb-navy py-1 pr-1 pl-3 text-mb-paper-bright shadow-[0_8px_22px_rgba(57,41,23,0.08)]">
+          <MbIcon id="check" size={18} className="shrink-0" />
 
-            {/* Description */}
-            <span className="flex-1 text-sm font-medium text-foreground truncate">
-              {entry.description}
-            </span>
+          <span className="min-w-0 flex-1 truncate text-[0.85rem] font-medium">
+            {entry.description}
+          </span>
 
-            {/* Undo button */}
-            <Button
-              variant="ghost"
-              onClick={handleUndo}
-              onKeyDown={handleKeyDown}
-              disabled={isUndoing}
-              className="shrink-0 gap-1.5 text-primary hover:text-primary hover:bg-primary/10"
-              aria-label={`Undo action${additionalUndos > 0 ? `, ${additionalUndos} more available` : ""}`}
-              tabIndex={0}
-            >
-              {isUndoing ? (
-                <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
-              ) : (
-                <Undo2 className="w-4 h-4" aria-hidden="true" />
-              )}
-              <span>{undoButtonText}</span>
-            </Button>
+          <button
+            type="button"
+            onClick={handleUndo}
+            onKeyDown={handleKeyDown}
+            disabled={isUndoing}
+            className="mb-btn mb-btn-coral shrink-0 px-4"
+            aria-label={`Undo action${additionalUndos > 0 ? `, ${additionalUndos} more available` : ""}`}
+            tabIndex={0}
+          >
+            {isUndoing && <InlineSpinner />}
+            <span>{undoButtonText}</span>
+          </button>
 
-            {/* Dismiss button */}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onDismiss}
-              className="shrink-0 text-muted-foreground hover:text-foreground"
-              aria-label="Dismiss notification and clear undo history"
-              tabIndex={0}
-            >
-              <X className="w-4 h-4" aria-hidden="true" />
-            </Button>
-          </div>
+          <button
+            type="button"
+            onClick={onDismiss}
+            className="flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-[4px] text-mb-paper-bright transition-colors hover:bg-white/10"
+            aria-label="Dismiss notification and clear undo history"
+            tabIndex={0}
+          >
+            <MbIcon id="close" size={18} />
+          </button>
         </div>
       </motion.div>
     );

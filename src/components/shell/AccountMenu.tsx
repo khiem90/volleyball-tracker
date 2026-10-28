@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LogOut } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { UnsyncedChangesError } from "@/lib/deviceData";
 import { signInHref } from "@/lib/shell";
@@ -79,19 +78,14 @@ export const AccountMenu = () => {
           aria-label={`Account menu, signed in as ${name}`}
           className="flex min-h-11 min-w-11 cursor-pointer items-center justify-center gap-1 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-mb-coral"
         >
-          <Avatar className="size-9 border-[1.5px] border-mb-navy bg-mb-paper-bright">
+          <Avatar>
             {user.photoURL && <AvatarImage src={user.photoURL} alt="" />}
-            <AvatarFallback className="matchbook-display bg-mb-paper-bright text-[0.95rem] font-bold text-mb-navy">
-              {initial}
-            </AvatarFallback>
+            <AvatarFallback>{initial}</AvatarFallback>
           </Avatar>
           <MbIcon id="chevron-down" size={12} className="text-mb-ink-muted" />
         </DropdownMenuTrigger>
-        <DropdownMenuContent
-          align="end"
-          className="w-64 max-w-[calc(100vw-2rem)] rounded-[4px] border-[1.5px] border-mb-navy bg-mb-paper-bright p-1 text-mb-navy"
-        >
-          <DropdownMenuLabel className="px-3 py-2">
+        <DropdownMenuContent align="end" className="w-64">
+          <DropdownMenuLabel>
             <span className="mb-kicker block">Signed in as</span>
             {user.displayName && (
               <span className="block truncate text-[0.9rem] font-semibold">{user.displayName}</span>
@@ -102,17 +96,17 @@ export const AccountMenu = () => {
               </span>
             )}
           </DropdownMenuLabel>
-          <DropdownMenuSeparator className="bg-mb-rule" />
+          <DropdownMenuSeparator />
           <DropdownMenuItem
+            variant="destructive"
             disabled={signOutState === "signing_out"}
             onSelect={(event) => {
               // The menu stays open to show the sign-out is under way.
               event.preventDefault();
               void runSignOut(false);
             }}
-            className="matchbook-display min-h-11 cursor-pointer gap-2 px-3 text-[0.8rem] font-semibold tracking-[0.06em] text-mb-red focus:bg-mb-red/10 focus:text-mb-red"
           >
-            <LogOut className="size-4 text-mb-red" />
+            <MbIcon id="logout" size={16} />
             {signOutState === "signing_out" ? "Signing out..." : "Sign out"}
           </DropdownMenuItem>
           {error && (

@@ -21,9 +21,6 @@ const buttonVariants = cva(
         destructive: "mb-btn mb-btn-red",
         /* Cancel and secondary actions: navy outline. */
         outline: "mb-btn mb-btn-outline-navy",
-        /* Only the undo toast uses this. Ticket 06 rewrites the toast and deletes it. */
-        ghost:
-          "inline-flex items-center justify-center gap-2 rounded-[4px] px-4 text-sm font-medium whitespace-nowrap transition-colors hover:bg-accent hover:text-accent-foreground",
       },
       size: {
         // 44px, the least a phone tap should have to hit. .mb-btn carries the same minimum.
