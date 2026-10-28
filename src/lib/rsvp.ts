@@ -4,7 +4,7 @@
  * touches the database or React. See CONTEXT.md under "RSVP" and ADR-0004.
  */
 
-import type { Tournament } from "@/types/game";
+import type { Rsvp, Tournament } from "@/types/game";
 
 // ============================================
 // Setup
@@ -183,6 +183,8 @@ export type RsvpPageState =
   /** RSVPs open at `opensAt`; the page counts down to it. */
   | { kind: "not_open"; opensAt: number }
   | { kind: "open" }
+  /** Open, with every spot taken: a new RSVP joins the waitlist. */
+  | { kind: "full" }
   /** The owner closed the list before the tournament started. */
   | { kind: "closed" }
   /** The tournament is live, which closes the list for good. */
@@ -194,11 +196,14 @@ export type RsvpPageState =
  * the phone's clock, which is right for showing a countdown and nothing
  * more: the rules judge the open time by the server's clock. Starting the
  * tournament needs no write to the RSVP settings, since a tournament that
- * has left draft is past RSVPs by definition.
+ * has left draft is past RSVPs by definition. An open night whose list
+ * of `rsvpCount` has reached capacity is full, and still takes RSVPs onto
+ * the waitlist; a raised capacity opens it again.
  */
 export const rsvpPageState = (
   tournament: Pick<Tournament, "status" | "rsvp">,
   now: number,
+  rsvpCount = 0,
 ): RsvpPageState => {
   const rsvp = tournament.rsvp;
   if (!rsvp?.enabled) return { kind: "link_off" };
@@ -209,6 +214,7 @@ export const rsvpPageState = (
   // is a document written around them; it reads as not open.
   const opensAt = rsvp.opensAt ?? Number.POSITIVE_INFINITY;
   if (now < opensAt) return { kind: "not_open", opensAt };
+  if (rsvpCount >= rsvp.capacity) return { kind: "full" };
   return { kind: "open" };
 };
 
@@ -241,6 +247,7 @@ export const NOT_OPEN_YET = "Not open yet";
 export const refusedRsvpMessage = (state: RsvpPageState): string => {
   switch (state.kind) {
     case "open":
+    case "full":
     case "not_open":
       return NOT_OPEN_YET;
     case "closed":
@@ -290,4 +297,68 @@ export const rsvpEntryProblems = (entry: RsvpEntry): RsvpEntryProblems => {
     problems.note = `Keep the note to ${RSVP_NOTE_MAX} characters.`;
   }
   return problems;
+};
+
+// ============================================
+// Confirmed and waitlisted (ADR-0004)
+// ============================================
+
+/** An RSVP with its place in its section: first confirmed is 1, first waiting is 1. */
+export type Placed<T> = T & { position: number };
+
+/** What the split needs of an RSVP: its id for a tie, and its arrival time. */
+type Arrival = Pick<Rsvp, "id" | "createdAt">;
+
+/** The list split by capacity, each section in arrival order. */
+export interface RsvpList<T extends Arrival = Rsvp> {
+  confirmed: Placed<T>[];
+  waitlisted: Placed<T>[];
+}
+
+/** Earlier arrival first, to the nanosecond, then document id for an exact tie. */
+const byArrival = (a: Arrival, b: Arrival): number =>
+  a.createdAt.seconds - b.createdAt.seconds ||
+  a.createdAt.nanoseconds - b.createdAt.nanoseconds ||
+  (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+
+/**
+ * Who is confirmed and who is waiting, from the RSVPs and the capacity.
+ * Nothing stores this: the first `capacity` arrivals are confirmed and the
+ * rest wait in order, so a withdrawal or a raised capacity promotes the
+ * next person the moment the list or the tournament changes. The sort is
+ * done here rather than trusted from the subscription, with the document
+ * id breaking a tie, so every phone works out the same split.
+ */
+export const splitRsvps = <T extends Arrival>(rsvps: T[], capacity: number): RsvpList<T> => {
+  const ordered = [...rsvps].sort(byArrival);
+  const cut = Math.max(0, capacity);
+  return {
+    confirmed: ordered.slice(0, cut).map((rsvp, index) => ({ ...rsvp, position: index + 1 })),
+    waitlisted: ordered.slice(cut).map((rsvp, index) => ({ ...rsvp, position: index + 1 })),
+  };
+};
+
+/** Where one account stands on a night's list. */
+export type RsvpStanding =
+  | { kind: "none" }
+  /** In, at `position` among the confirmed. */
+  | { kind: "confirmed"; position: number }
+  /** Waiting, `position` 1 being the next to move up. */
+  | { kind: "waitlisted"; position: number };
+
+/**
+ * Where the account `uid` stands on a split list: not on it, confirmed, or
+ * waiting at a position. A held spot has no uid, so it is nobody's
+ * standing; without an account, nobody is on the list.
+ */
+export const standingIn = <T extends Arrival & { uid: string | null }>(
+  list: RsvpList<T>,
+  uid: string | null,
+): RsvpStanding => {
+  if (uid === null) return { kind: "none" };
+  const confirmed = list.confirmed.find((rsvp) => rsvp.uid === uid);
+  if (confirmed) return { kind: "confirmed", position: confirmed.position };
+  const waiting = list.waitlisted.find((rsvp) => rsvp.uid === uid);
+  if (waiting) return { kind: "waitlisted", position: waiting.position };
+  return { kind: "none" };
 };

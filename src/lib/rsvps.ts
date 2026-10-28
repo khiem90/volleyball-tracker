@@ -1,5 +1,6 @@
 import {
   collection,
+  deleteDoc,
   deleteField,
   doc,
   getDoc,
@@ -178,4 +179,40 @@ export const readRememberedName = async (db: Firestore, uid: string): Promise<st
   const snapshot = await getDoc(accountDoc(db, uid));
   const name: unknown = snapshot.data()?.rsvpName;
   return typeof name === "string" && name.length > 0 ? name : null;
+};
+
+// ============================================
+// Changing and withdrawing
+// ============================================
+
+/**
+ * Change the name and note on the account's own RSVP, and remember the
+ * name, in one batch. The arrival time is left alone, so the person keeps
+ * their place. The note is stored trimmed, as an RSVP stores it. A name or
+ * note the rules would refuse is thrown before anything is written.
+ */
+export const updateRsvp = async (
+  db: Firestore,
+  tournamentId: string,
+  uid: string,
+  entry: RsvpEntry,
+): Promise<void> => {
+  const [problem] = Object.values(rsvpEntryProblems(entry));
+  if (problem) throw new Error(problem);
+  const name = entry.name.trim();
+
+  const batch = writeBatch(db);
+  batch.update(rsvpDoc(db, tournamentId, uid), { name, note: entry.note.trim() });
+  batch.set(accountDoc(db, uid), { rsvpName: name }, { merge: true });
+  await batch.commit();
+};
+
+/**
+ * Take the account's RSVP off the list. The first person waiting moves up
+ * with no write of their own: every phone's split changes when this one
+ * lands (ADR-0004). The rules allow it until the tournament starts, even
+ * after the owner closes the list. RSVPing again later is a new arrival.
+ */
+export const withdraw = async (db: Firestore, tournamentId: string, uid: string): Promise<void> => {
+  await deleteDoc(rsvpDoc(db, tournamentId, uid));
 };

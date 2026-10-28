@@ -905,5 +905,75 @@ describeFirestoreRules("Firestore rules", (env) => {
         await assertFails(setDoc(userDocAt(db, dan), { rsvpName: "Dan", isAdmin: true }));
       });
     });
+
+    describe("changing an RSVP", () => {
+      const dan = "dan-uid";
+      const eve = "eve-uid";
+      const rsvps = { [dan]: { name: "Dan", note: "Late" }, [eve]: { name: "Eve" } };
+
+      it("lets the account change its own name and note", async () => {
+        await seedNight("tourn-1", { rsvps });
+        const db = accountDb(dan);
+        await assertSucceeds(updateDoc(rsvpAt(db, "tourn-1", dan), { name: "Dan from Tuesdays" }));
+        await assertSucceeds(updateDoc(rsvpAt(db, "tourn-1", dan), { note: "On time after all" }));
+        await assertSucceeds(updateDoc(rsvpAt(db, "tourn-1", dan), { note: deleteField() }));
+      });
+
+      it("lets the account change them after the owner closes the list", async () => {
+        await seedNight("tourn-1", { closed: true, rsvps });
+        await assertSucceeds(updateDoc(rsvpAt(accountDb(dan), "tourn-1", dan), { name: "Daniel" }));
+      });
+
+      it("never lets the account move its arrival time or its uid", async () => {
+        await seedNight("tourn-1", { rsvps });
+        const db = accountDb(dan);
+        await assertFails(updateDoc(rsvpAt(db, "tourn-1", dan), { createdAt: serverTimestamp() }));
+        await assertFails(updateDoc(rsvpAt(db, "tourn-1", dan), { createdAt: minutesFromNow(-60) }));
+        await assertFails(updateDoc(rsvpAt(db, "tourn-1", dan), { uid: eve }));
+      });
+
+      it("holds a changed name and note to the limits an RSVP takes, and adds no other key", async () => {
+        await seedNight("tourn-1", { rsvps });
+        const db = accountDb(dan);
+        await assertFails(updateDoc(rsvpAt(db, "tourn-1", dan), { name: "" }));
+        await assertFails(updateDoc(rsvpAt(db, "tourn-1", dan), { name: "x".repeat(41) }));
+        await assertFails(updateDoc(rsvpAt(db, "tourn-1", dan), { note: "x".repeat(141) }));
+        await assertFails(updateDoc(rsvpAt(db, "tourn-1", dan), { status: "confirmed" }));
+      });
+
+      it("refuses a change to another account's RSVP, from that account's neighbour or the owner", async () => {
+        await seedNight("tourn-1", { rsvps });
+        await assertFails(updateDoc(rsvpAt(accountDb(eve), "tourn-1", dan), { name: "Mallory" }));
+        await assertFails(updateDoc(rsvpAt(accountDb(owner), "tourn-1", dan), { name: "Mallory" }));
+      });
+    });
+
+    describe("withdrawing", () => {
+      const dan = "dan-uid";
+      const eve = "eve-uid";
+      const rsvps = { [dan]: { name: "Dan" }, [eve]: { name: "Eve" } };
+
+      it("lets the account withdraw while the tournament is a draft, even after the list is closed", async () => {
+        await seedNight("tourn-1", { rsvps });
+        await seedNight("tourn-2", { closed: true, rsvps });
+        await assertSucceeds(deleteDoc(rsvpAt(accountDb(dan), "tourn-1", dan)));
+        await assertSucceeds(deleteDoc(rsvpAt(accountDb(dan), "tourn-2", dan)));
+      });
+
+      it.each(["live", "completed"] as const)(
+        "refuses the account's withdrawal once the tournament is %s",
+        async (status) => {
+          await seedNight("tourn-1", { status, rsvps });
+          await assertFails(deleteDoc(rsvpAt(accountDb(dan), "tourn-1", dan)));
+        },
+      );
+
+      it("refuses withdrawing someone else, and the anonymous identity under the same uid", async () => {
+        await seedNight("tourn-1", { rsvps });
+        await assertFails(deleteDoc(rsvpAt(accountDb(eve), "tourn-1", dan)));
+        await assertFails(deleteDoc(rsvpAt(anonymousDb(dan), "tourn-1", dan)));
+        await assertFails(deleteDoc(rsvpAt(signedOutDb(), "tourn-1", dan)));
+      });
+    });
   });
 });

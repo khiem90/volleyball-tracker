@@ -220,6 +220,26 @@ service cloud.firestore {
           && rsvpFieldsAreValid(request.resource.data)
           && request.resource.data.createdAt == request.time
           && rsvpsAreOpen();
+
+        // The account's own RSVP, which a held spot never is: it has no uid.
+        function isOwnRsvp() {
+          return realAccount()
+            && rsvpId == request.auth.uid
+            && resource.data.uid == request.auth.uid;
+        }
+
+        // A person fixes their name or note without losing their place:
+        // the arrival time and the uid never change, so neither does the
+        // order. This works after a close too, like a withdrawal.
+        allow update: if
+          isOwnRsvp()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'note'])
+          && rsvpFieldsAreValid(request.resource.data);
+
+        // A withdrawal is a delete, open until the tournament starts, even
+        // after the owner closes the list. RSVPing again is a new create
+        // with a new arrival time, which is the back of the line.
+        allow delete: if isOwnRsvp() && tournament().status == 'draft';
       }
 
       // One document per match. A match carries its owner and tournament ids
