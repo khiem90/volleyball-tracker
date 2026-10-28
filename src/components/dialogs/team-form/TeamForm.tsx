@@ -1,7 +1,6 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -10,10 +9,42 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ColorPicker } from "@/components/ui/color-picker";
-import { Users, Check } from "lucide-react";
+import { MbIcon } from "@/components/matchbook/MbIcon";
+import { TEAM_COLORS } from "@/lib/roster";
 import type { PersistentTeam } from "@/types/game";
 import { useTeamForm } from "./useTeamForm";
+
+interface ColorSwatchesProps {
+  value: string;
+  onChange: (color: string) => void;
+}
+
+/**
+ * The team colors as 44px navy-bordered squares, the chosen one carrying the
+ * sprite's check in white. The form is the only place these are picked, so
+ * the swatches live here rather than in a shared primitive.
+ */
+const ColorSwatches = ({ value, onChange }: ColorSwatchesProps) => (
+  <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Color selection">
+    {TEAM_COLORS.map((color) => {
+      const isSelected = value === color;
+      return (
+        <button
+          key={color}
+          type="button"
+          role="radio"
+          aria-checked={isSelected}
+          onClick={() => onChange(color)}
+          className="flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-[4px] border-[1.5px] border-mb-navy text-white"
+          style={{ backgroundColor: color }}
+          aria-label={`Select color ${color}`}
+        >
+          {isSelected && <MbIcon id="check" size={22} className="drop-shadow-md" />}
+        </button>
+      );
+    })}
+  </div>
+);
 
 interface TeamFormProps {
   open: boolean;
@@ -22,6 +53,11 @@ interface TeamFormProps {
   onSubmit: (name: string, color: string) => void;
 }
 
+/**
+ * The team form: a matchbook name field, the color swatches, and a flat
+ * preview block of the team color carrying the name, like the add strip
+ * beside it on the Teams page.
+ */
 export const TeamForm = ({ open, onOpenChange, team, onSubmit }: TeamFormProps) => {
   const {
     name,
@@ -46,8 +82,8 @@ export const TeamForm = ({ open, onOpenChange, team, onSubmit }: TeamFormProps) 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Users className="w-5 h-5 text-primary" />
+          <DialogTitle>
+            <MbIcon id="teams" size={18} className="shrink-0" />
             {isEditing ? "Edit Team" : "Create Team"}
           </DialogTitle>
           <DialogDescription>
@@ -57,61 +93,61 @@ export const TeamForm = ({ open, onOpenChange, team, onSubmit }: TeamFormProps) 
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6 py-4">
-          {/* Team Name Input */}
-          <div className="space-y-2">
-            <label htmlFor="team-name" className="text-sm font-medium">
+        <div className="flex flex-col gap-5">
+          {/* Team name. The wrapper turns red with the message, focused or not. */}
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="team-name" className="mb-kicker">
               Team Name
             </label>
-            <Input
-              id="team-name"
-              type="text"
-              value={name}
-              onChange={handleNameChange}
-              onKeyDown={handleKeyDown}
-              placeholder="Enter team name"
-              autoFocus
-              className={error ? "border-destructive focus-visible:ring-destructive" : ""}
-              aria-describedby={error ? "team-name-error" : undefined}
-              aria-invalid={!!error}
-            />
+            <span className={error ? "mb-input border-mb-red" : "mb-input"}>
+              <input
+                id="team-name"
+                type="text"
+                value={name}
+                onChange={handleNameChange}
+                onKeyDown={handleKeyDown}
+                placeholder="Enter team name"
+                autoFocus
+                aria-describedby={error ? "team-name-error" : undefined}
+                aria-invalid={!!error}
+              />
+            </span>
             {error && (
-              <p id="team-name-error" className="text-sm text-destructive">
+              <p id="team-name-error" className="text-sm text-mb-red">
                 {error}
               </p>
             )}
           </div>
 
-          {/* Color Picker */}
-          <div className="space-y-3">
-            <label className="text-sm font-medium">Team Color</label>
-            <ColorPicker value={color} onChange={handleColorSelect} />
+          {/* Team color */}
+          <div className="flex flex-col gap-1.5">
+            <span className="mb-kicker">Team Color</span>
+            <ColorSwatches value={color} onChange={handleColorSelect} />
           </div>
 
-          {/* Preview */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Preview</label>
+          {/* Preview: a flat block of the team color with the name on it. */}
+          <div className="flex flex-col gap-1.5">
+            <span className="mb-kicker">Preview</span>
             <div
-              className="p-4 rounded-xl flex items-center gap-4 text-white relative overflow-hidden"
-              style={{
-                background: `linear-gradient(135deg, ${color}, ${color}cc)`,
-              }}
+              className="flex items-center gap-3 rounded-[4px] border-[1.5px] border-mb-navy p-3 text-white"
+              style={{ backgroundColor: color }}
             >
-              <div className="absolute inset-0 bg-white/5" />
-              <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center relative z-10">
-                <span className="text-2xl font-bold">{previewInitial}</span>
-              </div>
-              <span className="font-semibold text-lg relative z-10">{previewName}</span>
+              <span className="matchbook-display flex size-11 shrink-0 items-center justify-center rounded-[4px] border-[1.5px] border-white/70 text-xl font-bold">
+                {previewInitial}
+              </span>
+              <span className="matchbook-display min-w-0 truncate text-lg font-bold">
+                {previewName}
+              </span>
             </div>
           </div>
         </div>
 
-        <DialogFooter className="flex-row gap-2 sm:gap-2">
-          <Button variant="outline" onClick={handleCancel} className="flex-1">
+        <DialogFooter>
+          <Button variant="outline" onClick={handleCancel} className="sm:flex-1">
             Cancel
           </Button>
-          <Button onClick={handleSubmit} className="flex-1 gap-2 shadow-lg shadow-primary/20">
-            <Check className="w-4 h-4" />
+          <Button onClick={handleSubmit} className="sm:flex-1">
+            <MbIcon id="check" size={14} />
             {isEditing ? "Save Changes" : "Create Team"}
           </Button>
         </DialogFooter>
