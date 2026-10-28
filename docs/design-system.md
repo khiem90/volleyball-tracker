@@ -65,9 +65,12 @@ turns navy on focus. The base layer gives every element a 2px coral outline on
 `focus-visible`; a control that hides that outline uses `ring-mb-coral`, and
 no other ring color exists.
 
-One shadow exists, `0 8px 22px rgba(57, 41, 23, 0.08)`, the soft brown lift
-under panels, dialogs, menus, the toast, and the fullscreen bar. Nothing else
-casts one. Text gets no shadow except the big score (`.mb-score-text`).
+One shadow exists, `--mb-shadow-panel` (`0 8px 22px rgba(57, 41, 23, 0.08)`),
+the soft brown lift under panels, dialogs, menus, the toast, and the
+fullscreen bar. `.mb-panel` and `.mb-dialog` carry it; anything else that
+needs it takes the `.mb-shadow-panel` class rather than spelling the value
+out. Nothing else casts one. Text gets no shadow except the big score
+(`.mb-score-text`).
 
 ## Component classes
 
@@ -78,7 +81,7 @@ same element wins:
 - Type: `.matchbook-display`, `.mb-kicker`, `.mb-score-text`, `.mb-score-box`, `.mb-table` and `.mb-table-compact`.
 - Buttons: `.mb-btn` with one of `.mb-btn-navy`, `.mb-btn-coral`, `.mb-btn-red`, `.mb-btn-outline-navy`, `.mb-btn-outline`, `.mb-btn-outline-red`.
 - Fields: `.mb-input` (a wrapper around a bare `<input>`), `.mb-textarea`, `.mb-select-native`, `.mb-search`, `.mb-checkbox`.
-- Small pieces: `.mb-live-dot`, `.mb-form-square`, `.mb-spinner`.
+- Small pieces: `.mb-live-dot`, `.mb-form-square`, `.mb-spinner`, `.mb-shadow-panel`.
 
 In `src/components`: `MbIcon` (`matchbook/MbIcon.tsx`), `Panel` and
 `AddTeamsForm` (`matchbook/`), `Button`, `Badge`, `Avatar`, `Dialog`, and
@@ -157,8 +160,10 @@ on a destructive dialog, where only the confirm button is red. The description
 is body text in the muted ink; pass it no color. The footer stacks the buttons
 full width on a phone with the main action on top and puts them side by side
 from `sm`, each `sm:flex-1`. A box inside a dialog (a score block, a kept-teams
-list, a play-in row) is paper or paper-bright with a rule-color border, the
-navy border and the 6% wash when selected. Menus and the toast follow the same
+list, a play-in row) is paper or paper-bright with a 1px rule-color border
+(`border border-mb-rule`), the navy border and the 6% wash when selected. Only
+a box that is itself the result, like the guest dialog's winner box, takes the
+1.5px navy frame. Menus and the toast follow the same
 frame: `DropdownMenuContent` and `UndoToast` carry their own colors and
 `font-sans` for the same portal reason.
 
@@ -170,6 +175,8 @@ frame: `DropdownMenuContent` and `UndoToast` carry their own colors and
 - `dark:` utilities. The design is light only.
 - Colors outside the palette: Tailwind's named colors (`slate-500`, `amber-200`), new hex values, oklch literals. Team colors are the exception.
 - Black overlays, backdrop blur, gradients, and any shadow other than the panel's.
+- One exception to the two rules above: the scoring page's team-color panels (`TeamScorePanel`) sit on the team color, not on paper, so they keep their translucent white controls and the amber Leading/Winner pill with its backdrop blur. Nothing else may use a named Tailwind color or backdrop blur.
+- `shadcn add` output as it comes. `components.json` still says `"iconLibrary": "lucide"`, so a generated component imports `lucide-react`; swap those imports for `MbIcon` before it is used, because lint refuses them.
 
 ## The legacy token block
 

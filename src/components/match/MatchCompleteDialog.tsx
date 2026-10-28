@@ -32,13 +32,19 @@ type MatchCompleteDialogProps = {
   onConfirm: () => void;
 };
 
-/** One team's color chip, name, and score in the confirm. */
-const TeamScore = ({ name, color, score }: { name: string; color: string; score: number }) => (
+/**
+ * One team's side of a final score: a square chip in the team color carrying
+ * the initial, the name, and the score. The guest match-complete dialog shows
+ * the same thing, so it imports this rather than drawing its own.
+ */
+export const TeamScore = ({ name, color, score }: { name: string; color: string; score: number }) => (
   <div className="min-w-0 text-center">
     <div
-      className="mx-auto mb-2 h-12 w-12 rounded-[4px] border-[1.5px] border-mb-navy"
+      className="mx-auto mb-2 flex size-12 items-center justify-center rounded-[4px] border-[1.5px] border-mb-navy"
       style={{ backgroundColor: color }}
-    />
+    >
+      <span className="matchbook-display text-xl font-bold text-white">{name.charAt(0)}</span>
+    </div>
     <p className="mb-1 truncate text-xs text-mb-ink-muted">{name}</p>
     <p className="matchbook-display text-3xl font-bold tabular-nums text-mb-navy">{score}</p>
   </div>
@@ -72,7 +78,7 @@ export const MatchCompleteDialog = memo(function MatchCompleteDialog({
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
         <div className="space-y-3 pt-2">
-          <div className="flex items-center justify-center gap-6 rounded-[4px] border-[1.5px] border-mb-rule bg-mb-paper p-4">
+          <div className="flex items-center justify-center gap-6 rounded-[4px] border border-mb-rule bg-mb-paper p-4">
             <TeamScore name={homeTeamName} color={homeColor} score={homeScore} />
             <span className="text-2xl font-light text-mb-ink-muted">:</span>
             <TeamScore name={awayTeamName} color={awayColor} score={awayScore} />

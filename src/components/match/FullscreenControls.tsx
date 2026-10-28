@@ -37,7 +37,7 @@ export const FullscreenControls = memo(function FullscreenControls({
           initial={{ y: 100, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 100, opacity: 0 }}
-          className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-1/2 z-50 flex -translate-x-1/2 items-center gap-2 rounded-[4px] border-[1.5px] border-mb-navy bg-mb-paper-bright p-1.5 shadow-[0_8px_22px_rgba(57,41,23,0.08)]"
+          className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-1/2 z-50 flex -translate-x-1/2 items-center gap-2 rounded-[4px] border-[1.5px] border-mb-navy bg-mb-paper-bright p-1.5 mb-shadow-panel"
         >
           {canScore && (
             <>

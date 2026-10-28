@@ -23,8 +23,8 @@ const buttonVariants = cva(
         outline: "mb-btn mb-btn-outline-navy",
       },
       size: {
-        // 44px, the least a phone tap should have to hit. .mb-btn carries the same minimum.
-        default: "min-h-11",
+        // The 44px minimum comes from .mb-btn; the default size adds nothing.
+        default: "",
         icon: "size-11 p-0",
       },
     },

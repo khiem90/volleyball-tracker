@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { MbIcon } from "@/components/matchbook/MbIcon";
+import { TeamScore } from "@/components/match/MatchCompleteDialog";
 import type { PersistentTeam } from "@/types/game";
 import { signInHref } from "@/lib/shell";
 
@@ -32,32 +33,6 @@ const SIGN_IN_BENEFITS: { icon: string; label: string }[] = [
   { icon: "history", label: "Match History" },
   { icon: "chart", label: "Statistics" },
 ];
-
-/* One side of the final score: a square chip in the team color, the name, the score. */
-const TeamScore = ({
-  team,
-  color,
-  score,
-}: {
-  team: PersistentTeam;
-  color: string;
-  score: number;
-}) => (
-  <div className="flex flex-col items-center text-center">
-    <div
-      className="mb-2 flex size-14 items-center justify-center rounded-[4px] border-[1.5px] border-mb-navy"
-      style={{ backgroundColor: color }}
-    >
-      <span className="matchbook-display text-xl font-bold text-white">
-        {team.name.charAt(0)}
-      </span>
-    </div>
-    <p className="mb-1 text-xs text-mb-ink-muted">{team.name}</p>
-    <p className="matchbook-display text-3xl font-bold leading-none text-mb-navy">
-      {score}
-    </p>
-  </div>
-);
 
 /**
  * The result a guest sees when a quick match ends: the final score, the
@@ -82,7 +57,7 @@ export const GuestMatchComplete = ({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>
-            <MbIcon id="compete" size={18} className="shrink-0" />
+            <MbIcon id="trophy" size={18} className="shrink-0" />
             Match Complete!
           </DialogTitle>
           <DialogDescription>
@@ -92,12 +67,12 @@ export const GuestMatchComplete = ({
 
         <div className="space-y-4">
           {/* Final score */}
-          <div className="flex items-center justify-center gap-6 rounded-[4px] border-[1.5px] border-mb-navy bg-mb-paper-bright p-4">
-            <TeamScore team={homeTeam} color={homeColor} score={homeScore} />
+          <div className="flex items-center justify-center gap-6 rounded-[4px] border border-mb-rule bg-mb-paper-bright p-4">
+            <TeamScore name={homeTeam.name} color={homeColor} score={homeScore} />
             <span className="matchbook-display text-2xl text-mb-ink-muted">
               :
             </span>
-            <TeamScore team={awayTeam} color={awayColor} score={awayScore} />
+            <TeamScore name={awayTeam.name} color={awayColor} score={awayScore} />
           </div>
 
           {/* Winner */}

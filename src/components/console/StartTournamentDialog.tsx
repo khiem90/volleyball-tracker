@@ -129,7 +129,7 @@ export const StartTournamentDialog = ({
                     }`}
                   >
                     <span
-                      className="h-4 w-4 shrink-0 rounded-full border border-mb-navy"
+                      className="h-4 w-4 shrink-0 rounded-full border-[1.5px] border-mb-navy"
                       style={{ backgroundColor: team.color }}
                     />
                     <span className="flex-1 truncate text-sm">{team.name}</span>

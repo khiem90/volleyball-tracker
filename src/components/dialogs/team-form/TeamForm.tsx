@@ -21,8 +21,9 @@ interface ColorSwatchesProps {
 
 /**
  * The team colors as 44px navy-bordered squares, the chosen one carrying the
- * sprite's check in white. The form is the only place these are picked, so
- * the swatches live here rather than in a shared primitive.
+ * sprite's check in navy on a small paper-bright disc, so it reads on the
+ * light swatches too. The form is the only place these are picked, so the
+ * swatches live here rather than in a shared primitive.
  */
 const ColorSwatches = ({ value, onChange }: ColorSwatchesProps) => (
   <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Color selection">
@@ -35,11 +36,15 @@ const ColorSwatches = ({ value, onChange }: ColorSwatchesProps) => (
           role="radio"
           aria-checked={isSelected}
           onClick={() => onChange(color)}
-          className="flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-[4px] border-[1.5px] border-mb-navy text-white"
+          className="flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-[4px] border-[1.5px] border-mb-navy"
           style={{ backgroundColor: color }}
           aria-label={`Select color ${color}`}
         >
-          {isSelected && <MbIcon id="check" size={22} className="drop-shadow-md" />}
+          {isSelected && (
+            <span className="flex size-7 items-center justify-center rounded-full bg-mb-paper-bright text-mb-navy">
+              <MbIcon id="check" size={20} />
+            </span>
+          )}
         </button>
       );
     })}
@@ -132,7 +137,7 @@ export const TeamForm = ({ open, onOpenChange, team, onSubmit }: TeamFormProps) 
               className="flex items-center gap-3 rounded-[4px] border-[1.5px] border-mb-navy p-3 text-white"
               style={{ backgroundColor: color }}
             >
-              <span className="matchbook-display flex size-11 shrink-0 items-center justify-center rounded-[4px] border-[1.5px] border-white/70 text-xl font-bold">
+              <span className="matchbook-display flex size-11 shrink-0 items-center justify-center rounded-[4px] border-[1.5px] border-mb-paper-bright/70 text-xl font-bold">
                 {previewInitial}
               </span>
               <span className="matchbook-display min-w-0 truncate text-lg font-bold">

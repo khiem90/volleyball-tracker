@@ -57,7 +57,7 @@ export const UndoToast = memo(
         role="alert"
         aria-live="polite"
       >
-        <div className="flex items-center gap-2 rounded-[4px] border-[1.5px] border-mb-navy bg-mb-navy py-1 pr-1 pl-3 text-mb-paper-bright shadow-[0_8px_22px_rgba(57,41,23,0.08)]">
+        <div className="flex items-center gap-2 rounded-[4px] border-[1.5px] border-mb-navy bg-mb-navy py-1 pr-1 pl-3 text-mb-paper-bright mb-shadow-panel">
           <MbIcon id="check" size={18} className="shrink-0" />
 
           <span className="min-w-0 flex-1 truncate text-[0.85rem] font-medium">
@@ -80,11 +80,11 @@ export const UndoToast = memo(
           <button
             type="button"
             onClick={onDismiss}
-            className="flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-[4px] text-mb-paper-bright transition-colors hover:bg-white/10"
+            className="flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-[4px] text-mb-paper-bright transition-colors hover:bg-mb-paper/10"
             aria-label="Dismiss notification and clear undo history"
             tabIndex={0}
           >
-            <MbIcon id="close" size={18} />
+            <MbIcon id="close" size={20} />
           </button>
         </div>
       </motion.div>

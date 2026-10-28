@@ -62,6 +62,8 @@
   --mb-red: #cf3f32;
   --mb-ink-muted: #5d6c70;
   --mb-rule: rgba(7, 50, 77, 0.28);
+  /* The one shadow: the soft brown lift under panels, dialogs, menus, the toast, and the fullscreen bar. */
+  --mb-shadow-panel: 0 8px 22px rgba(57, 41, 23, 0.08);
   --mb-display-font: var(--font-oswald), "Arial Narrow", "Roboto Condensed", Impact, sans-serif;
 
   /* Light only: native controls, scrollbars, and form fields stay light too. */
@@ -99,7 +101,7 @@
     border: 1.5px solid var(--mb-navy);
     border-top-width: 4px;
     border-radius: 4px;
-    box-shadow: 0 8px 22px rgba(57, 41, 23, 0.08);
+    box-shadow: var(--mb-shadow-panel);
     display: flex;
     flex-direction: column;
     height: 100%;
@@ -116,8 +118,13 @@
     border: 1.5px solid var(--mb-navy);
     border-top-width: 4px;
     border-radius: 4px;
-    box-shadow: 0 8px 22px rgba(57, 41, 23, 0.08);
+    box-shadow: var(--mb-shadow-panel);
     font-family: var(--font-sans), system-ui, sans-serif;
+  }
+
+  /* The panel shadow on something that is not a panel: the menu, the toast, the fullscreen bar. */
+  .mb-shadow-panel {
+    box-shadow: var(--mb-shadow-panel);
   }
 
   .mb-panel-head {
