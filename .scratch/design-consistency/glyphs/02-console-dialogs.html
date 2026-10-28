@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ticket 02 glyphs: play, pencil, remove-user</title>
+<style>
+  :root { --paper: #f7f0e4; --paper-bright: #fffaf1; --navy: #07324d; --red: #cf3f32; --muted: #5d6c70; --rule: rgba(7, 50, 77, 0.28); }
+  body { margin: 0; padding: 24px 16px; background: var(--paper); color: var(--navy); font-family: Outfit, system-ui, sans-serif; }
+  h1 { font-size: 1.1rem; text-transform: uppercase; letter-spacing: 0.04em; margin: 0 0 4px; }
+  p { color: var(--muted); font-size: 0.9rem; margin: 0 0 20px; max-width: 60ch; }
+  h2 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); margin: 24px 0 8px; }
+  .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; max-width: 720px; }
+  .card { background: var(--paper-bright); border: 1.5px solid var(--navy); border-top-width: 4px; border-radius: 4px; padding: 12px; box-shadow: 0 8px 22px rgba(57, 41, 23, 0.08); }
+  .card.new { border-color: var(--red); }
+  .label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; margin-bottom: 8px; }
+  .label small { display: block; text-transform: none; letter-spacing: 0; color: var(--muted); font-weight: 400; }
+  .sizes { display: flex; align-items: flex-end; gap: 16px; }
+  .sizes span { display: inline-flex; align-items: flex-end; gap: 4px; font-size: 0.65rem; color: var(--muted); }
+  svg { display: block; }
+  .inbutton { display: inline-flex; align-items: center; gap: 0.45rem; min-height: 2.75rem; padding: 0.55rem 1.1rem; border-radius: 4px; background: var(--navy); color: var(--paper-bright); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; font-size: 0.8rem; margin-top: 12px; }
+  .inbutton.red { background: var(--red); color: #fff; }
+  .inbutton.outline { background: var(--paper-bright); color: var(--navy); border: 1.5px solid var(--navy); }
+  .title { display: flex; align-items: center; gap: 0.5rem; text-transform: uppercase; font-weight: 700; font-size: 1.05rem; }
+  .pick { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--rule); border-radius: 4px; background: var(--paper-bright); font-size: 0.875rem; margin-top: 4px; }
+  .pick.on { border-color: var(--navy); background: rgba(7, 50, 77, 0.06); }
+  .pick i { width: 16px; height: 16px; border-radius: 999px; border: 1px solid var(--navy); display: inline-block; }
+  .pick b { flex: 1; font-weight: 400; }
+</style>
+</head>
+<body>
+<h1>Ticket 02: play, pencil, remove-user</h1>
+<p>Each new glyph (red frame) at 24px and 48px beside the lucide icon it replaces. The new glyphs are drawn on the sprite's 24px grid with a 1.8px stroke and round caps and joins; the old icons are the library markup as shipped (lucide at stroke 2). The last section shows the existing glyphs this ticket reuses in place of lucide icons.</p>
+
+<h2>play (replaces lucide Play in the start-tournament title and Start button)</h2>
+<div class="row">
+  <div class="card new">
+    <div class="label">New: sprite <code>play</code><small>1.8px, round joins, open triangle</small></div>
+    <div class="sizes">
+      <span><svg width="24" height="24" viewBox="0 0 24 24"><path d="m7 4.5 12 7.5-12 7.5Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>24</span>
+      <span><svg width="48" height="48" viewBox="0 0 24 24"><path d="m7 4.5 12 7.5-12 7.5Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>48</span>
+    </div>
+  </div>
+  <div class="card">
+    <div class="label">Old: lucide <code>Play</code><small>stroke 2, rounded corners</small></div>
+    <div class="sizes">
+      <span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></svg>24</span>
+      <span><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></svg>48</span>
+    </div>
+  </div>
+</div>
+
+<h2>pencil (replaces lucide PencilLine in the correct-result title and Save button)</h2>
+<div class="row">
+  <div class="card new">
+    <div class="label">New: sprite <code>pencil</code><small>1.8px, round caps and joins, no baseline</small></div>
+    <div class="sizes">
+      <span><svg width="24" height="24" viewBox="0 0 24 24"><path d="m4 20 1-4L16 5l3 3L8 19Zm9.5-12.5 3 3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>24</span>
+      <span><svg width="48" height="48" viewBox="0 0 24 24"><path d="m4 20 1-4L16 5l3 3L8 19Zm9.5-12.5 3 3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>48</span>
+    </div>
+  </div>
+  <div class="card">
+    <div class="label">Old: lucide <code>PencilLine</code><small>stroke 2, with a baseline</small></div>
+    <div class="sizes">
+      <span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 21h8"/><path d="m15 5 4 4"/><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/></svg>24</span>
+      <span><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 21h8"/><path d="m15 5 4 4"/><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/></svg>48</span>
+    </div>
+  </div>
+</div>
+
+<h2>remove-user (replaces lucide UserMinus in the withdraw confirm)</h2>
+<div class="row">
+  <div class="card new">
+    <div class="label">New: sprite <code>remove-user</code><small>1.8px, round caps and joins</small></div>
+    <div class="sizes">
+      <span><svg width="24" height="24" viewBox="0 0 24 24"><circle cx="9" cy="7.5" r="3.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3 20a6 6 0 0 1 12 0M16 11h6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>24</span>
+      <span><svg width="48" height="48" viewBox="0 0 24 24"><circle cx="9" cy="7.5" r="3.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3 20a6 6 0 0 1 12 0M16 11h6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>48</span>
+    </div>
+  </div>
+  <div class="card">
+    <div class="label">Old: lucide <code>UserMinus</code><small>stroke 2, round caps</small></div>
+    <div class="sizes">
+      <span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="22" x2="16" y1="11" y2="11"/></svg>24</span>
+      <span><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="22" x2="16" y1="11" y2="11"/></svg>48</span>
+    </div>
+  </div>
+</div>
+
+<h2>Existing glyphs reused (nothing new drawn)</h2>
+<div class="row">
+  <div class="card">
+    <div class="label">Sprite <code>compete</code> for End tournament<small>was lucide Square (a stop block)</small></div>
+    <div class="sizes">
+      <span><svg width="24" height="24" viewBox="0 0 24 24"><path d="M7 3h10v4c0 4-2 6-5 7-3-1-5-3-5-7ZM9 14h6M12 14v5M8 21h8M4 5h3v2c0 2-1 3-3 3ZM20 5h-3v2c0 2 1 3 3 3Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>24</span>
+      <span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/></svg>old</span>
+    </div>
+  </div>
+  <div class="card">
+    <div class="label">Sprite <code>swap</code> for Regenerate link<small>was the lucide TriangleAlert default</small></div>
+    <div class="sizes">
+      <span><svg width="24" height="24" viewBox="0 0 24 24"><path d="M4 7h14m0 0-4-4m4 4-4 4M20 17H6m0 0 4-4m-4 4 4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>24</span>
+      <span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>old</span>
+    </div>
+  </div>
+  <div class="card">
+    <div class="label">Sprite <code>court</code> for Close court<small>was the lucide TriangleAlert default</small></div>
+    <div class="sizes">
+      <span><svg width="24" height="24" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 4v16M7 4v16m10-16v16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-dasharray="2 2"/></svg>24</span>
+      <span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>old</span>
+    </div>
+  </div>
+  <div class="card">
+    <div class="label">Sprite <code>check</code> on the picked play-in row<small>was lucide Check (a bare tick)</small></div>
+    <div class="sizes">
+      <span><svg width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m7 12 3 3 7-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>24</span>
+      <span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>old</span>
+    </div>
+  </div>
+</div>
+
+<h2>In context: the start-tournament title, two play-in rows, and the footer</h2>
+<div class="card" style="max-width: 343px;">
+  <div class="title">
+    <svg width="18" height="18" viewBox="0 0 24 24"><path d="m7 4.5 12 7.5-12 7.5Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    Start the tournament?
+    <svg style="margin-left:auto" width="20" height="20" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </div>
+  <div style="margin-top:12px">
+    <div class="pick on"><i style="background:#148f89"></i><b>Harbour Hawks</b><svg width="16" height="16" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m7 12 3 3 7-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <div class="pick"><i style="background:#e6a01f"></i><b>Ridge Runners</b></div>
+  </div>
+  <div style="display:flex; gap:8px;">
+    <span class="inbutton outline" style="flex:1; justify-content:center;">Cancel</span>
+    <span class="inbutton" style="flex:1; justify-content:center;"><svg width="14" height="14" viewBox="0 0 24 24"><path d="m7 4.5 12 7.5-12 7.5Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Start</span>
+  </div>
+</div>
+
+<h2>In context: the withdraw confirm's title and buttons</h2>
+<div class="card" style="max-width: 343px;">
+  <div class="title">
+    <svg width="18" height="18" viewBox="0 0 24 24"><circle cx="9" cy="7.5" r="3.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3 20a6 6 0 0 1 12 0M16 11h6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    Withdraw Harbour Hawks?
+    <svg style="margin-left:auto" width="20" height="20" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </div>
+  <div style="display:flex; gap:8px;">
+    <span class="inbutton outline" style="flex:1; justify-content:center;">Cancel</span>
+    <span class="inbutton red" style="flex:1; justify-content:center;"><svg width="14" height="14" viewBox="0 0 24 24"><circle cx="9" cy="7.5" r="3.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3 20a6 6 0 0 1 12 0M16 11h6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Withdraw</span>
+  </div>
+</div>
+</body>
+</html>

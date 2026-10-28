@@ -144,6 +144,6 @@ per the brief.
   The shared formation page's four cards lost their soft shadow.
 - Installed browsers see the new glyphs only after the update banner; the
   service worker precaches the sprite.
-- Glyph page: `C:\Users\khiem\AppData\Local\Temp\claude\C--Dev-Tournament-Tracker\718bee3b-cf00-40de-9132-9a9163eeed1b\scratchpad\glyphs\01-dialog-foundation.html`.
+- Glyph page: `.scratch/design-consistency/glyphs/01-dialog-foundation.html`.
 
 No new issues filed.

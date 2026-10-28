@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ticket 08 glyphs: eye and eye-off</title>
+<style>
+  :root { --paper: #f7f0e4; --paper-bright: #fffaf1; --navy: #07324d; --red: #cf3f32; --coral: #ee4b34; --muted: #5d6c70; --rule: rgba(7, 50, 77, 0.28); --wash: rgba(7, 50, 77, 0.06); }
+  body { margin: 0; padding: 24px 16px; background: var(--paper); color: var(--navy); font-family: Outfit, system-ui, sans-serif; }
+  h1 { font-size: 1.1rem; text-transform: uppercase; letter-spacing: 0.04em; margin: 0 0 4px; }
+  p { color: var(--muted); font-size: 0.9rem; margin: 0 0 20px; max-width: 64ch; }
+  h2 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); margin: 24px 0 8px; }
+  .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; max-width: 720px; }
+  .card { background: var(--paper-bright); border: 1.5px solid var(--navy); border-top-width: 4px; border-radius: 4px; padding: 12px; box-shadow: 0 8px 22px rgba(57, 41, 23, 0.08); }
+  .card.new { border-color: var(--red); }
+  .label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; margin-bottom: 8px; }
+  .label small { display: block; text-transform: none; letter-spacing: 0; color: var(--muted); font-weight: 400; }
+  .sizes { display: flex; align-items: flex-end; gap: 16px; }
+  .sizes span { display: inline-flex; align-items: flex-end; gap: 4px; font-size: 0.65rem; color: var(--muted); }
+  svg { display: block; }
+  .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; }
+  .toggle { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 6px 12px; border-radius: 4px; border: 1px solid var(--rule); background: var(--wash); color: var(--muted); font-size: 0.75rem; font-weight: 500; }
+  .toggle.on-amber { background: rgba(245, 158, 11, 0.2); border-color: rgba(245, 158, 11, 0.5); color: #b45309; }
+  .toggle.on-blue { background: rgba(59, 130, 246, 0.2); border-color: rgba(59, 130, 246, 0.5); color: #1d4ed8; }
+  .round { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 999px; border: 1.5px solid var(--navy); background: var(--paper-bright); color: var(--navy); }
+  .accordion { max-width: 22rem; margin-top: 12px; border: 1px solid var(--rule); border-radius: 4px; background: var(--paper-bright); padding: 16px; }
+  .accordion .item { display: flex; align-items: center; justify-content: space-between; padding: 12px 4px; font-size: 0.875rem; font-weight: 500; border-bottom: 1px solid var(--rule); }
+  .accordion .item:last-child { border-bottom: 0; }
+  .accordion .item svg { color: var(--muted); }
+</style>
+</head>
+<body>
+<h1>Ticket 08: the eye and eye-off glyphs</h1>
+<p>Two new glyphs, drawn so the two volleyball components that still imported heroicons could lose the import. Red-topped cards are the new sprite drawings (24px grid, 1.8px stroke, round caps and joins); the navy card beside each is the heroicons icon it replaces (1.5px stroke). The rotation lab's Arrows toggle reuses the sprite's existing <code>swap</code> glyph, and its prev, next, and accordion chevrons reuse the sprite's chevrons; those are shown too so the whole swap can be judged.</p>
+
+<h2>eye (the Overlaps toggle, on)</h2>
+<div class="row">
+  <div class="card new">
+    <div class="label">New: sprite <code>eye</code><small>almond outline, 3px pupil</small></div>
+    <div class="sizes">
+      <span><svg width="24" height="24" viewBox="0 0 24 24"><path d="M2 12c2.5-4.5 6-7 10-7s7.5 2.5 10 7c-2.5 4.5-6 7-10 7S4.5 16.5 2 12Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>24</span>
+      <span><svg width="48" height="48" viewBox="0 0 24 24"><path d="M2 12c2.5-4.5 6-7 10-7s7.5 2.5 10 7c-2.5 4.5-6 7-10 7S4.5 16.5 2 12Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>48</span>
+    </div>
+  </div>
+  <div class="card">
+    <div class="label">Old: heroicons <code>EyeIcon</code><small>1.5px stroke</small></div>
+    <div class="sizes">
+      <span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/></svg>24</span>
+      <span><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/></svg>48</span>
+    </div>
+  </div>
+</div>
+
+<h2>eye-off (the Overlaps toggle, off)</h2>
+<div class="row">
+  <div class="card new">
+    <div class="label">New: sprite <code>eye-off</code><small>the same eye with one diagonal stroke</small></div>
+    <div class="sizes">
+      <span><svg width="24" height="24" viewBox="0 0 24 24"><path d="M2 12c2.5-4.5 6-7 10-7s7.5 2.5 10 7c-2.5 4.5-6 7-10 7S4.5 16.5 2 12Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m4 4 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>24</span>
+      <span><svg width="48" height="48" viewBox="0 0 24 24"><path d="M2 12c2.5-4.5 6-7 10-7s7.5 2.5 10 7c-2.5 4.5-6 7-10 7S4.5 16.5 2 12Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m4 4 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>48</span>
+    </div>
+  </div>
+  <div class="card">
+    <div class="label">Old: heroicons <code>EyeSlashIcon</code><small>broken outline around the slash</small></div>
+    <div class="sizes">
+      <span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88"/></svg>24</span>
+      <span><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88"/></svg>48</span>
+    </div>
+  </div>
+</div>
+
+<h2>Reused: swap for the Arrows toggle</h2>
+<div class="row">
+  <div class="card">
+    <div class="label">Reused: sprite <code>swap</code><small>already in the sprite; the toggle shows movement arrows</small></div>
+    <div class="sizes">
+      <span><svg width="24" height="24" viewBox="0 0 24 24"><path d="M4 7h14m0 0-4-4m4 4-4 4M20 17H6m0 0 4-4m-4 4 4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>24</span>
+      <span><svg width="48" height="48" viewBox="0 0 24 24"><path d="M4 7h14m0 0-4-4m4 4-4 4M20 17H6m0 0 4-4m-4 4 4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>48</span>
+    </div>
+  </div>
+  <div class="card">
+    <div class="label">Old: heroicons <code>ArrowPathIcon</code><small>a refresh cycle</small></div>
+    <div class="sizes">
+      <span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"/></svg>24</span>
+      <span><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"/></svg>48</span>
+    </div>
+  </div>
+</div>
+
+<h2>Reused: the chevrons</h2>
+<div class="row">
+  <div class="card">
+    <div class="label">Sprite <code>chevron-left</code>, <code>chevron-right</code>, <code>chevron-down</code><small>2px stroke, as the sprite draws them</small></div>
+    <div class="sizes">
+      <span><svg width="24" height="24" viewBox="0 0 24 24"><path d="m15 5-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      <span><svg width="24" height="24" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      <span><svg width="24" height="24" viewBox="0 0 24 24"><path d="m5 9 7 7 7-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>24</span>
+    </div>
+  </div>
+  <div class="card">
+    <div class="label">Old: heroicons <code>ChevronLeftIcon</code>, <code>ChevronRightIcon</code>, <code>ChevronDownIcon</code><small>1.5px stroke</small></div>
+    <div class="sizes">
+      <span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5"/></svg></span>
+      <span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5"/></svg></span>
+      <span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg>24</span>
+    </div>
+  </div>
+</div>
+
+<h2>In place: the rotation lab controls (old tokens, remapped)</h2>
+<div class="controls">
+  <span class="round"><svg width="20" height="20" viewBox="0 0 24 24"><path d="m15 5-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+  <span class="round"><svg width="20" height="20" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+</div>
+<div class="controls">
+  <span class="toggle on-amber"><svg width="14" height="14" viewBox="0 0 24 24"><path d="M2 12c2.5-4.5 6-7 10-7s7.5 2.5 10 7c-2.5 4.5-6 7-10 7S4.5 16.5 2 12Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>Overlaps</span>
+  <span class="toggle"><svg width="14" height="14" viewBox="0 0 24 24"><path d="M2 12c2.5-4.5 6-7 10-7s7.5 2.5 10 7c-2.5 4.5-6 7-10 7S4.5 16.5 2 12Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m4 4 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Overlaps</span>
+  <span class="toggle on-blue"><svg width="14" height="14" viewBox="0 0 24 24"><path d="M4 7h14m0 0-4-4m4 4-4 4M20 17H6m0 0 4-4m-4 4 4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Arrows</span>
+  <span class="toggle"><svg width="14" height="14" viewBox="0 0 24 24"><path d="M4 7h14m0 0-4-4m4 4-4 4M20 17H6m0 0 4-4m-4 4 4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Arrows</span>
+</div>
+<div class="accordion">
+  <div class="item">What are Rotations 1-6?<svg width="16" height="16" viewBox="0 0 24 24" style="transform: rotate(180deg)"><path d="m5 9 7 7 7-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+  <div class="item">What are the overlap lines?<svg width="16" height="16" viewBox="0 0 24 24"><path d="m5 9 7 7 7-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+</div>
+</body>
+</html>

@@ -110,6 +110,6 @@ their full-bleed look exactly, apart from their icons.
 - The match page while its tournaments load: a coral ring centered on paper.
 - Installed browsers see the new glyphs only after the update banner; the
   service worker precaches the sprite.
-- Glyph page: `C:\Users\khiem\AppData\Local\Temp\claude\C--Dev-Tournament-Tracker\718bee3b-cf00-40de-9132-9a9163eeed1b\scratchpad\glyphs\04-scoring-page.html`.
+- Glyph page: `.scratch/design-consistency/glyphs/04-scoring-page.html`.
 
 No new issues filed.

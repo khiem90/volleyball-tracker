@@ -116,7 +116,7 @@ is filed.
 - `/assets/matchbook/preview.html` lists `eye` and `eye-off` at the end.
 - Installed browsers see the two new glyphs only after the update banner; the
   service worker precaches the sprite.
-- Glyph page: `C:\Users\khiem\AppData\Local\Temp\claude\C--Dev-Tournament-Tracker\718bee3b-cf00-40de-9132-9a9163eeed1b\scratchpad\glyphs\08-contract-and-guard-rails.html`.
+- Glyph page: `.scratch/design-consistency/glyphs/08-contract-and-guard-rails.html`.
 
 ### Noticed across the merged tickets, for the review
 

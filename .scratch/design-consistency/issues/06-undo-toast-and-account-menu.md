@@ -97,6 +97,6 @@ rewrite. Added `logout` to the sprite, `manifest.json` `iconIds`, and the
   sans like the rest of the app.
 - Installed browsers see the new glyph only after the update banner; the
   service worker precaches the sprite.
-- Glyph page: `C:\Users\khiem\AppData\Local\Temp\claude\C--Dev-Tournament-Tracker\718bee3b-cf00-40de-9132-9a9163eeed1b\scratchpad\glyphs\06-undo-toast-and-account-menu.html`.
+- Glyph page: `.scratch/design-consistency/glyphs/06-undo-toast-and-account-menu.html`.
 
 No new issues filed.

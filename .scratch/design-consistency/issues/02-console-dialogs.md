@@ -89,6 +89,6 @@ sprite, `manifest.json`, and `preview.html`.
   until ticket 06 lands.
 - Installed browsers see the new glyphs only after the update banner; the
   service worker precaches the sprite.
-- Glyph page: `C:\Users\khiem\AppData\Local\Temp\claude\C--Dev-Tournament-Tracker\718bee3b-cf00-40de-9132-9a9163eeed1b\scratchpad\glyphs\02-console-dialogs.html`.
+- Glyph page: `.scratch/design-consistency/glyphs/02-console-dialogs.html`.
 
 No new issues filed.
