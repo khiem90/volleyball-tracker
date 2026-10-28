@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Check, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -11,6 +10,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { MbIcon } from "@/components/matchbook/MbIcon";
+import { InlineSpinner } from "@/components/shared";
 import { formatLabel, isBracketFormat } from "@/lib/formats";
 import { getPlayInMatchCount } from "@/lib/singleElimination";
 import type { PersistentTeam, Tournament } from "@/types/game";
@@ -83,8 +84,8 @@ export const StartTournamentDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={showPlayInSelection ? "sm:max-w-lg" : "sm:max-w-md"}>
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Play className="h-5 w-5 text-primary" />
+          <DialogTitle>
+            <MbIcon id="play" size={18} className="shrink-0" />
             Start the tournament?
           </DialogTitle>
           <DialogDescription>
@@ -99,16 +100,16 @@ export const StartTournamentDialog = ({
               <p className="text-sm font-medium">
                 Pick {playInTeamCount} team{playInTeamCount > 1 ? "s" : ""} to play in
               </p>
-              <span className="text-xs text-muted-foreground">
+              <span className="text-xs text-mb-ink-muted">
                 {selectedPlayInTeamIds.length}/{playInTeamCount} picked
               </span>
             </div>
-            <p className="mb-3 text-xs text-muted-foreground">
+            <p className="mb-3 text-xs text-mb-ink-muted">
               They play {playInMatchCount} play-in match{playInMatchCount > 1 ? "es" : ""}. The
               other {teamCount - playInTeamCount} team{teamCount - playInTeamCount > 1 ? "s" : ""}{" "}
               get a bye into the next round.
             </p>
-            <div className="max-h-60 space-y-1 overflow-y-auto rounded-lg border border-border p-2">
+            <div className="max-h-60 space-y-1 overflow-y-auto">
               {teams.map((team) => {
                 const isSelected = selectedPlayInTeamIds.includes(team.id);
                 const isDisabled =
@@ -119,20 +120,20 @@ export const StartTournamentDialog = ({
                     type="button"
                     onClick={() => toggleTeam(team.id)}
                     disabled={isDisabled}
-                    className={`flex min-h-11 w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors ${
+                    className={`flex min-h-11 w-full items-center gap-3 rounded-[4px] border bg-mb-paper-bright px-3 py-2 text-left transition-colors ${
                       isSelected
-                        ? "border border-primary/30 bg-primary/10"
+                        ? "border-mb-navy bg-mb-navy/6"
                         : isDisabled
-                          ? "cursor-not-allowed opacity-50"
-                          : "hover:bg-accent/50"
+                          ? "cursor-not-allowed border-mb-rule opacity-50"
+                          : "border-mb-rule hover:bg-mb-navy/6"
                     }`}
                   >
                     <span
-                      className="h-4 w-4 shrink-0 rounded-full"
+                      className="h-4 w-4 shrink-0 rounded-full border-[1.5px] border-mb-navy"
                       style={{ backgroundColor: team.color }}
                     />
                     <span className="flex-1 truncate text-sm">{team.name}</span>
-                    {isSelected && <Check className="h-4 w-4 shrink-0 text-primary" />}
+                    {isSelected && <MbIcon id="check" size={16} className="shrink-0" />}
                   </button>
                 );
               })}
@@ -140,17 +141,17 @@ export const StartTournamentDialog = ({
           </div>
         )}
 
-        <DialogFooter className="flex-row gap-2 sm:gap-2">
+        <DialogFooter>
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
             disabled={isStarting}
-            className="flex-1"
+            className="sm:flex-1"
           >
             Cancel
           </Button>
-          <Button onClick={handleStart} disabled={!canStart} className="flex-1 gap-2">
-            <Play className="h-4 w-4" />
+          <Button onClick={handleStart} disabled={!canStart} className="sm:flex-1">
+            {isStarting ? <InlineSpinner /> : <MbIcon id="play" size={14} />}
             {isStarting ? "Starting..." : "Start"}
           </Button>
         </DialogFooter>

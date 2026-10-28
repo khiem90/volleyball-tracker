@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ticket 04 glyphs</title>
+<style>
+  :root { --navy: #07324d; --paper: #f7f0e4; --bright: #fffaf1; --rule: rgba(7,50,77,.28); --muted: #5d6c70; }
+  body { margin: 0; padding: 24px 16px; background: var(--paper); color: var(--navy); font: 15px/1.5 system-ui, sans-serif; }
+  h1 { font: 700 1.3rem/1.2 "Oswald", "Arial Narrow", Impact, sans-serif; text-transform: uppercase; letter-spacing: .02em; margin: 0 0 4px; }
+  p.lede { color: var(--muted); margin: 0 0 20px; max-width: 60ch; }
+  table { border-collapse: collapse; background: var(--bright); border: 1.5px solid var(--navy); border-top-width: 4px; border-radius: 4px; box-shadow: 0 8px 22px rgba(57,41,23,.08); width: 100%; max-width: 760px; }
+  th, td { padding: 10px 12px; border-bottom: 1px solid var(--rule); text-align: left; vertical-align: middle; }
+  th { font: 600 .72rem/1 "Oswald", "Arial Narrow", Impact, sans-serif; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); }
+  tr:last-child td { border-bottom: 0; }
+  td.name { font-family: ui-monospace, Consolas, monospace; font-size: .85rem; white-space: nowrap; }
+  td.name small { display: block; color: var(--muted); font-family: system-ui, sans-serif; }
+  .pair { display: inline-flex; align-items: center; gap: 14px; }
+  svg { display: block; }
+  .lucide svg { color: #6b7280; }
+  .mb svg { color: var(--navy); }
+  .on-color { background: #3b82f6; color: #fff; border-radius: 4px; padding: 6px; }
+  .on-color svg { color: #fde68a; }
+  .note { color: var(--muted); font-size: .85rem; margin-top: 16px; max-width: 70ch; }
+</style>
+</head>
+<body>
+<h1>Ticket 04: scoring page glyphs</h1>
+<p class="lede">Each new sprite glyph (navy, 1.8px stroke on a 24px grid, round caps and joins; plus-like glyphs at 2px to match the existing plus) beside the lucide icon it replaces (grey, lucide's 2px stroke), at 24px and 48px.</p>
+
+<table>
+<thead><tr><th>Glyph</th><th>Replaces (lucide)</th><th>New (sprite)</th></tr></thead>
+<tbody>
+
+<tr>
+<td class="name">chevron-left<small>Back, scoring header</small></td>
+<td class="lucide"><span class="pair">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+</span></td>
+<td class="mb"><span class="pair">
+<svg width="24" height="24" viewBox="0 0 24 24"><path d="m15 5-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+<svg width="48" height="48" viewBox="0 0 24 24"><path d="m15 5-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+</span></td>
+</tr>
+
+<tr>
+<td class="name">flag<small>End match, header and fullscreen bar</small></td>
+<td class="lucide"><span class="pair">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22V4a1 1 0 0 1 .4-.8A6 6 0 0 1 8 2c3 0 5 2 7.333 2q2 0 3.067-.8A1 1 0 0 1 20 4v10a1 1 0 0 1-.4.8A6 6 0 0 1 16 16c-3 0-5-2-8-2a6 6 0 0 0-4 1.528"/></svg>
+<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22V4a1 1 0 0 1 .4-.8A6 6 0 0 1 8 2c3 0 5 2 7.333 2q2 0 3.067-.8A1 1 0 0 1 20 4v10a1 1 0 0 1-.4.8A6 6 0 0 1 16 16c-3 0-5-2-8-2a6 6 0 0 0-4 1.528"/></svg>
+</span></td>
+<td class="mb"><span class="pair">
+<svg width="24" height="24" viewBox="0 0 24 24"><path d="M5 21V3.5h13.5L16 8l2.5 4.5H5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+<svg width="48" height="48" viewBox="0 0 24 24"><path d="M5 21V3.5h13.5L16 8l2.5 4.5H5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+</span></td>
+</tr>
+
+<tr>
+<td class="name">maximize<small>Fullscreen, header</small></td>
+<td class="lucide"><span class="pair">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="m21 3-7 7"/><path d="m3 21 7-7"/><path d="M9 21H3v-6"/></svg>
+<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="m21 3-7 7"/><path d="m3 21 7-7"/><path d="M9 21H3v-6"/></svg>
+</span></td>
+<td class="mb"><span class="pair">
+<svg width="24" height="24" viewBox="0 0 24 24"><path d="M14 4h6v6m0-6-7 7M10 20H4v-6m0 6 7-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+<svg width="48" height="48" viewBox="0 0 24 24"><path d="M14 4h6v6m0-6-7 7M10 20H4v-6m0 6 7-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+</span></td>
+</tr>
+
+<tr>
+<td class="name">minimize<small>Exit fullscreen, fullscreen bar</small></td>
+<td class="lucide"><span class="pair">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m14 10 7-7"/><path d="M20 10h-6V4"/><path d="m3 21 7-7"/><path d="M4 14h6v6"/></svg>
+<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m14 10 7-7"/><path d="M20 10h-6V4"/><path d="m3 21 7-7"/><path d="M4 14h6v6"/></svg>
+</span></td>
+<td class="mb"><span class="pair">
+<svg width="24" height="24" viewBox="0 0 24 24"><path d="M20 10h-6V4m0 6 6-6M4 14h6v6m0-6-6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+<svg width="48" height="48" viewBox="0 0 24 24"><path d="M20 10h-6V4m0 6 6-6M4 14h6v6m0-6-6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+</span></td>
+</tr>
+
+<tr>
+<td class="name">undo<small>Undo the last point, header and fullscreen bar</small></td>
+<td class="lucide"><span class="pair">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11"/></svg>
+<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11"/></svg>
+</span></td>
+<td class="mb"><span class="pair">
+<svg width="24" height="24" viewBox="0 0 24 24"><path d="m8 13-4-4 4-4M4 9h10a5 5 0 0 1 0 10h-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+<svg width="48" height="48" viewBox="0 0 24 24"><path d="m8 13-4-4 4-4M4 9h10a5 5 0 0 1 0 10h-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+</span></td>
+</tr>
+
+<tr>
+<td class="name">crown<small>Leading / Winner pill on a team panel (shown on a team color too)</small></td>
+<td class="lucide"><span class="pair">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11.562 3.266a.5.5 0 0 1 .876 0L15.39 8.87a1 1 0 0 0 1.516.294L21.183 5.5a.5.5 0 0 1 .798.519l-2.834 10.246a1 1 0 0 1-.956.734H5.81a1 1 0 0 1-.957-.734L2.02 6.02a.5.5 0 0 1 .798-.519l4.276 3.664a1 1 0 0 0 1.516-.294z"/><path d="M5 21h14"/></svg>
+<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11.562 3.266a.5.5 0 0 1 .876 0L15.39 8.87a1 1 0 0 0 1.516.294L21.183 5.5a.5.5 0 0 1 .798.519l-2.834 10.246a1 1 0 0 1-.956.734H5.81a1 1 0 0 1-.957-.734L2.02 6.02a.5.5 0 0 1 .798-.519l4.276 3.664a1 1 0 0 0 1.516-.294z"/><path d="M5 21h14"/></svg>
+</span></td>
+<td class="mb"><span class="pair">
+<svg width="24" height="24" viewBox="0 0 24 24"><path d="M4 20 3 8l5 4 4-7 4 7 5-4-1 12Zm0-4h16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+<svg width="48" height="48" viewBox="0 0 24 24"><path d="M4 20 3 8l5 4 4-7 4 7 5-4-1 12Zm0-4h16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+<span class="on-color"><svg width="16" height="16" viewBox="0 0 24 24"><path d="M4 20 3 8l5 4 4-7 4 7 5-4-1 12Zm0-4h16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+</span></td>
+</tr>
+
+<tr>
+<td class="name">minus<small>Take a point, team panel (2px, like the existing plus)</small></td>
+<td class="lucide"><span class="pair">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></svg>
+<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></svg>
+</span></td>
+<td class="mb"><span class="pair">
+<svg width="24" height="24" viewBox="0 0 24 24"><path d="M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+<svg width="48" height="48" viewBox="0 0 24 24"><path d="M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+</span></td>
+</tr>
+
+<tr>
+<td class="name">trophy<small>Match-complete title and Confirm button</small></td>
+<td class="lucide"><span class="pair">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14.66v1.626a2 2 0 0 1-.976 1.696A5 5 0 0 0 7 21.978"/><path d="M14 14.66v1.626a2 2 0 0 0 .976 1.696A5 5 0 0 1 17 21.978"/><path d="M18 9h1.5a1 1 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M6 9a6 6 0 0 0 12 0V3a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1z"/><path d="M6 9H4.5a1 1 0 0 1 0-5H6"/></svg>
+<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14.66v1.626a2 2 0 0 1-.976 1.696A5 5 0 0 0 7 21.978"/><path d="M14 14.66v1.626a2 2 0 0 0 .976 1.696A5 5 0 0 1 17 21.978"/><path d="M18 9h1.5a1 1 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M6 9a6 6 0 0 0 12 0V3a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1z"/><path d="M6 9H4.5a1 1 0 0 1 0-5H6"/></svg>
+</span></td>
+<td class="mb"><span class="pair">
+<svg width="24" height="24" viewBox="0 0 24 24"><path d="M7 3h10v6a5 5 0 0 1-10 0ZM7 5H4.5v1.5a3 3 0 0 0 2.5 3M17 5h2.5v1.5a3 3 0 0 1-2.5 3M12 14v3M9 17h6l1 4H8Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+<svg width="48" height="48" viewBox="0 0 24 24"><path d="M7 3h10v6a5 5 0 0 1-10 0ZM7 5H4.5v1.5a3 3 0 0 0 2.5 3M17 5h2.5v1.5a3 3 0 0 1-2.5 3M12 14v3M9 17h6l1 4H8Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+</span></td>
+</tr>
+
+<tr>
+<td class="name">compete<small>Existing sprite glyph, for comparison with trophy</small></td>
+<td class="lucide"><span class="pair"><span style="color:var(--muted);font-size:.85rem">(already in the sprite)</span></span></td>
+<td class="mb"><span class="pair">
+<svg width="24" height="24" viewBox="0 0 24 24"><path d="M7 3h10v4c0 4-2 6-5 7-3-1-5-3-5-7ZM9 14h6M12 14v5M8 21h8M4 5h3v2c0 2-1 3-3 3ZM20 5h-3v2c0 2 1 3 3 3Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+<svg width="48" height="48" viewBox="0 0 24 24"><path d="M7 3h10v4c0 4-2 6-5 7-3-1-5-3-5-7ZM9 14h6M12 14v5M8 21h8M4 5h3v2c0 2-1 3-3 3ZM20 5h-3v2c0 2 1 3 3 3Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+</span></td>
+</tr>
+
+</tbody>
+</table>
+
+<p class="note">The scoring panel's plus comes from the existing <code>plus</code> glyph and is not redrawn. The trophy is a sibling of <code>compete</code> (a rounder cup on a plinth) so the match-complete confirm reads as a result rather than a tournament; if the two look too alike, the dialog can use <code>compete</code> instead with a one-line change.</p>
+</body>
+</html>

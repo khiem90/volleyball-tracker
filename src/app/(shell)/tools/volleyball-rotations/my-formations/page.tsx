@@ -229,8 +229,8 @@ export default function MyFormationsPage() {
                   />
                   {/* Delete confirmation overlay */}
                   {deletingId === formation.id && (
-                    <div className="absolute inset-0 bg-red-500/10 rounded-xl flex items-center justify-center backdrop-blur-sm">
-                      <div className="bg-background p-4 rounded-lg shadow-lg text-center">
+                    <div className="absolute inset-0 bg-mb-navy/55 rounded-xl flex items-center justify-center">
+                      <div className="mb-dialog p-4 text-center">
                         <p className="text-sm font-medium mb-2">Delete this formation?</p>
                         <div className="flex gap-2 justify-center">
                           <button

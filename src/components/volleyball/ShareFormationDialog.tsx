@@ -2,6 +2,7 @@
 
 import { memo, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { MbIcon } from "@/components/matchbook/MbIcon";
 import type { UserFormation } from "@/lib/volleyball/types";
 import { formationShareLink } from "@/lib/volleyball/formationLinks";
 import { useOrigin } from "@/hooks/useOrigin";
@@ -91,14 +92,14 @@ export const ShareFormationDialog = memo(
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-mb-navy/55 p-4"
             onClick={(e) => e.target === e.currentTarget && onClose()}
           >
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="w-full max-w-md bg-background rounded-2xl shadow-2xl overflow-hidden"
+              className="mb-dialog w-full max-w-md overflow-hidden"
             >
               {/* Header */}
               <div className="flex items-center justify-between px-6 py-4 border-b border-border">
@@ -106,22 +107,10 @@ export const ShareFormationDialog = memo(
                 <button
                   type="button"
                   onClick={onClose}
-                  className="flex size-11 items-center justify-center rounded-lg hover:bg-accent transition-colors"
+                  className="flex size-11 items-center justify-center rounded-[4px] text-mb-navy transition-colors hover:bg-mb-navy/6"
                   aria-label="Close dialog"
                 >
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
+                  <MbIcon id="close" size={20} />
                 </button>
               </div>
 

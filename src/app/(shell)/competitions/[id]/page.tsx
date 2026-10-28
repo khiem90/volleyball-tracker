@@ -24,7 +24,6 @@ import { courtLabel, courtsWord, type ConsoleRole } from "@/lib/console";
 import { STALE_SCORER_LINK } from "@/lib/shareLinks";
 import { signInHref } from "@/lib/shell";
 import { formatLabel, isBracketFormat, isRotationFormat } from "@/lib/formats";
-import { Trophy, UserMinus } from "lucide-react";
 
 const ROLE_LABEL: Record<Exclude<ConsoleRole, "owner">, string> = {
   scorer: "Scorer",
@@ -299,6 +298,7 @@ const TournamentConsole = () => {
       <ConfirmDialog
         open={page.regenerateOpen}
         onOpenChange={page.setRegenerateOpen}
+        icon="swap"
         title="Regenerate the scorer link?"
         description="Every phone on the current link is locked out the next time it saves a result. Share the new link with the helpers who should keep scoring."
         confirmLabel="Regenerate"
@@ -312,7 +312,7 @@ const TournamentConsole = () => {
         onOpenChange={(open) => {
           if (!open) page.cancelDecidingTap();
         }}
-        icon={Trophy}
+        icon="trophy"
         title="This is the last match"
         description={`Recording ${
           page.decidingTap ? page.team(page.decidingTap.winnerId).name : "this team"
@@ -328,7 +328,7 @@ const TournamentConsole = () => {
         onOpenChange={(open) => {
           if (!open && !page.isApplying) page.setWithdrawing(null);
         }}
-        icon={UserMinus}
+        icon="remove-user"
         title={`Withdraw ${page.withdrawing?.name ?? "the team"}?`}
         description={
           rotation
@@ -358,6 +358,7 @@ const TournamentConsole = () => {
         onOpenChange={(open) => {
           if (!open && !page.isApplying) page.setCourtsToClose(null);
         }}
+        icon="court"
         title={`Close ${
           page.courtsToClose ? courtLabel(tournament, page.courtsToClose.inPlay) : "the court"
         }?`}

@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { ShieldExclamationIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -11,6 +10,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { MbIcon } from "@/components/matchbook/MbIcon";
+import { InlineSpinner } from "@/components/shared/InlineSpinner";
 import { listNames } from "@/lib/utils";
 import type { Tournament } from "@/types/game";
 
@@ -22,7 +23,7 @@ export interface KeptTeamRow {
   tournaments: Pick<Tournament, "id" | "name">[];
 }
 
-/** One line per kept team, each naming the live tournaments holding it. */
+/** One line per kept team, each naming the live tournaments holding it. Links are navy, coral on hover. */
 const KeptTeamsList = ({ kept }: { kept: KeptTeamRow[] }) => (
   <ul className="flex flex-col gap-2 text-sm">
     {kept.map((team) => (
@@ -36,7 +37,7 @@ const KeptTeamsList = ({ kept }: { kept: KeptTeamRow[] }) => (
             <Link
               key={tournament.id}
               href={`/competitions/${tournament.id}`}
-              className="text-primary underline-offset-4 hover:underline"
+              className="font-medium text-mb-navy underline-offset-4 transition-colors hover:text-mb-coral hover:underline"
             >
               Open {tournament.name} to withdraw
             </Link>
@@ -67,8 +68,8 @@ export const TeamInLiveTournamentDialog = ({
   <Dialog open={open} onOpenChange={onOpenChange}>
     <DialogContent className="sm:max-w-md">
       <DialogHeader>
-        <DialogTitle className="flex items-center gap-2">
-          <ShieldExclamationIcon className="h-5 w-5 text-primary" />
+        <DialogTitle>
+          <MbIcon id="warning" size={18} className="shrink-0" />
           {kept.length === 1
             ? `${kept[0].name} is in a live tournament`
             : "These teams are in live tournaments"}
@@ -80,9 +81,7 @@ export const TeamInLiveTournamentDialog = ({
       </DialogHeader>
       <KeptTeamsList kept={kept} />
       <DialogFooter>
-        <Button variant="outline" onClick={() => onOpenChange(false)} className="rounded-xl">
-          Close
-        </Button>
+        <Button onClick={() => onOpenChange(false)}>Close</Button>
       </DialogFooter>
     </DialogContent>
   </Dialog>
@@ -100,8 +99,9 @@ interface DeleteTeamsDialogProps {
 }
 
 /**
- * One confirm for one team or many. Teams a live tournament keeps back are
- * named here so nobody is surprised when they are still on the roster after.
+ * One confirm for one team or many: a navy question, and only the Delete
+ * button in red. Teams a live tournament keeps back are named here so nobody
+ * is surprised when they are still on the roster after.
  */
 export const DeleteTeamsDialog = ({
   open,
@@ -116,8 +116,8 @@ export const DeleteTeamsDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-destructive">
-            <TrashIcon className="h-5 w-5" />
+          <DialogTitle>
+            <MbIcon id="trash" size={18} className="shrink-0" />
             {one ? `Delete ${deleting[0]}?` : `Delete ${deleting.length} teams?`}
           </DialogTitle>
           <DialogDescription>
@@ -127,19 +127,17 @@ export const DeleteTeamsDialog = ({
           </DialogDescription>
         </DialogHeader>
         {kept.length > 0 && (
-          <div className="flex flex-col gap-2 rounded-xl border border-border bg-accent/40 p-3">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Kept on the roster
-            </p>
+          <div className="flex flex-col gap-2 rounded-[4px] border border-mb-rule bg-mb-paper-bright p-3">
+            <p className="mb-kicker">Kept on the roster</p>
             <KeptTeamsList kept={kept} />
           </div>
         )}
-        <DialogFooter className="flex-row gap-2 sm:gap-2">
+        <DialogFooter>
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
             disabled={isDeleting}
-            className="flex-1 cursor-pointer rounded-xl"
+            className="sm:flex-1"
           >
             Cancel
           </Button>
@@ -147,9 +145,9 @@ export const DeleteTeamsDialog = ({
             variant="destructive"
             onClick={onConfirm}
             disabled={isDeleting}
-            className="flex-1 gap-2 cursor-pointer rounded-xl"
+            className="sm:flex-1"
           >
-            <TrashIcon className="h-4 w-4" />
+            {isDeleting ? <InlineSpinner /> : <MbIcon id="trash" size={14} />}
             {isDeleting ? "Deleting..." : one ? "Delete" : `Delete ${deleting.length} teams`}
           </Button>
         </DialogFooter>

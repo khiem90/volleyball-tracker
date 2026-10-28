@@ -15,3 +15,7 @@ The five default triage roles, each label string equal to its name (`needs-triag
 ### Domain docs
 
 Single-context layout, with one `CONTEXT.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
+
+## Design system
+
+Every screen uses the matchbook design: the `mb-*` tokens and classes in `src/app/globals.css`, Oswald and Outfit, 4px radii, 1.5px navy borders, and the one icon sprite. See `docs/design-system.md` before touching UI; it has the palette, which button to use, the dialog recipe, and what is forbidden.

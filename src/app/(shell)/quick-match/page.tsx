@@ -3,7 +3,6 @@
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { Trash2 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useQuickMatchPage } from "@/hooks/useQuickMatchPage";
 import { PageLoadingSpinner } from "@/components/shared";
@@ -138,7 +137,7 @@ const AbandonedMatch = ({
           onClick={onDiscard}
           className="mb-btn mb-btn-outline-red px-3 text-[0.72rem]"
         >
-          <Trash2 className="h-3.5 w-3.5" aria-hidden />
+          <MbIcon id="trash" size={14} />
           Discard
         </button>
         {match.resumable && (
@@ -509,7 +508,7 @@ export default function QuickMatchPage() {
         busyLabel="Discarding..."
         isBusy={false}
         onConfirm={handleConfirmDiscard}
-        icon={Trash2}
+        icon="trash"
       />
     </>
   );

@@ -5,6 +5,7 @@ import * as AvatarPrimitive from "@radix-ui/react-avatar"
 
 import { cn } from "@/lib/utils"
 
+/* The account avatar: a 36px navy ring on paper-bright, the initial in the display face. */
 function Avatar({
   className,
   ...props
@@ -13,7 +14,7 @@ function Avatar({
     <AvatarPrimitive.Root
       data-slot="avatar"
       className={cn(
-        "relative flex size-8 shrink-0 overflow-hidden rounded-full",
+        "relative flex size-9 shrink-0 overflow-hidden rounded-full border-[1.5px] border-mb-navy bg-mb-paper-bright",
         className
       )}
       {...props}
@@ -42,7 +43,7 @@ function AvatarFallback({
     <AvatarPrimitive.Fallback
       data-slot="avatar-fallback"
       className={cn(
-        "bg-muted flex size-full items-center justify-center rounded-full",
+        "matchbook-display flex size-full items-center justify-center rounded-full text-[0.95rem] font-bold text-mb-navy",
         className
       )}
       {...props}

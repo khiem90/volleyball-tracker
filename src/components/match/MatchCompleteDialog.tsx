@@ -1,7 +1,8 @@
 "use client";
 
 import { memo } from "react";
-import { Loader2, Trophy } from "lucide-react";
+import { MbIcon } from "@/components/matchbook/MbIcon";
+import { InlineSpinner } from "@/components/shared";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -31,6 +32,24 @@ type MatchCompleteDialogProps = {
   onConfirm: () => void;
 };
 
+/**
+ * One team's side of a final score: a square chip in the team color carrying
+ * the initial, the name, and the score. The guest match-complete dialog shows
+ * the same thing, so it imports this rather than drawing its own.
+ */
+export const TeamScore = ({ name, color, score }: { name: string; color: string; score: number }) => (
+  <div className="min-w-0 text-center">
+    <div
+      className="mx-auto mb-2 flex size-12 items-center justify-center rounded-[4px] border-[1.5px] border-mb-navy"
+      style={{ backgroundColor: color }}
+    >
+      <span className="matchbook-display text-xl font-bold text-white">{name.charAt(0)}</span>
+    </div>
+    <p className="mb-1 truncate text-xs text-mb-ink-muted">{name}</p>
+    <p className="matchbook-display text-3xl font-bold tabular-nums text-mb-navy">{score}</p>
+  </div>
+);
+
 /** The confirm before a result is recorded: the score, the winner, and a way back to playing. */
 export const MatchCompleteDialog = memo(function MatchCompleteDialog({
   open,
@@ -52,59 +71,41 @@ export const MatchCompleteDialog = memo(function MatchCompleteDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Trophy className="h-5 w-5 text-primary" aria-hidden />
+          <DialogTitle>
+            <MbIcon id="trophy" size={18} className="shrink-0" />
             {title}
           </DialogTitle>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
         <div className="space-y-3 pt-2">
-          <div className="flex items-center justify-center gap-6 rounded-xl bg-accent/20 p-4">
-            <div className="text-center">
-              <div
-                className="mx-auto mb-2 h-12 w-12 rounded-xl shadow-lg"
-                style={{ backgroundColor: homeColor, boxShadow: `0 8px 20px ${homeColor}40` }}
-              />
-              <p className="mb-1 text-xs text-muted-foreground">{homeTeamName}</p>
-              <p className="text-3xl font-bold tabular-nums">{homeScore}</p>
-            </div>
-            <span className="text-2xl font-light text-muted-foreground">:</span>
-            <div className="text-center">
-              <div
-                className="mx-auto mb-2 h-12 w-12 rounded-xl shadow-lg"
-                style={{ backgroundColor: awayColor, boxShadow: `0 8px 20px ${awayColor}40` }}
-              />
-              <p className="mb-1 text-xs text-muted-foreground">{awayTeamName}</p>
-              <p className="text-3xl font-bold tabular-nums">{awayScore}</p>
-            </div>
+          <div className="flex items-center justify-center gap-6 rounded-[4px] border border-mb-rule bg-mb-paper p-4">
+            <TeamScore name={homeTeamName} color={homeColor} score={homeScore} />
+            <span className="text-2xl font-light text-mb-ink-muted">:</span>
+            <TeamScore name={awayTeamName} color={awayColor} score={awayScore} />
           </div>
           <div className="pt-2 pb-2 text-center">
-            <p className="mb-1 text-sm text-muted-foreground">Winner</p>
-            <p className="text-xl font-semibold">
+            <p className="mb-1 text-sm text-mb-ink-muted">Winner</p>
+            <p className="matchbook-display text-xl font-bold text-mb-navy">
               {homeScore > awayScore ? homeTeamName : awayTeamName}
             </p>
           </div>
           {error && (
-            <p role="alert" className="text-center text-sm text-destructive">
+            <p role="alert" className="text-center text-sm font-medium text-mb-red">
               {error}
             </p>
           )}
         </div>
-        <DialogFooter className="flex-row gap-2 sm:gap-2">
+        <DialogFooter>
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
             disabled={isBusy}
-            className="flex-1"
+            className="sm:flex-1"
           >
             Keep playing
           </Button>
-          <Button onClick={onConfirm} disabled={isBusy} className="flex-1 gap-2">
-            {isBusy ? (
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-            ) : (
-              <Trophy className="h-4 w-4" aria-hidden />
-            )}
+          <Button onClick={onConfirm} disabled={isBusy} className="sm:flex-1">
+            {isBusy ? <InlineSpinner /> : <MbIcon id="trophy" size={14} />}
             {isBusy ? "Saving..." : confirmLabel}
           </Button>
         </DialogFooter>

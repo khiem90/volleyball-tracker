@@ -278,7 +278,7 @@ export default function SharedFormationPage() {
         {/* Left Column: Court + Controls */}
         <div className="space-y-6">
           {/* Controls Card */}
-          <div className="rounded-2xl border border-border bg-card p-4 md:p-6 shadow-soft">
+          <div className="rounded-2xl border border-border bg-card p-4 md:p-6">
             <RotationControls
               rotation={rotation}
               mode={mode}
@@ -296,7 +296,7 @@ export default function SharedFormationPage() {
           </div>
 
           {/* Court Visualization Card */}
-          <div className="rounded-2xl border border-border bg-card p-4 md:p-6 shadow-soft">
+          <div className="rounded-2xl border border-border bg-card p-4 md:p-6">
             <VolleyballCourt
               players={players}
               overlaps={overlaps}
@@ -313,7 +313,7 @@ export default function SharedFormationPage() {
         {/* Right Sidebar: Legend */}
         <div className="space-y-6 lg:sticky lg:top-20 lg:h-fit">
           {/* Legend Panel */}
-          <div className="rounded-2xl border border-border bg-card p-4 shadow-soft">
+          <div className="rounded-2xl border border-border bg-card p-4">
             <LegendPanel
               players={players}
               rotation={rotation}
@@ -324,7 +324,7 @@ export default function SharedFormationPage() {
           </div>
 
           {/* Formation Info */}
-          <div className="rounded-2xl border border-border bg-card p-4 shadow-soft">
+          <div className="rounded-2xl border border-border bg-card p-4">
             <h3 className="font-semibold mb-2">About This Formation</h3>
             <dl className="space-y-2 text-sm">
               <div>

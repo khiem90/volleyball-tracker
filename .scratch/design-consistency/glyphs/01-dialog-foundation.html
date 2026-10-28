@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ticket 01 glyphs: close and trash</title>
+<style>
+  :root { --paper: #f7f0e4; --paper-bright: #fffaf1; --navy: #07324d; --red: #cf3f32; --muted: #5d6c70; --rule: rgba(7, 50, 77, 0.28); }
+  body { margin: 0; padding: 24px 16px; background: var(--paper); color: var(--navy); font-family: Outfit, system-ui, sans-serif; }
+  h1 { font-size: 1.1rem; text-transform: uppercase; letter-spacing: 0.04em; margin: 0 0 4px; }
+  p { color: var(--muted); font-size: 0.9rem; margin: 0 0 20px; max-width: 60ch; }
+  h2 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); margin: 24px 0 8px; }
+  .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; max-width: 720px; }
+  .card { background: var(--paper-bright); border: 1.5px solid var(--navy); border-top-width: 4px; border-radius: 4px; padding: 12px; box-shadow: 0 8px 22px rgba(57, 41, 23, 0.08); }
+  .card.new { border-color: var(--red); }
+  .label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; margin-bottom: 8px; }
+  .label small { display: block; text-transform: none; letter-spacing: 0; color: var(--muted); font-weight: 400; }
+  .sizes { display: flex; align-items: flex-end; gap: 16px; }
+  .sizes span { display: inline-flex; align-items: flex-end; gap: 4px; font-size: 0.65rem; color: var(--muted); }
+  svg { display: block; }
+  .inbutton { display: inline-flex; align-items: center; gap: 0.45rem; min-height: 2.75rem; padding: 0.55rem 1.1rem; border-radius: 4px; background: var(--red); color: #fff; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; font-size: 0.8rem; margin-top: 12px; }
+  .inbutton.outline { background: var(--paper-bright); color: var(--navy); border: 1.5px solid var(--navy); }
+</style>
+</head>
+<body>
+<h1>Ticket 01: close and trash</h1>
+<p>Each new glyph (red frame) at 24px and 48px beside the icons it replaces. The new glyphs are drawn on the sprite's 24px grid with a 1.8px stroke and round caps and joins; the old icons are the library markup as shipped (lucide at stroke 2, heroicons at stroke 1.5).</p>
+
+<h2>close (replaces lucide X in the dialog close control, later the toast and the volleyball modals)</h2>
+<div class="row">
+  <div class="card new">
+    <div class="label">New: sprite <code>close</code><small>1.8px, round caps</small></div>
+    <div class="sizes">
+      <span><svg width="24" height="24" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>24</span>
+      <span><svg width="48" height="48" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>48</span>
+    </div>
+  </div>
+  <div class="card">
+    <div class="label">Old: lucide <code>X</code><small>stroke 2, round caps</small></div>
+    <div class="sizes">
+      <span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>24</span>
+      <span><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>48</span>
+    </div>
+  </div>
+</div>
+
+<h2>trash (replaces heroicons TrashIcon in the delete dialogs and lucide Trash2 in the quick-match discard)</h2>
+<div class="row">
+  <div class="card new">
+    <div class="label">New: sprite <code>trash</code><small>1.8px, round caps and joins</small></div>
+    <div class="sizes">
+      <span><svg width="24" height="24" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 11v6m4-6v6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>24</span>
+      <span><svg width="48" height="48" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 11v6m4-6v6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>48</span>
+    </div>
+  </div>
+  <div class="card">
+    <div class="label">Old: heroicons <code>TrashIcon</code> (outline)<small>stroke 1.5, round caps</small></div>
+    <div class="sizes">
+      <span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"/></svg>24</span>
+      <span><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"/></svg>48</span>
+    </div>
+  </div>
+  <div class="card">
+    <div class="label">Old: lucide <code>Trash2</code><small>stroke 2, round caps</small></div>
+    <div class="sizes">
+      <span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>24</span>
+      <span><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>48</span>
+    </div>
+  </div>
+</div>
+
+<h2>In context: the delete dialog's title and buttons</h2>
+<div class="card" style="max-width: 343px;">
+  <div style="display:flex; align-items:center; gap:0.5rem; text-transform:uppercase; font-weight:700; font-size:1.05rem;">
+    <svg width="18" height="18" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 11v6m4-6v6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    Delete the tournament?
+    <svg style="margin-left:auto" width="20" height="20" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </div>
+  <div style="display:flex; gap:8px;">
+    <span class="inbutton outline" style="flex:1; justify-content:center;">Cancel</span>
+    <span class="inbutton" style="flex:1; justify-content:center;"><svg width="14" height="14" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 11v6m4-6v6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Delete</span>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ticket 06 glyph: logout</title>
+<style>
+  :root { --paper: #f7f0e4; --paper-bright: #fffaf1; --navy: #07324d; --red: #cf3f32; --coral: #ee4b34; --muted: #5d6c70; --rule: rgba(7, 50, 77, 0.28); }
+  body { margin: 0; padding: 24px 16px; background: var(--paper); color: var(--navy); font-family: Outfit, system-ui, sans-serif; }
+  h1 { font-size: 1.1rem; text-transform: uppercase; letter-spacing: 0.04em; margin: 0 0 4px; }
+  p { color: var(--muted); font-size: 0.9rem; margin: 0 0 20px; max-width: 60ch; }
+  h2 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); margin: 24px 0 8px; }
+  .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; max-width: 720px; }
+  .card { background: var(--paper-bright); border: 1.5px solid var(--navy); border-top-width: 4px; border-radius: 4px; padding: 12px; box-shadow: 0 8px 22px rgba(57, 41, 23, 0.08); }
+  .card.new { border-color: var(--red); }
+  .label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; margin-bottom: 8px; }
+  .label small { display: block; text-transform: none; letter-spacing: 0; color: var(--muted); font-weight: 400; }
+  .sizes { display: flex; align-items: flex-end; gap: 16px; }
+  .sizes span { display: inline-flex; align-items: flex-end; gap: 4px; font-size: 0.65rem; color: var(--muted); }
+  svg { display: block; }
+  .menu { max-width: 16rem; margin-top: 12px; background: var(--paper-bright); border: 1.5px solid var(--navy); border-radius: 4px; padding: 4px; }
+  .menu .who { padding: 8px 12px; font-size: 0.875rem; font-weight: 500; }
+  .menu .who b { display: block; font-size: 0.62rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  .menu .who small { display: block; font-size: 0.8rem; color: var(--muted); font-weight: 400; }
+  .menu hr { border: 0; height: 1px; background: var(--rule); margin: 4px -4px; }
+  .menu .item { display: flex; align-items: center; gap: 0.5rem; min-height: 44px; padding: 0 12px; border-radius: 4px; color: var(--red); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; font-size: 0.8rem; }
+  .menu .item.focus { background: rgba(207, 63, 50, 0.1); }
+  .title { display: flex; align-items: center; gap: 0.5rem; text-transform: uppercase; font-weight: 700; font-size: 1.05rem; margin-top: 12px; }
+  .inbutton { display: inline-flex; align-items: center; gap: 0.45rem; min-height: 2.75rem; padding: 0.55rem 1.1rem; border-radius: 4px; background: var(--red); color: #fff; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; font-size: 0.8rem; margin-top: 12px; }
+  .toast { display: flex; align-items: center; gap: 0.5rem; max-width: 22rem; margin-top: 12px; padding: 4px 4px 4px 12px; border: 1.5px solid var(--navy); border-radius: 4px; background: var(--navy); color: var(--paper-bright); box-shadow: 0 8px 22px rgba(57, 41, 23, 0.08); font-size: 0.85rem; font-weight: 500; }
+  .toast .text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .toast .undo { display: inline-flex; align-items: center; min-height: 2.75rem; padding: 0.55rem 1rem; border-radius: 4px; background: var(--coral); color: #fff; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; font-size: 0.8rem; }
+  .toast .x { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; }
+</style>
+</head>
+<body>
+<h1>Ticket 06: the logout glyph</h1>
+<p>One new glyph. Red-topped card is the new sprite drawing (24px grid, 1.8px stroke, round caps and joins), the navy card is the lucide icon it replaces. Below, where it appears: the account menu's Sign out row and the sign-out confirm. The toast reuses the existing <code>check</code> and <code>close</code> glyphs, shown for context.</p>
+
+<h2>logout</h2>
+<div class="row">
+  <div class="card new">
+    <div class="label">New: sprite <code>logout</code><small>mirror of the sprite's <code>login</code></small></div>
+    <div class="sizes">
+      <span><svg width="24" height="24" viewBox="0 0 24 24"><path d="M10 4H4v16h6M9 12h12m0 0-4-4m4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>24</span>
+      <span><svg width="48" height="48" viewBox="0 0 24 24"><path d="M10 4H4v16h6M9 12h12m0 0-4-4m4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>48</span>
+    </div>
+  </div>
+  <div class="card">
+    <div class="label">Old: lucide <code>LogOut</code><small>2px stroke, rounded door</small></div>
+    <div class="sizes">
+      <span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/></svg>24</span>
+      <span><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/></svg>48</span>
+    </div>
+  </div>
+  <div class="card">
+    <div class="label">Beside: sprite <code>login</code><small>already in the sprite, for the pair</small></div>
+    <div class="sizes">
+      <span><svg width="24" height="24" viewBox="0 0 24 24"><path d="M14 4h6v16h-6M3 12h12m0 0-4-4m4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>24</span>
+      <span><svg width="48" height="48" viewBox="0 0 24 24"><path d="M14 4h6v16h-6M3 12h12m0 0-4-4m4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>48</span>
+    </div>
+  </div>
+</div>
+
+<h2>In place</h2>
+<div class="menu">
+  <div class="who"><b>Signed in as</b>Khiem<small>khiem@example.com</small></div>
+  <hr>
+  <div class="item focus"><svg width="16" height="16" viewBox="0 0 24 24"><path d="M10 4H4v16h6M9 12h12m0 0-4-4m4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Sign out</div>
+</div>
+<div class="title"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M10 4H4v16h6M9 12h12m0 0-4-4m4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Sign out and lose unsaved changes?</div>
+<div class="inbutton"><svg width="14" height="14" viewBox="0 0 24 24"><path d="M10 4H4v16h6M9 12h12m0 0-4-4m4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Sign out anyway</div>
+
+<h2>The toast, with the reused check and close glyphs</h2>
+<div class="toast">
+  <svg width="18" height="18" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m7 12 3 3 7-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <span class="text">Falcons won</span>
+  <span class="undo">Undo</span>
+  <span class="x"><svg width="18" height="18" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+</div>
+</body>
+</html>
