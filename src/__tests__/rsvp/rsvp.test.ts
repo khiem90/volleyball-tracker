@@ -12,6 +12,7 @@ import {
   rsvpSetupOf,
   timeLabel,
   wallClockToEpoch,
+  watchView,
   type RsvpSetup,
 } from "@/lib/rsvp";
 import type { RsvpSettings, Tournament, TournamentStatus } from "@/types/game";
@@ -183,6 +184,36 @@ describe("rsvpPageState", () => {
       kind: "started",
     });
     expect(rsvpPageState(night({ status: "completed" }), opensAt)).toEqual({ kind: "completed" });
+  });
+});
+
+describe("watchView", () => {
+  const night = (status: TournamentStatus): Pick<Tournament, "status" | "rsvp"> => ({
+    status,
+    rsvp: { enabled: true, capacity: 12, opensAt: thursday6pm, closed: false },
+  });
+
+  it("offers Watch into the console once the tournament is live, with the list closed", () => {
+    expect(watchView(rsvpPageState(night("live"), friday7pm))).toEqual({
+      status: "Live",
+      action: "Watch",
+      note: "The list closed when the tournament started.",
+    });
+  });
+
+  it("says Completed once it ends, and still offers the results, with the list as it stood", () => {
+    expect(watchView(rsvpPageState(night("completed"), friday7pm))).toEqual({
+      status: "Completed",
+      action: "See results",
+      note: "The list stays as it was when the tournament started.",
+    });
+  });
+
+  it("offers nothing to watch before the start, or with the link off", () => {
+    expect(watchView({ kind: "not_open", opensAt: thursday6pm })).toBeNull();
+    expect(watchView({ kind: "open" })).toBeNull();
+    expect(watchView({ kind: "closed" })).toBeNull();
+    expect(watchView({ kind: "link_off" })).toBeNull();
   });
 });
 

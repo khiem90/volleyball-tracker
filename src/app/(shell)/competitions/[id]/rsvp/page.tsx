@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import { PageLoadingSpinner } from "@/components/shared";
 import { MbIcon } from "@/components/matchbook/MbIcon";
@@ -7,7 +8,7 @@ import { Panel, PanelEmpty, PanelError } from "@/components/matchbook/Panel";
 import { NotFound } from "@/components/console/NotFound";
 import { RsvpDialog } from "@/components/rsvp/RsvpDialog";
 import { useRsvpPage } from "@/components/rsvp/useRsvpPage";
-import { NOT_OPEN_YET, refusedRsvpMessage } from "@/lib/rsvp";
+import { NOT_OPEN_YET, refusedRsvpMessage, watchView } from "@/lib/rsvp";
 import type { Rsvp } from "@/types/game";
 
 const Fact = ({ label, value }: { label: string; value: string }) => (
@@ -54,8 +55,10 @@ const RsvpList = ({ rsvps, uid }: { rsvps: Rsvp[]; uid: string | null }) => (
  * The RSVP link. A signed-in person sees the night: its name, when it is,
  * the capacity and how many have RSVP'd, and everyone on the list by name
  * in arrival order. Before the open time it counts down over a disabled
- * button; from then the button opens the RSVP dialog. With the link off it
- * shows the same not found as the console.
+ * button; from then the button opens the RSVP dialog. Once the tournament
+ * is live or completed, a button into the console takes the button's
+ * place and the list stays as it stood. With the link off it shows the
+ * same not found as the console.
  */
 export default function RsvpPage() {
   const params = useParams();
@@ -71,8 +74,9 @@ export default function RsvpPage() {
   const capacity = tournament.rsvp?.capacity ?? 0;
   const count = page.rsvps?.length ?? 0;
   const showsButton = state.kind === "not_open" || state.kind === "open";
-  // Once RSVPs are not taken, the page says why in place of the button.
-  const shut = showsButton ? null : refusedRsvpMessage(state);
+  const watch = watchView(state);
+  // A closed list says why in place of the button.
+  const shut = showsButton || watch ? null : refusedRsvpMessage(state);
 
   return (
     <>
@@ -141,6 +145,25 @@ export default function RsvpPage() {
             )}
 
             {shut && <p className="text-[0.85rem] text-mb-ink-muted">{shut}</p>}
+
+            {watch && (
+              <div className="flex flex-col gap-3">
+                <p className="flex items-center gap-2">
+                  {watch.status === "Live" && <span className="mb-live-dot" />}
+                  <span className="matchbook-display text-[0.95rem] font-bold tracking-[0.06em]">
+                    {watch.status}
+                  </span>
+                </p>
+                <Link
+                  href={`/competitions/${tournament.id}`}
+                  className={`mb-btn ${watch.status === "Live" ? "mb-btn-coral" : "mb-btn-navy"} w-full sm:w-auto sm:self-start`}
+                >
+                  <MbIcon id={watch.status === "Live" ? "eye" : "trophy"} size={14} />
+                  {watch.action}
+                </Link>
+                <p className="text-[0.85rem] text-mb-ink-muted">{watch.note}</p>
+              </div>
+            )}
           </div>
         </Panel>
 
