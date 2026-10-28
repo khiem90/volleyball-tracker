@@ -11,10 +11,29 @@ const withPWA = withPWAInit({
   // version waits instead, and the reload banner lets it in on a tap
   // (AppUpdateProvider sends it SKIP_WAITING).
   reloadOnOnline: false,
+  extendDefaultRuntimeCaching: true,
   workboxOptions: {
     disableDevLogs: true,
     skipWaiting: false,
     clientsClaim: true,
+    runtimeCaching: [
+      // Replaces the default "cross-origin" route, which caught Firestore's
+      // listen and write streams. Caching a response means reading its whole
+      // body, and a stream's body stays open for minutes, so the running
+      // worker never ran out of work and a waiting version could not take
+      // over: Reload brought back the old version. Requests to Google APIs
+      // (Firestore, Auth) now skip the service worker.
+      {
+        urlPattern: ({ sameOrigin, url }) =>
+          !sameOrigin && !url.hostname.endsWith(".googleapis.com"),
+        handler: "NetworkFirst",
+        options: {
+          cacheName: "cross-origin",
+          expiration: { maxEntries: 32, maxAgeSeconds: 3600 },
+          networkTimeoutSeconds: 10,
+        },
+      },
+    ],
   },
 });
 
