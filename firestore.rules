@@ -9,6 +9,27 @@ service cloud.firestore {
       return signedIn() && request.auth.uid == uid;
     }
 
+    // Signed in with a real account. signedIn() also passes the silent
+    // anonymous identity a scorer link gives a phone; this does not, so
+    // an RSVP and the name behind it always belong to an account.
+    function realAccount() {
+      return signedIn() && request.auth.token.firebase.sign_in_provider != 'anonymous';
+    }
+
+    // The account's own document. It holds the name the account last
+    // RSVP'd under, so the RSVP form can offer it again. Only that account
+    // reads or writes it.
+    match /users/{uid} {
+      allow read, delete: if realAccount() && request.auth.uid == uid;
+      allow create, update: if
+        realAccount()
+        && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['rsvpName'])
+        && request.resource.data.rsvpName is string
+        && request.resource.data.rsvpName.size() >= 1
+        && request.resource.data.rsvpName.size() <= 40;
+    }
+
     // Roster: the teams an account keeps between tournaments. Only that
     // account can see or change them; there is no public path to a roster.
     match /users/{uid}/teams/{teamId} {
@@ -108,10 +129,19 @@ service cloud.firestore {
             && data.rsvp.get('opensAt', null) is number);
       }
 
+      // Whether the RSVP link is on. A tournament from before RSVPs has no
+      // rsvp map and reads as off.
+      function rsvpLinkOn(data) {
+        return data.get('rsvp', {}).get('enabled', false) == true;
+      }
+
+      // The third door: any real account holding the RSVP link reads the
+      // tournament while the link is on.
       allow read: if
         (signedIn() && resource.data.ownerId == request.auth.uid)
         || resource.data.spectatorEnabled == true
-        || isScorer();
+        || isScorer()
+        || (realAccount() && rsvpLinkOn(resource.data));
 
       allow create: if
         signedIn()
@@ -148,6 +178,48 @@ service cloud.firestore {
           isAccount(uid)
           && request.resource.data.keys().hasOnly(['key', 'updatedAt'])
           && request.resource.data.key == scorerKey();
+      }
+
+      // One RSVP per account, under the account's uid, so a person holds at
+      // most one per tournament. Nothing stores who is confirmed or
+      // waiting: every phone works that out from the arrival times and the
+      // capacity (ADR-0004). The rules cannot count the list, so they never
+      // refuse an RSVP for being over capacity; they refuse it before the
+      // open time by the server's clock, and they make the server's time
+      // the arrival time, so no phone's clock takes part in the order.
+      match /rsvps/{rsvpId} {
+        function mayReadRsvps() {
+          return ownsTournament() || (realAccount() && rsvpLinkOn(tournament()));
+        }
+
+        // The link is on, the owner has not closed the list, the tournament
+        // has not started, and the server's clock has reached the open time.
+        function rsvpsAreOpen() {
+          let night = tournament();
+          return rsvpLinkOn(night)
+            && night.rsvp.get('closed', false) != true
+            && night.status == 'draft'
+            && request.time.toMillis() >= night.rsvp.opensAt;
+        }
+
+        function rsvpFieldsAreValid(data) {
+          return data.keys().hasAll(['uid', 'name', 'createdAt'])
+            && data.keys().hasOnly(['uid', 'name', 'createdAt', 'note'])
+            && data.name is string
+            && data.name.size() >= 1
+            && data.name.size() <= 40
+            && (!('note' in data) || (data.note is string && data.note.size() <= 140));
+        }
+
+        allow read: if mayReadRsvps();
+
+        allow create: if
+          realAccount()
+          && rsvpId == request.auth.uid
+          && request.resource.data.uid == request.auth.uid
+          && rsvpFieldsAreValid(request.resource.data)
+          && request.resource.data.createdAt == request.time
+          && rsvpsAreOpen();
       }
 
       // One document per match. A match carries its owner and tournament ids

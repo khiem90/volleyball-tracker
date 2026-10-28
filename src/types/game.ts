@@ -70,6 +70,33 @@ export interface RsvpSettings {
   closed: boolean;
 }
 
+/**
+ * An instant as the Firestore server writes it, kept to the microsecond so
+ * two RSVPs at the open instant still have a definite order. A Firestore
+ * `Timestamp` is one; nothing else in the app stores time this way.
+ */
+export interface ServerTime {
+  seconds: number;
+  nanoseconds: number;
+}
+
+/**
+ * A person's RSVP to a tournament, stored under the tournament with the
+ * account's uid as its id. Whether it is confirmed or waitlisted is not
+ * stored: it follows from `createdAt` and the capacity (ADR-0004).
+ */
+export interface Rsvp {
+  id: string;
+  /** The account that RSVP'd. */
+  uid: string;
+  /** The name the owner and everyone else on the list sees. Never an email. */
+  name: string;
+  /** An optional short note, such as arriving late. */
+  note?: string;
+  /** The arrival time, written by the server, which decides the order. */
+  createdAt: ServerTime;
+}
+
 export interface Tournament {
   id: string;
   ownerId: string;

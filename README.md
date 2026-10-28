@@ -54,12 +54,14 @@ Everything a signed-in account owns is in Firestore, and the rules in
 
 | Path | Holds |
 | --- | --- |
+| `users/{uid}` | The account's own fields: `rsvpName`, the name it last RSVP'd under; only that account can read it |
 | `users/{uid}/teams/{teamId}` | The roster |
 | `users/{uid}/matches/{matchId}` | Quick matches, with `tournamentId: null` |
 | `tournaments/{tournamentId}` | One tournament: owner, format, status, entries, settings, scheduled time, RSVP settings |
 | `tournaments/{tournamentId}/matches/{matchId}` | One document per match |
 | `tournaments/{tournamentId}/private/scorerKey` | The key behind the scorer link; only the owner can read it |
 | `tournaments/{tournamentId}/scorers/{uid}` | A phone's proof that it opened the scorer link |
+| `tournaments/{tournamentId}/rsvps/{uid}` | One account's RSVP: `uid`, `name`, `note`, and `createdAt`, the server's time |
 
 A tournament may also carry `scheduledAt`, when the owner says it will be
 played, in epoch milliseconds, with `scheduledZone`, the IANA zone it was
@@ -68,6 +70,16 @@ its own. Its `rsvp` map holds `enabled` (the RSVP link), `capacity`,
 `opensAt` (epoch milliseconds), and `closed`. A tournament without the map
 behaves as if the RSVP link were off. The rules refuse `enabled` without both
 `scheduledAt` and `opensAt`, and only the owner writes these fields.
+
+The RSVP link is the tournament's page with `/rsvp` on the end. While it is
+on, any signed-in account can read the tournament and its RSVPs; the silent
+identity a scorer link gives a phone does not count. An RSVP's id is the
+account's uid, so an account holds one RSVP per tournament. The rules accept
+one only from that account, only from `opensAt` by the server's clock, while
+the list is open and the tournament is a draft, and only with `createdAt`
+equal to the request's time, a Firestore timestamp unlike every other time
+in the app. Who is confirmed and who waits is never stored; it follows from
+the arrival order and the capacity (ADR-0004).
 
 Tournament ids are random so a link to one cannot be guessed. Every match
 carries `ownerId`, so one collection group query on `matches` returns all of an

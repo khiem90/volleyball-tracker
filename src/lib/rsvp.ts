@@ -171,3 +171,123 @@ export const epochToWallClock = (ms: number, zone: string): string => {
   const wall = wallClockParts(ms, zone);
   return `${wall.year}-${pad(wall.month)}-${pad(wall.day)}T${pad(wall.hour)}:${pad(wall.minute)}`;
 };
+
+// ============================================
+// The RSVP page
+// ============================================
+
+/** Where a night stands for someone holding its RSVP link. */
+export type RsvpPageState =
+  /** The owner has the link off, or the tournament never had one. The page shows not found. */
+  | { kind: "link_off" }
+  /** RSVPs open at `opensAt`; the page counts down to it. */
+  | { kind: "not_open"; opensAt: number }
+  | { kind: "open" }
+  /** The owner closed the list before the tournament started. */
+  | { kind: "closed" }
+  /** The tournament is live, which closes the list for good. */
+  | { kind: "started" }
+  | { kind: "completed" };
+
+/**
+ * The RSVP page's state for a tournament at `now`. On the page, `now` is
+ * the phone's clock, which is right for showing a countdown and nothing
+ * more: the rules judge the open time by the server's clock. Starting the
+ * tournament needs no write to the RSVP settings, since a tournament that
+ * has left draft is past RSVPs by definition.
+ */
+export const rsvpPageState = (
+  tournament: Pick<Tournament, "status" | "rsvp">,
+  now: number,
+): RsvpPageState => {
+  const rsvp = tournament.rsvp;
+  if (!rsvp?.enabled) return { kind: "link_off" };
+  if (tournament.status === "completed") return { kind: "completed" };
+  if (tournament.status === "live") return { kind: "started" };
+  if (rsvp.closed) return { kind: "closed" };
+  // The rules refuse the link on without an open time, so a missing one
+  // is a document written around them; it reads as not open.
+  const opensAt = rsvp.opensAt ?? Number.POSITIVE_INFINITY;
+  if (now < opensAt) return { kind: "not_open", opensAt };
+  return { kind: "open" };
+};
+
+const DAY = 86_400_000;
+
+/**
+ * The time left before RSVPs open, as "3:04:05", or "2d 3:04:05" a day or
+ * more out. A part second rounds up, so the countdown never reads zero
+ * while RSVPs are still shut by the phone's own clock.
+ */
+export const countdown = (msLeft: number): string => {
+  const totalSeconds = Math.max(0, Math.ceil(msLeft / 1000));
+  const days = Math.floor(totalSeconds / (DAY / 1000));
+  const hours = Math.floor((totalSeconds % (DAY / 1000)) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  const clock = `${hours}:${pad(minutes)}:${pad(seconds)}`;
+  return days > 0 ? `${days}d ${clock}` : clock;
+};
+
+/** What a phone shows when the server refuses an RSVP its own clock thought was open. */
+export const NOT_OPEN_YET = "Not open yet";
+
+/**
+ * Why the rules refused an RSVP, from the tournament as the server has it
+ * just after the refusal. A night that still reads as open on this phone's
+ * clock was refused for time, which only the server's clock can do, so it
+ * is "Not open yet" too: the phone's clock is ahead.
+ */
+export const refusedRsvpMessage = (state: RsvpPageState): string => {
+  switch (state.kind) {
+    case "open":
+    case "not_open":
+      return NOT_OPEN_YET;
+    case "closed":
+      return "The owner has closed RSVPs.";
+    case "started":
+      return "This tournament has started, so RSVPs are closed.";
+    case "completed":
+      return "This tournament is over.";
+    case "link_off":
+      return "This RSVP link is off.";
+  }
+};
+
+/** The longest name an RSVP takes. The rules hold the same limit. */
+export const RSVP_NAME_MAX = 40;
+/** The longest note an RSVP takes. The rules hold the same limit. */
+export const RSVP_NOTE_MAX = 140;
+
+/**
+ * The name the RSVP form starts with: the name this account last RSVP'd
+ * under, then its display name, then nothing, cut to what an RSVP takes.
+ */
+export const prefillName = (
+  remembered: string | null | undefined,
+  displayName: string | null | undefined,
+): string => (remembered?.trim() || displayName?.trim() || "").slice(0, RSVP_NAME_MAX);
+
+/** What the person types into the RSVP form. */
+export interface RsvpEntry {
+  name: string;
+  note: string;
+}
+
+/** Why an RSVP form cannot be sent yet, by field. Empty when it can. */
+export interface RsvpEntryProblems {
+  name?: string;
+  note?: string;
+}
+
+/** The problems with an RSVP form, judged on the name as it is saved, trimmed. */
+export const rsvpEntryProblems = (entry: RsvpEntry): RsvpEntryProblems => {
+  const problems: RsvpEntryProblems = {};
+  const name = entry.name.trim();
+  if (name.length === 0) problems.name = "Enter the name the owner will see.";
+  else if (name.length > RSVP_NAME_MAX) problems.name = `Keep the name to ${RSVP_NAME_MAX} characters.`;
+  if (entry.note.trim().length > RSVP_NOTE_MAX) {
+    problems.note = `Keep the note to ${RSVP_NOTE_MAX} characters.`;
+  }
+  return problems;
+};

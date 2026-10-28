@@ -1,11 +1,19 @@
 // @vitest-environment node
-import { doc, getDoc, type Firestore } from "firebase/firestore";
+import { doc, getDoc, getDocs, type Firestore, type Timestamp } from "firebase/firestore";
 import { expect, it } from "vitest";
-import { saveRsvpSettings } from "@/lib/rsvps";
+import { NOT_OPEN_YET } from "@/lib/rsvp";
+import {
+  readRememberedName,
+  rsvp,
+  RsvpRefusedError,
+  rsvpsCollection,
+  saveRsvpSettings,
+  subscribeToRsvps,
+} from "@/lib/rsvps";
 import { createTournament, type NewTournamentInput } from "@/lib/tournaments";
 import { DEFAULT_TERMINOLOGY } from "@/types/competition-config";
-import type { Tournament } from "@/types/game";
-import { describeFirestoreRules, modularFirestore } from "../rules/emulator";
+import type { Rsvp, Tournament } from "@/types/game";
+import { describeFirestoreRules, minutesFromNow, modularFirestore, when } from "../rules/emulator";
 
 const owner = "owner-uid";
 
@@ -112,5 +120,116 @@ describeFirestoreRules("RSVP settings on Firestore", (env) => {
     ).rejects.toThrow("Set when RSVPs open before turning the RSVP link on.");
 
     expect((await stored(db, created.id)).revision).toBe(created.revision);
+  });
+});
+
+describeFirestoreRules("RSVPing on Firestore", (env) => {
+  const dan = "dan-uid";
+  const eve = "eve-uid";
+  const accountDb = (uid: string) => modularFirestore(env().authenticatedContext(uid));
+
+  /** The owner's night, with RSVPs opening `opensInMinutes` from the test's clock. */
+  const night = async (
+    options: { opensInMinutes?: number; capacity?: number; closed?: boolean; enabled?: boolean } = {},
+  ): Promise<Tournament> =>
+    createTournament(accountDb(owner), owner, {
+      ...input,
+      scheduledAt: minutesFromNow(60 * 24),
+      scheduledZone: "America/New_York",
+      rsvp: {
+        enabled: options.enabled ?? true,
+        capacity: options.capacity ?? 1,
+        opensAt: minutesFromNow(options.opensInMinutes ?? -1),
+        closed: options.closed ?? false,
+      },
+    });
+
+  const listOf = (db: Firestore, tournamentId: string, count: number) =>
+    when<Rsvp[]>(
+      (onChange, onError) => subscribeToRsvps(db, tournamentId, onChange, onError),
+      (rsvps) => rsvps.length === count,
+    );
+
+  it("lands two accounts that RSVP at the same moment, and delivers them in the server's order", async () => {
+    const tournament = await night({ capacity: 1 });
+
+    await Promise.all([
+      rsvp(accountDb(dan), tournament.id, dan, { name: "Dan", note: "" }),
+      rsvp(accountDb(eve), tournament.id, eve, { name: "Eve", note: "Bringing a ball" }),
+    ]);
+
+    const delivered = await listOf(accountDb(owner), tournament.id, 2);
+
+    // The server's order, read with the rules off: arrival time to the
+    // microsecond, then document id for a tie.
+    let serverOrder: string[] = [];
+    await env().withSecurityRulesDisabled(async (unrestricted) => {
+      const docs = (await getDocs(rsvpsCollection(modularFirestore(unrestricted), tournament.id))).docs;
+      serverOrder = docs
+        .map((d) => ({ id: d.id, at: d.data().createdAt as Timestamp }))
+        .sort(
+          (a, b) =>
+            a.at.seconds - b.at.seconds ||
+            a.at.nanoseconds - b.at.nanoseconds ||
+            (a.id < b.id ? -1 : 1),
+        )
+        .map((r) => r.id);
+    });
+    expect(delivered.map((r) => r.id)).toEqual(serverOrder);
+    expect(delivered.map((r) => r.uid).sort()).toEqual([dan, eve]);
+    expect(delivered.find((r) => r.uid === eve)).toMatchObject({ name: "Eve", note: "Bringing a ball" });
+  });
+
+  it("shows the list to another signed-in account holding the link", async () => {
+    const tournament = await night();
+    await rsvp(accountDb(dan), tournament.id, dan, { name: "Dan", note: "" });
+
+    const seen = await listOf(accountDb(eve), tournament.id, 1);
+    expect(seen.map((r) => r.name)).toEqual(["Dan"]);
+  });
+
+  it("saves the name trimmed and remembers it for the account's next RSVP", async () => {
+    const tournament = await night();
+    const db = accountDb(dan);
+    expect(await readRememberedName(db, dan)).toBeNull();
+
+    await rsvp(db, tournament.id, dan, { name: "  Dan from Tuesdays ", note: " Late " });
+
+    const [mine] = await listOf(db, tournament.id, 1);
+    expect(mine).toMatchObject({ id: dan, uid: dan, name: "Dan from Tuesdays", note: "Late" });
+    expect(await readRememberedName(db, dan)).toBe("Dan from Tuesdays");
+  });
+
+  it("refuses a name the rules would refuse before writing anything", async () => {
+    const tournament = await night();
+    const db = accountDb(dan);
+
+    await expect(rsvp(db, tournament.id, dan, { name: " ", note: "" })).rejects.toThrow(
+      "Enter the name the owner will see.",
+    );
+    expect(await readRememberedName(db, dan)).toBeNull();
+  });
+
+  it("reads a refusal before the open time as not open yet, and remembers nothing", async () => {
+    const tournament = await night({ opensInMinutes: 1 });
+    const db = accountDb(dan);
+
+    const refused = rsvp(db, tournament.id, dan, { name: "Dan", note: "" });
+    await expect(refused).rejects.toBeInstanceOf(RsvpRefusedError);
+    await expect(refused).rejects.toThrow(NOT_OPEN_YET);
+    expect(await readRememberedName(db, dan)).toBeNull();
+  });
+
+  it("reads a refusal on a closed list, and on a link turned off, for what it is", async () => {
+    const closed = await night({ closed: true });
+    const off = await night({ enabled: false });
+    const db = accountDb(dan);
+
+    await expect(rsvp(db, closed.id, dan, { name: "Dan", note: "" })).rejects.toThrow(
+      "The owner has closed RSVPs.",
+    );
+    await expect(rsvp(db, off.id, dan, { name: "Dan", note: "" })).rejects.toThrow(
+      "This RSVP link is off.",
+    );
   });
 });

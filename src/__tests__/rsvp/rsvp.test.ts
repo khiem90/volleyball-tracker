@@ -1,13 +1,20 @@
 import { describe, expect, it } from "vitest";
 import {
+  countdown,
   DEFAULT_CAPACITY,
   epochToWallClock,
+  NOT_OPEN_YET,
+  prefillName,
+  refusedRsvpMessage,
+  rsvpEntryProblems,
+  rsvpPageState,
   rsvpProblems,
   rsvpSetupOf,
   timeLabel,
   wallClockToEpoch,
   type RsvpSetup,
 } from "@/lib/rsvp";
+import type { RsvpSettings, Tournament, TournamentStatus } from "@/types/game";
 
 // Friday 6 November 2026, 19:00 in UTC.
 const friday7pm = Date.UTC(2026, 10, 6, 19, 0);
@@ -136,5 +143,109 @@ describe("entering a time in the owner's zone", () => {
   it("reads an empty or half-typed field as no time", () => {
     expect(wallClockToEpoch("", "America/New_York")).toBeNull();
     expect(wallClockToEpoch("2026-11-06", "America/New_York")).toBeNull();
+  });
+});
+
+describe("rsvpPageState", () => {
+  const opensAt = thursday6pm;
+  const night = (
+    changes: { status?: TournamentStatus; rsvp?: Partial<RsvpSettings> | null } = {},
+  ): Pick<Tournament, "status" | "rsvp"> => ({
+    status: changes.status ?? "draft",
+    rsvp:
+      changes.rsvp === null
+        ? undefined
+        : { enabled: true, capacity: 12, opensAt, closed: false, ...changes.rsvp },
+  });
+
+  it("counts down to the open time before it, and is open from that instant", () => {
+    expect(rsvpPageState(night(), opensAt - 1)).toEqual({ kind: "not_open", opensAt });
+    expect(rsvpPageState(night(), opensAt)).toEqual({ kind: "open" });
+    expect(rsvpPageState(night(), opensAt + 86_400_000)).toEqual({ kind: "open" });
+  });
+
+  it("reads a link that is off, or a tournament from before RSVPs, as the link off", () => {
+    expect(rsvpPageState(night({ rsvp: { enabled: false } }), opensAt)).toEqual({ kind: "link_off" });
+    expect(rsvpPageState(night({ rsvp: null }), opensAt)).toEqual({ kind: "link_off" });
+    expect(rsvpPageState(night({ status: "live", rsvp: { enabled: false } }), opensAt)).toEqual({
+      kind: "link_off",
+    });
+  });
+
+  it("is closed once the owner closes the list, before or after the open time", () => {
+    expect(rsvpPageState(night({ rsvp: { closed: true } }), opensAt)).toEqual({ kind: "closed" });
+    expect(rsvpPageState(night({ rsvp: { closed: true } }), opensAt - 1)).toEqual({ kind: "closed" });
+  });
+
+  it("is started once the tournament is live and completed once it ends, closed or not", () => {
+    expect(rsvpPageState(night({ status: "live" }), opensAt)).toEqual({ kind: "started" });
+    expect(rsvpPageState(night({ status: "live", rsvp: { closed: true } }), opensAt - 1)).toEqual({
+      kind: "started",
+    });
+    expect(rsvpPageState(night({ status: "completed" }), opensAt)).toEqual({ kind: "completed" });
+  });
+});
+
+describe("countdown", () => {
+  it("shows hours, minutes, and seconds within a day, rounding a part second up so it never reads zero early", () => {
+    expect(countdown(3 * 3_600_000 + 4 * 60_000 + 5_000)).toBe("3:04:05");
+    expect(countdown(59_000)).toBe("0:00:59");
+    expect(countdown(400)).toBe("0:00:01");
+  });
+
+  it("names the days ahead of the clock once it is a day or more away", () => {
+    expect(countdown(86_400_000)).toBe("1d 0:00:00");
+    expect(countdown(2 * 86_400_000 + 3_600_000 + 1)).toBe("2d 1:00:01");
+  });
+
+  it("stops at zero", () => {
+    expect(countdown(0)).toBe("0:00:00");
+    expect(countdown(-5_000)).toBe("0:00:00");
+  });
+});
+
+describe("refusedRsvpMessage", () => {
+  it("says not open yet when the server refused a tap the phone's clock thought was open", () => {
+    expect(refusedRsvpMessage({ kind: "open" })).toBe(NOT_OPEN_YET);
+    expect(refusedRsvpMessage({ kind: "not_open", opensAt: thursday6pm })).toBe(NOT_OPEN_YET);
+    expect(NOT_OPEN_YET).toBe("Not open yet");
+  });
+
+  it("names a closed list, a started or finished tournament, and a link turned off", () => {
+    expect(refusedRsvpMessage({ kind: "closed" })).toBe("The owner has closed RSVPs.");
+    expect(refusedRsvpMessage({ kind: "started" })).toBe(
+      "This tournament has started, so RSVPs are closed.",
+    );
+    expect(refusedRsvpMessage({ kind: "completed" })).toBe("This tournament is over.");
+    expect(refusedRsvpMessage({ kind: "link_off" })).toBe("This RSVP link is off.");
+  });
+});
+
+describe("the RSVP form", () => {
+  it("prefills the remembered name, then the account's display name, then nothing", () => {
+    expect(prefillName("Dan from Tuesdays", "Daniel Smith")).toBe("Dan from Tuesdays");
+    expect(prefillName(null, "Daniel Smith")).toBe("Daniel Smith");
+    expect(prefillName(undefined, null)).toBe("");
+    expect(prefillName("", "  Daniel  ")).toBe("Daniel");
+  });
+
+  it("cuts a long display name to the forty characters an RSVP takes", () => {
+    expect(prefillName(null, "x".repeat(50))).toBe("x".repeat(40));
+  });
+
+  it("needs a name of one to forty characters and a note of at most 140", () => {
+    expect(rsvpEntryProblems({ name: "Dan", note: "" })).toEqual({});
+    expect(rsvpEntryProblems({ name: "x".repeat(40), note: "x".repeat(140) })).toEqual({});
+    expect(rsvpEntryProblems({ name: "   ", note: "" })).toEqual({
+      name: "Enter the name the owner will see.",
+    });
+    expect(rsvpEntryProblems({ name: "x".repeat(41), note: "x".repeat(141) })).toEqual({
+      name: "Keep the name to 40 characters.",
+      note: "Keep the note to 140 characters.",
+    });
+  });
+
+  it("judges the name as it will be saved, without the spaces around it", () => {
+    expect(rsvpEntryProblems({ name: ` ${"x".repeat(40)} `, note: "" })).toEqual({});
   });
 });

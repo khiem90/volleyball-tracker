@@ -1,12 +1,46 @@
-import { deleteField, type Firestore } from "firebase/firestore";
-import { rsvpProblems, type RsvpSetup } from "@/lib/rsvp";
-import { updateTournamentFields } from "@/lib/tournaments";
-import type { RsvpSettings, Tournament } from "@/types/game";
+import {
+  collection,
+  deleteField,
+  doc,
+  getDoc,
+  getDocFromServer,
+  onSnapshot,
+  orderBy,
+  query,
+  serverTimestamp,
+  writeBatch,
+  type Firestore,
+  type Unsubscribe,
+} from "firebase/firestore";
+import { isRefused } from "@/lib/firestoreData";
+import {
+  refusedRsvpMessage,
+  rsvpEntryProblems,
+  rsvpPageState,
+  rsvpProblems,
+  type RsvpEntry,
+  type RsvpSetup,
+} from "@/lib/rsvp";
+import { tournamentDoc, updateTournamentFields } from "@/lib/tournaments";
+import type { Rsvp, RsvpSettings, Tournament } from "@/types/game";
 
 /**
- * RSVPs on Firestore: the owner's RSVP settings on the tournament document.
- * The pure derivations are in src/lib/rsvp.ts.
+ * RSVPs on Firestore: the owner's RSVP settings on the tournament document,
+ * the RSVPs in the tournament's `rsvps` subcollection, and the name an
+ * account last RSVP'd under on its own `users/{uid}` document. The pure
+ * derivations are in src/lib/rsvp.ts.
  */
+
+export const rsvpsCollection = (db: Firestore, tournamentId: string) =>
+  collection(db, "tournaments", tournamentId, "rsvps");
+export const rsvpDoc = (db: Firestore, tournamentId: string, uid: string) =>
+  doc(db, "tournaments", tournamentId, "rsvps", uid);
+/** The account's own document. Only that account can read or write it. */
+export const accountDoc = (db: Firestore, uid: string) => doc(db, "users", uid);
+
+// ============================================
+// The owner
+// ============================================
 
 /**
  * Save a tournament's scheduled time and RSVP settings through the same
@@ -41,4 +75,107 @@ export const saveRsvpSettings = async (
     fields.scheduledZone = zone;
   }
   await updateTournamentFields(db, tournament.id, fields);
+};
+
+// ============================================
+// The list
+// ============================================
+
+/**
+ * A tournament's RSVPs in arrival order, for the owner, or for any signed-in
+ * account while the RSVP link is on. Firestore orders equal arrival times
+ * by document id, so the order is the same on every phone. A pending write
+ * of this phone's own shows with the server time estimated until the
+ * server answers. Calls `onError` when the rules refuse the list, as they
+ * do once the owner turns the link off.
+ */
+export const subscribeToRsvps = (
+  db: Firestore,
+  tournamentId: string,
+  onChange: (rsvps: Rsvp[]) => void,
+  onError?: (error: Error) => void,
+): Unsubscribe =>
+  onSnapshot(
+    query(rsvpsCollection(db, tournamentId), orderBy("createdAt")),
+    (snapshot) => {
+      onChange(
+        snapshot.docs.map((d) => ({
+          ...(d.data({ serverTimestamps: "estimate" }) as Omit<Rsvp, "id">),
+          id: d.id,
+        })),
+      );
+    },
+    (error) => onError?.(error),
+  );
+
+// ============================================
+// RSVPing
+// ============================================
+
+/** The rules refused an RSVP; the message says why, as the RSVP page shows it. */
+export class RsvpRefusedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "RsvpRefusedError";
+  }
+}
+
+/**
+ * Why the rules refused an RSVP to this tournament, from the tournament as
+ * the server has it now. A refused read means the owner turned the link
+ * off. The phone's clock is used only to tell a closed or started night
+ * from one that is not open yet; a night this phone thinks is open was
+ * refused by the server's clock, so it reads as not open yet.
+ */
+const whyRefused = async (db: Firestore, tournamentId: string): Promise<string> => {
+  try {
+    const snapshot = await getDocFromServer(tournamentDoc(db, tournamentId));
+    if (!snapshot.exists()) return refusedRsvpMessage({ kind: "link_off" });
+    return refusedRsvpMessage(rsvpPageState(snapshot.data() as Tournament, Date.now()));
+  } catch (error) {
+    if (isRefused(error)) return refusedRsvpMessage({ kind: "link_off" });
+    throw error;
+  }
+};
+
+/**
+ * RSVP to a tournament as the signed-in account `uid`, under the name and
+ * note given, and remember the name on the account for next time. Both
+ * land in one batch or neither does. The server writes the arrival time,
+ * and the rules refuse the RSVP before the open time by the server's
+ * clock, after a close, once the tournament has started, or with the link
+ * off; that refusal rejects with an RsvpRefusedError saying which. A name
+ * or note the rules would refuse is thrown before anything is written.
+ */
+export const rsvp = async (
+  db: Firestore,
+  tournamentId: string,
+  uid: string,
+  entry: RsvpEntry,
+): Promise<void> => {
+  const [problem] = Object.values(rsvpEntryProblems(entry));
+  if (problem) throw new Error(problem);
+  const name = entry.name.trim();
+
+  const batch = writeBatch(db);
+  batch.set(rsvpDoc(db, tournamentId, uid), {
+    uid,
+    name,
+    note: entry.note.trim(),
+    createdAt: serverTimestamp(),
+  });
+  batch.set(accountDoc(db, uid), { rsvpName: name }, { merge: true });
+  try {
+    await batch.commit();
+  } catch (error) {
+    if (!isRefused(error)) throw error;
+    throw new RsvpRefusedError(await whyRefused(db, tournamentId));
+  }
+};
+
+/** The name this account last RSVP'd under, or null before its first RSVP. */
+export const readRememberedName = async (db: Firestore, uid: string): Promise<string | null> => {
+  const snapshot = await getDoc(accountDoc(db, uid));
+  const name: unknown = snapshot.data()?.rsvpName;
+  return typeof name === "string" && name.length > 0 ? name : null;
 };
