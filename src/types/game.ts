@@ -55,6 +55,21 @@ export interface TournamentSettings {
  * and retried. Documents written before `basedOn` existed lack it until
  * their next write.
  */
+/**
+ * How a tournament takes RSVPs. The rules refuse `enabled` without both the
+ * tournament's `scheduledAt` and `opensAt`.
+ */
+export interface RsvpSettings {
+  /** Whether the RSVP link is on. */
+  enabled: boolean;
+  /** The number of confirmed RSVPs the tournament takes. */
+  capacity: number;
+  /** The moment RSVPs open, in epoch milliseconds, judged by the server's clock. */
+  opensAt?: number;
+  /** Whether the owner has closed the list early. */
+  closed: boolean;
+}
+
 export interface Tournament {
   id: string;
   ownerId: string;
@@ -70,6 +85,15 @@ export interface Tournament {
   twoMatchRotationState?: TwoMatchRotationState;
   /** Whether the spectator link is on. Off means nobody but the owner can read it. */
   spectatorEnabled: boolean;
+  /** When the owner says the tournament will be played, in epoch milliseconds. Absent until set. */
+  scheduledAt?: number;
+  /** The IANA zone the scheduled time was set in, so another zone can be shown the owner's wall clock. */
+  scheduledZone?: string;
+  /**
+   * The RSVP settings. Absent on a tournament from before RSVPs, which
+   * behaves as if the RSVP link were off.
+   */
+  rsvp?: RsvpSettings;
   revision: string;
   /** The revision the last write was built on. Absent until a tournament's first write after it was added. */
   basedOn?: string;

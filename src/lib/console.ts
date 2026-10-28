@@ -64,6 +64,8 @@ export interface ConsoleAccess {
   canDelete: boolean;
   /** Turn the spectator link on or off and regenerate the scorer link. Owner, in any status. */
   canShare: boolean;
+  /** Set the scheduled time, capacity, open time, and RSVP link. Owner while draft or live. */
+  canManageRsvp: boolean;
 }
 
 const NO_ACCESS: ConsoleAccess = {
@@ -75,6 +77,7 @@ const NO_ACCESS: ConsoleAccess = {
   canDuplicate: false,
   canDelete: false,
   canShare: false,
+  canManageRsvp: false,
 };
 
 /**
@@ -87,7 +90,9 @@ export const consoleAccess = (role: ConsoleRole, status: TournamentStatus): Cons
   if (role === "spectator") return NO_ACCESS;
   const owner = role === "owner";
   const ownerOnly = { canDuplicate: owner, canDelete: owner, canShare: owner };
-  if (status === "draft") return { ...NO_ACCESS, ...ownerOnly, canStart: owner, canRename: owner };
+  if (status === "draft") {
+    return { ...NO_ACCESS, ...ownerOnly, canStart: owner, canRename: owner, canManageRsvp: owner };
+  }
   if (status === "live") {
     return {
       ...NO_ACCESS,
@@ -96,6 +101,7 @@ export const consoleAccess = (role: ConsoleRole, status: TournamentStatus): Cons
       canEditCourts: true,
       canManage: owner,
       canRename: owner,
+      canManageRsvp: owner,
     };
   }
   return { ...NO_ACCESS, ...ownerOnly };

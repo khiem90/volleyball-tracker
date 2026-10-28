@@ -22,6 +22,7 @@ import type {
   Entry,
   Match,
   PersistentTeam,
+  RsvpSettings,
   Tournament,
   TournamentFormat,
   TournamentSettings,
@@ -176,6 +177,10 @@ export interface NewTournamentInput {
   /** The roster teams entering, in seed order. Each becomes an entry. */
   teams: PersistentTeam[];
   settings: TournamentSettings;
+  /** When the tournament will be played, with the zone it was entered in. */
+  scheduledAt?: number;
+  scheduledZone?: string;
+  rsvp?: RsvpSettings;
 }
 
 /** A draft tournament with its id assigned, ready to save. */
@@ -200,6 +205,9 @@ export const buildTournament = (
     teamIds: input.teams.map((team) => team.id),
     settings: input.settings,
     spectatorEnabled: false,
+    ...(input.scheduledAt !== undefined && { scheduledAt: input.scheduledAt }),
+    ...(input.scheduledZone !== undefined && { scheduledZone: input.scheduledZone }),
+    ...(input.rsvp !== undefined && { rsvp: { ...input.rsvp } }),
     revision: newToken(),
     createdAt: now,
     updatedAt: now,
@@ -298,6 +306,8 @@ export const createTournament = async (
  * from the roster, so each entry takes the team's current name and color
  * and a team that has since left the roster is left out. A team that had
  * withdrawn from the source is back in; a new draft has no withdrawals.
+ * Of the RSVP settings only the capacity comes across: next week's night
+ * has its own times, so its RSVP link starts off until the owner sets them.
  */
 export const duplicateInput = (source: Tournament, roster: PersistentTeam[]): NewTournamentInput => {
   const rosterById = new Map(roster.map((team) => [team.id, team]));
@@ -306,6 +316,9 @@ export const duplicateInput = (source: Tournament, roster: PersistentTeam[]): Ne
     format: source.format,
     teams: source.entries.flatMap((entry) => rosterById.get(entry.teamId) ?? []),
     settings: { ...source.settings, terminology: { ...source.settings.terminology } },
+    ...(source.rsvp && {
+      rsvp: { enabled: false, capacity: source.rsvp.capacity, closed: false },
+    }),
   };
 };
 

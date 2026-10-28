@@ -1,5 +1,5 @@
 /**
- * Share links, the pure part: how the spectator and scorer links are spelled,
+ * Share links, the pure part: how the spectator, scorer, and RSVP links are spelled,
  * how the scorer key is read back from a page, and the record a phone keeps
  * of the scorer links it has opened. Nothing in here touches the database or
  * the browser; the record takes its store as an argument.
@@ -18,6 +18,13 @@ export const spectatorLink = (origin: string, tournamentId: string): string =>
 /** The scorer link is the same page carrying the key. */
 export const scorerLink = (origin: string, tournamentId: string, key: string): string =>
   `${spectatorLink(origin, tournamentId)}?${SCORER_PARAM}=${encodeURIComponent(key)}`;
+
+/**
+ * The RSVP link is the tournament's RSVP page. It carries nothing secret:
+ * the rules decide who may see the page from the tournament's own RSVP flag.
+ */
+export const rsvpLink = (origin: string, tournamentId: string): string =>
+  `${spectatorLink(origin, tournamentId)}/rsvp`;
 
 /** The scorer key a page was opened with, or null when it was not a scorer link. */
 export const scorerKeyIn = (params: Pick<URLSearchParams, "get">): string | null => {

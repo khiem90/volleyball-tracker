@@ -97,16 +97,30 @@ service cloud.firestore {
               && request.resource.data.winnerId in resource.data.teamIds));
       }
 
+      // A tournament with its RSVP link on must say when it is and when
+      // RSVPs open, so the RSVP page can never be shared without them. The
+      // RSVP settings and the scheduled time are not in scorerChange's
+      // list, so only the owner writes them.
+      function rsvpHasItsTimes(data) {
+        return !('rsvp' in data)
+          || data.rsvp.get('enabled', false) != true
+          || (data.get('scheduledAt', null) is number
+            && data.rsvp.get('opensAt', null) is number);
+      }
+
       allow read: if
         (signedIn() && resource.data.ownerId == request.auth.uid)
         || resource.data.spectatorEnabled == true
         || isScorer();
 
       allow create: if
-        signedIn() && request.resource.data.ownerId == request.auth.uid;
+        signedIn()
+        && request.resource.data.ownerId == request.auth.uid
+        && rsvpHasItsTimes(request.resource.data);
 
       allow update: if
         basedOnStoredRevision()
+        && rsvpHasItsTimes(request.resource.data)
         && ((signedIn()
             && resource.data.ownerId == request.auth.uid
             && request.resource.data.ownerId == resource.data.ownerId)

@@ -4,6 +4,7 @@ import {
   collection,
   collectionGroup,
   deleteDoc,
+  deleteField,
   doc,
   getDoc,
   getDocs,
@@ -194,6 +195,101 @@ describeFirestoreRules("Firestore rules", (env) => {
           const db = modularFirestore(env().authenticatedContext(owner));
           await assertSucceeds(updateDoc(tournamentAt(db, "tourn-1"), { name: "Renamed" }));
           await assertSucceeds(updateDoc(tournamentAt(db, "tourn-1"), { name: "Again", basedOn: "r0" }));
+        });
+      });
+
+      describe("RSVP settings", () => {
+        const friday7pm = 1_800_000_000_000;
+        const thursday6pm = friday7pm - 25 * 3_600_000;
+        const rsvpOn = { enabled: true, capacity: 12, opensAt: thursday6pm, closed: false };
+        const moved = { revision: "r2", basedOn: "r1", updatedAt: 1_700_000_000_001 };
+
+        it("can create a tournament with its scheduled time and the RSVP link on", async () => {
+          const db = modularFirestore(env().authenticatedContext(owner));
+          await assertSucceeds(
+            setDoc(tournamentAt(db, "tourn-1"), {
+              ...tournamentDoc(false),
+              scheduledAt: friday7pm,
+              scheduledZone: "America/New_York",
+              rsvp: rsvpOn,
+            }),
+          );
+        });
+
+        it("can create one with the RSVP link off and no times", async () => {
+          const db = modularFirestore(env().authenticatedContext(owner));
+          await assertSucceeds(
+            setDoc(tournamentAt(db, "tourn-1"), {
+              ...tournamentDoc(false),
+              rsvp: { enabled: false, capacity: 12, closed: false },
+            }),
+          );
+        });
+
+        it("cannot create one with the RSVP link on and either time missing", async () => {
+          const db = modularFirestore(env().authenticatedContext(owner));
+          await assertFails(
+            setDoc(tournamentAt(db, "tourn-1"), { ...tournamentDoc(false), rsvp: rsvpOn }),
+          );
+          await assertFails(
+            setDoc(tournamentAt(db, "tourn-2"), {
+              ...tournamentDoc(false),
+              scheduledAt: friday7pm,
+              rsvp: { enabled: true, capacity: 12, closed: false },
+            }),
+          );
+        });
+
+        it("can set the times and turn the link on with a write built on the stored revision, as a rename is", async () => {
+          await seedTournament("tourn-1");
+          const db = modularFirestore(env().authenticatedContext(owner));
+          await assertSucceeds(
+            updateDoc(tournamentAt(db, "tourn-1"), {
+              ...moved,
+              scheduledAt: friday7pm,
+              scheduledZone: "America/New_York",
+              rsvp: rsvpOn,
+            }),
+          );
+        });
+
+        it("cannot turn the link on without both times, or take a time away while it is on", async () => {
+          await seedTournament("tourn-1");
+          const db = modularFirestore(env().authenticatedContext(owner));
+          const ref = tournamentAt(db, "tourn-1");
+          await assertFails(updateDoc(ref, { ...moved, rsvp: rsvpOn }));
+          await assertFails(
+            updateDoc(ref, {
+              ...moved,
+              scheduledAt: friday7pm,
+              rsvp: { enabled: true, capacity: 12, closed: false },
+            }),
+          );
+
+          await assertSucceeds(
+            updateDoc(ref, { ...moved, scheduledAt: friday7pm, rsvp: rsvpOn }),
+          );
+          await assertFails(
+            updateDoc(ref, { revision: "r3", basedOn: "r2", scheduledAt: deleteField() }),
+          );
+          await assertFails(
+            updateDoc(ref, { revision: "r3", basedOn: "r2", "rsvp.opensAt": deleteField() }),
+          );
+          await assertSucceeds(
+            updateDoc(ref, { revision: "r3", basedOn: "r2", "rsvp.enabled": false }),
+          );
+        });
+
+        it("cannot be set by another account", async () => {
+          await seedTournament("tourn-1");
+          const db = modularFirestore(env().authenticatedContext(otherAccount));
+          await assertFails(
+            updateDoc(tournamentAt(db, "tourn-1"), {
+              ...moved,
+              scheduledAt: friday7pm,
+              rsvp: rsvpOn,
+            }),
+          );
         });
       });
 
@@ -512,6 +608,19 @@ describeFirestoreRules("Firestore rules", (env) => {
         await assertFails(updateDoc(ref, { ...moved, spectatorEnabled: true }));
         await assertFails(updateDoc(ref, { ...moved, ownerId: phoneA }));
         await assertFails(deleteDoc(ref));
+      });
+
+      it("cannot set the scheduled time, its zone, or the RSVP settings", async () => {
+        await seedWithProof();
+        const ref = tournamentAt(asScorer(), "tourn-1");
+        await assertFails(updateDoc(ref, { ...moved, scheduledAt: 1_800_000_000_000 }));
+        await assertFails(updateDoc(ref, { ...moved, scheduledZone: "America/New_York" }));
+        await assertFails(
+          updateDoc(ref, {
+            ...moved,
+            rsvp: { enabled: false, capacity: 12, closed: false },
+          }),
+        );
       });
 
       it.each(["win2out", "two_match_rotation"])(
