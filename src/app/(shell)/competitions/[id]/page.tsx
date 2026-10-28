@@ -2,11 +2,11 @@
 
 import { Suspense, type ReactNode } from "react";
 import Link from "next/link";
-import { useParams, usePathname } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { DeleteConfirmDialog, PageLoadingSpinner } from "@/components/shared";
 import { MbIcon } from "@/components/matchbook/MbIcon";
-import { Crest, Panel, PanelEmpty } from "@/components/matchbook/Panel";
+import { Crest } from "@/components/matchbook/Panel";
 import { BracketPanel } from "@/components/console/BracketPanel";
 import { ConsoleTabs, panelId, tabId, type ConsoleTab } from "@/components/console/ConsoleTabs";
 import { CourtsPanel } from "@/components/console/CourtsPanel";
@@ -19,40 +19,15 @@ import { StandingsPanel } from "@/components/console/StandingsPanel";
 import { StartTournamentDialog } from "@/components/console/StartTournamentDialog";
 import { TeamsPanel } from "@/components/console/TeamsPanel";
 import { ConfirmDialog } from "@/components/console/ConfirmDialog";
-import { useConsole, type NotFoundReason } from "@/components/console/useConsole";
+import { NotFound } from "@/components/console/NotFound";
+import { useConsole } from "@/components/console/useConsole";
 import { TOURNAMENT_STATUS } from "@/components/matchbook/tournamentStatus";
 import { courtLabel, courtsWord, type ConsoleRole } from "@/lib/console";
-import { STALE_SCORER_LINK } from "@/lib/shareLinks";
-import { signInHref } from "@/lib/shell";
 import { formatLabel, isBracketFormat, isRotationFormat } from "@/lib/formats";
 
 const ROLE_LABEL: Record<Exclude<ConsoleRole, "owner">, string> = {
   scorer: "Scorer",
   spectator: "Spectator",
-};
-
-/**
- * Why the console shows nothing. The tournament is not there, or not
- * shared with this phone, or the scorer link it opened has been replaced.
- * A guest is offered sign-in, coming back here, in case the tournament is theirs.
- */
-const NotFound = ({ reason, isGuest }: { reason: NotFoundReason; isGuest: boolean }) => {
-  const pathname = usePathname();
-  const message =
-    reason === "stale_link"
-      ? STALE_SCORER_LINK
-      : isGuest
-        ? "This tournament does not exist or is not being shared. If it is yours, sign in to open it."
-        : "This tournament does not exist, is not being shared, or belongs to another account.";
-  return (
-    <Panel title={reason === "stale_link" ? "Scorer link replaced" : "Tournament not found"}>
-      <PanelEmpty
-        message={message}
-        actionLabel={isGuest ? "Sign in" : "Back to tournaments"}
-        href={isGuest ? signInHref(pathname) : "/competitions"}
-      />
-    </Panel>
-  );
 };
 
 /**
