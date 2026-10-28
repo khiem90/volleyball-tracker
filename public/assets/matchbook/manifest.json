@@ -35,6 +35,7 @@
     "warning", "live", "menu", "chevron-right", "chevron-down", "clipboard", "star",
     "mail", "lock", "login", "cloud", "close", "trash",
     "chevron-left", "flag", "maximize", "minimize", "undo", "crown", "minus", "trophy",
-    "play", "pencil", "remove-user", "logout"
+    "play", "pencil", "remove-user", "logout",
+    "eye", "eye-off"
   ]
 }

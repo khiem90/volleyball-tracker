@@ -3,13 +3,7 @@
 import { memo } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  ArrowPathIcon,
-  EyeIcon,
-  EyeSlashIcon,
-} from "@heroicons/react/24/outline";
+import { MbIcon } from "@/components/matchbook/MbIcon";
 import type { RotationNumber, GameMode } from "@/lib/volleyball/types";
 import { isSetterFrontRow, getFrontRowAttackerCount } from "@/lib/volleyball/rotations";
 
@@ -57,7 +51,7 @@ export const RotationControls = memo(
             className="rounded-full"
             aria-label="Previous rotation"
           >
-            <ChevronLeftIcon className="w-5 h-5" />
+            <MbIcon id="chevron-left" size={20} />
           </Button>
 
           <div className="order-first flex w-full items-center justify-center gap-1.5 sm:order-none sm:w-auto">
@@ -90,7 +84,7 @@ export const RotationControls = memo(
             className="rounded-full"
             aria-label="Next rotation"
           >
-            <ChevronRightIcon className="w-5 h-5" />
+            <MbIcon id="chevron-right" size={20} />
           </Button>
         </div>
 
@@ -182,9 +176,9 @@ export const RotationControls = memo(
             aria-pressed={showOverlaps}
           >
             {showOverlaps ? (
-              <EyeIcon className="w-3.5 h-3.5" />
+              <MbIcon id="eye" size={14} />
             ) : (
-              <EyeSlashIcon className="w-3.5 h-3.5" />
+              <MbIcon id="eye-off" size={14} />
             )}
             Overlaps
           </button>
@@ -205,7 +199,7 @@ export const RotationControls = memo(
             `}
             aria-pressed={showArrows}
           >
-            <ArrowPathIcon className="w-3.5 h-3.5" />
+            <MbIcon id="swap" size={14} />
             Arrows
           </button>
         </div>

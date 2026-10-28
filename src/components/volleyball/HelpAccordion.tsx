@@ -1,7 +1,7 @@
 "use client";
 
 import { memo, useState } from "react";
-import { ChevronDownIcon } from "@heroicons/react/24/outline";
+import { MbIcon } from "@/components/matchbook/MbIcon";
 
 type AccordionItemProps = {
   title: string;
@@ -22,8 +22,10 @@ const AccordionItem = memo(
           aria-expanded={isOpen}
         >
           <span className="font-medium text-sm text-foreground">{title}</span>
-          <ChevronDownIcon
-            className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${
+          <MbIcon
+            id="chevron-down"
+            size={16}
+            className={`text-muted-foreground transition-transform duration-200 ${
               isOpen ? "rotate-180" : ""
             }`}
           />

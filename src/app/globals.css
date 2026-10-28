@@ -494,11 +494,15 @@ body {
 }
 
 /*
- * LEGACY TOKENS. Only the volleyball tools still read these (bg-primary,
- * text-muted-foreground, border-border, and the rest), and they go with the
- * volleyball redesign. They are not a second palette: each one resolves to a
- * matchbook value, so those pages drift toward the design without being
- * touched. Matchbook screens use the mb-* tokens and classes above.
+ * LEGACY TOKENS. Not a second palette. Read only by the volleyball tools
+ * (src/components/volleyball and src/app/(shell)/tools/volleyball-rotations,
+ * through bg-primary, text-muted-foreground, border-border, and the rest), by
+ * the @theme inline maps at the top of this file, and by the base layer
+ * defaults below. They go with the volleyball redesign, and the base layer
+ * goes with them. Each one resolves to a matchbook value, so those pages
+ * drift toward the design without being touched. Matchbook screens use the
+ * mb-* tokens and classes above; src/__tests__/design/tokens.test.ts fails
+ * if one of them reads a legacy token, and docs/design-system.md has the rules.
  *
  * Mapping: background to paper; card and popover to paper-bright; foreground
  * to navy; primary to navy with a paper-bright foreground; secondary, muted,
