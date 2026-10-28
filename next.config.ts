@@ -18,11 +18,11 @@ const withPWA = withPWAInit({
     clientsClaim: true,
     runtimeCaching: [
       // Replaces the default "cross-origin" route, which caught Firestore's
-      // listen and write streams. Caching a response means reading its whole
-      // body, and a stream's body stays open for minutes, so the running
-      // worker never ran out of work and a waiting version could not take
-      // over: Reload brought back the old version. Requests to Google APIs
-      // (Firestore, Auth) now skip the service worker.
+      // listen and write streams. Workbox caches a response by reading its
+      // whole body, and a stream's body stays open for minutes. The running
+      // worker never ran out of work, so a waiting version could not take
+      // over and Reload brought back the old version. Firestore and Auth
+      // requests to googleapis.com now skip the service worker.
       {
         urlPattern: ({ sameOrigin, url }) =>
           !sameOrigin && !url.hostname.endsWith(".googleapis.com"),
