@@ -1,18 +1,22 @@
 // @vitest-environment node
 import { doc, getDoc, getDocs, type Firestore, type Timestamp } from "firebase/firestore";
 import { expect, it } from "vitest";
-import { NOT_OPEN_YET } from "@/lib/rsvp";
+import { millisOf, NOT_OPEN_YET } from "@/lib/rsvp";
 import {
+  deleteNotice,
+  markNoticesRead,
+  postNotice,
   readRememberedName,
   rsvp,
   RsvpRefusedError,
   rsvpsCollection,
   saveRsvpSettings,
+  subscribeToNotices,
   subscribeToRsvps,
 } from "@/lib/rsvps";
 import { createTournament, type NewTournamentInput } from "@/lib/tournaments";
 import { DEFAULT_TERMINOLOGY } from "@/types/competition-config";
-import type { Rsvp, Tournament } from "@/types/game";
+import type { Notice, Rsvp, Tournament } from "@/types/game";
 import { describeFirestoreRules, minutesFromNow, modularFirestore, when } from "../rules/emulator";
 
 const owner = "owner-uid";
@@ -231,5 +235,72 @@ describeFirestoreRules("RSVPing on Firestore", (env) => {
     await expect(rsvp(db, off.id, dan, { name: "Dan", note: "" })).rejects.toThrow(
       "This RSVP link is off.",
     );
+  });
+});
+
+describeFirestoreRules("Notices on Firestore", (env) => {
+  const dan = "dan-uid";
+  const accountDb = (uid: string) => modularFirestore(env().authenticatedContext(uid));
+
+  const openNight = () =>
+    createTournament(accountDb(owner), owner, {
+      ...input,
+      scheduledAt: minutesFromNow(60 * 24),
+      scheduledZone: "America/New_York",
+      rsvp: { enabled: true, capacity: 12, opensAt: minutesFromNow(-1), closed: false },
+    });
+
+  const noticesOf = (db: Firestore, tournamentId: string, ready: (notices: Notice[]) => boolean) =>
+    when<Notice[]>(
+      (onChange, onError) => subscribeToNotices(db, tournamentId, onChange, onError),
+      ready,
+    );
+
+  it("shows the owner's notices to an account holding the link, newest first", async () => {
+    const tournament = await openNight();
+    await postNotice(accountDb(owner), tournament.id, "Courts 3 and 4 tonight.");
+    await postNotice(accountDb(owner), tournament.id, "  We moved to 7:30.  ");
+
+    const seen = await noticesOf(accountDb(dan), tournament.id, (n) => n.length === 2);
+    expect(seen.map((n) => n.body)).toEqual(["We moved to 7:30.", "Courts 3 and 4 tonight."]);
+  });
+
+  it("refuses an empty or over-long notice before writing anything", async () => {
+    const tournament = await openNight();
+    const db = accountDb(owner);
+
+    await expect(postNotice(db, tournament.id, "   ")).rejects.toThrow("Write the notice first.");
+    await expect(postNotice(db, tournament.id, "x".repeat(501))).rejects.toThrow(
+      "Keep the notice to 500 characters.",
+    );
+    expect(await noticesOf(db, tournament.id, () => true)).toEqual([]);
+  });
+
+  it("takes a deleted notice off everyone's list", async () => {
+    const tournament = await openNight();
+    await postNotice(accountDb(owner), tournament.id, "Wrong night, sorry.");
+    await postNotice(accountDb(owner), tournament.id, "We moved to 7:30.");
+    const [, mistake] = await noticesOf(accountDb(owner), tournament.id, (n) => n.length === 2);
+
+    await deleteNotice(accountDb(owner), tournament.id, mistake.id);
+
+    const seen = await noticesOf(accountDb(dan), tournament.id, (n) => n.length === 1);
+    expect(seen.map((n) => n.body)).toEqual(["We moved to 7:30."]);
+  });
+
+  it("records on an account's RSVP that it has seen the newest notice", async () => {
+    const tournament = await openNight();
+    const db = accountDb(dan);
+    await rsvp(db, tournament.id, dan, { name: "Dan", note: "" });
+    await postNotice(accountDb(owner), tournament.id, "We moved to 7:30.");
+    const [newest] = await noticesOf(db, tournament.id, (n) => n.length === 1);
+
+    await markNoticesRead(db, tournament.id, dan);
+
+    const [mine] = await when<Rsvp[]>(
+      (onChange, onError) => subscribeToRsvps(db, tournament.id, onChange, onError),
+      (rsvps) => rsvps[0]?.noticesReadAt !== undefined,
+    );
+    expect(millisOf(mine.noticesReadAt!)).toBeGreaterThanOrEqual(millisOf(newest.createdAt));
   });
 });

@@ -4,7 +4,7 @@
  * touches the database or React. See CONTEXT.md under "RSVP" and ADR-0004.
  */
 
-import type { Rsvp, Tournament } from "@/types/game";
+import type { Rsvp, ServerTime, Tournament } from "@/types/game";
 
 // ============================================
 // Setup
@@ -218,6 +218,36 @@ export const rsvpPageState = (
   return { kind: "open" };
 };
 
+/** What the RSVP page shows in place of the RSVP button once the tournament has started. */
+export interface WatchView {
+  /** Where the night stands. */
+  status: "Live" | "Completed";
+  /** The label of the button into the console. */
+  action: string;
+  /** A line about the list, which nobody changes from the RSVP page any more. */
+  note: string;
+}
+
+/**
+ * The way into the console for someone holding the RSVP link, once the
+ * tournament is live or completed. The rules let any real account read the
+ * tournament and its matches while the link is on, so the console takes
+ * them as a spectator. Null before the start and with the link off.
+ */
+export const watchView = (state: RsvpPageState): WatchView | null => {
+  if (state.kind === "started") {
+    return { status: "Live", action: "Watch", note: "The list closed when the tournament started." };
+  }
+  if (state.kind === "completed") {
+    return {
+      status: "Completed",
+      action: "See results",
+      note: "The list stays as it was when the tournament started.",
+    };
+  }
+  return null;
+};
+
 const DAY = 86_400_000;
 
 /**
@@ -362,3 +392,22 @@ export const standingIn = <T extends Arrival & { uid: string | null }>(
   if (waiting) return { kind: "waitlisted", position: waiting.position };
   return { kind: "none" };
 };
+
+// ============================================
+// Notices
+// ============================================
+
+/** The longest notice the owner can post. The rules hold the same limit. */
+export const NOTICE_BODY_MAX = 500;
+
+/** Why a notice cannot be posted yet, judged on the body as it is saved, trimmed; null when it can. */
+export const noticeProblem = (body: string): string | null => {
+  const trimmed = body.trim();
+  if (trimmed.length === 0) return "Write the notice first.";
+  if (trimmed.length > NOTICE_BODY_MAX) return `Keep the notice to ${NOTICE_BODY_MAX} characters.`;
+  return null;
+};
+
+/** A time the server wrote, in epoch milliseconds, for showing it on a clock. */
+export const millisOf = (time: ServerTime): number =>
+  time.seconds * 1000 + Math.floor(time.nanoseconds / 1_000_000);

@@ -3,7 +3,9 @@ import {
   countdown,
   DEFAULT_CAPACITY,
   epochToWallClock,
+  millisOf,
   NOT_OPEN_YET,
+  noticeProblem,
   prefillName,
   refusedRsvpMessage,
   rsvpEntryProblems,
@@ -12,6 +14,7 @@ import {
   rsvpSetupOf,
   timeLabel,
   wallClockToEpoch,
+  watchView,
   type RsvpSetup,
 } from "@/lib/rsvp";
 import type { RsvpSettings, Tournament, TournamentStatus } from "@/types/game";
@@ -186,6 +189,36 @@ describe("rsvpPageState", () => {
   });
 });
 
+describe("watchView", () => {
+  const night = (status: TournamentStatus): Pick<Tournament, "status" | "rsvp"> => ({
+    status,
+    rsvp: { enabled: true, capacity: 12, opensAt: thursday6pm, closed: false },
+  });
+
+  it("offers Watch into the console once the tournament is live, with the list closed", () => {
+    expect(watchView(rsvpPageState(night("live"), friday7pm))).toEqual({
+      status: "Live",
+      action: "Watch",
+      note: "The list closed when the tournament started.",
+    });
+  });
+
+  it("says Completed once it ends, and still offers the results, with the list as it stood", () => {
+    expect(watchView(rsvpPageState(night("completed"), friday7pm))).toEqual({
+      status: "Completed",
+      action: "See results",
+      note: "The list stays as it was when the tournament started.",
+    });
+  });
+
+  it("offers nothing to watch before the start, or with the link off", () => {
+    expect(watchView({ kind: "not_open", opensAt: thursday6pm })).toBeNull();
+    expect(watchView({ kind: "open" })).toBeNull();
+    expect(watchView({ kind: "closed" })).toBeNull();
+    expect(watchView({ kind: "link_off" })).toBeNull();
+  });
+});
+
 describe("countdown", () => {
   it("shows hours, minutes, and seconds within a day, rounding a part second up so it never reads zero early", () => {
     expect(countdown(3 * 3_600_000 + 4 * 60_000 + 5_000)).toBe("3:04:05");
@@ -247,5 +280,18 @@ describe("the RSVP form", () => {
 
   it("judges the name as it will be saved, without the spaces around it", () => {
     expect(rsvpEntryProblems({ name: ` ${"x".repeat(40)} `, note: "" })).toEqual({});
+  });
+});
+
+describe("a notice", () => {
+  it("takes one to five hundred characters, judged as it will be saved, trimmed", () => {
+    expect(noticeProblem("We moved to 7:30.")).toBeNull();
+    expect(noticeProblem(` ${"x".repeat(500)} `)).toBeNull();
+    expect(noticeProblem("  \n ")).toBe("Write the notice first.");
+    expect(noticeProblem("x".repeat(501))).toBe("Keep the notice to 500 characters.");
+  });
+
+  it("is shown at the time the server posted it, to the millisecond", () => {
+    expect(millisOf({ seconds: 1_800_000_000, nanoseconds: 123_456_789 })).toBe(1_800_000_000_123);
   });
 });

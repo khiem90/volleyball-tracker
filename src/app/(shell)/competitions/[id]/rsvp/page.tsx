@@ -1,13 +1,21 @@
 "use client";
 
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import { PageLoadingSpinner } from "@/components/shared";
 import { MbIcon } from "@/components/matchbook/MbIcon";
 import { Panel, PanelEmpty, PanelError } from "@/components/matchbook/Panel";
 import { NotFound } from "@/components/console/NotFound";
+import { NoticeList } from "@/components/rsvp/NoticeList";
 import { RsvpDialog } from "@/components/rsvp/RsvpDialog";
 import { useRsvpPage } from "@/components/rsvp/useRsvpPage";
-import { NOT_OPEN_YET, refusedRsvpMessage, type Placed, type RsvpStanding } from "@/lib/rsvp";
+import {
+  NOT_OPEN_YET,
+  refusedRsvpMessage,
+  watchView,
+  type Placed,
+  type RsvpStanding,
+} from "@/lib/rsvp";
 import type { Rsvp } from "@/types/game";
 
 const Fact = ({ label, value }: { label: string; value: string }) => (
@@ -102,12 +110,15 @@ const StandingLine = ({
 /**
  * The RSVP link. A signed-in person sees the night: its name, when it is,
  * the capacity and how many have RSVP'd, and everyone on the list by name
- * in arrival order, split into who is in and who is waiting. Before the
- * open time it counts down over a disabled button; from then the button
- * opens the RSVP dialog, and once every spot is taken it joins the
- * waitlist. Someone on the list sees where they stand, and the same dialog
- * changes their name and note or withdraws them until the tournament
- * starts. With the link off it shows the same not found as the console.
+ * in arrival order, split into who is in and who is waiting, under the
+ * owner's notices, newest first, when there are any. Before the open time
+ * it counts down over a disabled button; from then the button opens the
+ * RSVP dialog, and once every spot is taken it joins the waitlist. Someone
+ * on the list sees where they stand, and the same dialog changes their
+ * name and note or withdraws them until the tournament starts. Once the
+ * tournament is live or completed, a button into the console takes the
+ * button's place and the list stays as it stood, read-only. With the link
+ * off it shows the same not found as the console.
  */
 export default function RsvpPage() {
   const params = useParams();
@@ -123,8 +134,9 @@ export default function RsvpPage() {
   const capacity = tournament.rsvp?.capacity ?? 0;
   const count = page.rsvps?.length ?? 0;
   const showsButton = state.kind === "not_open" || state.kind === "open" || state.kind === "full";
-  // Once RSVPs are not taken, the page says why in place of the button.
-  const shut = showsButton ? null : refusedRsvpMessage(state);
+  const watch = watchView(state);
+  // A closed list says why in place of the button.
+  const shut = showsButton || watch ? null : refusedRsvpMessage(state);
 
   return (
     <>
@@ -144,6 +156,12 @@ export default function RsvpPage() {
           </p>
         )}
       </header>
+
+      {page.notices && page.notices.length > 0 && (
+        <Panel title="Notices" icon="bell" className="mb-4">
+          <NoticeList notices={page.notices} />
+        </Panel>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-12 lg:items-start">
         <Panel title="The night" icon="calendar" className="lg:col-span-5">
@@ -169,7 +187,7 @@ export default function RsvpPage() {
                   standing={page.standing}
                   name={page.mine.name}
                   capacity={capacity}
-                  canMoveUp={tournament.status === "draft"}
+                  canMoveUp={!watch && tournament.status === "draft"}
                 />
                 {page.canChange && (
                   <button
@@ -216,6 +234,25 @@ export default function RsvpPage() {
             )}
 
             {shut && <p className="text-[0.85rem] text-mb-ink-muted">{shut}</p>}
+
+            {watch && (
+              <div className="flex flex-col gap-3">
+                <p className="flex items-center gap-2">
+                  {watch.status === "Live" && <span className="mb-live-dot" />}
+                  <span className="matchbook-display text-[0.95rem] font-bold tracking-[0.06em]">
+                    {watch.status}
+                  </span>
+                </p>
+                <Link
+                  href={`/competitions/${tournament.id}`}
+                  className={`mb-btn ${watch.status === "Live" ? "mb-btn-coral" : "mb-btn-navy"} w-full sm:w-auto sm:self-start`}
+                >
+                  <MbIcon id={watch.status === "Live" ? "eye" : "trophy"} size={14} />
+                  {watch.action}
+                </Link>
+                <p className="text-[0.85rem] text-mb-ink-muted">{watch.note}</p>
+              </div>
+            )}
           </div>
         </Panel>
 

@@ -11,6 +11,7 @@ import {
   splitRsvps,
   standingIn,
   timeLabel,
+  watchView,
   type RsvpEntry,
   type RsvpStanding,
   type TimeLabel,
@@ -83,8 +84,10 @@ export const useRsvpPage = (tournamentId: string) => {
     !mine &&
     night.rememberedName !== undefined;
   // Name, note, and withdrawal stay open until the tournament starts, even
-  // after the owner closes the list.
-  const canChange = mine !== null && tournament?.status === "draft";
+  // after the owner closes the list. Once the page shows the watch view,
+  // the list is read-only.
+  const canChange =
+    mine !== null && tournament?.status === "draft" && state !== null && watchView(state) === null;
 
   const openDialog = () => {
     setError(null);
@@ -163,6 +166,8 @@ export const useRsvpPage = (tournamentId: string) => {
     /** The list split into confirmed and waitlisted, each in arrival order; null while loading. */
     list,
     listError: night.listError,
+    /** The owner's notices, newest first; null until they arrive. */
+    notices: night.notices,
     /** This account's RSVP, or null while it has none. */
     mine,
     /** Where this account stands: not on the list, in, or waiting at a position. */

@@ -46,6 +46,14 @@ describe("roleFor", () => {
     expect(roleFor("owner-uid", "owner-uid", true)).toBe("owner");
     expect(roleFor("owner-uid", "phone-uid", false)).toBe("spectator");
   });
+
+  it("makes an account that reached the console through the RSVP link a spectator with nothing to do", () => {
+    const role = roleFor("owner-uid", "dan-uid", false);
+    expect(role).toBe("spectator");
+    for (const status of ["live", "completed"] as const) {
+      expect(Object.values(consoleAccess(role, status)).some(Boolean)).toBe(false);
+    }
+  });
 });
 
 describe("consoleAccess", () => {
