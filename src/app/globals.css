@@ -277,6 +277,11 @@
     to { transform: rotate(360deg); }
   }
 
+  /* The big score on a team-color panel: a soft shadow lifts the white digits off the color. */
+  .mb-score-text {
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  }
+
   .mb-score-box {
     display: inline-flex;
     align-items: center;
@@ -570,13 +575,6 @@ body {
 /* The press on every button. */
 button:active:not(:disabled) {
   transform: scale(0.98);
-}
-
-/* ============================================
-   SCORE DISPLAY - Warm theme
-   ============================================ */
-.score-text {
-  text-shadow: 0 2px 10px oklch(0 0 0 / 0.1);
 }
 
 /* ============================================

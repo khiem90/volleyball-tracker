@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronLeft, Flag, Maximize2, Undo2 } from "lucide-react";
+import { MbIcon } from "@/components/matchbook/MbIcon";
 import { statusLabel, type SeriesInfo } from "@/lib/scoring";
 import type { MatchStatus } from "@/types/game";
 
@@ -62,7 +62,7 @@ export const ScoringHeader = ({
         aria-label={`Back to ${backLabel}`}
         className="mb-btn mb-btn-outline-navy min-w-11 shrink-0 px-2.5 sm:px-3"
       >
-        <ChevronLeft className="h-5 w-5" aria-hidden />
+        <MbIcon id="chevron-left" size={20} />
         <span className="hidden sm:inline">{backLabel}</span>
       </Link>
 
@@ -97,7 +97,7 @@ export const ScoringHeader = ({
             aria-label="Fullscreen"
             className="mb-btn mb-btn-outline-navy min-w-11 px-2.5"
           >
-            <Maximize2 className="h-4 w-4" aria-hidden />
+            <MbIcon id="maximize" size={16} />
           </button>
         )}
         {canScore && (
@@ -109,7 +109,7 @@ export const ScoringHeader = ({
               aria-label="Undo the last point"
               className="mb-btn mb-btn-outline-navy min-w-11 px-2.5 sm:px-3"
             >
-              <Undo2 className="h-4 w-4" aria-hidden />
+              <MbIcon id="undo" size={16} />
               <span className="hidden sm:inline">Undo</span>
             </button>
             <button
@@ -119,7 +119,7 @@ export const ScoringHeader = ({
               aria-label={endLabel}
               className="mb-btn mb-btn-coral px-3"
             >
-              <Flag className="h-4 w-4" aria-hidden />
+              <MbIcon id="flag" size={16} />
               <span className="sm:hidden">End</span>
               <span className="hidden sm:inline">{endLabel}</span>
             </button>

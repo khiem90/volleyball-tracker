@@ -2,7 +2,7 @@
 
 import { memo } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Crown, Minus, Plus } from "lucide-react";
+import { MbIcon } from "@/components/matchbook/MbIcon";
 import type { Side } from "@/lib/scoring";
 
 /** The badge over a team: it leads while the match is played, it won once the match is over. */
@@ -80,7 +80,7 @@ export const TeamScorePanel = memo(function TeamScorePanel({
               exit={{ opacity: 0, scale: 0.8, y: -10 }}
               className="mb-2 flex items-center gap-1.5 rounded-full border border-amber-300/40 bg-amber-500/30 px-3 py-1 backdrop-blur-sm landscape:mb-1"
             >
-              <Crown className="h-4 w-4 text-amber-200" aria-hidden />
+              <MbIcon id="crown" size={16} className="text-amber-200" />
               <span className="matchbook-display text-[0.7rem] font-bold tracking-[0.12em] text-white">
                 {crowned === "winner" ? "Winner" : "Leading"}
               </span>
@@ -103,7 +103,7 @@ export const TeamScorePanel = memo(function TeamScorePanel({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -30, scale: 0.8 }}
             transition={{ type: "spring", stiffness: 300, damping: 25 }}
-            className={`score-text inline-block min-w-[1.5ch] text-center font-black leading-none tracking-tighter text-white ${
+            className={`mb-score-text inline-block min-w-[1.5ch] text-center font-black leading-none tracking-tighter text-white ${
               isFullscreen
                 ? "text-[clamp(6rem,40vmin,20rem)]"
                 : "text-[clamp(4.5rem,24vmin,12rem)]"
@@ -121,7 +121,7 @@ export const TeamScorePanel = memo(function TeamScorePanel({
               aria-label={`Take a point from ${teamName}`}
               className={BUTTON}
             >
-              <Minus className="h-6 w-6" aria-hidden />
+              <MbIcon id="minus" size={24} />
             </button>
             <span className="matchbook-display text-[0.7rem] font-semibold tracking-[0.12em] text-white/60">
               Tap to score
@@ -132,7 +132,7 @@ export const TeamScorePanel = memo(function TeamScorePanel({
               aria-label={`Add a point to ${teamName}`}
               className={BUTTON}
             >
-              <Plus className="h-6 w-6" aria-hidden />
+              <MbIcon id="plus" size={24} />
             </button>
           </div>
         )}

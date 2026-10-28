@@ -2,8 +2,8 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { Loader2 } from "lucide-react";
 import { ScoringScreen } from "@/components/match";
+import { PageLoadingSpinner } from "@/components/shared";
 import { useMatchPage } from "@/hooks/useMatchPage";
 import { STALE_SCORER_LINK } from "@/lib/shareLinks";
 
@@ -20,7 +20,7 @@ export default function MatchPage() {
   if (page.isLoading) {
     return (
       <Frame>
-        <Loader2 className="h-8 w-8 animate-spin text-mb-navy" aria-label="Loading" />
+        <PageLoadingSpinner />
       </Frame>
     );
   }
