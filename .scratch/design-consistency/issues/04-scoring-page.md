@@ -8,7 +8,7 @@ their full-bleed look exactly, apart from their icons.
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [x] Header: back, flag, fullscreen, and undo use sprite glyphs.
 - [x] Fullscreen bar: flag, exit fullscreen, and undo use sprite glyphs; the
@@ -29,7 +29,7 @@ their full-bleed look exactly, apart from their icons.
 - [x] 44px controls, both orientations, wake lock, and fullscreen behave as
       before.
 - [x] Typecheck, lint, and the full test suite pass unchanged.
-- [ ] Verified in the browser pane at 375x812 and in landscape against the
+- [x] Verified in the browser pane at 375x812 and in landscape against the
       emulators.
 
 ## Comments
@@ -113,3 +113,7 @@ their full-bleed look exactly, apart from their icons.
 - Glyph page: `.scratch/design-consistency/glyphs/04-scoring-page.html`.
 
 No new issues filed.
+
+### Browser check (orchestrator, 375x812, emulators)
+
+Seen on the guest scoring page in portrait: chevron-left back button, maximize, undo and flag in the header, the amber crown in the Leading pill, minus and plus in the round buttons, and the match-complete confirm (trophy glyph, navy-bordered chips, winner in navy, Confirm navy and Keep playing outline at 44px). Not checked: landscape, the fullscreen bar, the signed-in match page, wake lock.

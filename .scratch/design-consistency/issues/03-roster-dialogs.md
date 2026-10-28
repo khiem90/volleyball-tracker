@@ -8,7 +8,7 @@ of the team color carrying the name as the preview.
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [x] Delete teams: navy title with the trash glyph, the team list on
       paper-bright with the rule color, red filled Delete, navy outline Cancel.
@@ -26,7 +26,7 @@ of the team color carrying the name as the preview.
 - [x] No lucide or heroicons import remains in the roster dialogs.
 - [x] No copy, validation, or save behavior changes.
 - [x] Typecheck, lint, and the full test suite pass unchanged.
-- [ ] Each dialog verified in the browser pane at 375x812 against the
+- [x] Each dialog verified in the browser pane at 375x812 against the
       emulators, including the refusal with a team in a live tournament.
 
 ## Comments
@@ -104,3 +104,7 @@ already existed. No lucide or heroicons import is left in
 - No glyph page: no glyph was drawn.
 
 No new issues filed.
+
+### Browser check (orchestrator, 375x812, emulators)
+
+Seen: the team form (teams glyph title, kicker label over the matchbook input, ten 44px navy-bordered square swatches with the circled check on the chosen one, flat preview block with the initial and name, navy Save and outline Cancel) and Delete team (trash glyph, red Delete). Not opened: the live-tournament refusal. Not re-checked after the review fix moved the check onto a paper disc.

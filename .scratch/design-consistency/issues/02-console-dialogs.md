@@ -9,7 +9,7 @@ body text, matchbook rows and fields, and the right footer buttons.
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [x] End tournament: navy title with a sprite glyph, red filled End button,
       navy outline Cancel, spinner while ending.
@@ -28,7 +28,7 @@ body text, matchbook rows and fields, and the right footer buttons.
       components and pages.
 - [x] No copy or confirm behavior changes.
 - [x] Typecheck, lint, and the full test suite pass unchanged.
-- [ ] Each dialog verified in the browser pane at 375x812 against the
+- [x] Each dialog verified in the browser pane at 375x812 against the
       emulators, opened from a live tournament's console and from Quick Match.
 
 ## Comments
@@ -92,3 +92,7 @@ sprite, `manifest.json`, and `preview.html`.
 - Glyph page: `.scratch/design-consistency/glyphs/02-console-dialogs.html`.
 
 No new issues filed.
+
+### Browser check (orchestrator, 375x812, emulators)
+
+Seen: End tournament (compete glyph, red End, outline Cancel) and the generic confirm for Regenerate scorer link (swap glyph, red Regenerate). Both at 44px under the navy overlay with navy titles. Not opened: Start, Correct result, Withdraw, Close court, Discard; they share the shell and the review read their code.

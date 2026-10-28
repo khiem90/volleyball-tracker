@@ -14,7 +14,7 @@ focus and selection turn coral.
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [x] The delete-tournament dialog, opened from the Tournaments list and from a
       tournament's console, matches the recipe in the spec: paper-bright panel,
@@ -49,7 +49,7 @@ focus and selection turn coral.
 - [x] The base layer's focus-visible outline and selection color are coral; the
       press scale on buttons stays.
 - [x] Typecheck, lint, and the full test suite pass unchanged.
-- [ ] Verified in the browser pane at 375x812 against the emulators.
+- [x] Verified in the browser pane at 375x812 against the emulators.
 
 ## Comments
 
@@ -147,3 +147,7 @@ per the brief.
 - Glyph page: `.scratch/design-consistency/glyphs/01-dialog-foundation.html`.
 
 No new issues filed.
+
+### Browser check (orchestrator, 375x812, emulators)
+
+Seen: Delete tournament from a live console. Navy 55% overlay, paper-bright panel 16px from each edge with the 4px top rule, 4px radius and the panel shadow, navy uppercase title with the trash glyph, 44px close top right, Cancel outline and Delete red stacked full width at 44px. Not opened: the same dialog from the Tournaments list. Found while checking: tickets cited the glyph pages by an absolute temp path, which Tailwind's source scan read as a CSS variable and broke the dev build; the pages now live in `.scratch/design-consistency/glyphs/` (commit 071887d).

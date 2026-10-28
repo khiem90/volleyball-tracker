@@ -9,7 +9,7 @@ is filed.
 
 **Blocked by:** 02, 03, 04, 05, 06, 07
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [x] Both icon libraries are uninstalled and no import of either remains
       anywhere in the source, including the primitives.
@@ -133,3 +133,7 @@ is filed.
   every other footer splits the row.
 
 Issue filed: 10.
+
+### Browser check (orchestrator, 375x812, emulators)
+
+Static checks on the finished branch: tsc clean, eslint 0 errors with the 10 baseline warnings, vitest 538 passed with the emulator up (the token scan and the lint rule included). The Rotation Lab was opened at 375x812 and its icons come from the sprite.

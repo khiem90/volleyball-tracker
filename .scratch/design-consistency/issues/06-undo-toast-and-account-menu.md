@@ -9,7 +9,7 @@ class overrides can go.
 
 **Blocked by:** 01, 02
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [x] The toast shows after an instant win on a Win 2 & Out or Two Match
       Rotation court as a navy bar with paper text, 44px coral Undo, 44px paper
@@ -26,7 +26,7 @@ class overrides can go.
       glyph it replaces before being committed.
 - [x] No lucide import remains in the toast or the shell components.
 - [x] Typecheck, lint, and the full test suite pass unchanged.
-- [ ] Verified in the browser pane at 375x812 against the emulators: an
+- [x] Verified in the browser pane at 375x812 against the emulators: an
       instant win on a rotation court, then the menu and sign-out confirm.
 
 ## Comments
@@ -100,3 +100,7 @@ rewrite. Added `logout` to the sprite, `manifest.json` `iconIds`, and the
 - Glyph page: `.scratch/design-consistency/glyphs/06-undo-toast-and-account-menu.html`.
 
 No new issues filed.
+
+### Browser check (orchestrator, 375x812, emulators)
+
+Seen: the toast after an instant win on a Win 2 & Out court (navy bar, paper text with the circled check, 44px coral Undo, 44px paper dismiss with the close glyph, 4px radius) and the account menu (paper-bright, 1.5px navy border, 4px radius, panel shadow, 44px red uppercase Sign out with the logout glyph). Not opened: the sign-out confirm, which only appears with unsynced changes. Note: the panel shadow class only showed after wiping `.next`; the Turbopack cache did not pick up the stylesheet change on its own.

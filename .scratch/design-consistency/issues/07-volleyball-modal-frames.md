@@ -7,7 +7,7 @@ is, since the volleyball tools' content waits for its own redesign.
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [x] Formation editor: navy overlay, paper-bright panel with 1.5px navy border,
       4px top rule, 4px radius, panel shadow, sprite close glyph at 44px. The
@@ -21,7 +21,7 @@ is, since the volleyball tools' content waits for its own redesign.
 - [x] Opening, closing, escape, and backdrop behavior are unchanged.
 - [x] Typecheck, lint, and the full test suite pass unchanged, including the
       volleyball suites.
-- [ ] Verified in the browser pane at 375x812 on the Rotation Lab and My
+- [x] Verified in the browser pane at 375x812 on the Rotation Lab and My
       Formations.
 
 ## Comments
@@ -88,3 +88,7 @@ Three files, nothing else: `src/components/volleyball/FormationEditorModal.tsx`,
   service worker precaches the sprite.
 
 No new issues filed.
+
+### Browser check (orchestrator, 375x812, emulators)
+
+Seen: the formation editor on the Rotation Lab opens under the navy 55% overlay in the paper-bright panel with the 4px top rule, 1.5px navy border, 4px radius, panel shadow and a 44px navy close glyph; its controls are untouched. The rotation controls show the sprite chevrons, eye and swap glyphs. Not opened: the share dialog and the My Formations delete overlay.

@@ -10,7 +10,7 @@ the motion entrance are gone.
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [x] Same information as today: winner, final score, the three sign-in
       benefits, sign in, and play again. Same destinations for both buttons.
@@ -24,7 +24,7 @@ the motion entrance are gone.
       the app for the scoring page and volleyball.
 - [x] No heroicons import remains in this dialog.
 - [x] Typecheck, lint, and the full test suite pass unchanged.
-- [ ] Verified in the browser pane at 375x812 as a guest finishing a quick
+- [x] Verified in the browser pane at 375x812 as a guest finishing a quick
       match.
 
 ## Comments
@@ -111,3 +111,7 @@ the file adds nothing to the stylesheet and touches no other file.
   new to wait for here.
 
 No new issues filed. No glyph page: no glyphs drawn.
+
+### Browser check (orchestrator, 375x812, emulators)
+
+Seen: the guest result dialog after a quick match. Paper panel under the navy overlay, trophy title (after the review fix), score box and green winner box, the four benefits with teams, compete, history and chart glyphs, Sign In for More filled navy above Play again outline, both 44px and full width, sign-in link to /login?redirect=%2Fquick-match.
