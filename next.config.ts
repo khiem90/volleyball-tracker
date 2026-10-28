@@ -1,5 +1,16 @@
+import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
 import type { NextConfig } from "next";
 import withPWAInit from "@ducanh2912/next-pwa";
+
+// The service worker precaches public/, and a waiting version keeps serving
+// its own copy of the sprite to new page code, which then asks for glyphs the
+// old sprite lacks and draws blank icons. A hash of the sprite in its URL
+// sends a changed sprite past every old cache.
+const spriteVersion = createHash("sha1")
+  .update(readFileSync("public/assets/matchbook/icons/sprite.svg"))
+  .digest("hex")
+  .slice(0, 8);
 
 const withPWA = withPWAInit({
   dest: "public",
@@ -39,6 +50,7 @@ const withPWA = withPWAInit({
 
 const nextConfig: NextConfig = {
   turbopack: {},
+  env: { NEXT_PUBLIC_SPRITE_VERSION: spriteVersion },
 };
 
 export default withPWA(nextConfig);
