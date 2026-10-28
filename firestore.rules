@@ -52,8 +52,9 @@ service cloud.firestore {
     // results, reorder the queue, and swap courts while the tournament is
     // live, and nothing else. Either one's write that moves the revision
     // must be built on the stored revision. Anyone holding the link can read
-    // while the spectator link is on; with it off, only the owner and
-    // scorers can read the tournament or its matches.
+    // while the spectator link is on, and any real account while the RSVP
+    // link is on; with both off, only the owner and scorers can read the
+    // tournament or its matches.
     match /tournaments/{tournamentId} {
       function tournament() {
         return get(/databases/$(database)/documents/tournaments/$(tournamentId)).data;
@@ -261,8 +262,14 @@ service cloud.firestore {
           return ownsTournament() || (isLive() && isScorer());
         }
 
+        // The same doors as the tournament: the owner, the spectator link,
+        // a scorer, and a real account while the RSVP link is on, which is
+        // how someone who RSVP'd watches the night once it starts.
         allow read: if
-          ownsTournament() || tournament().spectatorEnabled == true || isScorer();
+          ownsTournament()
+          || tournament().spectatorEnabled == true
+          || isScorer()
+          || (realAccount() && rsvpLinkOn(tournament()));
 
         allow create: if
           mayWriteMatches()

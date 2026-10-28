@@ -212,6 +212,36 @@ export const rsvpPageState = (
   return { kind: "open" };
 };
 
+/** What the RSVP page shows in place of the RSVP button once the tournament has started. */
+export interface WatchView {
+  /** Where the night stands. */
+  status: "Live" | "Completed";
+  /** The label of the button into the console. */
+  action: string;
+  /** A line about the list, which nobody changes from the RSVP page any more. */
+  note: string;
+}
+
+/**
+ * The way into the console for someone holding the RSVP link, once the
+ * tournament is live or completed. The rules let any real account read the
+ * tournament and its matches while the link is on, so the console takes
+ * them as a spectator. Null before the start and with the link off.
+ */
+export const watchView = (state: RsvpPageState): WatchView | null => {
+  if (state.kind === "started") {
+    return { status: "Live", action: "Watch", note: "The list closed when the tournament started." };
+  }
+  if (state.kind === "completed") {
+    return {
+      status: "Completed",
+      action: "See results",
+      note: "The list stays as it was when the tournament started.",
+    };
+  }
+  return null;
+};
+
 const DAY = 86_400_000;
 
 /**

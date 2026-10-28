@@ -765,6 +765,40 @@ describeFirestoreRules("Firestore rules", (env) => {
       });
     });
 
+    describe("watching through the RSVP link", () => {
+      it("lets a signed-in account read the matches of a live tournament while the link is on", async () => {
+        await seedNight("tourn-1", { status: "live" });
+        const db = accountDb();
+        await assertSucceeds(getDocs(matchesOf(db, "tourn-1")));
+        await assertSucceeds(getDoc(matchAt(db, "tourn-1", "m1")));
+      });
+
+      it("refuses the account the matches once the owner turns the link off", async () => {
+        await seedNight("tourn-1", { status: "live" });
+        const db = accountDb();
+        await assertSucceeds(getDocs(matchesOf(db, "tourn-1")));
+
+        await assertSucceeds(
+          updateDoc(tournamentAt(accountDb(owner), "tourn-1"), { "rsvp.enabled": false }),
+        );
+
+        await assertFails(getDocs(matchesOf(db, "tourn-1")));
+      });
+
+      it("refuses the matches to a signed-out request and the anonymous identity a scorer link creates", async () => {
+        await seedNight("tourn-1", { status: "live" });
+        await assertFails(getDocs(matchesOf(signedOutDb(), "tourn-1")));
+        await assertFails(getDocs(matchesOf(anonymousDb(), "tourn-1")));
+      });
+
+      it("gives the account nothing to write: not a match, and not the tournament", async () => {
+        await seedNight("tourn-1", { status: "live" });
+        const db = accountDb();
+        await assertFails(updateDoc(matchAt(db, "tourn-1", "m1"), { status: "completed" }));
+        await assertFails(updateDoc(tournamentAt(db, "tourn-1"), { name: "Mine now" }));
+      });
+    });
+
     describe("RSVPing", () => {
       const dan = "dan-uid";
       const rsvpBy = (uid: string, changes: Record<string, unknown> = {}) => ({
