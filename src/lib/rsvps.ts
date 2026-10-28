@@ -1,16 +1,19 @@
 import {
   addDoc,
   collection,
+  collectionGroup,
   deleteDoc,
   deleteField,
   doc,
   getDoc,
   getDocFromServer,
+  limit,
   onSnapshot,
   orderBy,
   query,
   serverTimestamp,
   updateDoc,
+  where,
   writeBatch,
   type Firestore,
   type Unsubscribe,
@@ -22,10 +25,17 @@ import {
   rsvpEntryProblems,
   rsvpPageState,
   rsvpProblems,
+  type AccountNights,
+  type AccountRsvp,
   type RsvpEntry,
   type RsvpSetup,
 } from "@/lib/rsvp";
-import { noticesCollection, tournamentDoc, updateTournamentFields } from "@/lib/tournaments";
+import {
+  noticesCollection,
+  subscribeToTournament,
+  tournamentDoc,
+  updateTournamentFields,
+} from "@/lib/tournaments";
 import type { Notice, Rsvp, RsvpSettings, Tournament } from "@/types/game";
 
 /**
@@ -274,3 +284,162 @@ export const deleteNotice = (db: Firestore, tournamentId: string, noticeId: stri
  */
 export const markNoticesRead = (db: Firestore, tournamentId: string, uid: string): Promise<void> =>
   updateDoc(rsvpDoc(db, tournamentId, uid), { noticesReadAt: serverTimestamp() });
+
+// ============================================
+// Home
+// ============================================
+
+/**
+ * The account's own RSVPs across every tournament, oldest first: a
+ * collection group query on `uid`, which the wildcard rule proves from the
+ * filter and which needs the `rsvps` entry in firestore.indexes.json.
+ */
+const subscribeToAccountRsvps = (
+  db: Firestore,
+  uid: string,
+  onChange: (rsvps: AccountRsvp[]) => void,
+  onError: (error: Error) => void,
+): Unsubscribe =>
+  onSnapshot(
+    query(collectionGroup(db, "rsvps"), where("uid", "==", uid), orderBy("createdAt")),
+    (snapshot) => {
+      onChange(
+        snapshot.docs.map((d) => ({
+          ...(d.data({ serverTimestamps: "estimate" }) as Omit<Rsvp, "id">),
+          id: d.id,
+          // An RSVP sits at tournaments/{id}/rsvps/{uid}.
+          tournamentId: d.ref.parent.parent!.id,
+        })),
+      );
+    },
+    onError,
+  );
+
+/** A tournament's newest notice, as a list of at most one, which is all Home reads. */
+const subscribeToNewestNotice = (
+  db: Firestore,
+  tournamentId: string,
+  onChange: (notices: Notice[]) => void,
+  onError: (error: Error) => void,
+): Unsubscribe =>
+  onSnapshot(
+    query(noticesCollection(db, tournamentId), orderBy("createdAt", "desc"), limit(1)),
+    (snapshot) => {
+      onChange(
+        snapshot.docs.map((d) => ({
+          ...(d.data({ serverTimestamps: "estimate" }) as Omit<Notice, "id">),
+          id: d.id,
+        })),
+      );
+    },
+    onError,
+  );
+
+/**
+ * Everything Home needs about the nights the account `uid` has RSVP'd to:
+ * its own RSVPs across tournaments, and for each tournament they point at,
+ * the tournament, its list, and its newest notice. Delivers once the
+ * account's RSVPs arrive and again with every change; homeRsvpRows turns a
+ * delivery into rows.
+ *
+ * A night whose reads the rules refuse, as they do once the owner turns
+ * its link off, is dropped from the delivery rather than failing it, and
+ * read again the next time the account's RSVPs change. A withdrawal drops
+ * its night and stops its reads. Only the account's own query failing
+ * calls `onError`, which ends the subscription.
+ */
+export const subscribeToAccountNights = (
+  db: Firestore,
+  uid: string,
+  onChange: (nights: AccountNights) => void,
+  onError?: (error: Error) => void,
+): Unsubscribe => {
+  let mine: AccountRsvp[] | null = null;
+  const tournaments: Record<string, Tournament> = {};
+  const lists: Record<string, Rsvp[]> = {};
+  const notices: Record<string, Notice[]> = {};
+  const nights = new Map<string, Unsubscribe[]>();
+  let stopped = false;
+
+  const deliver = () => {
+    if (stopped || mine === null) return;
+    onChange({ mine, tournaments: { ...tournaments }, lists: { ...lists }, notices: { ...notices } });
+  };
+
+  const forget = (tournamentId: string) => {
+    nights.get(tournamentId)?.forEach((unsubscribe) => unsubscribe());
+    nights.delete(tournamentId);
+    delete tournaments[tournamentId];
+    delete lists[tournamentId];
+    delete notices[tournamentId];
+  };
+
+  const drop = (tournamentId: string) => {
+    if (!nights.has(tournamentId)) return;
+    forget(tournamentId);
+    deliver();
+  };
+
+  const watch = (tournamentId: string) => {
+    const refused = () => drop(tournamentId);
+    nights.set(tournamentId, [
+      subscribeToTournament(
+        db,
+        tournamentId,
+        (tournament) => {
+          if (tournament) tournaments[tournamentId] = tournament;
+          else delete tournaments[tournamentId];
+          deliver();
+        },
+        refused,
+      ),
+      subscribeToRsvps(
+        db,
+        tournamentId,
+        (rsvps) => {
+          lists[tournamentId] = rsvps;
+          deliver();
+        },
+        refused,
+      ),
+      subscribeToNewestNotice(
+        db,
+        tournamentId,
+        (newest) => {
+          notices[tournamentId] = newest;
+          deliver();
+        },
+        refused,
+      ),
+    ]);
+  };
+
+  const unsubscribeMine = subscribeToAccountRsvps(
+    db,
+    uid,
+    (rsvps) => {
+      mine = rsvps;
+      const wanted = new Set(rsvps.map((r) => r.tournamentId));
+      for (const tournamentId of [...nights.keys()]) {
+        if (!wanted.has(tournamentId)) forget(tournamentId);
+      }
+      for (const tournamentId of wanted) {
+        if (!nights.has(tournamentId)) watch(tournamentId);
+      }
+      deliver();
+    },
+    (error) => {
+      stop();
+      onError?.(error);
+    },
+  );
+
+  function stop() {
+    if (stopped) return;
+    stopped = true;
+    unsubscribeMine();
+    for (const tournamentId of [...nights.keys()]) forget(tournamentId);
+  }
+
+  return stop;
+};

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { liveTournaments, recentResults } from "@/lib/home";
-import type { Match, PersistentTeam } from "@/types/game";
+import { homeRsvpRows, type AccountNights, type AccountRsvp } from "@/lib/rsvp";
+import type { Match, Notice, PersistentTeam, Rsvp, Tournament } from "@/types/game";
 import {
   NOW,
   OWNER,
@@ -179,5 +180,182 @@ describe("recentResults", () => {
     const orphan = quickResult({ id: "orphan", awayTeamId: "deleted-team" });
 
     expect(recentResults([], [...gone.matches, orphan], roster)).toEqual([]);
+  });
+});
+
+describe("homeRsvpRows", () => {
+  const me = "me-uid";
+  const friday = NOW + 3 * 86_400_000;
+
+  /** A world's tournament as a night taking RSVPs, under its own id. */
+  const night = (id: string, world: World, changes: Partial<Tournament> = {}): Tournament =>
+    withId(world, id, {
+      name: `Night ${id}`,
+      scheduledAt: friday,
+      scheduledZone: "America/New_York",
+      rsvp: { enabled: true, capacity: 2, opensAt: NOW - 86_400_000, closed: false },
+      ...changes,
+    }).tournament;
+
+  /** A server time `seconds` after NOW, to the nanosecond. */
+  const at = (seconds: number, nanoseconds = 0) => ({
+    seconds: NOW / 1000 + seconds,
+    nanoseconds,
+  });
+
+  const rsvpBy = (uid: string, seconds: number, changes: Partial<Rsvp> = {}): Rsvp => ({
+    id: uid,
+    uid,
+    name: uid,
+    createdAt: at(seconds),
+    ...changes,
+  });
+
+  const notice = (id: string, seconds: number, nanoseconds = 0): Notice => ({
+    id,
+    body: `Notice ${id}`,
+    createdAt: at(seconds, nanoseconds),
+  });
+
+  /**
+   * Home's view of the account's nights: each tournament with its whole
+   * list and its notices, and the account's own RSVP picked out of each list.
+   */
+  const nights = (
+    ...entries: { tournament: Tournament; list: Rsvp[]; notices?: Notice[] }[]
+  ): AccountNights => ({
+    mine: entries.flatMap(({ tournament, list }) =>
+      list
+        .filter((r) => r.uid === me)
+        .map((r): AccountRsvp => ({ ...r, tournamentId: tournament.id })),
+    ),
+    tournaments: Object.fromEntries(entries.map((e) => [e.tournament.id, e.tournament])),
+    lists: Object.fromEntries(entries.map((e) => [e.tournament.id, e.list])),
+    notices: Object.fromEntries(
+      entries.filter((e) => e.notices).map((e) => [e.tournament.id, e.notices!]),
+    ),
+  });
+
+  it("lists a night the account is in with its name, scheduled time, standing, and the RSVP page", () => {
+    const tournament = night("friday", draftWorld("round_robin", 4));
+
+    const rows = homeRsvpRows(me, nights({ tournament, list: [rsvpBy("dan", 1), rsvpBy(me, 2)] }));
+
+    expect(rows).toEqual([
+      {
+        tournament,
+        standing: { kind: "confirmed", position: 2 },
+        unread: false,
+        href: "/competitions/friday/rsvp",
+      },
+    ]);
+    expect(rows[0].tournament).toMatchObject({ name: "Night friday", scheduledAt: friday });
+  });
+
+  it("shows a waiting account its place on the waitlist, counting held spots and arrival ties as the list does", () => {
+    const tournament = night("full", draftWorld("round_robin", 4));
+    const heldSpot = { ...rsvpBy("held-1", 2), uid: null, held: true } as unknown as Rsvp;
+    const list = [
+      rsvpBy("dan", 1),
+      heldSpot,
+      rsvpBy("eve", 3),
+      // Same instant as Eve: the id breaks the tie, and "eve" < "me-uid".
+      rsvpBy(me, 3),
+    ];
+
+    const [row] = homeRsvpRows(me, nights({ tournament, list }));
+
+    expect(row.standing).toEqual({ kind: "waitlisted", position: 2 });
+  });
+
+  it("keeps a live night, and leaves out a completed one", () => {
+    const live = night("live", started("round_robin", 4));
+    const done = night("done", playThrough(started("single_elimination", 4)));
+    expect(done.status).toBe("completed");
+
+    const rows = homeRsvpRows(
+      me,
+      nights({ tournament: live, list: [rsvpBy(me, 1)] }, { tournament: done, list: [rsvpBy(me, 1)] }),
+    );
+
+    expect(rows.map((row) => row.tournament.id)).toEqual(["live"]);
+  });
+
+  it("leaves out a night whose tournament cannot be read, whose link is off, or whose list has not arrived", () => {
+    const refused = night("refused", draftWorld("round_robin", 4));
+    const off = night("off", draftWorld("round_robin", 4), {
+      rsvp: { enabled: false, capacity: 2, opensAt: NOW, closed: false },
+    });
+    const waiting = night("waiting", draftWorld("round_robin", 4));
+    const world = nights(
+      { tournament: refused, list: [rsvpBy(me, 1)] },
+      { tournament: off, list: [rsvpBy(me, 1)] },
+      { tournament: waiting, list: [rsvpBy(me, 1)] },
+    );
+    delete world.tournaments.refused;
+    delete world.lists.waiting;
+
+    expect(homeRsvpRows(me, world)).toEqual([]);
+  });
+
+  it("leaves out a night the account has withdrawn from, even while its list still shows the old RSVP", () => {
+    const withdrawn = night("withdrawn", draftWorld("round_robin", 4));
+    const stale = night("stale", draftWorld("round_robin", 4));
+    const world = nights(
+      { tournament: withdrawn, list: [rsvpBy("dan", 1)] },
+      { tournament: stale, list: [rsvpBy(me, 1)] },
+    );
+    world.mine = [];
+
+    expect(homeRsvpRows(me, world)).toEqual([]);
+  });
+
+  it("marks a notice posted after the account last opened the page, to the nanosecond", () => {
+    const read = at(100, 500);
+    const unread = (notices: Notice[] | undefined, noticesReadAt: Rsvp["noticesReadAt"] = read) => {
+      const tournament = night("n", draftWorld("round_robin", 4));
+      const [row] = homeRsvpRows(
+        me,
+        nights({ tournament, list: [rsvpBy(me, 1, { noticesReadAt })], notices }),
+      );
+      return row.unread;
+    };
+
+    expect(unread([notice("new", 100, 501), notice("old", 50)])).toBe(true);
+    // Newest first is how they arrive, but any order reads the same.
+    expect(unread([notice("old", 50), notice("new", 101)])).toBe(true);
+    expect(unread([notice("seen", 100, 500)])).toBe(false);
+    expect(unread([notice("old", 99, 999_999_999)])).toBe(false);
+    expect(unread([])).toBe(false);
+    // Notices that have not arrived yet mark nothing.
+    expect(unread(undefined)).toBe(false);
+  });
+
+  it("marks any notice as new to an account that has never opened the page since RSVPing", () => {
+    const tournament = night("n", draftWorld("round_robin", 4));
+
+    const [row] = homeRsvpRows(
+      me,
+      nights({ tournament, list: [rsvpBy(me, 1)], notices: [notice("first", 0)] }),
+    );
+
+    expect(row.unread).toBe(true);
+  });
+
+  it("puts the soonest night first, and a night without a scheduled time last", () => {
+    const later = night("later", draftWorld("round_robin", 4), { scheduledAt: friday + 86_400_000 });
+    const sooner = night("sooner", draftWorld("round_robin", 4), { scheduledAt: friday });
+    const unscheduled = night("unscheduled", draftWorld("round_robin", 4), { scheduledAt: undefined });
+
+    const rows = homeRsvpRows(
+      me,
+      nights(
+        { tournament: unscheduled, list: [rsvpBy(me, 1)] },
+        { tournament: later, list: [rsvpBy(me, 1)] },
+        { tournament: sooner, list: [rsvpBy(me, 1)] },
+      ),
+    );
+
+    expect(rows.map((row) => row.tournament.id)).toEqual(["sooner", "later", "unscheduled"]);
   });
 });
