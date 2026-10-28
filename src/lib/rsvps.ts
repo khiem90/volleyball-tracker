@@ -4,6 +4,7 @@ import {
   deleteDoc,
   deleteField,
   doc,
+  getCountFromServer,
   getDoc,
   getDocFromServer,
   onSnapshot,
@@ -25,7 +26,12 @@ import {
   type RsvpEntry,
   type RsvpSetup,
 } from "@/lib/rsvp";
-import { noticesCollection, tournamentDoc, updateTournamentFields } from "@/lib/tournaments";
+import {
+  noticesCollection,
+  rsvpsCollection,
+  tournamentDoc,
+  updateTournamentFields,
+} from "@/lib/tournaments";
 import type { Notice, Rsvp, RsvpSettings, Tournament } from "@/types/game";
 
 /**
@@ -35,8 +41,9 @@ import type { Notice, Rsvp, RsvpSettings, Tournament } from "@/types/game";
  * derivations are in src/lib/rsvp.ts.
  */
 
-export const rsvpsCollection = (db: Firestore, tournamentId: string) =>
-  collection(db, "tournaments", tournamentId, "rsvps");
+// The path builder sits in tournaments.ts, which deletes the list with the
+// tournament and cannot import this module without a cycle.
+export { rsvpsCollection };
 export const rsvpDoc = (db: Firestore, tournamentId: string, uid: string) =>
   doc(db, "tournaments", tournamentId, "rsvps", uid);
 /** The account's own document. Only that account can read or write it. */
@@ -80,6 +87,62 @@ export const saveRsvpSettings = async (
   }
   await updateTournamentFields(db, tournament.id, fields);
 };
+
+/**
+ * Close the list early, or reopen it. A close stops new RSVPs and leaves
+ * withdrawals open; starting the tournament closes the list for good, so a
+ * reopen is refused before anything is written once it has left draft.
+ * Only `rsvp.closed` is written, through the revision-carrying field write,
+ * so a capacity saved from another phone at the same moment survives.
+ */
+export const setRsvpClosed = async (
+  db: Firestore,
+  tournamentId: string,
+  closed: boolean,
+): Promise<void> => {
+  const snapshot = await getDoc(tournamentDoc(db, tournamentId));
+  const tournament = snapshot.data() as Tournament | undefined;
+  if (!tournament?.rsvp) throw new Error("This tournament has no RSVP list to close.");
+  if (!closed && tournament.status !== "draft") {
+    throw new Error("The list can only be reopened while the tournament is a draft.");
+  }
+  await updateTournamentFields(db, tournamentId, { "rsvp.closed": closed });
+};
+
+/**
+ * Add a held spot: an RSVP by name for someone without an account. It has
+ * a generated id and no uid, so no account can change or withdraw it, and
+ * the server writes its arrival time, so it takes the next place in order
+ * like anyone else's RSVP. A name the rules would refuse is thrown before
+ * anything is written. Owner only, while the tournament is a draft or live.
+ */
+export const addHeldSpot = async (db: Firestore, tournamentId: string, name: string): Promise<void> => {
+  const problem = rsvpEntryProblems({ name, note: "" }).name;
+  if (problem) throw new Error(problem);
+  await addDoc(rsvpsCollection(db, tournamentId), {
+    uid: null,
+    held: true,
+    name: name.trim(),
+    createdAt: serverTimestamp(),
+  });
+};
+
+/**
+ * Take anyone off the list, a held spot included. As with a withdrawal,
+ * the first person waiting moves up with no write of their own. Owner
+ * only, at any status.
+ */
+export const removeRsvp = (db: Firestore, tournamentId: string, rsvpId: string): Promise<void> =>
+  deleteDoc(doc(rsvpsCollection(db, tournamentId), rsvpId));
+
+/**
+ * How many people are on a tournament's list, held spots included, counted
+ * by the server without reading the list, for a delete confirmation on a
+ * screen that does not hold it. Rejects offline. Owner, or anyone while
+ * the RSVP link is on.
+ */
+export const countRsvps = async (db: Firestore, tournamentId: string): Promise<number> =>
+  (await getCountFromServer(rsvpsCollection(db, tournamentId))).data().count;
 
 // ============================================
 // The list

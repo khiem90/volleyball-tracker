@@ -70,6 +70,9 @@ export const scorerProofDoc = (db: Firestore, tournamentId: string, uid: string)
 /** The owner's notices to everyone on the RSVP list (see src/lib/rsvps.ts). */
 export const noticesCollection = (db: Firestore, tournamentId: string) =>
   collection(db, "tournaments", tournamentId, "notices");
+/** The RSVPs and held spots on a tournament's list (see src/lib/rsvps.ts). */
+export const rsvpsCollection = (db: Firestore, tournamentId: string) =>
+  collection(db, "tournaments", tournamentId, "rsvps");
 
 export interface ScorerKey {
   key: string;
@@ -375,24 +378,34 @@ export const renameTournament = async (
   await updateTournamentFields(db, tournamentId, { name: trimmed });
 };
 
+/** The most writes the delete cleanup puts in one batch. */
+const BATCH_LIMIT = 500;
+
 /**
- * Delete a tournament with every match under it, its scorer key, and the
- * proofs of every phone that opened its scorer link.
+ * Delete a tournament with every match under it, its scorer key, the
+ * proofs of every phone that opened its scorer link, its RSVP list, held
+ * spots included, and its notices. The cleanup is one batch of at most 500
+ * writes, the limit Firestore has long documented for a batch; a big round
+ * robin with a long list that runs past it goes in as many as it needs.
  */
 export const deleteTournament = async (db: Firestore, tournamentId: string): Promise<void> => {
-  const [matches, proofs, notices] = await Promise.all([
+  const [matches, proofs, rsvps, notices] = await Promise.all([
     getDocs(matchesCollection(db, tournamentId)),
     getDocs(scorerProofsCollection(db, tournamentId)),
+    getDocs(rsvpsCollection(db, tournamentId)),
     getDocs(noticesCollection(db, tournamentId)),
   ]);
+  const refs = [
+    ...[matches, proofs, rsvps, notices].flatMap((snapshot) => snapshot.docs.map((d) => d.ref)),
+    scorerKeyDoc(db, tournamentId),
+  ];
   // The rules for everything under the tournament read the tournament
   // itself, so those go first and the tournament last, in its own write.
-  const batch = writeBatch(db);
-  matches.docs.forEach((d) => batch.delete(d.ref));
-  proofs.docs.forEach((d) => batch.delete(d.ref));
-  notices.docs.forEach((d) => batch.delete(d.ref));
-  batch.delete(scorerKeyDoc(db, tournamentId));
-  await batch.commit();
+  for (let start = 0; start < refs.length; start += BATCH_LIMIT) {
+    const batch = writeBatch(db);
+    refs.slice(start, start + BATCH_LIMIT).forEach((ref) => batch.delete(ref));
+    await batch.commit();
+  }
   await deleteDoc(tournamentDoc(db, tournamentId));
 };
 

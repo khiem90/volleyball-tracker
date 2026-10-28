@@ -1014,6 +1014,134 @@ describeFirestoreRules("Firestore rules", (env) => {
       });
     });
 
+    describe("the owner removing anyone", () => {
+      const dan = "dan-uid";
+      const rsvps = { [dan]: { name: "Dan" } };
+
+      it.each(["draft", "live", "completed"] as const)(
+        "lets the owner remove an RSVP while the tournament is %s",
+        async (status) => {
+          await seedNight("tourn-1", { status, rsvps });
+          await assertSucceeds(deleteDoc(rsvpAt(accountDb(owner), "tourn-1", dan)));
+        },
+      );
+
+      it("lets the owner remove an RSVP after the list is closed and with the link off", async () => {
+        await seedNight("tourn-1", { closed: true, rsvps });
+        await seedNight("tourn-2", { enabled: false, rsvps });
+        await assertSucceeds(deleteDoc(rsvpAt(accountDb(owner), "tourn-1", dan)));
+        await assertSucceeds(deleteDoc(rsvpAt(accountDb(owner), "tourn-2", dan)));
+      });
+    });
+
+    describe("held spots", () => {
+      const held = (changes: Record<string, unknown> = {}) => ({
+        uid: null,
+        held: true,
+        name: "Walk-in Sam",
+        createdAt: serverTimestamp(),
+        ...changes,
+      });
+
+      const seedHeld = (tournamentId: string, heldId: string) =>
+        env().withSecurityRulesDisabled(async (unrestricted) => {
+          await setDoc(rsvpAt(modularFirestore(unrestricted), tournamentId, heldId), held());
+        });
+
+      it.each(["draft", "live"] as const)(
+        "are added by the owner under a generated id while the tournament is %s",
+        async (status) => {
+          await seedNight("tourn-1", { status });
+          await assertSucceeds(setDoc(doc(rsvpsOf(accountDb(owner), "tourn-1")), held()));
+        },
+      );
+
+      it("are added after the list is closed and with the link off, which only stop RSVPs from people", async () => {
+        await seedNight("tourn-1", { closed: true });
+        await seedNight("tourn-2", { enabled: false });
+        await assertSucceeds(setDoc(doc(rsvpsOf(accountDb(owner), "tourn-1")), held()));
+        await assertSucceeds(setDoc(doc(rsvpsOf(accountDb(owner), "tourn-2")), held()));
+      });
+
+      it("are refused once the tournament is completed", async () => {
+        await seedNight("tourn-1", { status: "completed" });
+        await assertFails(setDoc(doc(rsvpsOf(accountDb(owner), "tourn-1")), held()));
+      });
+
+      it("are added by nobody but the owner", async () => {
+        await seedNight("tourn-1");
+        for (const db of [accountDb(otherAccount), signedOutDb(), anonymousDb()]) {
+          await assertFails(setDoc(doc(rsvpsOf(db, "tourn-1")), held()));
+        }
+      });
+
+      it("must be held, with no uid, a name of one to forty characters, the request's time, and nothing else", async () => {
+        await seedNight("tourn-1");
+        const db = accountDb(owner);
+        const add = (changes: Record<string, unknown>) => setDoc(doc(rsvpsOf(db, "tourn-1")), held(changes));
+        await assertFails(add({ held: false }));
+        await assertFails(add({ uid: otherAccount }));
+        await assertFails(add({ uid: owner }));
+        await assertFails(add({ name: "" }));
+        await assertFails(add({ name: "x".repeat(41) }));
+        await assertFails(add({ createdAt: Date.now() }));
+        await assertFails(add({ note: "Brings a ball" }));
+        await assertSucceeds(add({ name: "x".repeat(40) }));
+
+        const withoutHeld: Record<string, unknown> = held();
+        delete withoutHeld.held;
+        await assertFails(setDoc(doc(rsvpsOf(db, "tourn-1")), withoutHeld));
+      });
+
+      it("are changed by nobody, not even the owner", async () => {
+        await seedNight("tourn-1");
+        await seedHeld("tourn-1", "held-1");
+        for (const db of [accountDb(owner), accountDb(otherAccount)]) {
+          await assertFails(updateDoc(rsvpAt(db, "tourn-1", "held-1"), { name: "Sam" }));
+          await assertFails(
+            updateDoc(rsvpAt(db, "tourn-1", "held-1"), { noticesReadAt: serverTimestamp() }),
+          );
+        }
+      });
+
+      it("are removed by the owner and nobody else", async () => {
+        await seedNight("tourn-1");
+        await seedHeld("tourn-1", "held-1");
+        await assertFails(deleteDoc(rsvpAt(accountDb(otherAccount), "tourn-1", "held-1")));
+        await assertSucceeds(deleteDoc(rsvpAt(accountDb(owner), "tourn-1", "held-1")));
+      });
+
+      it("are listed with everyone else's RSVPs", async () => {
+        await seedNight("tourn-1", { rsvps: { "dan-uid": { name: "Dan" } } });
+        await seedHeld("tourn-1", "held-1");
+        await assertSucceeds(getDocs(query(rsvpsOf(accountDb(), "tourn-1"), orderBy("createdAt"))));
+      });
+    });
+
+    describe("the owner's own RSVP", () => {
+      it("is made like anyone else's, under the owner's uid, while RSVPs are open", async () => {
+        await seedNight("tourn-1");
+        await assertSucceeds(
+          setDoc(rsvpAt(accountDb(owner), "tourn-1", owner), {
+            uid: owner,
+            name: "The organiser",
+            createdAt: serverTimestamp(),
+          }),
+        );
+      });
+
+      it("is refused before the open time, like anyone else's", async () => {
+        await seedNight("tourn-1", { opensInMinutes: 1 });
+        await assertFails(
+          setDoc(rsvpAt(accountDb(owner), "tourn-1", owner), {
+            uid: owner,
+            name: "The organiser",
+            createdAt: serverTimestamp(),
+          }),
+        );
+      });
+    });
+
     describe("notices", () => {
       const notice = (changes: Record<string, unknown> = {}) => ({
         body: "We moved to 7:30.",

@@ -243,6 +243,28 @@ service cloud.firestore {
         // with a new arrival time, which is the back of the line.
         allow delete: if isOwnRsvp() && tournament().status == 'draft';
 
+        // The owner removes anyone, a held spot included, at any status.
+        allow delete: if ownsTournament();
+
+        // A held spot is the owner's RSVP for someone without an account,
+        // under a generated id with no uid, so no account can ever change
+        // or withdraw it. It takes its place in arrival order like any
+        // other RSVP, so its arrival time is the server's too. The owner
+        // adds one while the tournament is a draft or live, after a close
+        // and with the link off as well, since those stop RSVPs from
+        // people, not the owner's own list. Nobody updates one.
+        allow create: if
+          ownsTournament()
+          && tournament().status in ['draft', 'live']
+          && request.resource.data.keys().hasAll(['uid', 'held', 'name', 'createdAt'])
+          && request.resource.data.keys().hasOnly(['uid', 'held', 'name', 'createdAt'])
+          && request.resource.data.uid == null
+          && request.resource.data.held == true
+          && request.resource.data.name is string
+          && request.resource.data.name.size() >= 1
+          && request.resource.data.name.size() <= 40
+          && request.resource.data.createdAt == request.time;
+
         // When the account last opened the RSVP page, which Home compares
         // with the newest notice. Only the RSVP's own account records it,
         // always as the server's time, and nothing else changes with it.

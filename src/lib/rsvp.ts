@@ -43,17 +43,48 @@ export interface RsvpProblems {
 }
 
 /**
+ * What a night's list already holds, which limits how its setup may change
+ * from the console. A night being created has no list, and nothing here.
+ */
+export interface ListSoFar {
+  /** How many are confirmed at the stored capacity. Capacity cannot go below it. */
+  confirmed: number;
+  /** How many RSVPs and held spots have arrived. The first one locks the open time. */
+  arrivals: number;
+  /** The open time as stored, which stays once anyone has arrived. */
+  storedOpensAt: number | null;
+}
+
+/** The list so far for a tournament's stored settings and its RSVPs, held spots included. */
+export const listSoFar = (
+  tournament: Pick<Tournament, "rsvp">,
+  rsvps: Arrival[],
+): ListSoFar => ({
+  confirmed: splitRsvps(rsvps, tournament.rsvp?.capacity ?? DEFAULT_CAPACITY).confirmed.length,
+  arrivals: rsvps.length,
+  storedOpensAt: tournament.rsvp?.opensAt ?? null,
+});
+
+/** The open time's problem once it is locked, which the console also shows beside the read-only field. */
+export const OPEN_TIME_LOCKED = "People have RSVP'd, so the open time cannot change.";
+
+/**
  * The problems with an RSVP setup. The link cannot go on without both
  * times, since the page could not say when; a night with the link off may
  * leave them unset. An open time after the scheduled time and a capacity
- * below one are wrong either way.
+ * below one are wrong either way. Against a list that already has people
+ * on it, the capacity cannot drop below the confirmed count, so nobody
+ * loses a spot to the stepper, and the open time cannot change at all,
+ * so nobody who already answered is confused.
  */
-export const rsvpProblems = (setup: RsvpSetup): RsvpProblems => {
+export const rsvpProblems = (setup: RsvpSetup, list?: ListSoFar): RsvpProblems => {
   const problems: RsvpProblems = {};
   if (setup.enabled && setup.scheduledAt === null) {
     problems.scheduledAt = "Set the scheduled time before turning the RSVP link on.";
   }
-  if (setup.enabled && setup.opensAt === null) {
+  if (list && list.arrivals > 0 && setup.opensAt !== list.storedOpensAt) {
+    problems.opensAt = OPEN_TIME_LOCKED;
+  } else if (setup.enabled && setup.opensAt === null) {
     problems.opensAt = "Set when RSVPs open before turning the RSVP link on.";
   } else if (
     setup.opensAt !== null &&
@@ -62,7 +93,11 @@ export const rsvpProblems = (setup: RsvpSetup): RsvpProblems => {
   ) {
     problems.opensAt = "RSVPs must open before the scheduled time.";
   }
-  if (!(setup.capacity >= 1)) problems.capacity = "Capacity must be at least 1.";
+  if (!(setup.capacity >= 1)) {
+    problems.capacity = "Capacity must be at least 1.";
+  } else if (list && setup.capacity < list.confirmed) {
+    problems.capacity = `${list.confirmed} people are confirmed, so capacity cannot go below ${list.confirmed}.`;
+  }
   return problems;
 };
 

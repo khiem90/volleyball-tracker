@@ -107,6 +107,28 @@ export const consoleAccess = (role: ConsoleRole, status: TournamentStatus): Cons
   return { ...NO_ACCESS, ...ownerOnly };
 };
 
+/**
+ * Whether the console offers the RSVP tab: to the owner while the RSVP
+ * settings can change, and afterwards, read-only, when the tournament took
+ * RSVPs, so its list and notices stay on hand once it is completed.
+ */
+export const showsRsvpTab = (
+  role: ConsoleRole,
+  status: TournamentStatus,
+  hasRsvpSettings: boolean,
+): boolean => consoleAccess(role, status).canManageRsvp || (role === "owner" && hasRsvpSettings);
+
+/**
+ * What the delete confirmation says will go, naming the people on the RSVP
+ * list when there are any, so a night people are counting on is not
+ * deleted by accident.
+ */
+export const deleteTournamentDescription = (name: string, rsvpCount: number): string => {
+  if (rsvpCount === 0) return `This removes "${name}" and every match in it. It cannot be undone.`;
+  const people = rsvpCount === 1 ? "1 person" : `${rsvpCount} people`;
+  return `This removes "${name}", every match in it, and the ${people} on its RSVP list. It cannot be undone.`;
+};
+
 // ============================================
 // Courts
 // ============================================

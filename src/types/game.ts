@@ -82,13 +82,16 @@ export interface ServerTime {
 
 /**
  * A person's RSVP to a tournament, stored under the tournament with the
- * account's uid as its id. Whether it is confirmed or waitlisted is not
- * stored: it follows from `createdAt` and the capacity (ADR-0004).
+ * account's uid as its id, or a held spot the owner added by name under a
+ * generated id. Whether it is confirmed or waitlisted is not stored: it
+ * follows from `createdAt` and the capacity (ADR-0004).
  */
 export interface Rsvp {
   id: string;
-  /** The account that RSVP'd. */
-  uid: string;
+  /** The account that RSVP'd, or null on a held spot, which belongs to no account. */
+  uid: string | null;
+  /** True on a held spot: the owner's RSVP for someone without an account. */
+  held?: true;
   /** The name the owner and everyone else on the list sees. Never an email. */
   name: string;
   /** An optional short note, such as arriving late. */
