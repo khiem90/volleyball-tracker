@@ -29,6 +29,20 @@
       ]
     },
     {
+      "collectionGroup": "rsvps",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        {
+          "fieldPath": "uid",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "formations",
       "queryScope": "COLLECTION",
       "fields": [

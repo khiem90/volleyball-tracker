@@ -17,7 +17,7 @@ import {
   writeBatch,
   type Firestore,
 } from "firebase/firestore";
-import { describe, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
   anonymousContext,
   describeFirestoreRules,
@@ -914,6 +914,32 @@ describeFirestoreRules("Firestore rules", (env) => {
         await seedNight("tourn-1", { enabled: false, rsvps });
         await assertFails(getDocs(rsvpsOf(accountDb(), "tourn-1")));
         await assertSucceeds(getDocs(rsvpsOf(accountDb(owner), "tourn-1")));
+      });
+    });
+
+    describe("an account's RSVPs across tournaments", () => {
+      const dan = "dan-uid";
+      const eve = "eve-uid";
+      const mine = (db: Firestore, uid: string) =>
+        query(collectionGroup(db, "rsvps"), where("uid", "==", uid), orderBy("createdAt"));
+
+      it("returns the account's own RSVPs from every tournament, the link on or off", async () => {
+        await seedNight("tourn-1", { rsvps: { [dan]: { name: "Dan" }, [eve]: { name: "Eve" } } });
+        await seedNight("tourn-2", { enabled: false, rsvps: { [dan]: { name: "Dan" } } });
+        const snapshot = await assertSucceeds(getDocs(mine(accountDb(dan), dan)));
+        expect(snapshot.docs.map((d) => d.ref.parent.parent?.id).sort()).toEqual(["tourn-1", "tourn-2"]);
+      });
+
+      it("refuses another account's RSVPs, and a query not limited to the account's own", async () => {
+        await seedNight("tourn-1", { rsvps: { [dan]: { name: "Dan" }, [eve]: { name: "Eve" } } });
+        await assertFails(getDocs(mine(accountDb(dan), eve)));
+        await assertFails(getDocs(query(collectionGroup(accountDb(dan), "rsvps"))));
+      });
+
+      it("refuses a signed-out request, and the anonymous identity even under the same uid", async () => {
+        await seedNight("tourn-1", { rsvps: { [dan]: { name: "Dan" } } });
+        await assertFails(getDocs(mine(signedOutDb(), dan)));
+        await assertFails(getDocs(mine(anonymousDb(dan), dan)));
       });
     });
 
