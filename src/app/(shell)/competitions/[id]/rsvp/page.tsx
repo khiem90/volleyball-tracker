@@ -7,7 +7,7 @@ import { Panel, PanelEmpty, PanelError } from "@/components/matchbook/Panel";
 import { NotFound } from "@/components/console/NotFound";
 import { RsvpDialog } from "@/components/rsvp/RsvpDialog";
 import { useRsvpPage } from "@/components/rsvp/useRsvpPage";
-import { NOT_OPEN_YET, refusedRsvpMessage } from "@/lib/rsvp";
+import { NOT_OPEN_YET, refusedRsvpMessage, type Placed, type RsvpStanding } from "@/lib/rsvp";
 import type { Rsvp } from "@/types/game";
 
 const Fact = ({ label, value }: { label: string; value: string }) => (
@@ -17,16 +17,16 @@ const Fact = ({ label, value }: { label: string; value: string }) => (
   </div>
 );
 
-/** The list in arrival order, by name, with the viewer's own row marked. */
-const RsvpList = ({ rsvps, uid }: { rsvps: Rsvp[]; uid: string | null }) => (
+/** One section of the list in arrival order, by name, with the viewer's own row marked. */
+const RsvpList = ({ rsvps, uid }: { rsvps: Placed<Rsvp>[]; uid: string | null }) => (
   <ol className="flex flex-col">
-    {rsvps.map((rsvp, index) => (
+    {rsvps.map((rsvp) => (
       <li
         key={rsvp.id}
         className="grid grid-cols-[2rem_minmax(0,1fr)] items-baseline gap-2 border-b border-mb-rule px-4 py-3 last:border-b-0"
       >
         <span className="matchbook-display text-[0.85rem] font-bold text-mb-ink-muted tabular-nums">
-          {index + 1}
+          {rsvp.position}
         </span>
         <span className="flex min-w-0 flex-col gap-0.5">
           <span className="flex min-w-0 items-baseline gap-2">
@@ -50,12 +50,64 @@ const RsvpList = ({ rsvps, uid }: { rsvps: Rsvp[]; uid: string | null }) => (
   </ol>
 );
 
+/** A section heading inside the list panel: "In" or "Waitlist", with its count. */
+const SectionHead = ({ label, count }: { label: string; count: number }) => (
+  <div className="flex items-baseline justify-between border-b border-mb-rule bg-mb-paper px-4 py-2">
+    <span className="mb-kicker">{label}</span>
+    <span className="matchbook-display text-[0.72rem] font-bold tracking-[0.1em] tabular-nums">
+      {count}
+    </span>
+  </div>
+);
+
+/**
+ * Where the viewer stands, in one line: in at a spot, or waiting at a
+ * position. Once the tournament starts the list is final, so nobody moves up.
+ */
+const StandingLine = ({
+  standing,
+  name,
+  capacity,
+  canMoveUp,
+}: {
+  standing: RsvpStanding;
+  name: string;
+  capacity: number;
+  canMoveUp: boolean;
+}) => {
+  if (standing.kind === "confirmed") {
+    return (
+      <p className="flex items-start gap-2 text-[0.9rem] font-semibold text-mb-green">
+        <MbIcon id="check" size={16} className="mt-0.5 shrink-0" />
+        <span className="min-w-0 [overflow-wrap:anywhere]">
+          You&apos;re in as {name}, spot {standing.position} of {capacity}.
+        </span>
+      </p>
+    );
+  }
+  if (standing.kind === "waitlisted") {
+    return (
+      <p className="flex items-start gap-2 text-[0.9rem] font-semibold">
+        <MbIcon id="clock" size={16} className="mt-0.5 shrink-0" />
+        <span className="min-w-0 [overflow-wrap:anywhere]">
+          You&apos;re waiting as {name}, number {standing.position} on the waitlist.
+          {canMoveUp && " You move up on your own when a spot frees."}
+        </span>
+      </p>
+    );
+  }
+  return null;
+};
+
 /**
  * The RSVP link. A signed-in person sees the night: its name, when it is,
  * the capacity and how many have RSVP'd, and everyone on the list by name
- * in arrival order. Before the open time it counts down over a disabled
- * button; from then the button opens the RSVP dialog. With the link off it
- * shows the same not found as the console.
+ * in arrival order, split into who is in and who is waiting. Before the
+ * open time it counts down over a disabled button; from then the button
+ * opens the RSVP dialog, and once every spot is taken it joins the
+ * waitlist. Someone on the list sees where they stand, and the same dialog
+ * changes their name and note or withdraws them until the tournament
+ * starts. With the link off it shows the same not found as the console.
  */
 export default function RsvpPage() {
   const params = useParams();
@@ -70,7 +122,7 @@ export default function RsvpPage() {
 
   const capacity = tournament.rsvp?.capacity ?? 0;
   const count = page.rsvps?.length ?? 0;
-  const showsButton = state.kind === "not_open" || state.kind === "open";
+  const showsButton = state.kind === "not_open" || state.kind === "open" || state.kind === "full";
   // Once RSVPs are not taken, the page says why in place of the button.
   const shut = showsButton ? null : refusedRsvpMessage(state);
 
@@ -95,9 +147,10 @@ export default function RsvpPage() {
 
       <div className="grid gap-4 lg:grid-cols-12 lg:items-start">
         <Panel title="The night" icon="calendar" className="lg:col-span-5">
-          <div className="grid grid-cols-2 gap-3 border-b border-mb-rule p-4">
+          <div className="grid grid-cols-3 gap-3 border-b border-mb-rule p-4">
             <Fact label="Capacity" value={`${capacity} ${capacity === 1 ? "spot" : "spots"}`} />
-            <Fact label="RSVP'd" value={page.rsvps ? String(count) : "..."} />
+            <Fact label="In" value={page.list ? String(page.list.confirmed.length) : "..."} />
+            <Fact label="Waiting" value={page.list ? String(page.list.waitlisted.length) : "..."} />
           </div>
 
           <div className="flex flex-col gap-3 p-4">
@@ -111,21 +164,43 @@ export default function RsvpPage() {
             )}
 
             {page.mine ? (
-              <p className="flex items-center gap-2 text-[0.9rem] font-semibold text-mb-green">
-                <MbIcon id="check" size={16} className="shrink-0" />
-                You are on the list as {page.mine.name}.
-              </p>
+              <>
+                <StandingLine
+                  standing={page.standing}
+                  name={page.mine.name}
+                  capacity={capacity}
+                  canMoveUp={tournament.status === "draft"}
+                />
+                {page.canChange && (
+                  <button
+                    type="button"
+                    className="mb-btn mb-btn-outline-navy w-full sm:w-auto sm:self-start"
+                    onClick={page.dialog.open}
+                  >
+                    <MbIcon id="pencil" size={14} />
+                    Your RSVP
+                  </button>
+                )}
+              </>
             ) : (
               showsButton && (
-                <button
-                  type="button"
-                  className="mb-btn mb-btn-coral w-full sm:w-auto sm:self-start"
-                  disabled={!page.canRsvp}
-                  onClick={page.dialog.open}
-                >
-                  <MbIcon id="calendar" size={14} />
-                  RSVP
-                </button>
+                <>
+                  {state.kind === "full" && (
+                    <p className="text-[0.85rem]">
+                      Every spot is taken. RSVP now and you join the waitlist
+                      {page.list ? ` at number ${page.list.waitlisted.length + 1}` : ""}.
+                    </p>
+                  )}
+                  <button
+                    type="button"
+                    className="mb-btn mb-btn-coral w-full sm:w-auto sm:self-start"
+                    disabled={!page.canRsvp}
+                    onClick={page.dialog.open}
+                  >
+                    <MbIcon id="calendar" size={14} />
+                    {state.kind === "full" ? "Join the waitlist" : "RSVP"}
+                  </button>
+                </>
               )
             )}
 
@@ -158,12 +233,21 @@ export default function RsvpPage() {
         >
           {page.listError ? (
             <PanelError message="The list could not be loaded. Check your connection and reload." />
-          ) : page.rsvps === null ? (
+          ) : page.list === null ? (
             <PanelEmpty message="Loading the list..." />
-          ) : page.rsvps.length === 0 ? (
+          ) : page.list.confirmed.length === 0 ? (
             <PanelEmpty message="Nobody has RSVP'd yet." />
           ) : (
-            <RsvpList rsvps={page.rsvps} uid={page.mine?.uid ?? null} />
+            <>
+              <SectionHead label="In" count={page.list.confirmed.length} />
+              <RsvpList rsvps={page.list.confirmed} uid={page.mine?.uid ?? null} />
+              {page.list.waitlisted.length > 0 && (
+                <>
+                  <SectionHead label="Waitlist" count={page.list.waitlisted.length} />
+                  <RsvpList rsvps={page.list.waitlisted} uid={page.mine?.uid ?? null} />
+                </>
+              )}
+            </>
           )}
         </Panel>
       </div>
@@ -172,10 +256,13 @@ export default function RsvpPage() {
         open={page.dialog.isOpen}
         nightName={tournament.name}
         entry={page.dialog.entry}
+        isEditing={page.dialog.isEditing}
         isSending={page.dialog.isSending}
+        isWithdrawing={page.dialog.isWithdrawing}
         error={page.dialog.error}
         onChange={page.dialog.change}
         onSend={page.dialog.send}
+        onWithdraw={page.dialog.withdraw}
         onClose={page.dialog.close}
       />
     </>

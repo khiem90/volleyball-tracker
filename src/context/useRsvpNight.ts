@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
 import type { RsvpEntry } from "@/lib/rsvp";
-import { readRememberedName, rsvp, subscribeToRsvps } from "@/lib/rsvps";
+import { readRememberedName, rsvp, subscribeToRsvps, updateRsvp, withdraw } from "@/lib/rsvps";
 import { subscribeToTournament } from "@/lib/tournaments";
 import type { Rsvp, Tournament } from "@/types/game";
 
@@ -73,11 +73,29 @@ export const useRsvpNight = (tournamentId: string, uid: string | null) => {
     [tournamentId, uid],
   );
 
+  /** Change the name and note on this account's RSVP, keeping its place. */
+  const updateMine = useCallback(
+    async (entry: RsvpEntry) => {
+      if (!uid || !db) throw new Error("Sign in to change your RSVP.");
+      await updateRsvp(db, tournamentId, uid, entry);
+      setRememberedName(entry.name.trim());
+    },
+    [tournamentId, uid],
+  );
+
+  /** Take this account off the list. */
+  const withdrawMine = useCallback(async () => {
+    if (!uid || !db) throw new Error("Sign in to withdraw.");
+    await withdraw(db, tournamentId, uid);
+  }, [tournamentId, uid]);
+
   return {
     tournament,
     rsvps,
     listError,
     rememberedName,
     rsvp: rsvpAs,
+    update: updateMine,
+    withdraw: withdrawMine,
   };
 };

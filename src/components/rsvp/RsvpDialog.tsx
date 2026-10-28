@@ -1,6 +1,6 @@
 "use client";
 
-import type { FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { InlineSpinner } from "@/components/shared";
 import { MbIcon } from "@/components/matchbook/MbIcon";
 import { Button } from "@/components/ui/button";
@@ -18,46 +18,104 @@ import { RSVP_NAME_MAX, RSVP_NOTE_MAX, rsvpEntryProblems, type RsvpEntry } from 
  * The RSVP dialog: the name everyone on the list sees, prefilled, and an
  * optional short note. The name's problem shows once the person has
  * emptied it or typed past the limit; RSVP stays off until it is fixed.
+ *
+ * Opened on an RSVP already on the list, the same dialog edits its name
+ * and note, which keeps the person's place, and has Withdraw in the
+ * footer. Withdraw asks once more before it takes the spot away.
  */
 export const RsvpDialog = ({
   open,
   nightName,
   entry,
+  isEditing = false,
   isSending,
+  isWithdrawing = false,
   error,
   onChange,
   onSend,
+  onWithdraw,
   onClose,
 }: {
   open: boolean;
   nightName: string;
   entry: RsvpEntry | null;
+  /** True when the dialog edits the person's RSVP rather than making one. */
+  isEditing?: boolean;
   isSending: boolean;
+  isWithdrawing?: boolean;
   /** Why the last send failed for a reason other than the rules' refusal. */
   error: string | null;
   onChange: (changes: Partial<RsvpEntry>) => void;
   onSend: () => void;
+  onWithdraw?: () => void;
   onClose: () => void;
 }) => {
   const problems = entry ? rsvpEntryProblems(entry) : {};
   const canSend = entry !== null && Object.keys(problems).length === 0 && !isSending;
+
+  // Withdraw asks first. The question is forgotten each time the dialog opens.
+  const [isConfirming, setConfirming] = useState(false);
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) setConfirming(false);
+  }
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (canSend) onSend();
   };
 
+  if (isEditing && isConfirming) {
+    return (
+      <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              <MbIcon id="remove-user" size={18} className="shrink-0" />
+              Withdraw?
+            </DialogTitle>
+            <DialogDescription>
+              You come off the list for {nightName}, and the first person waiting takes your
+              place. If you RSVP again, you go to the back of the line.
+            </DialogDescription>
+          </DialogHeader>
+          {error && (
+            <p role="alert" className="text-[0.78rem] font-medium text-mb-red">
+              {error}
+            </p>
+          )}
+          <DialogFooter>
+            <Button variant="outline" className="sm:flex-1" onClick={() => setConfirming(false)}>
+              Keep my place
+            </Button>
+            <Button
+              variant="destructive"
+              className="sm:flex-1"
+              onClick={onWithdraw}
+              disabled={isWithdrawing}
+            >
+              {isWithdrawing ? <InlineSpinner /> : <MbIcon id="remove-user" size={14} />}
+              Withdraw
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>
-            <MbIcon id="calendar" size={18} className="shrink-0" />
-            RSVP
+            <MbIcon id={isEditing ? "pencil" : "calendar"} size={18} className="shrink-0" />
+            {isEditing ? "Your RSVP" : "RSVP"}
           </DialogTitle>
           <DialogDescription>
-            You are telling the owner of {nightName} that you will play. Everyone on the list sees
-            your name.
+            {isEditing
+              ? "Change your name or note. You keep your place on the list."
+              : `You are telling the owner of ${nightName} that you will play. Everyone on the list sees your name.`}
           </DialogDescription>
         </DialogHeader>
 
@@ -121,12 +179,23 @@ export const RsvpDialog = ({
         </form>
 
         <DialogFooter>
+          {isEditing && onWithdraw && (
+            <button
+              type="button"
+              className="mb-btn mb-btn-outline-red sm:flex-1"
+              onClick={() => setConfirming(true)}
+              disabled={isSending}
+            >
+              <MbIcon id="remove-user" size={14} />
+              Withdraw
+            </button>
+          )}
           <Button variant="outline" className="sm:flex-1" onClick={onClose}>
             Cancel
           </Button>
           <Button type="submit" form="rsvp-form" className="sm:flex-1" disabled={!canSend}>
-            {isSending ? <InlineSpinner /> : <MbIcon id="check" size={14} />}
-            RSVP
+            {isSending ? <InlineSpinner /> : <MbIcon id={isEditing ? "save" : "check"} size={14} />}
+            {isEditing ? "Save" : "RSVP"}
           </Button>
         </DialogFooter>
       </DialogContent>
