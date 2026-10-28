@@ -10,7 +10,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { TrashIcon } from "@heroicons/react/24/outline";
+import { MbIcon } from "@/components/matchbook/MbIcon";
+import { InlineSpinner } from "./InlineSpinner";
 
 type DeleteConfirmDialogProps = {
   open: boolean;
@@ -22,6 +23,7 @@ type DeleteConfirmDialogProps = {
   className?: string;
 };
 
+/** The confirm before a tournament is deleted: a navy question, and only the Delete button in red. */
 export const DeleteConfirmDialog = memo(function DeleteConfirmDialog({
   open,
   onOpenChange,
@@ -35,18 +37,18 @@ export const DeleteConfirmDialog = memo(function DeleteConfirmDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={className ?? "sm:max-w-md"}>
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-destructive">
-            <TrashIcon className="w-5 h-5" />
+          <DialogTitle>
+            <MbIcon id="trash" size={18} className="shrink-0" />
             {title}
           </DialogTitle>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
-        <DialogFooter className="flex-row gap-2 sm:gap-2">
+        <DialogFooter>
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
             disabled={isDeleting}
-            className="flex-1 cursor-pointer rounded-xl"
+            className="sm:flex-1"
           >
             Cancel
           </Button>
@@ -54,9 +56,9 @@ export const DeleteConfirmDialog = memo(function DeleteConfirmDialog({
             variant="destructive"
             onClick={onConfirm}
             disabled={isDeleting}
-            className="flex-1 gap-2 cursor-pointer rounded-xl"
+            className="sm:flex-1"
           >
-            <TrashIcon className="w-4 h-4" />
+            {isDeleting ? <InlineSpinner /> : <MbIcon id="trash" size={14} />}
             {isDeleting ? "Deleting..." : "Delete"}
           </Button>
         </DialogFooter>

@@ -27,6 +27,6 @@
   <h2>Volleyball court</h2><img class="court" src="./diagrams/volleyball-court.svg" alt="Volleyball court"/>
   <h2>Icon sprite</h2><div class="icons" id="icons"></div>
 </main><script>
-const ids=['overview','teams','quick','compete','history','tools','settings','help','bell','plus','export','import','share','print','save','search','filter','calendar','clock','location','volleyball','bracket','chart','swap','court','check','warning','live','menu','chevron-right','chevron-down','clipboard','star','mail','lock','login','cloud'];
+const ids=['overview','teams','quick','compete','history','tools','settings','help','bell','plus','export','import','share','print','save','search','filter','calendar','clock','location','volleyball','bracket','chart','swap','court','check','warning','live','menu','chevron-right','chevron-down','clipboard','star','mail','lock','login','cloud','close','trash'];
 document.querySelector('#icons').innerHTML=ids.map(id=>`<div class="icon"><svg aria-hidden="true"><use href="./icons/sprite.svg#${id}"></use></svg><code>${id}</code></div>`).join('');
 </script></body></html>

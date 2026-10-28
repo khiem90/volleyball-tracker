@@ -5,14 +5,6 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-outfit);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
   --color-chart-5: var(--chart-5);
   --color-chart-4: var(--chart-4);
   --color-chart-3: var(--chart-3);
@@ -41,15 +33,6 @@
   --radius-2xl: calc(var(--radius) + 8px);
   --radius-3xl: calc(var(--radius) + 12px);
   --radius-4xl: calc(var(--radius) + 16px);
-
-  /* Custom team colors */
-  --color-team-blue: oklch(0.55 0.18 220);
-  --color-team-blue-light: oklch(0.92 0.04 220);
-  --color-team-orange: oklch(0.65 0.18 45);
-  --color-team-orange-light: oklch(0.95 0.04 45);
-
-  /* Card shadow colors */
-  --color-card-shadow: var(--card-shadow);
 
   /* Matchbook palette (home redesign) */
   --color-mb-paper: var(--mb-paper);
@@ -122,6 +105,21 @@
     height: 100%;
   }
 
+  /*
+   * A dialog's frame: the panel's paper, border, top rule, radius, and shadow
+   * without the panel's flex layout. A dialog portals to <body>, outside
+   * .matchbook-surface, so it carries the ink color and the body font itself.
+   */
+  .mb-dialog {
+    color: var(--mb-navy);
+    background: var(--mb-paper-bright);
+    border: 1.5px solid var(--mb-navy);
+    border-top-width: 4px;
+    border-radius: 4px;
+    box-shadow: 0 8px 22px rgba(57, 41, 23, 0.08);
+    font-family: var(--font-sans), system-ui, sans-serif;
+  }
+
   .mb-panel-head {
     display: flex;
     flex-wrap: wrap;
@@ -182,6 +180,12 @@
 
   .mb-btn-coral {
     background: var(--mb-coral);
+    color: #fff;
+  }
+
+  /* A destructive confirm's main action. Hover, disabled, and 44px come from .mb-btn. */
+  .mb-btn-red {
+    background: var(--mb-red);
     color: #fff;
   }
 
@@ -255,6 +259,22 @@
   @keyframes mb-pulse {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.35; }
+  }
+
+  /* The page spinner's ring at 16px in the current text color, for a button that is busy. */
+  .mb-spinner {
+    display: inline-block;
+    flex: none;
+    width: 1rem;
+    height: 1rem;
+    border-radius: 999px;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    animation: mb-spin 1s linear infinite;
+  }
+
+  @keyframes mb-spin {
+    to { transform: rotate(360deg); }
   }
 
   .mb-score-box {
@@ -468,54 +488,55 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* ============================================
-   PLAYFUL WARM THEME - Cream + Bold Red
-   Inspired by Don't Board Me - warm, playful, inviting
-   ============================================ */
+/*
+ * LEGACY TOKENS. Only the volleyball tools still read these (bg-primary,
+ * text-muted-foreground, border-border, and the rest), and they go with the
+ * volleyball redesign. They are not a second palette: each one resolves to a
+ * matchbook value, so those pages drift toward the design without being
+ * touched. Matchbook screens use the mb-* tokens and classes above.
+ *
+ * Mapping: background to paper; card and popover to paper-bright; foreground
+ * to navy; primary to navy with a paper-bright foreground; secondary, muted,
+ * and accent to the light navy wash with navy foreground; destructive to the
+ * matchbook red; muted foreground to the muted ink; border and input to the
+ * rule color; ring to coral; the charts to navy, coral, teal, gold, and plum;
+ * the base radius to 4px so the derived radii follow.
+ */
 :root {
-  --radius: 0.75rem;
+  --radius: 4px;
 
-  /* Warm cream background */
-  --background: oklch(0.96 0.025 70);
-  --foreground: oklch(0.18 0.02 60);
+  --background: var(--mb-paper);
+  --foreground: var(--mb-navy);
 
-  /* Warm white cards */
-  --card: oklch(0.98 0.015 70);
-  --card-foreground: oklch(0.18 0.02 60);
-  --card-shadow: oklch(0.55 0.1 25 / 0.08);
+  --card: var(--mb-paper-bright);
+  --card-foreground: var(--mb-navy);
 
-  --popover: oklch(0.98 0.015 70);
-  --popover-foreground: oklch(0.18 0.02 60);
+  --popover: var(--mb-paper-bright);
+  --popover-foreground: var(--mb-navy);
 
-  /* Bold red primary - energetic and playful */
-  --primary: oklch(0.55 0.22 25);
-  --primary-foreground: oklch(0.99 0 0);
+  --primary: var(--mb-navy);
+  --primary-foreground: var(--mb-paper-bright);
 
-  /* Warm beige secondary */
-  --secondary: oklch(0.94 0.02 70);
-  --secondary-foreground: oklch(0.25 0.02 60);
+  --secondary: rgba(7, 50, 77, 0.06);
+  --secondary-foreground: var(--mb-navy);
 
-  --muted: oklch(0.94 0.015 70);
-  --muted-foreground: oklch(0.45 0.02 60);
+  --muted: rgba(7, 50, 77, 0.06);
+  --muted-foreground: var(--mb-ink-muted);
 
-  /* Cream accent for hover states */
-  --accent: oklch(0.93 0.025 70);
-  --accent-foreground: oklch(0.2 0.02 60);
+  --accent: rgba(7, 50, 77, 0.06);
+  --accent-foreground: var(--mb-navy);
 
-  /* Destructive - stays red */
-  --destructive: oklch(0.55 0.22 25);
+  --destructive: var(--mb-red);
 
-  /* Borders and inputs - warm grey */
-  --border: oklch(0.88 0.015 70);
-  --input: oklch(0.96 0.015 70);
-  --ring: oklch(0.55 0.22 25);
+  --border: var(--mb-rule);
+  --input: var(--mb-rule);
+  --ring: var(--mb-coral);
 
-  /* Chart colors - warm gradient palette */
-  --chart-1: oklch(0.55 0.22 25);
-  --chart-2: oklch(0.6 0.15 45);
-  --chart-3: oklch(0.55 0.12 145);
-  --chart-4: oklch(0.55 0.12 250);
-  --chart-5: oklch(0.6 0.12 180);
+  --chart-1: var(--mb-navy);
+  --chart-2: var(--mb-coral);
+  --chart-3: var(--mb-teal);
+  --chart-4: var(--mb-gold);
+  --chart-5: var(--mb-plum);
 }
 
 /*
@@ -531,7 +552,7 @@ body {
   }
 
   :focus-visible {
-    outline: 2px solid oklch(0.55 0.22 25);
+    outline: 2px solid var(--mb-coral);
     outline-offset: 2px;
   }
 
@@ -541,114 +562,14 @@ body {
   }
 
   ::selection {
-    background: oklch(0.55 0.22 25 / 0.2);
-    color: oklch(0.18 0.02 60);
+    background: rgba(238, 75, 52, 0.2);
+    color: var(--mb-navy);
   }
 }
 
-/* ============================================
-   SOFT CARD STYLES (replaces glassmorphism)
-   ============================================ */
-/* Legacy glass-card class for compatibility - now soft card */
-.glass-card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-2xl);
-  box-shadow:
-    0 1px 3px oklch(0 0 0 / 0.04),
-    0 4px 12px oklch(0.55 0.1 25 / 0.06);
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-}
-
-/* ============================================
-   PLAYFUL BUTTON STYLES
-   ============================================ */
-.btn-playful {
-  border-radius: 9999px;
-  font-weight: 600;
-  padding: 0.75rem 1.5rem;
-  transition: all 0.2s ease;
-}
-
-.btn-playful-primary {
-  background: linear-gradient(135deg, oklch(0.55 0.22 25) 0%, oklch(0.5 0.24 20) 100%);
-  color: white;
-  box-shadow: 0 4px 14px oklch(0.55 0.22 25 / 0.3);
-}
-
-.btn-playful-primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px oklch(0.55 0.22 25 / 0.4);
-}
-
-.btn-playful-primary:active {
-  transform: translateY(0) scale(0.98);
-}
-
-/* ============================================
-   SOFT SHADOW UTILITIES
-   ============================================ */
-.shadow-soft-sm {
-  box-shadow: 0 1px 2px oklch(0 0 0 / 0.03), 0 2px 6px oklch(0.55 0.1 25 / 0.04);
-}
-
-.shadow-soft {
-  box-shadow: 0 1px 3px oklch(0 0 0 / 0.04), 0 4px 12px oklch(0.55 0.1 25 / 0.06);
-}
-
-/* ============================================
-   BUTTON STATES
-   ============================================ */
+/* The press on every button. */
 button:active:not(:disabled) {
   transform: scale(0.98);
-}
-
-/* ============================================
-   RED GRADIENT BUTTONS
-   ============================================ */
-.btn-red-gradient {
-  background: linear-gradient(
-    135deg,
-    oklch(0.55 0.22 25) 0%,
-    oklch(0.5 0.24 20) 100%
-  );
-  color: white;
-  box-shadow: 0 2px 8px oklch(0.55 0.22 25 / 0.25),
-    inset 0 1px 0 oklch(1 0 0 / 0.15);
-  transition: all 0.2s ease;
-}
-
-.btn-red-gradient:hover {
-  box-shadow: 0 4px 16px oklch(0.55 0.22 25 / 0.35),
-    inset 0 1px 0 oklch(1 0 0 / 0.2);
-  transform: translateY(-1px);
-}
-
-.btn-red-gradient:active {
-  transform: translateY(0) scale(0.98);
-}
-
-/* Legacy btn-teal-gradient for compatibility - now red */
-.btn-teal-gradient {
-  background: linear-gradient(
-    135deg,
-    oklch(0.55 0.22 25) 0%,
-    oklch(0.5 0.24 20) 100%
-  );
-  color: white;
-  box-shadow: 0 2px 8px oklch(0.55 0.22 25 / 0.25),
-    inset 0 1px 0 oklch(1 0 0 / 0.15);
-  transition: all 0.2s ease;
-}
-
-.btn-teal-gradient:hover {
-  box-shadow: 0 4px 16px oklch(0.55 0.22 25 / 0.35),
-    inset 0 1px 0 oklch(1 0 0 / 0.2);
-  transform: translateY(-1px);
-}
-
-.btn-teal-gradient:active {
-  transform: translateY(0) scale(0.98);
 }
 
 /* ============================================
@@ -670,16 +591,4 @@ button:active:not(:disabled) {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
-
-  .btn-teal-gradient:hover {
-    transform: none;
-  }
-}
-
-/* ============================================
-   GPU ACCELERATION HINTS
-   ============================================ */
-.glass-card {
-  will-change: auto;
-  transform: translateZ(0);
 }

@@ -4,33 +4,31 @@ import { cva, type VariantProps } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
 
+/*
+ * The matchbook buttons. Each variant is a pair of the matchbook classes in
+ * globals.css, so <Button> and <button className="mb-btn mb-btn-navy"> are the
+ * same control. Hover, disabled, the 4px radius, and the 44px minimum come
+ * from .mb-btn; focus is the base layer's coral outline.
+ */
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-medium transition-all cursor-pointer disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 aria-invalid:border-destructive",
+  "shrink-0 cursor-pointer disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90 shadow-soft-sm",
-        destructive:
-          "bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20",
-        outline:
-          "border border-border bg-card shadow-soft-sm hover:bg-accent hover:text-accent-foreground hover:border-primary/30",
-        secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        /* The main action: filled navy. */
+        default: "mb-btn mb-btn-navy",
+        /* The confirm of a destructive dialog: filled red. */
+        destructive: "mb-btn mb-btn-red",
+        /* Cancel and secondary actions: navy outline. */
+        outline: "mb-btn mb-btn-outline-navy",
+        /* Only the undo toast uses this. Ticket 06 rewrites the toast and deletes it. */
         ghost:
-          "hover:bg-accent hover:text-accent-foreground",
-        link: "text-primary underline-offset-4 hover:underline",
-        soft: "bg-accent text-accent-foreground border border-border hover:bg-accent/80 hover:border-primary/30",
-        "red-gradient": "btn-red-gradient text-white font-bold uppercase tracking-wider",
-        "teal-gradient": "btn-red-gradient text-white font-bold uppercase tracking-wider",
-        playful: "btn-playful btn-playful-primary",
-        cta: "bg-primary text-primary-foreground font-bold uppercase tracking-wider hover:bg-primary/90 shadow-lg hover:shadow-xl",
+          "inline-flex items-center justify-center gap-2 rounded-[4px] px-4 text-sm font-medium whitespace-nowrap transition-colors hover:bg-accent hover:text-accent-foreground",
       },
       size: {
-        // 44px, the least a phone tap should have to hit.
-        default: "h-11 px-4 py-2 has-[>svg]:px-3",
-        lg: "h-11 rounded-xl px-6 has-[>svg]:px-4",
-        pill: "h-11 rounded-full px-6 has-[>svg]:px-4",
-        icon: "size-11",
+        // 44px, the least a phone tap should have to hit. .mb-btn carries the same minimum.
+        default: "min-h-11",
+        icon: "size-11 p-0",
       },
     },
     defaultVariants: {
