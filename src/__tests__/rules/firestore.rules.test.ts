@@ -12,6 +12,7 @@ import {
   query,
   serverTimestamp,
   setDoc,
+  Timestamp,
   updateDoc,
   where,
   writeBatch,
@@ -968,6 +969,13 @@ describeFirestoreRules("Firestore rules", (env) => {
         await assertFails(setDoc(userDocAt(db, dan), { rsvpName: "x".repeat(41) }));
         await assertFails(setDoc(userDocAt(db, dan), { rsvpName: "Dan", isAdmin: true }));
       });
+
+      it("cannot be deleted, even by its own account", async () => {
+        await env().withSecurityRulesDisabled(async (unrestricted) => {
+          await setDoc(userDocAt(modularFirestore(unrestricted), dan), { rsvpName: "Dan" });
+        });
+        await assertFails(deleteDoc(userDocAt(accountDb(dan), dan)));
+      });
     });
 
     describe("changing an RSVP", () => {
@@ -1262,9 +1270,17 @@ describeFirestoreRules("Firestore rules", (env) => {
           await assertFails(updateDoc(rsvpAt(db, "tourn-1", dan), { ...read, uid: otherAccount }));
         });
 
-        it("may come with the RSVP itself", async () => {
+        it("may come with the RSVP itself, as the request's time", async () => {
           await seedNight("tourn-1");
           const db = accountDb(dan);
+          await assertFails(
+            setDoc(rsvpAt(db, "tourn-1", dan), {
+              uid: dan,
+              name: "Dan",
+              createdAt: serverTimestamp(),
+              noticesReadAt: Timestamp.fromMillis(minutesFromNow(60 * 24 * 365)),
+            }),
+          );
           await assertSucceeds(
             setDoc(rsvpAt(db, "tourn-1", dan), {
               uid: dan,

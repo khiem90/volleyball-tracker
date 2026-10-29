@@ -18,9 +18,9 @@ service cloud.firestore {
 
     // The account's own document. It holds the name the account last
     // RSVP'd under, so the RSVP form can offer it again. Only that account
-    // reads or writes it.
+    // reads or writes it, and nobody deletes it.
     match /users/{uid} {
-      allow read, delete: if realAccount() && request.auth.uid == uid;
+      allow read: if realAccount() && request.auth.uid == uid;
       allow create, update: if
         realAccount()
         && request.auth.uid == uid
@@ -221,6 +221,8 @@ service cloud.firestore {
           && request.resource.data.uid == request.auth.uid
           && rsvpFieldsAreValid(request.resource.data)
           && request.resource.data.createdAt == request.time
+          // A read time sent with the RSVP is the server's, as when it is recorded later.
+          && request.resource.data.get('noticesReadAt', request.time) == request.time
           && rsvpsAreOpen();
 
         // The account's own RSVP, which a held spot never is: it has no uid.
