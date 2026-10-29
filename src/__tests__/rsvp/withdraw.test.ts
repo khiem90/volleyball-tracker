@@ -147,7 +147,7 @@ describeFirestoreRules("Waitlist and withdrawing on Firestore", (env) => {
     const started = await stored(ownerDb, tournament.id);
     expect(started.status).toBe("live");
     expect(started.rsvp).toEqual(settings);
-    expect(rsvpPageState(started, Date.now(), 2)).toEqual({ kind: "started" });
+    expect(rsvpPageState(started, Date.now(), 2)).toEqual({ kind: "live" });
 
     await expect(withdraw(accountDb(dan), tournament.id, dan)).rejects.toMatchObject({
       code: "permission-denied",

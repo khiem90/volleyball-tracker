@@ -10,6 +10,7 @@ import {
   rsvpPageState,
   splitRsvps,
   standingIn,
+  takesRsvps,
   timeLabel,
   watchView,
   type RsvpEntry,
@@ -80,7 +81,9 @@ export const useRsvpPage = (tournamentId: string) => {
   const [isWithdrawing, setWithdrawing] = useState(false);
 
   const canRsvp =
-    (state?.kind === "open" || state?.kind === "full") &&
+    state !== null &&
+    takesRsvps(state) &&
+    state.kind !== "not_open" &&
     !mine &&
     night.rememberedName !== undefined;
   // Name, note, and withdrawal stay open until the tournament starts, even

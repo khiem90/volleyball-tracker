@@ -18,9 +18,11 @@ import type { Rsvp, Tournament } from "@/types/game";
 /**
  * One night as its RSVP page sees it, for the signed-in account `uid`: the
  * tournament, its RSVPs in arrival order, the owner's notices newest first,
- * the name the account last RSVP'd under, and the RSVP action. Kept apart from the tournaments a phone
- * reaches by spectator or scorer link, because an RSVP holder may read the
- * tournament but not, before it starts, its matches.
+ * the name the account last RSVP'd under, and the RSVP action. Kept apart
+ * from the tournaments a phone reaches by spectator or scorer link, which
+ * are watched with their matches: the rules let an RSVP holder read the
+ * matches too while the link is on, but the RSVP page shows none, so it
+ * reads only what it shows.
  *
  * Nothing is read without an account, so a guest or a phone holding only
  * a scorer link's silent identity reads nothing here.

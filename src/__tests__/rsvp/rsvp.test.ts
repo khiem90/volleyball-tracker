@@ -8,6 +8,7 @@ import {
   noticeProblem,
   prefillName,
   refusedRsvpMessage,
+  takesRsvps,
   rsvpEntryProblems,
   rsvpPageState,
   rsvpProblems,
@@ -180,10 +181,10 @@ describe("rsvpPageState", () => {
     expect(rsvpPageState(night({ rsvp: { closed: true } }), opensAt - 1)).toEqual({ kind: "closed" });
   });
 
-  it("is started once the tournament is live and completed once it ends, closed or not", () => {
-    expect(rsvpPageState(night({ status: "live" }), opensAt)).toEqual({ kind: "started" });
+  it("is live once the tournament is live and completed once it ends, closed or not", () => {
+    expect(rsvpPageState(night({ status: "live" }), opensAt)).toEqual({ kind: "live" });
     expect(rsvpPageState(night({ status: "live", rsvp: { closed: true } }), opensAt - 1)).toEqual({
-      kind: "started",
+      kind: "live",
     });
     expect(rsvpPageState(night({ status: "completed" }), opensAt)).toEqual({ kind: "completed" });
   });
@@ -197,6 +198,7 @@ describe("watchView", () => {
 
   it("offers Watch into the console once the tournament is live, with the list closed", () => {
     expect(watchView(rsvpPageState(night("live"), friday7pm))).toEqual({
+      kind: "live",
       status: "Live",
       action: "Watch",
       note: "The list closed when the tournament started.",
@@ -205,6 +207,7 @@ describe("watchView", () => {
 
   it("says Completed once it ends, and still offers the results, with the list as it stood", () => {
     expect(watchView(rsvpPageState(night("completed"), friday7pm))).toEqual({
+      kind: "completed",
       status: "Completed",
       action: "See results",
       note: "The list stays as it was when the tournament started.",
@@ -216,6 +219,21 @@ describe("watchView", () => {
     expect(watchView({ kind: "open" })).toBeNull();
     expect(watchView({ kind: "closed" })).toBeNull();
     expect(watchView({ kind: "link_off" })).toBeNull();
+  });
+});
+
+describe("takesRsvps", () => {
+  it("takes RSVPs before the open time, once open, and onto the waitlist when full", () => {
+    expect(takesRsvps({ kind: "not_open", opensAt: thursday6pm })).toBe(true);
+    expect(takesRsvps({ kind: "open" })).toBe(true);
+    expect(takesRsvps({ kind: "full" })).toBe(true);
+  });
+
+  it("takes none once the list is closed, the tournament is live or completed, or the link is off", () => {
+    expect(takesRsvps({ kind: "closed" })).toBe(false);
+    expect(takesRsvps({ kind: "live" })).toBe(false);
+    expect(takesRsvps({ kind: "completed" })).toBe(false);
+    expect(takesRsvps({ kind: "link_off" })).toBe(false);
   });
 });
 
@@ -246,7 +264,7 @@ describe("refusedRsvpMessage", () => {
 
   it("names a closed list, a started or finished tournament, and a link turned off", () => {
     expect(refusedRsvpMessage({ kind: "closed" })).toBe("The owner has closed RSVPs.");
-    expect(refusedRsvpMessage({ kind: "started" })).toBe(
+    expect(refusedRsvpMessage({ kind: "live" })).toBe(
       "This tournament has started, so RSVPs are closed.",
     );
     expect(refusedRsvpMessage({ kind: "completed" })).toBe("This tournament is over.");

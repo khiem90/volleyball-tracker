@@ -223,7 +223,7 @@ export type RsvpPageState =
   /** The owner closed the list before the tournament started. */
   | { kind: "closed" }
   /** The tournament is live, which closes the list for good. */
-  | { kind: "started" }
+  | { kind: "live" }
   | { kind: "completed" };
 
 /**
@@ -243,7 +243,7 @@ export const rsvpPageState = (
   const rsvp = tournament.rsvp;
   if (!rsvp?.enabled) return { kind: "link_off" };
   if (tournament.status === "completed") return { kind: "completed" };
-  if (tournament.status === "live") return { kind: "started" };
+  if (tournament.status === "live") return { kind: "live" };
   if (rsvp.closed) return { kind: "closed" };
   // The rules refuse the link on without an open time, so a missing one
   // is a document written around them; it reads as not open.
@@ -253,9 +253,21 @@ export const rsvpPageState = (
   return { kind: "open" };
 };
 
+/**
+ * Whether a page state still takes RSVPs: the list is open now, or opens
+ * at its open time, or is full and takes them onto the waitlist. The RSVP
+ * button shows in these states, and a refusal in one of them can only be
+ * the server's clock saying it is not open yet.
+ */
+export const takesRsvps = (
+  state: RsvpPageState,
+): state is Extract<RsvpPageState, { kind: "not_open" | "open" | "full" }> =>
+  state.kind === "not_open" || state.kind === "open" || state.kind === "full";
+
 /** What the RSVP page shows in place of the RSVP button once the tournament has started. */
 export interface WatchView {
-  /** Where the night stands. */
+  kind: "live" | "completed";
+  /** Where the tournament stands, as the page shows it. */
   status: "Live" | "Completed";
   /** The label of the button into the console. */
   action: string;
@@ -270,11 +282,17 @@ export interface WatchView {
  * them as a spectator. Null before the start and with the link off.
  */
 export const watchView = (state: RsvpPageState): WatchView | null => {
-  if (state.kind === "started") {
-    return { status: "Live", action: "Watch", note: "The list closed when the tournament started." };
+  if (state.kind === "live") {
+    return {
+      kind: "live",
+      status: "Live",
+      action: "Watch",
+      note: "The list closed when the tournament started.",
+    };
   }
   if (state.kind === "completed") {
     return {
+      kind: "completed",
       status: "Completed",
       action: "See results",
       note: "The list stays as it was when the tournament started.",
@@ -310,14 +328,11 @@ export const NOT_OPEN_YET = "Not open yet";
  * is "Not open yet" too: the phone's clock is ahead.
  */
 export const refusedRsvpMessage = (state: RsvpPageState): string => {
+  if (takesRsvps(state)) return NOT_OPEN_YET;
   switch (state.kind) {
-    case "open":
-    case "full":
-    case "not_open":
-      return NOT_OPEN_YET;
     case "closed":
       return "The owner has closed RSVPs.";
-    case "started":
+    case "live":
       return "This tournament has started, so RSVPs are closed.";
     case "completed":
       return "This tournament is over.";

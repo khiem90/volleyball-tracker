@@ -106,10 +106,10 @@ describe("a full night", () => {
     expect(rsvpPageState(night(), opensAt)).toEqual({ kind: "open" });
   });
 
-  it("still counts down, reads closed, started, or completed whatever the count", () => {
+  it("still counts down, reads closed, live, or completed whatever the count", () => {
     expect(rsvpPageState(night(), opensAt - 1, 2)).toEqual({ kind: "not_open", opensAt });
     expect(rsvpPageState(night({ rsvp: { closed: true } }), opensAt, 2)).toEqual({ kind: "closed" });
-    expect(rsvpPageState(night({ status: "live" }), opensAt, 2)).toEqual({ kind: "started" });
+    expect(rsvpPageState(night({ status: "live" }), opensAt, 2)).toEqual({ kind: "live" });
     expect(rsvpPageState(night({ status: "completed" }), opensAt, 2)).toEqual({ kind: "completed" });
   });
 
@@ -121,6 +121,6 @@ describe("a full night", () => {
 describe("starting the tournament", () => {
   it("closes the list by its status alone, with the RSVP settings left as they were", () => {
     const rsvp: RsvpSettings = { enabled: true, capacity: 12, opensAt: 0, closed: false };
-    expect(rsvpPageState({ status: "live", rsvp }, 1, 0)).toEqual({ kind: "started" });
+    expect(rsvpPageState({ status: "live", rsvp }, 1, 0)).toEqual({ kind: "live" });
   });
 });

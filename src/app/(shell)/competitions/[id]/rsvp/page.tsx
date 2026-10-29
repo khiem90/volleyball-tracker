@@ -12,6 +12,7 @@ import { useRsvpPage } from "@/components/rsvp/useRsvpPage";
 import {
   NOT_OPEN_YET,
   refusedRsvpMessage,
+  takesRsvps,
   watchView,
   type Placed,
   type RsvpStanding,
@@ -133,7 +134,7 @@ export default function RsvpPage() {
 
   const capacity = tournament.rsvp?.capacity ?? 0;
   const count = page.rsvps?.length ?? 0;
-  const showsButton = state.kind === "not_open" || state.kind === "open" || state.kind === "full";
+  const showsButton = takesRsvps(state);
   const watch = watchView(state);
   // A closed list says why in place of the button.
   const shut = showsButton || watch ? null : refusedRsvpMessage(state);
@@ -238,16 +239,16 @@ export default function RsvpPage() {
             {watch && (
               <div className="flex flex-col gap-3">
                 <p className="flex items-center gap-2">
-                  {watch.status === "Live" && <span className="mb-live-dot" />}
+                  {watch.kind === "live" && <span className="mb-live-dot" />}
                   <span className="matchbook-display text-[0.95rem] font-bold tracking-[0.06em]">
                     {watch.status}
                   </span>
                 </p>
                 <Link
                   href={`/competitions/${tournament.id}`}
-                  className={`mb-btn ${watch.status === "Live" ? "mb-btn-coral" : "mb-btn-navy"} w-full sm:w-auto sm:self-start`}
+                  className={`mb-btn ${watch.kind === "live" ? "mb-btn-coral" : "mb-btn-navy"} w-full sm:w-auto sm:self-start`}
                 >
-                  <MbIcon id={watch.status === "Live" ? "eye" : "trophy"} size={14} />
+                  <MbIcon id={watch.kind === "live" ? "eye" : "trophy"} size={14} />
                   {watch.action}
                 </Link>
                 <p className="text-[0.85rem] text-mb-ink-muted">{watch.note}</p>
