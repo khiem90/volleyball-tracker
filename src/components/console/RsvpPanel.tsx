@@ -30,9 +30,10 @@ const sameDraft = (a: RsvpDraft, b: RsvpDraft) =>
  * The owner's RSVP tab: the RSVP link with its switch, Close or Reopen for
  * the list, and the scheduled time, open time, and capacity with a Save
  * button. Times are entered on this phone's clock. Turning the link on
- * also saves what the form holds, so a night set up and switched on in one
- * go needs no Save first, and is refused with the reason when either time
- * is missing. Settings that arrive from elsewhere replace the form unless
+ * also saves what the form holds, so a tournament set up and switched on
+ * in one go needs no Save first, and is refused with the reason when either
+ * time is missing. Turning it off writes only the switch, so it always
+ * works and leaves the form as typed. Settings that arrive from elsewhere replace the form unless
  * it is being edited. Once anyone is on the list the open time is
  * read-only, and the capacity stepper stops at the confirmed count; both
  * say why.
@@ -41,12 +42,15 @@ export const RsvpPanel = ({
   tournament,
   list,
   onSave,
+  onTurnOff,
   onSetClosed,
 }: {
   tournament: Tournament;
   /** What the list already holds; null until it arrives. */
   list: ListSoFar | null;
   onSave: (setup: RsvpSetup) => void;
+  /** Turn the link off, writing nothing else. */
+  onTurnOff: () => void;
   onSetClosed: (closed: boolean) => void;
 }) => {
   const [zone] = useState(deviceZone);
@@ -92,8 +96,15 @@ export const RsvpPanel = ({
     onSave({ ...draft, enabled: stored.enabled });
   };
 
+  // Turning off always works and leaves the form's edits unsaved. Turning
+  // on saves the form with it, since the link needs both times.
   const toggleLink = () => {
-    const next = { ...draft, enabled: !stored.enabled };
+    if (stored.enabled) {
+      setLinkProblem(null);
+      onTurnOff();
+      return;
+    }
+    const next = { ...draft, enabled: true };
     const [problem] = Object.values(rsvpProblems(next, against));
     if (problem) {
       setLinkProblem(problem);

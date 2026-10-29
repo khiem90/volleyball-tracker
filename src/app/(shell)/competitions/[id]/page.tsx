@@ -229,6 +229,7 @@ const TournamentConsole = () => {
                 tournament={tournament}
                 list={page.listSoFar}
                 onSave={page.saveRsvp}
+                onTurnOff={page.turnRsvpLinkOff}
                 onSetClosed={page.setRsvpClosed}
               />
             )}
@@ -296,7 +297,8 @@ const TournamentConsole = () => {
           if (!open && !page.isDeleting) page.setDeleteOpen(false);
         }}
         title="Delete the tournament?"
-        description={page.deleteDescription}
+        description={page.deleteConfirmation.description}
+        canConfirm={page.deleteConfirmation.canConfirm}
         isDeleting={page.isDeleting}
         onConfirm={page.remove}
       />

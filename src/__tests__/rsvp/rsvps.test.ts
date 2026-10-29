@@ -13,6 +13,7 @@ import {
   saveRsvpSettings,
   subscribeToNotices,
   subscribeToRsvps,
+  turnRsvpLinkOff,
 } from "@/lib/rsvps";
 import { createTournament, type NewTournamentInput } from "@/lib/tournaments";
 import { DEFAULT_TERMINOLOGY } from "@/types/competition-config";
@@ -124,6 +125,24 @@ describeFirestoreRules("RSVP settings on Firestore", (env) => {
     ).rejects.toThrow("Set when RSVPs open before turning the RSVP link on.");
 
     expect((await stored(db, created.id)).revision).toBe(created.revision);
+  });
+
+  it("turns the link off on its own, leaving the times and capacity as stored, on a new revision", async () => {
+    const db = ownerDb();
+    const created = await createTournament(db, owner, {
+      ...input,
+      scheduledAt: friday7pm,
+      scheduledZone: "America/New_York",
+      rsvp: { enabled: true, capacity: 12, opensAt: thursday6pm, closed: true },
+    });
+
+    await turnRsvpLinkOff(db, created.id);
+
+    const after = await stored(db, created.id);
+    expect(after.rsvp).toEqual({ enabled: false, capacity: 12, opensAt: thursday6pm, closed: true });
+    expect(after.scheduledAt).toBe(friday7pm);
+    expect(after.scheduledZone).toBe("America/New_York");
+    expect(after.basedOn).toBe(created.revision);
   });
 });
 

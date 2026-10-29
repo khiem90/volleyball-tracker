@@ -94,6 +94,14 @@ export const saveRsvpSettings = async (
 };
 
 /**
+ * Turn the RSVP link off, writing `rsvp.enabled` and nothing else, so it
+ * works whatever the RSVP tab's form holds, and a capacity saved from
+ * another phone at the same moment survives. Owner only.
+ */
+export const turnRsvpLinkOff = (db: Firestore, tournamentId: string): Promise<void> =>
+  updateTournamentFields(db, tournamentId, { "rsvp.enabled": false });
+
+/**
  * Close the list early, or reopen it. A close stops new RSVPs and leaves
  * withdrawals open; starting the tournament closes the list for good, so a
  * reopen is refused before anything is written once it has left draft.

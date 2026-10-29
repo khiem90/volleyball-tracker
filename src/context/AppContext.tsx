@@ -32,7 +32,10 @@ import {
 } from "@/lib/sharing";
 import { queueTournamentCommand, type AppliedCommand } from "@/lib/commandQueue";
 import { deviceZone, type RsvpSetup } from "@/lib/rsvp";
-import { saveRsvpSettings as saveRsvpSettingsDoc } from "@/lib/rsvps";
+import {
+  saveRsvpSettings as saveRsvpSettingsDoc,
+  turnRsvpLinkOff as turnRsvpLinkOffDoc,
+} from "@/lib/rsvps";
 import {
   buildTournamentToSave,
   deleteTournament as deleteTournamentDoc,
@@ -226,6 +229,8 @@ interface AppContextValue {
    * phone's zone. Rejects with the first problem before writing. Owner only.
    */
   saveRsvpSettings: (tournamentId: string, setup: RsvpSetup) => Promise<void>;
+  /** Turn a tournament's RSVP link off, writing nothing else. Owner only. */
+  turnRsvpLinkOff: (tournamentId: string) => Promise<void>;
   /** Replace a tournament's scorer link; every phone on the old one loses access. Owner only. */
   regenerateScorerLink: (tournamentId: string) => Promise<string>;
   /** The key behind a tournament's scorer link, null while it has none. Owner only. */
@@ -717,6 +722,11 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     [tournamentsById]
   );
 
+  const turnRsvpLinkOff = useCallback(
+    (tournamentId: string) => turnRsvpLinkOffDoc(requireDb(), tournamentId),
+    []
+  );
+
   const subscribeToScorerKey = useCallback(
     (
       tournamentId: string,
@@ -776,6 +786,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     isLinkedLoading,
     setSpectatorLink,
     saveRsvpSettings,
+    turnRsvpLinkOff,
     regenerateScorerLink,
     subscribeToScorerKey,
   };

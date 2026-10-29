@@ -192,15 +192,15 @@ export const firstProblem = (problems: SetupProblems): string | undefined =>
 /**
  * The scheduled time and RSVP settings the tournament is saved with. A
  * scheduled time carries the zone it was entered in. The RSVP map is
- * written once the link is on or an open time is set, so a night kept
- * private for now keeps what the owner entered; an untouched section adds
- * nothing.
+ * written once the link is on, an open time is set, or the capacity moves
+ * off the default, so a tournament kept private for now keeps what the
+ * owner entered; an untouched section adds nothing.
  */
 const scheduleInput = (
   setup: TournamentSetup,
 ): Pick<NewTournamentInput, "scheduledAt" | "scheduledZone" | "rsvp"> => ({
   ...(setup.scheduledAt !== null && { scheduledAt: setup.scheduledAt, scheduledZone: setup.zone }),
-  ...((setup.rsvpEnabled || setup.opensAt !== null) && {
+  ...((setup.rsvpEnabled || setup.opensAt !== null || setup.capacity !== DEFAULT_CAPACITY) && {
     rsvp: {
       enabled: setup.rsvpEnabled,
       capacity: setup.capacity,

@@ -13,7 +13,7 @@ import {
   completesTournament,
   consoleAccess,
   courtsView,
-  deleteTournamentDescription,
+  deleteConfirmation,
   failureNotice,
   isCorrectable,
   roleFor,
@@ -114,6 +114,7 @@ export const useConsole = (tournamentId: string) => {
     holdsScorerLink,
     setSpectatorLink,
     saveRsvpSettings,
+    turnRsvpLinkOff,
     regenerateScorerLink,
     subscribeToScorerKey,
   } = useApp();
@@ -469,6 +470,17 @@ export const useConsole = (tournamentId: string) => {
     [tournament, access.canManageRsvp, saveRsvpSettings, reportFailure],
   );
 
+  // Turning the link off writes only the switch, so it works whatever the
+  // form holds and shows at once from the local write.
+  const turnLinkOff = useCallback(() => {
+    if (!tournament || !access.canManageRsvp) return;
+    setActionError(null);
+    turnRsvpLinkOff(tournament.id).catch((error: unknown) => {
+      console.error("Failed to turn the RSVP link off:", error);
+      reportFailure("The RSVP link could not be turned off.", error);
+    });
+  }, [tournament, access.canManageRsvp, turnRsvpLinkOff, reportFailure]);
+
   // Close and reopen show at once from the local write, like the settings.
   const { setClosed: setListClosed } = rsvpList;
   const setRsvpClosed = useCallback(
@@ -726,6 +738,7 @@ export const useConsole = (tournamentId: string) => {
     regenerate,
     // RSVP
     saveRsvp,
+    turnRsvpLinkOff: turnLinkOff,
     setRsvpClosed,
     /** The RSVP list in arrival order, for the owner; null for anyone else and until it arrives. */
     rsvps: rsvpList.rsvps,
@@ -734,10 +747,15 @@ export const useConsole = (tournamentId: string) => {
     listSoFar: tournament && rsvpList.rsvps ? listSoFar(tournament, rsvpList.rsvps) : null,
     addHeldSpot: rsvpList.addHeld,
     removeRsvp: rsvpList.remove,
-    /** What the delete confirmation says will go, with the headcount when anyone is on the list. */
-    deleteDescription: tournament
-      ? deleteTournamentDescription(tournament.name, rsvpList.rsvps?.length ?? 0)
-      : "",
+    /** What the delete confirmation says will go, and whether Delete is offered yet: it waits for the list. */
+    deleteConfirmation: deleteConfirmation(
+      tournament?.name ?? "",
+      rsvpList.rsvps
+        ? { kind: "counted", count: rsvpList.rsvps.length }
+        : rsvpList.error
+          ? { kind: "unknown" }
+          : { kind: "counting" },
+    ),
     // Courts and queue
     /** True while a court, queue, or team edit is being saved. */
     isApplying,

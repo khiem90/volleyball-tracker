@@ -129,7 +129,7 @@ describe("setupInput", () => {
     });
   });
 
-  it("keeps the times of a night whose RSVP link stays off, and adds nothing when the section is untouched", () => {
+  it("keeps the times and a changed capacity of a night whose RSVP link stays off, and adds nothing when the section is untouched", () => {
     const friday7pm = Date.UTC(2026, 10, 7, 0, 0);
     const ready = { name: "Friday night", format: "round_robin" as const, teamIds: ["t1", "t2", "t3"] };
 
@@ -147,6 +147,9 @@ describe("setupInput", () => {
       opensAt: friday7pm - 3_600_000,
       closed: false,
     });
+
+    const capacityOnly = setupInput(setup({ ...ready, capacity: 20 }), roster);
+    expect(capacityOnly.rsvp).toEqual({ enabled: false, capacity: 20, closed: false });
 
     const untouched = setupInput(setup(ready), roster);
     expect(untouched).not.toHaveProperty("scheduledAt");
