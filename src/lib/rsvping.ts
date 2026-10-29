@@ -28,7 +28,7 @@ import {
   rsvpPageState,
   rsvpProblems,
   rsvpSettingsOf,
-  type AccountNights,
+  type AccountTournaments,
   type AccountRsvp,
   type RsvpEntry,
   type RsvpSetup,
@@ -202,8 +202,8 @@ export class RsvpRefusedError extends Error {
 /**
  * Why the rules refused an RSVP to this tournament, from the tournament as
  * the server has it now. A refused read means the owner turned the link
- * off. The phone's clock is used only to tell a closed or started night
- * from one that is not open yet; a night this phone thinks is open was
+ * off. The phone's clock is used only to tell a closed or started tournament
+ * from one that is not open yet; a tournament this phone thinks is open was
  * refused by the server's clock, so it reads as not open yet.
  */
 const whyRefused = async (db: Firestore, tournamentId: string): Promise<string> => {
@@ -383,29 +383,29 @@ const subscribeToAccountRsvps = (
   );
 
 /**
- * Everything Home needs about the nights the account `uid` has RSVP'd to:
+ * Everything Home needs about the tournaments the account `uid` has RSVP'd to:
  * its own RSVPs across tournaments, and for each tournament they point at,
  * the tournament, its list, and its newest notice. Delivers once the
  * account's RSVPs arrive and again with every change; homeRsvpRows turns a
  * delivery into rows.
  *
- * A night whose reads the rules refuse, as they do once the owner turns
+ * A tournament whose reads the rules refuse, as they do once the owner turns
  * its link off, is dropped from the delivery rather than failing it, and
  * read again the next time the account's RSVPs change. A withdrawal drops
- * its night and stops its reads. Only the account's own query failing
+ * its tournament and stops its reads. Only the account's own query failing
  * calls `onError`, which ends the subscription.
  */
-export const subscribeToAccountNights = (
+export const subscribeToAccountTournaments = (
   db: Firestore,
   uid: string,
-  onChange: (nights: AccountNights) => void,
+  onChange: (read: AccountTournaments) => void,
   onError?: (error: Error) => void,
 ): Unsubscribe => {
   let mine: AccountRsvp[] | null = null;
   const tournaments: Record<string, Tournament> = {};
   const lists: Record<string, Rsvp[]> = {};
   const notices: Record<string, Notice[]> = {};
-  const nights = new Map<string, Unsubscribe[]>();
+  const watching = new Map<string, Unsubscribe[]>();
   let stopped = false;
 
   const deliver = () => {
@@ -414,22 +414,22 @@ export const subscribeToAccountNights = (
   };
 
   const forget = (tournamentId: string) => {
-    nights.get(tournamentId)?.forEach((unsubscribe) => unsubscribe());
-    nights.delete(tournamentId);
+    watching.get(tournamentId)?.forEach((unsubscribe) => unsubscribe());
+    watching.delete(tournamentId);
     delete tournaments[tournamentId];
     delete lists[tournamentId];
     delete notices[tournamentId];
   };
 
   const drop = (tournamentId: string) => {
-    if (!nights.has(tournamentId)) return;
+    if (!watching.has(tournamentId)) return;
     forget(tournamentId);
     deliver();
   };
 
   const watch = (tournamentId: string) => {
     const refused = () => drop(tournamentId);
-    nights.set(tournamentId, [
+    watching.set(tournamentId, [
       subscribeToTournament(
         db,
         tournamentId,
@@ -468,11 +468,11 @@ export const subscribeToAccountNights = (
     (rsvps) => {
       mine = rsvps;
       const wanted = new Set(rsvps.map((r) => r.tournamentId));
-      for (const tournamentId of [...nights.keys()]) {
+      for (const tournamentId of [...watching.keys()]) {
         if (!wanted.has(tournamentId)) forget(tournamentId);
       }
       for (const tournamentId of wanted) {
-        if (!nights.has(tournamentId)) watch(tournamentId);
+        if (!watching.has(tournamentId)) watch(tournamentId);
       }
       deliver();
     },
@@ -486,7 +486,7 @@ export const subscribeToAccountNights = (
     if (stopped) return;
     stopped = true;
     unsubscribeMine();
-    for (const tournamentId of [...nights.keys()]) forget(tournamentId);
+    for (const tournamentId of [...watching.keys()]) forget(tournamentId);
   }
 
   return stop;

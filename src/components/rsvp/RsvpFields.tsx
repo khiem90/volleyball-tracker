@@ -118,7 +118,7 @@ export const CapacityField = ({
           type="button"
           onClick={stepDown}
           disabled={disabled || value <= 1}
-          aria-label="One fewer spot"
+          aria-label="Lower the capacity by one"
           className={step}
         >
           −
@@ -127,7 +127,7 @@ export const CapacityField = ({
           type="button"
           onClick={() => onChange(clamp(value + 1))}
           disabled={disabled || value >= MAX_CAPACITY}
-          aria-label="One more spot"
+          aria-label="Raise the capacity by one"
           className={step}
         >
           +

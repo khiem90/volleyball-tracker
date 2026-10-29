@@ -707,7 +707,7 @@ describeFirestoreRules("Firestore rules", (env) => {
      * off. The open time is computed here, inside the test, so the rules'
      * request time is compared against the same clock.
      */
-    const seedNight = (
+    const seedRsvpTournament = (
       id: string,
       options: {
         enabled?: boolean;
@@ -743,12 +743,12 @@ describeFirestoreRules("Firestore rules", (env) => {
 
     describe("reading the tournament through the RSVP link", () => {
       it("lets a signed-in account read it while the link is on", async () => {
-        await seedNight("tourn-1");
+        await seedRsvpTournament("tourn-1");
         await assertSucceeds(getDoc(tournamentAt(accountDb(), "tourn-1")));
       });
 
       it("refuses the account once the owner turns the link off", async () => {
-        await seedNight("tourn-1");
+        await seedRsvpTournament("tourn-1");
         const db = accountDb();
         await assertSucceeds(getDoc(tournamentAt(db, "tourn-1")));
 
@@ -760,7 +760,7 @@ describeFirestoreRules("Firestore rules", (env) => {
       });
 
       it("refuses a signed-out request and the anonymous identity a scorer link creates", async () => {
-        await seedNight("tourn-1");
+        await seedRsvpTournament("tourn-1");
         await assertFails(getDoc(tournamentAt(signedOutDb(), "tourn-1")));
         await assertFails(getDoc(tournamentAt(anonymousDb(), "tourn-1")));
       });
@@ -768,14 +768,14 @@ describeFirestoreRules("Firestore rules", (env) => {
 
     describe("watching through the RSVP link", () => {
       it("lets a signed-in account read the matches of a live tournament while the link is on", async () => {
-        await seedNight("tourn-1", { status: "live" });
+        await seedRsvpTournament("tourn-1", { status: "live" });
         const db = accountDb();
         await assertSucceeds(getDocs(matchesOf(db, "tourn-1")));
         await assertSucceeds(getDoc(matchAt(db, "tourn-1", "m1")));
       });
 
       it("refuses the account the matches once the owner turns the link off", async () => {
-        await seedNight("tourn-1", { status: "live" });
+        await seedRsvpTournament("tourn-1", { status: "live" });
         const db = accountDb();
         await assertSucceeds(getDocs(matchesOf(db, "tourn-1")));
 
@@ -787,13 +787,13 @@ describeFirestoreRules("Firestore rules", (env) => {
       });
 
       it("refuses the matches to a signed-out request and the anonymous identity a scorer link creates", async () => {
-        await seedNight("tourn-1", { status: "live" });
+        await seedRsvpTournament("tourn-1", { status: "live" });
         await assertFails(getDocs(matchesOf(signedOutDb(), "tourn-1")));
         await assertFails(getDocs(matchesOf(anonymousDb(), "tourn-1")));
       });
 
       it("gives the account nothing to write: not a match, and not the tournament", async () => {
-        await seedNight("tourn-1", { status: "live" });
+        await seedRsvpTournament("tourn-1", { status: "live" });
         const db = accountDb();
         await assertFails(updateDoc(matchAt(db, "tourn-1", "m1"), { status: "completed" }));
         await assertFails(updateDoc(tournamentAt(db, "tourn-1"), { name: "Mine now" }));
@@ -811,17 +811,17 @@ describeFirestoreRules("Firestore rules", (env) => {
       });
 
       it("is accepted from a minute after the open time, by the server's clock", async () => {
-        await seedNight("tourn-1", { opensInMinutes: -1 });
+        await seedRsvpTournament("tourn-1", { opensInMinutes: -1 });
         await assertSucceeds(setDoc(rsvpAt(accountDb(dan), "tourn-1", dan), rsvpBy(dan)));
       });
 
       it("is refused a minute before the open time", async () => {
-        await seedNight("tourn-1", { opensInMinutes: 1 });
+        await seedRsvpTournament("tourn-1", { opensInMinutes: 1 });
         await assertFails(setDoc(rsvpAt(accountDb(dan), "tourn-1", dan), rsvpBy(dan)));
       });
 
       it("must carry the request's time as its arrival time, never a time of the phone's choosing", async () => {
-        await seedNight("tourn-1");
+        await seedRsvpTournament("tourn-1");
         const db = accountDb(dan);
         await assertFails(
           setDoc(rsvpAt(db, "tourn-1", dan), rsvpBy(dan, { createdAt: minutesFromNow(-60) })),
@@ -830,14 +830,14 @@ describeFirestoreRules("Firestore rules", (env) => {
       });
 
       it("may leave the note out", async () => {
-        await seedNight("tourn-1");
+        await seedRsvpTournament("tourn-1");
         const withoutNote: Record<string, unknown> = rsvpBy(dan);
         delete withoutNote.note;
         await assertSucceeds(setDoc(rsvpAt(accountDb(dan), "tourn-1", dan), withoutNote));
       });
 
       it("is refused under another account's id or uid", async () => {
-        await seedNight("tourn-1");
+        await seedRsvpTournament("tourn-1");
         const db = accountDb(dan);
         await assertFails(setDoc(rsvpAt(db, "tourn-1", otherAccount), rsvpBy(otherAccount)));
         await assertFails(setDoc(rsvpAt(db, "tourn-1", dan), rsvpBy(otherAccount)));
@@ -845,34 +845,34 @@ describeFirestoreRules("Firestore rules", (env) => {
       });
 
       it("is refused from the anonymous identity a scorer link creates, and from a signed-out request", async () => {
-        await seedNight("tourn-1");
+        await seedRsvpTournament("tourn-1");
         const phone = "scorer-phone-uid";
         await assertFails(setDoc(rsvpAt(anonymousDb(phone), "tourn-1", phone), rsvpBy(phone)));
         await assertFails(setDoc(rsvpAt(signedOutDb(), "tourn-1", dan), rsvpBy(dan)));
       });
 
       it("is refused while the link is off or the list is closed", async () => {
-        await seedNight("tourn-1", { enabled: false });
-        await seedNight("tourn-2", { closed: true });
+        await seedRsvpTournament("tourn-1", { enabled: false });
+        await seedRsvpTournament("tourn-2", { closed: true });
         const db = accountDb(dan);
         await assertFails(setDoc(rsvpAt(db, "tourn-1", dan), rsvpBy(dan)));
         await assertFails(setDoc(rsvpAt(db, "tourn-2", dan), rsvpBy(dan)));
       });
 
       it.each(["live", "completed"] as const)("is refused once the tournament is %s", async (status) => {
-        await seedNight("tourn-1", { status });
+        await seedRsvpTournament("tourn-1", { status });
         await assertFails(setDoc(rsvpAt(accountDb(dan), "tourn-1", dan), rsvpBy(dan)));
       });
 
       it("is refused with a key outside the RSVP's fields", async () => {
-        await seedNight("tourn-1");
+        await seedRsvpTournament("tourn-1");
         const db = accountDb(dan);
         await assertFails(setDoc(rsvpAt(db, "tourn-1", dan), rsvpBy(dan, { held: true })));
         await assertFails(setDoc(rsvpAt(db, "tourn-1", dan), rsvpBy(dan, { status: "confirmed" })));
       });
 
       it("needs a name of one to forty characters", async () => {
-        await seedNight("tourn-1");
+        await seedRsvpTournament("tourn-1");
         const db = accountDb(dan);
         await assertFails(setDoc(rsvpAt(db, "tourn-1", dan), rsvpBy(dan, { name: "" })));
         await assertFails(setDoc(rsvpAt(db, "tourn-1", dan), rsvpBy(dan, { name: "x".repeat(41) })));
@@ -881,14 +881,14 @@ describeFirestoreRules("Firestore rules", (env) => {
       });
 
       it("keeps the note short", async () => {
-        await seedNight("tourn-1");
+        await seedRsvpTournament("tourn-1");
         const db = accountDb(dan);
         await assertFails(setDoc(rsvpAt(db, "tourn-1", dan), rsvpBy(dan, { note: "x".repeat(141) })));
         await assertSucceeds(setDoc(rsvpAt(db, "tourn-1", dan), rsvpBy(dan, { note: "x".repeat(140) })));
       });
 
       it("lands together with the remembered name in one batch", async () => {
-        await seedNight("tourn-1");
+        await seedRsvpTournament("tourn-1");
         const db = accountDb(dan);
         const batch = writeBatch(db);
         batch.set(rsvpAt(db, "tourn-1", dan), rsvpBy(dan));
@@ -901,18 +901,18 @@ describeFirestoreRules("Firestore rules", (env) => {
       const rsvps = { "dan-uid": { name: "Dan" }, "eve-uid": { name: "Eve", note: "Late" } };
 
       it("lets any signed-in account list the RSVPs in arrival order while the link is on", async () => {
-        await seedNight("tourn-1", { rsvps });
+        await seedRsvpTournament("tourn-1", { rsvps });
         await assertSucceeds(getDocs(query(rsvpsOf(accountDb(), "tourn-1"), orderBy("createdAt"))));
       });
 
       it("refuses a signed-out request and the anonymous identity", async () => {
-        await seedNight("tourn-1", { rsvps });
+        await seedRsvpTournament("tourn-1", { rsvps });
         await assertFails(getDocs(rsvpsOf(signedOutDb(), "tourn-1")));
         await assertFails(getDocs(rsvpsOf(anonymousDb(), "tourn-1")));
       });
 
       it("refuses another account once the link is off, and the owner can still read it", async () => {
-        await seedNight("tourn-1", { enabled: false, rsvps });
+        await seedRsvpTournament("tourn-1", { enabled: false, rsvps });
         await assertFails(getDocs(rsvpsOf(accountDb(), "tourn-1")));
         await assertSucceeds(getDocs(rsvpsOf(accountDb(owner), "tourn-1")));
       });
@@ -925,20 +925,20 @@ describeFirestoreRules("Firestore rules", (env) => {
         query(collectionGroup(db, "rsvps"), where("uid", "==", uid), orderBy("createdAt"));
 
       it("returns the account's own RSVPs from every tournament, the link on or off", async () => {
-        await seedNight("tourn-1", { rsvps: { [dan]: { name: "Dan" }, [eve]: { name: "Eve" } } });
-        await seedNight("tourn-2", { enabled: false, rsvps: { [dan]: { name: "Dan" } } });
+        await seedRsvpTournament("tourn-1", { rsvps: { [dan]: { name: "Dan" }, [eve]: { name: "Eve" } } });
+        await seedRsvpTournament("tourn-2", { enabled: false, rsvps: { [dan]: { name: "Dan" } } });
         const snapshot = await assertSucceeds(getDocs(mine(accountDb(dan), dan)));
         expect(snapshot.docs.map((d) => d.ref.parent.parent?.id).sort()).toEqual(["tourn-1", "tourn-2"]);
       });
 
       it("refuses another account's RSVPs, and a query not limited to the account's own", async () => {
-        await seedNight("tourn-1", { rsvps: { [dan]: { name: "Dan" }, [eve]: { name: "Eve" } } });
+        await seedRsvpTournament("tourn-1", { rsvps: { [dan]: { name: "Dan" }, [eve]: { name: "Eve" } } });
         await assertFails(getDocs(mine(accountDb(dan), eve)));
         await assertFails(getDocs(query(collectionGroup(accountDb(dan), "rsvps"))));
       });
 
       it("refuses a signed-out request, and the anonymous identity even under the same uid", async () => {
-        await seedNight("tourn-1", { rsvps: { [dan]: { name: "Dan" } } });
+        await seedRsvpTournament("tourn-1", { rsvps: { [dan]: { name: "Dan" } } });
         await assertFails(getDocs(mine(signedOutDb(), dan)));
         await assertFails(getDocs(mine(anonymousDb(dan), dan)));
       });
@@ -984,7 +984,7 @@ describeFirestoreRules("Firestore rules", (env) => {
       const rsvps = { [dan]: { name: "Dan", note: "Late" }, [eve]: { name: "Eve" } };
 
       it("lets the account change its own name and note", async () => {
-        await seedNight("tourn-1", { rsvps });
+        await seedRsvpTournament("tourn-1", { rsvps });
         const db = accountDb(dan);
         await assertSucceeds(updateDoc(rsvpAt(db, "tourn-1", dan), { name: "Dan from Tuesdays" }));
         await assertSucceeds(updateDoc(rsvpAt(db, "tourn-1", dan), { note: "On time after all" }));
@@ -992,12 +992,12 @@ describeFirestoreRules("Firestore rules", (env) => {
       });
 
       it("lets the account change them after the owner closes the list", async () => {
-        await seedNight("tourn-1", { closed: true, rsvps });
+        await seedRsvpTournament("tourn-1", { closed: true, rsvps });
         await assertSucceeds(updateDoc(rsvpAt(accountDb(dan), "tourn-1", dan), { name: "Daniel" }));
       });
 
       it("never lets the account move its arrival time or its uid", async () => {
-        await seedNight("tourn-1", { rsvps });
+        await seedRsvpTournament("tourn-1", { rsvps });
         const db = accountDb(dan);
         await assertFails(updateDoc(rsvpAt(db, "tourn-1", dan), { createdAt: serverTimestamp() }));
         await assertFails(updateDoc(rsvpAt(db, "tourn-1", dan), { createdAt: minutesFromNow(-60) }));
@@ -1005,7 +1005,7 @@ describeFirestoreRules("Firestore rules", (env) => {
       });
 
       it("holds a changed name and note to the limits an RSVP takes, and adds no other key", async () => {
-        await seedNight("tourn-1", { rsvps });
+        await seedRsvpTournament("tourn-1", { rsvps });
         const db = accountDb(dan);
         await assertFails(updateDoc(rsvpAt(db, "tourn-1", dan), { name: "" }));
         await assertFails(updateDoc(rsvpAt(db, "tourn-1", dan), { name: "x".repeat(41) }));
@@ -1014,7 +1014,7 @@ describeFirestoreRules("Firestore rules", (env) => {
       });
 
       it("refuses a change to another account's RSVP, from that account's neighbour or the owner", async () => {
-        await seedNight("tourn-1", { rsvps });
+        await seedRsvpTournament("tourn-1", { rsvps });
         await assertFails(updateDoc(rsvpAt(accountDb(eve), "tourn-1", dan), { name: "Mallory" }));
         await assertFails(updateDoc(rsvpAt(accountDb(owner), "tourn-1", dan), { name: "Mallory" }));
       });
@@ -1026,8 +1026,8 @@ describeFirestoreRules("Firestore rules", (env) => {
       const rsvps = { [dan]: { name: "Dan" }, [eve]: { name: "Eve" } };
 
       it("lets the account withdraw while the tournament is a draft, even after the list is closed", async () => {
-        await seedNight("tourn-1", { rsvps });
-        await seedNight("tourn-2", { closed: true, rsvps });
+        await seedRsvpTournament("tourn-1", { rsvps });
+        await seedRsvpTournament("tourn-2", { closed: true, rsvps });
         await assertSucceeds(deleteDoc(rsvpAt(accountDb(dan), "tourn-1", dan)));
         await assertSucceeds(deleteDoc(rsvpAt(accountDb(dan), "tourn-2", dan)));
       });
@@ -1035,13 +1035,13 @@ describeFirestoreRules("Firestore rules", (env) => {
       it.each(["live", "completed"] as const)(
         "refuses the account's withdrawal once the tournament is %s",
         async (status) => {
-          await seedNight("tourn-1", { status, rsvps });
+          await seedRsvpTournament("tourn-1", { status, rsvps });
           await assertFails(deleteDoc(rsvpAt(accountDb(dan), "tourn-1", dan)));
         },
       );
 
       it("refuses withdrawing someone else, and the anonymous identity under the same uid", async () => {
-        await seedNight("tourn-1", { rsvps });
+        await seedRsvpTournament("tourn-1", { rsvps });
         await assertFails(deleteDoc(rsvpAt(accountDb(eve), "tourn-1", dan)));
         await assertFails(deleteDoc(rsvpAt(anonymousDb(dan), "tourn-1", dan)));
         await assertFails(deleteDoc(rsvpAt(signedOutDb(), "tourn-1", dan)));
@@ -1055,14 +1055,14 @@ describeFirestoreRules("Firestore rules", (env) => {
       it.each(["draft", "live", "completed"] as const)(
         "lets the owner remove an RSVP while the tournament is %s",
         async (status) => {
-          await seedNight("tourn-1", { status, rsvps });
+          await seedRsvpTournament("tourn-1", { status, rsvps });
           await assertSucceeds(deleteDoc(rsvpAt(accountDb(owner), "tourn-1", dan)));
         },
       );
 
       it("lets the owner remove an RSVP after the list is closed and with the link off", async () => {
-        await seedNight("tourn-1", { closed: true, rsvps });
-        await seedNight("tourn-2", { enabled: false, rsvps });
+        await seedRsvpTournament("tourn-1", { closed: true, rsvps });
+        await seedRsvpTournament("tourn-2", { enabled: false, rsvps });
         await assertSucceeds(deleteDoc(rsvpAt(accountDb(owner), "tourn-1", dan)));
         await assertSucceeds(deleteDoc(rsvpAt(accountDb(owner), "tourn-2", dan)));
       });
@@ -1085,32 +1085,32 @@ describeFirestoreRules("Firestore rules", (env) => {
       it.each(["draft", "live"] as const)(
         "are added by the owner under a generated id while the tournament is %s",
         async (status) => {
-          await seedNight("tourn-1", { status });
+          await seedRsvpTournament("tourn-1", { status });
           await assertSucceeds(setDoc(doc(rsvpsOf(accountDb(owner), "tourn-1")), held()));
         },
       );
 
       it("are added after the list is closed and with the link off, which only stop RSVPs from people", async () => {
-        await seedNight("tourn-1", { closed: true });
-        await seedNight("tourn-2", { enabled: false });
+        await seedRsvpTournament("tourn-1", { closed: true });
+        await seedRsvpTournament("tourn-2", { enabled: false });
         await assertSucceeds(setDoc(doc(rsvpsOf(accountDb(owner), "tourn-1")), held()));
         await assertSucceeds(setDoc(doc(rsvpsOf(accountDb(owner), "tourn-2")), held()));
       });
 
       it("are refused once the tournament is completed", async () => {
-        await seedNight("tourn-1", { status: "completed" });
+        await seedRsvpTournament("tourn-1", { status: "completed" });
         await assertFails(setDoc(doc(rsvpsOf(accountDb(owner), "tourn-1")), held()));
       });
 
       it("are added by nobody but the owner", async () => {
-        await seedNight("tourn-1");
+        await seedRsvpTournament("tourn-1");
         for (const db of [accountDb(otherAccount), signedOutDb(), anonymousDb()]) {
           await assertFails(setDoc(doc(rsvpsOf(db, "tourn-1")), held()));
         }
       });
 
       it("must be held, with no uid, a name of one to forty characters, the request's time, and nothing else", async () => {
-        await seedNight("tourn-1");
+        await seedRsvpTournament("tourn-1");
         const db = accountDb(owner);
         const add = (changes: Record<string, unknown>) => setDoc(doc(rsvpsOf(db, "tourn-1")), held(changes));
         await assertFails(add({ held: false }));
@@ -1128,7 +1128,7 @@ describeFirestoreRules("Firestore rules", (env) => {
       });
 
       it("are changed by nobody, not even the owner", async () => {
-        await seedNight("tourn-1");
+        await seedRsvpTournament("tourn-1");
         await seedHeld("tourn-1", "held-1");
         for (const db of [accountDb(owner), accountDb(otherAccount)]) {
           await assertFails(updateDoc(rsvpAt(db, "tourn-1", "held-1"), { name: "Sam" }));
@@ -1139,14 +1139,14 @@ describeFirestoreRules("Firestore rules", (env) => {
       });
 
       it("are removed by the owner and nobody else", async () => {
-        await seedNight("tourn-1");
+        await seedRsvpTournament("tourn-1");
         await seedHeld("tourn-1", "held-1");
         await assertFails(deleteDoc(rsvpAt(accountDb(otherAccount), "tourn-1", "held-1")));
         await assertSucceeds(deleteDoc(rsvpAt(accountDb(owner), "tourn-1", "held-1")));
       });
 
       it("are listed with everyone else's RSVPs", async () => {
-        await seedNight("tourn-1", { rsvps: { "dan-uid": { name: "Dan" } } });
+        await seedRsvpTournament("tourn-1", { rsvps: { "dan-uid": { name: "Dan" } } });
         await seedHeld("tourn-1", "held-1");
         await assertSucceeds(getDocs(query(rsvpsOf(accountDb(), "tourn-1"), orderBy("createdAt"))));
       });
@@ -1154,7 +1154,7 @@ describeFirestoreRules("Firestore rules", (env) => {
 
     describe("the owner's own RSVP", () => {
       it("is made like anyone else's, under the owner's uid, while RSVPs are open", async () => {
-        await seedNight("tourn-1");
+        await seedRsvpTournament("tourn-1");
         await assertSucceeds(
           setDoc(rsvpAt(accountDb(owner), "tourn-1", owner), {
             uid: owner,
@@ -1165,7 +1165,7 @@ describeFirestoreRules("Firestore rules", (env) => {
       });
 
       it("is refused before the open time, like anyone else's", async () => {
-        await seedNight("tourn-1", { opensInMinutes: 1 });
+        await seedRsvpTournament("tourn-1", { opensInMinutes: 1 });
         await assertFails(
           setDoc(rsvpAt(accountDb(owner), "tourn-1", owner), {
             uid: owner,
@@ -1189,14 +1189,14 @@ describeFirestoreRules("Firestore rules", (env) => {
         });
 
       it("are posted and deleted by the owner", async () => {
-        await seedNight("tourn-1");
+        await seedRsvpTournament("tourn-1");
         const db = accountDb(owner);
         await assertSucceeds(setDoc(noticeAt(db, "tourn-1", "n1"), notice()));
         await assertSucceeds(deleteDoc(noticeAt(db, "tourn-1", "n1")));
       });
 
       it("cannot be posted or deleted by another account, a signed-out request, or the anonymous identity", async () => {
-        await seedNight("tourn-1");
+        await seedRsvpTournament("tourn-1");
         await seedNotice("tourn-1", "n1");
         for (const db of [accountDb(otherAccount), signedOutDb(), anonymousDb()]) {
           await assertFails(setDoc(noticeAt(db, "tourn-1", "n2"), notice()));
@@ -1205,13 +1205,13 @@ describeFirestoreRules("Firestore rules", (env) => {
       });
 
       it("cannot be edited once posted, even by the owner", async () => {
-        await seedNight("tourn-1");
+        await seedRsvpTournament("tourn-1");
         await seedNotice("tourn-1", "n1");
         await assertFails(updateDoc(noticeAt(accountDb(owner), "tourn-1", "n1"), { body: "Typo" }));
       });
 
       it("carry a body of one to five hundred characters, the request's time, and nothing else", async () => {
-        await seedNight("tourn-1");
+        await seedRsvpTournament("tourn-1");
         const db = accountDb(owner);
         await assertFails(setDoc(noticeAt(db, "tourn-1", "n1"), notice({ body: "" })));
         await assertFails(setDoc(noticeAt(db, "tourn-1", "n1"), notice({ body: "x".repeat(501) })));
@@ -1222,7 +1222,7 @@ describeFirestoreRules("Firestore rules", (env) => {
       });
 
       it("are read by the owner, and by any signed-in account while the link is on", async () => {
-        await seedNight("tourn-1");
+        await seedRsvpTournament("tourn-1");
         await seedNotice("tourn-1", "n1");
         const newestFirst = (db: Firestore) =>
           getDocs(query(noticesOf(db, "tourn-1"), orderBy("createdAt", "desc")));
@@ -1231,14 +1231,14 @@ describeFirestoreRules("Firestore rules", (env) => {
       });
 
       it("refuse a signed-out request and the anonymous identity", async () => {
-        await seedNight("tourn-1");
+        await seedRsvpTournament("tourn-1");
         await seedNotice("tourn-1", "n1");
         await assertFails(getDocs(noticesOf(signedOutDb(), "tourn-1")));
         await assertFails(getDocs(noticesOf(anonymousDb(), "tourn-1")));
       });
 
       it("refuse another account once the link is off, and the owner can still read them", async () => {
-        await seedNight("tourn-1", { enabled: false });
+        await seedRsvpTournament("tourn-1", { enabled: false });
         await seedNotice("tourn-1", "n1");
         await assertFails(getDocs(noticesOf(accountDb(), "tourn-1")));
         await assertSucceeds(getDocs(noticesOf(accountDb(owner), "tourn-1")));
@@ -1249,7 +1249,7 @@ describeFirestoreRules("Firestore rules", (env) => {
         const read = { noticesReadAt: serverTimestamp() };
 
         it("is written by the RSVP's own account, as the request's time", async () => {
-          await seedNight("tourn-1", { rsvps: { [dan]: { name: "Dan" } } });
+          await seedRsvpTournament("tourn-1", { rsvps: { [dan]: { name: "Dan" } } });
           const db = accountDb(dan);
           await assertSucceeds(updateDoc(rsvpAt(db, "tourn-1", dan), read));
           await assertSucceeds(updateDoc(rsvpAt(db, "tourn-1", dan), read));
@@ -1257,21 +1257,21 @@ describeFirestoreRules("Firestore rules", (env) => {
         });
 
         it("is written by nobody else: not another account, the owner, a signed-out request, or the anonymous identity", async () => {
-          await seedNight("tourn-1", { rsvps: { [dan]: { name: "Dan" } } });
+          await seedRsvpTournament("tourn-1", { rsvps: { [dan]: { name: "Dan" } } });
           for (const db of [accountDb(otherAccount), accountDb(owner), signedOutDb(), anonymousDb(dan)]) {
             await assertFails(updateDoc(rsvpAt(db, "tourn-1", dan), read));
           }
         });
 
         it("cannot carry another change with it", async () => {
-          await seedNight("tourn-1", { rsvps: { [dan]: { name: "Dan" } } });
+          await seedRsvpTournament("tourn-1", { rsvps: { [dan]: { name: "Dan" } } });
           const db = accountDb(dan);
           await assertFails(updateDoc(rsvpAt(db, "tourn-1", dan), { ...read, createdAt: serverTimestamp() }));
           await assertFails(updateDoc(rsvpAt(db, "tourn-1", dan), { ...read, uid: otherAccount }));
         });
 
         it("may come with the RSVP itself, as the request's time", async () => {
-          await seedNight("tourn-1");
+          await seedRsvpTournament("tourn-1");
           const db = accountDb(dan);
           await assertFails(
             setDoc(rsvpAt(db, "tourn-1", dan), {

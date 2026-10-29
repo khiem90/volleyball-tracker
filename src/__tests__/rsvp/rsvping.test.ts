@@ -89,7 +89,7 @@ describeFirestoreRules("RSVP settings on Firestore", (env) => {
     expect(after.rsvp?.capacity).toBe(14);
   });
 
-  it("clears the scheduled time and the open time of a night whose link is off", async () => {
+  it("clears the scheduled time and the open time of a tournament whose link is off", async () => {
     const db = ownerDb();
     const created = await createTournament(db, owner, {
       ...input,
@@ -151,8 +151,8 @@ describeFirestoreRules("RSVPing on Firestore", (env) => {
   const eve = "eve-uid";
   const accountDb = (uid: string) => modularFirestore(env().authenticatedContext(uid));
 
-  /** The owner's night, with RSVPs opening `opensInMinutes` from the test's clock. */
-  const night = async (
+  /** The owner's tournament, with RSVPs opening `opensInMinutes` from the test's clock. */
+  const rsvpTournament = async (
     options: { opensInMinutes?: number; capacity?: number; closed?: boolean; enabled?: boolean } = {},
   ): Promise<Tournament> =>
     createTournament(accountDb(owner), owner, {
@@ -174,7 +174,7 @@ describeFirestoreRules("RSVPing on Firestore", (env) => {
     );
 
   it("lands two accounts that RSVP at the same moment, and delivers them in the server's order", async () => {
-    const tournament = await night({ capacity: 1 });
+    const tournament = await rsvpTournament({ capacity: 1 });
 
     await Promise.all([
       sendRsvp(accountDb(dan), tournament.id, dan, { name: "Dan", note: "" }),
@@ -204,7 +204,7 @@ describeFirestoreRules("RSVPing on Firestore", (env) => {
   });
 
   it("shows the list to another signed-in account holding the link", async () => {
-    const tournament = await night();
+    const tournament = await rsvpTournament();
     await sendRsvp(accountDb(dan), tournament.id, dan, { name: "Dan", note: "" });
 
     const seen = await listOf(accountDb(eve), tournament.id, 1);
@@ -212,7 +212,7 @@ describeFirestoreRules("RSVPing on Firestore", (env) => {
   });
 
   it("saves the name trimmed and remembers it for the account's next RSVP", async () => {
-    const tournament = await night();
+    const tournament = await rsvpTournament();
     const db = accountDb(dan);
     expect(await readRememberedName(db, dan)).toBeNull();
 
@@ -224,7 +224,7 @@ describeFirestoreRules("RSVPing on Firestore", (env) => {
   });
 
   it("refuses a name the rules would refuse before writing anything", async () => {
-    const tournament = await night();
+    const tournament = await rsvpTournament();
     const db = accountDb(dan);
 
     await expect(sendRsvp(db, tournament.id, dan, { name: " ", note: "" })).rejects.toThrow(
@@ -234,7 +234,7 @@ describeFirestoreRules("RSVPing on Firestore", (env) => {
   });
 
   it("reads a refusal before the open time as not open yet, and remembers nothing", async () => {
-    const tournament = await night({ opensInMinutes: 1 });
+    const tournament = await rsvpTournament({ opensInMinutes: 1 });
     const db = accountDb(dan);
 
     const refused = sendRsvp(db, tournament.id, dan, { name: "Dan", note: "" });
@@ -244,8 +244,8 @@ describeFirestoreRules("RSVPing on Firestore", (env) => {
   });
 
   it("reads a refusal on a closed list, and on a link turned off, for what it is", async () => {
-    const closed = await night({ closed: true });
-    const off = await night({ enabled: false });
+    const closed = await rsvpTournament({ closed: true });
+    const off = await rsvpTournament({ enabled: false });
     const db = accountDb(dan);
 
     await expect(sendRsvp(db, closed.id, dan, { name: "Dan", note: "" })).rejects.toThrow(
@@ -261,7 +261,7 @@ describeFirestoreRules("Notices on Firestore", (env) => {
   const dan = "dan-uid";
   const accountDb = (uid: string) => modularFirestore(env().authenticatedContext(uid));
 
-  const openNight = () =>
+  const openTournament = () =>
     createTournament(accountDb(owner), owner, {
       ...input,
       scheduledAt: minutesFromNow(60 * 24),
@@ -276,7 +276,7 @@ describeFirestoreRules("Notices on Firestore", (env) => {
     );
 
   it("shows the owner's notices to an account holding the link, newest first", async () => {
-    const tournament = await openNight();
+    const tournament = await openTournament();
     await postNotice(accountDb(owner), tournament.id, "Courts 3 and 4 tonight.");
     await postNotice(accountDb(owner), tournament.id, "  We moved to 7:30.  ");
 
@@ -285,7 +285,7 @@ describeFirestoreRules("Notices on Firestore", (env) => {
   });
 
   it("refuses an empty or over-long notice before writing anything", async () => {
-    const tournament = await openNight();
+    const tournament = await openTournament();
     const db = accountDb(owner);
 
     await expect(postNotice(db, tournament.id, "   ")).rejects.toThrow("Write the notice first.");
@@ -296,7 +296,7 @@ describeFirestoreRules("Notices on Firestore", (env) => {
   });
 
   it("takes a deleted notice off everyone's list", async () => {
-    const tournament = await openNight();
+    const tournament = await openTournament();
     await postNotice(accountDb(owner), tournament.id, "Wrong night, sorry.");
     await postNotice(accountDb(owner), tournament.id, "We moved to 7:30.");
     const [, mistake] = await noticesOf(accountDb(owner), tournament.id, (n) => n.length === 2);
@@ -308,7 +308,7 @@ describeFirestoreRules("Notices on Firestore", (env) => {
   });
 
   it("records on an account's RSVP that it has seen the newest notice", async () => {
-    const tournament = await openNight();
+    const tournament = await openTournament();
     const db = accountDb(dan);
     await sendRsvp(db, tournament.id, dan, { name: "Dan", note: "" });
     await postNotice(accountDb(owner), tournament.id, "We moved to 7:30.");

@@ -83,9 +83,9 @@ describe("standingIn", () => {
   });
 });
 
-describe("a full night", () => {
+describe("a full tournament", () => {
   const opensAt = Date.UTC(2026, 10, 5, 18, 0);
-  const night = (
+  const rsvpTournament = (
     changes: { status?: TournamentStatus; rsvp?: Partial<RsvpSettings> } = {},
   ): Pick<Tournament, "status" | "rsvp"> => ({
     status: changes.status ?? "draft",
@@ -93,27 +93,27 @@ describe("a full night", () => {
   });
 
   it("is open with spots left, and full with the waitlist open once the list reaches capacity", () => {
-    expect(rsvpPageState(night(), opensAt, 1)).toEqual({ kind: "open" });
-    expect(rsvpPageState(night(), opensAt, 2)).toEqual({ kind: "full" });
-    expect(rsvpPageState(night(), opensAt, 5)).toEqual({ kind: "full" });
+    expect(rsvpPageState(rsvpTournament(), opensAt, 1)).toEqual({ kind: "open" });
+    expect(rsvpPageState(rsvpTournament(), opensAt, 2)).toEqual({ kind: "full" });
+    expect(rsvpPageState(rsvpTournament(), opensAt, 5)).toEqual({ kind: "full" });
   });
 
   it("is open again once capacity goes up past the list", () => {
-    expect(rsvpPageState(night({ rsvp: { capacity: 3 } }), opensAt, 2)).toEqual({ kind: "open" });
+    expect(rsvpPageState(rsvpTournament({ rsvp: { capacity: 3 } }), opensAt, 2)).toEqual({ kind: "open" });
   });
 
   it("reads as open without a count, as it did before the list was known", () => {
-    expect(rsvpPageState(night(), opensAt)).toEqual({ kind: "open" });
+    expect(rsvpPageState(rsvpTournament(), opensAt)).toEqual({ kind: "open" });
   });
 
   it("still counts down, reads closed, live, or completed whatever the count", () => {
-    expect(rsvpPageState(night(), opensAt - 1, 2)).toEqual({ kind: "not_open", opensAt });
-    expect(rsvpPageState(night({ rsvp: { closed: true } }), opensAt, 2)).toEqual({ kind: "closed" });
-    expect(rsvpPageState(night({ status: "live" }), opensAt, 2)).toEqual({ kind: "live" });
-    expect(rsvpPageState(night({ status: "completed" }), opensAt, 2)).toEqual({ kind: "completed" });
+    expect(rsvpPageState(rsvpTournament(), opensAt - 1, 2)).toEqual({ kind: "not_open", opensAt });
+    expect(rsvpPageState(rsvpTournament({ rsvp: { closed: true } }), opensAt, 2)).toEqual({ kind: "closed" });
+    expect(rsvpPageState(rsvpTournament({ status: "live" }), opensAt, 2)).toEqual({ kind: "live" });
+    expect(rsvpPageState(rsvpTournament({ status: "completed" }), opensAt, 2)).toEqual({ kind: "completed" });
   });
 
-  it("reads a refused RSVP to a full night as not open yet, since a full night still takes RSVPs", () => {
+  it("reads a refused RSVP to a full tournament as not open yet, since a full tournament still takes RSVPs", () => {
     expect(refusedRsvpMessage({ kind: "full" })).toBe(NOT_OPEN_YET);
   });
 });

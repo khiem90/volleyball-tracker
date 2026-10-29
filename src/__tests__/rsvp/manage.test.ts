@@ -54,8 +54,8 @@ const stored = async (db: Firestore, id: string): Promise<Tournament> =>
 describeFirestoreRules("The owner managing the RSVP list on Firestore", (env) => {
   const accountDb = (uid: string) => modularFirestore(env().authenticatedContext(uid));
 
-  /** The owner's night, open since a minute ago, taking `capacity`. */
-  const night = (capacity: number): Promise<Tournament> =>
+  /** The owner's tournament, open since a minute ago, taking `capacity`. */
+  const rsvpTournament = (capacity: number): Promise<Tournament> =>
     createTournament(accountDb(owner), owner, {
       ...input,
       scheduledAt: minutesFromNow(60 * 24),
@@ -68,7 +68,7 @@ describeFirestoreRules("The owner managing the RSVP list on Firestore", (env) =>
     when<Rsvp[]>((onChange, onError) => subscribeToRsvps(db, tournamentId, onChange, onError), ready);
 
   it("puts the owner's held spot in the next place in arrival order, behind everyone already there", async () => {
-    const tournament = await night(2);
+    const tournament = await rsvpTournament(2);
     await sendRsvp(accountDb(dan), tournament.id, dan, { name: "Dan", note: "" });
     await addHeldSpot(accountDb(owner), tournament.id, " Walk-in Sam ");
     await sendRsvp(accountDb(eve), tournament.id, eve, { name: "Eve", note: "" });
@@ -85,14 +85,14 @@ describeFirestoreRules("The owner managing the RSVP list on Firestore", (env) =>
   });
 
   it("refuses a held spot's name the rules would refuse before writing anything", async () => {
-    const tournament = await night(2);
+    const tournament = await rsvpTournament(2);
     await expect(addHeldSpot(accountDb(owner), tournament.id, "   ")).rejects.toThrow(
       "Enter the name the owner will see.",
     );
   });
 
   it("promotes the first person waiting when the owner removes a confirmed RSVP, with no write to them", async () => {
-    const tournament = await night(1);
+    const tournament = await rsvpTournament(1);
     await sendRsvp(accountDb(dan), tournament.id, dan, { name: "Dan", note: "" });
     await sendRsvp(accountDb(eve), tournament.id, eve, { name: "Eve", note: "" });
     const eveDb = accountDb(eve);
@@ -107,7 +107,7 @@ describeFirestoreRules("The owner managing the RSVP list on Firestore", (env) =>
   });
 
   it("removes a held spot, and anyone once the tournament has started", async () => {
-    const tournament = await night(4);
+    const tournament = await rsvpTournament(4);
     await sendRsvp(accountDb(dan), tournament.id, dan, { name: "Dan", note: "" });
     await addHeldSpot(accountDb(owner), tournament.id, "Walk-in Sam");
     const ownerDb = accountDb(owner);
@@ -121,7 +121,7 @@ describeFirestoreRules("The owner managing the RSVP list on Firestore", (env) =>
   });
 
   it("closes the list early, which refuses new RSVPs but not withdrawals, and reopens it while a draft", async () => {
-    const tournament = await night(4);
+    const tournament = await rsvpTournament(4);
     await sendRsvp(accountDb(dan), tournament.id, dan, { name: "Dan", note: "" });
     const ownerDb = accountDb(owner);
 
@@ -140,7 +140,7 @@ describeFirestoreRules("The owner managing the RSVP list on Firestore", (env) =>
   });
 
   it("refuses to reopen the list once the tournament has started, before writing anything", async () => {
-    const tournament = await night(4);
+    const tournament = await rsvpTournament(4);
     const ownerDb = accountDb(owner);
     await setRsvpClosed(ownerDb, tournament.id, true);
     await applyTournamentCommand(ownerDb, tournament.id, { type: "start" });
@@ -151,8 +151,8 @@ describeFirestoreRules("The owner managing the RSVP list on Firestore", (env) =>
     expect((await stored(ownerDb, tournament.id)).rsvp?.closed).toBe(true);
   });
 
-  it("lets the owner RSVP to their own night like anyone else, on the same list", async () => {
-    const tournament = await night(4);
+  it("lets the owner RSVP to their own tournament like anyone else, on the same list", async () => {
+    const tournament = await rsvpTournament(4);
     await sendRsvp(accountDb(dan), tournament.id, dan, { name: "Dan", note: "" });
     await sendRsvp(accountDb(owner), tournament.id, owner, { name: "The organiser", note: "" });
 
@@ -161,7 +161,7 @@ describeFirestoreRules("The owner managing the RSVP list on Firestore", (env) =>
   });
 
   it("counts the people on the list for the owner, held spots included", async () => {
-    const tournament = await night(1);
+    const tournament = await rsvpTournament(1);
     const ownerDb = accountDb(owner);
     expect(await countRsvps(ownerDb, tournament.id)).toBe(0);
 
@@ -173,7 +173,7 @@ describeFirestoreRules("The owner managing the RSVP list on Firestore", (env) =>
   });
 
   it("deleting a tournament removes its RSVPs and held spots with its notices, scorer key, and matches", async () => {
-    const tournament = await night(4);
+    const tournament = await rsvpTournament(4);
     const ownerDb = accountDb(owner);
     await sendRsvp(accountDb(dan), tournament.id, dan, { name: "Dan", note: "" });
     await sendRsvp(accountDb(eve), tournament.id, eve, { name: "Eve", note: "" });
@@ -193,7 +193,7 @@ describeFirestoreRules("The owner managing the RSVP list on Firestore", (env) =>
   });
 
   it("deleting a tournament with hundreds on its list removes all of them in one cleanup, never half the list", async () => {
-    const tournament = await night(4);
+    const tournament = await rsvpTournament(4);
     await env().withSecurityRulesDisabled(async (unrestricted) => {
       const raw = modularFirestore(unrestricted);
       for (let start = 0; start < 520; start += 260) {

@@ -44,8 +44,8 @@ const stored = async (db: Firestore, id: string): Promise<Tournament> =>
 describeFirestoreRules("Waitlist and withdrawing on Firestore", (env) => {
   const accountDb = (uid: string) => modularFirestore(env().authenticatedContext(uid));
 
-  /** The owner's night, open since a minute ago, taking `capacity`. */
-  const night = (capacity: number): Promise<Tournament> =>
+  /** The owner's tournament, open since a minute ago, taking `capacity`. */
+  const rsvpTournament = (capacity: number): Promise<Tournament> =>
     createTournament(accountDb(owner), owner, {
       ...input,
       scheduledAt: minutesFromNow(60 * 24),
@@ -70,7 +70,7 @@ describeFirestoreRules("Waitlist and withdrawing on Firestore", (env) => {
   };
 
   it("promotes the first person waiting when the first confirmed withdraws, with no write to them, and puts a returning account at the back", async () => {
-    const tournament = await night(1);
+    const tournament = await rsvpTournament(1);
     await danThenEve(tournament.id);
     const eveDb = accountDb(eve);
 
@@ -93,7 +93,7 @@ describeFirestoreRules("Waitlist and withdrawing on Firestore", (env) => {
   });
 
   it("promotes the next person when the owner raises the capacity", async () => {
-    const tournament = await night(1);
+    const tournament = await rsvpTournament(1);
     await danThenEve(tournament.id);
     const eveDb = accountDb(eve);
     const list = await listWhere(eveDb, tournament.id, (rsvps) => rsvps.length === 2);
@@ -113,7 +113,7 @@ describeFirestoreRules("Waitlist and withdrawing on Firestore", (env) => {
   });
 
   it("keeps a person's place when they change their name and note, and remembers the new name", async () => {
-    const tournament = await night(1);
+    const tournament = await rsvpTournament(1);
     await danThenEve(tournament.id);
     const danDb = accountDb(dan);
     const [first] = await listWhere(danDb, tournament.id, (rsvps) => rsvps.length === 2);
@@ -128,7 +128,7 @@ describeFirestoreRules("Waitlist and withdrawing on Firestore", (env) => {
   });
 
   it("refuses a changed name the rules would refuse before writing anything", async () => {
-    const tournament = await night(1);
+    const tournament = await rsvpTournament(1);
     await sendRsvp(accountDb(dan), tournament.id, dan, { name: "Dan", note: "" });
 
     await expect(updateRsvp(accountDb(dan), tournament.id, dan, { name: "  ", note: "" })).rejects.toThrow(
@@ -137,7 +137,7 @@ describeFirestoreRules("Waitlist and withdrawing on Firestore", (env) => {
   });
 
   it("closes the list when the tournament starts, without writing to the RSVP settings, and ends withdrawals", async () => {
-    const tournament = await night(1);
+    const tournament = await rsvpTournament(1);
     await danThenEve(tournament.id);
     const ownerDb = accountDb(owner);
     const settings = (await stored(ownerDb, tournament.id)).rsvp;

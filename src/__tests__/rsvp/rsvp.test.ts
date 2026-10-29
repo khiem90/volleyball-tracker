@@ -33,7 +33,7 @@ const setup = (changes: Partial<RsvpSetup> = {}): RsvpSetup => ({
 });
 
 describe("rsvpProblems", () => {
-  it("finds nothing wrong with a night that has its times, opens before it starts, and takes at least one", () => {
+  it("finds nothing wrong with a tournament that has its times, opens before it starts, and takes at least one", () => {
     expect(rsvpProblems(setup())).toEqual({});
     expect(rsvpProblems(setup({ capacity: 1 }))).toEqual({});
   });
@@ -47,7 +47,7 @@ describe("rsvpProblems", () => {
     });
   });
 
-  it("lets a night with the link off go without its times", () => {
+  it("lets a tournament with the link off go without its times", () => {
     expect(rsvpProblems(setup({ enabled: false, scheduledAt: null, opensAt: null }))).toEqual({});
   });
 
@@ -71,7 +71,7 @@ describe("rsvpProblems", () => {
 });
 
 describe("rsvpSetupOf", () => {
-  it("reads a tournament from before RSVPs as a night with the link off, no times, and the default capacity", () => {
+  it("reads a tournament from before RSVPs as having the link off, no times, and the default capacity", () => {
     expect(rsvpSetupOf({})).toEqual({
       enabled: false,
       capacity: DEFAULT_CAPACITY,
@@ -152,7 +152,7 @@ describe("entering a time in the owner's zone", () => {
 
 describe("rsvpPageState", () => {
   const opensAt = thursday6pm;
-  const night = (
+  const rsvpTournament = (
     changes: { status?: TournamentStatus; rsvp?: Partial<RsvpSettings> | null } = {},
   ): Pick<Tournament, "status" | "rsvp"> => ({
     status: changes.status ?? "draft",
@@ -163,41 +163,41 @@ describe("rsvpPageState", () => {
   });
 
   it("counts down to the open time before it, and is open from that instant", () => {
-    expect(rsvpPageState(night(), opensAt - 1)).toEqual({ kind: "not_open", opensAt });
-    expect(rsvpPageState(night(), opensAt)).toEqual({ kind: "open" });
-    expect(rsvpPageState(night(), opensAt + 86_400_000)).toEqual({ kind: "open" });
+    expect(rsvpPageState(rsvpTournament(), opensAt - 1)).toEqual({ kind: "not_open", opensAt });
+    expect(rsvpPageState(rsvpTournament(), opensAt)).toEqual({ kind: "open" });
+    expect(rsvpPageState(rsvpTournament(), opensAt + 86_400_000)).toEqual({ kind: "open" });
   });
 
   it("reads a link that is off, or a tournament from before RSVPs, as the link off", () => {
-    expect(rsvpPageState(night({ rsvp: { enabled: false } }), opensAt)).toEqual({ kind: "link_off" });
-    expect(rsvpPageState(night({ rsvp: null }), opensAt)).toEqual({ kind: "link_off" });
-    expect(rsvpPageState(night({ status: "live", rsvp: { enabled: false } }), opensAt)).toEqual({
+    expect(rsvpPageState(rsvpTournament({ rsvp: { enabled: false } }), opensAt)).toEqual({ kind: "link_off" });
+    expect(rsvpPageState(rsvpTournament({ rsvp: null }), opensAt)).toEqual({ kind: "link_off" });
+    expect(rsvpPageState(rsvpTournament({ status: "live", rsvp: { enabled: false } }), opensAt)).toEqual({
       kind: "link_off",
     });
   });
 
   it("is closed once the owner closes the list, before or after the open time", () => {
-    expect(rsvpPageState(night({ rsvp: { closed: true } }), opensAt)).toEqual({ kind: "closed" });
-    expect(rsvpPageState(night({ rsvp: { closed: true } }), opensAt - 1)).toEqual({ kind: "closed" });
+    expect(rsvpPageState(rsvpTournament({ rsvp: { closed: true } }), opensAt)).toEqual({ kind: "closed" });
+    expect(rsvpPageState(rsvpTournament({ rsvp: { closed: true } }), opensAt - 1)).toEqual({ kind: "closed" });
   });
 
   it("is live once the tournament is live and completed once it ends, closed or not", () => {
-    expect(rsvpPageState(night({ status: "live" }), opensAt)).toEqual({ kind: "live" });
-    expect(rsvpPageState(night({ status: "live", rsvp: { closed: true } }), opensAt - 1)).toEqual({
+    expect(rsvpPageState(rsvpTournament({ status: "live" }), opensAt)).toEqual({ kind: "live" });
+    expect(rsvpPageState(rsvpTournament({ status: "live", rsvp: { closed: true } }), opensAt - 1)).toEqual({
       kind: "live",
     });
-    expect(rsvpPageState(night({ status: "completed" }), opensAt)).toEqual({ kind: "completed" });
+    expect(rsvpPageState(rsvpTournament({ status: "completed" }), opensAt)).toEqual({ kind: "completed" });
   });
 });
 
 describe("watchView", () => {
-  const night = (status: TournamentStatus): Pick<Tournament, "status" | "rsvp"> => ({
+  const rsvpTournament = (status: TournamentStatus): Pick<Tournament, "status" | "rsvp"> => ({
     status,
     rsvp: { enabled: true, capacity: 12, opensAt: thursday6pm, closed: false },
   });
 
   it("offers Watch into the console once the tournament is live, with the list closed", () => {
-    expect(watchView(rsvpPageState(night("live"), friday7pm))).toEqual({
+    expect(watchView(rsvpPageState(rsvpTournament("live"), friday7pm))).toEqual({
       kind: "live",
       status: "Live",
       action: "Watch",
@@ -206,7 +206,7 @@ describe("watchView", () => {
   });
 
   it("says Completed once it ends, and still offers the results, with the list as it stood", () => {
-    expect(watchView(rsvpPageState(night("completed"), friday7pm))).toEqual({
+    expect(watchView(rsvpPageState(rsvpTournament("completed"), friday7pm))).toEqual({
       kind: "completed",
       status: "Completed",
       action: "See results",

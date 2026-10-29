@@ -1005,13 +1005,13 @@ describeFirestoreRules("Tournaments on Firestore", (env) => {
     it("the RSVP link lets a signed-in account watch the live tournament, and cuts it off when turned off", async () => {
       const db = ownerDb();
       const created = await createTournament(db, owner, input("round_robin"));
-      const night = {
+      const settings = {
         enabled: true,
         capacity: 12,
         scheduledAt: Date.UTC(2026, 10, 7, 0, 0),
         opensAt: Date.UTC(2026, 10, 5, 23, 0),
       };
-      await saveRsvpSettings(db, created, night, "America/New_York");
+      await saveRsvpSettings(db, created, settings, "America/New_York");
       await applyTournamentCommand(db, created.id, { type: "start" });
       const watcher = modularFirestore(env().authenticatedContext("dan-uid"));
 
@@ -1042,7 +1042,7 @@ describeFirestoreRules("Tournaments on Firestore", (env) => {
         );
       });
       const live = await tournamentDocOf(db, created.id);
-      await saveRsvpSettings(db, live, { ...night, enabled: false }, "America/New_York");
+      await saveRsvpSettings(db, live, { ...settings, enabled: false }, "America/New_York");
       await expect(cutOff).rejects.toMatchObject(REFUSED);
       await expect(
         getDocsFromServer(collection(watcher, "tournaments", created.id, "matches")),

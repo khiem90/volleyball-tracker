@@ -17,7 +17,7 @@ import { subscribeToTournament } from "@/lib/tournaments";
 import type { Rsvp, Tournament } from "@/types/game";
 
 /**
- * One night as its RSVP page sees it, for the signed-in account `uid`: the
+ * One tournament as its RSVP page sees it, for the signed-in account `uid`: the
  * tournament, its RSVPs in arrival order, the owner's notices newest first,
  * the name the account last RSVP'd under, and the RSVP action. Kept apart
  * from the tournaments a phone reaches by spectator or scorer link, which
@@ -28,7 +28,7 @@ import type { Rsvp, Tournament } from "@/types/game";
  * Nothing is read without an account, so a guest or a phone holding only
  * a scorer link's silent identity reads nothing here.
  */
-export const useRsvpNight = (tournamentId: string, uid: string | null) => {
+export const useRsvpTournament = (tournamentId: string, uid: string | null) => {
   // undefined while it is on its way; null when it is gone or the rules
   // refuse it, which is how a link turned off looks to a non-owner.
   const [tournament, setTournament] = useState<Tournament | null | undefined>(undefined);

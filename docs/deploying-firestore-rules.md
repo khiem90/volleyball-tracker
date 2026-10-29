@@ -51,7 +51,7 @@ check that the output says they ran.
 
 ## The RSVP index on Home
 
-Home finds the nights an account has RSVP'd to with a collection group query
+Home finds the tournaments an account has RSVP'd to with a collection group query
 on `rsvps`, filtered by `uid` and ordered by `createdAt`. That query needs the
 `rsvps` entry in `firestore.indexes.json`, next to the `matches` one, so deploy
 the indexes along with the rules that add RSVPs. Until the index finishes

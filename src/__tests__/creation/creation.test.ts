@@ -129,7 +129,7 @@ describe("setupInput", () => {
     });
   });
 
-  it("keeps the times and a changed capacity of a night whose RSVP link stays off, and adds nothing when the section is untouched", () => {
+  it("keeps the times and a changed capacity of a tournament whose RSVP link stays off, and adds nothing when the section is untouched", () => {
     const friday7pm = Date.UTC(2026, 10, 7, 0, 0);
     const ready = { name: "Friday night", format: "round_robin" as const, teamIds: ["t1", "t2", "t3"] };
 

@@ -312,7 +312,7 @@ export const createTournament = async (
  * from the roster, so each entry takes the team's current name and color
  * and a team that has since left the roster is left out. A team that had
  * withdrawn from the source is back in; a new draft has no withdrawals.
- * Of the RSVP settings only the capacity comes across: next week's night
+ * Of the RSVP settings only the capacity comes across: next week's tournament
  * has its own times, so its RSVP link starts off until the owner sets them.
  */
 export const duplicateInput = (source: Tournament, roster: PersistentTeam[]): NewTournamentInput => {

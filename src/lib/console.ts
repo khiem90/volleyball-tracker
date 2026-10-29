@@ -120,7 +120,7 @@ export const showsRsvpTab = (
 
 /**
  * What the delete confirmation says will go, naming the people on the RSVP
- * list when there are any, so a night people are counting on is not
+ * list when there are any, so a tournament people are counting on is not
  * deleted by accident.
  */
 export const deleteTournamentDescription = (name: string, rsvpCount: number): string => {

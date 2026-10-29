@@ -140,7 +140,7 @@ export const RsvpPanel = ({
         <p className="text-[0.72rem] text-mb-ink-muted">
           {stored.enabled
             ? "Copy the link from Settings. Turning it off makes the RSVP page show not found."
-            : "Only you can see this night. Set both times, then turn the link on to share it."}
+            : "Only you can see this tournament. Set both times, then turn the link on to share it."}
         </p>
       </div>
 

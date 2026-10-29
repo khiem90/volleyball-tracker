@@ -1,13 +1,13 @@
 // @vitest-environment node
 import { doc, getDoc, type Firestore, type Unsubscribe } from "firebase/firestore";
 import { expect, it } from "vitest";
-import { homeRsvpRows, type AccountNights } from "@/lib/rsvp";
+import { homeRsvpRows, type AccountTournaments } from "@/lib/rsvp";
 import {
   markNoticesRead,
   postNotice,
   sendRsvp,
   saveRsvpSettings,
-  subscribeToAccountNights,
+  subscribeToAccountTournaments,
   withdraw,
 } from "@/lib/rsvping";
 import { createTournament, type NewTournamentInput } from "@/lib/tournaments";
@@ -44,18 +44,18 @@ const stored = async (db: Firestore, id: string): Promise<Tournament> =>
  * resolves with the first delivery, or the latest one, that satisfies
  * `ready`, and fails the test if one never comes.
  */
-const watchNights = (db: Firestore, uid: string) => {
-  let latest: AccountNights | null = null;
+const watchAccountTournaments = (db: Firestore, uid: string) => {
+  let latest: AccountTournaments | null = null;
   let failure: Error | null = null;
-  let waiting: { ready: (n: AccountNights) => boolean; resolve: (n: AccountNights) => void } | null =
+  let waiting: { ready: (n: AccountTournaments) => boolean; resolve: (n: AccountTournaments) => void } | null =
     null;
-  const unsubscribe: Unsubscribe = subscribeToAccountNights(
+  const unsubscribe: Unsubscribe = subscribeToAccountTournaments(
     db,
     uid,
-    (nights) => {
-      latest = nights;
-      if (waiting?.ready(nights)) {
-        waiting.resolve(nights);
+    (read) => {
+      latest = read;
+      if (waiting?.ready(read)) {
+        waiting.resolve(read);
         waiting = null;
       }
     },
@@ -63,12 +63,12 @@ const watchNights = (db: Firestore, uid: string) => {
       failure = error;
     },
   );
-  const until = (ready: (n: AccountNights) => boolean) =>
-    new Promise<AccountNights>((resolve, reject) => {
+  const until = (ready: (n: AccountTournaments) => boolean) =>
+    new Promise<AccountTournaments>((resolve, reject) => {
       if (failure) return reject(failure);
       if (latest && ready(latest)) return resolve(latest);
       const timer = setTimeout(
-        () => reject(failure ?? new Error("the nights never reached the expected state")),
+        () => reject(failure ?? new Error("the tournaments never reached the expected state")),
         5000,
       );
       waiting = {
@@ -82,14 +82,14 @@ const watchNights = (db: Firestore, uid: string) => {
   return { until, stop: unsubscribe, failure: () => failure };
 };
 
-const rowIds = (uid: string, nights: AccountNights) =>
-  homeRsvpRows(uid, nights).map((row) => row.tournament.name);
+const rowIds = (uid: string, read: AccountTournaments) =>
+  homeRsvpRows(uid, read).map((row) => row.tournament.name);
 
 describeFirestoreRules("Home's RSVPs on Firestore", (env) => {
   const accountDb = (uid: string) => modularFirestore(env().authenticatedContext(uid));
 
-  /** One of the owner's nights, open since a minute ago. */
-  const night = (name: string, capacity = 12): Promise<Tournament> =>
+  /** One of the owner's tournaments, open since a minute ago. */
+  const rsvpTournament = (name: string, capacity = 12): Promise<Tournament> =>
     createTournament(accountDb(owner), owner, {
       ...input,
       name,
@@ -98,16 +98,16 @@ describeFirestoreRules("Home's RSVPs on Firestore", (env) => {
       rsvp: { enabled: true, capacity, opensAt: minutesFromNow(-1), closed: false },
     });
 
-  it("lists the account's nights across two tournaments, and drops one on withdrawal", async () => {
-    const friday = await night("Friday");
-    const saturday = await night("Saturday", 1);
-    const sunday = await night("Sunday");
+  it("lists the tournaments the account is on the list for, and drops one on withdrawal", async () => {
+    const friday = await rsvpTournament("Friday");
+    const saturday = await rsvpTournament("Saturday", 1);
+    const sunday = await rsvpTournament("Sunday");
     await sendRsvp(accountDb(eve), saturday.id, eve, { name: "Eve", note: "" });
     await sendRsvp(accountDb(dan), friday.id, dan, { name: "Dan", note: "" });
     await sendRsvp(accountDb(dan), saturday.id, dan, { name: "Dan", note: "" });
     await sendRsvp(accountDb(eve), sunday.id, eve, { name: "Eve", note: "" });
     const danDb = accountDb(dan);
-    const watcher = watchNights(danDb, dan);
+    const watcher = watchAccountTournaments(danDb, dan);
 
     try {
       // The cache can deliver Saturday's list holding only Dan before the
@@ -139,12 +139,12 @@ describeFirestoreRules("Home's RSVPs on Firestore", (env) => {
     }
   });
 
-  it("drops a night whose link the owner turns off, and keeps the rest of the panel", async () => {
-    const friday = await night("Friday");
-    const saturday = await night("Saturday");
+  it("drops a tournament whose link the owner turns off, and keeps the rest of the panel", async () => {
+    const friday = await rsvpTournament("Friday");
+    const saturday = await rsvpTournament("Saturday");
     await sendRsvp(accountDb(dan), friday.id, dan, { name: "Dan", note: "" });
     await sendRsvp(accountDb(dan), saturday.id, dan, { name: "Dan", note: "" });
-    const watcher = watchNights(accountDb(dan), dan);
+    const watcher = watchAccountTournaments(accountDb(dan), dan);
 
     try {
       await watcher.until((n) => homeRsvpRows(dan, n).length === 2);
@@ -172,10 +172,10 @@ describeFirestoreRules("Home's RSVPs on Firestore", (env) => {
   });
 
   it("marks a new notice until the account opens the RSVP page", async () => {
-    const friday = await night("Friday");
+    const friday = await rsvpTournament("Friday");
     await sendRsvp(accountDb(dan), friday.id, dan, { name: "Dan", note: "" });
     const danDb = accountDb(dan);
-    const watcher = watchNights(danDb, dan);
+    const watcher = watchAccountTournaments(danDb, dan);
 
     try {
       const before = await watcher.until((n) => homeRsvpRows(dan, n).length === 1);

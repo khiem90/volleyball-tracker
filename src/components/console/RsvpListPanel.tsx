@@ -126,7 +126,7 @@ export const RsvpListPanel = ({
             }
           >
             {shownProblem ??
-              "For someone without an account. It takes the next place in line, so in a full night it joins the waitlist."}
+              "For someone without an account. It takes the next place in line, so in a full tournament it joins the waitlist."}
           </p>
           {error && (
             <p role="alert" className="text-[0.78rem] font-medium text-mb-red">

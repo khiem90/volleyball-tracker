@@ -65,7 +65,7 @@ const StandingLine = ({
 };
 
 /**
- * The RSVP link. A signed-in person sees the night: its name, when it is,
+ * The RSVP link. A signed-in person sees the tournament: its name, when it is,
  * the capacity and how many have RSVP'd, and everyone on the list by name
  * in arrival order, split into who is in and who is waiting, under the
  * owner's notices, newest first, when there are any. Before the open time
@@ -121,9 +121,9 @@ export default function RsvpPage() {
       )}
 
       <div className="grid gap-4 lg:grid-cols-12 lg:items-start">
-        <Panel title="The night" icon="calendar" className="lg:col-span-5">
+        <Panel title="The tournament" icon="calendar" className="lg:col-span-5">
           <div className="grid grid-cols-3 gap-3 border-b border-mb-rule p-4">
-            <Fact label="Capacity" value={`${capacity} ${capacity === 1 ? "spot" : "spots"}`} />
+            <Fact label="Capacity" value={String(capacity)} />
             <Fact label="In" value={page.list ? String(page.list.confirmed.length) : "..."} />
             <Fact label="Waiting" value={page.list ? String(page.list.waitlisted.length) : "..."} />
           </div>
@@ -248,7 +248,7 @@ export default function RsvpPage() {
 
       <RsvpDialog
         open={page.dialog.isOpen}
-        nightName={tournament.name}
+        tournamentName={tournament.name}
         entry={page.dialog.entry}
         isEditing={page.dialog.isEditing}
         isSending={page.dialog.isSending}

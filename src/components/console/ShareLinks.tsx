@@ -151,7 +151,7 @@ export const ShareLinks = ({
         )}
         <p className="text-[0.72rem] text-mb-ink-muted">
           {links.rsvpLink
-            ? "Anyone with the link can sign in, see the night, and RSVP from the open time."
+            ? "Anyone with the link can sign in, see the tournament, and RSVP from the open time."
             : "Set the scheduled time and the open time in the RSVP tab, then turn the link on there."}
         </p>
       </div>

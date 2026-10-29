@@ -220,7 +220,7 @@ export const AdvancedSettings = ({
               note={
                 setup.rsvp.enabled
                   ? "Anyone you send the link to can sign in and RSVP from the open time."
-                  : "Off keeps the night private. You can turn it on later from the RSVP tab."
+                  : "Off keeps the tournament private. You can turn it on later from the RSVP tab."
               }
               value={setup.rsvp.enabled}
               options={[

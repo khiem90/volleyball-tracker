@@ -170,14 +170,14 @@ const RsvpRow = ({ row, zone }: { row: HomeRsvpRow; zone: string }) => {
   );
 };
 
-/** The nights the account has RSVP'd to. Home leaves it out when there are none. */
+/** The tournaments the account has RSVP'd to. Home leaves it out when there are none. */
 const RsvpsPanel = ({ rows }: { rows: HomeRsvpRow[] }) => {
   const [zone] = useState(deviceZone);
   return (
     <Panel
       title="Your RSVPs"
       icon="calendar"
-      meta={<span className="mb-kicker">{plural(rows.length, "night")}</span>}
+      meta={<span className="mb-kicker">{plural(rows.length, "tournament")}</span>}
     >
       <div className="flex flex-col divide-y divide-mb-rule">
         {rows.map((row) => (

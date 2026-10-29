@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
-import { useRsvpNight } from "@/context/useRsvpNight";
+import { useRsvpTournament } from "@/context/useRsvpTournament";
 import {
   countdown,
   deviceZone,
@@ -20,7 +20,7 @@ import {
 import { RsvpRefusedError } from "@/lib/rsvping";
 
 /**
- * Everything the RSVP page needs: the night, its list, the page state on
+ * Everything the RSVP page needs: the tournament, its list, the page state on
  * this phone's clock, the countdown, and the RSVP dialog. A guest, and a
  * phone holding only a scorer link's silent identity, are sent to sign in
  * and back here.
@@ -33,15 +33,15 @@ import { RsvpRefusedError } from "@/lib/rsvping";
 export const useRsvpPage = (tournamentId: string) => {
   const { user, isLoading: isAuthLoading } = useRequireAuth();
   const uid = user?.uid ?? null;
-  const night = useRsvpNight(tournamentId, uid);
-  const { tournament, rsvps } = night;
+  const data = useRsvpTournament(tournamentId, uid);
+  const { tournament, rsvps } = data;
 
   const [now, setNow] = useState(() => Date.now());
   const state = tournament ? rsvpPageState(tournament, now, rsvps?.length ?? 0) : null;
 
   // Who is in and who is waiting is worked out here from arrival order and
   // the capacity, never stored (ADR-0004), so a withdrawal or a raised
-  // capacity moves the waitlist up as soon as the list or night arrives.
+  // capacity moves the waitlist up as soon as the list or tournament arrives.
   const list = rsvps ? splitRsvps(rsvps, tournament?.rsvp?.capacity ?? 0) : null;
   const standing: RsvpStanding = list ? standingIn(list, uid) : { kind: "none" };
 
@@ -85,7 +85,7 @@ export const useRsvpPage = (tournamentId: string) => {
     takesRsvps(state) &&
     state.kind !== "not_open" &&
     !mine &&
-    night.rememberedName !== undefined;
+    data.rememberedName !== undefined;
   // Name, note, and withdrawal stay open until the tournament starts, even
   // after the owner closes the list. Once the page shows the watch view,
   // the list is read-only.
@@ -103,7 +103,7 @@ export const useRsvpPage = (tournamentId: string) => {
     if (!canRsvp) return;
     setEdit(null);
     setEntry(
-      (current) => current ?? { name: prefillName(night.rememberedName, user?.displayName), note: "" },
+      (current) => current ?? { name: prefillName(data.rememberedName, user?.displayName), note: "" },
     );
     setDialogOpen(true);
   };
@@ -119,11 +119,11 @@ export const useRsvpPage = (tournamentId: string) => {
     setError(null);
     try {
       if (isEditing) {
-        await night.update(sending);
+        await data.update(sending);
         closeDialog();
         return;
       }
-      await night.sendRsvp(sending);
+      await data.sendRsvp(sending);
       setRefusal(null);
       setEntry(null);
       setDialogOpen(false);
@@ -146,7 +146,7 @@ export const useRsvpPage = (tournamentId: string) => {
     setWithdrawing(true);
     setError(null);
     try {
-      await night.withdraw();
+      await data.withdraw();
       setEntry(null);
       closeDialog();
     } catch {
@@ -168,9 +168,9 @@ export const useRsvpPage = (tournamentId: string) => {
     rsvps,
     /** The list split into confirmed and waitlisted, each in arrival order; null while loading. */
     list,
-    listError: night.listError,
+    listError: data.listError,
     /** The owner's notices, newest first; null until they arrive. */
-    notices: night.notices,
+    notices: data.notices,
     /** This account's RSVP, or null while it has none. */
     mine,
     /** Where this account stands: not on the list, in, or waiting at a position. */

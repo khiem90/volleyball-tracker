@@ -1,5 +1,5 @@
 /**
- * RSVPs, the pure part: what is wrong with a night's RSVP setup, and how
+ * RSVPs, the pure part: what is wrong with a tournament's RSVP setup, and how
  * its times are entered and shown across time zones. Nothing in here
  * touches the database or React. See CONTEXT.md under "RSVP" and ADR-0004.
  */
@@ -54,8 +54,8 @@ export interface RsvpProblems {
 }
 
 /**
- * What a night's list already holds, which limits how its setup may change
- * from the console. A night being created has no list, and nothing here.
+ * What a tournament's list already holds, which limits how its setup may change
+ * from the console. A tournament being created has no list, and nothing here.
  */
 export interface ListSoFar {
   /** How many are confirmed at the stored capacity. Capacity cannot go below it. */
@@ -81,7 +81,7 @@ export const OPEN_TIME_LOCKED = "People have RSVP'd, so the open time cannot cha
 
 /**
  * The problems with an RSVP setup. The link cannot go on without both
- * times, since the page could not say when; a night with the link off may
+ * times, since the page could not say when; a tournament with the link off may
  * leave them unset. An open time after the scheduled time and a capacity
  * below one are wrong either way. Against a list that already has people
  * on it, the capacity cannot drop below the confirmed count, so nobody
@@ -222,7 +222,7 @@ export const epochToWallClock = (ms: number, zone: string): string => {
 // The RSVP page
 // ============================================
 
-/** Where a night stands for someone holding its RSVP link. */
+/** Where a tournament stands for someone holding its RSVP link. */
 export type RsvpPageState =
   /** The owner has the link off, or the tournament never had one. The page shows not found. */
   | { kind: "link_off" }
@@ -242,7 +242,7 @@ export type RsvpPageState =
  * the phone's clock, which is right for showing a countdown and nothing
  * more: the rules judge the open time by the server's clock. Starting the
  * tournament needs no write to the RSVP settings, since a tournament that
- * has left draft is past RSVPs by definition. An open night whose list
+ * has left draft is past RSVPs by definition. An open tournament whose list
  * of `rsvpCount` has reached capacity is full, and still takes RSVPs onto
  * the waitlist; a raised capacity opens it again.
  */
@@ -334,7 +334,7 @@ export const NOT_OPEN_YET = "Not open yet";
 
 /**
  * Why the rules refused an RSVP, from the tournament as the server has it
- * just after the refusal. A night that still reads as open on this phone's
+ * just after the refusal. A tournament that still reads as open on this phone's
  * clock was refused for time, which only the server's clock can do, so it
  * is "Not open yet" too: the phone's clock is ahead.
  */
@@ -429,7 +429,7 @@ export const splitRsvps = <T extends Arrival>(rsvps: T[], capacity: number): Rsv
   };
 };
 
-/** Where one account stands on a night's list. */
+/** Where one account stands on a tournament's list. */
 export type RsvpStanding =
   | { kind: "none" }
   /** In, at `position` among the confirmed. */
@@ -481,11 +481,11 @@ export const millisOf = (time: ServerTime): number =>
 export type AccountRsvp = Rsvp & { tournamentId: string };
 
 /**
- * What Home has read about the nights an account has RSVP'd to. Each
+ * What Home has read about the tournaments an account has RSVP'd to. Each
  * record is keyed by tournament id, and a key is absent while that read is
  * on its way, or once the rules refuse it or the tournament is gone.
  */
-export interface AccountNights {
+export interface AccountTournaments {
   /** The account's own RSVPs, across every tournament. */
   mine: AccountRsvp[];
   tournaments: Record<string, Tournament>;
@@ -495,7 +495,7 @@ export interface AccountNights {
   notices: Record<string, Notice[]>;
 }
 
-/** A night on Home: a tournament the account is on the list for. */
+/** A row on Home: a tournament the account is on the list for. */
 export interface HomeRsvpRow {
   tournament: Tournament;
   /** In at a position, or waiting at one. */
@@ -522,31 +522,31 @@ const scheduledOrLast = (row: HomeRsvpRow) =>
   row.tournament.scheduledAt ?? Number.POSITIVE_INFINITY;
 
 /**
- * The nights `uid` has RSVP'd to that Home lists, soonest first, with a
- * night that has no scheduled time last. A completed tournament is left
+ * The tournaments `uid` has RSVP'd to that Home lists, soonest first, with a
+ * tournament that has no scheduled time last. A completed tournament is left
  * out, and so is one whose RSVP page would show not found: a tournament the
- * rules no longer let the account read, or one whose link is off. A night
+ * rules no longer let the account read, or one whose link is off. A tournament
  * waits for its list, since the standing comes from it, and leaves Home
  * once the account's RSVP is gone. A notice is new when it was posted
  * after the account last opened the RSVP page, or at all when it never has.
  */
-export const homeRsvpRows = (uid: string, nights: AccountNights): HomeRsvpRow[] => {
+export const homeRsvpRows = (uid: string, read: AccountTournaments): HomeRsvpRow[] => {
   const rows: HomeRsvpRow[] = [];
-  for (const mine of nights.mine) {
-    const tournament = nights.tournaments[mine.tournamentId];
-    const list = nights.lists[mine.tournamentId];
+  for (const mine of read.mine) {
+    const tournament = read.tournaments[mine.tournamentId];
+    const list = read.lists[mine.tournamentId];
     if (!tournament || !list || !tournament.rsvp?.enabled) continue;
     if (tournament.status === "completed") continue;
 
     const standing = standingIn(splitRsvps(list, tournament.rsvp.capacity), uid);
     if (standing.kind === "none") continue;
 
-    const latest = newest(nights.notices[mine.tournamentId] ?? []);
+    const latest = newest(read.notices[mine.tournamentId] ?? []);
     const unread =
       latest !== null && (!mine.noticesReadAt || isAfter(latest.createdAt, mine.noticesReadAt));
     rows.push({ tournament, standing, unread, href: `/competitions/${tournament.id}/rsvp` });
   }
-  // Two nights without a time compare as NaN, which falls through to the id.
+  // Two tournaments without a time compare as NaN, which falls through to the id.
   return rows.sort(
     (a, b) =>
       scheduledOrLast(a) - scheduledOrLast(b) ||
