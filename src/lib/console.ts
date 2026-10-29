@@ -129,6 +129,38 @@ export const deleteTournamentDescription = (name: string, rsvpCount: number): st
   return `This removes "${name}", every match in it, and the ${people} on its RSVP list. It cannot be undone.`;
 };
 
+/** How many are on a tournament's RSVP list, as a delete confirmation learns it. */
+export type RsvpHeadcount =
+  | { kind: "counting" }
+  | { kind: "counted"; count: number }
+  /** The count could not be read, as offline. */
+  | { kind: "unknown" };
+
+/** What a delete confirmation says, and whether it offers Delete yet. */
+export interface DeleteConfirmation {
+  description: string;
+  canConfirm: boolean;
+}
+
+/**
+ * The delete confirmation for a tournament whose headcount is `headcount`.
+ * Delete waits for the count, so the owner never confirms against a wrong
+ * number; a count that cannot be read gives the wording without one.
+ */
+export const deleteConfirmation = (name: string, headcount: RsvpHeadcount): DeleteConfirmation => {
+  switch (headcount.kind) {
+    case "counting":
+      return { description: `Counting the people on the RSVP list of "${name}"...`, canConfirm: false };
+    case "counted":
+      return { description: deleteTournamentDescription(name, headcount.count), canConfirm: true };
+    case "unknown":
+      return {
+        description: `This removes "${name}", every match in it, and anyone on its RSVP list. It cannot be undone.`,
+        canConfirm: true,
+      };
+  }
+};
+
 // ============================================
 // Courts
 // ============================================

@@ -9,6 +9,7 @@ import {
   setRsvpClosed,
   subscribeToRsvps,
 } from "@/lib/rsvps";
+import type { RsvpHeadcount } from "@/lib/console";
 import type { Rsvp } from "@/types/game";
 
 /**
@@ -74,24 +75,26 @@ export const useRsvpList = (tournamentId: string, canRead: boolean) => {
 /**
  * How many people are on the list of the tournament `tournamentId`, read
  * once from the server when the id is given, for a delete confirmation on
- * a screen that does not hold the list. Null while it is on its way, with
- * no id, and when the count cannot be read, as offline; the confirmation
- * then leaves the headcount out.
+ * a screen that does not hold the list. Counting while it is on its way or
+ * with no id, and unknown when the count cannot be read, as offline.
  */
-export const useRsvpCount = (tournamentId: string | null): number | null => {
-  const [counted, setCounted] = useState<{ id: string; count: number } | null>(null);
+export const useRsvpCount = (tournamentId: string | null): RsvpHeadcount => {
+  const [counted, setCounted] = useState<{ id: string; headcount: RsvpHeadcount } | null>(null);
 
   useEffect(() => {
     if (!tournamentId || !db) return;
     let current = true;
     countRsvps(db, tournamentId).then(
-      (count) => current && setCounted({ id: tournamentId, count }),
-      (error: unknown) => console.warn("Could not count the RSVP list:", error),
+      (count) => current && setCounted({ id: tournamentId, headcount: { kind: "counted", count } }),
+      (error: unknown) => {
+        console.warn("Could not count the RSVP list:", error);
+        if (current) setCounted({ id: tournamentId, headcount: { kind: "unknown" } });
+      },
     );
     return () => {
       current = false;
     };
   }, [tournamentId]);
 
-  return counted && counted.id === tournamentId ? counted.count : null;
+  return counted && counted.id === tournamentId ? counted.headcount : { kind: "counting" };
 };

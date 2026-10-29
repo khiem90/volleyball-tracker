@@ -20,6 +20,8 @@ type DeleteConfirmDialogProps = {
   description: ReactNode;
   onConfirm: () => void;
   isDeleting?: boolean;
+  /** False holds Delete back, as while the confirmation waits for what it will say. */
+  canConfirm?: boolean;
   className?: string;
 };
 
@@ -31,6 +33,7 @@ export const DeleteConfirmDialog = memo(function DeleteConfirmDialog({
   description,
   onConfirm,
   isDeleting = false,
+  canConfirm = true,
   className,
 }: DeleteConfirmDialogProps) {
   return (
@@ -55,7 +58,7 @@ export const DeleteConfirmDialog = memo(function DeleteConfirmDialog({
           <Button
             variant="destructive"
             onClick={onConfirm}
-            disabled={isDeleting}
+            disabled={isDeleting || !canConfirm}
             className="sm:flex-1"
           >
             {isDeleting ? <InlineSpinner /> : <MbIcon id="trash" size={14} />}

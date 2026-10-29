@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { listSoFar, rsvpProblems, type RsvpSetup } from "@/lib/rsvp";
-import { deleteTournamentDescription, showsRsvpTab } from "@/lib/console";
+import { deleteConfirmation, deleteTournamentDescription, showsRsvpTab } from "@/lib/console";
 import type { Rsvp } from "@/types/game";
 
 // Friday 6 November 2026, 19:00 in UTC, and the Thursday before at 18:00.
@@ -94,6 +94,35 @@ describe("deleteTournamentDescription", () => {
     expect(deleteTournamentDescription("Friday night", 14)).toBe(
       'This removes "Friday night", every match in it, and the 14 people on its RSVP list. It cannot be undone.',
     );
+  });
+});
+
+describe("deleteConfirmation", () => {
+  it("holds the confirm while the headcount is on its way, so nobody confirms against a wrong number", () => {
+    expect(deleteConfirmation("Friday night", { kind: "counting" })).toEqual({
+      description: 'Counting the people on the RSVP list of "Friday night"...',
+      canConfirm: false,
+    });
+  });
+
+  it("offers the confirm with the headcount once it arrives", () => {
+    expect(deleteConfirmation("Friday night", { kind: "counted", count: 3 })).toEqual({
+      description:
+        'This removes "Friday night", every match in it, and the 3 people on its RSVP list. It cannot be undone.',
+      canConfirm: true,
+    });
+    expect(deleteConfirmation("Friday night", { kind: "counted", count: 0 })).toEqual({
+      description: 'This removes "Friday night" and every match in it. It cannot be undone.',
+      canConfirm: true,
+    });
+  });
+
+  it("offers the confirm without a number when the headcount cannot be read, as offline", () => {
+    expect(deleteConfirmation("Friday night", { kind: "unknown" })).toEqual({
+      description:
+        'This removes "Friday night", every match in it, and anyone on its RSVP list. It cannot be undone.',
+      canConfirm: true,
+    });
   });
 });
 

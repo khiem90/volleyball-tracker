@@ -192,7 +192,7 @@ describeFirestoreRules("The owner managing the RSVP list on Firestore", (env) =>
     });
   });
 
-  it("deleting a tournament with hundreds on its list removes all of them", async () => {
+  it("deleting a tournament with hundreds on its list removes all of them in one cleanup, never half the list", async () => {
     const tournament = await night(4);
     await env().withSecurityRulesDisabled(async (unrestricted) => {
       const raw = modularFirestore(unrestricted);
@@ -210,8 +210,18 @@ describeFirestoreRules("The owner managing the RSVP list on Firestore", (env) =>
       }
     });
 
-    await deleteTournament(accountDb(owner), tournament.id);
+    // The owner's console watches the list while the delete goes through.
+    // One cleanup batch takes the whole list at once; split batches would
+    // show it part gone first.
+    const ownerDb = accountDb(owner);
+    const sizes: number[] = [];
+    const unsubscribe = subscribeToRsvps(ownerDb, tournament.id, (rsvps) => sizes.push(rsvps.length), () => {});
+    await listWhere(ownerDb, tournament.id, (rsvps) => rsvps.length === 520);
 
+    await deleteTournament(ownerDb, tournament.id);
+    unsubscribe();
+
+    expect(sizes.filter((size) => size !== 520 && size !== 0)).toEqual([]);
     await env().withSecurityRulesDisabled(async (unrestricted) => {
       const raw = modularFirestore(unrestricted);
       expect((await getDocs(collection(raw, "tournaments", tournament.id, "rsvps"))).size).toBe(0);

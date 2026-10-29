@@ -378,15 +378,12 @@ export const renameTournament = async (
   await updateTournamentFields(db, tournamentId, { name: trimmed });
 };
 
-/** The most writes the delete cleanup puts in one batch. */
-const BATCH_LIMIT = 500;
-
 /**
  * Delete a tournament with every match under it, its scorer key, the
  * proofs of every phone that opened its scorer link, its RSVP list, held
- * spots included, and its notices. The cleanup is one batch of at most 500
- * writes, the limit Firestore has long documented for a batch; a big round
- * robin with a long list that runs past it goes in as many as it needs.
+ * spots included, and its notices, all in one cleanup batch. Firestore no
+ * longer caps a batch at 500 writes, so a big round robin with a long list
+ * still goes in one, and nobody watching the list sees it half gone.
  */
 export const deleteTournament = async (db: Firestore, tournamentId: string): Promise<void> => {
   const [matches, proofs, rsvps, notices] = await Promise.all([
@@ -395,17 +392,14 @@ export const deleteTournament = async (db: Firestore, tournamentId: string): Pro
     getDocs(rsvpsCollection(db, tournamentId)),
     getDocs(noticesCollection(db, tournamentId)),
   ]);
-  const refs = [
-    ...[matches, proofs, rsvps, notices].flatMap((snapshot) => snapshot.docs.map((d) => d.ref)),
-    scorerKeyDoc(db, tournamentId),
-  ];
   // The rules for everything under the tournament read the tournament
   // itself, so those go first and the tournament last, in its own write.
-  for (let start = 0; start < refs.length; start += BATCH_LIMIT) {
-    const batch = writeBatch(db);
-    refs.slice(start, start + BATCH_LIMIT).forEach((ref) => batch.delete(ref));
-    await batch.commit();
+  const batch = writeBatch(db);
+  for (const snapshot of [matches, proofs, rsvps, notices]) {
+    snapshot.docs.forEach((d) => batch.delete(d.ref));
   }
+  batch.delete(scorerKeyDoc(db, tournamentId));
+  await batch.commit();
   await deleteDoc(tournamentDoc(db, tournamentId));
 };
 
