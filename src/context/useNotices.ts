@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback } from "react";
 import { db } from "@/lib/firebase";
-import { deleteNotice, postNotice, subscribeToNotices } from "@/lib/rsvps";
+import { deleteNotice, postNotice, subscribeToNotices } from "@/lib/rsvping";
 import type { Notice } from "@/types/game";
+import { useSubscription } from "./useSubscription";
 
 /**
  * A tournament's notices, newest first, and the owner's two actions on
@@ -13,27 +14,10 @@ import type { Notice } from "@/types/game";
  */
 export const useNotices = (tournamentId: string, canRead: boolean) => {
   // null until the first delivery.
-  const [notices, setNotices] = useState<Notice[] | null>(null);
-  const [error, setError] = useState<Error | null>(null);
-
-  /* eslint-disable react-hooks/set-state-in-effect */
-  useEffect(() => {
-    if (!canRead || !db) {
-      setNotices(null);
-      return;
-    }
-    setError(null);
-    return subscribeToNotices(
-      db,
-      tournamentId,
-      (next) => {
-        setNotices(next);
-        setError(null);
-      },
-      setError,
-    );
-  }, [tournamentId, canRead]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+  const { value: notices, error } = useSubscription<Notice[]>(
+    canRead ? tournamentId : null,
+    (db, onChange, onError) => subscribeToNotices(db, tournamentId, onChange, onError),
+  );
 
   /** Post a notice. Rejects with the problem before writing, or with the rules' refusal. Owner only. */
   const post = useCallback(

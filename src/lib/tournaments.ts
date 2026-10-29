@@ -67,10 +67,10 @@ export const scorerProofsCollection = (db: Firestore, tournamentId: string) =>
   collection(db, "tournaments", tournamentId, "scorers");
 export const scorerProofDoc = (db: Firestore, tournamentId: string, uid: string) =>
   doc(scorerProofsCollection(db, tournamentId), uid);
-/** The owner's notices to everyone on the RSVP list (see src/lib/rsvps.ts). */
+/** The owner's notices to everyone on the RSVP list (see src/lib/rsvping.ts). */
 export const noticesCollection = (db: Firestore, tournamentId: string) =>
   collection(db, "tournaments", tournamentId, "notices");
-/** The RSVPs and held spots on a tournament's list (see src/lib/rsvps.ts). */
+/** The RSVPs and held spots on a tournament's list (see src/lib/rsvping.ts). */
 export const rsvpsCollection = (db: Firestore, tournamentId: string) =>
   collection(db, "tournaments", tournamentId, "rsvps");
 

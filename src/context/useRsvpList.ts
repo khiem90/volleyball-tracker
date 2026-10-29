@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useSubscription } from "./useSubscription";
 import { db } from "@/lib/firebase";
 import {
   addHeldSpot,
@@ -8,7 +9,7 @@ import {
   removeRsvp,
   setRsvpClosed,
   subscribeToRsvps,
-} from "@/lib/rsvps";
+} from "@/lib/rsvping";
 import type { RsvpHeadcount } from "@/lib/console";
 import type { Rsvp } from "@/types/game";
 
@@ -20,27 +21,10 @@ import type { Rsvp } from "@/types/game";
  */
 export const useRsvpList = (tournamentId: string, canRead: boolean) => {
   // null until the first delivery.
-  const [rsvps, setRsvps] = useState<Rsvp[] | null>(null);
-  const [error, setError] = useState<Error | null>(null);
-
-  /* eslint-disable react-hooks/set-state-in-effect */
-  useEffect(() => {
-    if (!canRead || !db) {
-      setRsvps(null);
-      return;
-    }
-    setError(null);
-    return subscribeToRsvps(
-      db,
-      tournamentId,
-      (next) => {
-        setRsvps(next);
-        setError(null);
-      },
-      setError,
-    );
-  }, [tournamentId, canRead]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+  const { value: rsvps, error } = useSubscription<Rsvp[]>(
+    canRead ? tournamentId : null,
+    (db, onChange, onError) => subscribeToRsvps(db, tournamentId, onChange, onError),
+  );
 
   /** Add a held spot by name. Rejects with the problem before writing, or with the rules' refusal. */
   const addHeld = useCallback(

@@ -6,12 +6,13 @@ import type { RsvpEntry } from "@/lib/rsvp";
 import {
   markNoticesRead,
   readRememberedName,
-  rsvp,
+  sendRsvp,
   subscribeToRsvps,
   updateRsvp,
   withdraw,
-} from "@/lib/rsvps";
+} from "@/lib/rsvping";
 import { useNotices } from "./useNotices";
+import { useSubscription } from "./useSubscription";
 import { subscribeToTournament } from "@/lib/tournaments";
 import type { Rsvp, Tournament } from "@/types/game";
 
@@ -31,8 +32,6 @@ export const useRsvpNight = (tournamentId: string, uid: string | null) => {
   // undefined while it is on its way; null when it is gone or the rules
   // refuse it, which is how a link turned off looks to a non-owner.
   const [tournament, setTournament] = useState<Tournament | null | undefined>(undefined);
-  const [rsvps, setRsvps] = useState<Rsvp[] | null>(null);
-  const [listError, setListError] = useState<Error | null>(null);
   const [rememberedName, setRememberedName] = useState<string | null | undefined>(undefined);
 
   /* eslint-disable react-hooks/set-state-in-effect */
@@ -42,22 +41,6 @@ export const useRsvpNight = (tournamentId: string, uid: string | null) => {
     return subscribeToTournament(db, tournamentId, setTournament, () => setTournament(null));
   }, [tournamentId, uid]);
 
-  // A refused listener stays dead, so the list is opened again whenever
-  // the link comes back on.
-  const linkOn = tournament?.rsvp?.enabled === true;
-  useEffect(() => {
-    if (!uid || !db || !linkOn) return;
-    setListError(null);
-    return subscribeToRsvps(
-      db,
-      tournamentId,
-      (next) => {
-        setRsvps(next);
-        setListError(null);
-      },
-      setListError,
-    );
-  }, [tournamentId, uid, linkOn]);
 
   useEffect(() => {
     if (!uid || !db) return;
@@ -72,6 +55,14 @@ export const useRsvpNight = (tournamentId: string, uid: string | null) => {
     };
   }, [uid]);
   /* eslint-enable react-hooks/set-state-in-effect */
+
+  // A refused listener stays dead, so the list is opened again whenever
+  // the link comes back on.
+  const linkOn = tournament?.rsvp?.enabled === true;
+  const { value: rsvps, error: listError } = useSubscription<Rsvp[]>(
+    uid && linkOn ? `${tournamentId}/${uid}` : null,
+    (db, onChange, onError) => subscribeToRsvps(db, tournamentId, onChange, onError),
+  );
 
   const { notices, error: noticesError } = useNotices(tournamentId, !!uid && linkOn);
 
@@ -92,7 +83,7 @@ export const useRsvpNight = (tournamentId: string, uid: string | null) => {
   const rsvpAs = useCallback(
     async (entry: RsvpEntry) => {
       if (!uid || !db) throw new Error("Sign in to RSVP.");
-      await rsvp(db, tournamentId, uid, entry);
+      await sendRsvp(db, tournamentId, uid, entry);
       setRememberedName(entry.name.trim());
     },
     [tournamentId, uid],
@@ -122,7 +113,7 @@ export const useRsvpNight = (tournamentId: string, uid: string | null) => {
     notices,
     noticesError,
     rememberedName,
-    rsvp: rsvpAs,
+    sendRsvp: rsvpAs,
     update: updateMine,
     withdraw: withdrawMine,
   };

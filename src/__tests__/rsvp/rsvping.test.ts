@@ -7,14 +7,14 @@ import {
   markNoticesRead,
   postNotice,
   readRememberedName,
-  rsvp,
+  sendRsvp,
   RsvpRefusedError,
   rsvpsCollection,
   saveRsvpSettings,
   subscribeToNotices,
   subscribeToRsvps,
   turnRsvpLinkOff,
-} from "@/lib/rsvps";
+} from "@/lib/rsvping";
 import { createTournament, type NewTournamentInput } from "@/lib/tournaments";
 import { DEFAULT_TERMINOLOGY } from "@/types/competition-config";
 import type { Notice, Rsvp, Tournament } from "@/types/game";
@@ -177,8 +177,8 @@ describeFirestoreRules("RSVPing on Firestore", (env) => {
     const tournament = await night({ capacity: 1 });
 
     await Promise.all([
-      rsvp(accountDb(dan), tournament.id, dan, { name: "Dan", note: "" }),
-      rsvp(accountDb(eve), tournament.id, eve, { name: "Eve", note: "Bringing a ball" }),
+      sendRsvp(accountDb(dan), tournament.id, dan, { name: "Dan", note: "" }),
+      sendRsvp(accountDb(eve), tournament.id, eve, { name: "Eve", note: "Bringing a ball" }),
     ]);
 
     const delivered = await listOf(accountDb(owner), tournament.id, 2);
@@ -205,7 +205,7 @@ describeFirestoreRules("RSVPing on Firestore", (env) => {
 
   it("shows the list to another signed-in account holding the link", async () => {
     const tournament = await night();
-    await rsvp(accountDb(dan), tournament.id, dan, { name: "Dan", note: "" });
+    await sendRsvp(accountDb(dan), tournament.id, dan, { name: "Dan", note: "" });
 
     const seen = await listOf(accountDb(eve), tournament.id, 1);
     expect(seen.map((r) => r.name)).toEqual(["Dan"]);
@@ -216,7 +216,7 @@ describeFirestoreRules("RSVPing on Firestore", (env) => {
     const db = accountDb(dan);
     expect(await readRememberedName(db, dan)).toBeNull();
 
-    await rsvp(db, tournament.id, dan, { name: "  Dan from Tuesdays ", note: " Late " });
+    await sendRsvp(db, tournament.id, dan, { name: "  Dan from Tuesdays ", note: " Late " });
 
     const [mine] = await listOf(db, tournament.id, 1);
     expect(mine).toMatchObject({ id: dan, uid: dan, name: "Dan from Tuesdays", note: "Late" });
@@ -227,7 +227,7 @@ describeFirestoreRules("RSVPing on Firestore", (env) => {
     const tournament = await night();
     const db = accountDb(dan);
 
-    await expect(rsvp(db, tournament.id, dan, { name: " ", note: "" })).rejects.toThrow(
+    await expect(sendRsvp(db, tournament.id, dan, { name: " ", note: "" })).rejects.toThrow(
       "Enter the name the owner will see.",
     );
     expect(await readRememberedName(db, dan)).toBeNull();
@@ -237,7 +237,7 @@ describeFirestoreRules("RSVPing on Firestore", (env) => {
     const tournament = await night({ opensInMinutes: 1 });
     const db = accountDb(dan);
 
-    const refused = rsvp(db, tournament.id, dan, { name: "Dan", note: "" });
+    const refused = sendRsvp(db, tournament.id, dan, { name: "Dan", note: "" });
     await expect(refused).rejects.toBeInstanceOf(RsvpRefusedError);
     await expect(refused).rejects.toThrow(NOT_OPEN_YET);
     expect(await readRememberedName(db, dan)).toBeNull();
@@ -248,10 +248,10 @@ describeFirestoreRules("RSVPing on Firestore", (env) => {
     const off = await night({ enabled: false });
     const db = accountDb(dan);
 
-    await expect(rsvp(db, closed.id, dan, { name: "Dan", note: "" })).rejects.toThrow(
+    await expect(sendRsvp(db, closed.id, dan, { name: "Dan", note: "" })).rejects.toThrow(
       "The owner has closed RSVPs.",
     );
-    await expect(rsvp(db, off.id, dan, { name: "Dan", note: "" })).rejects.toThrow(
+    await expect(sendRsvp(db, off.id, dan, { name: "Dan", note: "" })).rejects.toThrow(
       "This RSVP link is off.",
     );
   });
@@ -310,7 +310,7 @@ describeFirestoreRules("Notices on Firestore", (env) => {
   it("records on an account's RSVP that it has seen the newest notice", async () => {
     const tournament = await openNight();
     const db = accountDb(dan);
-    await rsvp(db, tournament.id, dan, { name: "Dan", note: "" });
+    await sendRsvp(db, tournament.id, dan, { name: "Dan", note: "" });
     await postNotice(accountDb(owner), tournament.id, "We moved to 7:30.");
     const [newest] = await noticesOf(db, tournament.id, (n) => n.length === 1);
 

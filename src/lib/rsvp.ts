@@ -4,7 +4,7 @@
  * touches the database or React. See CONTEXT.md under "RSVP" and ADR-0004.
  */
 
-import type { Notice, Rsvp, ServerTime, Tournament } from "@/types/game";
+import type { Notice, Rsvp, RsvpSettings, ServerTime, Tournament } from "@/types/game";
 
 // ============================================
 // Setup
@@ -33,6 +33,17 @@ export const rsvpSetupOf = (tournament: Pick<Tournament, "scheduledAt" | "rsvp">
   capacity: tournament.rsvp?.capacity ?? DEFAULT_CAPACITY,
   scheduledAt: tournament.scheduledAt ?? null,
   opensAt: tournament.rsvp?.opensAt ?? null,
+});
+
+/**
+ * The RSVP settings a tournament stores for a setup, with the list closed
+ * or not as `closed` says. An open time that is unset is left out.
+ */
+export const rsvpSettingsOf = (setup: RsvpSetup, closed: boolean): RsvpSettings => ({
+  enabled: setup.enabled,
+  capacity: setup.capacity,
+  ...(setup.opensAt !== null && { opensAt: setup.opensAt }),
+  closed,
 });
 
 /** Why an RSVP setup cannot be saved yet, by field. Empty when it can. */

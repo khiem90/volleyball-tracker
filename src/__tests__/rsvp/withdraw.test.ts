@@ -5,12 +5,12 @@ import { applyTournamentCommand } from "@/lib/commandQueue";
 import { rsvpPageState, splitRsvps, standingIn } from "@/lib/rsvp";
 import {
   readRememberedName,
-  rsvp,
+  sendRsvp,
   saveRsvpSettings,
   subscribeToRsvps,
   updateRsvp,
   withdraw,
-} from "@/lib/rsvps";
+} from "@/lib/rsvping";
 import { createTournament, subscribeToTournament, type NewTournamentInput } from "@/lib/tournaments";
 import { DEFAULT_TERMINOLOGY } from "@/types/competition-config";
 import type { Rsvp, Tournament } from "@/types/game";
@@ -65,8 +65,8 @@ describeFirestoreRules("Waitlist and withdrawing on Firestore", (env) => {
 
   /** Dan RSVPs, then Eve, one after the other so the order is certain. */
   const danThenEve = async (tournamentId: string) => {
-    await rsvp(accountDb(dan), tournamentId, dan, { name: "Dan", note: "" });
-    await rsvp(accountDb(eve), tournamentId, eve, { name: "Eve", note: "" });
+    await sendRsvp(accountDb(dan), tournamentId, dan, { name: "Dan", note: "" });
+    await sendRsvp(accountDb(eve), tournamentId, eve, { name: "Eve", note: "" });
   };
 
   it("promotes the first person waiting when the first confirmed withdraws, with no write to them, and puts a returning account at the back", async () => {
@@ -85,7 +85,7 @@ describeFirestoreRules("Waitlist and withdrawing on Firestore", (env) => {
     // Eve's RSVP is the one she wrote: the promotion is the split, not a write.
     expect(after[0]).toEqual(eveBefore);
 
-    await rsvp(accountDb(dan), tournament.id, dan, { name: "Dan", note: "Back in" });
+    await sendRsvp(accountDb(dan), tournament.id, dan, { name: "Dan", note: "Back in" });
 
     const again = await listWhere(eveDb, tournament.id, (rsvps) => rsvps.length === 2);
     expect(again.map((r) => r.uid)).toEqual([eve, dan]);
@@ -129,7 +129,7 @@ describeFirestoreRules("Waitlist and withdrawing on Firestore", (env) => {
 
   it("refuses a changed name the rules would refuse before writing anything", async () => {
     const tournament = await night(1);
-    await rsvp(accountDb(dan), tournament.id, dan, { name: "Dan", note: "" });
+    await sendRsvp(accountDb(dan), tournament.id, dan, { name: "Dan", note: "" });
 
     await expect(updateRsvp(accountDb(dan), tournament.id, dan, { name: "  ", note: "" })).rejects.toThrow(
       "Enter the name the owner will see.",
@@ -153,7 +153,7 @@ describeFirestoreRules("Waitlist and withdrawing on Firestore", (env) => {
       code: "permission-denied",
     });
     await expect(
-      rsvp(accountDb("fay-uid"), tournament.id, "fay-uid", { name: "Fay", note: "" }),
+      sendRsvp(accountDb("fay-uid"), tournament.id, "fay-uid", { name: "Fay", note: "" }),
     ).rejects.toThrow("This tournament has started, so RSVPs are closed.");
   });
 });

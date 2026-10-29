@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { db } from "@/lib/firebase";
 import { homeRsvpRows, type AccountNights, type HomeRsvpRow } from "@/lib/rsvp";
-import { subscribeToAccountNights } from "@/lib/rsvps";
+import { subscribeToAccountNights } from "@/lib/rsvping";
 
 /**
  * The nights the signed-in account `uid` has RSVP'd to, as Home lists them.

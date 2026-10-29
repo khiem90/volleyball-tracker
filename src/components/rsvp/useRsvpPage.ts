@@ -17,7 +17,7 @@ import {
   type RsvpStanding,
   type TimeLabel,
 } from "@/lib/rsvp";
-import { RsvpRefusedError } from "@/lib/rsvps";
+import { RsvpRefusedError } from "@/lib/rsvping";
 
 /**
  * Everything the RSVP page needs: the night, its list, the page state on
@@ -123,7 +123,7 @@ export const useRsvpPage = (tournamentId: string) => {
         closeDialog();
         return;
       }
-      await night.rsvp(sending);
+      await night.sendRsvp(sending);
       setRefusal(null);
       setEntry(null);
       setDialogOpen(false);

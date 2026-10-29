@@ -5,11 +5,11 @@ import { homeRsvpRows, type AccountNights } from "@/lib/rsvp";
 import {
   markNoticesRead,
   postNotice,
-  rsvp,
+  sendRsvp,
   saveRsvpSettings,
   subscribeToAccountNights,
   withdraw,
-} from "@/lib/rsvps";
+} from "@/lib/rsvping";
 import { createTournament, type NewTournamentInput } from "@/lib/tournaments";
 import { DEFAULT_TERMINOLOGY } from "@/types/competition-config";
 import type { Tournament } from "@/types/game";
@@ -102,10 +102,10 @@ describeFirestoreRules("Home's RSVPs on Firestore", (env) => {
     const friday = await night("Friday");
     const saturday = await night("Saturday", 1);
     const sunday = await night("Sunday");
-    await rsvp(accountDb(eve), saturday.id, eve, { name: "Eve", note: "" });
-    await rsvp(accountDb(dan), friday.id, dan, { name: "Dan", note: "" });
-    await rsvp(accountDb(dan), saturday.id, dan, { name: "Dan", note: "" });
-    await rsvp(accountDb(eve), sunday.id, eve, { name: "Eve", note: "" });
+    await sendRsvp(accountDb(eve), saturday.id, eve, { name: "Eve", note: "" });
+    await sendRsvp(accountDb(dan), friday.id, dan, { name: "Dan", note: "" });
+    await sendRsvp(accountDb(dan), saturday.id, dan, { name: "Dan", note: "" });
+    await sendRsvp(accountDb(eve), sunday.id, eve, { name: "Eve", note: "" });
     const danDb = accountDb(dan);
     const watcher = watchNights(danDb, dan);
 
@@ -142,8 +142,8 @@ describeFirestoreRules("Home's RSVPs on Firestore", (env) => {
   it("drops a night whose link the owner turns off, and keeps the rest of the panel", async () => {
     const friday = await night("Friday");
     const saturday = await night("Saturday");
-    await rsvp(accountDb(dan), friday.id, dan, { name: "Dan", note: "" });
-    await rsvp(accountDb(dan), saturday.id, dan, { name: "Dan", note: "" });
+    await sendRsvp(accountDb(dan), friday.id, dan, { name: "Dan", note: "" });
+    await sendRsvp(accountDb(dan), saturday.id, dan, { name: "Dan", note: "" });
     const watcher = watchNights(accountDb(dan), dan);
 
     try {
@@ -173,7 +173,7 @@ describeFirestoreRules("Home's RSVPs on Firestore", (env) => {
 
   it("marks a new notice until the account opens the RSVP page", async () => {
     const friday = await night("Friday");
-    await rsvp(accountDb(dan), friday.id, dan, { name: "Dan", note: "" });
+    await sendRsvp(accountDb(dan), friday.id, dan, { name: "Dan", note: "" });
     const danDb = accountDb(dan);
     const watcher = watchNights(danDb, dan);
 

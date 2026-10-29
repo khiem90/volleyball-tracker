@@ -1,5 +1,11 @@
 import { isRotationFormat, isSeriesFormat, minimumTeams, minimumTeamsMessage } from "@/lib/formats";
-import { DEFAULT_CAPACITY, rsvpProblems, type RsvpProblems } from "@/lib/rsvp";
+import {
+  DEFAULT_CAPACITY,
+  rsvpProblems,
+  rsvpSettingsOf,
+  type RsvpProblems,
+  type RsvpSetup,
+} from "@/lib/rsvp";
 import type { NewTournamentInput } from "@/lib/tournaments";
 import {
   DEFAULT_POINTS_FOR_LOSS,
@@ -34,14 +40,8 @@ export interface TournamentSetup {
   courtWord: string;
   /** The IANA zone the times are entered in: the owner's phone's. */
   zone: string;
-  /** When the tournament will be played, in epoch milliseconds, or null while unset. */
-  scheduledAt: number | null;
-  /** Whether the RSVP link goes on as the tournament is saved. */
-  rsvpEnabled: boolean;
-  /** The number of confirmed RSVPs the night takes. */
-  capacity: number;
-  /** When RSVPs open, in epoch milliseconds, or null while unset. */
-  opensAt: number | null;
+  /** The scheduled time and RSVP settings, with `enabled` saying whether the link goes on as the tournament is saved. */
+  rsvp: RsvpSetup;
 }
 
 /**
@@ -59,10 +59,7 @@ export const emptySetup = (zone = "UTC"): TournamentSetup => ({
   pointsForLoss: DEFAULT_POINTS_FOR_LOSS,
   courtWord: DEFAULT_TERMINOLOGY.venue,
   zone,
-  scheduledAt: null,
-  rsvpEnabled: false,
-  capacity: DEFAULT_CAPACITY,
-  opensAt: null,
+  rsvp: { enabled: false, capacity: DEFAULT_CAPACITY, scheduledAt: null, opensAt: null },
 });
 
 // ============================================
@@ -153,12 +150,7 @@ export const setupProblems = (
   setup: TournamentSetup,
   roster: PersistentTeam[],
 ): SetupProblems => {
-  const problems: SetupProblems = rsvpProblems({
-    enabled: setup.rsvpEnabled,
-    capacity: setup.capacity,
-    scheduledAt: setup.scheduledAt,
-    opensAt: setup.opensAt,
-  });
+  const problems: SetupProblems = rsvpProblems(setup.rsvp);
   if (setup.name.trim().length === 0) problems.name = "Give the tournament a name.";
   if (!setup.format) {
     problems.format = "Pick a format.";
@@ -196,17 +188,13 @@ export const firstProblem = (problems: SetupProblems): string | undefined =>
  * off the default, so a tournament kept private for now keeps what the
  * owner entered; an untouched section adds nothing.
  */
-const scheduleInput = (
-  setup: TournamentSetup,
-): Pick<NewTournamentInput, "scheduledAt" | "scheduledZone" | "rsvp"> => ({
-  ...(setup.scheduledAt !== null && { scheduledAt: setup.scheduledAt, scheduledZone: setup.zone }),
-  ...((setup.rsvpEnabled || setup.opensAt !== null || setup.capacity !== DEFAULT_CAPACITY) && {
-    rsvp: {
-      enabled: setup.rsvpEnabled,
-      capacity: setup.capacity,
-      ...(setup.opensAt !== null && { opensAt: setup.opensAt }),
-      closed: false,
-    },
+const scheduleInput = ({
+  rsvp,
+  zone,
+}: TournamentSetup): Pick<NewTournamentInput, "scheduledAt" | "scheduledZone" | "rsvp"> => ({
+  ...(rsvp.scheduledAt !== null && { scheduledAt: rsvp.scheduledAt, scheduledZone: zone }),
+  ...((rsvp.enabled || rsvp.opensAt !== null || rsvp.capacity !== DEFAULT_CAPACITY) && {
+    rsvp: rsvpSettingsOf(rsvp, false),
   }),
 });
 

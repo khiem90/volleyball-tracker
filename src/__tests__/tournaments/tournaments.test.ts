@@ -18,7 +18,7 @@ import {
 } from "@/lib/commandQueue";
 import { EngineError } from "@/lib/engine";
 import { addQuickMatch } from "@/lib/quickMatches";
-import { postNotice } from "@/lib/rsvps";
+import { postNotice } from "@/lib/rsvping";
 import {
   proveScorer,
   regenerateScorerKey,
@@ -26,7 +26,7 @@ import {
   StaleScorerLinkError,
   subscribeToScorerKey,
 } from "@/lib/sharing";
-import { saveRsvpSettings } from "@/lib/rsvps";
+import { saveRsvpSettings } from "@/lib/rsvping";
 import {
   createTournament,
   deleteTournament,

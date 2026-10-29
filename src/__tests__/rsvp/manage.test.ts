@@ -16,11 +16,11 @@ import {
   countRsvps,
   postNotice,
   removeRsvp,
-  rsvp,
+  sendRsvp,
   setRsvpClosed,
   subscribeToRsvps,
   withdraw,
-} from "@/lib/rsvps";
+} from "@/lib/rsvping";
 import { createTournament, deleteTournament, type NewTournamentInput } from "@/lib/tournaments";
 import { DEFAULT_TERMINOLOGY } from "@/types/competition-config";
 import type { Rsvp, Tournament } from "@/types/game";
@@ -69,9 +69,9 @@ describeFirestoreRules("The owner managing the RSVP list on Firestore", (env) =>
 
   it("puts the owner's held spot in the next place in arrival order, behind everyone already there", async () => {
     const tournament = await night(2);
-    await rsvp(accountDb(dan), tournament.id, dan, { name: "Dan", note: "" });
+    await sendRsvp(accountDb(dan), tournament.id, dan, { name: "Dan", note: "" });
     await addHeldSpot(accountDb(owner), tournament.id, " Walk-in Sam ");
-    await rsvp(accountDb(eve), tournament.id, eve, { name: "Eve", note: "" });
+    await sendRsvp(accountDb(eve), tournament.id, eve, { name: "Eve", note: "" });
 
     const list = await listWhere(accountDb(owner), tournament.id, (rsvps) => rsvps.length === 3);
     expect(list.map((r) => r.name)).toEqual(["Dan", "Walk-in Sam", "Eve"]);
@@ -93,8 +93,8 @@ describeFirestoreRules("The owner managing the RSVP list on Firestore", (env) =>
 
   it("promotes the first person waiting when the owner removes a confirmed RSVP, with no write to them", async () => {
     const tournament = await night(1);
-    await rsvp(accountDb(dan), tournament.id, dan, { name: "Dan", note: "" });
-    await rsvp(accountDb(eve), tournament.id, eve, { name: "Eve", note: "" });
+    await sendRsvp(accountDb(dan), tournament.id, dan, { name: "Dan", note: "" });
+    await sendRsvp(accountDb(eve), tournament.id, eve, { name: "Eve", note: "" });
     const eveDb = accountDb(eve);
     const before = await listWhere(eveDb, tournament.id, (rsvps) => rsvps.length === 2);
     expect(standingIn(splitRsvps(before, 1), eve)).toEqual({ kind: "waitlisted", position: 1 });
@@ -108,7 +108,7 @@ describeFirestoreRules("The owner managing the RSVP list on Firestore", (env) =>
 
   it("removes a held spot, and anyone once the tournament has started", async () => {
     const tournament = await night(4);
-    await rsvp(accountDb(dan), tournament.id, dan, { name: "Dan", note: "" });
+    await sendRsvp(accountDb(dan), tournament.id, dan, { name: "Dan", note: "" });
     await addHeldSpot(accountDb(owner), tournament.id, "Walk-in Sam");
     const ownerDb = accountDb(owner);
     const list = await listWhere(ownerDb, tournament.id, (rsvps) => rsvps.length === 2);
@@ -122,7 +122,7 @@ describeFirestoreRules("The owner managing the RSVP list on Firestore", (env) =>
 
   it("closes the list early, which refuses new RSVPs but not withdrawals, and reopens it while a draft", async () => {
     const tournament = await night(4);
-    await rsvp(accountDb(dan), tournament.id, dan, { name: "Dan", note: "" });
+    await sendRsvp(accountDb(dan), tournament.id, dan, { name: "Dan", note: "" });
     const ownerDb = accountDb(owner);
 
     await setRsvpClosed(ownerDb, tournament.id, true);
@@ -130,13 +130,13 @@ describeFirestoreRules("The owner managing the RSVP list on Firestore", (env) =>
     expect(closed.rsvp).toEqual({ ...tournament.rsvp, closed: true });
     expect(rsvpPageState(closed, Date.now())).toEqual({ kind: "closed" });
     await expect(
-      rsvp(accountDb(eve), tournament.id, eve, { name: "Eve", note: "" }),
+      sendRsvp(accountDb(eve), tournament.id, eve, { name: "Eve", note: "" }),
     ).rejects.toThrow("The owner has closed RSVPs.");
     await withdraw(accountDb(dan), tournament.id, dan);
 
     await setRsvpClosed(ownerDb, tournament.id, false);
     expect((await stored(ownerDb, tournament.id)).rsvp?.closed).toBe(false);
-    await rsvp(accountDb(eve), tournament.id, eve, { name: "Eve", note: "" });
+    await sendRsvp(accountDb(eve), tournament.id, eve, { name: "Eve", note: "" });
   });
 
   it("refuses to reopen the list once the tournament has started, before writing anything", async () => {
@@ -153,8 +153,8 @@ describeFirestoreRules("The owner managing the RSVP list on Firestore", (env) =>
 
   it("lets the owner RSVP to their own night like anyone else, on the same list", async () => {
     const tournament = await night(4);
-    await rsvp(accountDb(dan), tournament.id, dan, { name: "Dan", note: "" });
-    await rsvp(accountDb(owner), tournament.id, owner, { name: "The organiser", note: "" });
+    await sendRsvp(accountDb(dan), tournament.id, dan, { name: "Dan", note: "" });
+    await sendRsvp(accountDb(owner), tournament.id, owner, { name: "The organiser", note: "" });
 
     const list = await listWhere(accountDb(owner), tournament.id, (rsvps) => rsvps.length === 2);
     expect(standingIn(splitRsvps(list, 4), owner)).toEqual({ kind: "confirmed", position: 2 });
@@ -165,8 +165,8 @@ describeFirestoreRules("The owner managing the RSVP list on Firestore", (env) =>
     const ownerDb = accountDb(owner);
     expect(await countRsvps(ownerDb, tournament.id)).toBe(0);
 
-    await rsvp(accountDb(dan), tournament.id, dan, { name: "Dan", note: "" });
-    await rsvp(accountDb(eve), tournament.id, eve, { name: "Eve", note: "" });
+    await sendRsvp(accountDb(dan), tournament.id, dan, { name: "Dan", note: "" });
+    await sendRsvp(accountDb(eve), tournament.id, eve, { name: "Eve", note: "" });
     await addHeldSpot(ownerDb, tournament.id, "Walk-in Sam");
 
     expect(await countRsvps(ownerDb, tournament.id)).toBe(3);
@@ -175,8 +175,8 @@ describeFirestoreRules("The owner managing the RSVP list on Firestore", (env) =>
   it("deleting a tournament removes its RSVPs and held spots with its notices, scorer key, and matches", async () => {
     const tournament = await night(4);
     const ownerDb = accountDb(owner);
-    await rsvp(accountDb(dan), tournament.id, dan, { name: "Dan", note: "" });
-    await rsvp(accountDb(eve), tournament.id, eve, { name: "Eve", note: "" });
+    await sendRsvp(accountDb(dan), tournament.id, dan, { name: "Dan", note: "" });
+    await sendRsvp(accountDb(eve), tournament.id, eve, { name: "Eve", note: "" });
     await addHeldSpot(ownerDb, tournament.id, "Walk-in Sam");
     await postNotice(ownerDb, tournament.id, "We moved to 7:30.");
 

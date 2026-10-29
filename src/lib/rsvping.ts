@@ -16,7 +16,9 @@ import {
   where,
   writeBatch,
   type Firestore,
+  type QuerySnapshot,
   type Unsubscribe,
+  type WriteBatch,
 } from "firebase/firestore";
 import { isRefused } from "@/lib/firestoreData";
 import {
@@ -25,6 +27,7 @@ import {
   rsvpEntryProblems,
   rsvpPageState,
   rsvpProblems,
+  rsvpSettingsOf,
   type AccountNights,
   type AccountRsvp,
   type RsvpEntry,
@@ -37,7 +40,7 @@ import {
   tournamentDoc,
   updateTournamentFields,
 } from "@/lib/tournaments";
-import type { Notice, Rsvp, RsvpSettings, Tournament } from "@/types/game";
+import type { Notice, Rsvp, Tournament } from "@/types/game";
 
 /**
  * RSVPs on Firestore: the owner's RSVP settings on the tournament document,
@@ -53,6 +56,13 @@ export const rsvpDoc = (db: Firestore, tournamentId: string, uid: string) =>
   doc(db, "tournaments", tournamentId, "rsvps", uid);
 /** The account's own document. Only that account can read or write it. */
 export const accountDoc = (db: Firestore, uid: string) => doc(db, "users", uid);
+
+/**
+ * A query's documents with their ids. A pending write of this phone's own
+ * shows with the server time estimated until the server answers.
+ */
+const withIds = <T extends { id: string }>(snapshot: QuerySnapshot): T[] =>
+  snapshot.docs.map((d) => ({ ...d.data({ serverTimestamps: "estimate" }), id: d.id }) as T);
 
 // ============================================
 // The owner
@@ -76,13 +86,9 @@ export const saveRsvpSettings = async (
   const [problem] = Object.values(rsvpProblems(setup));
   if (problem) throw new Error(problem);
 
-  const rsvp: RsvpSettings = {
-    enabled: setup.enabled,
-    capacity: setup.capacity,
-    ...(setup.opensAt !== null && { opensAt: setup.opensAt }),
-    closed: tournament.rsvp?.closed ?? false,
+  const fields: Record<string, unknown> = {
+    rsvp: rsvpSettingsOf(setup, tournament.rsvp?.closed ?? false),
   };
-  const fields: Record<string, unknown> = { rsvp };
   if (setup.scheduledAt === null) {
     fields.scheduledAt = deleteField();
     fields.scheduledZone = deleteField();
@@ -177,14 +183,7 @@ export const subscribeToRsvps = (
 ): Unsubscribe =>
   onSnapshot(
     query(rsvpsCollection(db, tournamentId), orderBy("createdAt")),
-    (snapshot) => {
-      onChange(
-        snapshot.docs.map((d) => ({
-          ...(d.data({ serverTimestamps: "estimate" }) as Omit<Rsvp, "id">),
-          id: d.id,
-        })),
-      );
-    },
+    (snapshot) => onChange(withIds<Rsvp>(snapshot)),
     (error) => onError?.(error),
   );
 
@@ -219,6 +218,24 @@ const whyRefused = async (db: Firestore, tournamentId: string): Promise<string> 
 };
 
 /**
+ * A batch that remembers `name` on the account, for the RSVP write to join,
+ * with the entry trimmed as it is stored. A name or note the rules would
+ * refuse is thrown before anything is written.
+ */
+const rememberingBatch = (
+  db: Firestore,
+  uid: string,
+  entry: RsvpEntry,
+): { batch: WriteBatch; name: string; note: string } => {
+  const [problem] = Object.values(rsvpEntryProblems(entry));
+  if (problem) throw new Error(problem);
+  const name = entry.name.trim();
+  const batch = writeBatch(db);
+  batch.set(accountDoc(db, uid), { rsvpName: name }, { merge: true });
+  return { batch, name, note: entry.note.trim() };
+};
+
+/**
  * RSVP to a tournament as the signed-in account `uid`, under the name and
  * note given, and remember the name on the account for next time. Both
  * land in one batch or neither does. The server writes the arrival time,
@@ -227,24 +244,14 @@ const whyRefused = async (db: Firestore, tournamentId: string): Promise<string> 
  * off; that refusal rejects with an RsvpRefusedError saying which. A name
  * or note the rules would refuse is thrown before anything is written.
  */
-export const rsvp = async (
+export const sendRsvp = async (
   db: Firestore,
   tournamentId: string,
   uid: string,
   entry: RsvpEntry,
 ): Promise<void> => {
-  const [problem] = Object.values(rsvpEntryProblems(entry));
-  if (problem) throw new Error(problem);
-  const name = entry.name.trim();
-
-  const batch = writeBatch(db);
-  batch.set(rsvpDoc(db, tournamentId, uid), {
-    uid,
-    name,
-    note: entry.note.trim(),
-    createdAt: serverTimestamp(),
-  });
-  batch.set(accountDoc(db, uid), { rsvpName: name }, { merge: true });
+  const { batch, name, note } = rememberingBatch(db, uid, entry);
+  batch.set(rsvpDoc(db, tournamentId, uid), { uid, name, note, createdAt: serverTimestamp() });
   try {
     await batch.commit();
   } catch (error) {
@@ -276,13 +283,8 @@ export const updateRsvp = async (
   uid: string,
   entry: RsvpEntry,
 ): Promise<void> => {
-  const [problem] = Object.values(rsvpEntryProblems(entry));
-  if (problem) throw new Error(problem);
-  const name = entry.name.trim();
-
-  const batch = writeBatch(db);
-  batch.update(rsvpDoc(db, tournamentId, uid), { name, note: entry.note.trim() });
-  batch.set(accountDoc(db, uid), { rsvpName: name }, { merge: true });
+  const { batch, name, note } = rememberingBatch(db, uid, entry);
+  batch.update(rsvpDoc(db, tournamentId, uid), { name, note });
   await batch.commit();
 };
 
@@ -300,6 +302,22 @@ export const withdraw = async (db: Firestore, tournamentId: string, uid: string)
 // Notices
 // ============================================
 
+/** A tournament's notices newest first, all of them or only the newest. */
+const watchNotices = (
+  db: Firestore,
+  tournamentId: string,
+  newestOnly: boolean,
+  onChange: (notices: Notice[]) => void,
+  onError?: (error: Error) => void,
+): Unsubscribe => {
+  const newestFirst = query(noticesCollection(db, tournamentId), orderBy("createdAt", "desc"));
+  return onSnapshot(
+    newestOnly ? query(newestFirst, limit(1)) : newestFirst,
+    (snapshot) => onChange(withIds<Notice>(snapshot)),
+    (error) => onError?.(error),
+  );
+};
+
 /**
  * A tournament's notices, newest first, for the owner, or for any signed-in
  * account while the RSVP link is on. A notice this phone has just posted
@@ -312,19 +330,7 @@ export const subscribeToNotices = (
   tournamentId: string,
   onChange: (notices: Notice[]) => void,
   onError?: (error: Error) => void,
-): Unsubscribe =>
-  onSnapshot(
-    query(noticesCollection(db, tournamentId), orderBy("createdAt", "desc")),
-    (snapshot) => {
-      onChange(
-        snapshot.docs.map((d) => ({
-          ...(d.data({ serverTimestamps: "estimate" }) as Omit<Notice, "id">),
-          id: d.id,
-        })),
-      );
-    },
-    (error) => onError?.(error),
-  );
+): Unsubscribe => watchNotices(db, tournamentId, false, onChange, onError);
 
 /**
  * Post a notice on a tournament, trimmed, at the server's time. A body the
@@ -369,34 +375,9 @@ const subscribeToAccountRsvps = (
   onSnapshot(
     query(collectionGroup(db, "rsvps"), where("uid", "==", uid), orderBy("createdAt")),
     (snapshot) => {
-      onChange(
-        snapshot.docs.map((d) => ({
-          ...(d.data({ serverTimestamps: "estimate" }) as Omit<Rsvp, "id">),
-          id: d.id,
-          // An RSVP sits at tournaments/{id}/rsvps/{uid}.
-          tournamentId: d.ref.parent.parent!.id,
-        })),
-      );
-    },
-    onError,
-  );
-
-/** A tournament's newest notice, as a list of at most one, which is all Home reads. */
-const subscribeToNewestNotice = (
-  db: Firestore,
-  tournamentId: string,
-  onChange: (notices: Notice[]) => void,
-  onError: (error: Error) => void,
-): Unsubscribe =>
-  onSnapshot(
-    query(noticesCollection(db, tournamentId), orderBy("createdAt", "desc"), limit(1)),
-    (snapshot) => {
-      onChange(
-        snapshot.docs.map((d) => ({
-          ...(d.data({ serverTimestamps: "estimate" }) as Omit<Notice, "id">),
-          id: d.id,
-        })),
-      );
+      // An RSVP sits at tournaments/{id}/rsvps/{uid}.
+      const tournamentIds = snapshot.docs.map((d) => d.ref.parent.parent!.id);
+      onChange(withIds<Rsvp>(snapshot).map((rsvp, i) => ({ ...rsvp, tournamentId: tournamentIds[i] })));
     },
     onError,
   );
@@ -468,9 +449,10 @@ export const subscribeToAccountNights = (
         },
         refused,
       ),
-      subscribeToNewestNotice(
+      watchNotices(
         db,
         tournamentId,
+        true,
         (newest) => {
           notices[tournamentId] = newest;
           deliver();

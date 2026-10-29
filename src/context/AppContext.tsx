@@ -35,7 +35,7 @@ import { deviceZone, type RsvpSetup } from "@/lib/rsvp";
 import {
   saveRsvpSettings as saveRsvpSettingsDoc,
   turnRsvpLinkOff as turnRsvpLinkOffDoc,
-} from "@/lib/rsvps";
+} from "@/lib/rsvping";
 import {
   buildTournamentToSave,
   deleteTournament as deleteTournamentDoc,

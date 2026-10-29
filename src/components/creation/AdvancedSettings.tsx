@@ -9,6 +9,7 @@ import {
   type SetupProblems,
   type TournamentSetup,
 } from "@/lib/creation";
+import type { RsvpSetup } from "@/lib/rsvp";
 
 const COURT_CHOICES = [1, 2, 3, 4];
 const SERIES_CHOICES = [1, 3, 5, 7];
@@ -110,6 +111,7 @@ export const AdvancedSettings = ({
 }) => {
   const used = setup.format ? settingsUsedBy(setup.format) : ALL_SETTINGS;
   const { venue: courtWord, venuePlural: courtWords } = courtTerminology(setup.courtWord);
+  const changeRsvp = (changes: Partial<RsvpSetup>) => onChange({ rsvp: { ...setup.rsvp, ...changes } });
 
   return (
     <section className="mb-panel">
@@ -216,38 +218,38 @@ export const AdvancedSettings = ({
               id="rsvp-link"
               label="RSVP link"
               note={
-                setup.rsvpEnabled
+                setup.rsvp.enabled
                   ? "Anyone you send the link to can sign in and RSVP from the open time."
                   : "Off keeps the night private. You can turn it on later from the RSVP tab."
               }
-              value={setup.rsvpEnabled}
+              value={setup.rsvp.enabled}
               options={[
                 { value: false, label: "Off" },
                 { value: true, label: "On" },
               ]}
-              onChange={(rsvpEnabled) => onChange({ rsvpEnabled })}
+              onChange={(enabled) => changeRsvp({ enabled })}
             />
             <DateTimeField
               id="scheduled-at"
               label="Scheduled for"
-              value={setup.scheduledAt}
+              value={setup.rsvp.scheduledAt}
               zone={setup.zone}
               problem={problems.scheduledAt}
-              onChange={(scheduledAt) => onChange({ scheduledAt })}
+              onChange={(scheduledAt) => changeRsvp({ scheduledAt })}
             />
             <DateTimeField
               id="opens-at"
               label="RSVPs open"
-              value={setup.opensAt}
+              value={setup.rsvp.opensAt}
               zone={setup.zone}
               problem={problems.opensAt}
-              onChange={(opensAt) => onChange({ opensAt })}
+              onChange={(opensAt) => changeRsvp({ opensAt })}
             />
             <CapacityField
               id="capacity"
-              value={setup.capacity}
+              value={setup.rsvp.capacity}
               problem={problems.capacity}
-              onChange={(capacity) => onChange({ capacity })}
+              onChange={(capacity) => changeRsvp({ capacity })}
             />
           </div>
         </div>
