@@ -5,75 +5,9 @@ import { MbIcon } from "@/components/matchbook/MbIcon";
 import { Panel, PanelEmpty, PanelError } from "@/components/matchbook/Panel";
 import { InlineSpinner } from "@/components/shared";
 import { ConfirmDialog } from "@/components/console/ConfirmDialog";
-import { RSVP_NAME_MAX, rsvpEntryProblems, splitRsvps, type Placed } from "@/lib/rsvp";
+import { RsvpRows, RsvpSectionHead } from "@/components/rsvp/RsvpRows";
+import { RSVP_NAME_MAX, rsvpEntryProblems, splitRsvps } from "@/lib/rsvp";
 import type { Rsvp } from "@/types/game";
-
-const Tag = ({ label }: { label: string }) => (
-  <span className="matchbook-display shrink-0 border-[1.5px] border-mb-navy px-1.5 py-0.5 text-[0.58rem] font-bold tracking-[0.12em]">
-    {label}
-  </span>
-);
-
-/** A section heading: "In" or "Waitlist", with its count. */
-const SectionHead = ({ label, count }: { label: string; count: number }) => (
-  <div className="flex items-baseline justify-between border-b border-mb-rule bg-mb-paper px-4 py-2">
-    <span className="mb-kicker">{label}</span>
-    <span className="matchbook-display text-[0.72rem] font-bold tracking-[0.1em] tabular-nums">
-      {count}
-    </span>
-  </div>
-);
-
-/** One section in arrival order, by name, with Remove on each row while the owner can change the list. */
-const Rows = ({
-  rsvps,
-  ownerUid,
-  onRemove,
-}: {
-  rsvps: Placed<Rsvp>[];
-  ownerUid: string;
-  onRemove?: (rsvp: Rsvp) => void;
-}) => (
-  <ol className="flex flex-col">
-    {rsvps.map((rsvp) => (
-      <li
-        key={rsvp.id}
-        className="grid grid-cols-[2rem_minmax(0,1fr)_auto] items-center gap-2 border-b border-mb-rule px-4 py-2 last:border-b-0"
-      >
-        <span className="matchbook-display text-[0.85rem] font-bold text-mb-ink-muted tabular-nums">
-          {rsvp.position}
-        </span>
-        <span className="flex min-w-0 flex-col gap-0.5">
-          <span className="flex min-w-0 items-baseline gap-2">
-            <span className="min-w-0 text-[0.92rem] font-semibold [overflow-wrap:anywhere]">
-              {rsvp.name}
-            </span>
-            {rsvp.held && <Tag label="Held" />}
-            {rsvp.uid === ownerUid && <Tag label="You" />}
-          </span>
-          {rsvp.note && (
-            <span className="text-[0.78rem] text-mb-ink-muted [overflow-wrap:anywhere]">
-              {rsvp.note}
-            </span>
-          )}
-        </span>
-        {onRemove ? (
-          <button
-            type="button"
-            onClick={() => onRemove(rsvp)}
-            className="mb-btn mb-btn-outline-red"
-            aria-label={`Remove ${rsvp.name}`}
-          >
-            <MbIcon id="remove-user" size={14} />
-            Remove
-          </button>
-        ) : (
-          <span />
-        )}
-      </li>
-    ))}
-  </ol>
-);
 
 /**
  * The owner's RSVP list on the RSVP tab: who is in and who is waiting, in
@@ -216,11 +150,11 @@ export const RsvpListPanel = ({
         <PanelEmpty message="Nobody has RSVP'd yet." />
       ) : (
         <>
-          <SectionHead label="In" count={list.confirmed.length} />
-          <Rows rsvps={list.confirmed} ownerUid={ownerUid} onRemove={remove} />
-          <SectionHead label="Waitlist" count={list.waitlisted.length} />
+          <RsvpSectionHead label="In" count={list.confirmed.length} />
+          <RsvpRows rsvps={list.confirmed} viewerUid={ownerUid} onRemove={remove} />
+          <RsvpSectionHead label="Waitlist" count={list.waitlisted.length} />
           {list.waitlisted.length > 0 ? (
-            <Rows rsvps={list.waitlisted} ownerUid={ownerUid} onRemove={remove} />
+            <RsvpRows rsvps={list.waitlisted} viewerUid={ownerUid} onRemove={remove} />
           ) : (
             <p className="px-4 py-3 text-[0.82rem] text-mb-ink-muted">Nobody is waiting.</p>
           )}

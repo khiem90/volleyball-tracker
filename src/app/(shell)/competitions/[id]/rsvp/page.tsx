@@ -8,64 +8,20 @@ import { Panel, PanelEmpty, PanelError } from "@/components/matchbook/Panel";
 import { NotFound } from "@/components/console/NotFound";
 import { NoticeList } from "@/components/rsvp/NoticeList";
 import { RsvpDialog } from "@/components/rsvp/RsvpDialog";
+import { RsvpRows, RsvpSectionHead } from "@/components/rsvp/RsvpRows";
 import { useRsvpPage } from "@/components/rsvp/useRsvpPage";
 import {
   NOT_OPEN_YET,
   refusedRsvpMessage,
   takesRsvps,
   watchView,
-  type Placed,
   type RsvpStanding,
 } from "@/lib/rsvp";
-import type { Rsvp } from "@/types/game";
 
 const Fact = ({ label, value }: { label: string; value: string }) => (
   <div className="flex flex-col gap-0.5">
     <span className="mb-kicker">{label}</span>
     <span className="text-[0.95rem] font-semibold">{value}</span>
-  </div>
-);
-
-/** One section of the list in arrival order, by name, with the viewer's own row marked. */
-const RsvpList = ({ rsvps, uid }: { rsvps: Placed<Rsvp>[]; uid: string | null }) => (
-  <ol className="flex flex-col">
-    {rsvps.map((rsvp) => (
-      <li
-        key={rsvp.id}
-        className="grid grid-cols-[2rem_minmax(0,1fr)] items-baseline gap-2 border-b border-mb-rule px-4 py-3 last:border-b-0"
-      >
-        <span className="matchbook-display text-[0.85rem] font-bold text-mb-ink-muted tabular-nums">
-          {rsvp.position}
-        </span>
-        <span className="flex min-w-0 flex-col gap-0.5">
-          <span className="flex min-w-0 items-baseline gap-2">
-            <span className="min-w-0 text-[0.95rem] font-semibold [overflow-wrap:anywhere]">
-              {rsvp.name}
-            </span>
-            {rsvp.uid === uid && (
-              <span className="matchbook-display shrink-0 border-[1.5px] border-mb-navy px-1.5 py-0.5 text-[0.58rem] font-bold tracking-[0.12em]">
-                You
-              </span>
-            )}
-          </span>
-          {rsvp.note && (
-            <span className="text-[0.78rem] text-mb-ink-muted [overflow-wrap:anywhere]">
-              {rsvp.note}
-            </span>
-          )}
-        </span>
-      </li>
-    ))}
-  </ol>
-);
-
-/** A section heading inside the list panel: "In" or "Waitlist", with its count. */
-const SectionHead = ({ label, count }: { label: string; count: number }) => (
-  <div className="flex items-baseline justify-between border-b border-mb-rule bg-mb-paper px-4 py-2">
-    <span className="mb-kicker">{label}</span>
-    <span className="matchbook-display text-[0.72rem] font-bold tracking-[0.1em] tabular-nums">
-      {count}
-    </span>
   </div>
 );
 
@@ -277,12 +233,12 @@ export default function RsvpPage() {
             <PanelEmpty message="Nobody has RSVP'd yet." />
           ) : (
             <>
-              <SectionHead label="In" count={page.list.confirmed.length} />
-              <RsvpList rsvps={page.list.confirmed} uid={page.mine?.uid ?? null} />
+              <RsvpSectionHead label="In" count={page.list.confirmed.length} />
+              <RsvpRows rsvps={page.list.confirmed} viewerUid={page.mine?.uid ?? null} />
               {page.list.waitlisted.length > 0 && (
                 <>
-                  <SectionHead label="Waitlist" count={page.list.waitlisted.length} />
-                  <RsvpList rsvps={page.list.waitlisted} uid={page.mine?.uid ?? null} />
+                  <RsvpSectionHead label="Waitlist" count={page.list.waitlisted.length} />
+                  <RsvpRows rsvps={page.list.waitlisted} viewerUid={page.mine?.uid ?? null} />
                 </>
               )}
             </>
