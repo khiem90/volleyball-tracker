@@ -334,6 +334,15 @@ service cloud.firestore {
       allow read: if signedIn() && resource.data.ownerId == request.auth.uid;
     }
 
+    // Home lists the nights an account has RSVP'd to with a collection group
+    // query on its uid, which this wildcard rule proves from the filter. It
+    // reads the account's own RSVPs whether or not each link is still on; the
+    // tournament behind each one is read through the RSVP link as usual. A
+    // held spot has no uid, so it is nobody's.
+    match /{path=**}/rsvps/{rsvpId} {
+      allow read: if realAccount() && resource.data.uid == request.auth.uid;
+    }
+
     // User formations collection (for custom volleyball formations)
     match /formations/{formationId} {
       // Read allowed if:

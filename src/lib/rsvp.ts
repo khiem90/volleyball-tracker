@@ -4,7 +4,7 @@
  * touches the database or React. See CONTEXT.md under "RSVP" and ADR-0004.
  */
 
-import type { Rsvp, ServerTime, Tournament } from "@/types/game";
+import type { Notice, Rsvp, ServerTime, Tournament } from "@/types/game";
 
 // ============================================
 // Setup
@@ -446,3 +446,84 @@ export const noticeProblem = (body: string): string | null => {
 /** A time the server wrote, in epoch milliseconds, for showing it on a clock. */
 export const millisOf = (time: ServerTime): number =>
   time.seconds * 1000 + Math.floor(time.nanoseconds / 1_000_000);
+
+// ============================================
+// Home
+// ============================================
+
+/** One of an account's own RSVPs, with the tournament it sits under, as Home's query finds it. */
+export type AccountRsvp = Rsvp & { tournamentId: string };
+
+/**
+ * What Home has read about the nights an account has RSVP'd to. Each
+ * record is keyed by tournament id, and a key is absent while that read is
+ * on its way, or once the rules refuse it or the tournament is gone.
+ */
+export interface AccountNights {
+  /** The account's own RSVPs, across every tournament. */
+  mine: AccountRsvp[];
+  tournaments: Record<string, Tournament>;
+  /** Each tournament's whole list, which the account's standing is worked out from. */
+  lists: Record<string, Rsvp[]>;
+  /** Each tournament's notices in any order; only the newest counts. */
+  notices: Record<string, Notice[]>;
+}
+
+/** A night on Home: a tournament the account is on the list for. */
+export interface HomeRsvpRow {
+  tournament: Tournament;
+  /** In at a position, or waiting at one. */
+  standing: Exclude<RsvpStanding, { kind: "none" }>;
+  /** Whether a notice arrived after the account last opened the RSVP page. */
+  unread: boolean;
+  /** The RSVP page. */
+  href: string;
+}
+
+/** Whether server time `a` is after `b`, to the nanosecond. */
+const isAfter = (a: ServerTime, b: ServerTime): boolean =>
+  a.seconds > b.seconds || (a.seconds === b.seconds && a.nanoseconds > b.nanoseconds);
+
+/** The latest-posted notice, or null when there are none. */
+const newest = (notices: Notice[]): Notice | null =>
+  notices.reduce<Notice | null>(
+    (latest, notice) =>
+      latest === null || isAfter(notice.createdAt, latest.createdAt) ? notice : latest,
+    null,
+  );
+
+const scheduledOrLast = (row: HomeRsvpRow) =>
+  row.tournament.scheduledAt ?? Number.POSITIVE_INFINITY;
+
+/**
+ * The nights `uid` has RSVP'd to that Home lists, soonest first, with a
+ * night that has no scheduled time last. A completed tournament is left
+ * out, and so is one whose RSVP page would show not found: a tournament the
+ * rules no longer let the account read, or one whose link is off. A night
+ * waits for its list, since the standing comes from it, and leaves Home
+ * once the account's RSVP is gone. A notice is new when it was posted
+ * after the account last opened the RSVP page, or at all when it never has.
+ */
+export const homeRsvpRows = (uid: string, nights: AccountNights): HomeRsvpRow[] => {
+  const rows: HomeRsvpRow[] = [];
+  for (const mine of nights.mine) {
+    const tournament = nights.tournaments[mine.tournamentId];
+    const list = nights.lists[mine.tournamentId];
+    if (!tournament || !list || !tournament.rsvp?.enabled) continue;
+    if (tournament.status === "completed") continue;
+
+    const standing = standingIn(splitRsvps(list, tournament.rsvp.capacity), uid);
+    if (standing.kind === "none") continue;
+
+    const latest = newest(nights.notices[mine.tournamentId] ?? []);
+    const unread =
+      latest !== null && (!mine.noticesReadAt || isAfter(latest.createdAt, mine.noticesReadAt));
+    rows.push({ tournament, standing, unread, href: `/competitions/${tournament.id}/rsvp` });
+  }
+  // Two nights without a time compare as NaN, which falls through to the id.
+  return rows.sort(
+    (a, b) =>
+      scheduledOrLast(a) - scheduledOrLast(b) ||
+      (a.tournament.id < b.tournament.id ? -1 : a.tournament.id > b.tournament.id ? 1 : 0),
+  );
+};
