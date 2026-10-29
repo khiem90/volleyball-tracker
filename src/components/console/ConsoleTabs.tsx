@@ -4,7 +4,8 @@ import { MbIcon } from "@/components/matchbook/MbIcon";
 
 /**
  * The sections of the console. A tournament has Standings or a Bracket,
- * never both, and the owner gets RSVP while the tournament is a draft or live.
+ * never both. The owner gets RSVP while the tournament is a draft or live,
+ * and afterwards when it took RSVPs.
  */
 export type ConsoleTab =
   | "courts"
@@ -29,7 +30,7 @@ export const consoleTabs = ({
   hasBracket: boolean;
   /** "Courts", or "Fields" when the tournament calls them that. */
   courtsLabel: string;
-  /** Whether the RSVP tab is offered: to the owner while the tournament is a draft or live. */
+  /** Whether the RSVP tab is offered: see showsRsvpTab in src/lib/console.ts. */
   hasRsvp: boolean;
 }): ConsoleTabSpec[] => [
   { id: "courts", label: courtsLabel, icon: "court" },

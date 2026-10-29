@@ -64,22 +64,36 @@ export const DateTimeField = ({
   );
 };
 
-/** The number of confirmed RSVPs, typed or stepped one at a time. */
+/**
+ * The number of confirmed RSVPs, typed or stepped one at a time. With a
+ * `floor`, the minus button will not step below it and calls `onFloor`
+ * instead, so the page can say why.
+ */
 export const CapacityField = ({
   id,
   value,
   problem,
   disabled = false,
+  floor = 0,
+  onFloor,
   onChange,
 }: {
   id: string;
   value: number;
   problem?: string;
   disabled?: boolean;
+  /** The lowest capacity the stepper goes to, such as the confirmed count. */
+  floor?: number;
+  /** Called in place of a step below the floor. */
+  onFloor?: () => void;
   onChange: (value: number) => void;
 }) => {
   const step = "mb-btn mb-btn-outline-navy min-w-11 px-3 text-[1rem]";
   const clamp = (n: number) => Math.max(0, Math.min(MAX_CAPACITY, n));
+  const stepDown = () => {
+    if (value - 1 < floor && onFloor) onFloor();
+    else onChange(clamp(value - 1));
+  };
   return (
     <div className="flex flex-col gap-1.5">
       <label htmlFor={id} className="mb-kicker">
@@ -102,7 +116,7 @@ export const CapacityField = ({
         </span>
         <button
           type="button"
-          onClick={() => onChange(clamp(value - 1))}
+          onClick={stepDown}
           disabled={disabled || value <= 1}
           aria-label="One fewer spot"
           className={step}

@@ -4,7 +4,14 @@ import { useState, type FormEvent } from "react";
 import { MbIcon } from "@/components/matchbook/MbIcon";
 import { Panel } from "@/components/matchbook/Panel";
 import { CapacityField, DateTimeField } from "@/components/rsvp/RsvpFields";
-import { deviceZone, rsvpProblems, rsvpSetupOf, type RsvpSetup } from "@/lib/rsvp";
+import {
+  deviceZone,
+  OPEN_TIME_LOCKED,
+  rsvpProblems,
+  rsvpSetupOf,
+  type ListSoFar,
+  type RsvpSetup,
+} from "@/lib/rsvp";
 import type { Tournament } from "@/types/game";
 
 /** The part of the setup the form edits; the link is switched on its own. */
@@ -20,40 +27,64 @@ const sameDraft = (a: RsvpDraft, b: RsvpDraft) =>
   a.capacity === b.capacity && a.scheduledAt === b.scheduledAt && a.opensAt === b.opensAt;
 
 /**
- * The owner's RSVP tab: the RSVP link with its switch, and the scheduled
- * time, open time, and capacity with a Save button. Times are entered on
- * this phone's clock. Turning the link on also saves what the form holds,
- * so a night set up and switched on in one go needs no Save first, and is
- * refused with the reason when either time is missing. Settings that
- * arrive from elsewhere replace the form unless it is being edited.
+ * The owner's RSVP tab: the RSVP link with its switch, Close or Reopen for
+ * the list, and the scheduled time, open time, and capacity with a Save
+ * button. Times are entered on this phone's clock. Turning the link on
+ * also saves what the form holds, so a night set up and switched on in one
+ * go needs no Save first, and is refused with the reason when either time
+ * is missing. Settings that arrive from elsewhere replace the form unless
+ * it is being edited. Once anyone is on the list the open time is
+ * read-only, and the capacity stepper stops at the confirmed count; both
+ * say why.
  */
 export const RsvpPanel = ({
   tournament,
+  list,
   onSave,
+  onSetClosed,
 }: {
   tournament: Tournament;
+  /** What the list already holds; null until it arrives. */
+  list: ListSoFar | null;
   onSave: (setup: RsvpSetup) => void;
+  onSetClosed: (closed: boolean) => void;
 }) => {
   const [zone] = useState(deviceZone);
   const stored = rsvpSetupOf(tournament);
   const storedDraft = draftOf(stored);
 
-  const [draft, setDraft] = useState(storedDraft);
+  const [typed, setDraft] = useState(storedDraft);
   const [seen, setSeen] = useState(storedDraft);
   if (!sameDraft(storedDraft, seen)) {
     setSeen(storedDraft);
-    if (sameDraft(draft, seen)) setDraft(storedDraft);
+    if (sameDraft(typed, seen)) setDraft(storedDraft);
   }
+  // Once anyone is on the list the open time is the stored one, whatever
+  // was typed before the first RSVP arrived.
+  const openTimeLocked = (list?.arrivals ?? 0) > 0;
+  const draft = openTimeLocked ? { ...typed, opensAt: stored.opensAt } : typed;
   const [linkProblem, setLinkProblem] = useState<string | null>(null);
+  // Why the stepper did not go lower, until the capacity changes again.
+  const [floorProblem, setFloorProblem] = useState<string | null>(null);
 
   const change = (changes: Partial<RsvpDraft>) => {
     setLinkProblem(null);
+    setFloorProblem(null);
     setDraft((current) => ({ ...current, ...changes }));
   };
 
-  const problems = rsvpProblems({ ...draft, enabled: stored.enabled });
+  const against = list ?? undefined;
+  const problems = rsvpProblems({ ...draft, enabled: stored.enabled }, against);
   const edited = !sameDraft(draft, storedDraft);
   const canSave = edited && Object.keys(problems).length === 0;
+  // Reopen is offered only before the start, which closes the list for good.
+  const draftStatus = tournament.status === "draft";
+
+  const stepBelowFloor = () =>
+    setFloorProblem(
+      rsvpProblems({ ...draft, enabled: stored.enabled, capacity: draft.capacity - 1 }, against)
+        .capacity ?? null,
+    );
 
   const save = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -63,7 +94,7 @@ export const RsvpPanel = ({
 
   const toggleLink = () => {
     const next = { ...draft, enabled: !stored.enabled };
-    const [problem] = Object.values(rsvpProblems(next));
+    const [problem] = Object.values(rsvpProblems(next, against));
     if (problem) {
       setLinkProblem(problem);
       return;
@@ -102,6 +133,36 @@ export const RsvpPanel = ({
         </p>
       </div>
 
+      {tournament.rsvp && (
+        <div className="flex flex-col gap-1.5 border-b border-mb-rule p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex flex-col gap-0.5">
+              <span className="mb-kicker">List</span>
+              <span className="text-[0.85rem] font-semibold">
+                {draftStatus ? (tournament.rsvp.closed ? "Closed" : "Open") : "Closed"}
+              </span>
+            </div>
+            {draftStatus && (
+              <button
+                type="button"
+                onClick={() => onSetClosed(!tournament.rsvp?.closed)}
+                className="mb-btn mb-btn-outline-navy min-h-11"
+              >
+                <MbIcon id={tournament.rsvp.closed ? "undo" : "lock"} size={14} />
+                {tournament.rsvp.closed ? "Reopen" : "Close"}
+              </button>
+            )}
+          </div>
+          <p className="text-[0.72rem] text-mb-ink-muted">
+            {!draftStatus
+              ? "The list closed when the tournament started. You can still remove people and add held spots."
+              : tournament.rsvp.closed
+                ? "Nobody new can RSVP. People on the list can still withdraw. Reopen it any time before you start."
+                : "Close it to stop new RSVPs before you start. People on the list can still withdraw."}
+          </p>
+        </div>
+      )}
+
       <form onSubmit={save} className="flex flex-col gap-5 p-4">
         <DateTimeField
           id="rsvp-scheduled-at"
@@ -118,14 +179,21 @@ export const RsvpPanel = ({
           value={draft.opensAt}
           zone={zone}
           setZone={tournament.scheduledZone}
-          note="Everyone can RSVP from this moment, by the server's clock."
+          note={
+            openTimeLocked
+              ? `${OPEN_TIME_LOCKED} Anyone who already answered was told this time.`
+              : "Everyone can RSVP from this moment, by the server's clock."
+          }
           problem={problems.opensAt}
+          disabled={openTimeLocked}
           onChange={(opensAt) => change({ opensAt })}
         />
         <CapacityField
           id="rsvp-capacity"
           value={draft.capacity}
-          problem={problems.capacity}
+          problem={problems.capacity ?? floorProblem ?? undefined}
+          floor={list?.confirmed ?? 0}
+          onFloor={stepBelowFloor}
           onChange={(capacity) => change({ capacity })}
         />
         <button type="submit" className="mb-btn mb-btn-navy self-start" disabled={!canSave}>

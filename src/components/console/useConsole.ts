@@ -13,11 +13,13 @@ import {
   completesTournament,
   consoleAccess,
   courtsView,
+  deleteTournamentDescription,
   failureNotice,
   isCorrectable,
   roleFor,
   scheduleInstantWin,
   scheduleView,
+  showsRsvpTab,
   standingsView,
   teamsView,
   winTapGuard,
@@ -27,7 +29,8 @@ import type { AppliedCommand } from "@/lib/commandQueue";
 import { bracketAddRefusal } from "@/lib/engine";
 import { entryTeams } from "@/lib/entries";
 import { isBracketFormat, isRotationFormat, minimumTeams } from "@/lib/formats";
-import type { RsvpSetup } from "@/lib/rsvp";
+import { listSoFar, type RsvpSetup } from "@/lib/rsvp";
+import { useRsvpList } from "@/context/useRsvpList";
 import {
   rsvpLink,
   scorerKeyIn,
@@ -128,6 +131,11 @@ export const useConsole = (tournamentId: string) => {
 
   const role = roleFor(tournament?.ownerId, user?.uid, holdsScorerLink(tournamentId));
   const access = consoleAccess(role, tournament?.status ?? "draft");
+  const showsRsvp = showsRsvpTab(role, tournament?.status ?? "draft", !!tournament?.rsvp);
+
+  // The owner always holds the RSVP list: the RSVP tab shows it, and the
+  // delete confirmation counts it.
+  const rsvpList = useRsvpList(tournamentId, role === "owner");
 
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -229,9 +237,9 @@ export const useConsole = (tournamentId: string) => {
       consoleTabs({
         hasBracket: tournament ? isBracketFormat(tournament.format) : false,
         courtsLabel: capitalize(tournament?.settings.terminology.venuePlural ?? "courts"),
-        hasRsvp: access.canManageRsvp,
+        hasRsvp: showsRsvp,
       }),
-    [tournament, access.canManageRsvp],
+    [tournament, showsRsvp],
   );
   const [chosenTab, setTab] = useState<ConsoleTab>("courts");
   // A tab that goes away, as RSVP does when the tournament completes, falls back to the first.
@@ -459,6 +467,23 @@ export const useConsole = (tournamentId: string) => {
       });
     },
     [tournament, access.canManageRsvp, saveRsvpSettings, reportFailure],
+  );
+
+  // Close and reopen show at once from the local write, like the settings.
+  const { setClosed: setListClosed } = rsvpList;
+  const setRsvpClosed = useCallback(
+    (closed: boolean) => {
+      if (!tournament || !access.canManageRsvp) return;
+      setActionError(null);
+      setListClosed(closed).catch((error: unknown) => {
+        console.error("Failed to change whether the list is closed:", error);
+        reportFailure(
+          closed ? "The list could not be closed." : "The list could not be reopened.",
+          error,
+        );
+      });
+    },
+    [tournament, access.canManageRsvp, setListClosed, reportFailure],
   );
 
   // ============================================
@@ -701,6 +726,18 @@ export const useConsole = (tournamentId: string) => {
     regenerate,
     // RSVP
     saveRsvp,
+    setRsvpClosed,
+    /** The RSVP list in arrival order, for the owner; null for anyone else and until it arrives. */
+    rsvps: rsvpList.rsvps,
+    rsvpListError: rsvpList.error,
+    /** What the list already holds, which limits the capacity and the open time; null until it arrives. */
+    listSoFar: tournament && rsvpList.rsvps ? listSoFar(tournament, rsvpList.rsvps) : null,
+    addHeldSpot: rsvpList.addHeld,
+    removeRsvp: rsvpList.remove,
+    /** What the delete confirmation says will go, with the headcount when anyone is on the list. */
+    deleteDescription: tournament
+      ? deleteTournamentDescription(tournament.name, rsvpList.rsvps?.length ?? 0)
+      : "",
     // Courts and queue
     /** True while a court, queue, or team edit is being saved. */
     isApplying,

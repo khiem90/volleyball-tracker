@@ -13,6 +13,8 @@ import {
 } from "@/components/matchbook/useMatchbookCompete";
 
 import { TOURNAMENT_STATUS } from "@/components/matchbook/tournamentStatus";
+import { useRsvpCount } from "@/context/useRsvpList";
+import { deleteTournamentDescription } from "@/lib/console";
 
 const BracketBox = ({ cell }: { cell: MbBracketCell }) => {
   const side = (
@@ -182,6 +184,9 @@ export default function CompetitionsPage() {
   const { isLoading, isAuthenticated } = useRequireAuth();
   const data = useMatchbookCompete();
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  // The list is not held on this page, so the headcount is asked of the
+  // server when the confirmation opens; it is left out until it comes.
+  const headcount = useRsvpCount(deleteId);
 
   if (isLoading || !isAuthenticated) {
     return <PageLoadingSpinner />;
@@ -529,7 +534,7 @@ export default function CompetitionsPage() {
         open={deleteId !== null}
         onOpenChange={(open) => !open && setDeleteId(null)}
         title="Delete Competition?"
-        description={`This will permanently delete "${deleteTarget?.name ?? ""}" and all of its matches.`}
+        description={deleteTournamentDescription(deleteTarget?.name ?? "", headcount ?? 0)}
         onConfirm={() => {
           if (deleteId) data.deleteCompetition(deleteId);
           setDeleteId(null);

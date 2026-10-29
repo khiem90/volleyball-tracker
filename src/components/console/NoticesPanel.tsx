@@ -13,13 +13,17 @@ import type { Notice } from "@/types/game";
  * The owner's notices on the RSVP tab: a box to post a new one, and the
  * notices newest first with Delete on each. Everyone on the list sees them
  * on the RSVP page. Posting clears the box at once, since the notice shows
- * from the local write; a refusal puts the text back and says why.
+ * from the local write; a refusal puts the text back and says why. A
+ * completed tournament's notices are `readOnly`: listed, with no box and
+ * no Delete.
  */
 export const NoticesPanel = ({
   tournamentId,
+  readOnly = false,
   className = "",
 }: {
   tournamentId: string;
+  readOnly?: boolean;
   className?: string;
 }) => {
   const { notices, error: listError, post, remove } = useNotices(tournamentId, true);
@@ -68,45 +72,47 @@ export const NoticesPanel = ({
       }
       className={className}
     >
-      <form onSubmit={submit} className="flex flex-col gap-1.5 border-b border-mb-rule p-4">
-        <label htmlFor="notice-body" className="mb-kicker">
-          New notice
-        </label>
-        <textarea
-          id="notice-body"
-          className={shownProblem ? "mb-textarea border-mb-red" : "mb-textarea"}
-          rows={3}
-          value={draft}
-          onChange={(event) => {
-            setDraft(event.target.value);
-            setError(null);
-          }}
-          placeholder="We moved to 7:30."
-          aria-invalid={!!shownProblem}
-          aria-describedby="notice-body-help"
-        />
-        <p
-          id="notice-body-help"
-          role={shownProblem ? "alert" : undefined}
-          className={
-            shownProblem
-              ? "text-[0.78rem] font-medium text-mb-red"
-              : "text-[0.72rem] text-mb-ink-muted"
-          }
-        >
-          {shownProblem ??
-            `Up to ${NOTICE_BODY_MAX} characters. Everyone on the list sees it on the RSVP page.`}
-        </p>
-        {error && (
-          <p role="alert" className="text-[0.78rem] font-medium text-mb-red">
-            {error}
+      {!readOnly && (
+        <form onSubmit={submit} className="flex flex-col gap-1.5 border-b border-mb-rule p-4">
+          <label htmlFor="notice-body" className="mb-kicker">
+            New notice
+          </label>
+          <textarea
+            id="notice-body"
+            className={shownProblem ? "mb-textarea border-mb-red" : "mb-textarea"}
+            rows={3}
+            value={draft}
+            onChange={(event) => {
+              setDraft(event.target.value);
+              setError(null);
+            }}
+            placeholder="We moved to 7:30."
+            aria-invalid={!!shownProblem}
+            aria-describedby="notice-body-help"
+          />
+          <p
+            id="notice-body-help"
+            role={shownProblem ? "alert" : undefined}
+            className={
+              shownProblem
+                ? "text-[0.78rem] font-medium text-mb-red"
+                : "text-[0.72rem] text-mb-ink-muted"
+            }
+          >
+            {shownProblem ??
+              `Up to ${NOTICE_BODY_MAX} characters. Everyone on the list sees it on the RSVP page.`}
           </p>
-        )}
-        <button type="submit" className="mb-btn mb-btn-navy mt-1.5 self-start" disabled={!!problem}>
-          <MbIcon id="bell" size={14} />
-          Post
-        </button>
-      </form>
+          {error && (
+            <p role="alert" className="text-[0.78rem] font-medium text-mb-red">
+              {error}
+            </p>
+          )}
+          <button type="submit" className="mb-btn mb-btn-navy mt-1.5 self-start" disabled={!!problem}>
+            <MbIcon id="bell" size={14} />
+            Post
+          </button>
+        </form>
+      )}
 
       {listError ? (
         <PanelError message="The notices could not be loaded. Check your connection and reload." />
@@ -115,7 +121,7 @@ export const NoticesPanel = ({
       ) : notices.length === 0 ? (
         <PanelEmpty message="No notices yet." />
       ) : (
-        <NoticeList notices={notices} onDelete={setDeleting} />
+        <NoticeList notices={notices} onDelete={readOnly ? undefined : setDeleting} />
       )}
 
       <DeleteConfirmDialog
