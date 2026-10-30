@@ -46,10 +46,18 @@ describe("roleFor", () => {
     expect(roleFor("owner-uid", "owner-uid", true)).toBe("owner");
     expect(roleFor("owner-uid", "phone-uid", false)).toBe("spectator");
   });
+
+  it("makes an account that reached the console through the RSVP link a spectator with nothing to do", () => {
+    const role = roleFor("owner-uid", "dan-uid", false);
+    expect(role).toBe("spectator");
+    for (const status of ["live", "completed"] as const) {
+      expect(Object.values(consoleAccess(role, status)).some(Boolean)).toBe(false);
+    }
+  });
 });
 
 describe("consoleAccess", () => {
-  it("lets the owner of a draft start, rename, duplicate, or delete it, and nothing else", () => {
+  it("lets the owner of a draft start, rename, set up RSVPs, duplicate, or delete it, and nothing else", () => {
     expect(consoleAccess("owner", "draft")).toEqual({
       canStart: true,
       canScore: false,
@@ -59,10 +67,11 @@ describe("consoleAccess", () => {
       canDuplicate: true,
       canDelete: true,
       canShare: true,
+      canManageRsvp: true,
     });
   });
 
-  it("lets the owner of a live tournament score, arrange courts, manage, rename, duplicate, and delete it", () => {
+  it("lets the owner of a live tournament score, arrange courts, manage, rename, set up RSVPs, duplicate, and delete it", () => {
     expect(consoleAccess("owner", "live")).toEqual({
       canStart: false,
       canScore: true,
@@ -72,6 +81,7 @@ describe("consoleAccess", () => {
       canDuplicate: true,
       canDelete: true,
       canShare: true,
+      canManageRsvp: true,
     });
   });
 
@@ -85,6 +95,7 @@ describe("consoleAccess", () => {
       canDuplicate: true,
       canDelete: true,
       canShare: true,
+      canManageRsvp: false,
     });
   });
 
@@ -98,6 +109,7 @@ describe("consoleAccess", () => {
       canDuplicate: false,
       canDelete: false,
       canShare: false,
+      canManageRsvp: false,
     });
   });
 
@@ -118,6 +130,7 @@ describe("consoleAccess", () => {
         canDuplicate: false,
         canDelete: false,
         canShare: false,
+        canManageRsvp: false,
       });
     }
   });

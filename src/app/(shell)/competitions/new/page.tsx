@@ -9,6 +9,7 @@ import { AdvancedSettings } from "@/components/creation/AdvancedSettings";
 import { FormatPicker } from "@/components/creation/FormatPicker";
 import { TeamChecklist } from "@/components/creation/TeamChecklist";
 import { useCreation } from "@/components/creation/useCreation";
+import { problemsInOrder } from "@/lib/creation";
 
 /**
  * Creating a tournament on one page: format, name, the roster as a
@@ -24,7 +25,7 @@ export default function NewTournamentPage() {
   }
 
   const { setup, problems } = page;
-  const summary = [problems.format, problems.name, problems.teams].filter(Boolean).join(" ");
+  const summary = problemsInOrder(problems).join(" ");
   const alert = page.error ?? (summary || null);
 
   return (
@@ -91,6 +92,7 @@ export default function NewTournamentPage() {
 
         <AdvancedSettings
           setup={setup}
+          problems={problems}
           open={page.advancedOpen}
           onToggle={() => page.setAdvancedOpen((open) => !open)}
           onChange={page.change}

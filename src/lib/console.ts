@@ -64,6 +64,8 @@ export interface ConsoleAccess {
   canDelete: boolean;
   /** Turn the spectator link on or off and regenerate the scorer link. Owner, in any status. */
   canShare: boolean;
+  /** Set the scheduled time, capacity, open time, and RSVP link. Owner while draft or live. */
+  canManageRsvp: boolean;
 }
 
 const NO_ACCESS: ConsoleAccess = {
@@ -75,6 +77,7 @@ const NO_ACCESS: ConsoleAccess = {
   canDuplicate: false,
   canDelete: false,
   canShare: false,
+  canManageRsvp: false,
 };
 
 /**
@@ -87,7 +90,9 @@ export const consoleAccess = (role: ConsoleRole, status: TournamentStatus): Cons
   if (role === "spectator") return NO_ACCESS;
   const owner = role === "owner";
   const ownerOnly = { canDuplicate: owner, canDelete: owner, canShare: owner };
-  if (status === "draft") return { ...NO_ACCESS, ...ownerOnly, canStart: owner, canRename: owner };
+  if (status === "draft") {
+    return { ...NO_ACCESS, ...ownerOnly, canStart: owner, canRename: owner, canManageRsvp: owner };
+  }
   if (status === "live") {
     return {
       ...NO_ACCESS,
@@ -96,9 +101,64 @@ export const consoleAccess = (role: ConsoleRole, status: TournamentStatus): Cons
       canEditCourts: true,
       canManage: owner,
       canRename: owner,
+      canManageRsvp: owner,
     };
   }
   return { ...NO_ACCESS, ...ownerOnly };
+};
+
+/**
+ * Whether the console offers the RSVP tab: to the owner while the RSVP
+ * settings can change, and afterwards, read-only, when the tournament took
+ * RSVPs, so its list and notices stay on hand once it is completed.
+ */
+export const showsRsvpTab = (
+  role: ConsoleRole,
+  status: TournamentStatus,
+  hasRsvpSettings: boolean,
+): boolean => consoleAccess(role, status).canManageRsvp || (role === "owner" && hasRsvpSettings);
+
+/**
+ * What the delete confirmation says will go, naming the people on the RSVP
+ * list when there are any, so a tournament people are counting on is not
+ * deleted by accident.
+ */
+export const deleteTournamentDescription = (name: string, rsvpCount: number): string => {
+  if (rsvpCount === 0) return `This removes "${name}" and every match in it. It cannot be undone.`;
+  const people = rsvpCount === 1 ? "1 person" : `${rsvpCount} people`;
+  return `This removes "${name}", every match in it, and the ${people} on its RSVP list. It cannot be undone.`;
+};
+
+/** How many are on a tournament's RSVP list, as a delete confirmation learns it. */
+export type RsvpHeadcount =
+  | { kind: "counting" }
+  | { kind: "counted"; count: number }
+  /** The count could not be read, as offline. */
+  | { kind: "unknown" };
+
+/** What a delete confirmation says, and whether it offers Delete yet. */
+export interface DeleteConfirmation {
+  description: string;
+  canConfirm: boolean;
+}
+
+/**
+ * The delete confirmation for a tournament whose headcount is `headcount`.
+ * Delete waits for the count, so the owner never confirms against a wrong
+ * number; a count that cannot be read gives the wording without one.
+ */
+export const deleteConfirmation = (name: string, headcount: RsvpHeadcount): DeleteConfirmation => {
+  switch (headcount.kind) {
+    case "counting":
+      return { description: `Counting the people on the RSVP list of "${name}"...`, canConfirm: false };
+    case "counted":
+      return { description: deleteTournamentDescription(name, headcount.count), canConfirm: true };
+    case "unknown":
+      return {
+        description: `This removes "${name}", every match in it, and anyone on its RSVP list. It cannot be undone.`,
+        canConfirm: true,
+      };
+  }
 };
 
 // ============================================

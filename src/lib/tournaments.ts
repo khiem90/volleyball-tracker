@@ -22,6 +22,7 @@ import type {
   Entry,
   Match,
   PersistentTeam,
+  RsvpSettings,
   Tournament,
   TournamentFormat,
   TournamentSettings,
@@ -66,6 +67,12 @@ export const scorerProofsCollection = (db: Firestore, tournamentId: string) =>
   collection(db, "tournaments", tournamentId, "scorers");
 export const scorerProofDoc = (db: Firestore, tournamentId: string, uid: string) =>
   doc(scorerProofsCollection(db, tournamentId), uid);
+/** The owner's notices to everyone on the RSVP list (see src/lib/rsvping.ts). */
+export const noticesCollection = (db: Firestore, tournamentId: string) =>
+  collection(db, "tournaments", tournamentId, "notices");
+/** The RSVPs and held spots on a tournament's list (see src/lib/rsvping.ts). */
+export const rsvpsCollection = (db: Firestore, tournamentId: string) =>
+  collection(db, "tournaments", tournamentId, "rsvps");
 
 export interface ScorerKey {
   key: string;
@@ -176,6 +183,10 @@ export interface NewTournamentInput {
   /** The roster teams entering, in seed order. Each becomes an entry. */
   teams: PersistentTeam[];
   settings: TournamentSettings;
+  /** When the tournament will be played, with the zone it was entered in. */
+  scheduledAt?: number;
+  scheduledZone?: string;
+  rsvp?: RsvpSettings;
 }
 
 /** A draft tournament with its id assigned, ready to save. */
@@ -200,6 +211,9 @@ export const buildTournament = (
     teamIds: input.teams.map((team) => team.id),
     settings: input.settings,
     spectatorEnabled: false,
+    ...(input.scheduledAt !== undefined && { scheduledAt: input.scheduledAt }),
+    ...(input.scheduledZone !== undefined && { scheduledZone: input.scheduledZone }),
+    ...(input.rsvp !== undefined && { rsvp: { ...input.rsvp } }),
     revision: newToken(),
     createdAt: now,
     updatedAt: now,
@@ -298,6 +312,8 @@ export const createTournament = async (
  * from the roster, so each entry takes the team's current name and color
  * and a team that has since left the roster is left out. A team that had
  * withdrawn from the source is back in; a new draft has no withdrawals.
+ * Of the RSVP settings only the capacity comes across: next week's tournament
+ * has its own times, so its RSVP link starts off until the owner sets them.
  */
 export const duplicateInput = (source: Tournament, roster: PersistentTeam[]): NewTournamentInput => {
   const rosterById = new Map(roster.map((team) => [team.id, team]));
@@ -306,6 +322,9 @@ export const duplicateInput = (source: Tournament, roster: PersistentTeam[]): Ne
     format: source.format,
     teams: source.entries.flatMap((entry) => rosterById.get(entry.teamId) ?? []),
     settings: { ...source.settings, terminology: { ...source.settings.terminology } },
+    ...(source.rsvp && {
+      rsvp: { enabled: false, capacity: source.rsvp.capacity, closed: false },
+    }),
   };
 };
 
@@ -360,19 +379,25 @@ export const renameTournament = async (
 };
 
 /**
- * Delete a tournament with every match under it, its scorer key, and the
- * proofs of every phone that opened its scorer link.
+ * Delete a tournament with every match under it, its scorer key, the
+ * proofs of every phone that opened its scorer link, its RSVP list, held
+ * spots included, and its notices, all in one cleanup batch. Firestore no
+ * longer caps a batch at 500 writes, so a big round robin with a long list
+ * still goes in one, and nobody watching the list sees it half gone.
  */
 export const deleteTournament = async (db: Firestore, tournamentId: string): Promise<void> => {
-  const [matches, proofs] = await Promise.all([
+  const [matches, proofs, rsvps, notices] = await Promise.all([
     getDocs(matchesCollection(db, tournamentId)),
     getDocs(scorerProofsCollection(db, tournamentId)),
+    getDocs(rsvpsCollection(db, tournamentId)),
+    getDocs(noticesCollection(db, tournamentId)),
   ]);
   // The rules for everything under the tournament read the tournament
   // itself, so those go first and the tournament last, in its own write.
   const batch = writeBatch(db);
-  matches.docs.forEach((d) => batch.delete(d.ref));
-  proofs.docs.forEach((d) => batch.delete(d.ref));
+  for (const snapshot of [matches, proofs, rsvps, notices]) {
+    snapshot.docs.forEach((d) => batch.delete(d.ref));
+  }
   batch.delete(scorerKeyDoc(db, tournamentId));
   await batch.commit();
   await deleteDoc(tournamentDoc(db, tournamentId));

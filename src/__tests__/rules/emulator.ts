@@ -101,6 +101,23 @@ export function modularFirestore(context: RulesTestContext): Firestore {
   return context.firestore() as unknown as Firestore;
 }
 
+/**
+ * The silent identity a scorer link gives a phone. `authenticatedContext`
+ * alone signs in with a custom token, which the rules count as a real
+ * account; this one carries the anonymous sign-in provider instead.
+ */
+export function anonymousContext(env: RulesTestEnvironment, uid: string): RulesTestContext {
+  return env.authenticatedContext(uid, { firebase: { sign_in_provider: "anonymous" } });
+}
+
+/**
+ * An instant `minutes` from the test's own clock, in epoch milliseconds.
+ * The emulator runs on the same machine, so a rule comparing against the
+ * request's time sees the same clock. Call it inside the test, not when
+ * the file loads, so a slow run cannot drift past it.
+ */
+export const minutesFromNow = (minutes: number): number => Date.now() + minutes * 60_000;
+
 /** Resolves with the first snapshot from `subscribe` that satisfies `ready`. */
 export const when = <T>(
   subscribe: (onChange: (value: T) => void, onError: (error: Error) => void) => Unsubscribe,

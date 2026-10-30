@@ -64,7 +64,8 @@ const LinkField = ({ id, value, label }: { id: string; value: string; label: str
  * The share links in the owner's Settings tab. The spectator link is the
  * tournament's page, turned on or off here. The scorer link carries the
  * key; regenerating it locks out every phone on the old one, and a
- * tournament from before scorer keys gets one made here.
+ * tournament from before scorer keys gets one made here. The RSVP link is
+ * shown here to copy; it is turned on and off in the RSVP tab.
  */
 export const ShareLinks = ({
   links,
@@ -135,6 +136,23 @@ export const ShareLinks = ({
           Anyone with the link can score, reorder the queue, and swap {courts} without signing
           in, and cannot change anything else. Regenerating it locks out every phone on the old
           link.
+        </p>
+      </div>
+    )}
+
+    {(links.rsvpLink || links.rsvpSettable) && (
+      <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-0.5">
+          <span className="mb-kicker">RSVP link</span>
+          <span className="text-[0.85rem] font-semibold">{links.rsvpLink ? "On" : "Off"}</span>
+        </div>
+        {links.rsvpLink && (
+          <LinkField id="rsvp-link" value={links.rsvpLink} label="RSVP link" />
+        )}
+        <p className="text-[0.72rem] text-mb-ink-muted">
+          {links.rsvpLink
+            ? "Anyone with the link can sign in, see the tournament, and RSVP from the open time."
+            : "Set the scheduled time and the open time in the RSVP tab, then turn the link on there."}
         </p>
       </div>
     )}

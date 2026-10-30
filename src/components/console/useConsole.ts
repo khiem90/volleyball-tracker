@@ -13,11 +13,13 @@ import {
   completesTournament,
   consoleAccess,
   courtsView,
+  deleteConfirmation,
   failureNotice,
   isCorrectable,
   roleFor,
   scheduleInstantWin,
   scheduleView,
+  showsRsvpTab,
   standingsView,
   teamsView,
   winTapGuard,
@@ -27,7 +29,15 @@ import type { AppliedCommand } from "@/lib/commandQueue";
 import { bracketAddRefusal } from "@/lib/engine";
 import { entryTeams } from "@/lib/entries";
 import { isBracketFormat, isRotationFormat, minimumTeams } from "@/lib/formats";
-import { scorerKeyIn, scorerLink, spectatorLink, STALE_SCORER_LINK } from "@/lib/shareLinks";
+import { listSoFar, type RsvpSetup } from "@/lib/rsvp";
+import { useRsvpList } from "@/context/useRsvpList";
+import {
+  rsvpLink,
+  scorerKeyIn,
+  scorerLink,
+  spectatorLink,
+  STALE_SCORER_LINK,
+} from "@/lib/shareLinks";
 import { messageOf } from "@/lib/utils";
 import type { Match, PersistentTeam } from "@/types/game";
 import { consoleTabs, type ConsoleTab } from "./ConsoleTabs";
@@ -53,6 +63,10 @@ export interface ShareLinksView {
   scorerKeyKnown: boolean;
   /** A completed tournament takes no results, so its scorer link is not offered. */
   showsScorerLink: boolean;
+  /** The RSVP link, or null while the RSVP link is off. */
+  rsvpLink: string | null;
+  /** Whether the RSVP tab is there to turn the link on: a draft or live tournament. */
+  rsvpSettable: boolean;
 }
 
 /** Why the console cannot show the tournament. */
@@ -99,6 +113,8 @@ export const useConsole = (tournamentId: string) => {
     isStaleLink,
     holdsScorerLink,
     setSpectatorLink,
+    saveRsvpSettings,
+    turnRsvpLinkOff,
     regenerateScorerLink,
     subscribeToScorerKey,
   } = useApp();
@@ -116,6 +132,11 @@ export const useConsole = (tournamentId: string) => {
 
   const role = roleFor(tournament?.ownerId, user?.uid, holdsScorerLink(tournamentId));
   const access = consoleAccess(role, tournament?.status ?? "draft");
+  const showsRsvp = showsRsvpTab(role, tournament?.status ?? "draft", !!tournament?.rsvp);
+
+  // The owner always holds the RSVP list: the RSVP tab shows it, and the
+  // delete confirmation counts it.
+  const rsvpList = useRsvpList(tournamentId, role === "owner");
 
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -217,10 +238,13 @@ export const useConsole = (tournamentId: string) => {
       consoleTabs({
         hasBracket: tournament ? isBracketFormat(tournament.format) : false,
         courtsLabel: capitalize(tournament?.settings.terminology.venuePlural ?? "courts"),
+        hasRsvp: showsRsvp,
       }),
-    [tournament],
+    [tournament, showsRsvp],
   );
-  const [tab, setTab] = useState<ConsoleTab>("courts");
+  const [chosenTab, setTab] = useState<ConsoleTab>("courts");
+  // A tab that goes away, as RSVP does when the tournament completes, falls back to the first.
+  const tab = tabs.some((spec) => spec.id === chosenTab) ? chosenTab : "courts";
 
   // ============================================
   // The shell and Settings
@@ -398,6 +422,8 @@ export const useConsole = (tournamentId: string) => {
           scorerLink: scorerKey ? scorerLink(origin, tournament.id, scorerKey) : null,
           scorerKeyKnown,
           showsScorerLink: tournament.status !== "completed",
+          rsvpLink: tournament.rsvp?.enabled ? rsvpLink(origin, tournament.id) : null,
+          rsvpSettable: access.canManageRsvp,
         }
       : null;
 
@@ -424,6 +450,53 @@ export const useConsole = (tournamentId: string) => {
       reportFailure("The scorer link could not be regenerated.", error);
     });
   }, [tournament, access.canShare, regenerateScorerLink, reportFailure]);
+
+  // ============================================
+  // RSVP settings
+  // ============================================
+
+  // A field write like a rename: the RSVP tab shows the new settings as
+  // soon as the local write lands, and a refusal is reported when it comes.
+  // The tab checks the setup's problems before it calls this.
+  const saveRsvp = useCallback(
+    (setup: RsvpSetup) => {
+      if (!tournament || !access.canManageRsvp) return;
+      setActionError(null);
+      saveRsvpSettings(tournament.id, setup).catch((error: unknown) => {
+        console.error("Failed to save the RSVP settings:", error);
+        reportFailure("The RSVP settings could not be saved.", error);
+      });
+    },
+    [tournament, access.canManageRsvp, saveRsvpSettings, reportFailure],
+  );
+
+  // Turning the link off writes only the switch, so it works whatever the
+  // form holds and shows at once from the local write.
+  const turnLinkOff = useCallback(() => {
+    if (!tournament || !access.canManageRsvp) return;
+    setActionError(null);
+    turnRsvpLinkOff(tournament.id).catch((error: unknown) => {
+      console.error("Failed to turn the RSVP link off:", error);
+      reportFailure("The RSVP link could not be turned off.", error);
+    });
+  }, [tournament, access.canManageRsvp, turnRsvpLinkOff, reportFailure]);
+
+  // Close and reopen show at once from the local write, like the settings.
+  const { setClosed: setListClosed } = rsvpList;
+  const setRsvpClosed = useCallback(
+    (closed: boolean) => {
+      if (!tournament || !access.canManageRsvp) return;
+      setActionError(null);
+      setListClosed(closed).catch((error: unknown) => {
+        console.error("Failed to change whether the list is closed:", error);
+        reportFailure(
+          closed ? "The list could not be closed." : "The list could not be reopened.",
+          error,
+        );
+      });
+    },
+    [tournament, access.canManageRsvp, setListClosed, reportFailure],
+  );
 
   // ============================================
   // Teams, courts, and the queue
@@ -663,6 +736,26 @@ export const useConsole = (tournamentId: string) => {
     regenerateOpen,
     setRegenerateOpen,
     regenerate,
+    // RSVP
+    saveRsvp,
+    turnRsvpLinkOff: turnLinkOff,
+    setRsvpClosed,
+    /** The RSVP list in arrival order, for the owner; null for anyone else and until it arrives. */
+    rsvps: rsvpList.rsvps,
+    rsvpListError: rsvpList.error,
+    /** What the list already holds, which limits the capacity and the open time; null until it arrives. */
+    listSoFar: tournament && rsvpList.rsvps ? listSoFar(tournament, rsvpList.rsvps) : null,
+    addHeldSpot: rsvpList.addHeld,
+    removeRsvp: rsvpList.remove,
+    /** What the delete confirmation says will go, and whether Delete is offered yet: it waits for the list. */
+    deleteConfirmation: deleteConfirmation(
+      tournament?.name ?? "",
+      rsvpList.rsvps
+        ? { kind: "counted", count: rsvpList.rsvps.length }
+        : rsvpList.error
+          ? { kind: "unknown" }
+          : { kind: "counting" },
+    ),
     // Courts and queue
     /** True while a court, queue, or team edit is being saved. */
     isApplying,

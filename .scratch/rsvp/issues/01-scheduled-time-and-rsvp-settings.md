@@ -12,13 +12,17 @@ shareable.
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] A tournament has an optional `scheduledAt` (epoch milliseconds) with its `scheduledZone` (IANA), and an optional `rsvp` map of `enabled`, `capacity`, `opensAt`, and `closed`; a tournament from before this ticket has neither and behaves as if the link were off.
-- [ ] The creation page's RSVP section sets all of them with the browser's native date-time input styled in the matchbook field classes; the setup problems cover a missing scheduled time, a missing open time, an open time after the scheduled time, and a capacity below one, and the existing first-problem line shows them.
-- [ ] The console RSVP tab is shown to the owner while the tournament is a draft or live (console access gains `canManageRsvp`, pinned in the console tests) and edits every setting through the same revision-carrying field write a rename uses.
-- [ ] Settings shows the RSVP link with Copy; the pure link helper has a test beside the spectator and scorer link tests.
-- [ ] The rules accept these fields from the owner only, refuse `enabled` true without both `scheduledAt` and `opensAt`, and keep them out of the scorer's allowed keys; rules tests cover the owner, a scorer, and the missing-times refusal.
-- [ ] Duplicate copies `capacity`, starts with `enabled` false and no times, and the duplicate test says so.
-- [ ] Times display in the viewer's zone, with the owner's wall-clock time and zone abbreviation beside them when the zones differ.
-- [ ] The README's data layout describes the new tournament fields.
+- [x] A tournament has an optional `scheduledAt` (epoch milliseconds) with its `scheduledZone` (IANA), and an optional `rsvp` map of `enabled`, `capacity`, `opensAt`, and `closed`; a tournament from before this ticket has neither and behaves as if the link were off.
+- [x] The creation page's RSVP section sets all of them with the browser's native date-time input styled in the matchbook field classes; the setup problems cover a missing scheduled time, a missing open time, an open time after the scheduled time, and a capacity below one, and the existing first-problem line shows them.
+- [x] The console RSVP tab is shown to the owner while the tournament is a draft or live (console access gains `canManageRsvp`, pinned in the console tests) and edits every setting through the same revision-carrying field write a rename uses.
+- [x] Settings shows the RSVP link with Copy; the pure link helper has a test beside the spectator and scorer link tests.
+- [x] The rules accept these fields from the owner only, refuse `enabled` true without both `scheduledAt` and `opensAt`, and keep them out of the scorer's allowed keys; rules tests cover the owner, a scorer, and the missing-times refusal.
+- [x] Duplicate copies `capacity`, starts with `enabled` false and no times, and the duplicate test says so.
+- [x] Times display in the viewer's zone, with the owner's wall-clock time and zone abbreviation beside them when the zones differ.
+- [x] The README's data layout describes the new tournament fields.
+
+## Comments
+
+- 2026-10-28: Implemented test-first on the integration branch `claude/rsvp` (0d2152b, 3cd2db5). Code-review fixes landed in 1c65ff8..f4ca321. All acceptance boxes ticked, and the full suite (783 tests) passes against the emulator.

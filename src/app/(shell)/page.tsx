@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useApp } from "@/context/AppContext";
 import { useAuth } from "@/context/AuthContext";
+import { useHomeRsvps } from "@/context/useHomeRsvps";
 import { PageLoadingSpinner } from "@/components/shared";
 import { MbIcon } from "@/components/matchbook/MbIcon";
 import { PANEL_ROW, Panel, PanelEmpty, PanelError } from "@/components/matchbook/Panel";
@@ -18,6 +19,7 @@ import {
   type LiveTournament,
   type RecentResult,
 } from "@/lib/home";
+import { deviceZone, timeLabel, type HomeRsvpRow } from "@/lib/rsvp";
 import { signInHref } from "@/lib/shell";
 import { plural } from "@/lib/utils";
 
@@ -122,6 +124,70 @@ const GuestPanel = () => (
   </Panel>
 );
 
+/* ---------------------------------- RSVPs --------------------------------- */
+
+const standingLabel = (standing: HomeRsvpRow["standing"]) =>
+  standing.kind === "confirmed" ? "You're in" : `Waitlist #${standing.position}`;
+
+const RsvpRow = ({ row, zone }: { row: HomeRsvpRow; zone: string }) => {
+  const { tournament, standing, unread, href } = row;
+  const when =
+    tournament.scheduledAt === undefined
+      ? null
+      : timeLabel(tournament.scheduledAt, tournament.scheduledZone, zone).viewer;
+
+  return (
+    <Link
+      href={href}
+      className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 ${PANEL_ROW}`}
+    >
+      <div className="flex min-w-0 flex-col gap-1">
+        <p className="matchbook-display text-[0.95rem] font-bold leading-tight [overflow-wrap:anywhere]">
+          {tournament.name}
+        </p>
+        {when && <p className="text-[0.72rem] text-mb-ink-muted">{when}</p>}
+        {(tournament.status === "live" || unread) && (
+          <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            {tournament.status === "live" && <LiveTag />}
+            {unread && (
+              <span className="flex items-center gap-1 text-mb-coral">
+                <MbIcon id="bell" size={11} />
+                <span className="matchbook-display text-[0.62rem] font-bold">New notice</span>
+              </span>
+            )}
+          </span>
+        )}
+      </div>
+      <span
+        className={`matchbook-display flex items-center gap-1 text-[0.72rem] font-bold ${
+          standing.kind === "confirmed" ? "text-mb-green" : "text-mb-navy"
+        }`}
+      >
+        {standingLabel(standing)}
+        <MbIcon id="chevron-right" size={11} className="text-mb-ink-muted" />
+      </span>
+    </Link>
+  );
+};
+
+/** The tournaments the account has RSVP'd to. Home leaves it out when there are none. */
+const RsvpsPanel = ({ rows }: { rows: HomeRsvpRow[] }) => {
+  const [zone] = useState(deviceZone);
+  return (
+    <Panel
+      title="Your RSVPs"
+      icon="calendar"
+      meta={<span className="mb-kicker">{plural(rows.length, "tournament")}</span>}
+    >
+      <div className="flex flex-col divide-y divide-mb-rule">
+        {rows.map((row) => (
+          <RsvpRow key={row.tournament.id} row={row} zone={zone} />
+        ))}
+      </div>
+    </Panel>
+  );
+};
+
 /* ----------------------------- Recent results ----------------------------- */
 
 const ResultRow = ({ result }: { result: RecentResult }) => (
@@ -184,9 +250,12 @@ const ToolsPanel = () => (
  * match; nothing here is projected.
  */
 export default function HomePage() {
-  const { isGuest, isLoading } = useAuth();
+  const { user, isGuest, isLoading } = useAuth();
   const { roster, tournaments, matches, isRosterLoading, isTournamentsLoading, tournamentsError } =
     useApp();
+  // Only a real account has RSVPs; a guest and a scorer link's silent
+  // identity have no user, so they read nothing and see no panel.
+  const rsvpRows = useHomeRsvps(user?.uid ?? null);
 
   const live = useMemo(
     () => liveTournaments(tournaments, matches),
@@ -230,12 +299,15 @@ export default function HomePage() {
 
       {/* Start-aligned so each panel is as tall as its rows, not its column. */}
       <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-12">
-        <div className="lg:col-span-7">
+        {/* The RSVPs sit under the live tournaments, which on a phone,
+            where the columns stack, is also above the recent results. */}
+        <div className="flex flex-col gap-4 lg:col-span-7">
           {isGuest ? (
             <GuestPanel />
           ) : (
             <LivePanel rows={live} drafts={drafts} error={tournamentsError} />
           )}
+          {!isGuest && rsvpRows.length > 0 && <RsvpsPanel rows={rsvpRows} />}
         </div>
         <div className="flex flex-col gap-4 lg:col-span-5">
           {!isGuest && <ResultsPanel results={results} error={tournamentsError} />}

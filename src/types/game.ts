@@ -55,6 +55,65 @@ export interface TournamentSettings {
  * and retried. Documents written before `basedOn` existed lack it until
  * their next write.
  */
+/**
+ * How a tournament takes RSVPs. The rules refuse `enabled` without both the
+ * tournament's `scheduledAt` and `opensAt`.
+ */
+export interface RsvpSettings {
+  /** Whether the RSVP link is on. */
+  enabled: boolean;
+  /** The number of confirmed RSVPs the tournament takes. */
+  capacity: number;
+  /** The moment RSVPs open, in epoch milliseconds, judged by the server's clock. */
+  opensAt?: number;
+  /** Whether the owner has closed the list early. */
+  closed: boolean;
+}
+
+/**
+ * An instant as the Firestore server writes it, kept to the microsecond so
+ * two RSVPs at the open instant still have a definite order. A Firestore
+ * `Timestamp` is one; nothing else in the app stores time this way.
+ */
+export interface ServerTime {
+  seconds: number;
+  nanoseconds: number;
+}
+
+/**
+ * A person's RSVP to a tournament, stored under the tournament with the
+ * account's uid as its id, or a held spot the owner added by name under a
+ * generated id. Whether it is confirmed or waitlisted is not stored: it
+ * follows from `createdAt` and the capacity (ADR-0004).
+ */
+export interface Rsvp {
+  id: string;
+  /** The account that RSVP'd, or null on a held spot, which belongs to no account. */
+  uid: string | null;
+  /** True on a held spot: the owner's RSVP for someone without an account. */
+  held?: true;
+  /** The name the owner and everyone else on the list sees. Never an email. */
+  name: string;
+  /** An optional short note, such as arriving late. */
+  note?: string;
+  /** The arrival time, written by the server, which decides the order. */
+  createdAt: ServerTime;
+  /** When the account last opened the RSVP page, written by the server. Absent until it first does. */
+  noticesReadAt?: ServerTime;
+}
+
+/**
+ * A short message the owner posts on a tournament for everyone on its
+ * list, stored in the tournament's `notices` subcollection.
+ */
+export interface Notice {
+  id: string;
+  /** One to five hundred characters. */
+  body: string;
+  /** When it was posted, written by the server. */
+  createdAt: ServerTime;
+}
+
 export interface Tournament {
   id: string;
   ownerId: string;
@@ -70,6 +129,15 @@ export interface Tournament {
   twoMatchRotationState?: TwoMatchRotationState;
   /** Whether the spectator link is on. Off means nobody but the owner can read it. */
   spectatorEnabled: boolean;
+  /** When the owner says the tournament will be played, in epoch milliseconds. Absent until set. */
+  scheduledAt?: number;
+  /** The IANA zone the scheduled time was set in, so another zone can be shown the owner's wall clock. */
+  scheduledZone?: string;
+  /**
+   * The RSVP settings. Absent on a tournament from before RSVPs, which
+   * behaves as if the RSVP link were off.
+   */
+  rsvp?: RsvpSettings;
   revision: string;
   /** The revision the last write was built on. Absent until a tournament's first write after it was added. */
   basedOn?: string;

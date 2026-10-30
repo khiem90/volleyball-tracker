@@ -31,6 +31,11 @@ import {
   subscribeToScorerKey as subscribeToScorerKeyDoc,
 } from "@/lib/sharing";
 import { queueTournamentCommand, type AppliedCommand } from "@/lib/commandQueue";
+import { deviceZone, type RsvpSetup } from "@/lib/rsvp";
+import {
+  saveRsvpSettings as saveRsvpSettingsDoc,
+  turnRsvpLinkOff as turnRsvpLinkOffDoc,
+} from "@/lib/rsvping";
 import {
   buildTournamentToSave,
   deleteTournament as deleteTournamentDoc,
@@ -219,6 +224,13 @@ interface AppContextValue {
   isLinkedLoading: boolean;
   /** Turn a tournament's spectator link on or off. Owner only. */
   setSpectatorLink: (tournamentId: string, enabled: boolean) => Promise<void>;
+  /**
+   * Save a tournament's scheduled time and RSVP settings, entered in this
+   * phone's zone. Rejects with the first problem before writing. Owner only.
+   */
+  saveRsvpSettings: (tournamentId: string, setup: RsvpSetup) => Promise<void>;
+  /** Turn a tournament's RSVP link off, writing nothing else. Owner only. */
+  turnRsvpLinkOff: (tournamentId: string) => Promise<void>;
   /** Replace a tournament's scorer link; every phone on the old one loses access. Owner only. */
   regenerateScorerLink: (tournamentId: string) => Promise<string>;
   /** The key behind a tournament's scorer link, null while it has none. Owner only. */
@@ -699,6 +711,22 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     []
   );
 
+  // A field write like a rename: the local cache shows it at once and a
+  // refusal comes back to the caller as the rejection.
+  const saveRsvpSettings = useCallback(
+    async (tournamentId: string, setup: RsvpSetup) => {
+      const tournament = tournamentsById.get(tournamentId);
+      if (!tournament) throw new Error("That tournament no longer exists.");
+      await saveRsvpSettingsDoc(requireDb(), tournament, setup, deviceZone());
+    },
+    [tournamentsById]
+  );
+
+  const turnRsvpLinkOff = useCallback(
+    (tournamentId: string) => turnRsvpLinkOffDoc(requireDb(), tournamentId),
+    []
+  );
+
   const subscribeToScorerKey = useCallback(
     (
       tournamentId: string,
@@ -757,6 +785,8 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     holdsScorerLink,
     isLinkedLoading,
     setSpectatorLink,
+    saveRsvpSettings,
+    turnRsvpLinkOff,
     regenerateScorerLink,
     subscribeToScorerKey,
   };

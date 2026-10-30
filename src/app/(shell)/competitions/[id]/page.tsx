@@ -2,56 +2,35 @@
 
 import { Suspense, type ReactNode } from "react";
 import Link from "next/link";
-import { useParams, usePathname } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { DeleteConfirmDialog, PageLoadingSpinner } from "@/components/shared";
 import { MbIcon } from "@/components/matchbook/MbIcon";
-import { Crest, Panel, PanelEmpty } from "@/components/matchbook/Panel";
+import { Crest } from "@/components/matchbook/Panel";
 import { BracketPanel } from "@/components/console/BracketPanel";
 import { ConsoleTabs, panelId, tabId, type ConsoleTab } from "@/components/console/ConsoleTabs";
 import { CourtsPanel } from "@/components/console/CourtsPanel";
 import { CorrectResultDialog } from "@/components/console/CorrectResultDialog";
 import { EndTournamentDialog } from "@/components/console/EndTournamentDialog";
 import { SchedulePanel } from "@/components/console/SchedulePanel";
+import { NoticesPanel } from "@/components/console/NoticesPanel";
+import { RsvpListPanel } from "@/components/console/RsvpListPanel";
+import { RsvpPanel } from "@/components/console/RsvpPanel";
 import { SettingsPanel } from "@/components/console/SettingsPanel";
 import { StandingsPanel } from "@/components/console/StandingsPanel";
 import { StartTournamentDialog } from "@/components/console/StartTournamentDialog";
 import { TeamsPanel } from "@/components/console/TeamsPanel";
 import { ConfirmDialog } from "@/components/console/ConfirmDialog";
-import { useConsole, type NotFoundReason } from "@/components/console/useConsole";
+import { NotFound } from "@/components/console/NotFound";
+import { useConsole } from "@/components/console/useConsole";
 import { TOURNAMENT_STATUS } from "@/components/matchbook/tournamentStatus";
 import { courtLabel, courtsWord, type ConsoleRole } from "@/lib/console";
-import { STALE_SCORER_LINK } from "@/lib/shareLinks";
-import { signInHref } from "@/lib/shell";
 import { formatLabel, isBracketFormat, isRotationFormat } from "@/lib/formats";
+import { DEFAULT_CAPACITY } from "@/lib/rsvp";
 
 const ROLE_LABEL: Record<Exclude<ConsoleRole, "owner">, string> = {
   scorer: "Scorer",
   spectator: "Spectator",
-};
-
-/**
- * Why the console shows nothing. The tournament is not there, or not
- * shared with this phone, or the scorer link it opened has been replaced.
- * A guest is offered sign-in, coming back here, in case the tournament is theirs.
- */
-const NotFound = ({ reason, isGuest }: { reason: NotFoundReason; isGuest: boolean }) => {
-  const pathname = usePathname();
-  const message =
-    reason === "stale_link"
-      ? STALE_SCORER_LINK
-      : isGuest
-        ? "This tournament does not exist or is not being shared. If it is yours, sign in to open it."
-        : "This tournament does not exist, is not being shared, or belongs to another account.";
-  return (
-    <Panel title={reason === "stale_link" ? "Scorer link replaced" : "Tournament not found"}>
-      <PanelEmpty
-        message={message}
-        actionLabel={isGuest ? "Sign in" : "Back to tournaments"}
-        href={isGuest ? signInHref(pathname) : "/competitions"}
-      />
-    </Panel>
-  );
 };
 
 /**
@@ -243,6 +222,34 @@ const TournamentConsole = () => {
             busy={page.isApplying}
           />
         </Section>
+        {page.tabs.some((spec) => spec.id === "rsvp") && (
+          <Section id="rsvp" active={page.tab} className="lg:col-span-4">
+            {page.access.canManageRsvp && (
+              <RsvpPanel
+                tournament={tournament}
+                list={page.listSoFar}
+                onSave={page.saveRsvp}
+                onTurnOff={page.turnRsvpLinkOff}
+                onSetClosed={page.setRsvpClosed}
+              />
+            )}
+            <RsvpListPanel
+              rsvps={page.rsvps}
+              error={page.rsvpListError}
+              capacity={tournament.rsvp?.capacity ?? DEFAULT_CAPACITY}
+              ownerUid={tournament.ownerId}
+              canChange={page.access.canManageRsvp}
+              onAddHeld={page.addHeldSpot}
+              onRemove={page.removeRsvp}
+              className={page.access.canManageRsvp ? "mt-4" : ""}
+            />
+            <NoticesPanel
+              tournamentId={tournament.id}
+              readOnly={!page.access.canManageRsvp}
+              className="mt-4"
+            />
+          </Section>
+        )}
         <Section id="settings" active={page.tab} className="lg:col-span-4">
           <SettingsPanel
             tournament={tournament}
@@ -290,7 +297,8 @@ const TournamentConsole = () => {
           if (!open && !page.isDeleting) page.setDeleteOpen(false);
         }}
         title="Delete the tournament?"
-        description={`This removes "${tournament.name}" and every match in it. It cannot be undone.`}
+        description={page.deleteConfirmation.description}
+        canConfirm={page.deleteConfirmation.canConfirm}
         isDeleting={page.isDeleting}
         onConfirm={page.remove}
       />

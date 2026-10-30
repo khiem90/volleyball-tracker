@@ -4,6 +4,7 @@ import {
   memoryLinkStore,
   recordScorerLink,
   recordedScorerLinks,
+  rsvpLink,
   scorerKeyIn,
   scorerLink,
   spectatorLink,
@@ -20,6 +21,12 @@ describe("the links", () => {
   it("the scorer link is the same page carrying the key", () => {
     expect(scorerLink("https://tt.example", "abc123", "k_9x")).toBe(
       "https://tt.example/competitions/abc123?scorer=k_9x",
+    );
+  });
+
+  it("the RSVP link is the tournament's RSVP page, with nothing secret in it", () => {
+    expect(rsvpLink("https://tt.example", "abc123")).toBe(
+      "https://tt.example/competitions/abc123/rsvp",
     );
   });
 
