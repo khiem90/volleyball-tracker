@@ -136,6 +136,44 @@ _Avoid_: Share code, view link
 Someone using the app without signing in. A guest can play a quick match that is not saved and nothing else, apart from what a tournament's scorer or spectator link gives its holder in that tournament.
 _Avoid_: Anonymous user
 
+### RSVP
+
+**Scheduled time**:
+The date and time the owner says a tournament will be played, set in the owner's own time zone. A tournament need not have one; one that takes RSVPs must.
+_Avoid_: Start time, started at (the moment the owner actually started it)
+
+**RSVP**:
+A signed-in person's answer that they will play in a tournament. A person RSVPs as themselves under a name they choose, not as a team; the owner forms teams from the people who come. An RSVP is either confirmed or waitlisted, in the order it arrived. A person can withdraw an RSVP until the tournament starts, even after RSVPs have closed, and can RSVP again while they are open.
+_Avoid_: Registration, sign-up, booking
+
+**Open time**:
+The moment, chosen by the owner, from which a tournament accepts RSVPs. It is one instant for everyone, judged by the server's clock, so nobody can RSVP before anyone else by changing their device's time.
+_Avoid_: Release time, go-live
+
+**Capacity**:
+The number of confirmed RSVPs a tournament takes. The owner can raise it at any time and lower it no further than the confirmed count.
+_Avoid_: Max players, limit, spots (as the setting)
+
+**Waitlist**:
+The RSVPs beyond capacity, in arrival order. When a confirmed RSVP is withdrawn or removed, or capacity goes up, the first on the waitlist becomes confirmed and sees that on the RSVP page and on Home.
+_Avoid_: Queue (which is the teams waiting for a court), standby, overflow
+
+**Held spot**:
+An RSVP the owner adds by name for someone without an account. It takes its place in arrival order like any other RSVP.
+_Avoid_: Manual RSVP, placeholder, guest
+
+**Close**:
+The owner's action that stops new RSVPs before the tournament starts; starting a tournament closes them too. A closed list can be reopened while the tournament is a draft. Withdrawals still work after a close.
+_Avoid_: Lock, freeze, end (which completes a tournament)
+
+**RSVP link**:
+The link that lets a signed-in person see a tournament's RSVP page: its scheduled time, capacity, who is in and who is waiting, and RSVP themselves. Once the tournament starts, the same page shows it as a spectator would see it. The owner can switch the link off, which hides the page.
+_Avoid_: Invite link, sign-up link
+
+**Notice**:
+A short message the owner posts on a tournament for everyone who has RSVP'd, confirmed or waitlisted. It shows on the RSVP page and on Home until read. A tournament keeps its notices in order; the newest is shown first.
+_Avoid_: Announcement, broadcast, email, notification
+
 ### Records
 
 **History**:
