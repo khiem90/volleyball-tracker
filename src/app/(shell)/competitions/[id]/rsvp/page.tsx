@@ -251,6 +251,7 @@ export default function RsvpPage() {
         tournamentName={tournament.name}
         entry={page.dialog.entry}
         isEditing={page.dialog.isEditing}
+        joinsWaitlist={state.kind === "full"}
         isSending={page.dialog.isSending}
         isWithdrawing={page.dialog.isWithdrawing}
         error={page.dialog.error}

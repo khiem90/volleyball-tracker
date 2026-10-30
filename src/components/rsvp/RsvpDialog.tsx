@@ -28,6 +28,7 @@ export const RsvpDialog = ({
   tournamentName,
   entry,
   isEditing = false,
+  joinsWaitlist = false,
   isSending,
   isWithdrawing = false,
   error,
@@ -41,6 +42,8 @@ export const RsvpDialog = ({
   entry: RsvpEntry | null;
   /** True when the dialog edits the person's RSVP rather than making one. */
   isEditing?: boolean;
+  /** True when every spot is taken, so a new RSVP lands on the waitlist. */
+  joinsWaitlist?: boolean;
   isSending: boolean;
   isWithdrawing?: boolean;
   /** Why the last send failed for a reason other than the rules' refusal. */
@@ -115,7 +118,9 @@ export const RsvpDialog = ({
           <DialogDescription>
             {isEditing
               ? "Change your name or note. You keep your place on the list."
-              : `You are telling the owner of ${tournamentName} that you will play. Everyone on the list sees your name.`}
+              : joinsWaitlist
+                ? `Every spot in ${tournamentName} is taken, so you join the waitlist and move up on your own when a spot frees. Everyone on the list sees your name.`
+                : `You are telling the owner of ${tournamentName} that you will play. Everyone on the list sees your name.`}
           </DialogDescription>
         </DialogHeader>
 
@@ -195,7 +200,7 @@ export const RsvpDialog = ({
           </Button>
           <Button type="submit" form="rsvp-form" className="sm:flex-1" disabled={!canSend}>
             {isSending ? <InlineSpinner /> : <MbIcon id={isEditing ? "save" : "check"} size={14} />}
-            {isEditing ? "Save" : "RSVP"}
+            {isEditing ? "Save" : joinsWaitlist ? "Join the waitlist" : "RSVP"}
           </Button>
         </DialogFooter>
       </DialogContent>
