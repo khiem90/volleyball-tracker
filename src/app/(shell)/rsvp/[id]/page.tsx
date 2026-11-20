@@ -21,7 +21,7 @@ import { useListPage } from "@/components/rsvpList/useListPage";
  * RSVP from here, change their name and note, and withdraw, until the
  * scheduled time. After it the page is read-only.
  *
- * On a by-team list each RSVP is a team. A captain RSVPs the whole team
+ * On a by-team list each RSVP is a team. One person RSVPs the whole team
  * under a team name, and the page says teams where it would say people.
  *
  * Once a tournament imported from the list has started, the page offers
@@ -137,11 +137,11 @@ export default function RsvpListPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={settings.discard}
+                    onClick={settings.reset}
                     disabled={!settings.isDirty || settings.isSaving}
                     className="mb-btn mb-btn-outline-navy sm:flex-1"
                   >
-                    Discard changes
+                    Reset
                   </button>
                 </div>
               </div>

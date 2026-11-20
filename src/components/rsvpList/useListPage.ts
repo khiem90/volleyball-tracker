@@ -84,7 +84,8 @@ export const useListPage = (listId: string) => {
     setDraft({ ...setup, ...changes });
   };
 
-  const discard = () => {
+  /** Put the form back to the stored settings. */
+  const reset = () => {
     setDraft(null);
     setAttempted(false);
     setSaveError(null);
@@ -155,7 +156,7 @@ export const useListPage = (listId: string) => {
             canSave: rsvpCount !== null,
             isSaving,
             save,
-            discard,
+            reset,
           }
         : null,
   };
