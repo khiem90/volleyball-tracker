@@ -294,3 +294,16 @@ export const refusedListRsvpMessage = (list: ListForPage | null, now: number): s
   if (list.opensAt === undefined || list.scheduledAt === undefined) return NOT_OPEN_YET;
   return list.scheduledAt - now < now - list.opensAt ? LIST_IS_OVER : NOT_OPEN_YET;
 };
+
+/**
+ * What the delete confirmation says will go. It names the RSVPs on the
+ * list when there are any, held spots included, so a list people are
+ * counting on is not deleted by accident. A null count is a list whose
+ * RSVPs could not be read, which gets the warning without a number.
+ */
+export const deleteListDescription = (name: string, rsvpCount: number | null): string => {
+  if (rsvpCount === 0) return `This removes "${name}". It cannot be undone.`;
+  const rsvps =
+    rsvpCount === null ? "every RSVP" : rsvpCount === 1 ? "the 1 RSVP" : `the ${rsvpCount} RSVPs`;
+  return `This removes "${name}" and ${rsvps} on it. It cannot be undone.`;
+};

@@ -1,6 +1,35 @@
 import { describe, expect, it } from "vitest";
-import { firstListProblem, listLocks, listSetupOf, listSetupProblems } from "@/lib/rsvpList";
+import {
+  deleteListDescription,
+  firstListProblem,
+  listLocks,
+  listSetupOf,
+  listSetupProblems,
+} from "@/lib/rsvpList";
 import type { RsvpList } from "@/types/game";
+
+describe("deleteListDescription", () => {
+  it("names how many RSVPs go with the list when there are any", () => {
+    expect(deleteListDescription("Friday pickup", 14)).toBe(
+      'This removes "Friday pickup" and the 14 RSVPs on it. It cannot be undone.',
+    );
+    expect(deleteListDescription("Friday pickup", 1)).toBe(
+      'This removes "Friday pickup" and the 1 RSVP on it. It cannot be undone.',
+    );
+  });
+
+  it("says nothing of RSVPs for a list with nobody on it", () => {
+    expect(deleteListDescription("Friday pickup", 0)).toBe(
+      'This removes "Friday pickup". It cannot be undone.',
+    );
+  });
+
+  it("warns without a number while the RSVPs could not be counted", () => {
+    expect(deleteListDescription("Friday pickup", null)).toBe(
+      'This removes "Friday pickup" and every RSVP on it. It cannot be undone.',
+    );
+  });
+});
 
 // Friday 6 November 2026, 19:00 in UTC.
 const friday7pm = Date.UTC(2026, 10, 6, 19, 0);
