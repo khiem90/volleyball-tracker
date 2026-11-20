@@ -60,6 +60,9 @@ const noticesOf = (db: Firestore, tournamentId: string) =>
   collection(db, "tournaments", tournamentId, "notices");
 const listAt = (db: Firestore, id: string) => doc(db, "rsvpLists", id);
 const listsOf = (db: Firestore) => collection(db, "rsvpLists");
+const listRsvpAt = (db: Firestore, listId: string, rsvpId: string) =>
+  doc(db, "rsvpLists", listId, "rsvps", rsvpId);
+const listRsvpsOf = (db: Firestore, listId: string) => collection(db, "rsvpLists", listId, "rsvps");
 
 const tournamentDoc = (spectatorEnabled: boolean) => ({
   ownerId: owner,
@@ -1479,6 +1482,254 @@ describeFirestoreRules("Firestore rules", (env) => {
         for (const db of [accountDb(), signedOutDb(), anonymousDb()]) {
           await assertFails(deleteDoc(listAt(db, "list-1")));
         }
+      });
+    });
+
+    describe("RSVPs on a list", () => {
+      const dan = "dan-uid";
+      const eve = "eve-uid";
+
+      /**
+       * A list with its RSVP link on, open since a minute ago and scheduled
+       * for tomorrow unless changed, plus any RSVPs given, seeded with the
+       * rules off. Both times are worked out here, inside the test, so the
+       * rules' request time is compared against the same clock.
+       */
+      const seedOpenList = (
+        id: string,
+        options: {
+          enabled?: boolean;
+          closed?: boolean;
+          opensInMinutes?: number;
+          scheduledInMinutes?: number;
+          rsvps?: Record<string, { name: string; note?: string }>;
+        } = {},
+      ) =>
+        env().withSecurityRulesDisabled(async (unrestricted) => {
+          const db = modularFirestore(unrestricted);
+          await setDoc(
+            listAt(db, id),
+            listDoc({
+              enabled: options.enabled ?? true,
+              closed: options.closed ?? false,
+              opensAt: minutesFromNow(options.opensInMinutes ?? -1),
+              scheduledAt: minutesFromNow(options.scheduledInMinutes ?? 60 * 24),
+            }),
+          );
+          for (const [uid, rsvp] of Object.entries(options.rsvps ?? {})) {
+            await setDoc(listRsvpAt(db, id, uid), { uid, createdAt: serverTimestamp(), ...rsvp });
+          }
+        });
+
+      const rsvpBy = (uid: string, changes: Record<string, unknown> = {}) => ({
+        uid,
+        name: "Dan from Tuesdays",
+        note: "Thirty minutes late",
+        createdAt: serverTimestamp(),
+        ...changes,
+      });
+
+      describe("RSVPing", () => {
+        it("is accepted a minute after the open time and a minute before the scheduled time, by the server's clock", async () => {
+          await seedOpenList("list-1", { opensInMinutes: -1, scheduledInMinutes: 1 });
+          await assertSucceeds(setDoc(listRsvpAt(accountDb(dan), "list-1", dan), rsvpBy(dan)));
+        });
+
+        it("is refused a minute before the open time", async () => {
+          await seedOpenList("list-1", { opensInMinutes: 1 });
+          await assertFails(setDoc(listRsvpAt(accountDb(dan), "list-1", dan), rsvpBy(dan)));
+        });
+
+        it("is refused a minute after the scheduled time, when the list is over", async () => {
+          await seedOpenList("list-1", { opensInMinutes: -60, scheduledInMinutes: -1 });
+          await assertFails(setDoc(listRsvpAt(accountDb(dan), "list-1", dan), rsvpBy(dan)));
+        });
+
+        it("is refused while the link is off", async () => {
+          await seedOpenList("list-1", { enabled: false });
+          await assertFails(setDoc(listRsvpAt(accountDb(dan), "list-1", dan), rsvpBy(dan)));
+        });
+
+        it("is refused while the list is closed", async () => {
+          await seedOpenList("list-1", { closed: true });
+          await assertFails(setDoc(listRsvpAt(accountDb(dan), "list-1", dan), rsvpBy(dan)));
+        });
+
+        it("must carry the request's time as its arrival time, never a time of the phone's choosing", async () => {
+          await seedOpenList("list-1");
+          const db = accountDb(dan);
+          await assertFails(
+            setDoc(listRsvpAt(db, "list-1", dan), rsvpBy(dan, { createdAt: minutesFromNow(-60) })),
+          );
+          await assertFails(
+            setDoc(listRsvpAt(db, "list-1", dan), rsvpBy(dan, { createdAt: Date.now() })),
+          );
+        });
+
+        it("is refused under another account's id or uid", async () => {
+          await seedOpenList("list-1");
+          const db = accountDb(dan);
+          await assertFails(setDoc(listRsvpAt(db, "list-1", eve), rsvpBy(eve)));
+          await assertFails(setDoc(listRsvpAt(db, "list-1", dan), rsvpBy(eve)));
+          await assertFails(setDoc(listRsvpAt(db, "list-1", eve), rsvpBy(dan)));
+        });
+
+        it("is refused from the anonymous identity a scorer link creates, and from a signed-out request", async () => {
+          await seedOpenList("list-1");
+          const phone = "scorer-phone-uid";
+          await assertFails(setDoc(listRsvpAt(anonymousDb(phone), "list-1", phone), rsvpBy(phone)));
+          await assertFails(setDoc(listRsvpAt(signedOutDb(), "list-1", dan), rsvpBy(dan)));
+        });
+
+        it("may leave the note out", async () => {
+          await seedOpenList("list-1");
+          const withoutNote: Record<string, unknown> = rsvpBy(dan);
+          delete withoutNote.note;
+          await assertSucceeds(setDoc(listRsvpAt(accountDb(dan), "list-1", dan), withoutNote));
+        });
+
+        it("is refused with a key outside the RSVP's fields", async () => {
+          await seedOpenList("list-1");
+          const db = accountDb(dan);
+          await assertFails(setDoc(listRsvpAt(db, "list-1", dan), rsvpBy(dan, { held: true })));
+          await assertFails(setDoc(listRsvpAt(db, "list-1", dan), rsvpBy(dan, { status: "confirmed" })));
+        });
+
+        it("needs a name of one to forty characters, and keeps the note to 140", async () => {
+          await seedOpenList("list-1");
+          const db = accountDb(dan);
+          await assertFails(setDoc(listRsvpAt(db, "list-1", dan), rsvpBy(dan, { name: "" })));
+          await assertFails(setDoc(listRsvpAt(db, "list-1", dan), rsvpBy(dan, { name: "x".repeat(41) })));
+          await assertFails(setDoc(listRsvpAt(db, "list-1", dan), rsvpBy(dan, { name: 7 })));
+          await assertFails(setDoc(listRsvpAt(db, "list-1", dan), rsvpBy(dan, { note: "x".repeat(141) })));
+          await assertSucceeds(
+            setDoc(
+              listRsvpAt(db, "list-1", dan),
+              rsvpBy(dan, { name: "x".repeat(40), note: "x".repeat(140) }),
+            ),
+          );
+        });
+
+        it("lands together with the remembered name in one batch", async () => {
+          await seedOpenList("list-1");
+          const db = accountDb(dan);
+          const batch = writeBatch(db);
+          batch.set(listRsvpAt(db, "list-1", dan), rsvpBy(dan));
+          batch.set(userDocAt(db, dan), { rsvpName: "Dan from Tuesdays" }, { merge: true });
+          await assertSucceeds(batch.commit());
+        });
+
+        it("is made by the owner like anyone else's, under the owner's uid, and refused before the open time", async () => {
+          await seedOpenList("list-open");
+          await seedOpenList("list-early", { opensInMinutes: 1 });
+          const db = accountDb(owner);
+          await assertSucceeds(setDoc(listRsvpAt(db, "list-open", owner), rsvpBy(owner)));
+          await assertFails(setDoc(listRsvpAt(db, "list-early", owner), rsvpBy(owner)));
+        });
+      });
+
+      describe("reading the RSVPs", () => {
+        const rsvps = { [dan]: { name: "Dan" }, [eve]: { name: "Eve", note: "Late" } };
+
+        it("lets any real account list them in arrival order while the link is on", async () => {
+          await seedOpenList("list-1", { rsvps });
+          await assertSucceeds(getDocs(query(listRsvpsOf(accountDb(), "list-1"), orderBy("createdAt"))));
+        });
+
+        it("refuses a signed-out request and the anonymous identity", async () => {
+          await seedOpenList("list-1", { rsvps });
+          await assertFails(getDocs(listRsvpsOf(signedOutDb(), "list-1")));
+          await assertFails(getDocs(listRsvpsOf(anonymousDb(), "list-1")));
+        });
+
+        it("refuses another account once the link is off, and the owner can still read them", async () => {
+          await seedOpenList("list-1", { enabled: false, rsvps });
+          await assertFails(getDocs(listRsvpsOf(accountDb(), "list-1")));
+          await assertSucceeds(getDocs(listRsvpsOf(accountDb(owner), "list-1")));
+        });
+
+        it("returns an account's own RSVP under a list to its query across every list, and not another's", async () => {
+          await seedOpenList("list-1", { rsvps });
+          const mine = (db: Firestore, uid: string) =>
+            query(collectionGroup(db, "rsvps"), where("uid", "==", uid), orderBy("createdAt"));
+
+          const snapshot = await assertSucceeds(getDocs(mine(accountDb(dan), dan)));
+          expect(snapshot.docs.map((d) => d.ref.path)).toEqual([`rsvpLists/list-1/rsvps/${dan}`]);
+          await assertFails(getDocs(mine(accountDb(dan), eve)));
+        });
+      });
+
+      describe("changing an RSVP", () => {
+        const rsvps = { [dan]: { name: "Dan", note: "Late" }, [eve]: { name: "Eve" } };
+
+        it("lets the account change its own name and note", async () => {
+          await seedOpenList("list-1", { rsvps });
+          const db = accountDb(dan);
+          await assertSucceeds(updateDoc(listRsvpAt(db, "list-1", dan), { name: "Dan from Tuesdays" }));
+          await assertSucceeds(updateDoc(listRsvpAt(db, "list-1", dan), { note: "On time after all" }));
+          await assertSucceeds(updateDoc(listRsvpAt(db, "list-1", dan), { note: deleteField() }));
+        });
+
+        it("lets the account change them after the owner closes the list", async () => {
+          await seedOpenList("list-1", { closed: true, rsvps });
+          await assertSucceeds(updateDoc(listRsvpAt(accountDb(dan), "list-1", dan), { name: "Daniel" }));
+        });
+
+        it("never lets the account move its arrival time or its uid", async () => {
+          await seedOpenList("list-1", { rsvps });
+          const db = accountDb(dan);
+          await assertFails(updateDoc(listRsvpAt(db, "list-1", dan), { createdAt: serverTimestamp() }));
+          await assertFails(updateDoc(listRsvpAt(db, "list-1", dan), { createdAt: minutesFromNow(-60) }));
+          await assertFails(updateDoc(listRsvpAt(db, "list-1", dan), { uid: eve }));
+        });
+
+        it("holds a changed name and note to the limits an RSVP takes, and adds no other key", async () => {
+          await seedOpenList("list-1", { rsvps });
+          const db = accountDb(dan);
+          await assertFails(updateDoc(listRsvpAt(db, "list-1", dan), { name: "" }));
+          await assertFails(updateDoc(listRsvpAt(db, "list-1", dan), { name: "x".repeat(41) }));
+          await assertFails(updateDoc(listRsvpAt(db, "list-1", dan), { note: "x".repeat(141) }));
+          await assertFails(updateDoc(listRsvpAt(db, "list-1", dan), { status: "confirmed" }));
+        });
+
+        it("refuses a change to another account's RSVP, from that account's neighbour or the owner", async () => {
+          await seedOpenList("list-1", { rsvps });
+          await assertFails(updateDoc(listRsvpAt(accountDb(eve), "list-1", dan), { name: "Mallory" }));
+          await assertFails(updateDoc(listRsvpAt(accountDb(owner), "list-1", dan), { name: "Mallory" }));
+        });
+      });
+
+      describe("withdrawing", () => {
+        const rsvps = { [dan]: { name: "Dan" }, [eve]: { name: "Eve" } };
+
+        it("lets the account withdraw a minute before the scheduled time", async () => {
+          await seedOpenList("list-1", { scheduledInMinutes: 1, rsvps });
+          await assertSucceeds(deleteDoc(listRsvpAt(accountDb(dan), "list-1", dan)));
+        });
+
+        it("lets the account withdraw after the owner closes the list", async () => {
+          await seedOpenList("list-1", { closed: true, rsvps });
+          await assertSucceeds(deleteDoc(listRsvpAt(accountDb(dan), "list-1", dan)));
+        });
+
+        it("refuses the account's withdrawal a minute after the scheduled time", async () => {
+          await seedOpenList("list-1", { opensInMinutes: -60, scheduledInMinutes: -1, rsvps });
+          await assertFails(deleteDoc(listRsvpAt(accountDb(dan), "list-1", dan)));
+        });
+
+        it("refuses withdrawing someone else, and the anonymous identity under the same uid", async () => {
+          await seedOpenList("list-1", { rsvps });
+          await assertFails(deleteDoc(listRsvpAt(accountDb(eve), "list-1", dan)));
+          await assertFails(deleteDoc(listRsvpAt(anonymousDb(dan), "list-1", dan)));
+          await assertFails(deleteDoc(listRsvpAt(signedOutDb(), "list-1", dan)));
+        });
+
+        it("lets the account RSVP again after withdrawing, as a new arrival", async () => {
+          await seedOpenList("list-1", { rsvps });
+          const db = accountDb(dan);
+          await assertSucceeds(deleteDoc(listRsvpAt(db, "list-1", dan)));
+          await assertSucceeds(setDoc(listRsvpAt(db, "list-1", dan), rsvpBy(dan)));
+        });
       });
     });
   });
