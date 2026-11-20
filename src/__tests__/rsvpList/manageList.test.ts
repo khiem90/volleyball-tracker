@@ -7,8 +7,11 @@ import {
   addListHeldSpot,
   createRsvpList,
   removeListRsvp,
+  RsvpRefusedError,
   sendListRsvp,
+  setListClosed,
   subscribeToListRsvps,
+  withdrawFromList,
 } from "@/lib/rsvpListData";
 import type { Rsvp, RsvpList } from "@/types/game";
 import { describeFirestoreRules, minutesFromNow, modularFirestore, when } from "../rules/emulator";
@@ -165,5 +168,64 @@ describeFirestoreRules("Managing a list on Firestore", (env) => {
     await removeListRsvp(accountDb(owner), list.id, heldId);
 
     expect(await storedRsvps(list.id)).toEqual({});
+  });
+
+  it("stops new RSVPs on a close, leaves withdrawals working, and lets RSVPs in again on a reopen", async () => {
+    const list = await openList();
+    const ownerDb = accountDb(owner);
+    await sendListRsvp(accountDb(dan), list.id, dan, { name: "Dan", note: "" });
+
+    await setListClosed(ownerDb, list, true);
+
+    expect(await storedList(list.id)).toMatchObject({ closed: true });
+    const refusal = await sendListRsvp(accountDb(eve), list.id, eve, { name: "Eve", note: "" }).catch(
+      (error: unknown) => error,
+    );
+    expect(refusal).toBeInstanceOf(RsvpRefusedError);
+    expect((refusal as Error).message).toBe("The owner has closed RSVPs.");
+    expect(Object.keys(await storedRsvps(list.id))).toEqual([dan]);
+
+    await withdrawFromList(accountDb(dan), list.id, dan);
+    expect(await storedRsvps(list.id)).toEqual({});
+
+    await setListClosed(ownerDb, list, false);
+
+    expect(await storedList(list.id)).toMatchObject({ closed: false });
+    await sendListRsvp(accountDb(eve), list.id, eve, { name: "Eve", note: "" });
+    expect(Object.keys(await storedRsvps(list.id))).toEqual([eve]);
+  });
+
+  it("writes only the close, so a capacity saved from another phone at the same moment survives", async () => {
+    const list = await openList({ capacity: 12 });
+    await env().withSecurityRulesDisabled((unrestricted) =>
+      updateDoc(doc(modularFirestore(unrestricted), "rsvpLists", list.id), { capacity: 20 }),
+    );
+
+    await setListClosed(accountDb(owner), list, true);
+
+    const after = await storedList(list.id);
+    expect(after).toMatchObject({ closed: true, capacity: 20, enabled: true });
+    expect(after!.updatedAt).toBeGreaterThanOrEqual(list.updatedAt);
+  });
+
+  it("refuses to reopen a list that is over, before anything is written", async () => {
+    const list = await openList({ opensAt: minutesFromNow(-60), scheduledAt: minutesFromNow(-1) });
+    await env().withSecurityRulesDisabled((unrestricted) =>
+      updateDoc(doc(modularFirestore(unrestricted), "rsvpLists", list.id), { closed: true }),
+    );
+
+    await expect(setListClosed(accountDb(owner), list, false)).rejects.toThrow("This list is over.");
+
+    expect(await storedList(list.id)).toMatchObject({ closed: true, updatedAt: list.updatedAt });
+  });
+
+  it("refuses a close from anyone but the owner", async () => {
+    const list = await openList();
+
+    await expect(setListClosed(accountDb(dan), list, true)).rejects.toMatchObject({
+      code: "permission-denied",
+    });
+
+    expect(await storedList(list.id)).toMatchObject({ closed: false });
   });
 });

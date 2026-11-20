@@ -22,6 +22,8 @@ import { isRefused, stripUndefined } from "@/lib/firestoreData";
 import { rsvpEntryProblems, type RsvpEntry } from "@/lib/rsvp";
 import {
   firstListProblem,
+  isListOver,
+  LIST_IS_OVER,
   listSetupProblems,
   refusedListRsvpMessage,
   type ListSetup,
@@ -160,6 +162,23 @@ export const saveListSettings = async (
   if (Object.keys(changes).length === 0) return;
 
   await updateDoc(rsvpListDoc(db, list.id), { ...changes, updatedAt: Date.now() });
+};
+
+/**
+ * Close the list, or reopen it. A close stops new RSVPs and leaves
+ * withdrawals working. The scheduled time ends the list for good, so a
+ * change is refused before anything is written once `list`, the copy this
+ * phone holds, is over on this phone's clock. Only `closed` is written, so
+ * a capacity saved from another phone at the same moment survives. Owner
+ * only.
+ */
+export const setListClosed = async (
+  db: Firestore,
+  list: Pick<RsvpList, "id" | "scheduledAt">,
+  closed: boolean,
+): Promise<void> => {
+  if (isListOver(list, Date.now())) throw new Error(LIST_IS_OVER);
+  await updateDoc(rsvpListDoc(db, list.id), { closed, updatedAt: Date.now() });
 };
 
 /**
