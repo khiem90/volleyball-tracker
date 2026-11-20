@@ -1,3 +1,4 @@
+import { nameKey } from "@/lib/utils";
 import type { Entry, PersistentTeam, Tournament } from "@/types/game";
 
 /**
@@ -182,6 +183,7 @@ export type MixedTeamEdit =
   | { kind: "move_player"; teamId: string; player: PlayerRef; toTeamId: string };
 
 export const TEAM_NEEDS_A_NAME = "A team needs a name.";
+export const TEAM_NAME_TAKEN = "Another team in this tournament is already called that.";
 export const PLAYER_NEEDS_A_NAME = "A player needs a name.";
 export const NOT_A_MIXED_TEAM = "Only a mixed team can be edited here.";
 export const PLAYER_HAS_GONE = "That player is no longer on the team.";
@@ -215,8 +217,10 @@ const named = (name: string, problem: string): string => {
  * involved. A moved player joins the end of the other team. A team whose
  * last player goes stays in as a mixed team with nobody on it, since its
  * matches still need it. Throws when the edit cannot be made: an empty
- * name, a team that is not a mixed team in these entries, or a player who
- * has since left the team.
+ * name, a team name another entry has, ignoring case and outer spaces, a
+ * team that is not a mixed team in these entries, or a player who has
+ * since left the team. A withdrawn team's name counts as taken, since the
+ * team can come back.
  */
 export const editMixedTeam = (entries: Entry[], edit: MixedTeamEdit): Entry[] => {
   const team = mixedTeamIn(entries, edit.teamId);
@@ -224,8 +228,14 @@ export const editMixedTeam = (entries: Entry[], edit: MixedTeamEdit): Entry[] =>
     entries.map((entry) => (entry.teamId === team.teamId ? { ...entry, ...changes } : entry));
 
   switch (edit.kind) {
-    case "rename":
-      return withTeam({ name: named(edit.name, TEAM_NEEDS_A_NAME) });
+    case "rename": {
+      const name = named(edit.name, TEAM_NEEDS_A_NAME);
+      const isTaken = entries.some(
+        (entry) => entry.teamId !== team.teamId && nameKey(entry.name) === nameKey(name),
+      );
+      if (isTaken) throw new Error(TEAM_NAME_TAKEN);
+      return withTeam({ name });
+    }
     case "add_player":
       return withTeam({ players: [...team.players, named(edit.name, PLAYER_NEEDS_A_NAME)] });
     case "remove_player": {

@@ -200,12 +200,19 @@ describe("mixed teams as the creation page shows them", () => {
   it("never matches a mixed team to a roster team, whatever it is called", () => {
     const renamed = renameImportedTeam(imported, "mixed-1", "sharks");
 
-    expect(importedTeamRows(renamed, roster).map((row) => row.rosterTeam)).toEqual([null, null]);
+    expect(importedTeamRows(renamed, roster, []).map((row) => row.rosterTeam)).toEqual([null, null]);
   });
 
   it("flags two mixed teams under one name", () => {
     const renamed = renameImportedTeam(imported, "mixed-2", " team 1 ");
 
-    expect(importedTeamRows(renamed, roster).map((row) => row.clashes)).toEqual([true, true]);
+    expect(importedTeamRows(renamed, roster, []).map((row) => row.clashes)).toEqual([true, true]);
+  });
+
+  it("flags a mixed team under the name of a ticked roster team, and not of one left unticked", () => {
+    const renamed = renameImportedTeam(imported, "mixed-1", " sharks ");
+
+    expect(importedTeamRows(renamed, roster, roster).map((row) => row.clashes)).toEqual([true, false]);
+    expect(importedTeamRows(renamed, roster, []).map((row) => row.clashes)).toEqual([false, false]);
   });
 });

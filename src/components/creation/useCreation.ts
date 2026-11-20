@@ -10,6 +10,7 @@ import {
   isEnteringMixedTeam,
   setupInput,
   setupProblems,
+  tickedTeams,
   type SetupProblems,
   type TournamentSetup,
 } from "@/lib/creation";
@@ -61,7 +62,8 @@ export const useCreation = () => {
   );
 
   const setImport = useCallback((next: ListImport | null) => change({ import: next }), [change]);
-  const listImport = useListImport(setup.import, roster, setImport, mixedColors);
+  const tickedInOrder = useMemo(() => tickedTeams(setup, roster), [setup, roster]);
+  const listImport = useListImport(setup.import, roster, tickedInOrder, setImport, mixedColors);
   // A list deleted since it was imported would have the save refused.
   const importBlock = listImport.imported?.problem ?? null;
 

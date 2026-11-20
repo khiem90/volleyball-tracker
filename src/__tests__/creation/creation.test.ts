@@ -381,6 +381,21 @@ describe("setupProblems with mixed teams", () => {
     expect(problems).toEqual({ imported: "Rename one of the two teams called Sharks." });
   });
 
+  it("asks the owner to tell a mixed team apart from a ticked roster team under the same name", () => {
+    const base = {
+      name: "Friday night",
+      format: "single_elimination" as const,
+      import: mixed([" aces ", "Ana"], ["Team 2", "Ben"]),
+    };
+    const clash =
+      "A ticked roster team is also called Aces. Rename the mixed team or untick the roster team.";
+
+    expect(setupProblems(setup({ ...base, teamIds: ["t1"] }), roster)).toEqual({ imported: clash });
+    expect(() => setupInput(setup({ ...base, teamIds: ["t1"] }), roster)).toThrow(clash);
+    // Left unticked, the roster team does not enter, so nothing shares the name.
+    expect(setupProblems(setup({ ...base, teamIds: ["t2"] }), roster)).toEqual({});
+  });
+
   it("asks for a name when the owner has blanked a mixed team", () => {
     const problems = setupProblems(
       setup({
@@ -452,20 +467,21 @@ describe("setupInput with mixed teams", () => {
     expect(colors[10]).toBe("#ef4444");
   });
 
-  it("keeps a mixed team off the roster team that shares its name, and enters both", () => {
+  it("never enters a mixed team as the roster team that shares its name", () => {
     const input = setupInput(
       setup({
         name: "Friday night",
         format: "single_elimination",
-        teamIds: ["t1"],
+        teamIds: ["t2"],
         import: mixed(["aces", "Ana", "Ben"]),
       }),
       roster,
     );
 
+    // Aces is on the roster and not ticked, so only the mixed team has the name.
     expect(input.teams).toEqual([
-      roster[0],
-      { name: "aces", color: "#f97316", players: ["Ana", "Ben"] },
+      roster[1],
+      { name: "aces", color: "#ef4444", players: ["Ana", "Ben"] },
     ]);
   });
 });

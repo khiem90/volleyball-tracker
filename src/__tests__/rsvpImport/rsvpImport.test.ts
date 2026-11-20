@@ -210,7 +210,7 @@ describe("the imported teams as the creation page shows them", () => {
       rsvp("c", "SPIKERS", 3),
     ], neverAsked);
 
-    expect(importedTeamRows(imported, roster)).toEqual([
+    expect(importedTeamRows(imported, roster, [])).toEqual([
       { team: { id: "a", name: "aces" }, rosterTeam: roster[0], clashes: false },
       { team: { id: "b", name: "Spikers" }, rosterTeam: null, clashes: true },
       { team: { id: "c", name: "SPIKERS" }, rosterTeam: null, clashes: true },
@@ -220,6 +220,12 @@ describe("the imported teams as the creation page shows them", () => {
   it("flags two teams that both match one roster team", () => {
     const imported = importList(fridayTeams, [rsvp("a", "Aces", 1), rsvp("b", "aces", 2)], neverAsked);
 
-    expect(importedTeamRows(imported, roster).map((row) => row.clashes)).toEqual([true, true]);
+    expect(importedTeamRows(imported, roster, []).map((row) => row.clashes)).toEqual([true, true]);
+  });
+
+  it("does not flag a team from a by-team list that a ticked roster team shares its name with, since it enters as that team", () => {
+    const imported = importList(fridayTeams, [rsvp("a", "aces", 1), rsvp("b", "Spikers", 2)], neverAsked);
+
+    expect(importedTeamRows(imported, roster, roster).map((row) => row.clashes)).toEqual([false, false]);
   });
 });

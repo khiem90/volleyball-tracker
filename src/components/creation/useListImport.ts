@@ -60,7 +60,9 @@ const dealingOf = (current: ListImport, onChange: (next: ListImport) => void) =>
  * offer to close an open one, and the imported teams once a list is
  * chosen. `current` is the import the setup holds, `onChange` replaces it,
  * and `roster` says which imported names are already roster teams.
- * `mixedColors` holds the color each mixed team will take, in team order.
+ * `ticked` holds the roster teams entering beside the import, whose names
+ * a mixed team cannot share. `mixedColors` holds the color each mixed team
+ * will take, in team order.
  *
  * The page may open with a list chosen, from Create tournament on the
  * list's own page. A list that is ready is then imported at once, and an
@@ -69,6 +71,7 @@ const dealingOf = (current: ListImport, onChange: (next: ListImport) => void) =>
 export const useListImport = (
   current: ListImport | null,
   roster: PersistentTeam[],
+  ticked: PersistentTeam[],
   onChange: (next: ListImport | null) => void,
   mixedColors: string[] = [],
 ) => {
@@ -150,7 +153,10 @@ export const useListImport = (
     return [...upcoming, ...over].map((list) => choiceFor(list, now));
   }, [lists, now]);
 
-  const rows = useMemo(() => (current ? importedTeamRows(current, roster) : []), [current, roster]);
+  const rows = useMemo(
+    () => (current ? importedTeamRows(current, roster, ticked) : []),
+    [current, roster, ticked],
+  );
   const rosterIds = useMemo(
     () => new Set(rows.flatMap((row) => (row.rosterTeam ? row.rosterTeam.id : []))),
     [rows],

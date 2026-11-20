@@ -288,18 +288,37 @@ export interface ImportedTeamRow {
    * roster, and always null for a mixed team, which never does.
    */
   rosterTeam: PersistentTeam | null;
-  /** Whether another imported team has the same name, so one of them needs a rename. */
+  /** Whether another team entering has the same name, so one of them needs a rename. */
   clashes: boolean;
 }
 
 /**
+ * The ticked roster team that a mixed team's name runs into, ignoring case
+ * and outer spaces, or undefined when there is none. A mixed team is never
+ * the roster team of its name (ADR-0006), so both would enter and the
+ * schedule could not tell them apart. A team from a by-team list never
+ * runs into one, since it enters as the roster team of its name.
+ */
+export const tickedTeamNamed = (
+  imported: ListImport,
+  name: string,
+  ticked: PersistentTeam[],
+): PersistentTeam | undefined =>
+  imported.takes === "people"
+    ? ticked.find((team) => nameKey(team.name) === nameKey(name))
+    : undefined;
+
+/**
  * The import's teams in order, each with its roster match and whether its
  * name clashes. A mixed team matches no roster team, whatever it is called,
- * since it never joins the roster (ADR-0006).
+ * since it never joins the roster (ADR-0006). `ticked` holds the roster
+ * teams the owner ticked to enter beside the import, and a mixed team under
+ * the name of one clashes with it.
  */
 export const importedTeamRows = (
   imported: ListImport,
   roster: PersistentTeam[],
+  ticked: PersistentTeam[],
 ): ImportedTeamRow[] => {
   const names = imported.teams.map((team) => team.name);
   const matches = matchRosterTeams(names, imported.takes === "teams" ? roster : []);
@@ -307,6 +326,6 @@ export const importedTeamRows = (
   return imported.teams.map((team, index) => ({
     team,
     rosterTeam: matches[index],
-    clashes: clashing.has(index),
+    clashes: clashing.has(index) || tickedTeamNamed(imported, team.name, ticked) !== undefined,
   }));
 };

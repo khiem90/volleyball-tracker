@@ -1,5 +1,10 @@
 import { isRotationFormat, isSeriesFormat, minimumTeams, minimumTeamsMessage } from "@/lib/formats";
-import { importedTeamRows, nameClashes, type ListImport } from "@/lib/rsvpImport";
+import {
+  matchRosterTeams,
+  nameClashes,
+  tickedTeamNamed,
+  type ListImport,
+} from "@/lib/rsvpImport";
 import { leastUsedColors } from "@/lib/teamColors";
 import type { NewTournamentInput } from "@/lib/tournaments";
 import {
@@ -160,9 +165,10 @@ const importedRosterTeams = (
   imported: ListImport,
   roster: PersistentTeam[],
 ): (PersistentTeam | JoiningTeam)[] =>
-  importedTeamRows(imported, roster).map(
-    ({ team, rosterTeam }) => rosterTeam ?? { newName: team.name.trim() },
-  );
+  matchRosterTeams(
+    imported.teams.map((team) => team.name),
+    roster,
+  ).map((rosterTeam, index) => rosterTeam ?? { newName: imported.teams[index].name.trim() });
 
 /**
  * The mixed teams a by-person import enters, in number order. Each takes
@@ -179,16 +185,25 @@ const mixedTeams = (imported: ListImport, entering: PersistentTeam[]): EnteringM
 };
 
 /**
+ * The roster teams the owner ticked, in tick order. A ticked team that has
+ * since left the roster is left out.
+ */
+export const tickedTeams = (setup: TournamentSetup, roster: PersistentTeam[]): PersistentTeam[] => {
+  const byId = new Map(roster.map((team) => [team.id, team]));
+  return setup.teamIds.flatMap((id) => byId.get(id) ?? []);
+};
+
+/**
  * The teams that will enter, in seed order, which is the order the teams
  * section shows: ticked roster teams in tick order, then imported teams in
  * the import's order. A ticked team that has since left the roster is left
  * out, not entered from memory. A roster team a by-team import also brings
  * enters once, at its imported place. A mixed team enters beside a roster
- * team of the same name, since it is never that team.
+ * team of the same name, since it is never that team, and setupProblems
+ * asks the owner to tell the two apart first.
  */
 export const enteredTeams = (setup: TournamentSetup, roster: PersistentTeam[]): EnteringTeam[] => {
-  const byId = new Map(roster.map((team) => [team.id, team]));
-  const ticked = setup.teamIds.flatMap((id) => byId.get(id) ?? []);
+  const ticked = tickedTeams(setup, roster);
   if (!setup.import) return ticked;
   if (setup.import.takes === "people") return [...ticked, ...mixedTeams(setup.import, ticked)];
   const imported = importedRosterTeams(setup.import, roster);
@@ -200,16 +215,22 @@ export const enteredTeams = (setup: TournamentSetup, roster: PersistentTeam[]): 
  * What stops an import being saved as it stands. Two teams from a by-team
  * list under one name would land on one roster team, and two mixed teams
  * under one name could not be told apart on the schedule, so the owner
- * renames one first. A team the owner has blanked needs a name again.
+ * renames one first. A team the owner has blanked needs a name again. A
+ * mixed team under the name of a roster team in `ticked` would enter
+ * beside it, so the owner renames the mixed team or unticks the other.
  */
-const importProblem = (imported: ListImport): string | undefined => {
+const importProblem = (imported: ListImport, ticked: PersistentTeam[]): string | undefined => {
   const names = imported.teams.map((team) => team.name);
   if (names.some((name) => name.trim().length === 0)) return "Give every imported team a name.";
   const [clash] = nameClashes(names);
-  if (!clash) return undefined;
-  return clash.indexes.length === 2
-    ? `Rename one of the two teams called ${clash.name}.`
-    : `Rename the ${clash.indexes.length} teams called ${clash.name} so each has its own name.`;
+  if (clash) {
+    return clash.indexes.length === 2
+      ? `Rename one of the two teams called ${clash.name}.`
+      : `Rename the ${clash.indexes.length} teams called ${clash.name} so each has its own name.`;
+  }
+  const [shared] = names.flatMap((name) => tickedTeamNamed(imported, name, ticked) ?? []);
+  if (!shared) return undefined;
+  return `A ticked roster team is also called ${shared.name}. Rename the mixed team or untick the roster team.`;
 };
 
 /** Why the setup cannot become a tournament yet, by field. Empty when it can. */
@@ -227,7 +248,9 @@ export const setupProblems = (
 ): SetupProblems => {
   const problems: SetupProblems = {};
   if (setup.name.trim().length === 0) problems.name = "Give the tournament a name.";
-  const imported = setup.import ? importProblem(setup.import) : undefined;
+  const imported = setup.import
+    ? importProblem(setup.import, tickedTeams(setup, roster))
+    : undefined;
   if (imported) problems.imported = imported;
   if (!setup.format) {
     problems.format = "Pick a format.";

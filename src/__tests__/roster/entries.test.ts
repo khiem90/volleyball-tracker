@@ -249,6 +249,26 @@ describe("editMixedTeam", () => {
       );
     });
 
+    it("refuses a name another team in the tournament has, ignoring case and outer spaces", () => {
+      const taken = "Another team in this tournament is already called that.";
+      const rename = (name: string) =>
+        editMixedTeam(entries, { kind: "rename", teamId: "mixed-two", name });
+
+      // A roster team's name, and a withdrawn mixed team's.
+      expect(() => rename(` ${aces.name.toUpperCase()} `)).toThrow(taken);
+      expect(() => rename(sharks.name.toLowerCase())).toThrow(taken);
+    });
+
+    it("lets a team keep its own name in other letters", () => {
+      const edited = editMixedTeam(entries, {
+        kind: "rename",
+        teamId: "mixed-two",
+        name: teamTwo.name.toUpperCase(),
+      });
+
+      expect(edited).toEqual([aces, withdrawnSharks, { ...teamTwo, name: teamTwo.name.toUpperCase() }]);
+    });
+
     it("refuses a roster team, which is renamed on the roster", () => {
       expect(() => editMixedTeam(entries, { kind: "rename", teamId: "aces", name: "Ace Hitters" })).toThrow(
         "Only a mixed team can be edited here.",
