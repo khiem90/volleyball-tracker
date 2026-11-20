@@ -179,11 +179,24 @@ export const subscribeToTournamentMatches = (
 // Create, update, delete
 // ============================================
 
+/**
+ * A team as a new tournament enters it. A roster team is one as it stands.
+ * A mixed team brings an id generated for the tournament and its players'
+ * names, and has no roster team behind it (ADR-0006).
+ */
+export interface TeamToEnter {
+  id: string;
+  name: string;
+  color?: string;
+  /** The players' names, on a mixed team only. */
+  players?: string[];
+}
+
 export interface NewTournamentInput {
   name: string;
   format: TournamentFormat;
-  /** The roster teams entering, in seed order. Each becomes an entry. */
-  teams: PersistentTeam[];
+  /** The teams entering, in seed order. Each becomes an entry. */
+  teams: TeamToEnter[];
   settings: TournamentSettings;
   /** The RSVP list the teams were imported from, when there is one. */
   rsvpListId?: string;
@@ -200,6 +213,7 @@ export const buildTournament = (
     teamId: team.id,
     name: team.name,
     ...(team.color !== undefined && { color: team.color }),
+    ...(team.players !== undefined && { players: [...team.players] }),
   }));
   return {
     id: doc(tournamentsCollection(db)).id,
@@ -323,7 +337,10 @@ export const createTournament = async (
  * and a team that has since left the roster is left out. A team that had
  * withdrawn from the source is back in; a new draft has no withdrawals.
  */
-export const duplicateInput = (source: Tournament, roster: PersistentTeam[]): NewTournamentInput => {
+export const duplicateInput = (
+  source: Tournament,
+  roster: PersistentTeam[],
+): NewTournamentInput & { teams: PersistentTeam[] } => {
   const rosterById = new Map(roster.map((team) => [team.id, team]));
   return {
     name: `${source.name} (duplicate)`,

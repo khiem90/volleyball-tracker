@@ -1,6 +1,6 @@
 import { arrayUnion, writeBatch, type Firestore } from "firebase/firestore";
-import { isJoiningTeam, type SetupInput } from "@/lib/creation";
-import { stripUndefined } from "@/lib/firestoreData";
+import { isEnteringMixedTeam, isJoiningTeam, type SetupInput } from "@/lib/creation";
+import { newToken, stripUndefined } from "@/lib/firestoreData";
 import { buildRosterTeamsNamed, rosterTeamDoc } from "@/lib/roster";
 import { rsvpListDoc } from "@/lib/rsvpListData";
 import {
@@ -9,6 +9,7 @@ import {
   saveTournamentAndMatches,
   tournamentDoc,
   type CreateTournamentOptions,
+  type TeamToEnter,
   type TournamentToSave,
 } from "@/lib/tournaments";
 import { nameKey } from "@/lib/utils";
@@ -33,9 +34,10 @@ export interface NewTournamentToSave extends TournamentToSave {
  * The tournament a setup input describes, ready to save: a draft, or with
  * `start` already live with its first matches. Each team entering under a
  * new name is built as a roster team first, with the palette color the
- * roster uses least, so its entry carries the id the roster will have.
- * `roster` is the account's roster as the caller knows it. Nothing is
- * written here, and the ids are known at once.
+ * roster uses least, so its entry carries the id the roster will have. A
+ * mixed team gets an id generated for this tournament, and its entry
+ * carries its players (ADR-0006). `roster` is the account's roster as the
+ * caller knows it. Nothing is written here, and the ids are known at once.
  */
 export const buildTournamentFromSetup = (
   db: Firestore,
@@ -51,7 +53,9 @@ export const buildTournamentFromSetup = (
   for (const team of [...roster, ...joiningRoster]) {
     if (!byName.has(nameKey(team.name))) byName.set(nameKey(team.name), team);
   }
-  const teams = input.teams.map((team) => {
+  const teams = input.teams.map((team): TeamToEnter => {
+    // A mixed team gets an id of its own here and never reaches the roster.
+    if (isEnteringMixedTeam(team)) return { ...team, id: newToken() };
     if (!isJoiningTeam(team)) return team;
     const joined = byName.get(nameKey(team.newName));
     if (!joined) throw new Error("Give every imported team a name.");

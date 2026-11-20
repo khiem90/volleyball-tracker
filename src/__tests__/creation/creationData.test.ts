@@ -11,8 +11,9 @@ import { expect, it } from "vitest";
 import { emptySetup, setupInput, type TournamentSetup } from "@/lib/creation";
 import { createTournamentFromSetup } from "@/lib/creationData";
 import { addRosterTeam, TEAM_COLORS } from "@/lib/roster";
-import { importList } from "@/lib/rsvpImport";
+import { changeTeamSize, importList, type ListImport, type Random } from "@/lib/rsvpImport";
 import {
+  addListHeldSpot,
   createRsvpList,
   deleteRsvpList,
   readListForImport,
@@ -27,6 +28,10 @@ const owner = "owner-uid";
 const dan = "dan-uid";
 const eve = "eve-uid";
 const fay = "fay-uid";
+const gus = "gus-uid";
+
+/** Leaves the people in arrival order, so a deal is the same on every run. */
+const inOrder: Random = () => 0.999999;
 
 describeFirestoreRules("Creating a tournament from an RSVP list on Firestore", (env) => {
   const accountDb = (uid: string) => modularFirestore(env().authenticatedContext(uid));
@@ -51,6 +56,34 @@ describeFirestoreRules("Creating a tournament from an RSVP list on Firestore", (
   const rsvpTeam = (listId: string, uid: string, name: string) =>
     sendListRsvp(accountDb(uid), listId, uid, { name, note: "" }, "teams");
 
+  /** The owner's by-person list, open since a minute ago and scheduled for tomorrow. */
+  const personList = (capacity = 8): Promise<RsvpList> =>
+    createRsvpList(
+      accountDb(owner),
+      owner,
+      {
+        name: "Friday pickup",
+        takes: "people",
+        capacity,
+        scheduledAt: minutesFromNow(60 * 24),
+        opensAt: minutesFromNow(-1),
+        enabled: true,
+      },
+      "America/New_York",
+    );
+
+  /** A person RSVPs to the list as themselves. */
+  const rsvpPerson = (listId: string, uid: string, name: string) =>
+    sendListRsvp(accountDb(uid), listId, uid, { name, note: "" }, "people");
+
+  /** The list as the owner imports it now. A by-person list is dealt in arrival order. */
+  const importing = async (list: RsvpList): Promise<ListImport> =>
+    importList(
+      list,
+      await readListForImport(accountDb(owner), list, { closeFirst: false }),
+      inOrder,
+    );
+
   /** The creation page's setup once the owner has imported the list as it stands. */
   const setupImporting = async (
     list: RsvpList,
@@ -59,10 +92,7 @@ describeFirestoreRules("Creating a tournament from an RSVP list on Firestore", (
     ...emptySetup(),
     name: "Friday night",
     format: "single_elimination",
-    import: importList(
-      list,
-      await readListForImport(accountDb(owner), list, { closeFirst: false }),
-    ),
+    import: await importing(list),
     ...changes,
   });
 
@@ -211,6 +241,83 @@ describeFirestoreRules("Creating a tournament from an RSVP list on Firestore", (
       tournaments = (await getDocs(collection(modularFirestore(unrestricted), "tournaments"))).size;
     });
     expect(tournaments).toBe(0);
+  });
+
+  it("stores a by-person list's mixed teams with their players and writes nothing to the roster", async () => {
+    const ownerDb = accountDb(owner);
+    const aces = await addRosterTeam(ownerDb, owner, { name: "Aces", color: TEAM_COLORS[0] });
+    const list = await personList(4);
+    await rsvpPerson(list.id, dan, "Dan");
+    await rsvpPerson(list.id, eve, "Eve");
+    await addListHeldSpot(ownerDb, list.id, "Walk-in Wes");
+    await rsvpPerson(list.id, fay, "Fay");
+    await rsvpPerson(list.id, gus, "Waitlisted Gus");
+    await setListClosed(ownerDb, list, true);
+
+    const setup: TournamentSetup = {
+      ...emptySetup(),
+      name: "Friday night",
+      format: "single_elimination",
+      teamIds: [aces.id],
+      import: changeTeamSize(await importing(list), 2, inOrder),
+    };
+    const tournament = await createTournamentFromSetup(
+      ownerDb,
+      owner,
+      setupInput(setup, [aces]),
+      [aces],
+    );
+
+    const saved = await stored<Tournament>("tournaments", tournament.id);
+    expect(saved?.status).toBe("draft");
+    expect(saved?.entries).toHaveLength(3);
+    const [acesEntry, teamOne, teamTwo] = saved?.entries ?? [];
+    expect(acesEntry).toEqual<Entry>({ teamId: aces.id, name: "Aces", color: TEAM_COLORS[0] });
+    expect(teamOne).toEqual<Entry>({
+      teamId: expect.any(String),
+      name: "Team 1",
+      color: TEAM_COLORS[1],
+      players: ["Dan", "Walk-in Wes"],
+    });
+    expect(teamTwo).toEqual<Entry>({
+      teamId: expect.any(String),
+      name: "Team 2",
+      color: TEAM_COLORS[2],
+      players: ["Eve", "Fay"],
+    });
+    expect(saved?.teamIds).toEqual([aces.id, teamOne.teamId, teamTwo.teamId]);
+    expect(new Set(saved?.teamIds).size).toBe(3);
+    expect(saved?.rsvpListId).toBe(list.id);
+
+    expect(await storedRoster()).toEqual([aces]);
+    expect((await stored<RsvpList>("rsvpLists", list.id))?.tournamentIds).toEqual([tournament.id]);
+  });
+
+  it("starts a tournament of people entered alone as it is created", async () => {
+    const ownerDb = accountDb(owner);
+    const list = await personList();
+    await rsvpPerson(list.id, dan, "Dan");
+    await rsvpPerson(list.id, eve, "Eve");
+    await setListClosed(ownerDb, list, true);
+
+    const setup: TournamentSetup = {
+      ...emptySetup(),
+      name: "Friday singles",
+      format: "single_elimination",
+      import: changeTeamSize(await importing(list), 1, inOrder),
+    };
+    const tournament = await createTournamentFromSetup(ownerDb, owner, setupInput(setup, []), [], {
+      start: true,
+    });
+
+    const saved = await stored<Tournament>("tournaments", tournament.id);
+    expect(saved?.status).toBe("live");
+    expect(saved?.entries.map((entry) => [entry.name, entry.players])).toEqual([
+      ["Dan", ["Dan"]],
+      ["Eve", ["Eve"]],
+    ]);
+    expect(await storedMatchCount(tournament.id)).toBe(1);
+    expect(await storedRoster()).toEqual([]);
   });
 
   it("closes an open list when asked, then reads its RSVPs in arrival order", async () => {

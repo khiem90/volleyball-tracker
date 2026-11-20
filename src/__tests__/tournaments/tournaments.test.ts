@@ -69,7 +69,9 @@ const input = (format: TournamentFormat, name = "Tuesday night"): NewTournamentI
 });
 
 /** Six teams on two courts, so each court has a queue to draw from. */
-const rotationInput = (format: TournamentFormat): NewTournamentInput => {
+const rotationInput = (
+  format: TournamentFormat,
+): NewTournamentInput & { teams: PersistentTeam[] } => {
   const base = input(format, "Rotation night");
   return {
     ...base,
