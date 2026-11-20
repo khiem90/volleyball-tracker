@@ -17,6 +17,7 @@ import {
 } from "firebase/firestore";
 import { applyCommand, type MatchWrite } from "@/lib/engine";
 import { createdMatches } from "@/lib/engine/writes";
+import { editMixedTeam, type MixedTeamEdit } from "@/lib/entries";
 import { isRefused, newToken, stripUndefined, toUpdatePayload } from "@/lib/firestoreData";
 import type {
   Entry,
@@ -364,20 +365,37 @@ export const duplicateInput = (
  * rejects with Firestore's error. Offline, the base comes from the cache and
  * the write waits for the connection like any field update.
  */
-export const updateTournamentFields = async (
+export const updateTournamentFields = (
   db: Firestore,
   tournamentId: string,
   fields: Record<string, unknown>,
+): Promise<void> => updateTournamentFrom(db, tournamentId, () => fields);
+
+/**
+ * updateTournamentFields for an edit whose fields depend on what is stored,
+ * such as one team's entry among the tournament's entries. `fieldsFrom` is
+ * given the stored tournament on every attempt, so after a lost race the
+ * edit is worked out again on the fresh copy and sent with that copy's
+ * revision as its base. Whatever landed in between is kept, because the
+ * fresh copy already holds it. An error `fieldsFrom` throws ends the edit
+ * with nothing more written.
+ */
+export const updateTournamentFrom = async (
+  db: Firestore,
+  tournamentId: string,
+  fieldsFrom: (stored: Tournament) => Record<string, unknown>,
 ): Promise<void> => {
   const ref = tournamentDoc(db, tournamentId);
   let refused: { on: string; error: unknown } | null = null;
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
     const current = await getDoc(ref);
     if (!current.exists()) throw new Error("That tournament no longer exists.");
-    const basedOn = (current.data() as Tournament).revision;
+    const stored: Tournament = { ...(current.data() as Tournament), id: current.id };
+    const basedOn = stored.revision;
     // A refusal on a base the tournament has not moved past is not a race
     // lost but a write the rules would never accept.
     if (refused !== null && refused.on === basedOn) throw refused.error;
+    const fields = fieldsFrom(stored);
     try {
       await updateDoc(ref, { ...fields, basedOn, revision: newToken(), updatedAt: Date.now() });
       return;
@@ -399,6 +417,28 @@ export const renameTournament = async (
   if (trimmed.length === 0) throw new Error("A tournament needs a name.");
   await updateTournamentFields(db, tournamentId, { name: trimmed });
 };
+
+export const COMPLETED_KEEPS_ITS_TEAMS = "A completed tournament keeps its teams as they were.";
+
+/**
+ * Save one edit to a mixed team: a rename, or a player added, removed, or
+ * moved (ADR-0006). Only `entries` is written, so no match and no result
+ * is touched. A withdrawal changes the entries too, so the edit is applied
+ * to the stored entries on every attempt and never sent again from an old
+ * copy (see updateTournamentFrom). Rejects with the edit's own refusal,
+ * such as an empty name, before anything is written, and with
+ * COMPLETED_KEEPS_ITS_TEAMS once the tournament is completed, even when
+ * the result that completed it landed while the edit was on its way.
+ */
+export const saveMixedTeamEdit = (
+  db: Firestore,
+  tournamentId: string,
+  edit: MixedTeamEdit,
+): Promise<void> =>
+  updateTournamentFrom(db, tournamentId, (stored) => {
+    if (stored.status === "completed") throw new Error(COMPLETED_KEEPS_ITS_TEAMS);
+    return { entries: stripUndefined(editMixedTeam(stored.entries, edit)) };
+  });
 
 /**
  * Delete a tournament with every match under it, its scorer key, and the
