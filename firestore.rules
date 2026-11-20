@@ -74,7 +74,8 @@ service cloud.firestore {
     // while the tournament is live, and nothing else. Either one's write that moves the revision
     // must be built on the stored revision. Anyone holding the link can read
     // while the spectator link is on; with it off, only the owner and
-    // scorers can read the tournament or its matches.
+    // scorers can read the tournament or its matches, and the real accounts
+    // that reach a started one through the RSVP list it was imported from.
     match /tournaments/{tournamentId} {
       function tournament() {
         return get(/databases/$(database)/documents/tournaments/$(tournamentId)).data;
@@ -139,9 +140,29 @@ service cloud.firestore {
               && request.resource.data.winnerId in resource.data.teamIds));
       }
 
+      // A tournament imported from an RSVP list can be watched from the
+      // list's page (ADR-0005). Any real account reads it while the list it
+      // names has its RSVP link on, once it is live or completed. A draft
+      // stays with its owner, so nobody sees teams still being arranged.
+      // The checks that cost nothing come first, so the list is read only
+      // for a real account and a started tournament that names one. A
+      // deleted list makes the get() fail, which denies through this door
+      // and leaves the others as they were.
+      function listLinkIsOn(data) {
+        return realAccount()
+          && data.status in ['live', 'completed']
+          && data.get('rsvpListId', null) is string
+          && get(/databases/$(database)/documents/rsvpLists/$(data.rsvpListId)).data.enabled == true;
+      }
+
+      // The list door sits before the scorer door. A watcher from a list
+      // then costs one lookup, the list, and none for a scorer proof it
+      // does not have. A scorer's phone is not a real account, so it never
+      // pays for the list.
       allow read: if
         (signedIn() && resource.data.ownerId == request.auth.uid)
         || resource.data.spectatorEnabled == true
+        || listLinkIsOn(resource.data)
         || isScorer();
 
       // A tournament created with an import names its RSVP list in
@@ -220,10 +241,15 @@ service cloud.firestore {
         }
 
         // The same doors as the tournament: the owner, the spectator link,
-        // and a scorer.
+        // the RSVP link of the list it was imported from, and a scorer. A
+        // match does not say which list its tournament names, so the list
+        // door reads the tournament, which the first two doors have read
+        // already, and then the list. That is one more lookup for a
+        // watcher from a list and none for anyone else.
         allow read: if
           ownsTournament()
           || tournament().spectatorEnabled == true
+          || listLinkIsOn(tournament())
           || isScorer();
 
         allow create: if
