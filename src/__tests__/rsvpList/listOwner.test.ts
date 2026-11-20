@@ -91,6 +91,28 @@ describe("listSetupProblems against what the list already holds", () => {
     expect(listSetupProblems(setup, listLocks(stored, 1, thursdayNoon))).toEqual({});
   });
 
+  it("refuses a change of by-person or by-team once the first RSVP has arrived, a held spot included", () => {
+    const stored = list({ takes: "people" });
+    const setup = listSetupOf(stored);
+    const byTeam = { ...setup, takes: "teams" as const };
+    const locked = {
+      takes: "The list has RSVPs, so its by-person or by-team choice cannot change.",
+    };
+
+    expect(listSetupProblems(byTeam, listLocks(stored, 0, thursdayNoon))).toEqual({});
+    expect(listSetupProblems(byTeam, listLocks(stored, 1, thursdayNoon))).toEqual(locked);
+    expect(listSetupProblems(setup, listLocks(stored, 1, thursdayNoon))).toEqual({});
+    expect(firstListProblem(listSetupProblems(byTeam, listLocks(stored, 1, thursdayNoon)))).toBe(
+      locked.takes,
+    );
+
+    // A by-team list is held to its choice the same way.
+    const teams = list({ takes: "teams" });
+    expect(
+      listSetupProblems({ ...listSetupOf(teams), takes: "people" }, listLocks(teams, 3, thursdayNoon)),
+    ).toEqual(locked);
+  });
+
   it("lets everything but the open time change on a list with RSVPs", () => {
     const stored = list();
     const changed = {
