@@ -5,11 +5,14 @@ import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useImportSource } from "@/context/useImportSource";
 import {
-  BY_PERSON_NOT_YET,
+  changeTeamSize,
   importedTeamRows,
   importReadiness,
+  largestTeamSize,
   listToImportIn,
+  movePerson,
   renameImportedTeam,
+  shuffleImport,
   type ImportReadiness,
   type ListImport,
 } from "@/lib/rsvpImport";
@@ -23,18 +26,33 @@ const LIST_GONE = "The list these teams came from was deleted. Remove the import
 /** A list in the picker: what it is, where it stands, and whether it can be chosen. */
 export interface ImportChoice {
   list: RsvpList;
-  /** "By team • Closed", or for a by-person list why it cannot be chosen. */
+  /** "By team • Closed". */
   detail: string;
-  canChoose: boolean;
 }
 
 const choiceFor = (list: RsvpList, now: number): ImportChoice => {
-  const readiness = importReadiness(list, now);
-  if (readiness.kind === "by_person") {
-    return { list, detail: `${TAKES_LABEL[list.takes]} • ${BY_PERSON_NOT_YET}`, canChoose: false };
-  }
   const standing = isListOver(list, now) ? "Over" : list.closed ? "Closed" : "Open";
-  return { list, detail: `${TAKES_LABEL[list.takes]} • ${standing}`, canChoose: true };
+  return { list, detail: `${TAKES_LABEL[list.takes]} • ${standing}` };
+};
+
+/**
+ * The dealing of a by-person import: the team size, Shuffle, and moving a
+ * person. Each new deal reads `Math.random`, which the pure module never
+ * does itself.
+ */
+const dealingOf = (current: ListImport, onChange: (next: ListImport) => void) => {
+  const people = current.people?.length ?? 0;
+  const teams = current.teams.length;
+  return {
+    teamSize: current.teamSize ?? 1,
+    largestTeamSize: largestTeamSize(current),
+    /** "14 people in 4 teams". */
+    summary: `${people} ${people === 1 ? "person" : "people"} in ${teams} ${teams === 1 ? "team" : "teams"}`,
+    /** Changing the size deals everyone again. */
+    setTeamSize: (size: number) => onChange(changeTeamSize(current, size, Math.random)),
+    shuffle: () => onChange(shuffleImport(current, Math.random)),
+    move: (personId: string, toTeamId: string) => onChange(movePerson(current, personId, toTeamId)),
+  };
 };
 
 /**
@@ -42,6 +60,7 @@ const choiceFor = (list: RsvpList, now: number): ImportChoice => {
  * offer to close an open one, and the imported teams once a list is
  * chosen. `current` is the import the setup holds, `onChange` replaces it,
  * and `roster` says which imported names are already roster teams.
+ * `mixedColors` holds the color each mixed team will take, in team order.
  *
  * The page may open with a list chosen, from Create tournament on the
  * list's own page. A list that is ready is then imported at once, and an
@@ -51,6 +70,7 @@ export const useListImport = (
   current: ListImport | null,
   roster: PersistentTeam[],
   onChange: (next: ListImport | null) => void,
+  mixedColors: string[] = [],
 ) => {
   const { user } = useAuth();
   const source = useImportSource(user?.uid ?? null);
@@ -114,7 +134,6 @@ export const useListImport = (
     setRequestOpen(false);
     setError(null);
     const readiness = importReadiness(list, Date.now());
-    if (readiness.kind === "by_person") return;
     if (readiness.kind === "open") {
       setPicking(false);
       setChosenToClose(list);
@@ -139,8 +158,7 @@ export const useListImport = (
   const isListGone =
     current !== null && lists !== null && !lists.some((list) => list.id === current.listId);
 
-  const requestProblem =
-    requested === null ? LIST_NOT_FOUND : requestedKind === "by_person" ? BY_PERSON_NOT_YET : null;
+  const requestProblem = requested === null ? LIST_NOT_FOUND : null;
 
   return {
     picker: {
@@ -182,6 +200,10 @@ export const useListImport = (
       rows,
       /** The roster teams the import enters. Their rows in the checklist are taken. */
       rosterIds,
+      /** The team size, Shuffle, and moves of a by-person import, or null for a by-team one. */
+      dealing: current.takes === "people" ? dealingOf(current, onChange) : null,
+      /** The color each mixed team will take in the tournament, in team order. */
+      mixedColors,
       /** Set when the list has been deleted since, which the save would be refused for. */
       problem: isListGone ? LIST_GONE : null,
       rename: (teamId: string, name: string) => onChange(renameImportedTeam(current, teamId, name)),

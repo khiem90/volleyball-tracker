@@ -335,3 +335,137 @@ describe("setupInput with an import", () => {
     ).toThrow("Rename one of the two teams called Spikers.");
   });
 });
+
+/** An import of a by-person list dealt into these mixed teams, each a name and its players. */
+const mixed = (...teams: [name: string, ...players: string[]][]): ListImport => {
+  const dealt = teams.map(([name, ...players], index) => ({
+    id: `mixed-${index + 1}`,
+    name,
+    players: players.map((player) => ({ id: `rsvp-${player.toLowerCase()}`, name: player })),
+  }));
+  return {
+    listId: "list-2",
+    listName: "Friday pickup",
+    takes: "people",
+    teams: dealt,
+    people: dealt.flatMap((team) => team.players),
+    teamSize: 2,
+  };
+};
+
+describe("setupProblems with mixed teams", () => {
+  it("counts mixed teams toward the format's minimum with the ticked ones", () => {
+    const base = { name: "Friday night", format: "round_robin" as const, teamIds: ["t1"] };
+
+    expect(
+      setupProblems(setup({ ...base, import: mixed(["Team 1", "Ana", "Ben"]) }), roster),
+    ).toEqual({ teams: "Round Robin needs at least 3 teams." });
+    expect(
+      setupProblems(
+        setup({ ...base, import: mixed(["Team 1", "Ana", "Ben"], ["Team 2", "Cy", "Dee"]) }),
+        roster,
+      ),
+    ).toEqual({});
+  });
+
+  it("asks the owner to rename one of two mixed teams under the same name", () => {
+    const problems = setupProblems(
+      setup({
+        name: "Friday night",
+        format: "single_elimination",
+        import: mixed(["Sharks", "Ana"], ["sharks", "Ben"]),
+      }),
+      roster,
+    );
+
+    expect(problems).toEqual({ imported: "Rename one of the two teams called Sharks." });
+  });
+
+  it("asks for a name when the owner has blanked a mixed team", () => {
+    const problems = setupProblems(
+      setup({
+        name: "Friday night",
+        format: "single_elimination",
+        import: mixed(["Team 1", "Ana"], [" ", "Ben"]),
+      }),
+      roster,
+    );
+
+    expect(problems).toEqual({ imported: "Give every imported team a name." });
+  });
+});
+
+describe("setupInput with mixed teams", () => {
+  it("seeds the ticked roster teams in tick order, then the mixed teams in number order with their players", () => {
+    const input = setupInput(
+      setup({
+        name: "Friday night",
+        format: "round_robin",
+        teamIds: ["t2", "t1"],
+        import: mixed(["Team 1", "Ana", "Ben"], [" Sharks ", "Cy", "Dee", "Eve"]),
+      }),
+      roster,
+    );
+
+    expect(input.teams).toEqual([
+      roster[1],
+      roster[0],
+      { name: "Team 1", color: "#f97316", players: ["Ana", "Ben"] },
+      { name: "Sharks", color: "#eab308", players: ["Cy", "Dee", "Eve"] },
+    ]);
+    expect(input.rsvpListId).toBe("list-2");
+  });
+
+  it("gives each mixed team the palette color the tournament's teams use least", () => {
+    const input = setupInput(
+      setup({
+        name: "Friday night",
+        format: "round_robin",
+        teamIds: ["t1", "t2", "t3"],
+        import: mixed(["Team 1", "Ana"], ["Team 2", "Ben"], ["Team 3", "Cy"], ["Team 4", "Dee"]),
+      }),
+      roster,
+    );
+
+    // Red, blue, and green are taken by the ticked teams, so the mixed teams
+    // take the unused palette colors in palette order.
+    expect(input.teams.slice(3).map((team) => "color" in team && team.color)).toEqual([
+      "#f97316",
+      "#eab308",
+      "#14b8a6",
+      "#06b6d4",
+    ]);
+  });
+
+  it("goes round the palette again once every color is taken", () => {
+    const eleven = Array.from(
+      { length: 11 },
+      (_, i): [string, string] => [`Team ${i + 1}`, `Person ${i + 1}`],
+    );
+    const input = setupInput(
+      setup({ name: "Friday night", format: "round_robin", import: mixed(...eleven) }),
+      roster,
+    );
+
+    const colors = input.teams.map((team) => "color" in team && team.color);
+    expect(new Set(colors.slice(0, 10)).size).toBe(10);
+    expect(colors[10]).toBe("#ef4444");
+  });
+
+  it("keeps a mixed team off the roster team that shares its name, and enters both", () => {
+    const input = setupInput(
+      setup({
+        name: "Friday night",
+        format: "single_elimination",
+        teamIds: ["t1"],
+        import: mixed(["aces", "Ana", "Ben"]),
+      }),
+      roster,
+    );
+
+    expect(input.teams).toEqual([
+      roster[0],
+      { name: "aces", color: "#f97316", players: ["Ana", "Ben"] },
+    ]);
+  });
+});

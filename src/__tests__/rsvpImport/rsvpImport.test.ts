@@ -4,17 +4,22 @@ import {
   importHref,
   importList,
   importReadiness,
-  isImportable,
   listToImportIn,
   matchRosterTeams,
   nameClashes,
   renameImportedTeam,
   rsvpsToImport,
+  type Random,
 } from "@/lib/rsvpImport";
 import type { PersistentTeam, Rsvp, RsvpList } from "@/types/game";
 
 const NOW = 1_800_000_000_000;
 const HOUR = 3_600_000;
+
+/** A by-team import deals nobody, so it must never ask for a random number. */
+const neverAsked: Random = () => {
+  throw new Error("A by-team import read the randomness.");
+};
 
 /** A by-team list scheduled for an hour from now unless changed. */
 const list = (changes: { takes?: "people" | "teams"; closed?: boolean; scheduledAt?: number } = {}) => ({
@@ -47,11 +52,9 @@ describe("whether a list can be imported yet", () => {
     });
   });
 
-  it("cannot import a by-person list yet, whatever its state", () => {
-    expect(importReadiness(list({ takes: "people", closed: true }), NOW)).toEqual({
-      kind: "by_person",
-    });
-    expect(importReadiness(list({ takes: "people" }), NOW)).toEqual({ kind: "by_person" });
+  it("judges a by-person list the same way", () => {
+    expect(importReadiness(list({ takes: "people", closed: true }), NOW)).toEqual({ kind: "ready" });
+    expect(importReadiness(list({ takes: "people" }), NOW)).toEqual({ kind: "open" });
   });
 });
 
@@ -119,7 +122,7 @@ describe("importing a by-team list", () => {
       rsvp("a", "Aces", 1),
       rsvp("held-1", "Walk-ins", 3, true),
       rsvp("d", "Diggers", 4),
-    ]);
+    ], neverAsked);
 
     expect(imported).toEqual({
       listId: "list-1",
@@ -132,16 +135,14 @@ describe("importing a by-team list", () => {
       ],
     });
   });
-
-  it("refuses a by-person list for now", () => {
-    expect(() => importList({ ...fridayTeams, takes: "people" }, [rsvp("a", "Ana", 1)])).toThrow(
-      "A by-person list cannot be imported yet.",
-    );
-  });
 });
 
 describe("renaming an imported team", () => {
-  const imported = importList(fridayTeams, [rsvp("a", "Spikers", 1), rsvp("b", "spikers", 2)]);
+  const imported = importList(
+    fridayTeams,
+    [rsvp("a", "Spikers", 1), rsvp("b", "spikers", 2)],
+    neverAsked,
+  );
 
   it("changes that team's name and leaves its id, its place, and the others alone", () => {
     expect(renameImportedTeam(imported, "b", "Spikers B").teams).toEqual([
@@ -207,7 +208,7 @@ describe("the imported teams as the creation page shows them", () => {
       rsvp("a", "aces", 1),
       rsvp("b", "Spikers", 2),
       rsvp("c", "SPIKERS", 3),
-    ]);
+    ], neverAsked);
 
     expect(importedTeamRows(imported, roster)).toEqual([
       { team: { id: "a", name: "aces" }, rosterTeam: roster[0], clashes: false },
@@ -217,15 +218,8 @@ describe("the imported teams as the creation page shows them", () => {
   });
 
   it("flags two teams that both match one roster team", () => {
-    const imported = importList(fridayTeams, [rsvp("a", "Aces", 1), rsvp("b", "aces", 2)]);
+    const imported = importList(fridayTeams, [rsvp("a", "Aces", 1), rsvp("b", "aces", 2)], neverAsked);
 
     expect(importedTeamRows(imported, roster).map((row) => row.clashes)).toEqual([true, true]);
-  });
-});
-
-describe("which lists can be imported", () => {
-  it("is by-team lists only, for now", () => {
-    expect(isImportable({ takes: "teams" })).toBe(true);
-    expect(isImportable({ takes: "people" })).toBe(false);
   });
 });

@@ -7,6 +7,7 @@ import {
   emptySetup,
   enteredTeams,
   firstProblem,
+  isEnteringMixedTeam,
   setupInput,
   setupProblems,
   type SetupProblems,
@@ -40,9 +41,12 @@ export const useCreation = () => {
 
   const problems = useMemo(() => setupProblems(setup, roster), [setup, roster]);
   const ticked = useMemo(() => new Set(setup.teamIds), [setup.teamIds]);
-  const enteredCount = useMemo(
-    () => enteredTeams(setup, roster).length,
-    [setup, roster],
+  const entering = useMemo(() => enteredTeams(setup, roster), [setup, roster]);
+  const enteredCount = entering.length;
+  // The color each mixed team will take, which depends on the ticked teams.
+  const mixedColors = useMemo(
+    () => entering.filter(isEnteringMixedTeam).map((team) => team.color),
+    [entering],
   );
 
   // Every edit clears the last write's error: the setup it was about is gone.
@@ -57,7 +61,7 @@ export const useCreation = () => {
   );
 
   const setImport = useCallback((next: ListImport | null) => change({ import: next }), [change]);
-  const listImport = useListImport(setup.import, roster, setImport);
+  const listImport = useListImport(setup.import, roster, setImport, mixedColors);
   // A list deleted since it was imported would have the save refused.
   const importBlock = listImport.imported?.problem ?? null;
 

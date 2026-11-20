@@ -1,7 +1,8 @@
 /**
  * Import, the pure part: turning an RSVP list into the teams a tournament
- * enters. Nothing in here touches the database or React. See GLOSSARY.md
- * under "Import" and ADR-0005.
+ * enters. Nothing in here touches the database or React, and nothing reads
+ * `Math.random`: a deal takes its randomness as an argument. See GLOSSARY.md
+ * under "Import" and "Mixed team", ADR-0005, and ADR-0006.
  */
 
 import { splitRsvps, type Placed } from "@/lib/rsvp";
@@ -13,36 +14,24 @@ import type { PersistentTeam, Rsvp, RsvpList, RsvpTakes } from "@/types/game";
 // Whether a list can be imported
 // ============================================
 
-/**
- * Whether import takes this kind of list at all. Only by-team lists for
- * now. A list's own page offers Create tournament when this is true.
- */
-export const isImportable = (list: Pick<RsvpList, "takes">): boolean => list.takes === "teams";
-
 /** Whether a list can be imported yet. */
 export type ImportReadiness =
   /** Closed, or past its scheduled time, so nobody new arrives while the owner arranges teams. */
   | { kind: "ready" }
   /** Still taking RSVPs, or able to. The owner is offered a close first. */
-  | { kind: "open" }
-  /** A by-person list. Import takes only by-team lists for now. */
-  | { kind: "by_person" };
+  | { kind: "open" };
 
 /**
  * Whether a list can be imported at `now`: its owner has closed it, or its
  * scheduled time has passed. A list with no scheduled time is never over,
- * so it has to be closed. On a page `now` is the phone's clock.
+ * so it has to be closed. By-person and by-team lists are judged alike.
+ * On a page `now` is the phone's clock.
  */
 export const importReadiness = (
-  list: Pick<RsvpList, "takes" | "closed" | "scheduledAt">,
+  list: Pick<RsvpList, "closed" | "scheduledAt">,
   now: number,
-): ImportReadiness => {
-  if (!isImportable(list)) return { kind: "by_person" };
-  return list.closed || isListOver(list, now) ? { kind: "ready" } : { kind: "open" };
-};
-
-/** What the creation page says about a by-person list. */
-export const BY_PERSON_NOT_YET = "A by-person list cannot be imported yet.";
+): ImportReadiness =>
+  list.closed || isListOver(list, now) ? { kind: "ready" } : { kind: "open" };
 
 const LIST_PARAM = "list";
 
@@ -55,7 +44,7 @@ export const listToImportIn = (query: Pick<URLSearchParams, "get">): string | nu
   query.get(LIST_PARAM) || null;
 
 // ============================================
-// The import
+// What an import takes
 // ============================================
 
 /**
@@ -68,13 +57,74 @@ export const rsvpsToImport = <T extends Pick<Rsvp, "id" | "createdAt">>(
   capacity: number,
 ): Placed<T>[] => splitRsvps(rsvps, capacity).confirmed;
 
+/** A person on a by-person list, as an import deals them into a team. */
+export interface ImportedPerson {
+  /** The RSVP's id, which tells two people of one name apart. */
+  id: string;
+  name: string;
+}
+
 /** A team an import brings to the creation page. */
 export interface ImportedTeam {
-  /** Stays the same through a rename. On a by-team list it is the RSVP's id. */
+  /**
+   * Stays the same through a rename and a move. On a by-team list it is the
+   * RSVP's id. A mixed team gets one from the deal.
+   */
   id: string;
   /** The team's name, as the owner last left it. */
   name: string;
+  /** The people on a mixed team, in the order they were dealt or moved in. Absent on a team from a by-team list. */
+  players?: ImportedPerson[];
 }
+
+// ============================================
+// Dealing people into mixed teams
+// ============================================
+
+/**
+ * A source of randomness: each call gives a number from 0 up to but not
+ * including 1, as `Math.random` does. A deal takes one as an argument, so
+ * the same source gives the same deal.
+ */
+export type Random = () => number;
+
+/** The people in a random order, by a Fisher-Yates shuffle. The array given is left alone. */
+const shuffled = <T>(items: T[], random: Random): T[] => {
+  const result = [...items];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+};
+
+/**
+ * Deal people into mixed teams no larger than `size`. The deal makes the
+ * fewest teams that keep every team at or under the size, then hands the
+ * shuffled people round them one at a time, so sizes differ by at most
+ * one: fourteen people at size four gives 4, 4, 3, and 3. The teams are
+ * named "Team 1", "Team 2", and so on. At a size of one each person is a
+ * team under their own name. A size below one counts as one.
+ */
+export const dealTeams = (
+  people: ImportedPerson[],
+  size: number,
+  random: Random,
+): ImportedTeam[] => {
+  const cap = Math.max(1, Math.floor(size));
+  const teamCount = Math.ceil(people.length / cap);
+  const players: ImportedPerson[][] = Array.from({ length: teamCount }, () => []);
+  shuffled(people, random).forEach((person, index) => players[index % teamCount].push(person));
+  return players.map((onTeam, index) => ({
+    id: `mixed-${index + 1}`,
+    name: cap === 1 ? onTeam[0].name : `Team ${index + 1}`,
+    players: onTeam,
+  }));
+};
+
+// ============================================
+// The import as the owner arranges it
+// ============================================
 
 /**
  * An import as the creation page holds it: a copy of the list taken when
@@ -86,25 +136,86 @@ export interface ListImport {
   listName: string;
   /** What the list took, which says what kind of teams these are. */
   takes: RsvpTakes;
-  /** The teams in the order they enter: arrival order on a by-team list. */
+  /**
+   * The teams in the order they enter: arrival order on a by-team list, and
+   * number order for the mixed teams of a by-person list.
+   */
   teams: ImportedTeam[];
+  /** On a by-person list, the confirmed people in arrival order, kept so they can be dealt again. */
+  people?: ImportedPerson[];
+  /** On a by-person list, the size no dealt team goes over. */
+  teamSize?: number;
 }
+
+/** The team size a by-person import starts at. */
+export const DEFAULT_TEAM_SIZE = 4;
 
 /**
  * Import a list with these RSVPs on it. A by-team list gives one team per
  * confirmed RSVP, in arrival order, under the name the captain gave. A
- * by-person list cannot be imported yet and throws.
+ * by-person list has its confirmed people dealt into mixed teams of the
+ * default size, and `random` decides the deal. A by-team import never
+ * reads it.
  */
 export const importList = (
   list: Pick<RsvpList, "id" | "name" | "takes" | "capacity">,
   rsvps: Rsvp[],
+  random: Random,
 ): ListImport => {
-  if (!isImportable(list)) throw new Error(BY_PERSON_NOT_YET);
+  const confirmed: ImportedPerson[] = rsvpsToImport(rsvps, list.capacity).map((rsvp) => ({
+    id: rsvp.id,
+    name: rsvp.name,
+  }));
+  const imported = { listId: list.id, listName: list.name, takes: list.takes };
+  if (list.takes === "teams") return { ...imported, teams: confirmed };
   return {
-    listId: list.id,
-    listName: list.name,
-    takes: list.takes,
-    teams: rsvpsToImport(rsvps, list.capacity).map((rsvp) => ({ id: rsvp.id, name: rsvp.name })),
+    ...imported,
+    teams: dealTeams(confirmed, DEFAULT_TEAM_SIZE, random),
+    people: confirmed,
+    teamSize: DEFAULT_TEAM_SIZE,
+  };
+};
+
+/** The largest team size worth offering: everyone on one team, and never below one. */
+export const largestTeamSize = (imported: ListImport): number =>
+  Math.max(1, imported.people?.length ?? 1);
+
+/**
+ * A by-person import dealt again at a new team size, kept between one and
+ * the number of people. A new deal starts over: the names go back to
+ * "Team 1" and so on, and every move is forgotten. A by-team import comes
+ * back as it was.
+ */
+export const changeTeamSize = (imported: ListImport, size: number, random: Random): ListImport => {
+  if (imported.people === undefined) return imported;
+  const teamSize = Math.min(largestTeamSize(imported), Math.max(1, Math.floor(size)));
+  return { ...imported, teamSize, teams: dealTeams(imported.people, teamSize, random) };
+};
+
+/** A by-person import dealt again at the size it has, which is what Shuffle does. */
+export const shuffleImport = (imported: ListImport, random: Random): ListImport =>
+  changeTeamSize(imported, imported.teamSize ?? DEFAULT_TEAM_SIZE, random);
+
+/**
+ * The import with one person moved to the end of another team. The owner
+ * decides here, so a move may take a team past the team size. A team left
+ * with nobody is dropped. A person or team the import does not have
+ * changes nothing, and neither does a move to the team the person is on.
+ */
+export const movePerson = (imported: ListImport, personId: string, toTeamId: string): ListImport => {
+  const from = imported.teams.find((team) => team.players?.some((p) => p.id === personId));
+  const to = imported.teams.find((team) => team.id === toTeamId);
+  const person = from?.players?.find((p) => p.id === personId);
+  if (!from?.players || !person || !to?.players || from.id === to.id) return imported;
+  const staying = from.players.filter((p) => p.id !== personId);
+  const joined = [...to.players, person];
+  return {
+    ...imported,
+    teams: imported.teams.flatMap((team) => {
+      if (team.id === to.id) return { ...team, players: joined };
+      if (team.id !== from.id) return team;
+      return staying.length > 0 ? { ...team, players: staying } : [];
+    }),
   };
 };
 
@@ -172,19 +283,26 @@ export const matchRosterTeams = (
 /** An imported team as the creation page shows it. */
 export interface ImportedTeamRow {
   team: ImportedTeam;
-  /** The roster team it enters as, or null when its name is new and it joins the roster. */
+  /**
+   * The roster team it enters as. Null when its name is new and it joins the
+   * roster, and always null for a mixed team, which never does.
+   */
   rosterTeam: PersistentTeam | null;
   /** Whether another imported team has the same name, so one of them needs a rename. */
   clashes: boolean;
 }
 
-/** The import's teams in order, each with its roster match and whether its name clashes. */
+/**
+ * The import's teams in order, each with its roster match and whether its
+ * name clashes. A mixed team matches no roster team, whatever it is called,
+ * since it never joins the roster (ADR-0006).
+ */
 export const importedTeamRows = (
   imported: ListImport,
   roster: PersistentTeam[],
 ): ImportedTeamRow[] => {
   const names = imported.teams.map((team) => team.name);
-  const matches = matchRosterTeams(names, roster);
+  const matches = matchRosterTeams(names, imported.takes === "teams" ? roster : []);
   const clashing = new Set(nameClashes(names).flatMap((clash) => clash.indexes));
   return imported.teams.map((team, index) => ({
     team,

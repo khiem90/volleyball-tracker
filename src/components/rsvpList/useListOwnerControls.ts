@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useListOwner } from "@/context/useListOwner";
-import { importHref, isImportable } from "@/lib/rsvpImport";
+import { importHref } from "@/lib/rsvpImport";
 import { deleteListDescription } from "@/lib/rsvpList";
 import { messageOf } from "@/lib/utils";
 import type { RsvpList } from "@/types/game";
@@ -95,11 +95,8 @@ export const useListOwnerControls = (
     removeRsvp: owner.removeRsvp,
     duplicate,
     isDuplicating,
-    /**
-     * The creation page with this list chosen, behind Create tournament, or
-     * null for a list import does not take. It stays once the list is over.
-     */
-    importHref: isImportable(list) ? importHref(list.id) : null,
+    /** The creation page with this list chosen, behind Create tournament. It stays once the list is over. */
+    importHref: importHref(list.id),
     deletion: {
       isOpen: isDeleteOpen,
       open: () => setDeleteOpen(true),

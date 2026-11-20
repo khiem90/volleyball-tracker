@@ -1,5 +1,6 @@
 import { isRotationFormat, isSeriesFormat, minimumTeams, minimumTeamsMessage } from "@/lib/formats";
 import { importedTeamRows, nameClashes, type ListImport } from "@/lib/rsvpImport";
+import { leastUsedColors } from "@/lib/teamColors";
 import type { NewTournamentInput } from "@/lib/tournaments";
 import {
   DEFAULT_POINTS_FOR_LOSS,
@@ -129,40 +130,77 @@ export interface JoiningTeam {
   newName: string;
 }
 
-/** A team entering a new tournament: one on the roster, or one about to join it. */
-export type EnteringTeam = PersistentTeam | JoiningTeam;
+/**
+ * A mixed team entering: dealt from a by-person list, and never on the
+ * roster (ADR-0006). It has no id yet. The tournament gives it one as it
+ * is built.
+ */
+export interface EnteringMixedTeam {
+  name: string;
+  /** The palette color the tournament's teams use least. */
+  color: string;
+  /** The players' names, in the order the creation page shows them. */
+  players: string[];
+}
+
+/** A team entering a new tournament: one on the roster, one about to join it, or a mixed team. */
+export type EnteringTeam = PersistentTeam | JoiningTeam | EnteringMixedTeam;
 
 export const isJoiningTeam = (team: EnteringTeam): team is JoiningTeam => "newName" in team;
 
+export const isEnteringMixedTeam = (team: EnteringTeam): team is EnteringMixedTeam =>
+  "players" in team;
+
 /**
- * The teams an import enters, in the import's order. A name the roster has,
- * ignoring case, enters that roster team. Any other name enters as a team
- * joining the roster.
+ * The teams a by-team import enters, in arrival order. A name the roster
+ * has, ignoring case, enters that roster team. Any other name enters as a
+ * team joining the roster.
  */
-const importedTeams = (imported: ListImport, roster: PersistentTeam[]): EnteringTeam[] =>
+const importedRosterTeams = (
+  imported: ListImport,
+  roster: PersistentTeam[],
+): (PersistentTeam | JoiningTeam)[] =>
   importedTeamRows(imported, roster).map(
     ({ team, rosterTeam }) => rosterTeam ?? { newName: team.name.trim() },
   );
 
 /**
- * The teams that will enter, in seed order, which is the order the teams
- * section shows: ticked roster teams in tick order, then imported teams in
- * the import's order. A ticked team that has since left the roster is left
- * out, not entered from memory. A roster team the import also brings enters
- * once, at its imported place.
+ * The mixed teams a by-person import enters, in number order. Each takes
+ * the palette color used least among the teams entering before it, the
+ * way a pasted team name does on the roster.
  */
-export const enteredTeams = (setup: TournamentSetup, roster: PersistentTeam[]): EnteringTeam[] => {
-  const byId = new Map(roster.map((team) => [team.id, team]));
-  const imported = setup.import ? importedTeams(setup.import, roster) : [];
-  const importedIds = new Set(imported.flatMap((team) => (isJoiningTeam(team) ? [] : team.id)));
-  const ticked = setup.teamIds.flatMap((id) => (importedIds.has(id) ? [] : byId.get(id) ?? []));
-  return [...ticked, ...imported];
+const mixedTeams = (imported: ListImport, entering: PersistentTeam[]): EnteringMixedTeam[] => {
+  const nextColor = leastUsedColors(entering.map((team) => team.color));
+  return imported.teams.map((team) => ({
+    name: team.name.trim(),
+    color: nextColor(),
+    players: (team.players ?? []).map((person) => person.name),
+  }));
 };
 
 /**
- * What stops an import being saved as it stands. Two teams under one name
- * would land on one roster team, so the owner renames one first. A team
- * the owner has blanked needs a name again.
+ * The teams that will enter, in seed order, which is the order the teams
+ * section shows: ticked roster teams in tick order, then imported teams in
+ * the import's order. A ticked team that has since left the roster is left
+ * out, not entered from memory. A roster team a by-team import also brings
+ * enters once, at its imported place. A mixed team enters beside a roster
+ * team of the same name, since it is never that team.
+ */
+export const enteredTeams = (setup: TournamentSetup, roster: PersistentTeam[]): EnteringTeam[] => {
+  const byId = new Map(roster.map((team) => [team.id, team]));
+  const ticked = setup.teamIds.flatMap((id) => byId.get(id) ?? []);
+  if (!setup.import) return ticked;
+  if (setup.import.takes === "people") return [...ticked, ...mixedTeams(setup.import, ticked)];
+  const imported = importedRosterTeams(setup.import, roster);
+  const importedIds = new Set(imported.flatMap((team) => (isJoiningTeam(team) ? [] : team.id)));
+  return [...ticked.filter((team) => !importedIds.has(team.id)), ...imported];
+};
+
+/**
+ * What stops an import being saved as it stands. Two teams from a by-team
+ * list under one name would land on one roster team, and two mixed teams
+ * under one name could not be told apart on the schedule, so the owner
+ * renames one first. A team the owner has blanked needs a name again.
  */
 const importProblem = (imported: ListImport): string | undefined => {
   const names = imported.teams.map((team) => team.name);

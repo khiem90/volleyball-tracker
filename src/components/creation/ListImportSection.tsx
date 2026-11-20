@@ -16,7 +16,7 @@ import type { ListImportView } from "./useListImport";
 
 const ALERT = "text-[0.78rem] font-medium text-mb-red";
 
-/** The owner's lists to import from. A list that cannot be imported is shown and not offered. */
+/** The owner's lists to import from, by-person and by-team alike. */
 const ImportPicker = ({ view }: { view: ListImportView }) => {
   const { picker, isBusy } = view;
   return (
@@ -28,8 +28,9 @@ const ImportPicker = ({ view }: { view: ListImportView }) => {
             Import from an RSVP list
           </DialogTitle>
           <DialogDescription>
-            Import takes the confirmed RSVPs and leaves the waitlist out. The tournament keeps its
-            own copy, so a later change to the list does not reach it.
+            Import takes the confirmed RSVPs and leaves the waitlist out. A by-person list is dealt
+            into mixed teams of a size you pick. The tournament keeps its own copy, so a later
+            change to the list does not reach it.
           </DialogDescription>
         </DialogHeader>
 
@@ -45,12 +46,12 @@ const ImportPicker = ({ view }: { view: ListImportView }) => {
           </p>
         ) : (
           <ul className="flex max-h-[50vh] flex-col gap-2 overflow-auto">
-            {picker.choices.map(({ list, detail, canChoose }) => (
+            {picker.choices.map(({ list, detail }) => (
               <li key={list.id}>
                 <button
                   type="button"
                   onClick={() => picker.choose(list)}
-                  disabled={!canChoose || isBusy}
+                  disabled={isBusy}
                   className="flex min-h-11 w-full flex-col items-start gap-0.5 rounded-[4px] border border-mb-rule bg-mb-paper-bright px-3 py-2 text-left hover:border-mb-navy hover:bg-[rgba(7,50,77,0.06)] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:border-mb-rule disabled:hover:bg-mb-paper-bright"
                 >
                   <span className="matchbook-display max-w-full truncate text-[0.85rem] font-semibold">
@@ -106,12 +107,145 @@ const CloseOffer = ({ view }: { view: ListImportView }) => {
   );
 };
 
+type Imported = NonNullable<ListImportView["imported"]>;
+type Dealing = NonNullable<Imported["dealing"]>;
+
+const STEP = "mb-btn mb-btn-outline-navy min-w-11 px-3 text-[1rem]";
+
+/** The team size stepper and Shuffle of a by-person import. Either one deals everyone again. */
+const DealControls = ({ dealing }: { dealing: Dealing }) => (
+  <div className="flex flex-col gap-1.5 border-t border-mb-rule px-3 py-2.5">
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-col gap-0.5">
+        <span className="mb-kicker">Team size</span>
+        <span className="text-[0.85rem] font-semibold">{dealing.teamSize}</span>
+      </div>
+      <span className="flex gap-1">
+        <button
+          type="button"
+          onClick={() => dealing.setTeamSize(dealing.teamSize - 1)}
+          disabled={dealing.teamSize <= 1}
+          aria-label="Lower the team size by one"
+          className={STEP}
+        >
+          −
+        </button>
+        <button
+          type="button"
+          onClick={() => dealing.setTeamSize(dealing.teamSize + 1)}
+          disabled={dealing.teamSize >= dealing.largestTeamSize}
+          aria-label="Raise the team size by one"
+          className={STEP}
+        >
+          +
+        </button>
+        <button type="button" onClick={dealing.shuffle} className="mb-btn mb-btn-outline">
+          <MbIcon id="swap" size={14} />
+          Shuffle
+        </button>
+      </span>
+    </div>
+    <p className="text-[0.85rem] font-semibold" aria-live="polite">
+      {dealing.summary}
+    </p>
+    <p className="text-[0.72rem] text-mb-ink-muted">
+      No dealt team goes over the team size, and a size of 1 enters each person alone. Changing
+      the size or shuffling deals everyone again, so rename teams and move people after that.
+    </p>
+  </div>
+);
+
+/** What a mixed team is called in a move menu: its name, or its number while the name is blank. */
+const teamLabel = (name: string, index: number) => name.trim() || `Team ${index + 1}`;
+
+/**
+ * A by-person import's mixed teams in number order, each with its color, a
+ * name the owner can change, and its players. A player moves through the
+ * menu beside their name.
+ */
+const MixedTeams = ({
+  imported,
+  dealing,
+  describedBy,
+}: {
+  imported: Imported;
+  dealing: Dealing;
+  describedBy?: string;
+}) => (
+  <ul aria-label={`Mixed teams dealt from ${imported.listName}`} aria-describedby={describedBy}>
+    {imported.rows.map(({ team, clashes }, index) => {
+      const isInvalid = clashes || team.name.trim().length === 0;
+      const players = team.players ?? [];
+      return (
+        <li key={team.id} className="border-t border-mb-rule px-3 py-2">
+          <div className="flex min-h-11 items-center gap-3">
+            <span
+              className="h-3 w-3 shrink-0 rounded-full border border-mb-navy"
+              style={{ background: imported.mixedColors[index] ?? "transparent" }}
+              aria-hidden="true"
+            />
+            <span className={`mb-input min-w-0 flex-1 ${isInvalid ? "border-mb-red" : ""}`}>
+              <input
+                type="text"
+                value={team.name}
+                onChange={(event) => imported.rename(team.id, event.target.value)}
+                maxLength={RSVP_NAME_MAX}
+                autoComplete="off"
+                aria-label={`Name of mixed team ${index + 1}`}
+                aria-invalid={isInvalid ? true : undefined}
+              />
+            </span>
+            <span className="mb-kicker shrink-0">
+              {clashes ? "Same name" : `${players.length} ${players.length === 1 ? "player" : "players"}`}
+            </span>
+          </div>
+          <ul aria-label={`Players on ${teamLabel(team.name, index)}`} className="pl-6">
+            {players.map((person) => (
+              <li key={person.id} className="flex min-h-11 items-center justify-between gap-3 py-1">
+                <span className="min-w-0 truncate text-[0.85rem]">{person.name}</span>
+                {imported.rows.length > 1 && (
+                  <span className="relative shrink-0">
+                    <select
+                      className="mb-select-native min-h-11 w-auto text-[0.72rem]"
+                      value=""
+                      onChange={(event) =>
+                        event.target.value && dealing.move(person.id, event.target.value)
+                      }
+                      aria-label={`Move ${person.name} to another team`}
+                    >
+                      <option value="">Move to</option>
+                      {imported.rows.map(
+                        (other, otherIndex) =>
+                          other.team.id !== team.id && (
+                            <option key={other.team.id} value={other.team.id}>
+                              {teamLabel(other.team.name, otherIndex)}
+                            </option>
+                          ),
+                      )}
+                    </select>
+                    <MbIcon
+                      id="chevron-down"
+                      size={13}
+                      className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-mb-ink-muted"
+                    />
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </li>
+      );
+    })}
+  </ul>
+);
+
 /**
  * The import inside the teams section, above the roster checklist. With
  * no import it offers one. With one it shows the imported teams in the
  * order they enter, each with a name the owner can change, which is how
- * two teams under one name are told apart. `problem` is what stops the
- * import being saved, shown once a create has been tried.
+ * two teams under one name are told apart. A by-person import also shows
+ * the team size, Shuffle, and each mixed team's players. `problem` is what
+ * stops the import being saved, shown once a create has been tried.
  */
 export const ListImportSection = ({ view, problem }: { view: ListImportView; problem?: string }) => {
   const { imported } = view;
@@ -141,6 +275,15 @@ export const ListImportSection = ({ view, problem }: { view: ListImportView; pro
             <p className="border-t border-mb-rule px-3 py-3 text-[0.85rem] text-mb-ink-muted">
               This list has no confirmed RSVPs, so it brings no teams.
             </p>
+          ) : imported.dealing ? (
+            <>
+              <DealControls dealing={imported.dealing} />
+              <MixedTeams
+                imported={imported}
+                dealing={imported.dealing}
+                describedBy={shownProblem ? "import-problem" : undefined}
+              />
+            </>
           ) : (
             <ul
               aria-label={`Teams imported from ${imported.listName}`}

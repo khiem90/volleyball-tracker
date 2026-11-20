@@ -17,12 +17,12 @@ export const useImportSource = (uid: string | null) => {
 
   /**
    * Import a list as the server has it now, closing it first when asked.
-   * Rejects with no connection, since a copy of the list has to be the
-   * server's.
+   * A by-person list is dealt into mixed teams by `Math.random`. Rejects
+   * with no connection, since a copy of the list has to be the server's.
    */
   const take = useCallback(async (list: RsvpList, closeFirst: boolean): Promise<ListImport> => {
     if (!db) throw new Error("Not connected.");
-    return importList(list, await readListForImport(db, list, { closeFirst }));
+    return importList(list, await readListForImport(db, list, { closeFirst }), Math.random);
   }, []);
 
   return { lists, error, take };
