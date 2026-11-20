@@ -58,6 +58,16 @@ the indexes along with the rules that add RSVPs. Until the index finishes
 building, Home leaves the panel out and logs the failed query. The emulator
 does not check indexes, so the tests pass whether or not it is deployed.
 
+## The RSVP lists index
+
+The RSVP tab reads an account's own lists with a query on `rsvpLists`,
+filtered by `ownerId` and ordered by `createdAt`, newest first. That query
+needs the `rsvpLists` entry in `firestore.indexes.json`, next to the
+`tournaments` one, so deploy the indexes along with the rules that add RSVP
+lists. Until the index finishes building, the tab says the lists could not be
+loaded. The emulator does not check indexes, so the tests pass whether or not
+it is deployed.
+
 ## Once per project: anonymous sign-in
 
 Scorer links sign a phone in anonymously, so the project needs the Anonymous

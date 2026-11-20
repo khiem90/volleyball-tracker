@@ -63,6 +63,15 @@ Everything a signed-in account owns is in Firestore, and the rules in
 | `tournaments/{tournamentId}/scorers/{uid}` | A phone's proof that it opened the scorer link |
 | `tournaments/{tournamentId}/rsvps/{uid}` | One account's RSVP: `uid`, `name`, `note`, and `createdAt`, the server's time |
 | `tournaments/{tournamentId}/notices/{noticeId}` | A notice from the owner to everyone on the list: `body` and `createdAt`, the server's time |
+| `rsvpLists/{listId}` | One RSVP list, with no tournament behind it: owner, name, `takes` (`people` or `teams`), capacity, scheduled time, open time, `enabled` (the RSVP link), `closed`, and the ids of tournaments imported from it |
+
+An RSVP list's RSVP link is its own page, `/rsvp/{listId}`. The owner always
+reads the list, and any other signed-in account reads it while `enabled` is
+on. The silent identity a scorer link gives a phone does not count. The rules
+refuse `enabled` without both `scheduledAt` and `opensAt`, and only the owner
+writes a list. A write names only the fields it changes, and a list carries
+no revision. The RSVP tab's query for an account's own lists needs the
+`rsvpLists` index in `firestore.indexes.json`.
 
 A tournament may also carry `scheduledAt`, when the owner says it will be
 played, in epoch milliseconds, with `scheduledZone`, the IANA zone it was
