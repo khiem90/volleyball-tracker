@@ -1,10 +1,10 @@
 /**
- * The app shell's navigation, the pure part: the four tabs, which tab a
+ * The app shell's navigation, the pure part: the five tabs, which tab a
  * page sits under, and where a tab leads a guest. The tab bar and the top
  * bar read it; nothing in here touches the browser.
  */
 
-export type ShellTabId = "home" | "teams" | "tournaments" | "history";
+export type ShellTabId = "home" | "teams" | "tournaments" | "history" | "rsvp";
 
 export interface ShellTab {
   id: ShellTabId;
@@ -28,6 +28,7 @@ export const SHELL_TABS: readonly ShellTab[] = [
     needsAccount: true,
   },
   { id: "history", label: "History", href: "/summaries", icon: "history", needsAccount: true },
+  { id: "rsvp", label: "RSVP", href: "/rsvp", icon: "rsvp", needsAccount: true },
 ];
 
 /** The sign-in page, coming back to `returnTo` once signed in. */
@@ -41,7 +42,7 @@ export const signInHref = (returnTo: string): string =>
 export const tabHref = (tab: ShellTab, isGuest: boolean): string =>
   isGuest && tab.needsAccount ? signInHref(tab.href) : tab.href;
 
-// Pages outside the four sections that are reached from Home.
+// Pages outside the five sections that are reached from Home.
 const REACHED_FROM_HOME = ["/quick-match", "/tools"];
 
 const isAt = (pathname: string, base: string) =>

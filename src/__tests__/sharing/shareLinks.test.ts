@@ -5,6 +5,7 @@ import {
   recordScorerLink,
   recordedScorerLinks,
   rsvpLink,
+  rsvpListLink,
   scorerKeyIn,
   scorerLink,
   spectatorLink,
@@ -28,6 +29,10 @@ describe("the links", () => {
     expect(rsvpLink("https://tt.example", "abc123")).toBe(
       "https://tt.example/competitions/abc123/rsvp",
     );
+  });
+
+  it("a list's RSVP link is the list's own page, with nothing secret in it", () => {
+    expect(rsvpListLink("https://tt.example", "k3v9x2")).toBe("https://tt.example/rsvp/k3v9x2");
   });
 
   it("reads the key from the page's query, and nothing from a page without one", () => {

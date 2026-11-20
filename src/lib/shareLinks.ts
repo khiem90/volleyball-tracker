@@ -26,6 +26,12 @@ export const scorerLink = (origin: string, tournamentId: string, key: string): s
 export const rsvpLink = (origin: string, tournamentId: string): string =>
   `${spectatorLink(origin, tournamentId)}/rsvp`;
 
+/**
+ * An RSVP list's RSVP link is the list's own page. It carries nothing
+ * secret: the rules decide who may see the page from the list's own flag.
+ */
+export const rsvpListLink = (origin: string, listId: string): string => `${origin}/rsvp/${listId}`;
+
 /** The scorer key a page was opened with, or null when it was not a scorer link. */
 export const scorerKeyIn = (params: Pick<URLSearchParams, "get">): string | null => {
   const key = params.get(SCORER_PARAM);
