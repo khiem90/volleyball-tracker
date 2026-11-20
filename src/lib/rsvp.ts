@@ -473,6 +473,28 @@ export const noticeProblem = (body: string): string | null => {
 export const millisOf = (time: ServerTime): number =>
   time.seconds * 1000 + Math.floor(time.nanoseconds / 1_000_000);
 
+/** Whether server time `a` is after `b`, to the nanosecond. */
+const isAfter = (a: ServerTime, b: ServerTime): boolean =>
+  a.seconds > b.seconds || (a.seconds === b.seconds && a.nanoseconds > b.nanoseconds);
+
+/** The latest-posted notice, or null when there are none. */
+const newest = (notices: Notice[]): Notice | null =>
+  notices.reduce<Notice | null>(
+    (latest, notice) =>
+      latest === null || isAfter(notice.createdAt, latest.createdAt) ? notice : latest,
+    null,
+  );
+
+/**
+ * Whether a notice is new to an account that last opened the RSVP page at
+ * `readAt`: the newest of `notices`, in any order, was posted after it. To
+ * an account that has never opened the page, any notice is new.
+ */
+export const hasNewNotice = (notices: Notice[], readAt: ServerTime | undefined): boolean => {
+  const latest = newest(notices);
+  return latest !== null && (!readAt || isAfter(latest.createdAt, readAt));
+};
+
 // ============================================
 // Home
 // ============================================
@@ -506,18 +528,6 @@ export interface HomeRsvpRow {
   href: string;
 }
 
-/** Whether server time `a` is after `b`, to the nanosecond. */
-const isAfter = (a: ServerTime, b: ServerTime): boolean =>
-  a.seconds > b.seconds || (a.seconds === b.seconds && a.nanoseconds > b.nanoseconds);
-
-/** The latest-posted notice, or null when there are none. */
-const newest = (notices: Notice[]): Notice | null =>
-  notices.reduce<Notice | null>(
-    (latest, notice) =>
-      latest === null || isAfter(notice.createdAt, latest.createdAt) ? notice : latest,
-    null,
-  );
-
 const scheduledOrLast = (row: HomeRsvpRow) =>
   row.tournament.scheduledAt ?? Number.POSITIVE_INFINITY;
 
@@ -541,9 +551,7 @@ export const homeRsvpRows = (uid: string, read: AccountTournaments): HomeRsvpRow
     const standing = standingIn(splitRsvps(list, tournament.rsvp.capacity), uid);
     if (standing.kind === "none") continue;
 
-    const latest = newest(read.notices[mine.tournamentId] ?? []);
-    const unread =
-      latest !== null && (!mine.noticesReadAt || isAfter(latest.createdAt, mine.noticesReadAt));
+    const unread = hasNewNotice(read.notices[mine.tournamentId] ?? [], mine.noticesReadAt);
     rows.push({ tournament, standing, unread, href: `/competitions/${tournament.id}/rsvp` });
   }
   // Two tournaments without a time compare as NaN, which falls through to the id.

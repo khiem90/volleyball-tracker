@@ -4,8 +4,15 @@
  * the database or React. See GLOSSARY.md under "RSVP" and ADR-0005.
  */
 
-import { NOT_OPEN_YET, refusedRsvpMessage } from "@/lib/rsvp";
-import type { RsvpList, RsvpTakes } from "@/types/game";
+import {
+  hasNewNotice,
+  NOT_OPEN_YET,
+  refusedRsvpMessage,
+  splitRsvps,
+  standingIn,
+  type RsvpStanding,
+} from "@/lib/rsvp";
+import type { Notice, Rsvp, RsvpList, RsvpTakes } from "@/types/game";
 
 // ============================================
 // Setup
@@ -306,4 +313,75 @@ export const deleteListDescription = (name: string, rsvpCount: number | null): s
   const rsvps =
     rsvpCount === null ? "every RSVP" : rsvpCount === 1 ? "the 1 RSVP" : `the ${rsvpCount} RSVPs`;
   return `This removes "${name}" and ${rsvps} on it. It cannot be undone.`;
+};
+
+// ============================================
+// Home
+// ============================================
+
+/** One of an account's own RSVPs, with the list it sits under, as Home's query finds it. */
+export type AccountListRsvp = Rsvp & { listId: string };
+
+/**
+ * What Home has read about the lists an account has RSVP'd to. Each record
+ * is keyed by list id. A key is absent while that read is on its way, and
+ * once the rules refuse it or the list is gone.
+ */
+export interface AccountLists {
+  /** The account's own RSVPs, across every list. */
+  mine: AccountListRsvp[];
+  lists: Record<string, RsvpList>;
+  /** Each list's RSVPs, held spots included. The account's standing is worked out from them. */
+  rsvps: Record<string, Rsvp[]>;
+  /** Each list's notices in any order. Only the newest counts. */
+  notices: Record<string, Notice[]>;
+}
+
+/** A row on Home: a list the account is on. */
+export interface HomeListRow {
+  list: RsvpList;
+  /** In at a position, or waiting at one. */
+  standing: Exclude<RsvpStanding, { kind: "none" }>;
+  /** Whether a notice arrived after the account last opened the list's page. */
+  unread: boolean;
+  /** The list's page. */
+  href: string;
+}
+
+/** How long Home keeps a list after its scheduled time: a day, in milliseconds. */
+export const HOME_KEEPS_A_LIST_FOR = 24 * 60 * 60 * 1000;
+
+/**
+ * Whether Home has let go of a list at `now`: its scheduled time is 24
+ * hours back or more. A list with no scheduled time is never let go.
+ */
+const isOffHome = (list: Pick<RsvpList, "scheduledAt">, now: number): boolean =>
+  list.scheduledAt !== undefined && now >= list.scheduledAt + HOME_KEEPS_A_LIST_FOR;
+
+/**
+ * The lists `uid` is on that Home shows at `now`, soonest first, with a
+ * list that has no scheduled time last. A list stays for 24 hours after its
+ * scheduled time, so its page is one tap away while people play. Home
+ * leaves out a list whose RSVP link is off and one the rules no longer let
+ * the account read, since either page would show not found. A list waits
+ * for its RSVPs, since the standing comes from them, and leaves once the
+ * account's own RSVP is gone. On Home `now` is the phone's clock.
+ */
+export const homeListRows = (uid: string, read: AccountLists, now: number): HomeListRow[] => {
+  const rows: HomeListRow[] = [];
+  for (const mine of read.mine) {
+    const list = read.lists[mine.listId];
+    const rsvps = read.rsvps[mine.listId];
+    if (!list || !rsvps || !list.enabled) continue;
+    if (isOffHome(list, now)) continue;
+    const standing = standingIn(splitRsvps(rsvps, list.capacity), uid);
+    if (standing.kind === "none") continue;
+    const unread = hasNewNotice(read.notices[mine.listId] ?? [], mine.noticesReadAt);
+    rows.push({ list, standing, unread, href: `/rsvp/${list.id}` });
+  }
+  return rows.sort(
+    (a, b) =>
+      (a.list.scheduledAt ?? Number.POSITIVE_INFINITY) -
+        (b.list.scheduledAt ?? Number.POSITIVE_INFINITY) || byId(a.list, b.list),
+  );
 };
