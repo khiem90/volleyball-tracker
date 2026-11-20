@@ -606,18 +606,28 @@ export const useConsole = (tournamentId: string) => {
   }, []);
   const closeTeamEdit = useCallback(() => setEditingTeamId(null), []);
 
-  // Like a rename, an edit shows as soon as the local write lands and
-  // nothing waits on the server. A refusal is reported when it comes.
+  // Like a rename, an edit shows as soon as the local write lands and the
+  // server's answer is not waited for. A refusal is reported when it comes.
+  // The write is built on the stored tournament, which is read first, and
+  // on a slow connection that read takes a moment. Until this phone's copy
+  // moves on from the revision the edit was made on, the dialog is busy,
+  // so a second tap cannot add the same player twice.
+  const [editedOnRevision, setEditedOnRevision] = useState<string | null>(null);
+  const isEditingTeam = editedOnRevision !== null && editedOnRevision === tournament?.revision;
   const editTeam = useCallback(
     (edit: MixedTeamEdit) => {
-      if (!tournament || !access.canEditMixedTeams) return;
+      if (!tournament || !access.canEditMixedTeams || isEditingTeam) return;
+      const madeOn = tournament.revision;
       setActionError(null);
-      editMixedTeam(tournament.id, edit).catch((error: unknown) => {
-        console.error("Failed to change the mixed team:", error);
-        reportFailure("The team could not be changed.", error);
-      });
+      setEditedOnRevision(madeOn);
+      editMixedTeam(tournament.id, edit)
+        .catch((error: unknown) => {
+          console.error("Failed to change the mixed team:", error);
+          reportFailure("The team could not be changed.", error);
+        })
+        .finally(() => setEditedOnRevision((current) => (current === madeOn ? null : current)));
     },
-    [tournament, access.canEditMixedTeams, editMixedTeam, reportFailure],
+    [tournament, access.canEditMixedTeams, isEditingTeam, editMixedTeam, reportFailure],
   );
 
   // ============================================
@@ -746,6 +756,8 @@ export const useConsole = (tournamentId: string) => {
     openTeamEdit,
     closeTeamEdit,
     editTeam,
+    /** True from an edit to a mixed team until this phone shows it. */
+    isEditingTeam,
     // Results
     /** Whether completed results can be corrected: the owner of a live round robin or bracket. */
     canCorrectResults,

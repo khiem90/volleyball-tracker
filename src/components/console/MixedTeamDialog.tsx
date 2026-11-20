@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { MbIcon } from "@/components/matchbook/MbIcon";
+import { InlineSpinner } from "@/components/shared";
 import type { TeamRow } from "@/lib/console";
 import type { MixedTeamEdit } from "@/lib/entries";
 import { RSVP_NAME_MAX } from "@/lib/rsvp";
@@ -21,7 +22,15 @@ import { plural } from "@/lib/utils";
  * differs from the stored one. A rename that arrives from elsewhere
  * replaces the field unless it is being edited.
  */
-const NameForm = ({ name, onRename }: { name: string; onRename: (name: string) => void }) => {
+const NameForm = ({
+  name,
+  busy,
+  onRename,
+}: {
+  name: string;
+  busy: boolean;
+  onRename: (name: string) => void;
+}) => {
   const [value, setValue] = useState(name);
   const [seen, setSeen] = useState(name);
   if (name !== seen) {
@@ -30,7 +39,7 @@ const NameForm = ({ name, onRename }: { name: string; onRename: (name: string) =
   }
 
   const trimmed = value.trim();
-  const canSave = trimmed.length > 0 && trimmed !== name;
+  const canSave = trimmed.length > 0 && trimmed !== name && !busy;
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -65,13 +74,14 @@ const NameForm = ({ name, onRename }: { name: string; onRename: (name: string) =
 };
 
 /** A name field that adds a player on Enter and clears for the next one. */
-const AddPlayerForm = ({ onAdd }: { onAdd: (name: string) => void }) => {
+const AddPlayerForm = ({ busy, onAdd }: { busy: boolean; onAdd: (name: string) => void }) => {
   const [name, setName] = useState("");
   const trimmed = name.trim();
+  const canAdd = trimmed.length > 0 && !busy;
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (trimmed.length === 0) return;
+    if (!canAdd) return;
     onAdd(trimmed);
     setName("");
   };
@@ -91,7 +101,7 @@ const AddPlayerForm = ({ onAdd }: { onAdd: (name: string) => void }) => {
           enterKeyHint="done"
         />
       </label>
-      <button type="submit" className="mb-btn mb-btn-navy" disabled={trimmed.length === 0}>
+      <button type="submit" className="mb-btn mb-btn-navy" disabled={!canAdd}>
         Add
       </button>
     </form>
@@ -106,10 +116,12 @@ const AddPlayerForm = ({ onAdd }: { onAdd: (name: string) => void }) => {
 const Players = ({
   team,
   others,
+  busy,
   onEdit,
 }: {
   team: TeamRow;
   others: TeamRow[];
+  busy: boolean;
   onEdit: (edit: MixedTeamEdit) => void;
 }) => {
   const players = team.players ?? [];
@@ -134,6 +146,7 @@ const Players = ({
                   <select
                     className="mb-select-native w-auto text-[0.72rem]"
                     value=""
+                    disabled={busy}
                     onChange={(event) =>
                       event.target.value &&
                       onEdit({
@@ -162,6 +175,7 @@ const Players = ({
               <button
                 type="button"
                 onClick={() => onEdit({ kind: "remove_player", teamId: team.teamId, player })}
+                disabled={busy}
                 className="mb-btn mb-btn-outline-red"
                 aria-label={`Remove ${name} from ${team.name}`}
               >
@@ -180,12 +194,14 @@ const Players = ({
  * The owner's edit of one mixed team, reached from the Teams tab: its name,
  * and its players to add, remove, or move to another mixed team. Open
  * while `team` is set. Each change is saved as it is made, so there is
- * nothing to confirm and Done only closes. A change the tournament
- * refuses comes back as `error`.
+ * nothing to confirm and Done only closes. `busy` holds the controls from
+ * one change until the phone shows it. A change the tournament refuses
+ * comes back as `error`.
  */
 export const MixedTeamDialog = ({
   team,
   mixedTeams,
+  busy,
   error,
   onEdit,
   onClose,
@@ -193,6 +209,7 @@ export const MixedTeamDialog = ({
   team: TeamRow | null;
   /** Every mixed team in the tournament, this one included. */
   mixedTeams: TeamRow[];
+  busy: boolean;
   error: string | null;
   onEdit: (edit: MixedTeamEdit) => void;
   onClose: () => void;
@@ -219,19 +236,29 @@ export const MixedTeamDialog = ({
           <NameForm
             key={team.teamId}
             name={team.name}
+            busy={busy}
             onRename={(name) => onEdit({ kind: "rename", teamId: team.teamId, name })}
           />
 
           <div className="flex flex-col gap-1.5">
-            <span className="mb-kicker">{plural(team.players?.length ?? 0, "player")}</span>
+            {/* The spinner sits beside the count, so the dialog keeps its height while a change saves. */}
+            <span className="mb-kicker flex min-h-5 items-center gap-2">
+              {plural(team.players?.length ?? 0, "player")}
+              {busy && <InlineSpinner />}
+              <span role="status" className="sr-only">
+                {busy ? "Saving" : ""}
+              </span>
+            </span>
             <div className="max-h-[40vh] overflow-auto">
               <Players
                 team={team}
                 others={mixedTeams.filter((other) => other.teamId !== team.teamId)}
+                busy={busy}
                 onEdit={onEdit}
               />
             </div>
             <AddPlayerForm
+              busy={busy}
               onAdd={(name) => onEdit({ kind: "add_player", teamId: team.teamId, name })}
             />
           </div>

@@ -324,6 +324,7 @@ const TournamentConsole = () => {
       <MixedTeamDialog
         team={page.editingTeam}
         mixedTeams={page.mixedTeams}
+        busy={page.isEditingTeam}
         error={page.editingTeam ? page.actionError : null}
         onEdit={page.editTeam}
         onClose={page.closeTeamEdit}
