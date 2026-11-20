@@ -21,6 +21,7 @@ import {
 import { isRefused, stripUndefined } from "@/lib/firestoreData";
 import { rsvpEntryProblems, type RsvpEntry } from "@/lib/rsvp";
 import {
+  duplicateListSetup,
   firstListProblem,
   isListOver,
   LIST_IS_OVER,
@@ -163,6 +164,20 @@ export const saveListSettings = async (
 
   await updateDoc(rsvpListDoc(db, list.id), { ...changes, updatedAt: Date.now() });
 };
+
+/**
+ * Duplicate a list for `ownerId`: a new list with the source's by-person
+ * or by-team choice and its capacity, named as its duplicate, with no
+ * times, nobody on it, its RSVP link off, and no tournament imported from
+ * it. The source is left as it is. Resolves with the new list.
+ */
+export const duplicateRsvpList = (
+  db: Firestore,
+  ownerId: string,
+  source: Pick<RsvpList, "name" | "takes" | "capacity">,
+): Promise<RsvpList> =>
+  // A duplicate has no scheduled time, so no zone is stored with it.
+  createRsvpList(db, ownerId, duplicateListSetup(source), "");
 
 /**
  * Close the list, or reopen it. A close stops new RSVPs and leaves

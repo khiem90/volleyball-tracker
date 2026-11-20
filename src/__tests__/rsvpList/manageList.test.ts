@@ -6,6 +6,7 @@ import type { ListSetup } from "@/lib/rsvpList";
 import {
   addListHeldSpot,
   createRsvpList,
+  duplicateRsvpList,
   removeListRsvp,
   RsvpRefusedError,
   sendListRsvp,
@@ -227,5 +228,60 @@ describeFirestoreRules("Managing a list on Firestore", (env) => {
     });
 
     expect(await storedList(list.id)).toMatchObject({ closed: false });
+  });
+
+  it("duplicates a list with its by-team choice and capacity, named as a duplicate, with no times, nobody on it, and the link off", async () => {
+    const source = await openList({ name: "Friday league", takes: "teams", capacity: 8 });
+    await danThenEve(source.id);
+    await addListHeldSpot(accountDb(owner), source.id, "Walk-in Sam");
+    await env().withSecurityRulesDisabled((unrestricted) =>
+      updateDoc(doc(modularFirestore(unrestricted), "rsvpLists", source.id), {
+        closed: true,
+        tournamentIds: ["tourn-1"],
+      }),
+    );
+    const sourceStored = await storedList(source.id);
+    const before = Date.now();
+
+    const copy = await duplicateRsvpList(accountDb(owner), owner, source);
+
+    expect(copy.id).not.toBe(source.id);
+    const stored = await storedList(copy.id);
+    expect(stored).toEqual({
+      ownerId: owner,
+      name: "Friday league (duplicate)",
+      takes: "teams",
+      capacity: 8,
+      enabled: false,
+      closed: false,
+      tournamentIds: [],
+      createdAt: expect.any(Number),
+      updatedAt: expect.any(Number),
+    });
+    expect(stored!.createdAt).toBeGreaterThanOrEqual(before);
+    expect(copy).toEqual({ ...stored, id: copy.id });
+    expect(await storedRsvps(copy.id)).toEqual({});
+    // The source keeps everything it had.
+    expect(await storedList(source.id)).toEqual(sourceStored);
+    expect(Object.keys(await storedRsvps(source.id))).toHaveLength(3);
+  });
+
+  it("duplicates a by-person list that is over, which is how a list comes back for next week", async () => {
+    const source = await openList({
+      capacity: 16,
+      opensAt: minutesFromNow(-60),
+      scheduledAt: minutesFromNow(-1),
+    });
+
+    const copy = await duplicateRsvpList(accountDb(owner), owner, source);
+
+    expect(await storedList(copy.id)).toMatchObject({
+      name: "Friday pickup (duplicate)",
+      takes: "people",
+      capacity: 16,
+      enabled: false,
+    });
+    expect(copy.scheduledAt).toBeUndefined();
+    expect(copy.opensAt).toBeUndefined();
   });
 });

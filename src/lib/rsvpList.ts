@@ -56,6 +56,20 @@ export const listSetupOf = (list: RsvpList): ListSetup => ({
   enabled: list.enabled,
 });
 
+/**
+ * What a duplicate of `source` starts from: the same by-person or by-team
+ * choice and the same capacity, named as its duplicate. Next week's list
+ * has its own times, so it has none yet and its RSVP link is off.
+ */
+export const duplicateListSetup = (source: Pick<RsvpList, "name" | "takes" | "capacity">): ListSetup => ({
+  name: `${source.name} (duplicate)`,
+  takes: source.takes,
+  capacity: source.capacity,
+  scheduledAt: null,
+  opensAt: null,
+  enabled: false,
+});
+
 /** Why a list setup cannot be saved yet, by field. Empty when it can. */
 export interface ListSetupProblems {
   /** The list is over, so none of its settings can change. No other problem comes with it. */
