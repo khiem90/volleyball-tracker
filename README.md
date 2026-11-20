@@ -64,6 +64,7 @@ Everything a signed-in account owns is in Firestore, and the rules in
 | `tournaments/{tournamentId}/rsvps/{uid}` | One account's RSVP: `uid`, `name`, `note`, and `createdAt`, the server's time |
 | `tournaments/{tournamentId}/notices/{noticeId}` | A notice from the owner to everyone on the list: `body` and `createdAt`, the server's time |
 | `rsvpLists/{listId}` | One RSVP list, with no tournament behind it: owner, name, `takes` (`people` or `teams`), capacity, scheduled time, open time, `enabled` (the RSVP link), `closed`, and the ids of tournaments imported from it |
+| `rsvpLists/{listId}/rsvps/{uid}` | One account's RSVP to the list: `uid`, `name`, `note`, and `createdAt`, the server's time |
 
 An RSVP list's RSVP link is its own page, `/rsvp/{listId}`. The owner always
 reads the list, and any other signed-in account reads it while `enabled` is
@@ -72,6 +73,16 @@ refuse `enabled` without both `scheduledAt` and `opensAt`, and only the owner
 writes a list. A write names only the fields it changes, and a list carries
 no revision. The RSVP tab's query for an account's own lists needs the
 `rsvpLists` index in `firestore.indexes.json`.
+
+Whoever can read a list can read its RSVPs. An RSVP's id is the account's
+uid, so an account holds one RSVP per list. The rules accept one only from
+that account, only while the link is on and the list is not closed, only from
+`opensAt` until `scheduledAt` by the server's clock, and only with `createdAt`
+equal to the request's time. The account changes its own `name` and `note`
+and never its arrival time. It withdraws by deleting the RSVP, until
+`scheduledAt`, and an RSVP made after that is a new arrival at the back of
+the line. Who is confirmed and who waits is never stored. It follows from the
+arrival order and the capacity (ADR-0004).
 
 A tournament may also carry `scheduledAt`, when the owner says it will be
 played, in epoch milliseconds, with `scheduledZone`, the IANA zone it was
