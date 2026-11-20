@@ -6,6 +6,7 @@ import { InlineSpinner, LinkField, PageLoadingSpinner } from "@/components/share
 import { MbIcon } from "@/components/matchbook/MbIcon";
 import { Panel, PanelError } from "@/components/matchbook/Panel";
 import { RsvpDialog } from "@/components/rsvp/RsvpDialog";
+import { ListNoticesPanel } from "@/components/rsvpList/ListNoticesPanel";
 import { ListPeoplePanel } from "@/components/rsvpList/ListPeoplePanel";
 import { ListRsvpPanel } from "@/components/rsvpList/ListRsvpPanel";
 import { ListSetupFields } from "@/components/rsvpList/ListSetupFields";
@@ -60,7 +61,12 @@ export default function RsvpListPage() {
         )}
       </header>
 
-      {/* Notices go here, above the panels, for everyone who can see the page. */}
+      <ListNoticesPanel
+        listId={list.id}
+        isOwner={page.isOwner}
+        readerUid={rsvp.mine?.uid ?? null}
+        className="mb-4"
+      />
 
       <div className="grid gap-4 lg:grid-cols-12 lg:items-start">
         <div className="flex flex-col gap-4 lg:col-span-5">
