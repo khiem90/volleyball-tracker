@@ -74,12 +74,21 @@ writes a list. A write names only the fields it changes, and a list carries
 no revision. The RSVP tab's query for an account's own lists needs the
 `rsvpLists` index in `firestore.indexes.json`.
 
+The owner closes a list by setting `closed`, which stops new RSVPs and leaves
+withdrawals working, and reopens it the same way. The owner removes any RSVP
+at any time, and until `scheduledAt` adds a held spot: an RSVP under a
+generated id with `uid` null and `held` true, which no account can change.
+Deleting a list deletes its RSVPs in the same batch. The app refuses a change
+to `capacity` below the confirmed count, a change to `opensAt` once the list
+has an RSVP, and any settings change once `scheduledAt` has passed. The rules
+do not check those three, since only the owner writes a list.
+
 Whoever can read a list can read its RSVPs. An RSVP's id is the account's
 uid, so an account holds one RSVP per list. The rules accept one only from
 that account, only while the link is on and the list is not closed, only from
 `opensAt` until `scheduledAt` by the server's clock, and only with `createdAt`
-equal to the request's time. The account changes its own `name` and `note`
-and never its arrival time. It withdraws by deleting the RSVP, until
+equal to the request's time. The account changes its own `name` and `note`,
+until `scheduledAt`, and never its arrival time. It withdraws by deleting the RSVP, until
 `scheduledAt`, and an RSVP made after that is a new arrival at the back of
 the line. Who is confirmed and who waits is never stored. It follows from the
 arrival order and the capacity (ADR-0004).
