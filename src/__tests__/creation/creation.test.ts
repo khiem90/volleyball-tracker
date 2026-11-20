@@ -7,6 +7,7 @@ import {
   setupProblems,
   type TournamentSetup,
 } from "@/lib/creation";
+import type { ListImport } from "@/lib/rsvpImport";
 import { DEFAULT_TERMINOLOGY } from "@/types/competition-config";
 import type { PersistentTeam } from "@/types/game";
 
@@ -61,11 +62,12 @@ describe("setupProblems and the teams", () => {
 });
 
 describe("the setup as the page opens", () => {
-  it("has nothing chosen, one court, single games, and nothing about RSVPs or a scheduled time", () => {
+  it("has nothing chosen, nothing imported, one court, single games, and no scheduled time", () => {
     expect(emptySetup()).toEqual({
       name: "",
       format: null,
       teamIds: [],
+      import: null,
       courts: 1,
       seriesLength: 1,
       instantWin: false,
@@ -186,5 +188,150 @@ describe("setupInput", () => {
     expect(() => setupInput(setup({ teamIds: ["t1", "t2", "t3"] }), roster)).toThrow(
       "Pick a format.",
     );
+  });
+});
+
+/** An import of a by-team list holding these team names, in arrival order. */
+const imported = (...names: string[]): ListImport => ({
+  listId: "list-1",
+  listName: "Friday teams",
+  takes: "teams",
+  teams: names.map((name, index) => ({ id: `rsvp-${index + 1}`, name })),
+});
+
+describe("setupProblems with an import", () => {
+  it("counts imported teams toward the format's minimum with the ticked ones", () => {
+    const base = { name: "Friday night", format: "round_robin" as const, teamIds: ["t1"] };
+
+    expect(setupProblems(setup({ ...base, import: imported("Newcomers") }), roster)).toEqual({
+      teams: "Round Robin needs at least 3 teams.",
+    });
+    expect(
+      setupProblems(setup({ ...base, import: imported("Newcomers", "chasers") }), roster),
+    ).toEqual({});
+  });
+
+  it("counts a roster team once when it is both ticked and imported", () => {
+    const problems = setupProblems(
+      setup({
+        name: "Friday night",
+        format: "round_robin",
+        teamIds: ["t1", "t2"],
+        import: imported("Aces", "blockers"),
+      }),
+      roster,
+    );
+
+    expect(problems).toEqual({ teams: "Round Robin needs at least 3 teams." });
+  });
+
+  it("asks the owner to rename one of two imported teams under the same name", () => {
+    const problems = setupProblems(
+      setup({
+        name: "Friday night",
+        format: "round_robin",
+        import: imported("Spikers", "Newcomers", "spikers"),
+      }),
+      roster,
+    );
+
+    expect(problems).toEqual({ imported: "Rename one of the two teams called Spikers." });
+  });
+
+  it("words a name three teams share for three", () => {
+    const problems = setupProblems(
+      setup({
+        name: "Friday night",
+        format: "round_robin",
+        import: imported("Aces", "ACES", "aces"),
+      }),
+      roster,
+    );
+
+    expect(problems.imported).toBe("Rename the 3 teams called Aces so each has its own name.");
+  });
+
+  it("asks for a name when the owner has blanked an imported team", () => {
+    const problems = setupProblems(
+      setup({
+        name: "Friday night",
+        format: "single_elimination",
+        import: imported("Spikers", "  "),
+      }),
+      roster,
+    );
+
+    expect(problems).toEqual({ imported: "Give every imported team a name." });
+  });
+
+  it("puts the import's problem after the name and before the team count", () => {
+    const problems = setupProblems(
+      setup({ format: "round_robin", import: imported("Spikers", "Spikers") }),
+      roster,
+    );
+
+    expect(problemsInOrder(problems)).toEqual([
+      "Give the tournament a name.",
+      "Rename one of the two teams called Spikers.",
+      "Round Robin needs at least 3 teams.",
+    ]);
+  });
+});
+
+describe("setupInput with an import", () => {
+  it("seeds the ticked roster teams in tick order, then the imported teams in arrival order", () => {
+    const input = setupInput(
+      setup({
+        name: "Friday night",
+        format: "round_robin",
+        teamIds: ["t4", "t1"],
+        import: imported("Newcomers", "BLOCKERS", " Late Entry "),
+      }),
+      roster,
+    );
+
+    expect(input.teams).toEqual([
+      roster[3],
+      roster[0],
+      { newName: "Newcomers" },
+      roster[1],
+      { newName: "Late Entry" },
+    ]);
+  });
+
+  it("enters a roster team once, at its imported place, when it is also ticked", () => {
+    const input = setupInput(
+      setup({
+        name: "Friday night",
+        format: "round_robin",
+        teamIds: ["t2", "t1"],
+        import: imported("Chasers", "Blockers"),
+      }),
+      roster,
+    );
+
+    expect(input.teams).toEqual([roster[0], roster[2], roster[1]]);
+  });
+
+  it("names the list the teams came from", () => {
+    const input = setupInput(
+      setup({ name: "Friday night", format: "single_elimination", import: imported("Aces", "Newcomers") }),
+      roster,
+    );
+
+    expect(input.rsvpListId).toBe("list-1");
+  });
+
+  it("refuses to build while two imported teams share a name", () => {
+    expect(() =>
+      setupInput(
+        setup({
+          name: "Friday night",
+          format: "single_elimination",
+          import: imported("Spikers", "spikers"),
+        }),
+        roster,
+      ),
+    ).toThrow("Rename one of the two teams called Spikers.");
   });
 });

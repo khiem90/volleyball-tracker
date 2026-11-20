@@ -114,6 +114,12 @@ export interface Tournament {
   twoMatchRotationState?: TwoMatchRotationState;
   /** Whether the spectator link is on. Off means nobody but the owner can read it. */
   spectatorEnabled: boolean;
+  /**
+   * The RSVP list the tournament's teams were imported from, set when it is
+   * created with an import and never changed (ADR-0005). A duplicate does
+   * not carry it.
+   */
+  rsvpListId?: string;
   revision: string;
   /** The revision the last write was built on. Absent until a tournament's first write after it was added. */
   basedOn?: string;

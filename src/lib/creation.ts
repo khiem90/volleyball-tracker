@@ -1,4 +1,5 @@
 import { isRotationFormat, isSeriesFormat, minimumTeams, minimumTeamsMessage } from "@/lib/formats";
+import { matchRosterTeams, nameClashes, type ListImport } from "@/lib/rsvpImport";
 import type { NewTournamentInput } from "@/lib/tournaments";
 import {
   DEFAULT_POINTS_FOR_LOSS,
@@ -20,6 +21,11 @@ export interface TournamentSetup {
   format: TournamentFormat | null;
   /** The ticked roster teams in the order they were ticked, which is the seed order. */
   teamIds: string[];
+  /**
+   * The RSVP list the owner imported, with its teams as arranged so far, or
+   * null with no import. Imported teams are seeded after the ticked ones.
+   */
+  import: ListImport | null;
   /** Courts in play at once. Only rotation formats use more than one. */
   courts: number;
   /** Best-of series length. Rotation formats always play single games. */
@@ -33,11 +39,12 @@ export interface TournamentSetup {
   courtWord: string;
 }
 
-/** The page as it opens: nothing chosen, one court, single games. */
+/** The page as it opens: nothing chosen, nothing imported, one court, single games. */
 export const emptySetup = (): TournamentSetup => ({
   name: "",
   format: null,
   teamIds: [],
+  import: null,
   courts: 1,
   seriesLength: 1,
   instantWin: false,
@@ -115,18 +122,66 @@ export const setupSettings = (
 // ============================================
 
 /**
- * The teams that will enter, in tick order. A ticked team that has since
- * left the roster is left out rather than entered from memory.
+ * A team entering under a name the roster does not have. It joins the
+ * roster as the tournament is saved, so it is there next week.
  */
-export const enteredTeams = (setup: TournamentSetup, roster: PersistentTeam[]): PersistentTeam[] => {
+export interface JoiningTeam {
+  newName: string;
+}
+
+/** A team entering a new tournament: one on the roster, or one about to join it. */
+export type EnteringTeam = PersistentTeam | JoiningTeam;
+
+export const isJoiningTeam = (team: EnteringTeam): team is JoiningTeam => "newName" in team;
+
+/**
+ * The teams an import enters, in the import's order. A name the roster has,
+ * ignoring case, enters that roster team. Any other name enters as a team
+ * joining the roster.
+ */
+const importedTeams = (imported: ListImport, roster: PersistentTeam[]): EnteringTeam[] => {
+  const names = imported.teams.map((team) => team.name);
+  return matchRosterTeams(names, roster).map(
+    (rosterTeam, index) => rosterTeam ?? { newName: names[index].trim() },
+  );
+};
+
+/**
+ * The teams that will enter, in seed order, which is the order the teams
+ * section shows: ticked roster teams in tick order, then imported teams in
+ * the import's order. A ticked team that has since left the roster is left
+ * out, not entered from memory. A roster team the import also brings enters
+ * once, at its imported place.
+ */
+export const enteredTeams = (setup: TournamentSetup, roster: PersistentTeam[]): EnteringTeam[] => {
   const byId = new Map(roster.map((team) => [team.id, team]));
-  return setup.teamIds.flatMap((id) => byId.get(id) ?? []);
+  const imported = setup.import ? importedTeams(setup.import, roster) : [];
+  const importedIds = new Set(imported.flatMap((team) => (isJoiningTeam(team) ? [] : team.id)));
+  const ticked = setup.teamIds.flatMap((id) => (importedIds.has(id) ? [] : byId.get(id) ?? []));
+  return [...ticked, ...imported];
+};
+
+/**
+ * What stops an import being saved as it stands. Two teams under one name
+ * would land on one roster team, so the owner renames one first. A team
+ * the owner has blanked needs a name again.
+ */
+const importProblem = (imported: ListImport): string | undefined => {
+  const names = imported.teams.map((team) => team.name);
+  if (names.some((name) => name.trim().length === 0)) return "Give every imported team a name.";
+  const [clash] = nameClashes(names);
+  if (!clash) return undefined;
+  return clash.indexes.length === 2
+    ? `Rename one of the two teams called ${clash.name}.`
+    : `Rename the ${clash.indexes.length} teams called ${clash.name} so each has its own name.`;
 };
 
 /** Why the setup cannot become a tournament yet, by field. Empty when it can. */
 export interface SetupProblems {
   name?: string;
   format?: string;
+  /** What is wrong with the imported teams. */
+  imported?: string;
   teams?: string;
 }
 
@@ -136,6 +191,8 @@ export const setupProblems = (
 ): SetupProblems => {
   const problems: SetupProblems = {};
   if (setup.name.trim().length === 0) problems.name = "Give the tournament a name.";
+  const imported = setup.import ? importProblem(setup.import) : undefined;
+  if (imported) problems.imported = imported;
   if (!setup.format) {
     problems.format = "Pick a format.";
     return problems;
@@ -149,10 +206,10 @@ export const setupProblems = (
 
 /**
  * The problems in the order to fix them: the format, since the rest depend
- * on it, then the name, then the teams.
+ * on it, then the name, then the imported teams, then the team count.
  */
 export const problemsInOrder = (problems: SetupProblems): string[] =>
-  [problems.format, problems.name, problems.teams].filter(
+  [problems.format, problems.name, problems.imported, problems.teams].filter(
     (problem): problem is string => problem !== undefined,
   );
 
@@ -161,11 +218,21 @@ export const firstProblem = (problems: SetupProblems): string | undefined =>
   problemsInOrder(problems)[0];
 
 /**
+ * What the creation page hands over to be saved: a new tournament's input
+ * whose teams may include some that join the roster on the way.
+ */
+export interface SetupInput extends Omit<NewTournamentInput, "teams"> {
+  /** The teams entering, in seed order. */
+  teams: EnteringTeam[];
+}
+
+/**
  * The input the draft is built from. The problems are checked again here,
  * so a page that shows them and stops is the normal path and this throw
- * is the guard behind it.
+ * is the guard behind it. With an import, the input names the list the
+ * teams came from.
  */
-export const setupInput = (setup: TournamentSetup, roster: PersistentTeam[]): NewTournamentInput => {
+export const setupInput = (setup: TournamentSetup, roster: PersistentTeam[]): SetupInput => {
   const first = firstProblem(setupProblems(setup, roster));
   if (first || !setup.format) throw new Error(first ?? "Pick a format.");
   return {
@@ -173,5 +240,6 @@ export const setupInput = (setup: TournamentSetup, roster: PersistentTeam[]): Ne
     format: setup.format,
     teams: enteredTeams(setup, roster),
     settings: setupSettings(setup.format, setup),
+    ...(setup.import && { rsvpListId: setup.import.listId }),
   };
 };
