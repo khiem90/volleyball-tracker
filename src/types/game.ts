@@ -149,6 +149,42 @@ export interface Tournament {
 }
 
 // ============================================
+// RSVP lists
+// ============================================
+
+/** What an RSVP list takes: people on a by-person list, teams on a by-team list. */
+export type RsvpTakes = "people" | "teams";
+
+/**
+ * An RSVP list document at rsvpLists/{id}, owned by one account and tied to
+ * no tournament (ADR-0005). A write to it names only the fields it changes.
+ * It has no revision, since no engine result races its settings. The rules
+ * refuse `enabled` without both `scheduledAt` and `opensAt`.
+ */
+export interface RsvpList {
+  id: string;
+  ownerId: string;
+  name: string;
+  takes: RsvpTakes;
+  /** The number of confirmed RSVPs the list takes. */
+  capacity: number;
+  /** When the people on the list will play, in epoch milliseconds. Absent until set. */
+  scheduledAt?: number;
+  /** The IANA zone the scheduled time was set in. */
+  scheduledZone?: string;
+  /** The moment RSVPs open, in epoch milliseconds, judged by the server's clock. Absent until set. */
+  opensAt?: number;
+  /** Whether the RSVP link is on. */
+  enabled: boolean;
+  /** Whether the owner has closed the list. */
+  closed: boolean;
+  /** The tournaments imported from the list. */
+  tournamentIds: string[];
+  createdAt: number;
+  updatedAt: number;
+}
+
+// ============================================
 // Matches
 // ============================================
 
