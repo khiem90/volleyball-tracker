@@ -1,12 +1,14 @@
 import {
   addDoc,
   collection,
+  collectionGroup,
   deleteDoc,
   deleteField,
   doc,
   getDoc,
   getDocFromServer,
   getDocs,
+  limit,
   onSnapshot,
   orderBy,
   query,
@@ -28,6 +30,8 @@ import {
   LIST_IS_OVER,
   listSetupProblems,
   refusedListRsvpMessage,
+  type AccountListRsvp,
+  type AccountLists,
   type ListSetup,
 } from "@/lib/rsvpList";
 import type { Notice, Rsvp, RsvpList } from "@/types/game";
@@ -275,6 +279,27 @@ export const subscribeToListRsvps = (
 // Notices
 // ============================================
 
+/** A list's notices, newest first: every one, or the newest alone, which is all Home reads. */
+const watchListNotices = (
+  db: Firestore,
+  listId: string,
+  newestOnly: boolean,
+  onChange: (notices: Notice[]) => void,
+  onError?: (error: Error) => void,
+): Unsubscribe => {
+  const newestFirst = query(listNoticesCollection(db, listId), orderBy("createdAt", "desc"));
+  return onSnapshot(
+    newestOnly ? query(newestFirst, limit(1)) : newestFirst,
+    (snapshot) =>
+      onChange(
+        snapshot.docs.map(
+          (d) => ({ ...d.data({ serverTimestamps: "estimate" }), id: d.id }) as Notice,
+        ),
+      ),
+    (error) => onError?.(error),
+  );
+};
+
 /**
  * A list's notices, newest first, for the owner, or for any real account
  * while the RSVP link is on. A notice this phone has just posted shows
@@ -287,17 +312,7 @@ export const subscribeToListNotices = (
   listId: string,
   onChange: (notices: Notice[]) => void,
   onError?: (error: Error) => void,
-): Unsubscribe =>
-  onSnapshot(
-    query(listNoticesCollection(db, listId), orderBy("createdAt", "desc")),
-    (snapshot) =>
-      onChange(
-        snapshot.docs.map(
-          (d) => ({ ...d.data({ serverTimestamps: "estimate" }), id: d.id }) as Notice,
-        ),
-      ),
-    (error) => onError?.(error),
-  );
+): Unsubscribe => watchListNotices(db, listId, false, onChange, onError);
 
 /**
  * Post a notice on a list, trimmed, at the server's time. The rules take
@@ -429,3 +444,148 @@ export const updateListRsvp = async (
  */
 export const withdrawFromList = (db: Firestore, listId: string, uid: string): Promise<void> =>
   deleteDoc(listRsvpDoc(db, listId, uid));
+
+// ============================================
+// Home
+// ============================================
+
+/**
+ * The account's own RSVPs across every list, oldest first. This is a
+ * collection group query on `uid`. The wildcard rule proves it from the
+ * filter, and it needs the `rsvps` entry in firestore.indexes.json.
+ *
+ * An RSVP on a list sits at rsvpLists/{id}/rsvps/{uid}. The query also
+ * finds any RSVP left under an old tournament, at
+ * tournaments/{id}/rsvps/{uid}. Those are on no list, so they are left out
+ * (ADR-0005).
+ */
+const subscribeToAccountListRsvps = (
+  db: Firestore,
+  uid: string,
+  onChange: (rsvps: AccountListRsvp[]) => void,
+  onError: (error: Error) => void,
+): Unsubscribe =>
+  onSnapshot(
+    query(collectionGroup(db, "rsvps"), where("uid", "==", uid), orderBy("createdAt")),
+    (snapshot) =>
+      onChange(
+        snapshot.docs.flatMap((d) => {
+          const list = d.ref.parent.parent;
+          if (list?.parent.path !== "rsvpLists") return [];
+          const rsvp = { ...d.data({ serverTimestamps: "estimate" }), id: d.id } as Rsvp;
+          return [{ ...rsvp, listId: list.id }];
+        }),
+      ),
+    onError,
+  );
+
+/**
+ * Everything Home needs about the lists the account `uid` has RSVP'd to:
+ * its own RSVPs across lists, and for each list they point at, the list,
+ * its RSVPs, and its newest notice. Each of those is read by the list's id,
+ * which the rules can judge, so nothing here queries across other
+ * accounts' lists. Delivers once the account's RSVPs arrive and again with
+ * every change. homeListRows turns a delivery into rows.
+ *
+ * A list whose reads the rules refuse, as they do once the owner turns its
+ * link off or deletes it, is dropped from the delivery without failing it,
+ * and read again the next time the account's RSVPs change. A withdrawal
+ * drops its list and stops its reads. Only the account's own query failing
+ * calls `onError`, which ends the subscription.
+ */
+export const subscribeToAccountLists = (
+  db: Firestore,
+  uid: string,
+  onChange: (read: AccountLists) => void,
+  onError?: (error: Error) => void,
+): Unsubscribe => {
+  let mine: AccountListRsvp[] | null = null;
+  const lists: Record<string, RsvpList> = {};
+  const rsvps: Record<string, Rsvp[]> = {};
+  const notices: Record<string, Notice[]> = {};
+  const watching = new Map<string, Unsubscribe[]>();
+  let stopped = false;
+
+  const deliver = () => {
+    if (stopped || mine === null) return;
+    onChange({ mine, lists: { ...lists }, rsvps: { ...rsvps }, notices: { ...notices } });
+  };
+
+  const forget = (listId: string) => {
+    watching.get(listId)?.forEach((unsubscribe) => unsubscribe());
+    watching.delete(listId);
+    delete lists[listId];
+    delete rsvps[listId];
+    delete notices[listId];
+  };
+
+  const drop = (listId: string) => {
+    if (!watching.has(listId)) return;
+    forget(listId);
+    deliver();
+  };
+
+  const watch = (listId: string) => {
+    const refused = () => drop(listId);
+    watching.set(listId, [
+      subscribeToRsvpList(
+        db,
+        listId,
+        (list) => {
+          if (list) lists[listId] = list;
+          else delete lists[listId];
+          deliver();
+        },
+        refused,
+      ),
+      subscribeToListRsvps(
+        db,
+        listId,
+        (all) => {
+          rsvps[listId] = all;
+          deliver();
+        },
+        refused,
+      ),
+      watchListNotices(
+        db,
+        listId,
+        true,
+        (newest) => {
+          notices[listId] = newest;
+          deliver();
+        },
+        refused,
+      ),
+    ]);
+  };
+
+  const unsubscribeMine = subscribeToAccountListRsvps(
+    db,
+    uid,
+    (own) => {
+      mine = own;
+      const wanted = new Set(own.map((rsvp) => rsvp.listId));
+      for (const listId of [...watching.keys()]) {
+        if (!wanted.has(listId)) forget(listId);
+      }
+      for (const listId of wanted) {
+        if (!watching.has(listId)) watch(listId);
+      }
+      deliver();
+    },
+    (error) => {
+      stop();
+      onError?.(error);
+    },
+  );
+
+  function stop() {
+    if (stopped) return;
+    stopped = true;
+    unsubscribeMine();
+    for (const listId of [...watching.keys()]) forget(listId);
+  }
+
+  return stop;
+};

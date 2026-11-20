@@ -1648,14 +1648,20 @@ describeFirestoreRules("Firestore rules", (env) => {
           await assertSucceeds(getDocs(listRsvpsOf(accountDb(owner), "list-1")));
         });
 
-        it("returns an account's own RSVP under a list to its query across every list, and not another's", async () => {
+        it("returns an account's own RSVPs to its query across every list, the link on or off, and not another's", async () => {
           await seedOpenList("list-1", { rsvps });
+          await seedOpenList("list-2", { enabled: false, rsvps: { [dan]: { name: "Dan" } } });
           const mine = (db: Firestore, uid: string) =>
             query(collectionGroup(db, "rsvps"), where("uid", "==", uid), orderBy("createdAt"));
 
           const snapshot = await assertSucceeds(getDocs(mine(accountDb(dan), dan)));
-          expect(snapshot.docs.map((d) => d.ref.path)).toEqual([`rsvpLists/list-1/rsvps/${dan}`]);
+          expect(snapshot.docs.map((d) => d.ref.path).sort()).toEqual([
+            `rsvpLists/list-1/rsvps/${dan}`,
+            `rsvpLists/list-2/rsvps/${dan}`,
+          ]);
           await assertFails(getDocs(mine(accountDb(dan), eve)));
+          await assertFails(getDocs(query(collectionGroup(accountDb(dan), "rsvps"))));
+          await assertFails(getDocs(mine(anonymousDb(dan), dan)));
         });
       });
 
