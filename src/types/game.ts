@@ -25,12 +25,18 @@ export type TournamentStatus = "draft" | "live" | "completed";
  * A team's place in one tournament. An entry copies the team's name and color
  * from the roster when it is made, so a completed tournament keeps them as
  * they were. Withdrawing a team from a live tournament sets `withdrawnAt`.
+ *
+ * An entry with `players` is a mixed team (ADR-0006). Its `teamId` was
+ * generated for this tournament and no roster team has it, so the entry's
+ * own name and color are what every page shows.
  */
 export interface Entry {
   teamId: string;
   name: string;
   color?: string;
   withdrawnAt?: number;
+  /** The players' names on a mixed team. Absent on a roster team's entry. */
+  players?: string[];
 }
 
 export interface TournamentSettings {
@@ -56,21 +62,6 @@ export interface TournamentSettings {
  * their next write.
  */
 /**
- * How a tournament takes RSVPs. The rules refuse `enabled` without both the
- * tournament's `scheduledAt` and `opensAt`.
- */
-export interface RsvpSettings {
-  /** Whether the RSVP link is on. */
-  enabled: boolean;
-  /** The number of confirmed RSVPs the tournament takes. */
-  capacity: number;
-  /** The moment RSVPs open, in epoch milliseconds, judged by the server's clock. */
-  opensAt?: number;
-  /** Whether the owner has closed the list early. */
-  closed: boolean;
-}
-
-/**
  * An instant as the Firestore server writes it, kept to the microsecond so
  * two RSVPs at the open instant still have a definite order. A Firestore
  * `Timestamp` is one; nothing else in the app stores time this way.
@@ -81,10 +72,10 @@ export interface ServerTime {
 }
 
 /**
- * A person's RSVP to a tournament, stored under the tournament with the
- * account's uid as its id, or a held spot the owner added by name under a
- * generated id. Whether it is confirmed or waitlisted is not stored: it
- * follows from `createdAt` and the capacity (ADR-0004).
+ * An RSVP to an RSVP list, stored under the list with the account's uid as
+ * its id, or a held spot the owner added by name under a generated id.
+ * Whether it is confirmed or waitlisted is not stored: it follows from
+ * `createdAt` and the capacity (ADR-0004).
  */
 export interface Rsvp {
   id: string;
@@ -103,8 +94,8 @@ export interface Rsvp {
 }
 
 /**
- * A short message the owner posts on a tournament for everyone on its
- * list, stored in the tournament's `notices` subcollection.
+ * A short message the owner posts on an RSVP list for everyone on it,
+ * stored in the list's `notices` subcollection.
  */
 export interface Notice {
   id: string;
@@ -129,15 +120,12 @@ export interface Tournament {
   twoMatchRotationState?: TwoMatchRotationState;
   /** Whether the spectator link is on. Off means nobody but the owner can read it. */
   spectatorEnabled: boolean;
-  /** When the owner says the tournament will be played, in epoch milliseconds. Absent until set. */
-  scheduledAt?: number;
-  /** The IANA zone the scheduled time was set in, so another zone can be shown the owner's wall clock. */
-  scheduledZone?: string;
   /**
-   * The RSVP settings. Absent on a tournament from before RSVPs, which
-   * behaves as if the RSVP link were off.
+   * The RSVP list the tournament's teams were imported from, set when it is
+   * created with an import and never changed (ADR-0005). A duplicate does
+   * not carry it.
    */
-  rsvp?: RsvpSettings;
+  rsvpListId?: string;
   revision: string;
   /** The revision the last write was built on. Absent until a tournament's first write after it was added. */
   basedOn?: string;
@@ -146,6 +134,42 @@ export interface Tournament {
   startedAt?: number;
   completedAt?: number;
   winnerId?: string;
+}
+
+// ============================================
+// RSVP lists
+// ============================================
+
+/** What an RSVP list takes: people on a by-person list, teams on a by-team list. */
+export type RsvpTakes = "people" | "teams";
+
+/**
+ * An RSVP list document at rsvpLists/{id}, owned by one account and tied to
+ * no tournament (ADR-0005). A write to it names only the fields it changes.
+ * It has no revision, since no engine result races its settings. The rules
+ * refuse `enabled` without both `scheduledAt` and `opensAt`.
+ */
+export interface RsvpList {
+  id: string;
+  ownerId: string;
+  name: string;
+  takes: RsvpTakes;
+  /** The number of confirmed RSVPs the list takes. */
+  capacity: number;
+  /** When the people on the list will play, in epoch milliseconds. Absent until set. */
+  scheduledAt?: number;
+  /** The IANA zone the scheduled time was set in. */
+  scheduledZone?: string;
+  /** The moment RSVPs open, in epoch milliseconds, judged by the server's clock. Absent until set. */
+  opensAt?: number;
+  /** Whether the RSVP link is on. */
+  enabled: boolean;
+  /** Whether the owner has closed the list. */
+  closed: boolean;
+  /** The tournaments imported from the list. */
+  tournamentIds: string[];
+  createdAt: number;
+  updatedAt: number;
 }
 
 // ============================================

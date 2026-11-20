@@ -1,71 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import { MbIcon } from "@/components/matchbook/MbIcon";
+import { LinkField } from "@/components/shared";
 import type { ShareLinksView } from "./useConsole";
-
-/** Copies a link to the clipboard and says so for a moment. */
-const CopyButton = ({ value, label }: { value: string; label: string }) => {
-  const [copied, setCopied] = useState(false);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(
-    () => () => {
-      if (timer.current) clearTimeout(timer.current);
-    },
-    [],
-  );
-
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(value);
-      setCopied(true);
-      if (timer.current) clearTimeout(timer.current);
-      timer.current = setTimeout(() => setCopied(false), 2000);
-    } catch (error) {
-      console.error("Failed to copy the link:", error);
-    }
-  };
-
-  return (
-    <button
-      type="button"
-      onClick={copy}
-      aria-label={copied ? "Copied" : label}
-      className="mb-btn mb-btn-outline-navy shrink-0"
-    >
-      <MbIcon id={copied ? "check" : "clipboard"} size={14} />
-      {copied ? "Copied" : "Copy"}
-    </button>
-  );
-};
-
-/**
- * A link in a read-only field with a Copy button. Tapping the field
- * selects the whole link, for a phone whose clipboard needs a long press.
- */
-const LinkField = ({ id, value, label }: { id: string; value: string; label: string }) => (
-  <div className="flex gap-2">
-    <span className="mb-input min-w-0 flex-1">
-      <input
-        id={id}
-        type="text"
-        readOnly
-        value={value}
-        aria-label={label}
-        onFocus={(event) => event.currentTarget.select()}
-        className="truncate"
-      />
-    </span>
-    <CopyButton value={value} label={`Copy the ${label}`} />
-  </div>
-);
 
 /**
  * The share links in the owner's Settings tab. The spectator link is the
  * tournament's page, turned on or off here. The scorer link carries the
  * key; regenerating it locks out every phone on the old one, and a
- * tournament from before scorer keys gets one made here. The RSVP link is
- * shown here to copy; it is turned on and off in the RSVP tab.
+ * tournament from before scorer keys gets one made here.
  */
 export const ShareLinks = ({
   links,
@@ -136,23 +79,6 @@ export const ShareLinks = ({
           Anyone with the link can score, reorder the queue, and swap {courts} without signing
           in, and cannot change anything else. Regenerating it locks out every phone on the old
           link.
-        </p>
-      </div>
-    )}
-
-    {(links.rsvpLink || links.rsvpSettable) && (
-      <div className="flex flex-col gap-1.5">
-        <div className="flex flex-col gap-0.5">
-          <span className="mb-kicker">RSVP link</span>
-          <span className="text-[0.85rem] font-semibold">{links.rsvpLink ? "On" : "Off"}</span>
-        </div>
-        {links.rsvpLink && (
-          <LinkField id="rsvp-link" value={links.rsvpLink} label="RSVP link" />
-        )}
-        <p className="text-[0.72rem] text-mb-ink-muted">
-          {links.rsvpLink
-            ? "Anyone with the link can sign in, see the tournament, and RSVP from the open time."
-            : "Set the scheduled time and the open time in the RSVP tab, then turn the link on there."}
         </p>
       </div>
     )}

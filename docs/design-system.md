@@ -112,7 +112,7 @@ button, 16 in a panel title or a row, 18 in a dialog title, 20 for the close
 and back controls, 24 on the scoring page. There is no bare tick; `check` is a
 circled tick. A left chevron is `chevron-left`, not a rotated `chevron-right`.
 
-To add a glyph, reuse first: 53 ids exist (`manifest.json` lists them, and
+To add a glyph, reuse first: 54 ids exist (`manifest.json` lists them, and
 `/assets/matchbook/preview.html` draws them). If none carries the meaning,
 draw one in the sprite's style: a 24px grid (`viewBox="0 0 24 24"`), 1.8px
 stroke (2px for `plus`, `minus`, and the chevrons), `stroke-linecap="round"`

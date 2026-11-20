@@ -7,14 +7,17 @@ import {
   emptySetup,
   enteredTeams,
   firstProblem,
+  isEnteringMixedTeam,
   setupInput,
   setupProblems,
+  tickedTeams,
   type SetupProblems,
   type TournamentSetup,
 } from "@/lib/creation";
 import type { AddedTeams } from "@/lib/roster";
-import { deviceZone } from "@/lib/rsvp";
+import type { ListImport } from "@/lib/rsvpImport";
 import { messageOf } from "@/lib/utils";
+import { useListImport } from "./useListImport";
 
 const NO_PROBLEMS: SetupProblems = {};
 
@@ -23,15 +26,14 @@ export type CreationAction = "draft" | "start";
 
 /**
  * Everything the creation page needs: the setup as it stands, the problems
- * with it once a create has been tried, the roster to tick from, and the
- * actions that change the setup or turn it into a tournament and open its
- * console.
+ * with it once a create has been tried, the roster to tick from, the
+ * import from an RSVP list, and the actions that change the setup or turn
+ * it into a tournament and open its console.
  */
 export const useCreation = () => {
   const router = useRouter();
   const { roster, isRosterLoading, addTeamsFromText: addToRoster, createTournament } = useApp();
-  // Times are entered on this phone's clock and saved with its zone.
-  const [setup, setSetup] = useState<TournamentSetup>(() => emptySetup(deviceZone()));
+  const [setup, setSetup] = useState<TournamentSetup>(emptySetup);
   const [attempted, setAttempted] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [busy, setBusy] = useState<CreationAction | null>(null);
@@ -40,9 +42,12 @@ export const useCreation = () => {
 
   const problems = useMemo(() => setupProblems(setup, roster), [setup, roster]);
   const ticked = useMemo(() => new Set(setup.teamIds), [setup.teamIds]);
-  const enteredCount = useMemo(
-    () => enteredTeams(setup, roster).length,
-    [setup, roster],
+  const entering = useMemo(() => enteredTeams(setup, roster), [setup, roster]);
+  const enteredCount = entering.length;
+  // The color each mixed team will take, which depends on the ticked teams.
+  const mixedColors = useMemo(
+    () => entering.filter(isEnteringMixedTeam).map((team) => team.color),
+    [entering],
   );
 
   // Every edit clears the last write's error: the setup it was about is gone.
@@ -55,6 +60,12 @@ export const useCreation = () => {
     (changes: Partial<TournamentSetup>) => edit((current) => ({ ...current, ...changes })),
     [edit],
   );
+
+  const setImport = useCallback((next: ListImport | null) => change({ import: next }), [change]);
+  const tickedInOrder = useMemo(() => tickedTeams(setup, roster), [setup, roster]);
+  const listImport = useListImport(setup.import, roster, tickedInOrder, setImport, mixedColors);
+  // A list deleted since it was imported would have the save refused.
+  const importBlock = listImport.imported?.problem ?? null;
 
   const toggleTeam = useCallback(
     (teamId: string) =>
@@ -102,9 +113,7 @@ export const useCreation = () => {
   const create = useCallback(
     async (action: CreationAction) => {
       setAttempted(true);
-      // The RSVP fields sit behind the disclosure, so it opens on their problems.
-      if (problems.scheduledAt || problems.opensAt || problems.capacity) setAdvancedOpen(true);
-      if (busy || firstProblem(problems)) return;
+      if (busy || firstProblem(problems) || importBlock) return;
       setBusy(action);
       setError(null);
       try {
@@ -118,7 +127,7 @@ export const useCreation = () => {
         setBusy(null);
       }
     },
-    [busy, problems, setup, roster, createTournament, router],
+    [busy, problems, importBlock, setup, roster, createTournament, router],
   );
 
   return {
@@ -132,12 +141,13 @@ export const useCreation = () => {
     setAllTeams,
     addTeamsFromText,
     revealId,
+    listImport,
     /** Shown once a create has been tried, and kept up to date after. */
     problems: attempted ? problems : NO_PROBLEMS,
     advancedOpen,
     setAdvancedOpen,
     busy,
-    error,
+    error: error ?? (attempted ? importBlock : null),
     create,
   };
 };

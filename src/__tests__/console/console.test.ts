@@ -4,6 +4,7 @@ import {
   bracketView,
   consoleAccess,
   courtsView,
+  deleteTournamentDescription,
   failureNotice,
   roleFor,
   scheduleView,
@@ -47,7 +48,7 @@ describe("roleFor", () => {
     expect(roleFor("owner-uid", "phone-uid", false)).toBe("spectator");
   });
 
-  it("makes an account that reached the console through the RSVP link a spectator with nothing to do", () => {
+  it("makes an account that reached the console from an RSVP list's page a spectator with nothing to do", () => {
     const role = roleFor("owner-uid", "dan-uid", false);
     expect(role).toBe("spectator");
     for (const status of ["live", "completed"] as const) {
@@ -57,31 +58,31 @@ describe("roleFor", () => {
 });
 
 describe("consoleAccess", () => {
-  it("lets the owner of a draft start, rename, set up RSVPs, duplicate, or delete it, and nothing else", () => {
+  it("lets the owner of a draft start, rename, duplicate, delete, or share it, and nothing else", () => {
     expect(consoleAccess("owner", "draft")).toEqual({
       canStart: true,
       canScore: false,
       canEditCourts: false,
       canManage: false,
       canRename: true,
+      canEditMixedTeams: true,
       canDuplicate: true,
       canDelete: true,
       canShare: true,
-      canManageRsvp: true,
     });
   });
 
-  it("lets the owner of a live tournament score, arrange courts, manage, rename, set up RSVPs, duplicate, and delete it", () => {
+  it("lets the owner of a live tournament score, arrange courts, manage, rename, duplicate, delete, and share it", () => {
     expect(consoleAccess("owner", "live")).toEqual({
       canStart: false,
       canScore: true,
       canEditCourts: true,
       canManage: true,
       canRename: true,
+      canEditMixedTeams: true,
       canDuplicate: true,
       canDelete: true,
       canShare: true,
-      canManageRsvp: true,
     });
   });
 
@@ -92,10 +93,10 @@ describe("consoleAccess", () => {
       canEditCourts: false,
       canManage: false,
       canRename: false,
+      canEditMixedTeams: false,
       canDuplicate: true,
       canDelete: true,
       canShare: true,
-      canManageRsvp: false,
     });
   });
 
@@ -106,10 +107,10 @@ describe("consoleAccess", () => {
       canEditCourts: true,
       canManage: false,
       canRename: false,
+      canEditMixedTeams: false,
       canDuplicate: false,
       canDelete: false,
       canShare: false,
-      canManageRsvp: false,
     });
   });
 
@@ -127,12 +128,29 @@ describe("consoleAccess", () => {
         canEditCourts: false,
         canManage: false,
         canRename: false,
+        canEditMixedTeams: false,
         canDuplicate: false,
         canDelete: false,
         canShare: false,
-        canManageRsvp: false,
-      });
+        });
     }
+  });
+
+  it("lets the owner edit mixed teams while the tournament is a draft or live, and nobody otherwise", () => {
+    const whoMay = (["owner", "scorer", "spectator"] as const).flatMap((role) =>
+      (["draft", "live", "completed"] as const).flatMap((status) =>
+        consoleAccess(role, status).canEditMixedTeams ? [`${role} ${status}`] : [],
+      ),
+    );
+    expect(whoMay).toEqual(["owner draft", "owner live"]);
+  });
+});
+
+describe("deleteTournamentDescription", () => {
+  it("names the tournament and its matches, and nothing else", () => {
+    expect(deleteTournamentDescription("Friday night")).toBe(
+      'This removes "Friday night" and every match in it. It cannot be undone.',
+    );
   });
 });
 
@@ -321,6 +339,26 @@ describe("teamsView", () => {
 
     expect(rows[0]).toMatchObject({ name: "Team t1", won: 1, lost: 0 });
     expect(rows[1]).toMatchObject({ name: "Team t2", won: 0, lost: 1, withdrawn: true });
+  });
+
+  it("gives a mixed team its players, withdrawn or not, and a roster team none", () => {
+    const world = started("win2out", 4);
+    const tournament = {
+      ...world.tournament,
+      entries: world.tournament.entries.map((entry) => {
+        if (entry.teamId === "t2") return { ...entry, name: "Sharks", players: ["Ana", "Ben"] };
+        if (entry.teamId === "t3") return { ...entry, players: ["Cy"], withdrawnAt: 5 };
+        return entry;
+      }),
+    };
+
+    // Nobody's roster has a mixed team, so none is passed for them.
+    const rows = teamsView(tournament, world.matches, [{ id: "t1", name: "Aces", createdAt: 0 }]);
+
+    expect(rows[0]).toMatchObject({ name: "Aces" });
+    expect("players" in rows[0]).toBe(false);
+    expect(rows[1]).toMatchObject({ name: "Sharks", players: ["Ana", "Ben"], withdrawn: false });
+    expect(rows[2]).toMatchObject({ name: "Team t3", players: ["Cy"], withdrawn: true });
   });
 });
 

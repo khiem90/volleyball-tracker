@@ -36,6 +36,6 @@
     "mail", "lock", "login", "cloud", "close", "trash",
     "chevron-left", "flag", "maximize", "minimize", "undo", "crown", "minus", "trophy",
     "play", "pencil", "remove-user", "logout",
-    "eye", "eye-off"
+    "eye", "eye-off", "rsvp"
   ]
 }

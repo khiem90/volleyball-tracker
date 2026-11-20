@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useApp } from "@/context/AppContext";
+import { entryTeams } from "@/lib/entries";
 import { calculateStandings } from "@/lib/roundRobin";
 import { FORMAT_LABELS, isBracketFormat, isRotationFormat } from "@/lib/formats";
 import type { Tournament, Match } from "@/types/game";
@@ -109,14 +110,6 @@ export const useMatchbookCompete = (): MbCompeteData => {
       year: "numeric",
     });
 
-    const refFor = (teamId: string): MbTeam => {
-      const team = roster.find((t) => t.id === teamId);
-      return {
-        name: team?.name ?? "Unknown",
-        crest: crestForTeam(teamId, team?.name ?? ""),
-      };
-    };
-
     const matchesOf = (tournamentId: string): Match[] =>
       ownMatches.filter((m) => m.tournamentId === tournamentId);
 
@@ -149,6 +142,17 @@ export const useMatchbookCompete = (): MbCompeteData => {
     let selected: MbCompeteSelected | null = null;
     const competition = tournaments.find((c) => c.id === selectedId);
     if (competition) {
+      // The entries as they should be shown, so a mixed team, which no
+      // roster has, reads its name from its own entry.
+      const shown = new Map(entryTeams(competition, roster).map((team) => [team.id, team]));
+      const refFor = (teamId: string): MbTeam => {
+        const team = shown.get(teamId);
+        return {
+          name: team?.name ?? "Unknown",
+          crest: crestForTeam(teamId, team?.name ?? ""),
+        };
+      };
+
       const matches = matchesOf(competition.id);
       const completed = matches.filter((m) => m.status === "completed");
       const live = matches.filter((m) => m.status === "in_progress");

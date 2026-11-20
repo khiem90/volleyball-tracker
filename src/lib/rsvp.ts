@@ -1,116 +1,12 @@
 /**
- * RSVPs, the pure part: what is wrong with a tournament's RSVP setup, and how
- * its times are entered and shown across time zones. Nothing in here
- * touches the database or React. See CONTEXT.md under "RSVP" and ADR-0004.
+ * RSVPs, the pure part that needs no list: how times are entered and shown
+ * across time zones, the RSVP form, who is confirmed and who is waiting,
+ * and notices. A list's settings and page state are in src/lib/rsvpList.ts.
+ * Nothing in here touches the database or React. See GLOSSARY.md under
+ * "RSVP" and ADR-0004.
  */
 
-import type { Notice, Rsvp, RsvpSettings, ServerTime, Tournament } from "@/types/game";
-
-// ============================================
-// Setup
-// ============================================
-
-/** The RSVP settings as the creation page and the console's RSVP tab edit them. */
-export interface RsvpSetup {
-  /** Whether the RSVP link is on. */
-  enabled: boolean;
-  capacity: number;
-  /** The scheduled time in epoch milliseconds, or null while unset. */
-  scheduledAt: number | null;
-  /** The open time in epoch milliseconds, or null while unset. */
-  opensAt: number | null;
-}
-
-/** The capacity offered before the owner changes it. */
-export const DEFAULT_CAPACITY = 12;
-
-/**
- * A tournament's RSVP settings as the RSVP tab edits them. A tournament
- * from before RSVPs has no RSVP map and reads as the link off.
- */
-export const rsvpSetupOf = (tournament: Pick<Tournament, "scheduledAt" | "rsvp">): RsvpSetup => ({
-  enabled: tournament.rsvp?.enabled ?? false,
-  capacity: tournament.rsvp?.capacity ?? DEFAULT_CAPACITY,
-  scheduledAt: tournament.scheduledAt ?? null,
-  opensAt: tournament.rsvp?.opensAt ?? null,
-});
-
-/**
- * The RSVP settings a tournament stores for a setup, with the list closed
- * or not as `closed` says. An open time that is unset is left out.
- */
-export const rsvpSettingsOf = (setup: RsvpSetup, closed: boolean): RsvpSettings => ({
-  enabled: setup.enabled,
-  capacity: setup.capacity,
-  ...(setup.opensAt !== null && { opensAt: setup.opensAt }),
-  closed,
-});
-
-/** Why an RSVP setup cannot be saved yet, by field. Empty when it can. */
-export interface RsvpProblems {
-  scheduledAt?: string;
-  opensAt?: string;
-  capacity?: string;
-}
-
-/**
- * What a tournament's list already holds, which limits how its setup may change
- * from the console. A tournament being created has no list, and nothing here.
- */
-export interface ListSoFar {
-  /** How many are confirmed at the stored capacity. Capacity cannot go below it. */
-  confirmed: number;
-  /** How many RSVPs and held spots have arrived. The first one locks the open time. */
-  arrivals: number;
-  /** The open time as stored, which stays once anyone has arrived. */
-  storedOpensAt: number | null;
-}
-
-/** The list so far for a tournament's stored settings and its RSVPs, held spots included. */
-export const listSoFar = (
-  tournament: Pick<Tournament, "rsvp">,
-  rsvps: Arrival[],
-): ListSoFar => ({
-  confirmed: splitRsvps(rsvps, tournament.rsvp?.capacity ?? DEFAULT_CAPACITY).confirmed.length,
-  arrivals: rsvps.length,
-  storedOpensAt: tournament.rsvp?.opensAt ?? null,
-});
-
-/** The open time's problem once it is locked, which the console also shows beside the read-only field. */
-export const OPEN_TIME_LOCKED = "People have RSVP'd, so the open time cannot change.";
-
-/**
- * The problems with an RSVP setup. The link cannot go on without both
- * times, since the page could not say when; a tournament with the link off may
- * leave them unset. An open time after the scheduled time and a capacity
- * below one are wrong either way. Against a list that already has people
- * on it, the capacity cannot drop below the confirmed count, so nobody
- * loses a spot to the stepper, and the open time cannot change at all,
- * so nobody who already answered is confused.
- */
-export const rsvpProblems = (setup: RsvpSetup, list?: ListSoFar): RsvpProblems => {
-  const problems: RsvpProblems = {};
-  if (setup.enabled && setup.scheduledAt === null) {
-    problems.scheduledAt = "Set the scheduled time before turning the RSVP link on.";
-  }
-  if (list && list.arrivals > 0 && setup.opensAt !== list.storedOpensAt) {
-    problems.opensAt = OPEN_TIME_LOCKED;
-  } else if (setup.enabled && setup.opensAt === null) {
-    problems.opensAt = "Set when RSVPs open before turning the RSVP link on.";
-  } else if (
-    setup.opensAt !== null &&
-    setup.scheduledAt !== null &&
-    setup.opensAt > setup.scheduledAt
-  ) {
-    problems.opensAt = "RSVPs must open before the scheduled time.";
-  }
-  if (!(setup.capacity >= 1)) {
-    problems.capacity = "Capacity must be at least 1.";
-  } else if (list && setup.capacity < list.confirmed) {
-    problems.capacity = `${list.confirmed} people are confirmed, so capacity cannot go below ${list.confirmed}.`;
-  }
-  return problems;
-};
+import type { Notice, Rsvp, ServerTime } from "@/types/game";
 
 // ============================================
 // Time zones
@@ -222,96 +118,6 @@ export const epochToWallClock = (ms: number, zone: string): string => {
 // The RSVP page
 // ============================================
 
-/** Where a tournament stands for someone holding its RSVP link. */
-export type RsvpPageState =
-  /** The owner has the link off, or the tournament never had one. The page shows not found. */
-  | { kind: "link_off" }
-  /** RSVPs open at `opensAt`; the page counts down to it. */
-  | { kind: "not_open"; opensAt: number }
-  | { kind: "open" }
-  /** Open, with every spot taken: a new RSVP joins the waitlist. */
-  | { kind: "full" }
-  /** The owner closed the list before the tournament started. */
-  | { kind: "closed" }
-  /** The tournament is live, which closes the list for good. */
-  | { kind: "live" }
-  | { kind: "completed" };
-
-/**
- * The RSVP page's state for a tournament at `now`. On the page, `now` is
- * the phone's clock, which is right for showing a countdown and nothing
- * more: the rules judge the open time by the server's clock. Starting the
- * tournament needs no write to the RSVP settings, since a tournament that
- * has left draft is past RSVPs by definition. An open tournament whose list
- * of `rsvpCount` has reached capacity is full, and still takes RSVPs onto
- * the waitlist; a raised capacity opens it again.
- */
-export const rsvpPageState = (
-  tournament: Pick<Tournament, "status" | "rsvp">,
-  now: number,
-  rsvpCount = 0,
-): RsvpPageState => {
-  const rsvp = tournament.rsvp;
-  if (!rsvp?.enabled) return { kind: "link_off" };
-  if (tournament.status === "completed") return { kind: "completed" };
-  if (tournament.status === "live") return { kind: "live" };
-  if (rsvp.closed) return { kind: "closed" };
-  // The rules refuse the link on without an open time, so a missing one
-  // is a document written around them; it reads as not open.
-  const opensAt = rsvp.opensAt ?? Number.POSITIVE_INFINITY;
-  if (now < opensAt) return { kind: "not_open", opensAt };
-  if (rsvpCount >= rsvp.capacity) return { kind: "full" };
-  return { kind: "open" };
-};
-
-/**
- * Whether a page state still takes RSVPs: the list is open now, or opens
- * at its open time, or is full and takes them onto the waitlist. The RSVP
- * button shows in these states, and a refusal in one of them can only be
- * the server's clock saying it is not open yet.
- */
-export const takesRsvps = (
-  state: RsvpPageState,
-): state is Extract<RsvpPageState, { kind: "not_open" | "open" | "full" }> =>
-  state.kind === "not_open" || state.kind === "open" || state.kind === "full";
-
-/** What the RSVP page shows in place of the RSVP button once the tournament has started. */
-export interface WatchView {
-  kind: "live" | "completed";
-  /** Where the tournament stands, as the page shows it. */
-  status: "Live" | "Completed";
-  /** The label of the button into the console. */
-  action: string;
-  /** A line about the list, which nobody changes from the RSVP page any more. */
-  note: string;
-}
-
-/**
- * The way into the console for someone holding the RSVP link, once the
- * tournament is live or completed. The rules let any real account read the
- * tournament and its matches while the link is on, so the console takes
- * them as a spectator. Null before the start and with the link off.
- */
-export const watchView = (state: RsvpPageState): WatchView | null => {
-  if (state.kind === "live") {
-    return {
-      kind: "live",
-      status: "Live",
-      action: "Watch",
-      note: "The list closed when the tournament started.",
-    };
-  }
-  if (state.kind === "completed") {
-    return {
-      kind: "completed",
-      status: "Completed",
-      action: "See results",
-      note: "The list stays as it was when the tournament started.",
-    };
-  }
-  return null;
-};
-
 const DAY = 86_400_000;
 
 /**
@@ -333,24 +139,12 @@ export const countdown = (msLeft: number): string => {
 export const NOT_OPEN_YET = "Not open yet";
 
 /**
- * Why the rules refused an RSVP, from the tournament as the server has it
- * just after the refusal. A tournament that still reads as open on this phone's
- * clock was refused for time, which only the server's clock can do, so it
- * is "Not open yet" too: the phone's clock is ahead.
+ * Why a list the owner closed, or one whose RSVP link is off, takes no
+ * RSVPs. The list's page shows it in place of the RSVP button, and a
+ * refused RSVP is answered with it.
  */
-export const refusedRsvpMessage = (state: RsvpPageState): string => {
-  if (takesRsvps(state)) return NOT_OPEN_YET;
-  switch (state.kind) {
-    case "closed":
-      return "The owner has closed RSVPs.";
-    case "live":
-      return "This tournament has started, so RSVPs are closed.";
-    case "completed":
-      return "This tournament is over.";
-    case "link_off":
-      return "This RSVP link is off.";
-  }
-};
+export const refusedRsvpMessage = (state: { kind: "closed" | "link_off" }): string =>
+  state.kind === "closed" ? "The owner has closed RSVPs." : "This RSVP link is off.";
 
 /** The longest name an RSVP takes. The rules hold the same limit. */
 export const RSVP_NAME_MAX = 40;
@@ -401,7 +195,7 @@ export type Placed<T> = T & { position: number };
 type Arrival = Pick<Rsvp, "id" | "createdAt">;
 
 /** The list split by capacity, each section in arrival order. */
-export interface RsvpList<T extends Arrival = Rsvp> {
+export interface RsvpSplit<T extends Arrival = Rsvp> {
   confirmed: Placed<T>[];
   waitlisted: Placed<T>[];
 }
@@ -416,11 +210,11 @@ const byArrival = (a: Arrival, b: Arrival): number =>
  * Who is confirmed and who is waiting, from the RSVPs and the capacity.
  * Nothing stores this: the first `capacity` arrivals are confirmed and the
  * rest wait in order, so a withdrawal or a raised capacity promotes the
- * next person the moment the list or the tournament changes. The sort is
+ * next person the moment the RSVPs or the list's capacity change. The sort is
  * done here rather than trusted from the subscription, with the document
  * id breaking a tie, so every phone works out the same split.
  */
-export const splitRsvps = <T extends Arrival>(rsvps: T[], capacity: number): RsvpList<T> => {
+export const splitRsvps = <T extends Arrival>(rsvps: T[], capacity: number): RsvpSplit<T> => {
   const ordered = [...rsvps].sort(byArrival);
   const cut = Math.max(0, capacity);
   return {
@@ -429,7 +223,7 @@ export const splitRsvps = <T extends Arrival>(rsvps: T[], capacity: number): Rsv
   };
 };
 
-/** Where one account stands on a tournament's list. */
+/** Where one account stands on a list. */
 export type RsvpStanding =
   | { kind: "none" }
   /** In, at `position` among the confirmed. */
@@ -443,7 +237,7 @@ export type RsvpStanding =
  * standing; without an account, nobody is on the list.
  */
 export const standingIn = <T extends Arrival & { uid: string | null }>(
-  list: RsvpList<T>,
+  list: RsvpSplit<T>,
   uid: string | null,
 ): RsvpStanding => {
   if (uid === null) return { kind: "none" };
@@ -473,39 +267,6 @@ export const noticeProblem = (body: string): string | null => {
 export const millisOf = (time: ServerTime): number =>
   time.seconds * 1000 + Math.floor(time.nanoseconds / 1_000_000);
 
-// ============================================
-// Home
-// ============================================
-
-/** One of an account's own RSVPs, with the tournament it sits under, as Home's query finds it. */
-export type AccountRsvp = Rsvp & { tournamentId: string };
-
-/**
- * What Home has read about the tournaments an account has RSVP'd to. Each
- * record is keyed by tournament id, and a key is absent while that read is
- * on its way, or once the rules refuse it or the tournament is gone.
- */
-export interface AccountTournaments {
-  /** The account's own RSVPs, across every tournament. */
-  mine: AccountRsvp[];
-  tournaments: Record<string, Tournament>;
-  /** Each tournament's whole list, which the account's standing is worked out from. */
-  lists: Record<string, Rsvp[]>;
-  /** Each tournament's notices in any order; only the newest counts. */
-  notices: Record<string, Notice[]>;
-}
-
-/** A row on Home: a tournament the account is on the list for. */
-export interface HomeRsvpRow {
-  tournament: Tournament;
-  /** In at a position, or waiting at one. */
-  standing: Exclude<RsvpStanding, { kind: "none" }>;
-  /** Whether a notice arrived after the account last opened the RSVP page. */
-  unread: boolean;
-  /** The RSVP page. */
-  href: string;
-}
-
 /** Whether server time `a` is after `b`, to the nanosecond. */
 const isAfter = (a: ServerTime, b: ServerTime): boolean =>
   a.seconds > b.seconds || (a.seconds === b.seconds && a.nanoseconds > b.nanoseconds);
@@ -518,38 +279,12 @@ const newest = (notices: Notice[]): Notice | null =>
     null,
   );
 
-const scheduledOrLast = (row: HomeRsvpRow) =>
-  row.tournament.scheduledAt ?? Number.POSITIVE_INFINITY;
-
 /**
- * The tournaments `uid` has RSVP'd to that Home lists, soonest first, with a
- * tournament that has no scheduled time last. A completed tournament is left
- * out, and so is one whose RSVP page would show not found: a tournament the
- * rules no longer let the account read, or one whose link is off. A tournament
- * waits for its list, since the standing comes from it, and leaves Home
- * once the account's RSVP is gone. A notice is new when it was posted
- * after the account last opened the RSVP page, or at all when it never has.
+ * Whether a notice is new to an account that last opened the RSVP page at
+ * `readAt`: the newest of `notices`, in any order, was posted after it. To
+ * an account that has never opened the page, any notice is new.
  */
-export const homeRsvpRows = (uid: string, read: AccountTournaments): HomeRsvpRow[] => {
-  const rows: HomeRsvpRow[] = [];
-  for (const mine of read.mine) {
-    const tournament = read.tournaments[mine.tournamentId];
-    const list = read.lists[mine.tournamentId];
-    if (!tournament || !list || !tournament.rsvp?.enabled) continue;
-    if (tournament.status === "completed") continue;
-
-    const standing = standingIn(splitRsvps(list, tournament.rsvp.capacity), uid);
-    if (standing.kind === "none") continue;
-
-    const latest = newest(read.notices[mine.tournamentId] ?? []);
-    const unread =
-      latest !== null && (!mine.noticesReadAt || isAfter(latest.createdAt, mine.noticesReadAt));
-    rows.push({ tournament, standing, unread, href: `/competitions/${tournament.id}/rsvp` });
-  }
-  // Two tournaments without a time compare as NaN, which falls through to the id.
-  return rows.sort(
-    (a, b) =>
-      scheduledOrLast(a) - scheduledOrLast(b) ||
-      (a.tournament.id < b.tournament.id ? -1 : a.tournament.id > b.tournament.id ? 1 : 0),
-  );
+export const hasNewNotice = (notices: Notice[], readAt: ServerTime | undefined): boolean => {
+  const latest = newest(notices);
+  return latest !== null && (!readAt || isAfter(latest.createdAt, readAt));
 };

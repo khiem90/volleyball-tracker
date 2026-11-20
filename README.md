@@ -54,39 +54,91 @@ Everything a signed-in account owns is in Firestore, and the rules in
 
 | Path | Holds |
 | --- | --- |
-| `users/{uid}` | The account's own fields: `rsvpName`, the name it last RSVP'd under; only that account can read it |
+| `users/{uid}` | The account's own fields: `rsvpName`, the name it last RSVP'd under on a by-person list, and `rsvpTeamName`, the team name it last RSVP'd on a by-team list; only that account can read it |
 | `users/{uid}/teams/{teamId}` | The roster |
 | `users/{uid}/matches/{matchId}` | Quick matches, with `tournamentId: null` |
-| `tournaments/{tournamentId}` | One tournament: owner, format, status, entries, settings, scheduled time, RSVP settings |
+| `tournaments/{tournamentId}` | One tournament: owner, format, status, entries, settings, and `rsvpListId` when its teams were imported from an RSVP list |
 | `tournaments/{tournamentId}/matches/{matchId}` | One document per match |
 | `tournaments/{tournamentId}/private/scorerKey` | The key behind the scorer link; only the owner can read it |
 | `tournaments/{tournamentId}/scorers/{uid}` | A phone's proof that it opened the scorer link |
-| `tournaments/{tournamentId}/rsvps/{uid}` | One account's RSVP: `uid`, `name`, `note`, and `createdAt`, the server's time |
-| `tournaments/{tournamentId}/notices/{noticeId}` | A notice from the owner to everyone on the list: `body` and `createdAt`, the server's time |
+| `rsvpLists/{listId}` | One RSVP list, with no tournament behind it: owner, name, `takes` (`people` or `teams`), capacity, scheduled time, open time, `enabled` (the RSVP link), `closed`, and the ids of tournaments imported from it |
+| `rsvpLists/{listId}/rsvps/{uid}` | One account's RSVP to the list: `uid`, `name`, `note`, and `createdAt`, the server's time |
+| `rsvpLists/{listId}/notices/{noticeId}` | A notice from the owner to everyone on the list: `body` and `createdAt`, the server's time |
 
-A tournament may also carry `scheduledAt`, when the owner says it will be
-played, in epoch milliseconds, with `scheduledZone`, the IANA zone it was
-entered in, so a phone in another zone can show the owner's wall clock beside
-its own. Its `rsvp` map holds `enabled` (the RSVP link), `capacity`,
-`opensAt` (epoch milliseconds), and `closed`. A tournament without the map
-behaves as if the RSVP link were off. The rules refuse `enabled` without both
-`scheduledAt` and `opensAt`, and only the owner writes these fields.
+An RSVP list's RSVP link is its own page, `/rsvp/{listId}`. The owner always
+reads the list, and any other signed-in account reads it while `enabled` is
+on. The silent identity a scorer link gives a phone does not count. The rules
+refuse `enabled` without both `scheduledAt` and `opensAt`, and only the owner
+writes a list. A write names only the fields it changes, and a list carries
+no revision. The RSVP tab's query for an account's own lists needs the
+`rsvpLists` index in `firestore.indexes.json`.
 
-The RSVP link is the tournament's page with `/rsvp` on the end. While it is
-on, any signed-in account can read the tournament and its RSVPs; the silent
-identity a scorer link gives a phone does not count. An RSVP's id is the
-account's uid, so an account holds one RSVP per tournament. The rules accept
-one only from that account, only from `opensAt` by the server's clock, while
-the list is open and the tournament is a draft, and only with `createdAt`
-equal to the request's time, a Firestore timestamp unlike every other time
-in the app. Who is confirmed and who waits is never stored; it follows from
-the arrival order and the capacity (ADR-0004).
+The owner closes a list by setting `closed`, which stops new RSVPs and leaves
+withdrawals working, and reopens it the same way. The owner removes any RSVP
+at any time, and until `scheduledAt` adds a held spot: an RSVP under a
+generated id with `uid` null and `held` true, which no account can change.
+Deleting a list deletes its RSVPs in the same batch. The app refuses a change
+to `capacity` below the confirmed count, a change to `opensAt` once the list
+has an RSVP, and any settings change once `scheduledAt` has passed. The rules
+do not check those three, since only the owner writes a list.
 
-Only the owner posts or deletes a notice, and nobody edits one. Whoever can
-read the RSVPs can read the notices. Opening the RSVP page sets
-`noticesReadAt` on the account's own RSVP to the server's time, and only that
-account can write it, so a notice newer than it has not been seen. Deleting a
-tournament deletes its notices with it.
+Whoever can read a list can read its RSVPs. An RSVP's id is the account's
+uid, so an account holds one RSVP per list. The rules accept one only from
+that account, only while the link is on and the list is not closed, only from
+`opensAt` until `scheduledAt` by the server's clock, and only with `createdAt`
+equal to the request's time. The account changes its own `name` and `note`,
+until `scheduledAt`, and never its arrival time. It withdraws by deleting the RSVP, until
+`scheduledAt`, and an RSVP made after that is a new arrival at the back of
+the line. Who is confirmed and who waits is never stored. It follows from the
+arrival order and the capacity (ADR-0004).
+
+Only the owner posts or deletes a notice on a list, and nobody edits one.
+The owner can do both after `scheduledAt`. Whoever can read the RSVPs can
+read the notices. Opening the list's page sets `noticesReadAt` on the
+account's own RSVP to the server's time. Only that account can write it, and
+it can still write it after `scheduledAt`, so a notice newer than it has not
+been seen.
+
+Creating a tournament can import a list that is closed or past
+`scheduledAt`. The confirmed RSVPs are copied into its entries once
+(ADR-0005). On a by-team list a name the roster has enters that roster team,
+and a new name joins the roster. On a by-person list the people are dealt
+into mixed teams (ADR-0006): each entry gets a `teamId` generated for that
+tournament, a palette color, and `players`, the players' names, and no
+roster document is written. One batch writes the new roster teams, the tournament with
+`rsvpListId`, and the tournament's id appended to the list's `tournamentIds`,
+so all of it lands or none does. The rules refuse a tournament whose
+`rsvpListId` names a list another account owns, or no list, and never let
+`rsvpListId` change afterwards. Nothing that happens to the list later
+reaches the tournament.
+
+The owner renames a mixed team and adds, removes, or moves its players from
+the console's Teams tab while the tournament is a draft or live. The write
+names only `entries`, applies the edit to the stored entries, and carries
+`basedOn`, so a refused one is applied again to the fresh copy and a
+withdrawal or a result that landed in between is kept. No match is written.
+A scorer cannot write `entries`. Duplicating a tournament copies its mixed
+teams with their players under new ids and leaves `rsvpListId` behind.
+
+Once an imported tournament is live or completed, any signed-in account reads
+it and its matches while the list it names has `enabled` on and the same
+owner as the tournament. The owner check matters because any account can
+create a list under an id it knows, a deleted list's id included. The list's page
+reads each id in `tournamentIds` and offers Watch or See results for the ones
+it can read, and the console takes that account as a spectator. A draft stays
+with its owner. Turning the list's link off, or deleting the list, closes this
+way in and leaves the tournament, its spectator link, and its scorer link as
+they were. Deleting a tournament takes its id off the list's `tournamentIds`
+in a write of its own, after the delete, and a refusal of that write is
+dropped. An id that stays behind leads nowhere, and the page skips it.
+
+A tournament takes no RSVPs and has no scheduled time. One saved before RSVP
+lists may still hold `scheduledAt`, `scheduledZone`, an `rsvp` map, and
+`rsvps` and `notices` subcollections of its own. The app ignores all of them,
+and nothing migrates them (ADR-0005). Home's query for an account's own RSVPs
+skips any that is not under a list. The rules let only the tournament's owner
+read and delete what is in those two subcollections, and nobody write to
+them. Deleting the tournament deletes them with it.
 
 Tournament ids are random so a link to one cannot be guessed. Every match
 carries `ownerId`, so one collection group query on `matches` returns all of an

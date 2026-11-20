@@ -1,4 +1,5 @@
 import {
+  arrayRemove,
   collection,
   collectionGroup,
   deleteDoc,
@@ -17,12 +18,13 @@ import {
 } from "firebase/firestore";
 import { applyCommand, type MatchWrite } from "@/lib/engine";
 import { createdMatches } from "@/lib/engine/writes";
+import { editMixedTeam, isMixedTeam, type MixedTeamEdit } from "@/lib/entries";
 import { isRefused, newToken, stripUndefined, toUpdatePayload } from "@/lib/firestoreData";
+import { leastUsedColors } from "@/lib/teamColors";
 import type {
   Entry,
   Match,
   PersistentTeam,
-  RsvpSettings,
   Tournament,
   TournamentFormat,
   TournamentSettings,
@@ -67,12 +69,15 @@ export const scorerProofsCollection = (db: Firestore, tournamentId: string) =>
   collection(db, "tournaments", tournamentId, "scorers");
 export const scorerProofDoc = (db: Firestore, tournamentId: string, uid: string) =>
   doc(scorerProofsCollection(db, tournamentId), uid);
-/** The owner's notices to everyone on the RSVP list (see src/lib/rsvping.ts). */
-export const noticesCollection = (db: Firestore, tournamentId: string) =>
-  collection(db, "tournaments", tournamentId, "notices");
-/** The RSVPs and held spots on a tournament's list (see src/lib/rsvping.ts). */
-export const rsvpsCollection = (db: Firestore, tournamentId: string) =>
+/**
+ * Where a tournament kept its RSVPs and notices before RSVP lists
+ * (ADR-0005). Nothing writes or shows them now. Deleting the tournament
+ * reads them once more to sweep them.
+ */
+const oldRsvpsCollection = (db: Firestore, tournamentId: string) =>
   collection(db, "tournaments", tournamentId, "rsvps");
+const oldNoticesCollection = (db: Firestore, tournamentId: string) =>
+  collection(db, "tournaments", tournamentId, "notices");
 
 export interface ScorerKey {
   key: string;
@@ -177,16 +182,42 @@ export const subscribeToTournamentMatches = (
 // Create, update, delete
 // ============================================
 
+/**
+ * A team as a new tournament enters it. A roster team is one as it stands.
+ * A mixed team brings an id generated for the tournament and its players'
+ * names, and has no roster team behind it (ADR-0006).
+ */
+export interface TeamToEnter {
+  id: string;
+  name: string;
+  color?: string;
+  /** The players' names, on a mixed team only. */
+  players?: string[];
+}
+
+/**
+ * A mixed team entering: dealt from a by-person list, and never on the
+ * roster (ADR-0006). It has no id yet. The tournament gives it one as it
+ * is built. `kind` tells it from the other teams a setup enters (see
+ * EnteringTeam in src/lib/creation.ts).
+ */
+export interface EnteringMixedTeam {
+  kind: "mixed";
+  name: string;
+  /** The palette color the tournament's teams use least. */
+  color: string;
+  /** The players' names, in the order the creation page shows them. */
+  players: string[];
+}
+
 export interface NewTournamentInput {
   name: string;
   format: TournamentFormat;
-  /** The roster teams entering, in seed order. Each becomes an entry. */
-  teams: PersistentTeam[];
+  /** The teams entering, in seed order. Each becomes an entry. */
+  teams: TeamToEnter[];
   settings: TournamentSettings;
-  /** When the tournament will be played, with the zone it was entered in. */
-  scheduledAt?: number;
-  scheduledZone?: string;
-  rsvp?: RsvpSettings;
+  /** The RSVP list the teams were imported from, when there is one. */
+  rsvpListId?: string;
 }
 
 /** A draft tournament with its id assigned, ready to save. */
@@ -200,6 +231,7 @@ export const buildTournament = (
     teamId: team.id,
     name: team.name,
     ...(team.color !== undefined && { color: team.color }),
+    ...(isMixedTeam(team) && { players: [...team.players] }),
   }));
   return {
     id: doc(tournamentsCollection(db)).id,
@@ -211,9 +243,7 @@ export const buildTournament = (
     teamIds: input.teams.map((team) => team.id),
     settings: input.settings,
     spectatorEnabled: false,
-    ...(input.scheduledAt !== undefined && { scheduledAt: input.scheduledAt }),
-    ...(input.scheduledZone !== undefined && { scheduledZone: input.scheduledZone }),
-    ...(input.rsvp !== undefined && { rsvp: { ...input.rsvp } }),
+    ...(input.rsvpListId !== undefined && { rsvpListId: input.rsvpListId }),
     revision: newToken(),
     createdAt: now,
     updatedAt: now,
@@ -280,15 +310,27 @@ export const buildTournamentToSave = (
  */
 export const saveTournamentAndMatches = async (
   db: Firestore,
+  toSave: TournamentToSave,
+): Promise<void> => {
+  const saved = saveTournament(db, toSave.tournament);
+  await Promise.all([saved, saveScorerKeyAndMatches(db, toSave)]);
+};
+
+/**
+ * The second write of a new tournament: its scorer key and its matches in
+ * one batch. Issue it after the write that creates the tournament, since
+ * the rules for both read the stored tournament.
+ */
+export const saveScorerKeyAndMatches = async (
+  db: Firestore,
   { tournament, matches, scorerKey }: TournamentToSave,
 ): Promise<void> => {
-  const saved = saveTournament(db, tournament);
   const batch = writeBatch(db);
   batch.set(scorerKeyDoc(db, tournament.id), scorerKey);
   for (const match of matches) {
     batch.set(matchDoc(db, tournament.id, match.id), stripUndefined(match));
   }
-  await Promise.all([saved, batch.commit()]);
+  await batch.commit();
 };
 
 /**
@@ -306,25 +348,44 @@ export const createTournament = async (
   return built.tournament;
 };
 
+/** What a duplicate is built from: roster teams as they stand, and mixed teams still to be given an id. */
+export interface DuplicateInput extends Omit<NewTournamentInput, "teams" | "rsvpListId"> {
+  teams: (PersistentTeam | EnteringMixedTeam)[];
+}
+
 /**
  * What a duplicate of `source` is made from: the same format and settings,
- * and the same teams in the same order, named as its duplicate. The teams come
- * from the roster, so each entry takes the team's current name and color
- * and a team that has since left the roster is left out. A team that had
- * withdrawn from the source is back in; a new draft has no withdrawals.
- * Of the RSVP settings only the capacity comes across: next week's tournament
- * has its own times, so its RSVP link starts off until the owner sets them.
+ * and the same teams in the same order, named as its duplicate. A roster
+ * team comes from the roster, so its entry takes the team's current name
+ * and color, and a team that has since left the roster is left out. A
+ * mixed team has no roster team (ADR-0006), so it is copied from its entry
+ * with its name, color, and players, and without its id: the new tournament
+ * gives it one of its own (see buildTournamentFromSetup). A team that had
+ * withdrawn from the source is back in, since a new draft has no
+ * withdrawals. The list the source was imported from is not carried.
  */
-export const duplicateInput = (source: Tournament, roster: PersistentTeam[]): NewTournamentInput => {
+export const duplicateInput = (source: Tournament, roster: PersistentTeam[]): DuplicateInput => {
   const rosterById = new Map(roster.map((team) => [team.id, team]));
+  // Every mixed team the app makes has a color. This covers one stored without.
+  const spareColor = leastUsedColors(source.entries.map((entry) => entry.color));
   return {
     name: `${source.name} (duplicate)`,
     format: source.format,
-    teams: source.entries.flatMap((entry) => rosterById.get(entry.teamId) ?? []),
-    settings: { ...source.settings, terminology: { ...source.settings.terminology } },
-    ...(source.rsvp && {
-      rsvp: { enabled: false, capacity: source.rsvp.capacity, closed: false },
+    teams: source.entries.flatMap((entry): (PersistentTeam | EnteringMixedTeam)[] => {
+      if (!isMixedTeam(entry)) {
+        const rosterTeam = rosterById.get(entry.teamId);
+        return rosterTeam ? [rosterTeam] : [];
+      }
+      return [
+        {
+          kind: "mixed",
+          name: entry.name,
+          color: entry.color ?? spareColor(),
+          players: [...entry.players],
+        },
+      ];
     }),
+    settings: { ...source.settings, terminology: { ...source.settings.terminology } },
   };
 };
 
@@ -337,25 +398,44 @@ export const duplicateInput = (source: Tournament, roster: PersistentTeam[]): Ne
  * fresh one instead of writing the old fields back. The stored revision is
  * read first and sent as the base;
  * when the rules refuse the write because the tournament moved on meanwhile,
- * the fields are rebuilt on the fresh copy, a bounded number of times. A
+ * the same fields go out again on the fresh copy's revision, a bounded
+ * number of times. Fields that depend on what is stored, such as the
+ * entries, must go through updateTournamentFrom instead. A
  * refusal that persists, such as a scorer's attempt at an owner-only field,
  * rejects with Firestore's error. Offline, the base comes from the cache and
  * the write waits for the connection like any field update.
  */
-export const updateTournamentFields = async (
+export const updateTournamentFields = (
   db: Firestore,
   tournamentId: string,
   fields: Record<string, unknown>,
+): Promise<void> => updateTournamentFrom(db, tournamentId, () => fields);
+
+/**
+ * updateTournamentFields for an edit whose fields depend on what is stored,
+ * such as one team's entry among the tournament's entries. `fieldsFrom` is
+ * given the stored tournament on every attempt, so after a lost race the
+ * edit is worked out again on the fresh copy and sent with that copy's
+ * revision as its base. Whatever landed in between is kept, because the
+ * fresh copy already holds it. An error `fieldsFrom` throws ends the edit
+ * with nothing more written.
+ */
+export const updateTournamentFrom = async (
+  db: Firestore,
+  tournamentId: string,
+  fieldsFrom: (stored: Tournament) => Record<string, unknown>,
 ): Promise<void> => {
   const ref = tournamentDoc(db, tournamentId);
   let refused: { on: string; error: unknown } | null = null;
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
     const current = await getDoc(ref);
     if (!current.exists()) throw new Error("That tournament no longer exists.");
-    const basedOn = (current.data() as Tournament).revision;
+    const stored: Tournament = { ...(current.data() as Tournament), id: current.id };
+    const basedOn = stored.revision;
     // A refusal on a base the tournament has not moved past is not a race
     // lost but a write the rules would never accept.
     if (refused !== null && refused.on === basedOn) throw refused.error;
+    const fields = fieldsFrom(stored);
     try {
       await updateDoc(ref, { ...fields, basedOn, revision: newToken(), updatedAt: Date.now() });
       return;
@@ -378,19 +458,75 @@ export const renameTournament = async (
   await updateTournamentFields(db, tournamentId, { name: trimmed });
 };
 
+export const COMPLETED_KEEPS_ITS_TEAMS = "A completed tournament keeps its teams as they were.";
+
 /**
- * Delete a tournament with every match under it, its scorer key, the
- * proofs of every phone that opened its scorer link, its RSVP list, held
- * spots included, and its notices, all in one cleanup batch. Firestore no
- * longer caps a batch at 500 writes, so a big round robin with a long list
- * still goes in one, and nobody watching the list sees it half gone.
+ * Save one edit to a mixed team: a rename, or a player added, removed, or
+ * moved (ADR-0006). Only `entries` is written, so no match and no result
+ * is touched. A withdrawal changes the entries too, so the edit is applied
+ * to the stored entries on every attempt and never sent again from an old
+ * copy (see updateTournamentFrom). Rejects with the edit's own refusal,
+ * such as an empty name, before anything is written, and with
+ * COMPLETED_KEEPS_ITS_TEAMS once the tournament is completed, even when
+ * the result that completed it landed while the edit was on its way.
+ */
+export const saveMixedTeamEdit = (
+  db: Firestore,
+  tournamentId: string,
+  edit: MixedTeamEdit,
+): Promise<void> =>
+  updateTournamentFrom(db, tournamentId, (stored) => {
+    if (stored.status === "completed") throw new Error(COMPLETED_KEEPS_ITS_TEAMS);
+    return { entries: stripUndefined(editMixedTeam(stored.entries, edit)) };
+  });
+
+/**
+ * The id of the RSVP list a tournament was imported from, or null when it
+ * names none. Null too when this phone cannot say, as with no connection
+ * and no copy in its cache, so the caller carries on without it.
+ */
+const listImportedFrom = async (db: Firestore, tournamentId: string): Promise<string | null> => {
+  try {
+    const snapshot = await getDoc(tournamentDoc(db, tournamentId));
+    return (snapshot.data() as Tournament | undefined)?.rsvpListId ?? null;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Take a deleted tournament's id off the record of the list it was
+ * imported from (ADR-0005), so the list's page stops asking for it. The
+ * write is sent and not waited for, and a refusal is dropped: the rules
+ * refuse it for a list that is gone, and with no connection it waits its
+ * turn. The list's path is spelled out because rsvpListData.ts imports
+ * this module.
+ */
+const forgetOnList = (db: Firestore, listId: string, tournamentId: string): void => {
+  updateDoc(doc(db, "rsvpLists", listId), {
+    tournamentIds: arrayRemove(tournamentId),
+    updatedAt: Date.now(),
+  }).catch(() => {});
+};
+
+/**
+ * Delete a tournament with every match under it, its scorer key, and the
+ * proofs of every phone that opened its scorer link, all in one cleanup
+ * batch. A tournament from before RSVP lists may still hold RSVPs and
+ * notices of its own, and the batch sweeps those too. Firestore no longer
+ * caps a batch at 500 writes, so a big round robin still goes in one.
+ *
+ * A tournament imported from an RSVP list also comes off that list's
+ * record once it is deleted. That step never holds up or fails the delete
+ * (see forgetOnList).
  */
 export const deleteTournament = async (db: Firestore, tournamentId: string): Promise<void> => {
-  const [matches, proofs, rsvps, notices] = await Promise.all([
+  const [matches, proofs, rsvps, notices, listId] = await Promise.all([
     getDocs(matchesCollection(db, tournamentId)),
     getDocs(scorerProofsCollection(db, tournamentId)),
-    getDocs(rsvpsCollection(db, tournamentId)),
-    getDocs(noticesCollection(db, tournamentId)),
+    getDocs(oldRsvpsCollection(db, tournamentId)),
+    getDocs(oldNoticesCollection(db, tournamentId)),
+    listImportedFrom(db, tournamentId),
   ]);
   // The rules for everything under the tournament read the tournament
   // itself, so those go first and the tournament last, in its own write.
@@ -401,6 +537,7 @@ export const deleteTournament = async (db: Firestore, tournamentId: string): Pro
   batch.delete(scorerKeyDoc(db, tournamentId));
   await batch.commit();
   await deleteDoc(tournamentDoc(db, tournamentId));
+  if (listId !== null) forgetOnList(db, listId, tournamentId);
 };
 
 // ============================================

@@ -16,18 +16,38 @@ service cloud.firestore {
       return signedIn() && request.auth.token.firebase.sign_in_provider != 'anonymous';
     }
 
-    // The account's own document. It holds the name the account last
-    // RSVP'd under, so the RSVP form can offer it again. Only that account
-    // reads or writes it, and nobody deletes it.
+    // The fields an account's own RSVP to a list may hold.
+    function rsvpFieldsAreValid(data) {
+      return data.keys().hasAll(['uid', 'name', 'createdAt'])
+        && data.keys().hasOnly(['uid', 'name', 'createdAt', 'note', 'noticesReadAt'])
+        && data.name is string
+        && data.name.size() >= 1
+        && data.name.size() <= 40
+        && (!('note' in data) || (data.note is string && data.note.size() <= 140))
+        && (!('noticesReadAt' in data) || data.noticesReadAt is timestamp);
+    }
+
+    // A name an account's own document remembers, when it holds one: a
+    // string as long as an RSVP's name may be.
+    function rememberedNameIsValid(data, field) {
+      return !(field in data)
+        || (data[field] is string && data[field].size() >= 1 && data[field].size() <= 40);
+    }
+
+    // The account's own document. It holds the names the account last
+    // RSVP'd under, so the RSVP form can offer them again: rsvpName from a
+    // by-person list and rsvpTeamName from a by-team list. It holds one or
+    // both and nothing else. Only that account reads or writes it, and
+    // nobody deletes it.
     match /users/{uid} {
       allow read: if realAccount() && request.auth.uid == uid;
       allow create, update: if
         realAccount()
         && request.auth.uid == uid
-        && request.resource.data.keys().hasOnly(['rsvpName'])
-        && request.resource.data.rsvpName is string
-        && request.resource.data.rsvpName.size() >= 1
-        && request.resource.data.rsvpName.size() <= 40;
+        && request.resource.data.keys().hasOnly(['rsvpName', 'rsvpTeamName'])
+        && request.resource.data.keys().hasAny(['rsvpName', 'rsvpTeamName'])
+        && rememberedNameIsValid(request.resource.data, 'rsvpName')
+        && rememberedNameIsValid(request.resource.data, 'rsvpTeamName');
     }
 
     // Roster: the teams an account keeps between tournaments. Only that
@@ -48,13 +68,14 @@ service cloud.firestore {
     }
 
     // Tournaments are owned by the account that created them. The owner
-    // writes anything. A scorer, a phone holding the scorer link, may record
-    // results, reorder the queue, and swap courts while the tournament is
-    // live, and nothing else. Either one's write that moves the revision
+    // writes anything but the RSVP list a tournament was imported from,
+    // which is named once at creation. A scorer, a phone holding the
+    // scorer link, may record results, reorder the queue, and swap courts
+    // while the tournament is live, and nothing else. Either one's write that moves the revision
     // must be built on the stored revision. Anyone holding the link can read
-    // while the spectator link is on, and any real account while the RSVP
-    // link is on; with both off, only the owner and scorers can read the
-    // tournament or its matches.
+    // while the spectator link is on; with it off, only the owner and
+    // scorers can read the tournament or its matches, and the real accounts
+    // that reach a started one through the RSVP list it was imported from.
     match /tournaments/{tournamentId} {
       function tournament() {
         return get(/databases/$(database)/documents/tournaments/$(tournamentId)).data;
@@ -119,39 +140,66 @@ service cloud.firestore {
               && request.resource.data.winnerId in resource.data.teamIds));
       }
 
-      // A tournament with its RSVP link on must say when it is and when
-      // RSVPs open, so the RSVP page can never be shared without them. The
-      // RSVP settings and the scheduled time are not in scorerChange's
-      // list, so only the owner writes them.
-      function rsvpHasItsTimes(data) {
-        return !('rsvp' in data)
-          || data.rsvp.get('enabled', false) != true
-          || (data.get('scheduledAt', null) is number
-            && data.rsvp.get('opensAt', null) is number);
+      // A tournament imported from an RSVP list can be watched from the
+      // list's page (ADR-0005). Any real account reads it while the list it
+      // names has its RSVP link on, once it is live or completed. A draft
+      // stays with its owner, so nobody sees teams still being arranged.
+      // The checks that cost nothing come first, so the list is read only
+      // for a real account and a started tournament that names one. A
+      // deleted list makes the get() fail, which denies through this door
+      // and leaves the others as they were.
+      function listLinkIsOn(data) {
+        return realAccount()
+          && data.status in ['live', 'completed']
+          && data.get('rsvpListId', null) is string
+          && opensTheDoorFor(
+            get(/databases/$(database)/documents/rsvpLists/$(data.rsvpListId)).data,
+            data.ownerId);
       }
 
-      // Whether the RSVP link is on. A tournament from before RSVPs has no
-      // rsvp map and reads as off.
-      function rsvpLinkOn(data) {
-        return data.get('rsvp', {}).get('enabled', false) == true;
+      // The list must belong to the tournament's owner. Any real account
+      // can create a list under an id it knows, a deleted list's id
+      // included, so a list with its link on proves nothing until its
+      // owner matches. Only the tournament's owner opens this door.
+      function opensTheDoorFor(list, tournamentOwnerId) {
+        return list.enabled == true && list.ownerId == tournamentOwnerId;
       }
 
-      // The third door: any real account holding the RSVP link reads the
-      // tournament while the link is on.
+      // The list door sits before the scorer door. A watcher from a list
+      // then costs one lookup, the list, and none for a scorer proof it
+      // does not have. A scorer's phone is not a real account, so it never
+      // pays for the list.
       allow read: if
         (signedIn() && resource.data.ownerId == request.auth.uid)
         || resource.data.spectatorEnabled == true
-        || isScorer()
-        || (realAccount() && rsvpLinkOn(resource.data));
+        || listLinkIsOn(resource.data)
+        || isScorer();
+
+      // A tournament created with an import names its RSVP list in
+      // rsvpListId (ADR-0005). The list must belong to the account creating
+      // the tournament, so nobody attaches a tournament to someone else's
+      // list. A list that does not exist makes the get() fail, which denies.
+      function namesNoListOrItsOwn(data) {
+        return !('rsvpListId' in data)
+          || get(/databases/$(database)/documents/rsvpLists/$(data.rsvpListId)).data.ownerId
+            == request.auth.uid;
+      }
+
+      // The list is named once, at creation, and never changed after. This
+      // reads no list, so the tournament outlives a list that is deleted.
+      function keepsItsList() {
+        return request.resource.data.get('rsvpListId', null)
+          == resource.data.get('rsvpListId', null);
+      }
 
       allow create: if
         signedIn()
         && request.resource.data.ownerId == request.auth.uid
-        && rsvpHasItsTimes(request.resource.data);
+        && namesNoListOrItsOwn(request.resource.data);
 
       allow update: if
         basedOnStoredRevision()
-        && rsvpHasItsTimes(request.resource.data)
+        && keepsItsList()
         && ((signedIn()
             && resource.data.ownerId == request.auth.uid
             && request.resource.data.ownerId == resource.data.ownerId)
@@ -181,120 +229,16 @@ service cloud.firestore {
           && request.resource.data.key == scorerKey();
       }
 
-      // One RSVP per account, under the account's uid, so a person holds at
-      // most one per tournament. Nothing stores who is confirmed or
-      // waiting: every phone works that out from the arrival times and the
-      // capacity (ADR-0004). The rules cannot count the list, so they never
-      // refuse an RSVP for being over capacity; they refuse it before the
-      // open time by the server's clock, and they make the server's time
-      // the arrival time, so no phone's clock takes part in the order.
+      // A tournament from before RSVP lists took RSVPs of its own, and may
+      // still hold them and the owner's notices (ADR-0005). The app no
+      // longer reads or writes either. The owner alone can read and delete
+      // them, which is what deleting the tournament needs to sweep them.
       match /rsvps/{rsvpId} {
-        function mayReadRsvps() {
-          return ownsTournament() || (realAccount() && rsvpLinkOn(tournament()));
-        }
-
-        // The link is on, the owner has not closed the list, the tournament
-        // has not started, and the server's clock has reached the open time.
-        function rsvpsAreOpen() {
-          let current = tournament();
-          return rsvpLinkOn(current)
-            && current.rsvp.get('closed', false) != true
-            && current.status == 'draft'
-            && request.time.toMillis() >= current.rsvp.opensAt;
-        }
-
-        function rsvpFieldsAreValid(data) {
-          return data.keys().hasAll(['uid', 'name', 'createdAt'])
-            && data.keys().hasOnly(['uid', 'name', 'createdAt', 'note', 'noticesReadAt'])
-            && data.name is string
-            && data.name.size() >= 1
-            && data.name.size() <= 40
-            && (!('note' in data) || (data.note is string && data.note.size() <= 140))
-            && (!('noticesReadAt' in data) || data.noticesReadAt is timestamp);
-        }
-
-        allow read: if mayReadRsvps();
-
-        allow create: if
-          realAccount()
-          && rsvpId == request.auth.uid
-          && request.resource.data.uid == request.auth.uid
-          && rsvpFieldsAreValid(request.resource.data)
-          && request.resource.data.createdAt == request.time
-          // A read time sent with the RSVP is the server's, as when it is recorded later.
-          && request.resource.data.get('noticesReadAt', request.time) == request.time
-          && rsvpsAreOpen();
-
-        // The account's own RSVP, which a held spot never is: it has no uid.
-        function isOwnRsvp() {
-          return realAccount()
-            && rsvpId == request.auth.uid
-            && resource.data.uid == request.auth.uid;
-        }
-
-        // A person fixes their name or note without losing their place:
-        // the arrival time and the uid never change, so neither does the
-        // order. This works after a close too, like a withdrawal.
-        allow update: if
-          isOwnRsvp()
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'note'])
-          && rsvpFieldsAreValid(request.resource.data);
-
-        // A withdrawal is a delete, open until the tournament starts, even
-        // after the owner closes the list. RSVPing again is a new create
-        // with a new arrival time, which is the back of the line.
-        allow delete: if isOwnRsvp() && tournament().status == 'draft';
-
-        // The owner removes anyone, a held spot included, at any status.
-        allow delete: if ownsTournament();
-
-        // A held spot is the owner's RSVP for someone without an account,
-        // under a generated id with no uid, so no account can ever change
-        // or withdraw it. It takes its place in arrival order like any
-        // other RSVP, so its arrival time is the server's too. The owner
-        // adds one while the tournament is a draft or live, after a close
-        // and with the link off as well, since those stop RSVPs from
-        // people, not the owner's own list. Nobody updates one.
-        allow create: if
-          ownsTournament()
-          && tournament().status in ['draft', 'live']
-          && request.resource.data.keys().hasAll(['uid', 'held', 'name', 'createdAt'])
-          && request.resource.data.keys().hasOnly(['uid', 'held', 'name', 'createdAt'])
-          && request.resource.data.uid == null
-          && request.resource.data.held == true
-          && request.resource.data.name is string
-          && request.resource.data.name.size() >= 1
-          && request.resource.data.name.size() <= 40
-          && request.resource.data.createdAt == request.time;
-
-        // When the account last opened the RSVP page, which Home compares
-        // with the newest notice. Only the RSVP's own account records it,
-        // always as the server's time, and nothing else changes with it.
-        allow update: if
-          realAccount()
-          && rsvpId == request.auth.uid
-          && resource.data.uid == request.auth.uid
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['noticesReadAt'])
-          && request.resource.data.noticesReadAt == request.time;
+        allow read, delete: if ownsTournament();
       }
 
-      // A notice is a short message the owner posts for everyone on the
-      // list, confirmed or waiting. Only the owner posts or deletes one,
-      // nobody edits one, and they are read by whoever may read the RSVPs.
-      // The server's time is the posting time, so it compares honestly with
-      // the time an account last opened the RSVP page.
       match /notices/{noticeId} {
-        allow read: if ownsTournament() || (realAccount() && rsvpLinkOn(tournament()));
-
-        allow create: if
-          ownsTournament()
-          && request.resource.data.keys().hasOnly(['body', 'createdAt'])
-          && request.resource.data.body is string
-          && request.resource.data.body.size() >= 1
-          && request.resource.data.body.size() <= 500
-          && request.resource.data.createdAt == request.time;
-
-        allow delete: if ownsTournament();
+        allow read, delete: if ownsTournament();
       }
 
       // One document per match. A match carries its owner and tournament ids
@@ -307,13 +251,16 @@ service cloud.firestore {
         }
 
         // The same doors as the tournament: the owner, the spectator link,
-        // a scorer, and a real account while the RSVP link is on, which is
-        // how someone who RSVP'd watches the tournament once it starts.
+        // the RSVP link of the list it was imported from, and a scorer. A
+        // match does not say which list its tournament names, so the list
+        // door reads the tournament, which the first two doors have read
+        // already, and then the list. That is one more lookup for a
+        // watcher from a list and none for anyone else.
         allow read: if
           ownsTournament()
           || tournament().spectatorEnabled == true
-          || isScorer()
-          || (realAccount() && rsvpLinkOn(tournament()));
+          || listLinkIsOn(tournament())
+          || isScorer();
 
         allow create: if
           mayWriteMatches()
@@ -329,6 +276,167 @@ service cloud.firestore {
       }
     }
 
+    // An RSVP list stands on its own, with no tournament behind it, and is
+    // owned by the account that created it (ADR-0005). Only a real account
+    // owns one, so the silent identity a scorer link gives a phone never
+    // does. The owner reads and writes it. Any other real account reads it
+    // while the RSVP link is on, and nobody else reads it at all.
+    match /rsvpLists/{listId} {
+      function ownsList(data) {
+        return realAccount() && data.ownerId == request.auth.uid;
+      }
+
+      // A list takes RSVPs by person or by team, and nothing else.
+      function takesIsValid(data) {
+        return data.get('takes', null) in ['people', 'teams'];
+      }
+
+      // A list with its RSVP link on must say when it is and when RSVPs
+      // open, so the RSVP page can never be shared without them.
+      function listHasItsTimes(data) {
+        return data.get('enabled', false) != true
+          || (data.get('scheduledAt', null) is number
+            && data.get('opensAt', null) is number);
+      }
+
+      allow read: if
+        ownsList(resource.data)
+        || (realAccount() && resource.data.enabled == true);
+
+      allow create: if
+        ownsList(request.resource.data)
+        && takesIsValid(request.resource.data)
+        && listHasItsTimes(request.resource.data);
+
+      allow update: if
+        ownsList(resource.data)
+        && request.resource.data.ownerId == resource.data.ownerId
+        && takesIsValid(request.resource.data)
+        && listHasItsTimes(request.resource.data);
+
+      allow delete: if ownsList(resource.data);
+
+      function list() {
+        return get(/databases/$(database)/documents/rsvpLists/$(listId)).data;
+      }
+
+      // A list is over once the server's clock reaches its scheduled time.
+      // A list with no scheduled time is not over.
+      function listIsOver(data) {
+        return data.get('scheduledAt', null) is number
+          && request.time.toMillis() >= data.scheduledAt;
+      }
+
+      // One RSVP per account, under the account's uid, so an account holds
+      // at most one per list. Nothing stores who is confirmed or waiting.
+      // Every phone works that out from the arrival times and the capacity
+      // (ADR-0004). The rules cannot count the list, so they never refuse
+      // an RSVP for being over capacity. They hold both of the list's times
+      // to the server's clock, and they make the server's time the arrival
+      // time, so no phone's clock takes part in the order.
+      match /rsvps/{rsvpId} {
+        // The link is on, the owner has not closed the list, and the
+        // server's clock is at or past the open time and before the
+        // scheduled time. A list with its link on has both times.
+        function rsvpsAreOpen() {
+          let current = list();
+          return current.enabled == true
+            && current.get('closed', false) != true
+            && request.time.toMillis() >= current.opensAt
+            && !listIsOver(current);
+        }
+
+        // The account's own RSVP.
+        function isOwnRsvp() {
+          return realAccount()
+            && rsvpId == request.auth.uid
+            && resource.data.uid == request.auth.uid;
+        }
+
+        allow read: if ownsList(list()) || (realAccount() && list().enabled == true);
+
+        allow create: if
+          realAccount()
+          && rsvpId == request.auth.uid
+          && request.resource.data.uid == request.auth.uid
+          && rsvpFieldsAreValid(request.resource.data)
+          && request.resource.data.createdAt == request.time
+          // A read time sent with the RSVP is the server's, as when it is recorded later.
+          && request.resource.data.get('noticesReadAt', request.time) == request.time
+          && rsvpsAreOpen();
+
+        // A held spot is the owner's RSVP for someone without an account,
+        // under a generated id with no uid, so no account can ever change
+        // or withdraw it. It takes its place in arrival order like any
+        // other RSVP, so its arrival time is the server's too. The owner
+        // adds one until the scheduled time, or on a list that has none
+        // yet. The open time, a close, and the link being off stop RSVPs
+        // from accounts and not the owner's held spots. Nobody updates one.
+        allow create: if
+          ownsList(list())
+          && !listIsOver(list())
+          && request.resource.data.keys().hasAll(['uid', 'held', 'name', 'createdAt'])
+          && request.resource.data.keys().hasOnly(['uid', 'held', 'name', 'createdAt'])
+          && request.resource.data.uid == null
+          && request.resource.data.held == true
+          && request.resource.data.name is string
+          && request.resource.data.name.size() >= 1
+          && request.resource.data.name.size() <= 40
+          && request.resource.data.createdAt == request.time;
+
+        // A person fixes their name or note without losing their place.
+        // The arrival time and the uid never change, so neither does the
+        // order. This works after a close too, like a withdrawal, and like
+        // a withdrawal it stops at the scheduled time. The check sits on
+        // this rule alone, so it bounds the name and the note and no other
+        // field an account may write on its own RSVP.
+        allow update: if
+          isOwnRsvp()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'note'])
+          && rsvpFieldsAreValid(request.resource.data)
+          && !listIsOver(list());
+
+        // The owner removes anyone, a held spot included, at any time. The
+        // delete of a whole list relies on it after the scheduled time.
+        allow delete: if ownsList(list());
+
+        // A withdrawal is a delete, open until the scheduled time, even
+        // after the owner closes the list. RSVPing again is a new create
+        // with a new arrival time, which is the back of the line.
+        allow delete: if isOwnRsvp() && !listIsOver(list());
+
+        // When the account last opened the list's page, which Home compares
+        // with the newest notice. Only the RSVP's own account records it,
+        // always as the server's time, and nothing else changes with it.
+        // The scheduled time does not stop it, since the owner still posts
+        // notices after it.
+        allow update: if
+          isOwnRsvp()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['noticesReadAt'])
+          && request.resource.data.noticesReadAt == request.time;
+      }
+
+      // A notice is a short message the owner posts for everyone on the
+      // list, confirmed or waiting. Only the owner posts or deletes one,
+      // and nobody edits one. Neither stops at the scheduled time, so
+      // "courts are running late" still goes out.
+      match /notices/{noticeId} {
+        // The same readers as the RSVPs.
+        allow read: if ownsList(list()) || (realAccount() && list().enabled == true);
+
+        allow create: if
+          ownsList(list())
+          && request.resource.data.keys().hasAll(['body', 'createdAt'])
+          && request.resource.data.keys().hasOnly(['body', 'createdAt'])
+          && request.resource.data.body is string
+          && request.resource.data.body.size() >= 1
+          && request.resource.data.body.size() <= 500
+          && request.resource.data.createdAt == request.time;
+
+        allow delete: if ownsList(list());
+      }
+    }
+
     // The account-wide match query (History, team records) is a collection
     // group query, which needs a rule on this wildcard path. The query filters
     // on ownerId, so the rule can be proven from the filter alone.
@@ -336,11 +444,13 @@ service cloud.firestore {
       allow read: if signedIn() && resource.data.ownerId == request.auth.uid;
     }
 
-    // Home lists the tournaments an account has RSVP'd to with a collection group
+    // Home lists the RSVP lists an account is on with a collection group
     // query on its uid, which this wildcard rule proves from the filter. It
-    // reads the account's own RSVPs whether or not each link is still on; the
-    // tournament behind each one is read through the RSVP link as usual. A
-    // held spot has no uid, so it is nobody's.
+    // reads the account's own RSVPs whether or not each link is still on.
+    // The list behind each one is read through its RSVP link as usual. The
+    // rule cannot tell a list from a tournament, so it also returns the
+    // account's own RSVP left under a tournament from before RSVP lists,
+    // which Home leaves out. A held spot has no uid, so it is nobody's.
     match /{path=**}/rsvps/{rsvpId} {
       allow read: if realAccount() && resource.data.uid == request.auth.uid;
     }

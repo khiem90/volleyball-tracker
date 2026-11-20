@@ -34,7 +34,7 @@ const TabLink = ({
       aria-current={active ? "page" : undefined}
       className={
         layout === "bar"
-          ? `matchbook-display flex h-full min-w-0 flex-col items-center justify-center gap-1 border-t-[3px] px-0.5 text-[0.62rem] font-bold tracking-[0.06em] ${tone}`
+          ? `matchbook-display flex h-full min-w-0 flex-auto flex-col items-center justify-center gap-1 border-t-[3px] px-0.5 text-[0.62rem] font-bold tracking-[0.06em] ${tone}`
           : `matchbook-display flex min-h-11 items-center gap-2 border-b-[3px] px-3 text-[0.78rem] font-bold tracking-[0.08em] ${tone}`
       }
     >
@@ -54,7 +54,7 @@ const TabLink = ({
 
 /**
  * The frame around every page but sign-in and scoring: a top bar with the
- * brand and the account menu, and the four tabs, in a bar fixed above the
+ * brand and the account menu, and the five tabs, in a bar fixed above the
  * home indicator on a phone and in the top bar from lg up. Every edge
  * keeps clear of the notch, the status bar, and the home indicator.
  */
@@ -109,7 +109,7 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
         data-tab-bar
         className="fixed inset-x-0 bottom-0 z-40 border-t-[1.5px] border-mb-navy bg-mb-paper-bright pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] lg:hidden"
       >
-        <div className="grid h-(--tab-bar-height) grid-cols-4">
+        <div className="flex h-(--tab-bar-height)">
           {SHELL_TABS.map((tab) => (
             <TabLink
               key={tab.id}

@@ -31,22 +31,18 @@ import {
   subscribeToScorerKey as subscribeToScorerKeyDoc,
 } from "@/lib/sharing";
 import { queueTournamentCommand, type AppliedCommand } from "@/lib/commandQueue";
-import { deviceZone, type RsvpSetup } from "@/lib/rsvp";
+import type { SetupInput } from "@/lib/creation";
+import type { MixedTeamEdit } from "@/lib/entries";
+import { buildTournamentFromSetup, saveNewTournament } from "@/lib/creationData";
 import {
-  saveRsvpSettings as saveRsvpSettingsDoc,
-  turnRsvpLinkOff as turnRsvpLinkOffDoc,
-} from "@/lib/rsvping";
-import {
-  buildTournamentToSave,
   deleteTournament as deleteTournamentDoc,
   duplicateInput,
   renameTournament as renameTournamentDoc,
-  saveTournamentAndMatches,
+  saveMixedTeamEdit,
   subscribeToAccountMatches,
   subscribeToTournaments,
   updateMatch as updateTournamentMatch,
   type CreateTournamentOptions,
-  type NewTournamentInput,
 } from "@/lib/tournaments";
 import {
   buildQuickMatch,
@@ -126,10 +122,12 @@ interface AppContextValue {
    * Create a draft, or with `start` a tournament that is live from the
    * moment it exists. Resolves with the id as soon as the local write is
    * issued; rejects, with nothing written, when the format cannot start
-   * with these teams.
+   * with these teams. An input from an import also adds its new teams to
+   * the roster and records the tournament on its RSVP list, in the same
+   * write as the tournament.
    */
   createTournament: (
-    input: NewTournamentInput,
+    input: SetupInput,
     options?: CreateTournamentOptions
   ) => Promise<string>;
   /**
@@ -138,6 +136,13 @@ interface AppContextValue {
    * server refuses it.
    */
   renameTournament: (id: string, name: string) => Promise<void>;
+  /**
+   * Rename a mixed team or change its players. Owner only, while the
+   * tournament is a draft or live. The change shows from the local cache
+   * as soon as the stored tournament has been read; the promise settles
+   * when the server has the write, and rejects if the edit is refused.
+   */
+  editMixedTeam: (tournamentId: string, edit: MixedTeamEdit) => Promise<void>;
   /**
    * Make a new draft from a tournament, with the same format, settings, and
    * teams. Resolves with the draft's id as soon as the local write is issued.
@@ -224,13 +229,6 @@ interface AppContextValue {
   isLinkedLoading: boolean;
   /** Turn a tournament's spectator link on or off. Owner only. */
   setSpectatorLink: (tournamentId: string, enabled: boolean) => Promise<void>;
-  /**
-   * Save a tournament's scheduled time and RSVP settings, entered in this
-   * phone's zone. Rejects with the first problem before writing. Owner only.
-   */
-  saveRsvpSettings: (tournamentId: string, setup: RsvpSetup) => Promise<void>;
-  /** Turn a tournament's RSVP link off, writing nothing else. Owner only. */
-  turnRsvpLinkOff: (tournamentId: string) => Promise<void>;
   /** Replace a tournament's scorer link; every phone on the old one loses access. Owner only. */
   regenerateScorerLink: (tournamentId: string) => Promise<string>;
   /** The key behind a tournament's scorer link, null while it has none. Owner only. */
@@ -455,15 +453,17 @@ export const AppProvider = ({ children }: AppProviderProps) => {
   // The id is known before the write, and the subscription shows the new
   // tournament from the local cache at once, so nobody waits for the server.
   // A phone with no signal can still set up a tournament, and start it: the
-  // engine runs here on the draft, so there is nothing to read back.
+  // engine runs here on the draft, so there is nothing to read back. An
+  // import's new roster teams and its list's record of the tournament ride
+  // in the same write, queued with it when there is no signal.
   const createTournament = useCallback(
-    async (input: NewTournamentInput, options?: CreateTournamentOptions) => {
+    async (input: SetupInput, options?: CreateTournamentOptions) => {
       const account = requireAccount();
-      const built = buildTournamentToSave(account.db, account.uid, input, options);
-      saveTournamentAndMatches(account.db, built).catch(logFailure("save tournament"));
+      const built = buildTournamentFromSetup(account.db, account.uid, input, roster, options);
+      saveNewTournament(account.db, account.uid, built).catch(logFailure("save tournament"));
       return built.tournament.id;
     },
-    [requireAccount]
+    [requireAccount, roster]
   );
 
   // A field write, so a rename can never paper over a result a court just
@@ -471,6 +471,12 @@ export const AppProvider = ({ children }: AppProviderProps) => {
   // a refused write comes back to the caller as the rejection.
   const renameTournament = useCallback(async (id: string, name: string) => {
     await renameTournamentDoc(requireDb(), id, name);
+  }, []);
+
+  // A field write on the entries, built on the stored tournament, so it
+  // never undoes a withdrawal or a result that landed a moment before.
+  const editMixedTeam = useCallback(async (tournamentId: string, edit: MixedTeamEdit) => {
+    await saveMixedTeamEdit(requireDb(), tournamentId, edit);
   }, []);
 
   // A duplicate is created like any other draft, so the console can open
@@ -711,22 +717,6 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     []
   );
 
-  // A field write like a rename: the local cache shows it at once and a
-  // refusal comes back to the caller as the rejection.
-  const saveRsvpSettings = useCallback(
-    async (tournamentId: string, setup: RsvpSetup) => {
-      const tournament = tournamentsById.get(tournamentId);
-      if (!tournament) throw new Error("That tournament no longer exists.");
-      await saveRsvpSettingsDoc(requireDb(), tournament, setup, deviceZone());
-    },
-    [tournamentsById]
-  );
-
-  const turnRsvpLinkOff = useCallback(
-    (tournamentId: string) => turnRsvpLinkOffDoc(requireDb(), tournamentId),
-    []
-  );
-
   const subscribeToScorerKey = useCallback(
     (
       tournamentId: string,
@@ -756,6 +746,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     deleteTeams,
     createTournament,
     renameTournament,
+    editMixedTeam,
     duplicateTournament,
     deleteTournament,
     startTournament,
@@ -785,8 +776,6 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     holdsScorerLink,
     isLinkedLoading,
     setSpectatorLink,
-    saveRsvpSettings,
-    turnRsvpLinkOff,
     regenerateScorerLink,
     subscribeToScorerKey,
   };

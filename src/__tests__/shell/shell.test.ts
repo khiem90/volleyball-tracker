@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { SHELL_TABS, tabFor, tabHref, type ShellTabId } from "@/lib/shell";
 
@@ -11,6 +12,12 @@ describe("tabFor", () => {
     expect(tabFor("/competitions/new")).toBe("tournaments");
     expect(tabFor("/competitions/k3v9x2")).toBe("tournaments");
     expect(tabFor("/summaries")).toBe("history");
+  });
+
+  it("puts the RSVP tab's pages under it: the lists, a new list, and a list's own page", () => {
+    expect(tabFor("/rsvp")).toBe("rsvp");
+    expect(tabFor("/rsvp/new")).toBe("rsvp");
+    expect(tabFor("/rsvp/k3v9x2")).toBe("rsvp");
   });
 
   it("puts quick match and the tools under Home, which is where they are reached from", () => {
@@ -31,6 +38,7 @@ describe("tabHref", () => {
     expect(tabHref(tab("teams"), true)).toBe("/login?redirect=%2Fteams");
     expect(tabHref(tab("tournaments"), true)).toBe("/login?redirect=%2Fcompetitions");
     expect(tabHref(tab("history"), true)).toBe("/login?redirect=%2Fsummaries");
+    expect(tabHref(tab("rsvp"), true)).toBe("/login?redirect=%2Frsvp");
     expect(tabHref(tab("home"), true)).toBe("/");
   });
 
@@ -40,6 +48,28 @@ describe("tabHref", () => {
       "/teams",
       "/competitions",
       "/summaries",
+      "/rsvp",
     ]);
+  });
+});
+
+describe("SHELL_TABS", () => {
+  it("has five tabs, the fifth being RSVP, which needs an account", () => {
+    expect(SHELL_TABS.map((spec) => spec.label)).toEqual([
+      "Home",
+      "Teams",
+      "Tournaments",
+      "History",
+      "RSVP",
+    ]);
+    expect(tab("rsvp").needsAccount).toBe(true);
+  });
+
+  it("draws every tab with an icon the sprite has", () => {
+    // Read from the repo root, which is where vitest runs.
+    const sprite = readFileSync("public/assets/matchbook/icons/sprite.svg", "utf8");
+    for (const spec of SHELL_TABS) {
+      expect(sprite, spec.label).toContain(`<symbol id="${spec.icon}" `);
+    }
   });
 });

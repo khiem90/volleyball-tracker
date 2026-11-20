@@ -14,7 +14,7 @@ The five default triage roles, each label string equal to its name (`needs-triag
 
 ### Domain docs
 
-Single-context layout, with one `CONTEXT.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
+Single-context layout, with one `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
 
 ## Design system
 

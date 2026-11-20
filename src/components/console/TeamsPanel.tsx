@@ -4,6 +4,7 @@ import { useRef, useState, type FormEvent } from "react";
 import { MbIcon } from "@/components/matchbook/MbIcon";
 import { Panel, PanelEmpty, TeamMark } from "@/components/matchbook/Panel";
 import type { TeamRow } from "@/lib/console";
+import { isMixedTeam } from "@/lib/entries";
 import type { TeamLookup } from "./teamRefs";
 
 const SUGGESTIONS_ID = "console-roster-names";
@@ -80,8 +81,11 @@ const AddTeamForm = ({
 };
 
 /**
- * The Teams tab: every entry with its record in this tournament. The owner
- * of a live tournament can withdraw a team here. In a rotation or round
+ * The Teams tab: every entry with its record in this tournament. A mixed
+ * team shows its players under its name, to everyone who can open the tab,
+ * and to the owner of a draft or live tournament an Edit button for its
+ * name and players. A roster team has none: it is renamed on the roster.
+ * The owner of a live tournament can withdraw a team here. In a rotation or round
  * robin tournament the owner can also add a team, which joins the back of
  * the queue or gets its matches, and bring a withdrawn one back; a bracket
  * takes nobody once it is drawn, and says so where the add strip would be.
@@ -91,12 +95,14 @@ export const TeamsPanel = ({
   team,
   canAdd,
   canWithdraw,
+  canEditMixed,
   addRefusal,
   suggestions,
   joinedNote,
   onAdd,
   onWithdraw,
   onRejoin,
+  onEdit,
   busy,
 }: {
   rows: TeamRow[];
@@ -105,6 +111,8 @@ export const TeamsPanel = ({
   canAdd: boolean;
   /** Whether a team can be withdrawn: the owner of any live tournament. */
   canWithdraw: boolean;
+  /** Whether a mixed team can be renamed and its players changed: the owner of a draft or live tournament. */
+  canEditMixed: boolean;
   /** Why a team cannot be added, shown in place of the add strip while teams can still be withdrawn. */
   addRefusal: string | null;
   /** Roster names to offer while typing: teams not yet entered. */
@@ -114,85 +122,112 @@ export const TeamsPanel = ({
   onAdd: (name: string) => Promise<string | null>;
   onWithdraw: (row: TeamRow) => void;
   onRejoin: (row: TeamRow) => void;
+  /** Opens the edit of a mixed team. */
+  onEdit: (row: TeamRow) => void;
   /** True while a team edit is being saved. */
   busy: boolean;
-}) => (
-  <Panel title="Teams" meta={<span className="mb-kicker">{rows.length} entered</span>}>
-    {canAdd && (
-      <AddTeamForm suggestions={suggestions} joinedNote={joinedNote} onAdd={onAdd} busy={busy} />
-    )}
-    {!canAdd && canWithdraw && addRefusal && (
-      <p className="border-b border-mb-rule px-3 py-2.5 text-[0.78rem] font-medium text-mb-ink-muted">
-        {addRefusal}
-      </p>
-    )}
-    {rows.length === 0 ? (
-      <PanelEmpty message="No teams are entered." />
-    ) : (
-      <div className="overflow-x-auto">
-        <table className="mb-table mb-table-compact w-full border-collapse">
-          <thead>
-            <tr>
-              <th className="w-8 pl-3 text-center">#</th>
-              <th>Team</th>
-              <th className="text-center">W</th>
-              <th className={canWithdraw ? "text-center" : "pr-3 text-center"}>L</th>
-              {canWithdraw && (
-                <th className="pr-3">
-                  <span className="sr-only">Actions</span>
-                </th>
-              )}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row, i) => (
-              <tr key={row.teamId} className={row.withdrawn ? "opacity-60" : undefined}>
-                <td className="matchbook-display pl-3 text-center font-bold">{i + 1}</td>
-                <td>
-                  <span className="flex items-center gap-2">
-                    {row.color && (
-                      <span
-                        className="h-3 w-3 shrink-0 rounded-full border border-mb-navy"
-                        style={{ background: row.color }}
-                        aria-hidden="true"
-                      />
-                    )}
-                    <TeamMark team={team(row.teamId)} size={20} />
-                    {row.withdrawn && <span className="mb-kicker">Withdrawn</span>}
-                  </span>
-                </td>
-                <td className="text-center tabular-nums">{row.won}</td>
-                <td className={`text-center tabular-nums ${canWithdraw ? "" : "pr-3"}`}>{row.lost}</td>
-                {canWithdraw && (
-                  <td className="pr-3 text-right">
-                    {row.withdrawn ? (
-                      canAdd && (
-                        <button
-                          type="button"
-                          onClick={() => onRejoin(row)}
-                          disabled={busy}
-                          className="mb-btn mb-btn-outline-navy px-3 text-[0.66rem]"
-                        >
-                          Rejoin
-                        </button>
-                      )
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => onWithdraw(row)}
-                        disabled={busy}
-                        className="mb-btn mb-btn-outline px-3 text-[0.66rem]"
-                      >
-                        Withdraw
-                      </button>
-                    )}
-                  </td>
+}) => {
+  const editable = (row: TeamRow) => canEditMixed && isMixedTeam(row);
+  // A draft has nobody to withdraw, so the column is there only for Edit.
+  const hasActions = canWithdraw || rows.some(editable);
+  return (
+    <Panel title="Teams" meta={<span className="mb-kicker">{rows.length} entered</span>}>
+      {canAdd && (
+        <AddTeamForm suggestions={suggestions} joinedNote={joinedNote} onAdd={onAdd} busy={busy} />
+      )}
+      {!canAdd && canWithdraw && addRefusal && (
+        <p className="border-b border-mb-rule px-3 py-2.5 text-[0.78rem] font-medium text-mb-ink-muted">
+          {addRefusal}
+        </p>
+      )}
+      {rows.length === 0 ? (
+        <PanelEmpty message="No teams are entered." />
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="mb-table mb-table-compact w-full border-collapse">
+            <thead>
+              <tr>
+                <th className="w-8 pl-3 text-center">#</th>
+                <th>Team</th>
+                <th className="text-center">W</th>
+                <th className={hasActions ? "text-center" : "pr-3 text-center"}>L</th>
+                {hasActions && (
+                  <th className="pr-3">
+                    <span className="sr-only">Actions</span>
+                  </th>
                 )}
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    )}
-  </Panel>
-);
+            </thead>
+            <tbody>
+              {rows.map((row, i) => (
+                <tr key={row.teamId} className={row.withdrawn ? "opacity-60" : undefined}>
+                  <td className="matchbook-display pl-3 text-center font-bold">{i + 1}</td>
+                  <td>
+                    <span className="flex items-center gap-2">
+                      {row.color && (
+                        <span
+                          className="h-3 w-3 shrink-0 rounded-full border border-mb-navy"
+                          style={{ background: row.color }}
+                          aria-hidden="true"
+                        />
+                      )}
+                      <TeamMark team={team(row.teamId)} size={20} />
+                      {row.withdrawn && <span className="mb-kicker">Withdrawn</span>}
+                    </span>
+                    {row.players && row.players.length > 0 && (
+                      <p className="mt-1 text-[0.72rem] text-mb-ink-muted">
+                        <span className="sr-only">Players: </span>
+                        {row.players.join(", ")}
+                      </p>
+                    )}
+                  </td>
+                  <td className="text-center tabular-nums">{row.won}</td>
+                  <td className={`text-center tabular-nums ${hasActions ? "" : "pr-3"}`}>{row.lost}</td>
+                  {hasActions && (
+                    <td className="pr-3">
+                      <span className="flex flex-wrap justify-end gap-1.5">
+                        {editable(row) && (
+                          <button
+                            type="button"
+                            onClick={() => onEdit(row)}
+                            className="mb-btn mb-btn-outline-navy px-3 text-[0.66rem]"
+                            aria-label={`Edit ${row.name}`}
+                          >
+                            <MbIcon id="pencil" size={14} />
+                            Edit
+                          </button>
+                        )}
+                        {canWithdraw &&
+                          (row.withdrawn ? (
+                            canAdd && (
+                              <button
+                                type="button"
+                                onClick={() => onRejoin(row)}
+                                disabled={busy}
+                                className="mb-btn mb-btn-outline-navy px-3 text-[0.66rem]"
+                              >
+                                Rejoin
+                              </button>
+                            )
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => onWithdraw(row)}
+                              disabled={busy}
+                              className="mb-btn mb-btn-outline px-3 text-[0.66rem]"
+                            >
+                              Withdraw
+                            </button>
+                          ))}
+                      </span>
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Panel>
+  );
+};

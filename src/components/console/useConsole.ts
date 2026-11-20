@@ -13,13 +13,12 @@ import {
   completesTournament,
   consoleAccess,
   courtsView,
-  deleteConfirmation,
+  deleteTournamentDescription,
   failureNotice,
   isCorrectable,
   roleFor,
   scheduleInstantWin,
   scheduleView,
-  showsRsvpTab,
   standingsView,
   teamsView,
   winTapGuard,
@@ -27,24 +26,18 @@ import {
 } from "@/lib/console";
 import type { AppliedCommand } from "@/lib/commandQueue";
 import { bracketAddRefusal } from "@/lib/engine";
-import { entryTeams } from "@/lib/entries";
+import { entryTeams, isMixedTeam, type MixedTeamEdit } from "@/lib/entries";
 import { isBracketFormat, isRotationFormat, minimumTeams } from "@/lib/formats";
-import { listSoFar, type RsvpSetup } from "@/lib/rsvp";
-import { useRsvpList } from "@/context/useRsvpList";
 import {
-  rsvpLink,
   scorerKeyIn,
   scorerLink,
   spectatorLink,
   STALE_SCORER_LINK,
 } from "@/lib/shareLinks";
-import { messageOf } from "@/lib/utils";
+import { messageOf, nameKey } from "@/lib/utils";
 import type { Match, PersistentTeam } from "@/types/game";
 import { consoleTabs, type ConsoleTab } from "./ConsoleTabs";
 import { teamLookup } from "./teamRefs";
-
-// "Aces" and "aces" name the same roster team.
-const nameKey = (name: string) => name.trim().toLowerCase();
 
 /** A court count waiting for the owner to confirm it, because a court with a match in play would close. */
 export interface CourtsToClose {
@@ -63,10 +56,6 @@ export interface ShareLinksView {
   scorerKeyKnown: boolean;
   /** A completed tournament takes no results, so its scorer link is not offered. */
   showsScorerLink: boolean;
-  /** The RSVP link, or null while the RSVP link is off. */
-  rsvpLink: string | null;
-  /** Whether the RSVP tab is there to turn the link on: a draft or live tournament. */
-  rsvpSettable: boolean;
 }
 
 /** Why the console cannot show the tournament. */
@@ -76,13 +65,15 @@ export type NotFoundReason = "not_found" | "stale_link";
  * Everything the console page needs for one tournament: the tournament and
  * its matches from the provider, the visitor's role and what it allows, the
  * five views, the actions on the shell and in Settings, the court, queue,
- * and team edits of a live tournament, the correction of its results, and
- * the share links.
+ * and team edits of a live tournament, the owner's edits to a mixed team,
+ * the correction of its results, and the share links.
  *
  * The visitor is the owner when the account owns the tournament. Anyone
  * else reached it by link. With a scorer key in the address the phone
  * proves it holds the link and becomes a scorer, and without one it
- * watches as the spectator link allows.
+ * watches as the spectator link allows. An account that came from the
+ * page of the RSVP list the tournament was imported from watches the same
+ * way, as a spectator, once the tournament has started.
  */
 export const useConsole = (tournamentId: string) => {
   const router = useRouter();
@@ -96,6 +87,7 @@ export const useConsole = (tournamentId: string) => {
     startTournament,
     endTournament,
     renameTournament,
+    editMixedTeam,
     duplicateTournament,
     deleteTournament,
     addTeamToTournament,
@@ -113,8 +105,6 @@ export const useConsole = (tournamentId: string) => {
     isStaleLink,
     holdsScorerLink,
     setSpectatorLink,
-    saveRsvpSettings,
-    turnRsvpLinkOff,
     regenerateScorerLink,
     subscribeToScorerKey,
   } = useApp();
@@ -132,11 +122,6 @@ export const useConsole = (tournamentId: string) => {
 
   const role = roleFor(tournament?.ownerId, user?.uid, holdsScorerLink(tournamentId));
   const access = consoleAccess(role, tournament?.status ?? "draft");
-  const showsRsvp = showsRsvpTab(role, tournament?.status ?? "draft", !!tournament?.rsvp);
-
-  // The owner always holds the RSVP list: the RSVP tab shows it, and the
-  // delete confirmation counts it.
-  const rsvpList = useRsvpList(tournamentId, role === "owner");
 
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -238,13 +223,10 @@ export const useConsole = (tournamentId: string) => {
       consoleTabs({
         hasBracket: tournament ? isBracketFormat(tournament.format) : false,
         courtsLabel: capitalize(tournament?.settings.terminology.venuePlural ?? "courts"),
-        hasRsvp: showsRsvp,
       }),
-    [tournament, showsRsvp],
+    [tournament],
   );
-  const [chosenTab, setTab] = useState<ConsoleTab>("courts");
-  // A tab that goes away, as RSVP does when the tournament completes, falls back to the first.
-  const tab = tabs.some((spec) => spec.id === chosenTab) ? chosenTab : "courts";
+  const [tab, setTab] = useState<ConsoleTab>("courts");
 
   // ============================================
   // The shell and Settings
@@ -422,8 +404,6 @@ export const useConsole = (tournamentId: string) => {
           scorerLink: scorerKey ? scorerLink(origin, tournament.id, scorerKey) : null,
           scorerKeyKnown,
           showsScorerLink: tournament.status !== "completed",
-          rsvpLink: tournament.rsvp?.enabled ? rsvpLink(origin, tournament.id) : null,
-          rsvpSettable: access.canManageRsvp,
         }
       : null;
 
@@ -450,53 +430,6 @@ export const useConsole = (tournamentId: string) => {
       reportFailure("The scorer link could not be regenerated.", error);
     });
   }, [tournament, access.canShare, regenerateScorerLink, reportFailure]);
-
-  // ============================================
-  // RSVP settings
-  // ============================================
-
-  // A field write like a rename: the RSVP tab shows the new settings as
-  // soon as the local write lands, and a refusal is reported when it comes.
-  // The tab checks the setup's problems before it calls this.
-  const saveRsvp = useCallback(
-    (setup: RsvpSetup) => {
-      if (!tournament || !access.canManageRsvp) return;
-      setActionError(null);
-      saveRsvpSettings(tournament.id, setup).catch((error: unknown) => {
-        console.error("Failed to save the RSVP settings:", error);
-        reportFailure("The RSVP settings could not be saved.", error);
-      });
-    },
-    [tournament, access.canManageRsvp, saveRsvpSettings, reportFailure],
-  );
-
-  // Turning the link off writes only the switch, so it works whatever the
-  // form holds and shows at once from the local write.
-  const turnLinkOff = useCallback(() => {
-    if (!tournament || !access.canManageRsvp) return;
-    setActionError(null);
-    turnRsvpLinkOff(tournament.id).catch((error: unknown) => {
-      console.error("Failed to turn the RSVP link off:", error);
-      reportFailure("The RSVP link could not be turned off.", error);
-    });
-  }, [tournament, access.canManageRsvp, turnRsvpLinkOff, reportFailure]);
-
-  // Close and reopen show at once from the local write, like the settings.
-  const { setClosed: setListClosed } = rsvpList;
-  const setRsvpClosed = useCallback(
-    (closed: boolean) => {
-      if (!tournament || !access.canManageRsvp) return;
-      setActionError(null);
-      setListClosed(closed).catch((error: unknown) => {
-        console.error("Failed to change whether the list is closed:", error);
-        reportFailure(
-          closed ? "The list could not be closed." : "The list could not be reopened.",
-          error,
-        );
-      });
-    },
-    [tournament, access.canManageRsvp, setListClosed, reportFailure],
-  );
 
   // ============================================
   // Teams, courts, and the queue
@@ -627,7 +560,9 @@ export const useConsole = (tournamentId: string) => {
 
   // A withdrawn team comes back through the same command. Its roster team
   // is normally still there; the entry's own snapshot covers the case where
-  // it is not, so the team never comes back as "Unknown".
+  // it is not, so the team never comes back as "Unknown". A mixed team has
+  // no roster team, so it always comes back from its entry, and the engine
+  // keeps its players.
   const rejoin = useCallback(
     (row: TeamRow) => {
       if (!tournament || !access.canManage) return;
@@ -649,6 +584,51 @@ export const useConsole = (tournamentId: string) => {
     await apply("withdraw the team", () => withdrawTeam(tournament.id, teamId));
     setWithdrawing(null);
   }, [tournament, withdrawing, access.canManage, apply, withdrawTeam]);
+
+  // ============================================
+  // Mixed teams
+  // ============================================
+
+  // The mixed team being edited is held by id and read fresh, so the dialog
+  // shows its name and players as they now stand. It closes by itself when
+  // the owner can no longer edit, as when the last result completes the
+  // tournament.
+  const [editingTeamId, setEditingTeamId] = useState<string | null>(null);
+  const mixedTeams = useMemo(() => teamRows.filter((row) => isMixedTeam(row)), [teamRows]);
+  const editingTeam = useMemo(
+    () =>
+      (access.canEditMixedTeams && mixedTeams.find((row) => row.teamId === editingTeamId)) || null,
+    [access.canEditMixedTeams, mixedTeams, editingTeamId],
+  );
+  const openTeamEdit = useCallback((row: TeamRow) => {
+    setActionError(null);
+    setEditingTeamId(row.teamId);
+  }, []);
+  const closeTeamEdit = useCallback(() => setEditingTeamId(null), []);
+
+  // Like a rename, an edit shows as soon as the local write lands and the
+  // server's answer is not waited for. A refusal is reported when it comes.
+  // The write is built on the stored tournament, which is read first, and
+  // on a slow connection that read takes a moment. Until this phone's copy
+  // moves on from the revision the edit was made on, the dialog is busy,
+  // so a second tap cannot add the same player twice.
+  const [editedOnRevision, setEditedOnRevision] = useState<string | null>(null);
+  const isEditingTeam = editedOnRevision !== null && editedOnRevision === tournament?.revision;
+  const editTeam = useCallback(
+    (edit: MixedTeamEdit) => {
+      if (!tournament || !access.canEditMixedTeams || isEditingTeam) return;
+      const madeOn = tournament.revision;
+      setActionError(null);
+      setEditedOnRevision(madeOn);
+      editMixedTeam(tournament.id, edit)
+        .catch((error: unknown) => {
+          console.error("Failed to change the mixed team:", error);
+          reportFailure("The team could not be changed.", error);
+        })
+        .finally(() => setEditedOnRevision((current) => (current === madeOn ? null : current)));
+    },
+    [tournament, access.canEditMixedTeams, isEditingTeam, editMixedTeam, reportFailure],
+  );
 
   // ============================================
   // Results
@@ -736,26 +716,8 @@ export const useConsole = (tournamentId: string) => {
     regenerateOpen,
     setRegenerateOpen,
     regenerate,
-    // RSVP
-    saveRsvp,
-    turnRsvpLinkOff: turnLinkOff,
-    setRsvpClosed,
-    /** The RSVP list in arrival order, for the owner; null for anyone else and until it arrives. */
-    rsvps: rsvpList.rsvps,
-    rsvpListError: rsvpList.error,
-    /** What the list already holds, which limits the capacity and the open time; null until it arrives. */
-    listSoFar: tournament && rsvpList.rsvps ? listSoFar(tournament, rsvpList.rsvps) : null,
-    addHeldSpot: rsvpList.addHeld,
-    removeRsvp: rsvpList.remove,
-    /** What the delete confirmation says will go, and whether Delete is offered yet: it waits for the list. */
-    deleteConfirmation: deleteConfirmation(
-      tournament?.name ?? "",
-      rsvpList.rsvps
-        ? { kind: "counted", count: rsvpList.rsvps.length }
-        : rsvpList.error
-          ? { kind: "unknown" }
-          : { kind: "counting" },
-    ),
+    /** What the delete confirmation says will go. */
+    deleteDescription: deleteTournamentDescription(tournament?.name ?? ""),
     // Courts and queue
     /** True while a court, queue, or team edit is being saved. */
     isApplying,
@@ -784,6 +746,18 @@ export const useConsole = (tournamentId: string) => {
     withdrawing,
     setWithdrawing,
     withdraw,
+    // Mixed teams
+    /** Whether a mixed team can be renamed and its players changed: the owner of a draft or live tournament. */
+    canEditMixedTeams: access.canEditMixedTeams,
+    /** Every mixed team, which is where a player can be moved. */
+    mixedTeams,
+    /** The mixed team being edited, if one is. */
+    editingTeam,
+    openTeamEdit,
+    closeTeamEdit,
+    editTeam,
+    /** True from an edit to a mixed team until this phone shows it. */
+    isEditingTeam,
     // Results
     /** Whether completed results can be corrected: the owner of a live round robin or bracket. */
     canCorrectResults,

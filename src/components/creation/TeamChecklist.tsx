@@ -3,27 +3,36 @@
 import { useCallback } from "react";
 import { AddTeamsForm } from "@/components/matchbook/AddTeamsForm";
 import { Panel, PanelEmpty } from "@/components/matchbook/Panel";
+import { emptyRosterMessage } from "@/lib/creation";
 import type { AddedTeams } from "@/lib/roster";
 import type { PersistentTeam } from "@/types/game";
+import { ListImportSection } from "./ListImportSection";
+import type { ListImportView } from "./useListImport";
 
 /**
- * The roster as a checklist, with the add strip from the Teams page above
- * it so a team can be added, and ticked, without leaving the page. Tick
- * order is the seed order.
+ * The teams section: the add strip from the Teams page, so a team can be
+ * added, and ticked, without leaving the page, then the import from an
+ * RSVP list, then the roster as a checklist. Tick order is the seed order,
+ * and imported teams are seeded after the ticked ones. A roster team the
+ * import enters shows ticked and cannot be unticked, since the import is
+ * what enters it.
  */
 export const TeamChecklist = ({
   roster,
   ticked,
-  tickedCount,
+  enteredCount,
   onToggle,
   onSetAll,
   onAdd,
   revealId,
   problem,
+  listImport,
+  importProblem,
 }: {
   roster: PersistentTeam[];
   ticked: ReadonlySet<string>;
-  tickedCount: number;
+  /** How many teams will enter: the ticked ones and the imported ones. */
+  enteredCount: number;
   onToggle: (teamId: string) => void;
   onSetAll: (on: boolean) => void;
   /** Adds one team per line of the text and says what happened. */
@@ -31,6 +40,9 @@ export const TeamChecklist = ({
   /** A row to scroll into view when it appears, such as a team just added. */
   revealId: string | null;
   problem?: string;
+  listImport: ListImportView;
+  /** What stops the imported teams being saved. */
+  importProblem?: string;
 }) => {
   // Runs when the row for revealId mounts. The list is its own scroll area,
   // so this moves the rows and leaves the add strip in place.
@@ -38,14 +50,20 @@ export const TeamChecklist = ({
     row?.scrollIntoView({ block: "nearest" });
   }, []);
 
-  const allTicked = roster.length > 0 && roster.every((team) => ticked.has(team.id));
+  const imported = listImport.imported;
+  const isImported = (teamId: string) => imported?.rosterIds.has(teamId) ?? false;
+  const allTicked =
+    roster.length > 0 && roster.every((team) => ticked.has(team.id) || isImported(team.id));
+  const emptyMessage = emptyRosterMessage(imported?.rows.length ?? 0);
 
   return (
     <Panel
       title="Teams"
       meta={
         <span className="flex items-center gap-3">
-          <span className="mb-kicker">{tickedCount} ticked</span>
+          <span className="mb-kicker">
+            {enteredCount} {imported ? "entering" : "ticked"}
+          </span>
           {roster.length > 0 && (
             <button
               type="button"
@@ -60,8 +78,9 @@ export const TeamChecklist = ({
       }
     >
       <AddTeamsForm onAdd={onAdd} />
+      <ListImportSection view={listImport} problem={importProblem} />
       {roster.length === 0 ? (
-        <PanelEmpty message="No teams yet. Type a name above and press Enter, or paste a list." />
+        emptyMessage && <PanelEmpty message={emptyMessage} />
       ) : (
         <div
           className="max-h-[50vh] overflow-auto"
@@ -70,19 +89,21 @@ export const TeamChecklist = ({
           aria-describedby={problem ? "teams-problem" : undefined}
         >
           {roster.map((team) => {
-            const checked = ticked.has(team.id);
+            const fromImport = isImported(team.id);
+            const checked = fromImport || ticked.has(team.id);
             return (
               <label
                 key={team.id}
                 ref={team.id === revealId ? reveal : undefined}
-                className={`flex min-h-11 cursor-pointer items-center gap-3 border-b border-mb-rule px-3 py-2 last:border-b-0 ${
-                  checked ? "bg-[rgba(238,75,52,0.06)]" : "hover:bg-[rgba(7,50,77,0.04)]"
-                }`}
+                className={`flex min-h-11 items-center gap-3 border-b border-mb-rule px-3 py-2 last:border-b-0 ${
+                  fromImport ? "cursor-default" : "cursor-pointer"
+                } ${checked ? "bg-[rgba(238,75,52,0.06)]" : "hover:bg-[rgba(7,50,77,0.04)]"}`}
               >
                 <input
                   type="checkbox"
                   className="mb-checkbox"
                   checked={checked}
+                  disabled={fromImport}
                   onChange={() => onToggle(team.id)}
                   aria-label={`Tick ${team.name}`}
                 />
@@ -94,6 +115,7 @@ export const TeamChecklist = ({
                 <span className="matchbook-display min-w-0 flex-1 truncate text-[0.85rem] font-semibold">
                   {team.name}
                 </span>
+                {fromImport && <span className="mb-kicker shrink-0">From the list</span>}
               </label>
             );
           })}

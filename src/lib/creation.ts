@@ -1,12 +1,14 @@
 import { isRotationFormat, isSeriesFormat, minimumTeams, minimumTeamsMessage } from "@/lib/formats";
 import {
-  DEFAULT_CAPACITY,
-  rsvpProblems,
-  rsvpSettingsOf,
-  type RsvpProblems,
-  type RsvpSetup,
-} from "@/lib/rsvp";
-import type { NewTournamentInput } from "@/lib/tournaments";
+  matchRosterTeams,
+  nameClashes,
+  tickedTeamNamed,
+  type ByPersonImport,
+  type ByTeamImport,
+  type ListImport,
+} from "@/lib/rsvpImport";
+import { leastUsedColors } from "@/lib/teamColors";
+import type { EnteringMixedTeam, NewTournamentInput } from "@/lib/tournaments";
 import {
   DEFAULT_POINTS_FOR_LOSS,
   DEFAULT_POINTS_FOR_WIN,
@@ -27,6 +29,11 @@ export interface TournamentSetup {
   format: TournamentFormat | null;
   /** The ticked roster teams in the order they were ticked, which is the seed order. */
   teamIds: string[];
+  /**
+   * The RSVP list the owner imported, with its teams as arranged so far, or
+   * null with no import. Imported teams are seeded after the ticked ones.
+   */
+  import: ListImport | null;
   /** Courts in play at once. Only rotation formats use more than one. */
   courts: number;
   /** Best-of series length. Rotation formats always play single games. */
@@ -38,28 +45,20 @@ export interface TournamentSetup {
   pointsForLoss: number;
   /** The tournament's word for a court: "court", "field", or "table". */
   courtWord: string;
-  /** The IANA zone the times are entered in: the owner's phone's. */
-  zone: string;
-  /** The scheduled time and RSVP settings, with `enabled` saying whether the link goes on as the tournament is saved. */
-  rsvp: RsvpSetup;
 }
 
-/**
- * The page as it opens: nothing chosen, one court, single games, no times,
- * and the RSVP link off. Times are entered in `zone`, the phone's own.
- */
-export const emptySetup = (zone = "UTC"): TournamentSetup => ({
+/** The page as it opens: nothing chosen, nothing imported, one court, single games. */
+export const emptySetup = (): TournamentSetup => ({
   name: "",
   format: null,
   teamIds: [],
+  import: null,
   courts: 1,
   seriesLength: 1,
   instantWin: false,
   pointsForWin: DEFAULT_POINTS_FOR_WIN,
   pointsForLoss: DEFAULT_POINTS_FOR_LOSS,
   courtWord: DEFAULT_TERMINOLOGY.venue,
-  zone,
-  rsvp: { enabled: false, capacity: DEFAULT_CAPACITY, scheduledAt: null, opensAt: null },
 });
 
 // ============================================
@@ -131,18 +130,127 @@ export const setupSettings = (
 // ============================================
 
 /**
- * The teams that will enter, in tick order. A ticked team that has since
- * left the roster is left out rather than entered from memory.
+ * A team entering under a name the roster does not have. It joins the
+ * roster as the tournament is saved, so it is there next week.
  */
-export const enteredTeams = (setup: TournamentSetup, roster: PersistentTeam[]): PersistentTeam[] => {
+export interface JoiningTeam {
+  kind: "joining";
+  newName: string;
+}
+
+/**
+ * A team entering a new tournament: one on the roster, one about to join
+ * it, or a mixed team. `kind` tells them apart. A roster team enters as the
+ * roster holds it, so it has no kind.
+ */
+export type EnteringTeam =
+  | (PersistentTeam & { kind?: undefined })
+  | JoiningTeam
+  | EnteringMixedTeam;
+
+export const isJoiningTeam = (team: EnteringTeam): team is JoiningTeam => team.kind === "joining";
+
+export const isEnteringMixedTeam = (team: EnteringTeam): team is EnteringMixedTeam =>
+  team.kind === "mixed";
+
+/**
+ * The teams a by-team import enters, in arrival order. A name the roster
+ * has, ignoring case, enters that roster team. Any other name enters as a
+ * team joining the roster.
+ */
+const importedRosterTeams = (
+  imported: ByTeamImport,
+  roster: PersistentTeam[],
+): (PersistentTeam | JoiningTeam)[] =>
+  matchRosterTeams(
+    imported.teams.map((team) => team.name),
+    roster,
+  ).map(
+    (rosterTeam, index) =>
+      rosterTeam ?? { kind: "joining", newName: imported.teams[index].name.trim() },
+  );
+
+/**
+ * The mixed teams a by-person import enters, in number order. Each takes
+ * the palette color used least among the teams entering before it, the
+ * way a pasted team name does on the roster.
+ */
+const mixedTeams = (
+  imported: ByPersonImport,
+  entering: PersistentTeam[],
+): EnteringMixedTeam[] => {
+  const nextColor = leastUsedColors(entering.map((team) => team.color));
+  return imported.teams.map((team) => ({
+    kind: "mixed",
+    name: team.name.trim(),
+    color: nextColor(),
+    players: team.players.map((person) => person.name),
+  }));
+};
+
+/**
+ * The roster teams the owner ticked, in tick order. A ticked team that has
+ * since left the roster is left out.
+ */
+export const tickedTeams = (setup: TournamentSetup, roster: PersistentTeam[]): PersistentTeam[] => {
   const byId = new Map(roster.map((team) => [team.id, team]));
   return setup.teamIds.flatMap((id) => byId.get(id) ?? []);
 };
 
+/**
+ * The teams that will enter, in seed order, which is the order the teams
+ * section shows: ticked roster teams in tick order, then imported teams in
+ * the import's order. A ticked team that has since left the roster is left
+ * out, not entered from memory. A roster team a by-team import also brings
+ * enters once, at its imported place. A mixed team enters beside a roster
+ * team of the same name, since it is never that team, and setupProblems
+ * asks the owner to tell the two apart first.
+ */
+export const enteredTeams = (setup: TournamentSetup, roster: PersistentTeam[]): EnteringTeam[] => {
+  const ticked = tickedTeams(setup, roster);
+  if (!setup.import) return ticked;
+  if (setup.import.takes === "people") return [...ticked, ...mixedTeams(setup.import, ticked)];
+  const imported = importedRosterTeams(setup.import, roster);
+  const importedIds = new Set(imported.flatMap((team) => (isJoiningTeam(team) ? [] : team.id)));
+  return [...ticked.filter((team) => !importedIds.has(team.id)), ...imported];
+};
+
+/**
+ * What stops an import being saved as it stands. Two teams from a by-team
+ * list under one name would land on one roster team, and two mixed teams
+ * under one name could not be told apart on the schedule, so the owner
+ * renames one first. A team the owner has blanked needs a name again. A
+ * mixed team under the name of a roster team in `ticked` would enter
+ * beside it, so the owner renames the mixed team or unticks the other.
+ */
+const importProblem = (imported: ListImport, ticked: PersistentTeam[]): string | undefined => {
+  const names = imported.teams.map((team) => team.name);
+  if (names.some((name) => name.trim().length === 0)) return "Give every imported team a name.";
+  const [clash] = nameClashes(names);
+  if (clash) {
+    return clash.indexes.length === 2
+      ? `Rename one of the two teams called ${clash.name}.`
+      : `Rename the ${clash.indexes.length} teams called ${clash.name} so each has its own name.`;
+  }
+  const [shared] = names.flatMap((name) => tickedTeamNamed(imported, name, ticked) ?? []);
+  if (!shared) return undefined;
+  return `A ticked roster team is also called ${shared.name}. Rename the mixed team or untick the roster team.`;
+};
+
+/**
+ * What the teams section says in place of the roster while the roster is
+ * empty, or null when it says nothing. With `importedCount` teams from an
+ * import above it, "No teams yet" would be wrong, so the line goes.
+ */
+export const emptyRosterMessage = (importedCount: number): string | null =>
+  importedCount > 0 ? null : "No teams yet. Type a name above and press Enter, or paste a list.";
+
 /** Why the setup cannot become a tournament yet, by field. Empty when it can. */
-export interface SetupProblems extends RsvpProblems {
+export interface SetupProblems {
   name?: string;
   format?: string;
+  /** What is wrong with the imported teams. */
+  imported?: string;
   teams?: string;
 }
 
@@ -150,8 +258,12 @@ export const setupProblems = (
   setup: TournamentSetup,
   roster: PersistentTeam[],
 ): SetupProblems => {
-  const problems: SetupProblems = rsvpProblems(setup.rsvp);
+  const problems: SetupProblems = {};
   if (setup.name.trim().length === 0) problems.name = "Give the tournament a name.";
+  const imported = setup.import
+    ? importProblem(setup.import, tickedTeams(setup, roster))
+    : undefined;
+  if (imported) problems.imported = imported;
   if (!setup.format) {
     problems.format = "Pick a format.";
     return problems;
@@ -165,45 +277,33 @@ export const setupProblems = (
 
 /**
  * The problems in the order to fix them: the format, since the rest depend
- * on it, then the name, the teams, and the RSVP section.
+ * on it, then the name, then the imported teams, then the team count.
  */
 export const problemsInOrder = (problems: SetupProblems): string[] =>
-  [
-    problems.format,
-    problems.name,
-    problems.teams,
-    problems.scheduledAt,
-    problems.opensAt,
-    problems.capacity,
-  ].filter((problem): problem is string => problem !== undefined);
+  [problems.format, problems.name, problems.imported, problems.teams].filter(
+    (problem): problem is string => problem !== undefined,
+  );
 
 /** The first problem to fix. */
 export const firstProblem = (problems: SetupProblems): string | undefined =>
   problemsInOrder(problems)[0];
 
 /**
- * The scheduled time and RSVP settings the tournament is saved with. A
- * scheduled time carries the zone it was entered in. The RSVP map is
- * written once the link is on, an open time is set, or the capacity moves
- * off the default, so a tournament kept private for now keeps what the
- * owner entered; an untouched section adds nothing.
+ * What the creation page hands over to be saved: a new tournament's input
+ * whose teams may include some that join the roster on the way.
  */
-const scheduleInput = ({
-  rsvp,
-  zone,
-}: TournamentSetup): Pick<NewTournamentInput, "scheduledAt" | "scheduledZone" | "rsvp"> => ({
-  ...(rsvp.scheduledAt !== null && { scheduledAt: rsvp.scheduledAt, scheduledZone: zone }),
-  ...((rsvp.enabled || rsvp.opensAt !== null || rsvp.capacity !== DEFAULT_CAPACITY) && {
-    rsvp: rsvpSettingsOf(rsvp, false),
-  }),
-});
+export interface SetupInput extends Omit<NewTournamentInput, "teams"> {
+  /** The teams entering, in seed order. */
+  teams: EnteringTeam[];
+}
 
 /**
  * The input the draft is built from. The problems are checked again here,
  * so a page that shows them and stops is the normal path and this throw
- * is the guard behind it.
+ * is the guard behind it. With an import, the input names the list the
+ * teams came from.
  */
-export const setupInput = (setup: TournamentSetup, roster: PersistentTeam[]): NewTournamentInput => {
+export const setupInput = (setup: TournamentSetup, roster: PersistentTeam[]): SetupInput => {
   const first = firstProblem(setupProblems(setup, roster));
   if (first || !setup.format) throw new Error(first ?? "Pick a format.");
   return {
@@ -211,6 +311,6 @@ export const setupInput = (setup: TournamentSetup, roster: PersistentTeam[]): Ne
     format: setup.format,
     teams: enteredTeams(setup, roster),
     settings: setupSettings(setup.format, setup),
-    ...scheduleInput(setup),
+    ...(setup.import && { rsvpListId: setup.import.listId }),
   };
 };

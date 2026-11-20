@@ -5,6 +5,7 @@ import {
 } from "@/lib/doubleElimination";
 import { ReversedCommandError } from "@/lib/commandErrors";
 import { openMatchOn } from "@/lib/engine";
+import { isMixedTeam } from "@/lib/entries";
 import { isBracketFormat, isRotationFormat } from "@/lib/formats";
 import { calculateStandings } from "@/lib/roundRobin";
 import { seriesInfo } from "@/lib/series";
@@ -58,14 +59,14 @@ export interface ConsoleAccess {
   canManage: boolean;
   /** Rename. Owner while draft or live; a completed tournament keeps its name. */
   canRename: boolean;
+  /** Rename a mixed team and change its players. Owner while draft or live. */
+  canEditMixedTeams: boolean;
   /** Make a new draft from this tournament. Owner, in any status. */
   canDuplicate: boolean;
   /** Delete the tournament and its matches. Owner, in any status. */
   canDelete: boolean;
   /** Turn the spectator link on or off and regenerate the scorer link. Owner, in any status. */
   canShare: boolean;
-  /** Set the scheduled time, capacity, open time, and RSVP link. Owner while draft or live. */
-  canManageRsvp: boolean;
 }
 
 const NO_ACCESS: ConsoleAccess = {
@@ -74,10 +75,10 @@ const NO_ACCESS: ConsoleAccess = {
   canEditCourts: false,
   canManage: false,
   canRename: false,
+  canEditMixedTeams: false,
   canDuplicate: false,
   canDelete: false,
   canShare: false,
-  canManageRsvp: false,
 };
 
 /**
@@ -91,7 +92,13 @@ export const consoleAccess = (role: ConsoleRole, status: TournamentStatus): Cons
   const owner = role === "owner";
   const ownerOnly = { canDuplicate: owner, canDelete: owner, canShare: owner };
   if (status === "draft") {
-    return { ...NO_ACCESS, ...ownerOnly, canStart: owner, canRename: owner, canManageRsvp: owner };
+    return {
+      ...NO_ACCESS,
+      ...ownerOnly,
+      canStart: owner,
+      canRename: owner,
+      canEditMixedTeams: owner,
+    };
   }
   if (status === "live") {
     return {
@@ -101,65 +108,15 @@ export const consoleAccess = (role: ConsoleRole, status: TournamentStatus): Cons
       canEditCourts: true,
       canManage: owner,
       canRename: owner,
-      canManageRsvp: owner,
+      canEditMixedTeams: owner,
     };
   }
   return { ...NO_ACCESS, ...ownerOnly };
 };
 
-/**
- * Whether the console offers the RSVP tab: to the owner while the RSVP
- * settings can change, and afterwards, read-only, when the tournament took
- * RSVPs, so its list and notices stay on hand once it is completed.
- */
-export const showsRsvpTab = (
-  role: ConsoleRole,
-  status: TournamentStatus,
-  hasRsvpSettings: boolean,
-): boolean => consoleAccess(role, status).canManageRsvp || (role === "owner" && hasRsvpSettings);
-
-/**
- * What the delete confirmation says will go, naming the people on the RSVP
- * list when there are any, so a tournament people are counting on is not
- * deleted by accident.
- */
-export const deleteTournamentDescription = (name: string, rsvpCount: number): string => {
-  if (rsvpCount === 0) return `This removes "${name}" and every match in it. It cannot be undone.`;
-  const people = rsvpCount === 1 ? "1 person" : `${rsvpCount} people`;
-  return `This removes "${name}", every match in it, and the ${people} on its RSVP list. It cannot be undone.`;
-};
-
-/** How many are on a tournament's RSVP list, as a delete confirmation learns it. */
-export type RsvpHeadcount =
-  | { kind: "counting" }
-  | { kind: "counted"; count: number }
-  /** The count could not be read, as offline. */
-  | { kind: "unknown" };
-
-/** What a delete confirmation says, and whether it offers Delete yet. */
-export interface DeleteConfirmation {
-  description: string;
-  canConfirm: boolean;
-}
-
-/**
- * The delete confirmation for a tournament whose headcount is `headcount`.
- * Delete waits for the count, so the owner never confirms against a wrong
- * number; a count that cannot be read gives the wording without one.
- */
-export const deleteConfirmation = (name: string, headcount: RsvpHeadcount): DeleteConfirmation => {
-  switch (headcount.kind) {
-    case "counting":
-      return { description: `Counting the people on the RSVP list of "${name}"...`, canConfirm: false };
-    case "counted":
-      return { description: deleteTournamentDescription(name, headcount.count), canConfirm: true };
-    case "unknown":
-      return {
-        description: `This removes "${name}", every match in it, and anyone on its RSVP list. It cannot be undone.`,
-        canConfirm: true,
-      };
-  }
-};
+/** What the delete confirmation says will go. */
+export const deleteTournamentDescription = (name: string): string =>
+  `This removes "${name}" and every match in it. It cannot be undone.`;
 
 // ============================================
 // Courts
@@ -381,6 +338,8 @@ export interface TeamRow {
   teamId: string;
   name: string;
   color?: string;
+  /** The players' names on a mixed team, for everyone who can see the tournament. Absent on a roster team. */
+  players?: string[];
   withdrawn: boolean;
   played: number;
   won: number;
@@ -390,8 +349,9 @@ export interface TeamRow {
 /**
  * The entries with each team's record in this tournament. Names and colors
  * come from `teams`, the entries as they should be shown (see entryTeams),
- * with the entry's own snapshot as the fallback. A forfeit counts as a win
- * and a loss; byes are not played.
+ * with the entry's own snapshot as the fallback. A mixed team's players come
+ * from its entry, which is the only place they are kept. A forfeit counts as
+ * a win and a loss; byes are not played.
  */
 export const teamsView = (
   tournament: Tournament,
@@ -419,6 +379,7 @@ export const teamsView = (
       teamId: entry.teamId,
       name: team?.name ?? entry.name,
       ...(color !== undefined && { color }),
+      ...(isMixedTeam(entry) && { players: entry.players }),
       withdrawn: entry.withdrawnAt !== undefined,
       ...(record.get(entry.teamId) ?? { played: 0, won: 0, lost: 0 }),
     };

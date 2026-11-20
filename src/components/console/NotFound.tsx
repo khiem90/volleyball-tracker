@@ -10,8 +10,7 @@ import type { NotFoundReason } from "./useConsole";
  * Why a tournament page shows nothing. The tournament is not there, or not
  * shared with this phone, or the scorer link it opened has been replaced.
  * A guest is offered sign-in, coming back here, in case the tournament is
- * theirs. The console and the RSVP page both show it, so a link that has
- * been turned off reveals nothing about which one it was.
+ * theirs.
  */
 export const NotFound = ({ reason, isGuest }: { reason: NotFoundReason; isGuest: boolean }) => {
   const pathname = usePathname();

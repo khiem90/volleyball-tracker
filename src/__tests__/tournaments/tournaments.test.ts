@@ -6,7 +6,7 @@ import {
   enableNetwork,
   getDoc,
   getDocs,
-  getDocsFromServer,
+  serverTimestamp,
   setDoc,
   type Firestore,
 } from "firebase/firestore";
@@ -16,9 +16,9 @@ import {
   queueTournamentCommand,
   ReversedCommandError,
 } from "@/lib/commandQueue";
+import { createTournamentFromSetup } from "@/lib/creationData";
 import { EngineError } from "@/lib/engine";
 import { addQuickMatch } from "@/lib/quickMatches";
-import { postNotice } from "@/lib/rsvping";
 import {
   proveScorer,
   regenerateScorerKey,
@@ -26,7 +26,6 @@ import {
   StaleScorerLinkError,
   subscribeToScorerKey,
 } from "@/lib/sharing";
-import { saveRsvpSettings } from "@/lib/rsvping";
 import {
   createTournament,
   deleteTournament,
@@ -71,7 +70,9 @@ const input = (format: TournamentFormat, name = "Tuesday night"): NewTournamentI
 });
 
 /** Six teams on two courts, so each court has a queue to draw from. */
-const rotationInput = (format: TournamentFormat): NewTournamentInput => {
+const rotationInput = (
+  format: TournamentFormat,
+): NewTournamentInput & { teams: PersistentTeam[] } => {
   const base = input(format, "Rotation night");
   return {
     ...base,
@@ -510,7 +511,13 @@ describeFirestoreRules("Tournaments on Firestore", (env) => {
       const completed = await tournamentDocOf(db, source.id);
       const roster = rotationInput("win2out").teams;
 
-      const duplicate = await createTournament(db, owner, duplicateInput(completed, roster));
+      // The app's own path: a duplicate is saved like a tournament from the creation page.
+      const duplicate = await createTournamentFromSetup(
+        db,
+        owner,
+        duplicateInput(completed, roster),
+        roster,
+      );
 
       const stored = await tournamentDocOf(db, duplicate.id);
       expect(stored.id).not.toBe(source.id);
@@ -666,12 +673,21 @@ describeFirestoreRules("Tournaments on Firestore", (env) => {
       expect("forfeitedBy" in corrected).toBe(false);
     });
 
-    it("deleting a tournament removes it, its matches, and its notices", async () => {
+    it("deleting a tournament removes it and its matches, and sweeps the RSVPs and notices left under one from before RSVP lists", async () => {
       const db = modularFirestore(env().authenticatedContext(owner));
       const created = await createTournament(db, owner, input("round_robin"));
       await applyTournamentCommand(db, created.id, { type: "start" });
-      await postNotice(db, created.id, "Courts 3 and 4 tonight.");
-      await postNotice(db, created.id, "We moved to 7:30.");
+      // Nothing writes RSVPs or notices under a tournament any more, so
+      // what an old one still holds is stored with the rules off (ADR-0005).
+      await env().withSecurityRulesDisabled(async (unrestricted) => {
+        const raw = modularFirestore(unrestricted);
+        const under = (kind: string, id: string) => doc(raw, "tournaments", created.id, kind, id);
+        const createdAt = serverTimestamp();
+        await setDoc(under("rsvps", "dan-uid"), { uid: "dan-uid", name: "Dan", createdAt });
+        await setDoc(under("rsvps", "held-1"), { uid: null, held: true, name: "Walk-in", createdAt });
+        await setDoc(under("notices", "n1"), { body: "Courts 3 and 4 tonight.", createdAt });
+        await setDoc(under("notices", "n2"), { body: "We moved to 7:30.", createdAt });
+      });
 
       await deleteTournament(db, created.id);
 
@@ -681,6 +697,7 @@ describeFirestoreRules("Tournaments on Firestore", (env) => {
         const raw = modularFirestore(unrestricted);
         expect((await getDoc(doc(raw, "tournaments", created.id))).exists()).toBe(false);
         expect(await matchDocsOf(raw, created.id)).toHaveLength(0);
+        expect((await getDocs(collection(raw, "tournaments", created.id, "rsvps"))).size).toBe(0);
         expect((await getDocs(collection(raw, "tournaments", created.id, "notices"))).size).toBe(0);
       });
     });
@@ -1000,53 +1017,6 @@ describeFirestoreRules("Tournaments on Firestore", (env) => {
       await setSpectatorEnabled(db, created.id, false);
       await expect(cutOff).rejects.toMatchObject(REFUSED);
       expect((await tournamentDocOf(db, created.id)).revision).not.toBe(created.revision);
-    });
-
-    it("the RSVP link lets a signed-in account watch the live tournament, and cuts it off when turned off", async () => {
-      const db = ownerDb();
-      const created = await createTournament(db, owner, input("round_robin"));
-      const settings = {
-        enabled: true,
-        capacity: 12,
-        scheduledAt: Date.UTC(2026, 10, 7, 0, 0),
-        opensAt: Date.UTC(2026, 10, 5, 23, 0),
-      };
-      await saveRsvpSettings(db, created, settings, "America/New_York");
-      await applyTournamentCommand(db, created.id, { type: "start" });
-      const watcher = modularFirestore(env().authenticatedContext("dan-uid"));
-
-      const seen = await when<Tournament | null>(
-        (onChange, onError) => subscribeToTournament(watcher, created.id, onChange, onError),
-        (tournament) => tournament !== null,
-      );
-      const matches = await when<Match[]>(
-        (onChange, onError) => subscribeToTournamentMatches(watcher, created.id, onChange, onError),
-        (list) => list.length === 6,
-      );
-      expect(seen).toMatchObject({ id: created.id, status: "live", spectatorEnabled: false });
-      expect(matches.every((m) => m.tournamentId === created.id)).toBe(true);
-
-      // The console treats a refused tournament listener as the end of the
-      // view, as it does when the spectator link goes off. A listener on the
-      // matches is not re-checked until a match changes, so the test asks
-      // the server for them afresh instead.
-      const cutOff = new Promise<never>((_resolve, reject) => {
-        const unsubscribe = subscribeToTournament(
-          watcher,
-          created.id,
-          () => {},
-          (error) => {
-            unsubscribe();
-            reject(error);
-          },
-        );
-      });
-      const live = await tournamentDocOf(db, created.id);
-      await saveRsvpSettings(db, live, { ...settings, enabled: false }, "America/New_York");
-      await expect(cutOff).rejects.toMatchObject(REFUSED);
-      await expect(
-        getDocsFromServer(collection(watcher, "tournaments", created.id, "matches")),
-      ).rejects.toMatchObject(REFUSED);
     });
 
     it("deleting a tournament removes its scorer key and every phone's proof with it", async () => {
