@@ -538,6 +538,27 @@ describeFirestoreRules("Firestore rules", (env) => {
         await assertFails(deleteDoc(ref));
       });
 
+      it("cannot rename a mixed team or change its players, alone or inside a result, though the owner can", async () => {
+        await seedWithProof();
+        const mixed = { teamId: "t2", name: "Blockers", players: ["Ana", "Ben"] };
+        await env().withSecurityRulesDisabled(async (unrestricted) => {
+          await updateDoc(tournamentAt(modularFirestore(unrestricted), "tourn-1"), {
+            entries: [{ teamId: "t1", name: "Aces" }, mixed],
+          });
+        });
+        const renamed = { entries: [{ teamId: "t1", name: "Aces" }, { ...mixed, name: "Net Ninjas" }] };
+        const withoutBen = { entries: [{ teamId: "t1", name: "Aces" }, { ...mixed, players: ["Ana"] }] };
+
+        const ref = tournamentAt(asScorer(), "tourn-1");
+        await assertFails(updateDoc(ref, { ...moved, ...renamed }));
+        await assertFails(updateDoc(ref, { ...moved, ...withoutBen }));
+        await assertFails(updateDoc(ref, { ...played, ...moved, ...withoutBen }));
+        await assertFails(updateDoc(ref, withoutBen));
+
+        const ownerRef = tournamentAt(modularFirestore(env().authenticatedContext(owner)), "tourn-1");
+        await assertSucceeds(updateDoc(ownerRef, { ...moved, ...withoutBen }));
+      });
+
       it.each(["win2out", "two_match_rotation"])(
         "cannot complete a %s tournament, which only finishes through End",
         async (format) => {
