@@ -65,6 +65,7 @@ describe("consoleAccess", () => {
       canEditCourts: false,
       canManage: false,
       canRename: true,
+      canEditMixedTeams: true,
       canDuplicate: true,
       canDelete: true,
       canShare: true,
@@ -78,6 +79,7 @@ describe("consoleAccess", () => {
       canEditCourts: true,
       canManage: true,
       canRename: true,
+      canEditMixedTeams: true,
       canDuplicate: true,
       canDelete: true,
       canShare: true,
@@ -91,6 +93,7 @@ describe("consoleAccess", () => {
       canEditCourts: false,
       canManage: false,
       canRename: false,
+      canEditMixedTeams: false,
       canDuplicate: true,
       canDelete: true,
       canShare: true,
@@ -104,6 +107,7 @@ describe("consoleAccess", () => {
       canEditCourts: true,
       canManage: false,
       canRename: false,
+      canEditMixedTeams: false,
       canDuplicate: false,
       canDelete: false,
       canShare: false,
@@ -124,11 +128,21 @@ describe("consoleAccess", () => {
         canEditCourts: false,
         canManage: false,
         canRename: false,
+        canEditMixedTeams: false,
         canDuplicate: false,
         canDelete: false,
         canShare: false,
         });
     }
+  });
+
+  it("lets the owner edit mixed teams while the tournament is a draft or live, and nobody otherwise", () => {
+    const whoMay = (["owner", "scorer", "spectator"] as const).flatMap((role) =>
+      (["draft", "live", "completed"] as const).flatMap((status) =>
+        consoleAccess(role, status).canEditMixedTeams ? [`${role} ${status}`] : [],
+      ),
+    );
+    expect(whoMay).toEqual(["owner draft", "owner live"]);
   });
 });
 

@@ -58,6 +58,8 @@ export interface ConsoleAccess {
   canManage: boolean;
   /** Rename. Owner while draft or live; a completed tournament keeps its name. */
   canRename: boolean;
+  /** Rename a mixed team and change its players. Owner while draft or live. */
+  canEditMixedTeams: boolean;
   /** Make a new draft from this tournament. Owner, in any status. */
   canDuplicate: boolean;
   /** Delete the tournament and its matches. Owner, in any status. */
@@ -72,6 +74,7 @@ const NO_ACCESS: ConsoleAccess = {
   canEditCourts: false,
   canManage: false,
   canRename: false,
+  canEditMixedTeams: false,
   canDuplicate: false,
   canDelete: false,
   canShare: false,
@@ -88,7 +91,13 @@ export const consoleAccess = (role: ConsoleRole, status: TournamentStatus): Cons
   const owner = role === "owner";
   const ownerOnly = { canDuplicate: owner, canDelete: owner, canShare: owner };
   if (status === "draft") {
-    return { ...NO_ACCESS, ...ownerOnly, canStart: owner, canRename: owner };
+    return {
+      ...NO_ACCESS,
+      ...ownerOnly,
+      canStart: owner,
+      canRename: owner,
+      canEditMixedTeams: owner,
+    };
   }
   if (status === "live") {
     return {
@@ -98,6 +107,7 @@ export const consoleAccess = (role: ConsoleRole, status: TournamentStatus): Cons
       canEditCourts: true,
       canManage: owner,
       canRename: owner,
+      canEditMixedTeams: owner,
     };
   }
   return { ...NO_ACCESS, ...ownerOnly };
