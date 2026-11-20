@@ -3,13 +3,15 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useListOwner } from "@/context/useListOwner";
+import { importHref, isImportable } from "@/lib/rsvpImport";
 import { deleteListDescription } from "@/lib/rsvpList";
 import { messageOf } from "@/lib/utils";
 import type { RsvpList } from "@/types/game";
 
 /**
  * The owner's controls on a list's page: Close and Reopen, Add held spot,
- * Remove on a row, Duplicate, and Delete with its confirmation. `list` is
+ * Remove on a row, Create tournament, Duplicate, and Delete with its
+ * confirmation. `list` is
  * null for anyone but the owner, and then nothing here does anything.
  * `rsvpCount` is how many RSVPs are on the list, held spots included, or
  * null until they arrive, and `rsvpsFailed` says they never will. `isOver`
@@ -93,6 +95,11 @@ export const useListOwnerControls = (
     removeRsvp: owner.removeRsvp,
     duplicate,
     isDuplicating,
+    /**
+     * The creation page with this list chosen, behind Create tournament, or
+     * null for a list import does not take. It stays once the list is over.
+     */
+    importHref: isImportable(list) ? importHref(list.id) : null,
     deletion: {
       isOpen: isDeleteOpen,
       open: () => setDeleteOpen(true),

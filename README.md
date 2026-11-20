@@ -57,7 +57,7 @@ Everything a signed-in account owns is in Firestore, and the rules in
 | `users/{uid}` | The account's own fields: `rsvpName`, the name it last RSVP'd under on a by-person list, and `rsvpTeamName`, the team name it last RSVP'd on a by-team list; only that account can read it |
 | `users/{uid}/teams/{teamId}` | The roster |
 | `users/{uid}/matches/{matchId}` | Quick matches, with `tournamentId: null` |
-| `tournaments/{tournamentId}` | One tournament: owner, format, status, entries, settings |
+| `tournaments/{tournamentId}` | One tournament: owner, format, status, entries, settings, and `rsvpListId` when its teams were imported from an RSVP list |
 | `tournaments/{tournamentId}/matches/{matchId}` | One document per match |
 | `tournaments/{tournamentId}/private/scorerKey` | The key behind the scorer link; only the owner can read it |
 | `tournaments/{tournamentId}/scorers/{uid}` | A phone's proof that it opened the scorer link |
@@ -98,6 +98,16 @@ read the notices. Opening the list's page sets `noticesReadAt` on the
 account's own RSVP to the server's time. Only that account can write it, and
 it can still write it after `scheduledAt`, so a notice newer than it has not
 been seen.
+
+Creating a tournament can import a by-team list that is closed or past
+`scheduledAt`. The confirmed RSVPs are copied into its entries once
+(ADR-0005): a name the roster has enters that roster team, and a new name
+joins the roster. One batch writes the new roster teams, the tournament with
+`rsvpListId`, and the tournament's id appended to the list's `tournamentIds`,
+so all of it lands or none does. The rules refuse a tournament whose
+`rsvpListId` names a list another account owns, or no list, and never let
+`rsvpListId` change afterwards. Nothing that happens to the list later
+reaches the tournament.
 
 A tournament takes no RSVPs and has no scheduled time. One saved before RSVP
 lists may still hold `scheduledAt`, `scheduledZone`, an `rsvp` map, and

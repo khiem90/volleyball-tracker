@@ -132,4 +132,13 @@ describe("listWording", () => {
       "The list is closed. No new team can RSVP, and teams on it can still withdraw. Reopen it any time before the scheduled time.",
     );
   });
+
+  it("says what closing an open list for an import does, for people or for teams", () => {
+    expect(people.closeToImport("Friday pickup")).toBe(
+      "Friday pickup is still open. Closing it stops new RSVPs, so nobody new arrives while you arrange teams. People on it can still withdraw, and you can reopen it until the scheduled time.",
+    );
+    expect(teams.closeToImport("Friday teams")).toBe(
+      "Friday teams is still open. Closing it stops new RSVPs, so no new team arrives while you arrange them. Teams on it can still withdraw, and you can reopen it until the scheduled time.",
+    );
+  });
 });

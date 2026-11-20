@@ -1,5 +1,5 @@
 import { isRotationFormat, isSeriesFormat, minimumTeams, minimumTeamsMessage } from "@/lib/formats";
-import { matchRosterTeams, nameClashes, type ListImport } from "@/lib/rsvpImport";
+import { importedTeamRows, nameClashes, type ListImport } from "@/lib/rsvpImport";
 import type { NewTournamentInput } from "@/lib/tournaments";
 import {
   DEFAULT_POINTS_FOR_LOSS,
@@ -139,12 +139,10 @@ export const isJoiningTeam = (team: EnteringTeam): team is JoiningTeam => "newNa
  * ignoring case, enters that roster team. Any other name enters as a team
  * joining the roster.
  */
-const importedTeams = (imported: ListImport, roster: PersistentTeam[]): EnteringTeam[] => {
-  const names = imported.teams.map((team) => team.name);
-  return matchRosterTeams(names, roster).map(
-    (rosterTeam, index) => rosterTeam ?? { newName: names[index].trim() },
+const importedTeams = (imported: ListImport, roster: PersistentTeam[]): EnteringTeam[] =>
+  importedTeamRows(imported, roster).map(
+    ({ team, rosterTeam }) => rosterTeam ?? { newName: team.name.trim() },
   );
-};
 
 /**
  * The teams that will enter, in seed order, which is the order the teams

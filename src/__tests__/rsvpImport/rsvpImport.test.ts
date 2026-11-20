@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  importedTeamRows,
+  importHref,
   importList,
   importReadiness,
+  isImportable,
+  listToImportIn,
   matchRosterTeams,
   nameClashes,
   renameImportedTeam,
@@ -74,6 +78,20 @@ const fridayTeams: RsvpList = {
   createdAt: NOW - 2 * HOUR,
   updatedAt: NOW - 2 * HOUR,
 };
+
+describe("the link from a list to the creation page", () => {
+  it("opens the creation page with the list chosen, and reads the list back from its query", () => {
+    const href = importHref("list-1");
+
+    expect(href).toBe("/competitions/new?list=list-1");
+    expect(listToImportIn(new URLSearchParams(href.split("?")[1]))).toBe("list-1");
+  });
+
+  it("finds no list on the creation page opened plainly", () => {
+    expect(listToImportIn(new URLSearchParams(""))).toBeNull();
+    expect(listToImportIn(new URLSearchParams("list="))).toBeNull();
+  });
+});
 
 describe("the RSVPs an import takes", () => {
   it("takes the confirmed RSVPs in arrival order and leaves the waitlist out", () => {
@@ -178,5 +196,36 @@ describe("matching team names to the roster", () => {
     const twin: PersistentTeam = { id: "t3", name: "aces", createdAt: 3 };
 
     expect(matchRosterTeams(["Aces"], [...roster, twin])).toEqual([roster[0]]);
+  });
+});
+
+describe("the imported teams as the creation page shows them", () => {
+  const roster: PersistentTeam[] = [{ id: "t1", name: "Aces", color: "#ef4444", createdAt: 1 }];
+
+  it("says for each team whether it is on the roster and whether its name clashes", () => {
+    const imported = importList(fridayTeams, [
+      rsvp("a", "aces", 1),
+      rsvp("b", "Spikers", 2),
+      rsvp("c", "SPIKERS", 3),
+    ]);
+
+    expect(importedTeamRows(imported, roster)).toEqual([
+      { team: { id: "a", name: "aces" }, rosterTeam: roster[0], clashes: false },
+      { team: { id: "b", name: "Spikers" }, rosterTeam: null, clashes: true },
+      { team: { id: "c", name: "SPIKERS" }, rosterTeam: null, clashes: true },
+    ]);
+  });
+
+  it("flags two teams that both match one roster team", () => {
+    const imported = importList(fridayTeams, [rsvp("a", "Aces", 1), rsvp("b", "aces", 2)]);
+
+    expect(importedTeamRows(imported, roster).map((row) => row.clashes)).toEqual([true, true]);
+  });
+});
+
+describe("which lists can be imported", () => {
+  it("is by-team lists only, for now", () => {
+    expect(isImportable({ takes: "teams" })).toBe(true);
+    expect(isImportable({ takes: "people" })).toBe(false);
   });
 });

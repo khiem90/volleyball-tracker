@@ -1,0 +1,213 @@
+"use client";
+
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { MbIcon } from "@/components/matchbook/MbIcon";
+import { InlineSpinner } from "@/components/shared";
+import { RSVP_NAME_MAX } from "@/lib/rsvp";
+import type { ListImportView } from "./useListImport";
+
+const ALERT = "text-[0.78rem] font-medium text-mb-red";
+
+/** The owner's lists to import from. A list that cannot be imported is shown and not offered. */
+const ImportPicker = ({ view }: { view: ListImportView }) => {
+  const { picker, isBusy } = view;
+  return (
+    <Dialog open={picker.isOpen} onOpenChange={(next) => !next && picker.close()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>
+            <MbIcon id="import" size={18} className="shrink-0" />
+            Import from an RSVP list
+          </DialogTitle>
+          <DialogDescription>
+            Import takes the confirmed RSVPs and leaves the waitlist out. The tournament keeps its
+            own copy, so a later change to the list does not reach it.
+          </DialogDescription>
+        </DialogHeader>
+
+        {picker.choices === null ? (
+          <p className="text-[0.85rem] text-mb-ink-muted">
+            {picker.hasLoadError
+              ? "Your lists could not be loaded. Check your connection and reload."
+              : "Loading your lists..."}
+          </p>
+        ) : picker.choices.length === 0 ? (
+          <p className="text-[0.85rem] text-mb-ink-muted">
+            You have no RSVP lists yet. Create one from the RSVP tab.
+          </p>
+        ) : (
+          <ul className="flex max-h-[50vh] flex-col gap-2 overflow-auto">
+            {picker.choices.map(({ list, detail, canChoose }) => (
+              <li key={list.id}>
+                <button
+                  type="button"
+                  onClick={() => picker.choose(list)}
+                  disabled={!canChoose || isBusy}
+                  className="flex min-h-11 w-full flex-col items-start gap-0.5 rounded-[4px] border border-mb-rule bg-mb-paper-bright px-3 py-2 text-left hover:border-mb-navy hover:bg-[rgba(7,50,77,0.06)] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:border-mb-rule disabled:hover:bg-mb-paper-bright"
+                >
+                  <span className="matchbook-display max-w-full truncate text-[0.85rem] font-semibold">
+                    {list.name}
+                  </span>
+                  <span className="text-[0.72rem] text-mb-ink-muted">{detail}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <DialogFooter>
+          <Button variant="outline" className="sm:flex-1" onClick={picker.close} disabled={isBusy}>
+            Cancel
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+/** The question before an import closes an open list. Closing can be undone, so nothing here is red. */
+const CloseOffer = ({ view }: { view: ListImportView }) => {
+  const { closeOffer, isBusy } = view;
+  if (!closeOffer) return null;
+  return (
+    <Dialog open onOpenChange={(next) => !next && closeOffer.cancel()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>
+            <MbIcon id="lock" size={18} className="shrink-0" />
+            Close the list first?
+          </DialogTitle>
+          <DialogDescription>{closeOffer.description}</DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button
+            variant="outline"
+            className="sm:flex-1"
+            onClick={closeOffer.cancel}
+            disabled={isBusy}
+          >
+            Cancel
+          </Button>
+          <Button className="sm:flex-1" onClick={closeOffer.confirm} disabled={isBusy}>
+            {isBusy ? <InlineSpinner /> : <MbIcon id="lock" size={14} />}
+            {isBusy ? "Closing..." : "Close and import"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+/**
+ * The import inside the teams section, above the roster checklist. With
+ * no import it offers one. With one it shows the imported teams in the
+ * order they enter, each with a name the owner can change, which is how
+ * two teams under one name are told apart. `problem` is what stops the
+ * import being saved, shown once a create has been tried.
+ */
+export const ListImportSection = ({ view, problem }: { view: ListImportView; problem?: string }) => {
+  const { imported } = view;
+  const shownProblem = imported?.problem ?? problem;
+
+  return (
+    <div className="border-b border-mb-rule">
+      {imported ? (
+        <>
+          <div className="flex items-center justify-between gap-3 px-3 py-2">
+            <div className="min-w-0">
+              <span className="mb-kicker">Imported from</span>
+              <p className="matchbook-display truncate text-[0.85rem] font-semibold">
+                {imported.listName}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={imported.remove}
+              className="mb-btn mb-btn-outline-navy shrink-0"
+            >
+              <MbIcon id="close" size={14} />
+              Remove import
+            </button>
+          </div>
+          {imported.rows.length === 0 ? (
+            <p className="border-t border-mb-rule px-3 py-3 text-[0.85rem] text-mb-ink-muted">
+              This list has no confirmed RSVPs, so it brings no teams.
+            </p>
+          ) : (
+            <ul
+              aria-label={`Teams imported from ${imported.listName}`}
+              aria-describedby={shownProblem ? "import-problem" : undefined}
+            >
+              {imported.rows.map(({ team, rosterTeam, clashes }, index) => {
+                const isInvalid = clashes || team.name.trim().length === 0;
+                return (
+                  <li
+                    key={team.id}
+                    className="flex min-h-11 items-center gap-3 border-t border-mb-rule px-3 py-2"
+                  >
+                    <span
+                      className="h-3 w-3 shrink-0 rounded-full border border-mb-navy"
+                      style={{ background: rosterTeam?.color ?? "transparent" }}
+                      aria-hidden="true"
+                    />
+                    <span className={`mb-input min-w-0 flex-1 ${isInvalid ? "border-mb-red" : ""}`}>
+                      <input
+                        type="text"
+                        value={team.name}
+                        onChange={(event) => imported.rename(team.id, event.target.value)}
+                        maxLength={RSVP_NAME_MAX}
+                        autoComplete="off"
+                        aria-label={`Name of imported team ${index + 1}`}
+                        aria-invalid={isInvalid ? true : undefined}
+                      />
+                    </span>
+                    <span className="mb-kicker shrink-0">
+                      {clashes ? "Same name" : rosterTeam ? "On roster" : "Joins roster"}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </>
+      ) : (
+        <div className="flex flex-col items-start gap-2 px-3 py-3">
+          <button
+            type="button"
+            onClick={view.picker.open}
+            disabled={view.isBusy}
+            className="mb-btn mb-btn-outline"
+          >
+            {view.isBusy ? <InlineSpinner /> : <MbIcon id="import" size={14} />}
+            Import from an RSVP list
+          </button>
+          {view.error && (
+            <p role="alert" className={ALERT}>
+              {view.error}
+            </p>
+          )}
+        </div>
+      )}
+      {shownProblem && (
+        <p
+          id="import-problem"
+          role="alert"
+          className={`border-t border-mb-rule px-3 py-2 ${ALERT}`}
+        >
+          {shownProblem}
+        </p>
+      )}
+
+      <ImportPicker view={view} />
+      <CloseOffer view={view} />
+    </div>
+  );
+};

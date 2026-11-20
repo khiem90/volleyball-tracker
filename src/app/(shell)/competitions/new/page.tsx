@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import Link from "next/link";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { PageLoadingSpinner } from "@/components/shared";
@@ -12,11 +13,13 @@ import { useCreation } from "@/components/creation/useCreation";
 import { problemsInOrder } from "@/lib/creation";
 
 /**
- * Creating a tournament on one page: format, name, the roster as a
- * checklist with inline add, advanced settings behind a disclosure, and
- * "Save as draft" beside "Create and start". Both open the console.
+ * Creating a tournament on one page: format, name, the teams, advanced
+ * settings behind a disclosure, and "Save as draft" beside "Create and
+ * start". Both open the console. The teams are the roster as a checklist
+ * with inline add, and those imported from an RSVP list. Create tournament
+ * on a list's page opens this page with that list chosen.
  */
-export default function NewTournamentPage() {
+function NewTournamentContent() {
   const { isLoading, isAuthenticated } = useRequireAuth();
   const page = useCreation();
 
@@ -39,7 +42,8 @@ export default function NewTournamentPage() {
           New <span className="text-mb-coral">Tournament</span>
         </h1>
         <p className="text-[0.85rem] text-mb-ink-muted">
-          Pick a format, name it, tick the teams, then start it now or keep it as a draft.
+          Pick a format, name it, tick the teams or import them from an RSVP list, then start it
+          now or keep it as a draft.
         </p>
       </header>
 
@@ -82,12 +86,14 @@ export default function NewTournamentPage() {
         <TeamChecklist
           roster={page.roster}
           ticked={page.ticked}
-          tickedCount={page.enteredCount}
+          enteredCount={page.enteredCount}
           onToggle={page.toggleTeam}
           onSetAll={page.setAllTeams}
           onAdd={page.addTeamsFromText}
           revealId={page.revealId}
           problem={problems.teams}
+          listImport={page.listImport}
+          importProblem={problems.imported}
         />
 
         <AdvancedSettings
@@ -129,5 +135,14 @@ export default function NewTournamentPage() {
         </div>
       </div>
     </>
+  );
+}
+
+// useSearchParams, which reads the list to import, needs a Suspense boundary.
+export default function NewTournamentPage() {
+  return (
+    <Suspense fallback={<PageLoadingSpinner />}>
+      <NewTournamentContent />
+    </Suspense>
   );
 }

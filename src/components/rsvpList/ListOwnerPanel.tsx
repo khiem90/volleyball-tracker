@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { MbIcon } from "@/components/matchbook/MbIcon";
 import { Panel } from "@/components/matchbook/Panel";
 import { DeleteConfirmDialog, InlineSpinner } from "@/components/shared";
@@ -37,8 +38,10 @@ const Action = ({
 
 /**
  * The owner's controls for the whole list: Close or Reopen until the
- * scheduled time, then Duplicate and Delete, which stay once the list is
- * over. Delete asks first and names how many RSVPs go with the list.
+ * scheduled time, then Create tournament, Duplicate, and Delete, which
+ * stay once the list is over. Create tournament opens the creation page
+ * with this list chosen, on a list import takes. Delete asks first and
+ * names how many RSVPs go with the list.
  * `wording` says who can still withdraw from a closed list: people, or
  * teams.
  */
@@ -75,6 +78,19 @@ export const ListOwnerPanel = ({
           <p className="text-[0.85rem] text-mb-ink-muted">
             This list is over, so nothing on it changes. Duplicate it for next time.
           </p>
+        )}
+
+        {controls.importHref && (
+          <div className="flex flex-col gap-1.5">
+            <Link href={controls.importHref} className="mb-btn mb-btn-navy">
+              <MbIcon id="compete" size={14} />
+              Create tournament
+            </Link>
+            <p className="text-[0.72rem] text-mb-ink-muted">
+              Opens a new tournament with this list chosen. Import takes the confirmed RSVPs,
+              leaves the waitlist out, and asks to close the list first if it is still open.
+            </p>
+          </div>
         )}
 
         <Action

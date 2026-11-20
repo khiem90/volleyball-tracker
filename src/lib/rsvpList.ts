@@ -415,6 +415,8 @@ export interface ListWording {
   closeNote: string;
   /** What a closed list means, under the owner's Reopen button. */
   closedNote: string;
+  /** What closing the open list called `listName` does, asked before an import closes it. */
+  closeToImport: (listName: string) => string;
 }
 
 const HELD_SPOT_PLACE = "It takes the next place in line, so on a full list it joins the waitlist.";
@@ -457,6 +459,8 @@ const PEOPLE_WORDING: ListWording = {
     "Stops new RSVPs. People on the list can still withdraw, and you can reopen it until the scheduled time.",
   closedNote:
     "The list is closed. Nobody new can RSVP, and people on it can still withdraw. Reopen it any time before the scheduled time.",
+  closeToImport: (listName) =>
+    `${listName} is still open. Closing it stops new RSVPs, so nobody new arrives while you arrange teams. People on it can still withdraw, and you can reopen it until the scheduled time.`,
 };
 
 const TEAMS_WORDING: ListWording = {
@@ -497,6 +501,8 @@ const TEAMS_WORDING: ListWording = {
     "Stops new RSVPs. Teams on the list can still withdraw, and you can reopen it until the scheduled time.",
   closedNote:
     "The list is closed. No new team can RSVP, and teams on it can still withdraw. Reopen it any time before the scheduled time.",
+  closeToImport: (listName) =>
+    `${listName} is still open. Closing it stops new RSVPs, so no new team arrives while you arrange them. Teams on it can still withdraw, and you can reopen it until the scheduled time.`,
 };
 
 /**

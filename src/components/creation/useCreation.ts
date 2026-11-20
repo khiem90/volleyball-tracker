@@ -13,7 +13,9 @@ import {
   type TournamentSetup,
 } from "@/lib/creation";
 import type { AddedTeams } from "@/lib/roster";
+import type { ListImport } from "@/lib/rsvpImport";
 import { messageOf } from "@/lib/utils";
+import { useListImport } from "./useListImport";
 
 const NO_PROBLEMS: SetupProblems = {};
 
@@ -22,9 +24,9 @@ export type CreationAction = "draft" | "start";
 
 /**
  * Everything the creation page needs: the setup as it stands, the problems
- * with it once a create has been tried, the roster to tick from, and the
- * actions that change the setup or turn it into a tournament and open its
- * console.
+ * with it once a create has been tried, the roster to tick from, the
+ * import from an RSVP list, and the actions that change the setup or turn
+ * it into a tournament and open its console.
  */
 export const useCreation = () => {
   const router = useRouter();
@@ -53,6 +55,11 @@ export const useCreation = () => {
     (changes: Partial<TournamentSetup>) => edit((current) => ({ ...current, ...changes })),
     [edit],
   );
+
+  const setImport = useCallback((next: ListImport | null) => change({ import: next }), [change]);
+  const listImport = useListImport(setup.import, roster, setImport);
+  // A list deleted since it was imported would have the save refused.
+  const importBlock = listImport.imported?.problem ?? null;
 
   const toggleTeam = useCallback(
     (teamId: string) =>
@@ -100,7 +107,7 @@ export const useCreation = () => {
   const create = useCallback(
     async (action: CreationAction) => {
       setAttempted(true);
-      if (busy || firstProblem(problems)) return;
+      if (busy || firstProblem(problems) || importBlock) return;
       setBusy(action);
       setError(null);
       try {
@@ -114,7 +121,7 @@ export const useCreation = () => {
         setBusy(null);
       }
     },
-    [busy, problems, setup, roster, createTournament, router],
+    [busy, problems, importBlock, setup, roster, createTournament, router],
   );
 
   return {
@@ -128,12 +135,13 @@ export const useCreation = () => {
     setAllTeams,
     addTeamsFromText,
     revealId,
+    listImport,
     /** Shown once a create has been tried, and kept up to date after. */
     problems: attempted ? problems : NO_PROBLEMS,
     advancedOpen,
     setAdvancedOpen,
     busy,
-    error,
+    error: error ?? (attempted ? importBlock : null),
     create,
   };
 };

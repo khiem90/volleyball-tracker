@@ -13,6 +13,12 @@ import type { PersistentTeam, Rsvp, RsvpList, RsvpTakes } from "@/types/game";
 // Whether a list can be imported
 // ============================================
 
+/**
+ * Whether import takes this kind of list at all. Only by-team lists for
+ * now. A list's own page offers Create tournament when this is true.
+ */
+export const isImportable = (list: Pick<RsvpList, "takes">): boolean => list.takes === "teams";
+
 /** Whether a list can be imported yet. */
 export type ImportReadiness =
   /** Closed, or past its scheduled time, so nobody new arrives while the owner arranges teams. */
@@ -31,12 +37,22 @@ export const importReadiness = (
   list: Pick<RsvpList, "takes" | "closed" | "scheduledAt">,
   now: number,
 ): ImportReadiness => {
-  if (list.takes !== "teams") return { kind: "by_person" };
+  if (!isImportable(list)) return { kind: "by_person" };
   return list.closed || isListOver(list, now) ? { kind: "ready" } : { kind: "open" };
 };
 
 /** What the creation page says about a by-person list. */
 export const BY_PERSON_NOT_YET = "A by-person list cannot be imported yet.";
+
+const LIST_PARAM = "list";
+
+/** The creation page with this list chosen, which is where a list's Create tournament goes. */
+export const importHref = (listId: string): string =>
+  `/competitions/new?${LIST_PARAM}=${encodeURIComponent(listId)}`;
+
+/** The list the creation page was opened for, from its query, or null when it was opened plainly. */
+export const listToImportIn = (query: Pick<URLSearchParams, "get">): string | null =>
+  query.get(LIST_PARAM) || null;
 
 // ============================================
 // The import
@@ -83,7 +99,7 @@ export const importList = (
   list: Pick<RsvpList, "id" | "name" | "takes" | "capacity">,
   rsvps: Rsvp[],
 ): ListImport => {
-  if (list.takes !== "teams") throw new Error(BY_PERSON_NOT_YET);
+  if (!isImportable(list)) throw new Error(BY_PERSON_NOT_YET);
   return {
     listId: list.id,
     listName: list.name,
@@ -151,4 +167,28 @@ export const matchRosterTeams = (
     if (!byKey.has(nameKey(team.name))) byKey.set(nameKey(team.name), team);
   }
   return names.map((name) => byKey.get(nameKey(name)) ?? null);
+};
+
+/** An imported team as the creation page shows it. */
+export interface ImportedTeamRow {
+  team: ImportedTeam;
+  /** The roster team it enters as, or null when its name is new and it joins the roster. */
+  rosterTeam: PersistentTeam | null;
+  /** Whether another imported team has the same name, so one of them needs a rename. */
+  clashes: boolean;
+}
+
+/** The import's teams in order, each with its roster match and whether its name clashes. */
+export const importedTeamRows = (
+  imported: ListImport,
+  roster: PersistentTeam[],
+): ImportedTeamRow[] => {
+  const names = imported.teams.map((team) => team.name);
+  const matches = matchRosterTeams(names, roster);
+  const clashing = new Set(nameClashes(names).flatMap((clash) => clash.indexes));
+  return imported.teams.map((team, index) => ({
+    team,
+    rosterTeam: matches[index],
+    clashes: clashing.has(index),
+  }));
 };
