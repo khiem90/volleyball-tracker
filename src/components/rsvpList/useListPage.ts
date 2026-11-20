@@ -14,6 +14,7 @@ import {
 } from "@/lib/rsvpList";
 import { rsvpListLink } from "@/lib/shareLinks";
 import { messageOf } from "@/lib/utils";
+import { useListRsvpView } from "./useListRsvpView";
 
 const NO_PROBLEMS: ListSetupProblems = {};
 
@@ -27,14 +28,15 @@ const sameSetup = (a: ListSetup, b: ListSetup): boolean =>
 
 /**
  * Everything a list's page needs: the list, when it is on this phone's
- * clock, and for its owner the settings form and the RSVP link. A guest,
- * and a phone holding only a scorer link's silent identity, are sent to
- * sign in and back here.
+ * clock, the RSVPs and the viewer's own RSVP, and for its owner the
+ * settings form and the RSVP link. A guest, and a phone holding only a
+ * scorer link's silent identity, are sent to sign in and back here.
  */
 export const useListPage = (listId: string) => {
   const { user, isLoading: isAuthLoading } = useRequireAuth();
   const uid = user?.uid ?? null;
   const { list, error: loadError, save: saveList } = useList(listId, uid);
+  const rsvp = useListRsvpView(listId, list ?? null, user);
   const origin = useOrigin();
   const [zone] = useState(deviceZone);
 
@@ -97,6 +99,8 @@ export const useListPage = (listId: string) => {
     /** True when the list could not be read for a reason other than a refusal. */
     hasLoadError: loadError !== null,
     isOwner,
+    /** The RSVPs, the viewer's standing, and the RSVP dialog. The same for the owner as for anyone. */
+    rsvp,
     /** The scheduled time on this phone's clock, with the owner's beside it when they differ. */
     when,
     /** The RSVP link, or null while it is off. */
