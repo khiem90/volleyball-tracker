@@ -51,8 +51,10 @@ check that the output says they ran.
 
 ## The RSVP index on Home
 
-Home finds the tournaments an account has RSVP'd to with a collection group query
-on `rsvps`, filtered by `uid` and ordered by `createdAt`. That query needs the
+Home finds the RSVP lists an account is on with a collection group query on
+`rsvps`, filtered by `uid` and ordered by `createdAt`. Until tournaments stop
+taking RSVPs, it finds the tournaments an account has RSVP'd to with the same
+query. That query needs the
 `rsvps` entry in `firestore.indexes.json`, next to the `matches` one, so deploy
 the indexes along with the rules that add RSVPs. Until the index finishes
 building, Home leaves the panel out and logs the failed query. The emulator
