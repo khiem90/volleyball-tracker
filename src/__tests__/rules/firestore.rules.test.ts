@@ -1485,6 +1485,71 @@ describeFirestoreRules("Firestore rules", (env) => {
       });
     });
 
+    describe("the names an account last RSVP'd under", () => {
+      const dan = "dan-uid";
+      const seedAccount = (fields: Record<string, unknown>) =>
+        env().withSecurityRulesDisabled((unrestricted) =>
+          setDoc(userDocAt(modularFirestore(unrestricted), dan), fields),
+        );
+
+      it("takes a person name, a team name, or both from its own account", async () => {
+        const db = accountDb(dan);
+        await assertSucceeds(setDoc(userDocAt(db, dan), { rsvpTeamName: "Spikers" }));
+        await assertSucceeds(setDoc(userDocAt(db, dan), { rsvpName: "Dan" }));
+        await assertSucceeds(
+          setDoc(userDocAt(db, dan), { rsvpName: "Dan", rsvpTeamName: "Spikers" }),
+        );
+      });
+
+      it("takes one name merged beside the other, already stored", async () => {
+        await seedAccount({ rsvpName: "Dan" });
+        const db = accountDb(dan);
+        await assertSucceeds(
+          setDoc(userDocAt(db, dan), { rsvpTeamName: "Spikers" }, { merge: true }),
+        );
+        await assertSucceeds(setDoc(userDocAt(db, dan), { rsvpName: "Daniel" }, { merge: true }));
+      });
+
+      it("refuses a third field, beside either name or both", async () => {
+        const db = accountDb(dan);
+        await assertFails(setDoc(userDocAt(db, dan), { rsvpName: "Dan", isAdmin: true }));
+        await assertFails(setDoc(userDocAt(db, dan), { rsvpTeamName: "Spikers", isAdmin: true }));
+        await assertFails(
+          setDoc(userDocAt(db, dan), { rsvpName: "Dan", rsvpTeamName: "Spikers", isAdmin: true }),
+        );
+        await seedAccount({ rsvpName: "Dan", rsvpTeamName: "Spikers" });
+        await assertFails(setDoc(userDocAt(db, dan), { isAdmin: true }, { merge: true }));
+      });
+
+      it("refuses a document with neither name", async () => {
+        await assertFails(setDoc(userDocAt(accountDb(dan), dan), {}));
+      });
+
+      it("holds each name to a string of one to forty characters", async () => {
+        const db = accountDb(dan);
+        for (const field of ["rsvpName", "rsvpTeamName"]) {
+          await assertFails(setDoc(userDocAt(db, dan), { [field]: "" }));
+          await assertFails(setDoc(userDocAt(db, dan), { [field]: "x".repeat(41) }));
+          await assertFails(setDoc(userDocAt(db, dan), { [field]: 7 }));
+          await assertSucceeds(setDoc(userDocAt(db, dan), { [field]: "x".repeat(40) }));
+        }
+        // A good name does not carry a bad one in beside it.
+        await assertFails(setDoc(userDocAt(db, dan), { rsvpName: "Dan", rsvpTeamName: "" }));
+        await assertFails(setDoc(userDocAt(db, dan), { rsvpName: "", rsvpTeamName: "Spikers" }));
+      });
+
+      it("keeps the team name from another account, a signed-out request, and the anonymous identity", async () => {
+        await seedAccount({ rsvpTeamName: "Spikers" });
+        for (const db of [accountDb(otherAccount), signedOutDb(), anonymousDb(dan)]) {
+          await assertFails(getDoc(userDocAt(db, dan)));
+          await assertFails(
+            setDoc(userDocAt(db, dan), { rsvpTeamName: "Mallory's" }, { merge: true }),
+          );
+        }
+        await assertSucceeds(getDoc(userDocAt(accountDb(dan), dan)));
+      });
+    });
+
     describe("RSVPs on a list", () => {
       const dan = "dan-uid";
       const eve = "eve-uid";

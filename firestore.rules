@@ -28,18 +28,27 @@ service cloud.firestore {
         && (!('noticesReadAt' in data) || data.noticesReadAt is timestamp);
     }
 
-    // The account's own document. It holds the name the account last
-    // RSVP'd under, so the RSVP form can offer it again. Only that account
-    // reads or writes it, and nobody deletes it.
+    // A name an account's own document remembers, when it holds one: a
+    // string as long as an RSVP's name may be.
+    function rememberedNameIsValid(data, field) {
+      return !(field in data)
+        || (data[field] is string && data[field].size() >= 1 && data[field].size() <= 40);
+    }
+
+    // The account's own document. It holds the names the account last
+    // RSVP'd under, so the RSVP form can offer them again: rsvpName from a
+    // by-person list and rsvpTeamName from a by-team list. It holds one or
+    // both and nothing else. Only that account reads or writes it, and
+    // nobody deletes it.
     match /users/{uid} {
       allow read: if realAccount() && request.auth.uid == uid;
       allow create, update: if
         realAccount()
         && request.auth.uid == uid
-        && request.resource.data.keys().hasOnly(['rsvpName'])
-        && request.resource.data.rsvpName is string
-        && request.resource.data.rsvpName.size() >= 1
-        && request.resource.data.rsvpName.size() <= 40;
+        && request.resource.data.keys().hasOnly(['rsvpName', 'rsvpTeamName'])
+        && request.resource.data.keys().hasAny(['rsvpName', 'rsvpTeamName'])
+        && rememberedNameIsValid(request.resource.data, 'rsvpName')
+        && rememberedNameIsValid(request.resource.data, 'rsvpTeamName');
     }
 
     // Roster: the teams an account keeps between tournaments. Only that
