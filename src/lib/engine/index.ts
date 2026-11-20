@@ -679,8 +679,9 @@ export const bracketAddRefusal = (format: TournamentFormat): string =>
  * Add a team while live. In a rotation format it joins the back of the
  * queue, and a court the tournament runs but that had gone empty opens if
  * the queue can now fill it. In a round robin it gets its matches. A team
- * that had withdrawn rejoins the same way and keeps its record. A bracket
- * takes nobody once it is drawn.
+ * that had withdrawn rejoins the same way and keeps its record, and a mixed
+ * team keeps its players, which live on its entry alone. A bracket takes
+ * nobody once it is drawn.
  */
 const addTeam = (working: Working, command: Extract<EngineCommand, { type: "add_team" }>) => {
   requireLive(working, "take a new team");
@@ -696,6 +697,7 @@ const addTeam = (working: Working, command: Extract<EngineCommand, { type: "add_
     teamId: command.teamId,
     name: command.name,
     ...(command.color !== undefined && { color: command.color }),
+    ...(entry?.players !== undefined && { players: entry.players }),
   };
   working.tournament = {
     ...tournament,

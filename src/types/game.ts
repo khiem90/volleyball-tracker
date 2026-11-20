@@ -25,12 +25,18 @@ export type TournamentStatus = "draft" | "live" | "completed";
  * A team's place in one tournament. An entry copies the team's name and color
  * from the roster when it is made, so a completed tournament keeps them as
  * they were. Withdrawing a team from a live tournament sets `withdrawnAt`.
+ *
+ * An entry with `players` is a mixed team (ADR-0006). Its `teamId` was
+ * generated for this tournament and no roster team has it, so the entry's
+ * own name and color are what every page shows.
  */
 export interface Entry {
   teamId: string;
   name: string;
   color?: string;
   withdrawnAt?: number;
+  /** The players' names on a mixed team. Absent on a roster team's entry. */
+  players?: string[];
 }
 
 export interface TournamentSettings {
