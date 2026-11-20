@@ -28,6 +28,7 @@ import {
   duplicateListSetup,
   firstListProblem,
   isListOver,
+  isOffHome,
   LIST_IS_OVER,
   listSetupProblems,
   refusedListRsvpMessage,
@@ -641,6 +642,12 @@ const subscribeToAccountListRsvps = (
  * accounts' lists. Delivers once the account's RSVPs arrive and again with
  * every change. homeListRows turns a delivery into rows.
  *
+ * The list's own document is read first. Its RSVPs and newest notice are
+ * read once it arrives, and only while Home still shows the list. Once the
+ * document says the list is 24 hours past its scheduled time, both reads
+ * stop and their records leave the delivery, so a list from months ago
+ * costs one listener and not three.
+ *
  * A list whose reads the rules refuse, as they do once the owner turns its
  * link off or deletes it, is dropped from the delivery without failing it,
  * and read again the next time the account's RSVPs change. A withdrawal
@@ -681,6 +688,40 @@ export const subscribeToAccountLists = (
 
   const watch = (listId: string) => {
     const refused = () => drop(listId);
+    // The list's RSVPs and its newest notice, read only while Home still
+    // shows the list. An account's RSVPs pile up week after week, and
+    // without this every old list would cost Home two more reads for good.
+    let itsPeople: Unsubscribe[] = [];
+    const readItsPeople = () => {
+      itsPeople = [
+        subscribeToListRsvps(
+          db,
+          listId,
+          (all) => {
+            rsvps[listId] = all;
+            deliver();
+          },
+          refused,
+        ),
+        watchListNotices(
+          db,
+          listId,
+          true,
+          (newest) => {
+            notices[listId] = newest;
+            deliver();
+          },
+          refused,
+        ),
+      ];
+    };
+    const letItsPeopleGo = () => {
+      itsPeople.forEach((unsubscribe) => unsubscribe());
+      itsPeople = [];
+      delete rsvps[listId];
+      delete notices[listId];
+    };
+
     watching.set(listId, [
       subscribeToRsvpList(
         db,
@@ -688,29 +729,15 @@ export const subscribeToAccountLists = (
         (list) => {
           if (list) lists[listId] = list;
           else delete lists[listId];
+          // This phone's clock, which only decides what Home shows.
+          const isShown = list !== null && !isOffHome(list, Date.now());
+          if (isShown && itsPeople.length === 0) readItsPeople();
+          if (!isShown) letItsPeopleGo();
           deliver();
         },
         refused,
       ),
-      subscribeToListRsvps(
-        db,
-        listId,
-        (all) => {
-          rsvps[listId] = all;
-          deliver();
-        },
-        refused,
-      ),
-      watchListNotices(
-        db,
-        listId,
-        true,
-        (newest) => {
-          notices[listId] = newest;
-          deliver();
-        },
-        refused,
-      ),
+      letItsPeopleGo,
     ]);
   };
 

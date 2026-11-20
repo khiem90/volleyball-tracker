@@ -3,6 +3,7 @@ import {
   doc,
   serverTimestamp,
   setDoc,
+  updateDoc,
   type Firestore,
   type Unsubscribe,
 } from "firebase/firestore";
@@ -202,6 +203,82 @@ describeFirestoreRules("Home's lists on Firestore", (env) => {
       const after = await watcher.until((read) => !(friday.id in read.lists));
       expect(friday.id in after.rsvps).toBe(false);
       expect(rowNames(dan, after)).toEqual(["Saturday"]);
+      expect(watcher.failure()).toBeNull();
+    } finally {
+      watcher.stop();
+    }
+  });
+
+  /**
+   * Move a list's times into the past, around the rules: scheduled
+   * `hoursAgo` hours back and opened an hour before that. Nobody RSVPs to
+   * a list that is over, so the RSVPs go on first and the times move after.
+   */
+  const moveBack = (listId: string, hoursAgo: number) =>
+    env().withSecurityRulesDisabled((unrestricted) =>
+      updateDoc(doc(modularFirestore(unrestricted), "rsvpLists", listId), {
+        scheduledAt: minutesFromNow(-hoursAgo * 60),
+        opensAt: minutesFromNow(-(hoursAgo + 1) * 60),
+      }),
+    );
+
+  it("reads only the list itself once it is 24 hours past its scheduled time, and still reads a newer one whole", async () => {
+    const lastNight = await openList("Last night");
+    const lastWeek = await openList("Last week");
+    for (const list of [lastNight, lastWeek]) {
+      await sendListRsvp(accountDb(dan), list.id, dan, { name: "Dan", note: "" });
+      await postListNotice(accountDb(owner), list.id, "Thanks for coming.");
+    }
+    await moveBack(lastNight.id, 1);
+    await moveBack(lastWeek.id, 25);
+    const watcher = watchAccountLists(accountDb(dan), dan);
+
+    try {
+      await watcher.until(
+        (read) =>
+          lastWeek.id in read.lists &&
+          read.rsvps[lastNight.id]?.length === 1 &&
+          read.notices[lastNight.id]?.length === 1,
+      );
+      // One more answer about the old list, by which time a read of its
+      // RSVPs or notices would have answered too.
+      await saveListSettings(
+        accountDb(owner),
+        lastWeek,
+        { ...listSetupOf(lastWeek), name: "Last week, renamed" },
+        "America/New_York",
+      );
+
+      const after = await watcher.until(
+        (read) => read.lists[lastWeek.id]?.name === "Last week, renamed",
+      );
+      expect(lastWeek.id in after.rsvps).toBe(false);
+      expect(lastWeek.id in after.notices).toBe(false);
+      expect(rowNames(dan, after)).toEqual(["Last night"]);
+      expect(watcher.failure()).toBeNull();
+    } finally {
+      watcher.stop();
+    }
+  });
+
+  it("lets go of a list's RSVPs and notices when its document comes to say it is 24 hours past", async () => {
+    const friday = await openList("Friday");
+    await sendListRsvp(accountDb(dan), friday.id, dan, { name: "Dan", note: "" });
+    await postListNotice(accountDb(owner), friday.id, "Thanks for coming.");
+    const watcher = watchAccountLists(accountDb(dan), dan);
+
+    try {
+      await watcher.until(
+        (read) => read.rsvps[friday.id]?.length === 1 && read.notices[friday.id]?.length === 1,
+      );
+
+      await moveBack(friday.id, 25);
+
+      const after = await watcher.until(
+        (read) => !(friday.id in read.rsvps) && !(friday.id in read.notices),
+      );
+      expect(friday.id in after.lists).toBe(true);
+      expect(after.mine).toHaveLength(1);
       expect(watcher.failure()).toBeNull();
     } finally {
       watcher.stop();

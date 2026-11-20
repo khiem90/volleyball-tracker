@@ -608,7 +608,7 @@ export const HOME_KEEPS_A_LIST_FOR = 24 * 60 * 60 * 1000;
  * Whether Home has let go of a list at `now`: its scheduled time is 24
  * hours back or more. A list with no scheduled time is never let go.
  */
-const isOffHome = (list: Pick<RsvpList, "scheduledAt">, now: number): boolean =>
+export const isOffHome = (list: Pick<RsvpList, "scheduledAt">, now: number): boolean =>
   list.scheduledAt !== undefined && now >= list.scheduledAt + HOME_KEEPS_A_LIST_FOR;
 
 /**
