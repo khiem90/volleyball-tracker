@@ -43,11 +43,11 @@ const list = (id: string, changes: Partial<RsvpList> = {}): RsvpList => ({
 
 /** A list as Firestore returns it when its times were never set. */
 const untimed = (id: string, changes: Partial<RsvpList> = {}): RsvpList => {
-  const { scheduledAt: _at, scheduledZone: _zone, opensAt: _opens, ...rest } = list(id, {
-    enabled: false,
-    ...changes,
-  });
-  return rest;
+  const stored = list(id, { enabled: false, ...changes });
+  delete stored.scheduledAt;
+  delete stored.scheduledZone;
+  delete stored.opensAt;
+  return stored;
 };
 
 describe("emptyListSetup", () => {

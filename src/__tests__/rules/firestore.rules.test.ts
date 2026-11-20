@@ -1445,7 +1445,9 @@ describeFirestoreRules("Firestore rules", (env) => {
 
       it("refuses turning the link on with either time missing, and taking a time off a list with the link on", async () => {
         await env().withSecurityRulesDisabled((unrestricted) => {
-          const { scheduledAt: _at, opensAt: _opens, ...noTimes } = listDoc({ enabled: false });
+          const noTimes: Record<string, unknown> = listDoc({ enabled: false });
+          delete noTimes.scheduledAt;
+          delete noTimes.opensAt;
           return setDoc(listAt(modularFirestore(unrestricted), "no-times"), noTimes);
         });
         await seedList("list-on");

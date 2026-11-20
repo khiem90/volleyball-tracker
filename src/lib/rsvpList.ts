@@ -23,6 +23,12 @@ export interface ListSetup {
   enabled: boolean;
 }
 
+/** How the owner's choice of what a list takes reads on a button and in a row. */
+export const TAKES_LABEL: Record<RsvpTakes, string> = {
+  people: "By person",
+  teams: "By team",
+};
+
 /** The capacity offered before the owner changes it. */
 export const DEFAULT_LIST_CAPACITY = 12;
 
