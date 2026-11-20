@@ -58,6 +58,8 @@ export const listSetupOf = (list: RsvpList): ListSetup => ({
 
 /** Why a list setup cannot be saved yet, by field. Empty when it can. */
 export interface ListSetupProblems {
+  /** The list is over, so none of its settings can change. No other problem comes with it. */
+  over?: string;
   name?: string;
   scheduledAt?: string;
   opensAt?: string;
@@ -65,20 +67,75 @@ export interface ListSetupProblems {
 }
 
 /**
+ * What a stored list already holds, which limits how its settings may
+ * change. A list being created holds nothing, and has no locks.
+ */
+export interface ListLocks {
+  /** The settings as stored. */
+  stored: ListSetup;
+  /** How many RSVPs are confirmed at the stored capacity. Capacity cannot go below it. */
+  confirmed: number;
+  /** How many RSVPs have arrived, held spots included. The first one locks the open time. */
+  arrivals: number;
+  /** True once the scheduled time has passed. No setting changes after it. */
+  isOver: boolean;
+}
+
+/**
+ * The locks on a stored list with `rsvpCount` RSVPs on it, held spots
+ * included, at `now`. On a page `now` is the phone's clock.
+ */
+export const listLocks = (list: RsvpList, rsvpCount: number, now: number): ListLocks => ({
+  stored: listSetupOf(list),
+  confirmed: Math.min(rsvpCount, list.capacity),
+  arrivals: rsvpCount,
+  isOver: isListOver(list, now),
+});
+
+/** Whether two setups hold the same settings. */
+export const sameListSetup = (a: ListSetup, b: ListSetup): boolean =>
+  a.name === b.name &&
+  a.takes === b.takes &&
+  a.capacity === b.capacity &&
+  a.scheduledAt === b.scheduledAt &&
+  a.opensAt === b.opensAt &&
+  a.enabled === b.enabled;
+
+/** The open time's problem once it is locked. The form also shows it under the read-only field. */
+export const LIST_OPEN_TIME_LOCKED = "The list has RSVPs, so the open time cannot change.";
+
+/** Why no setting of a list that is over can change. */
+export const LIST_SETTINGS_LOCKED = "This list is over, so its settings cannot change.";
+
+/**
  * The problems with a list setup. A list needs a name, since the RSVP page
  * says what people are saying yes to. The link cannot go on without both
  * times, since the page could not say when. A list with the link off may
  * leave them unset. An open time after the scheduled time and a capacity
  * below one are wrong either way.
+ *
+ * Against the `locks` of a stored list there are three more. The capacity
+ * cannot drop below the confirmed count, so nobody loses a spot to the
+ * stepper. The open time cannot change once an RSVP has arrived, so nobody
+ * who already answered is confused. And once the list is over no setting
+ * can change, so the record of who came stops moving.
  */
-export const listSetupProblems = (setup: ListSetup): ListSetupProblems => {
+export const listSetupProblems = (setup: ListSetup, locks?: ListLocks): ListSetupProblems => {
+  if (locks?.isOver) return sameListSetup(setup, locks.stored) ? {} : { over: LIST_SETTINGS_LOCKED };
+
   const problems: ListSetupProblems = {};
   if (setup.name.trim().length === 0) problems.name = "Give the list a name.";
-  if (!(setup.capacity >= 1)) problems.capacity = "Capacity must be at least 1.";
+  if (!(setup.capacity >= 1)) {
+    problems.capacity = "Capacity must be at least 1.";
+  } else if (locks && setup.capacity < locks.confirmed) {
+    problems.capacity = `${locks.confirmed} RSVPs are confirmed, so capacity cannot go below ${locks.confirmed}.`;
+  }
   if (setup.enabled && setup.scheduledAt === null) {
     problems.scheduledAt = "Set the scheduled time before turning the RSVP link on.";
   }
-  if (setup.enabled && setup.opensAt === null) {
+  if (locks && locks.arrivals > 0 && setup.opensAt !== locks.stored.opensAt) {
+    problems.opensAt = LIST_OPEN_TIME_LOCKED;
+  } else if (setup.enabled && setup.opensAt === null) {
     problems.opensAt = "Set the open time before turning the RSVP link on.";
   } else if (
     setup.opensAt !== null &&
@@ -92,7 +149,7 @@ export const listSetupProblems = (setup: ListSetup): ListSetupProblems => {
 
 /** The first problem to fix, in the order the form shows its fields. */
 export const firstListProblem = (problems: ListSetupProblems): string | undefined =>
-  problems.name ?? problems.capacity ?? problems.scheduledAt ?? problems.opensAt;
+  problems.over ?? problems.name ?? problems.capacity ?? problems.scheduledAt ?? problems.opensAt;
 
 // ============================================
 // The RSVP tab
