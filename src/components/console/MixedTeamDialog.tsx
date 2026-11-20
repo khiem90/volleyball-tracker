@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { MbIcon } from "@/components/matchbook/MbIcon";
-import { InlineSpinner } from "@/components/shared";
+import { InlineSpinner, MoveToSelect } from "@/components/shared";
 import type { TeamRow } from "@/lib/console";
 import type { MixedTeamEdit } from "@/lib/entries";
 import { RSVP_NAME_MAX } from "@/lib/rsvp";
@@ -142,35 +142,14 @@ const Players = ({
             </span>
             <span className="flex shrink-0 flex-wrap items-center justify-end gap-2">
               {others.length > 0 && (
-                <span className="relative">
-                  <select
-                    className="mb-select-native w-auto text-[0.72rem]"
-                    value=""
-                    disabled={busy}
-                    onChange={(event) =>
-                      event.target.value &&
-                      onEdit({
-                        kind: "move_player",
-                        teamId: team.teamId,
-                        player,
-                        toTeamId: event.target.value,
-                      })
-                    }
-                    aria-label={`Move ${name} to another team`}
-                  >
-                    <option value="">Move to</option>
-                    {others.map((other) => (
-                      <option key={other.teamId} value={other.teamId}>
-                        {other.name}
-                      </option>
-                    ))}
-                  </select>
-                  <MbIcon
-                    id="chevron-down"
-                    size={13}
-                    className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-mb-ink-muted"
-                  />
-                </span>
+                <MoveToSelect
+                  player={name}
+                  teams={others.map((other) => ({ id: other.teamId, name: other.name }))}
+                  disabled={busy}
+                  onMove={(toTeamId) =>
+                    onEdit({ kind: "move_player", teamId: team.teamId, player, toTeamId })
+                  }
+                />
               )}
               <button
                 type="button"

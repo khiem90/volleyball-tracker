@@ -10,7 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { MbIcon } from "@/components/matchbook/MbIcon";
-import { InlineSpinner } from "@/components/shared";
+import { InlineSpinner, MoveToSelect, StepButtons } from "@/components/shared";
 import { RSVP_NAME_MAX } from "@/lib/rsvp";
 import type { ListImportView } from "./useListImport";
 
@@ -110,8 +110,6 @@ const CloseOffer = ({ view }: { view: ListImportView }) => {
 type Imported = NonNullable<ListImportView["imported"]>;
 type Dealing = NonNullable<Imported["dealing"]>;
 
-const STEP = "mb-btn mb-btn-outline-navy min-w-11 px-3 text-[1rem]";
-
 /** The team size stepper and Shuffle of a by-person import. Either one deals everyone again. */
 const DealControls = ({ dealing }: { dealing: Dealing }) => (
   <div className="flex flex-col gap-1.5 border-t border-mb-rule px-3 py-2.5">
@@ -121,24 +119,13 @@ const DealControls = ({ dealing }: { dealing: Dealing }) => (
         <span className="text-[0.85rem] font-semibold">{dealing.teamSize}</span>
       </div>
       <span className="flex gap-1">
-        <button
-          type="button"
-          onClick={() => dealing.setTeamSize(dealing.teamSize - 1)}
-          disabled={dealing.teamSize <= 1}
-          aria-label="Lower the team size by one"
-          className={STEP}
-        >
-          −
-        </button>
-        <button
-          type="button"
-          onClick={() => dealing.setTeamSize(dealing.teamSize + 1)}
-          disabled={dealing.teamSize >= dealing.largestTeamSize}
-          aria-label="Raise the team size by one"
-          className={STEP}
-        >
-          +
-        </button>
+        <StepButtons
+          what="team size"
+          value={dealing.teamSize}
+          min={1}
+          max={dealing.largestTeamSize}
+          onChange={dealing.setTeamSize}
+        />
         <button type="button" onClick={dealing.shuffle} className="mb-btn mb-btn-outline">
           <MbIcon id="swap" size={14} />
           Shuffle
@@ -159,6 +146,51 @@ const DealControls = ({ dealing }: { dealing: Dealing }) => (
 const teamLabel = (name: string, index: number) => name.trim() || `Team ${index + 1}`;
 
 /**
+ * What a row of an imported team holds, by-team and mixed alike: its color,
+ * a name the owner can change, and a word on where it stands. `label`
+ * names the field for a screen reader. A blank name and a clash both mark
+ * the field, and a clash also replaces `status` with "Same name".
+ */
+const TeamNameRow = ({
+  team,
+  color,
+  clashes,
+  label,
+  status,
+  onRename,
+}: {
+  team: Imported["rows"][number]["team"];
+  color: string | undefined;
+  clashes: boolean;
+  label: string;
+  status: string;
+  onRename: (teamId: string, name: string) => void;
+}) => {
+  const isInvalid = clashes || team.name.trim().length === 0;
+  return (
+    <>
+      <span
+        className="h-3 w-3 shrink-0 rounded-full border border-mb-navy"
+        style={{ background: color ?? "transparent" }}
+        aria-hidden="true"
+      />
+      <span className={`mb-input min-w-0 flex-1 ${isInvalid ? "border-mb-red" : ""}`}>
+        <input
+          type="text"
+          value={team.name}
+          onChange={(event) => onRename(team.id, event.target.value)}
+          maxLength={RSVP_NAME_MAX}
+          autoComplete="off"
+          aria-label={label}
+          aria-invalid={isInvalid ? true : undefined}
+        />
+      </span>
+      <span className="mb-kicker shrink-0">{clashes ? "Same name" : status}</span>
+    </>
+  );
+};
+
+/**
  * A by-person import's mixed teams in number order, each with its color, a
  * name the owner can change, and its players. A player moves through the
  * menu beside their name.
@@ -174,61 +206,34 @@ const MixedTeams = ({
 }) => (
   <ul aria-label={`Mixed teams dealt from ${imported.listName}`} aria-describedby={describedBy}>
     {imported.rows.map(({ team, clashes }, index) => {
-      const isInvalid = clashes || team.name.trim().length === 0;
       const players = team.players ?? [];
+      const others = imported.rows.flatMap((other, otherIndex) =>
+        other.team.id === team.id
+          ? []
+          : { id: other.team.id, name: teamLabel(other.team.name, otherIndex) },
+      );
       return (
         <li key={team.id} className="border-t border-mb-rule px-3 py-2">
           <div className="flex min-h-11 items-center gap-3">
-            <span
-              className="h-3 w-3 shrink-0 rounded-full border border-mb-navy"
-              style={{ background: imported.mixedColors[index] ?? "transparent" }}
-              aria-hidden="true"
+            <TeamNameRow
+              team={team}
+              color={imported.mixedColors[index]}
+              clashes={clashes}
+              label={`Name of mixed team ${index + 1}`}
+              status={`${players.length} ${players.length === 1 ? "player" : "players"}`}
+              onRename={imported.rename}
             />
-            <span className={`mb-input min-w-0 flex-1 ${isInvalid ? "border-mb-red" : ""}`}>
-              <input
-                type="text"
-                value={team.name}
-                onChange={(event) => imported.rename(team.id, event.target.value)}
-                maxLength={RSVP_NAME_MAX}
-                autoComplete="off"
-                aria-label={`Name of mixed team ${index + 1}`}
-                aria-invalid={isInvalid ? true : undefined}
-              />
-            </span>
-            <span className="mb-kicker shrink-0">
-              {clashes ? "Same name" : `${players.length} ${players.length === 1 ? "player" : "players"}`}
-            </span>
           </div>
           <ul aria-label={`Players on ${teamLabel(team.name, index)}`} className="pl-6">
             {players.map((person) => (
               <li key={person.id} className="flex min-h-11 items-center justify-between gap-3 py-1">
                 <span className="min-w-0 truncate text-[0.85rem]">{person.name}</span>
-                {imported.rows.length > 1 && (
-                  <span className="relative shrink-0">
-                    <select
-                      className="mb-select-native min-h-11 w-auto text-[0.72rem]"
-                      value=""
-                      onChange={(event) =>
-                        event.target.value && dealing.move(person.id, event.target.value)
-                      }
-                      aria-label={`Move ${person.name} to another team`}
-                    >
-                      <option value="">Move to</option>
-                      {imported.rows.map(
-                        (other, otherIndex) =>
-                          other.team.id !== team.id && (
-                            <option key={other.team.id} value={other.team.id}>
-                              {teamLabel(other.team.name, otherIndex)}
-                            </option>
-                          ),
-                      )}
-                    </select>
-                    <MbIcon
-                      id="chevron-down"
-                      size={13}
-                      className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-mb-ink-muted"
-                    />
-                  </span>
+                {others.length > 0 && (
+                  <MoveToSelect
+                    player={person.name}
+                    teams={others}
+                    onMove={(toTeamId) => dealing.move(person.id, toTeamId)}
+                  />
                 )}
               </li>
             ))}
@@ -289,35 +294,21 @@ export const ListImportSection = ({ view, problem }: { view: ListImportView; pro
               aria-label={`Teams imported from ${imported.listName}`}
               aria-describedby={shownProblem ? "import-problem" : undefined}
             >
-              {imported.rows.map(({ team, rosterTeam, clashes }, index) => {
-                const isInvalid = clashes || team.name.trim().length === 0;
-                return (
-                  <li
-                    key={team.id}
-                    className="flex min-h-11 items-center gap-3 border-t border-mb-rule px-3 py-2"
-                  >
-                    <span
-                      className="h-3 w-3 shrink-0 rounded-full border border-mb-navy"
-                      style={{ background: rosterTeam?.color ?? "transparent" }}
-                      aria-hidden="true"
-                    />
-                    <span className={`mb-input min-w-0 flex-1 ${isInvalid ? "border-mb-red" : ""}`}>
-                      <input
-                        type="text"
-                        value={team.name}
-                        onChange={(event) => imported.rename(team.id, event.target.value)}
-                        maxLength={RSVP_NAME_MAX}
-                        autoComplete="off"
-                        aria-label={`Name of imported team ${index + 1}`}
-                        aria-invalid={isInvalid ? true : undefined}
-                      />
-                    </span>
-                    <span className="mb-kicker shrink-0">
-                      {clashes ? "Same name" : rosterTeam ? "On roster" : "Joins roster"}
-                    </span>
-                  </li>
-                );
-              })}
+              {imported.rows.map(({ team, rosterTeam, clashes }, index) => (
+                <li
+                  key={team.id}
+                  className="flex min-h-11 items-center gap-3 border-t border-mb-rule px-3 py-2"
+                >
+                  <TeamNameRow
+                    team={team}
+                    color={rosterTeam?.color}
+                    clashes={clashes}
+                    label={`Name of imported team ${index + 1}`}
+                    status={rosterTeam ? "On roster" : "Joins roster"}
+                    onRename={imported.rename}
+                  />
+                </li>
+              ))}
             </ul>
           )}
         </>

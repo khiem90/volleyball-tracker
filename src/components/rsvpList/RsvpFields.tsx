@@ -1,5 +1,6 @@
 "use client";
 
+import { StepButtons } from "@/components/shared";
 import { epochToWallClock, timeLabel, wallClockToEpoch } from "@/lib/rsvp";
 
 const MAX_CAPACITY = 999;
@@ -79,7 +80,6 @@ export const CapacityField = ({
   problem?: string;
   onChange: (value: number) => void;
 }) => {
-  const step = "mb-btn mb-btn-outline-navy min-w-11 px-3 text-[1rem]";
   const clamp = (n: number) => Math.max(0, Math.min(MAX_CAPACITY, n));
   return (
     <div className="flex flex-col gap-1.5">
@@ -100,24 +100,13 @@ export const CapacityField = ({
             aria-describedby={problem ? `${id}-problem` : undefined}
           />
         </span>
-        <button
-          type="button"
-          onClick={() => onChange(clamp(value - 1))}
-          disabled={value <= 1}
-          aria-label="Lower the capacity by one"
-          className={step}
-        >
-          −
-        </button>
-        <button
-          type="button"
-          onClick={() => onChange(clamp(value + 1))}
-          disabled={value >= MAX_CAPACITY}
-          aria-label="Raise the capacity by one"
-          className={step}
-        >
-          +
-        </button>
+        <StepButtons
+          what="capacity"
+          value={value}
+          min={1}
+          max={MAX_CAPACITY}
+          onChange={(next) => onChange(clamp(next))}
+        />
       </div>
       <span className="text-[0.72rem] text-mb-ink-muted">{note}</span>
       <Problem id={`${id}-problem`} problem={problem} />
