@@ -40,6 +40,7 @@ import {
   tournamentDoc,
   updateTournamentFields,
 } from "@/lib/tournaments";
+import { accountDoc, readRememberedName, RsvpRefusedError } from "@/lib/rsvpListData";
 import type { Notice, Rsvp, Tournament } from "@/types/game";
 
 /**
@@ -52,10 +53,11 @@ import type { Notice, Rsvp, Tournament } from "@/types/game";
 // The path builder sits in tournaments.ts, which deletes the list with the
 // tournament and cannot import this module without a cycle.
 export { rsvpsCollection };
+// The account's remembered name and the refusal are the same for an RSVP
+// to a list, and belong to the list's module.
+export { accountDoc, readRememberedName, RsvpRefusedError };
 export const rsvpDoc = (db: Firestore, tournamentId: string, uid: string) =>
   doc(db, "tournaments", tournamentId, "rsvps", uid);
-/** The account's own document. Only that account can read or write it. */
-export const accountDoc = (db: Firestore, uid: string) => doc(db, "users", uid);
 
 /**
  * A query's documents with their ids. A pending write of this phone's own
@@ -191,14 +193,6 @@ export const subscribeToRsvps = (
 // RSVPing
 // ============================================
 
-/** The rules refused an RSVP; the message says why, as the RSVP page shows it. */
-export class RsvpRefusedError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "RsvpRefusedError";
-  }
-}
-
 /**
  * Why the rules refused an RSVP to this tournament, from the tournament as
  * the server has it now. A refused read means the owner turned the link
@@ -258,13 +252,6 @@ export const sendRsvp = async (
     if (!isRefused(error)) throw error;
     throw new RsvpRefusedError(await whyRefused(db, tournamentId));
   }
-};
-
-/** The name this account last RSVP'd under, or null before its first RSVP. */
-export const readRememberedName = async (db: Firestore, uid: string): Promise<string | null> => {
-  const snapshot = await getDoc(accountDoc(db, uid));
-  const name: unknown = snapshot.data()?.rsvpName;
-  return typeof name === "string" && name.length > 0 ? name : null;
 };
 
 // ============================================
@@ -375,9 +362,19 @@ const subscribeToAccountRsvps = (
   onSnapshot(
     query(collectionGroup(db, "rsvps"), where("uid", "==", uid), orderBy("createdAt")),
     (snapshot) => {
-      // An RSVP sits at tournaments/{id}/rsvps/{uid}.
-      const tournamentIds = snapshot.docs.map((d) => d.ref.parent.parent!.id);
-      onChange(withIds<Rsvp>(snapshot).map((rsvp, i) => ({ ...rsvp, tournamentId: tournamentIds[i] })));
+      // An RSVP sits at tournaments/{id}/rsvps/{uid}. The query also finds
+      // the account's RSVPs to lists, at rsvpLists/{id}/rsvps/{uid}. Those
+      // are not tournaments, so they are left out.
+      const tournamentIds = snapshot.docs.map((d) => {
+        const parent = d.ref.parent.parent!;
+        return parent.parent.id === "tournaments" ? parent.id : null;
+      });
+      onChange(
+        withIds<Rsvp>(snapshot).flatMap((rsvp, i) => {
+          const tournamentId = tournamentIds[i];
+          return tournamentId === null ? [] : [{ ...rsvp, tournamentId }];
+        }),
+      );
     },
     onError,
   );

@@ -1,28 +1,49 @@
 import {
   collection,
+  deleteDoc,
   deleteField,
   doc,
+  getDoc,
+  getDocFromServer,
   onSnapshot,
   orderBy,
   query,
+  serverTimestamp,
   setDoc,
   updateDoc,
   where,
+  writeBatch,
   type Firestore,
   type Unsubscribe,
+  type WriteBatch,
 } from "firebase/firestore";
-import { stripUndefined } from "@/lib/firestoreData";
-import { firstListProblem, listSetupProblems, type ListSetup } from "@/lib/rsvpList";
-import type { RsvpList } from "@/types/game";
+import { isRefused, stripUndefined } from "@/lib/firestoreData";
+import { rsvpEntryProblems, type RsvpEntry } from "@/lib/rsvp";
+import {
+  firstListProblem,
+  listSetupProblems,
+  refusedListRsvpMessage,
+  type ListSetup,
+} from "@/lib/rsvpList";
+import type { Rsvp, RsvpList } from "@/types/game";
 
 /**
  * RSVP lists on Firestore: one document per list in the top-level
- * `rsvpLists` collection, owned by the account in `ownerId` (ADR-0005).
- * The pure derivations are in src/lib/rsvpList.ts.
+ * `rsvpLists` collection, owned by the account in `ownerId` (ADR-0005),
+ * the RSVPs in the list's `rsvps` subcollection, and the name an account
+ * last RSVP'd under on its own `users/{uid}` document. The pure
+ * derivations are in src/lib/rsvpList.ts and src/lib/rsvp.ts.
  */
 
 export const rsvpListsCollection = (db: Firestore) => collection(db, "rsvpLists");
 export const rsvpListDoc = (db: Firestore, listId: string) => doc(db, "rsvpLists", listId);
+export const listRsvpsCollection = (db: Firestore, listId: string) =>
+  collection(db, "rsvpLists", listId, "rsvps");
+/** An account's own RSVP to a list. Its id is the account's uid. */
+export const listRsvpDoc = (db: Firestore, listId: string, uid: string) =>
+  doc(db, "rsvpLists", listId, "rsvps", uid);
+/** The account's own document. Only that account can read or write it. */
+export const accountDoc = (db: Firestore, uid: string) => doc(db, "users", uid);
 
 const throwFirstProblem = (setup: ListSetup): void => {
   const problem = firstListProblem(listSetupProblems(setup));
@@ -139,3 +160,136 @@ export const saveListSettings = async (
 
   await updateDoc(rsvpListDoc(db, list.id), { ...changes, updatedAt: Date.now() });
 };
+
+// ============================================
+// The RSVPs on a list
+// ============================================
+
+/**
+ * A list's RSVPs in arrival order, for the owner, or for any real account
+ * while the RSVP link is on. Firestore orders equal arrival times by
+ * document id, so the order is the same on every phone. A pending write of
+ * this phone's own shows with the server time estimated until the server
+ * answers. Calls `onError` when the rules refuse the read, as they do once
+ * the owner turns the link off.
+ */
+export const subscribeToListRsvps = (
+  db: Firestore,
+  listId: string,
+  onChange: (rsvps: Rsvp[]) => void,
+  onError?: (error: Error) => void,
+): Unsubscribe =>
+  onSnapshot(
+    query(listRsvpsCollection(db, listId), orderBy("createdAt")),
+    (snapshot) =>
+      onChange(
+        snapshot.docs.map(
+          (d) => ({ ...d.data({ serverTimestamps: "estimate" }), id: d.id }) as Rsvp,
+        ),
+      ),
+    (error) => onError?.(error),
+  );
+
+// ============================================
+// RSVPing
+// ============================================
+
+/** The rules refused an RSVP. The message says why, as the RSVP page shows it. */
+export class RsvpRefusedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "RsvpRefusedError";
+  }
+}
+
+/** The name this account last RSVP'd under, or null before its first RSVP. */
+export const readRememberedName = async (db: Firestore, uid: string): Promise<string | null> => {
+  const snapshot = await getDoc(accountDoc(db, uid));
+  const name: unknown = snapshot.data()?.rsvpName;
+  return typeof name === "string" && name.length > 0 ? name : null;
+};
+
+/**
+ * Why the rules refused an RSVP to this list, from the list as the server
+ * has it now. A refused read, or no list at all, means the link is off.
+ * The phone's clock only tells apart the reasons the server's clock gave.
+ */
+const whyRefused = async (db: Firestore, listId: string): Promise<string> => {
+  try {
+    const snapshot = await getDocFromServer(rsvpListDoc(db, listId));
+    const list = snapshot.exists() ? (snapshot.data() as RsvpList) : null;
+    return refusedListRsvpMessage(list, Date.now());
+  } catch (error) {
+    if (isRefused(error)) return refusedListRsvpMessage(null, Date.now());
+    throw error;
+  }
+};
+
+/**
+ * A batch that remembers `name` on the account, for the RSVP write to join,
+ * with the entry trimmed as it is stored. A name or note the rules would
+ * refuse is thrown before anything is written.
+ */
+const rememberingBatch = (
+  db: Firestore,
+  uid: string,
+  entry: RsvpEntry,
+): { batch: WriteBatch; name: string; note: string } => {
+  const [problem] = Object.values(rsvpEntryProblems(entry));
+  if (problem) throw new Error(problem);
+  const name = entry.name.trim();
+  const batch = writeBatch(db);
+  batch.set(accountDoc(db, uid), { rsvpName: name }, { merge: true });
+  return { batch, name, note: entry.note.trim() };
+};
+
+/**
+ * RSVP to a list as the real account `uid`, under the name and note given,
+ * and remember the name on the account for next time. Both land in one
+ * batch or neither does. The server writes the arrival time. The rules
+ * refuse the RSVP before the open time and from the scheduled time on, by
+ * the server's clock, after a close, and with the link off. That refusal
+ * rejects with an RsvpRefusedError saying which. A name or note the rules
+ * would refuse is thrown before anything is written.
+ */
+export const sendListRsvp = async (
+  db: Firestore,
+  listId: string,
+  uid: string,
+  entry: RsvpEntry,
+): Promise<void> => {
+  const { batch, name, note } = rememberingBatch(db, uid, entry);
+  batch.set(listRsvpDoc(db, listId, uid), { uid, name, note, createdAt: serverTimestamp() });
+  try {
+    await batch.commit();
+  } catch (error) {
+    if (!isRefused(error)) throw error;
+    throw new RsvpRefusedError(await whyRefused(db, listId));
+  }
+};
+
+/**
+ * Change the name and note on the account's own RSVP, and remember the
+ * name, in one batch. The arrival time is left alone, so the account keeps
+ * its place. A name or note the rules would refuse is thrown before
+ * anything is written.
+ */
+export const updateListRsvp = async (
+  db: Firestore,
+  listId: string,
+  uid: string,
+  entry: RsvpEntry,
+): Promise<void> => {
+  const { batch, name, note } = rememberingBatch(db, uid, entry);
+  batch.update(listRsvpDoc(db, listId, uid), { name, note });
+  await batch.commit();
+};
+
+/**
+ * Take the account's RSVP off the list. The first RSVP waiting moves up
+ * with no write of its own, since every phone's split changes when this
+ * one lands (ADR-0004). The rules allow it until the scheduled time, even
+ * after the owner closes the list. RSVPing again later is a new arrival.
+ */
+export const withdrawFromList = (db: Firestore, listId: string, uid: string): Promise<void> =>
+  deleteDoc(listRsvpDoc(db, listId, uid));
