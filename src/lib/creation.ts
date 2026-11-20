@@ -3,6 +3,8 @@ import {
   matchRosterTeams,
   nameClashes,
   tickedTeamNamed,
+  type ByPersonImport,
+  type ByTeamImport,
   type ListImport,
 } from "@/lib/rsvpImport";
 import { leastUsedColors } from "@/lib/teamColors";
@@ -132,16 +134,24 @@ export const setupSettings = (
  * roster as the tournament is saved, so it is there next week.
  */
 export interface JoiningTeam {
+  kind: "joining";
   newName: string;
 }
 
-/** A team entering a new tournament: one on the roster, one about to join it, or a mixed team. */
-export type EnteringTeam = PersistentTeam | JoiningTeam | EnteringMixedTeam;
+/**
+ * A team entering a new tournament: one on the roster, one about to join
+ * it, or a mixed team. `kind` tells them apart. A roster team enters as the
+ * roster holds it, so it has no kind.
+ */
+export type EnteringTeam =
+  | (PersistentTeam & { kind?: undefined })
+  | JoiningTeam
+  | EnteringMixedTeam;
 
-export const isJoiningTeam = (team: EnteringTeam): team is JoiningTeam => "newName" in team;
+export const isJoiningTeam = (team: EnteringTeam): team is JoiningTeam => team.kind === "joining";
 
 export const isEnteringMixedTeam = (team: EnteringTeam): team is EnteringMixedTeam =>
-  "players" in team;
+  team.kind === "mixed";
 
 /**
  * The teams a by-team import enters, in arrival order. A name the roster
@@ -149,25 +159,32 @@ export const isEnteringMixedTeam = (team: EnteringTeam): team is EnteringMixedTe
  * team joining the roster.
  */
 const importedRosterTeams = (
-  imported: ListImport,
+  imported: ByTeamImport,
   roster: PersistentTeam[],
 ): (PersistentTeam | JoiningTeam)[] =>
   matchRosterTeams(
     imported.teams.map((team) => team.name),
     roster,
-  ).map((rosterTeam, index) => rosterTeam ?? { newName: imported.teams[index].name.trim() });
+  ).map(
+    (rosterTeam, index) =>
+      rosterTeam ?? { kind: "joining", newName: imported.teams[index].name.trim() },
+  );
 
 /**
  * The mixed teams a by-person import enters, in number order. Each takes
  * the palette color used least among the teams entering before it, the
  * way a pasted team name does on the roster.
  */
-const mixedTeams = (imported: ListImport, entering: PersistentTeam[]): EnteringMixedTeam[] => {
+const mixedTeams = (
+  imported: ByPersonImport,
+  entering: PersistentTeam[],
+): EnteringMixedTeam[] => {
   const nextColor = leastUsedColors(entering.map((team) => team.color));
   return imported.teams.map((team) => ({
+    kind: "mixed",
     name: team.name.trim(),
     color: nextColor(),
-    players: (team.players ?? []).map((person) => person.name),
+    players: team.players.map((person) => person.name),
   }));
 };
 

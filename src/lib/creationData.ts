@@ -55,7 +55,10 @@ export const buildTournamentFromSetup = (
   }
   const teams = input.teams.map((team): TeamToEnter => {
     // A mixed team gets an id of its own here and never reaches the roster.
-    if (isEnteringMixedTeam(team)) return { ...team, id: newToken() };
+    if (isEnteringMixedTeam(team)) {
+      const { name, color, players } = team;
+      return { id: newToken(), name, color, players };
+    }
     if (!isJoiningTeam(team)) return team;
     const joined = byName.get(nameKey(team.newName));
     if (!joined) throw new Error("Give every imported team a name.");

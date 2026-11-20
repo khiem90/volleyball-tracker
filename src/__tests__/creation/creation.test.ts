@@ -307,9 +307,9 @@ describe("setupInput with an import", () => {
     expect(input.teams).toEqual([
       roster[3],
       roster[0],
-      { newName: "Newcomers" },
+      { kind: "joining", newName: "Newcomers" },
       roster[1],
-      { newName: "Late Entry" },
+      { kind: "joining", newName: "Late Entry" },
     ]);
   });
 
@@ -439,8 +439,8 @@ describe("setupInput with mixed teams", () => {
     expect(input.teams).toEqual([
       roster[1],
       roster[0],
-      { name: "Team 1", color: "#f97316", players: ["Ana", "Ben"] },
-      { name: "Sharks", color: "#eab308", players: ["Cy", "Dee", "Eve"] },
+      { kind: "mixed", name: "Team 1", color: "#f97316", players: ["Ana", "Ben"] },
+      { kind: "mixed", name: "Sharks", color: "#eab308", players: ["Cy", "Dee", "Eve"] },
     ]);
     expect(input.rsvpListId).toBe("list-2");
   });
@@ -495,7 +495,7 @@ describe("setupInput with mixed teams", () => {
     // Aces is on the roster and not ticked, so only the mixed team has the name.
     expect(input.teams).toEqual([
       roster[1],
-      { name: "aces", color: "#ef4444", players: ["Ana", "Ben"] },
+      { kind: "mixed", name: "aces", color: "#ef4444", players: ["Ana", "Ben"] },
     ]);
   });
 });

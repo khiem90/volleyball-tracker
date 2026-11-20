@@ -198,9 +198,11 @@ export interface TeamToEnter {
 /**
  * A mixed team entering: dealt from a by-person list, and never on the
  * roster (ADR-0006). It has no id yet. The tournament gives it one as it
- * is built.
+ * is built. `kind` tells it from the other teams a setup enters (see
+ * EnteringTeam in src/lib/creation.ts).
  */
 export interface EnteringMixedTeam {
+  kind: "mixed";
   name: string;
   /** The palette color the tournament's teams use least. */
   color: string;
@@ -375,7 +377,12 @@ export const duplicateInput = (source: Tournament, roster: PersistentTeam[]): Du
         return rosterTeam ? [rosterTeam] : [];
       }
       return [
-        { name: entry.name, color: entry.color ?? spareColor(), players: [...entry.players] },
+        {
+          kind: "mixed",
+          name: entry.name,
+          color: entry.color ?? spareColor(),
+          players: [...entry.players],
+        },
       ];
     }),
     settings: { ...source.settings, terminology: { ...source.settings.terminology } },

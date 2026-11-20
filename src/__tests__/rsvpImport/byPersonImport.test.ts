@@ -8,6 +8,7 @@ import {
   movePerson,
   renameImportedTeam,
   shuffleImport,
+  type ByPersonImport,
   type ListImport,
   type Random,
 } from "@/lib/rsvpImport";
@@ -44,12 +45,19 @@ const answers = [
   rsvp("e", "Eve", 5),
 ];
 
+/** Friday pickup imported. It takes people, so its import has people and a team size. */
+const importPickup = (random: Random): ByPersonImport => {
+  const imported = importList(fridayPickup, answers, random);
+  if (imported.takes !== "people") throw new Error("Friday pickup takes people.");
+  return imported;
+};
+
 const names = (imported: ListImport) =>
   imported.teams.map((team) => team.players?.map((person) => person.name));
 
 describe("importing a by-person list", () => {
   it("keeps the confirmed people in arrival order, held spots included, and leaves the waitlist out", () => {
-    const imported = importList(fridayPickup, answers, inOrder);
+    const imported = importPickup(inOrder);
 
     expect(imported.people).toEqual([
       { id: "a", name: "Ana" },
@@ -61,7 +69,7 @@ describe("importing a by-person list", () => {
   });
 
   it("deals them into mixed teams of the default size", () => {
-    const imported = importList(fridayPickup, answers, inOrder);
+    const imported = importPickup(inOrder);
 
     expect(DEFAULT_TEAM_SIZE).toBe(4);
     expect(imported).toMatchObject({
@@ -83,7 +91,7 @@ describe("importing a by-person list", () => {
 });
 
 describe("changing the team size", () => {
-  const imported = importList(fridayPickup, answers, inOrder);
+  const imported = importPickup(inOrder);
 
   it("deals everyone again at the new size", () => {
     const pairs = changeTeamSize(imported, 2, inOrder);
@@ -118,7 +126,7 @@ describe("changing the team size", () => {
 
 describe("shuffling", () => {
   it("deals the same people again at the same size", () => {
-    const imported = importList(fridayPickup, answers, inOrder);
+    const imported = importPickup(inOrder);
     const again = shuffleImport(imported, alwaysFirst);
 
     expect(again.teamSize).toBe(4);
@@ -143,7 +151,7 @@ describe("shuffling", () => {
 });
 
 describe("moving a person between teams", () => {
-  const imported = importList(fridayPickup, answers, inOrder);
+  const imported = importPickup(inOrder);
 
   it("takes the person off their team and puts them at the end of the other", () => {
     expect(names(movePerson(imported, "c", "mixed-2"))).toEqual([
@@ -185,7 +193,7 @@ describe("moving a person between teams", () => {
 
 describe("renaming a mixed team", () => {
   it("changes its name and keeps its players", () => {
-    const imported = importList(fridayPickup, answers, inOrder);
+    const imported = importPickup(inOrder);
     const renamed = renameImportedTeam(imported, "mixed-2", "Sharks");
 
     expect(renamed.teams.map((team) => team.name)).toEqual(["Team 1", "Sharks"]);
@@ -195,7 +203,7 @@ describe("renaming a mixed team", () => {
 
 describe("mixed teams as the creation page shows them", () => {
   const roster: PersistentTeam[] = [{ id: "t1", name: "Sharks", color: "#ef4444", createdAt: 1 }];
-  const imported = importList(fridayPickup, answers, inOrder);
+  const imported = importPickup(inOrder);
 
   it("never matches a mixed team to a roster team, whatever it is called", () => {
     const renamed = renameImportedTeam(imported, "mixed-1", "sharks");

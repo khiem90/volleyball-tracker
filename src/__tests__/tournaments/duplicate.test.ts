@@ -121,9 +121,9 @@ describe("duplicateInput for a tournament with mixed teams", () => {
 
     expect(input.teams).toEqual([
       t1,
-      { name: "Sharks", color: "#f97316", players: ["Ana", "Ben"] },
+      { kind: "mixed", name: "Sharks", color: "#f97316", players: ["Ana", "Ben"] },
       t3,
-      { name: "Team 2", color: "#3b82f6", players: ["Cy"] },
+      { kind: "mixed", name: "Team 2", color: "#3b82f6", players: ["Cy"] },
     ]);
   });
 
@@ -173,7 +173,7 @@ describe("duplicateInput for a tournament with mixed teams", () => {
 
     const input = duplicateInput(source, roster);
 
-    expect(input.teams[1]).toEqual({ name: "Sharks", color: "#f97316", players: ["Ana", "Ben"] });
+    expect(input.teams[1]).toEqual({ kind: "mixed", name: "Sharks", color: "#f97316", players: ["Ana", "Ben"] });
   });
 
   it("gives a mixed team stored without a color the palette color the source's teams use least", () => {
@@ -185,6 +185,6 @@ describe("duplicateInput for a tournament with mixed teams", () => {
     const input = duplicateInput({ ...source, entries }, rosterFor(source));
 
     // Red is the first palette color none of the others has.
-    expect(input.teams[3]).toEqual({ name: "Team 2", color: "#ef4444", players: ["Cy"] });
+    expect(input.teams[3]).toEqual({ kind: "mixed", name: "Team 2", color: "#ef4444", players: ["Cy"] });
   });
 });

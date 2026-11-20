@@ -77,6 +77,9 @@ export interface ImportedTeam {
   players?: ImportedPerson[];
 }
 
+/** A mixed team as a deal makes it. It always holds its people. */
+export type DealtTeam = ImportedTeam & { players: ImportedPerson[] };
+
 // ============================================
 // Dealing people into mixed teams
 // ============================================
@@ -110,7 +113,7 @@ export const dealTeams = (
   people: ImportedPerson[],
   size: number,
   random: Random,
-): ImportedTeam[] => {
+): DealtTeam[] => {
   const cap = Math.max(1, Math.floor(size));
   const teamCount = Math.ceil(people.length / cap);
   const players: ImportedPerson[][] = Array.from({ length: teamCount }, () => []);
@@ -129,22 +132,33 @@ export const dealTeams = (
 /**
  * An import as the creation page holds it: a copy of the list taken when
  * the owner chose it (ADR-0005). The owner arranges `teams` before saving,
- * and nothing that happens to the list afterwards reaches them.
+ * and nothing that happens to the list afterwards reaches them. What the
+ * list took says what kind of teams these are, and only a by-person import
+ * has people to deal.
  */
-export interface ListImport {
+export type ListImport = ByTeamImport | ByPersonImport;
+
+interface ImportOfList {
   listId: string;
   listName: string;
-  /** What the list took, which says what kind of teams these are. */
-  takes: RsvpTakes;
-  /**
-   * The teams in the order they enter: arrival order on a by-team list, and
-   * number order for the mixed teams of a by-person list.
-   */
+}
+
+/** The import of a by-team list. */
+export interface ByTeamImport extends ImportOfList {
+  takes: "teams";
+  /** The teams in arrival order, which is the order they enter. */
   teams: ImportedTeam[];
-  /** On a by-person list, the confirmed people in arrival order, kept so they can be dealt again. */
-  people?: ImportedPerson[];
-  /** On a by-person list, the size no dealt team goes over. */
-  teamSize?: number;
+}
+
+/** The import of a by-person list. */
+export interface ByPersonImport extends ImportOfList {
+  takes: "people";
+  /** The mixed teams in number order, which is the order they enter. */
+  teams: DealtTeam[];
+  /** The confirmed people in arrival order, kept so they can be dealt again. */
+  people: ImportedPerson[];
+  /** The size no dealt team goes over. */
+  teamSize: number;
 }
 
 /** The team size a by-person import starts at. */
@@ -166,10 +180,11 @@ export const importList = (
     id: rsvp.id,
     name: rsvp.name,
   }));
-  const imported = { listId: list.id, listName: list.name, takes: list.takes };
-  if (list.takes === "teams") return { ...imported, teams: confirmed };
+  const imported = { listId: list.id, listName: list.name };
+  if (list.takes === "teams") return { ...imported, takes: "teams", teams: confirmed };
   return {
     ...imported,
+    takes: "people",
     teams: dealTeams(confirmed, DEFAULT_TEAM_SIZE, random),
     people: confirmed,
     teamSize: DEFAULT_TEAM_SIZE,
@@ -177,8 +192,8 @@ export const importList = (
 };
 
 /** The largest team size worth offering: everyone on one team, and never below one. */
-export const largestTeamSize = (imported: ListImport): number =>
-  Math.max(1, imported.people?.length ?? 1);
+export const largestTeamSize = (imported: ByPersonImport): number =>
+  Math.max(1, imported.people.length);
 
 /**
  * A by-person import dealt again at a new team size, kept between one and
@@ -186,27 +201,37 @@ export const largestTeamSize = (imported: ListImport): number =>
  * "Team 1" and so on, and every move is forgotten. A by-team import comes
  * back as it was.
  */
-export const changeTeamSize = (imported: ListImport, size: number, random: Random): ListImport => {
-  if (imported.people === undefined) return imported;
+export const changeTeamSize = <Import extends ListImport>(
+  imported: Import,
+  size: number,
+  random: Random,
+): Import => {
+  if (imported.takes === "teams") return imported;
   const teamSize = Math.min(largestTeamSize(imported), Math.max(1, Math.floor(size)));
   return { ...imported, teamSize, teams: dealTeams(imported.people, teamSize, random) };
 };
 
 /** A by-person import dealt again at the size it has, which is what Shuffle does. */
-export const shuffleImport = (imported: ListImport, random: Random): ListImport =>
-  changeTeamSize(imported, imported.teamSize ?? DEFAULT_TEAM_SIZE, random);
+export const shuffleImport = <Import extends ListImport>(imported: Import, random: Random): Import =>
+  imported.takes === "teams" ? imported : changeTeamSize(imported, imported.teamSize, random);
 
 /**
  * The import with one person moved to the end of another team. The owner
  * decides here, so a move may take a team past the team size. A team left
  * with nobody is dropped. A person or team the import does not have
- * changes nothing, and neither does a move to the team the person is on.
+ * changes nothing, and neither does a move to the team the person is on. A
+ * by-team import has no people to move.
  */
-export const movePerson = (imported: ListImport, personId: string, toTeamId: string): ListImport => {
-  const from = imported.teams.find((team) => team.players?.some((p) => p.id === personId));
+export const movePerson = <Import extends ListImport>(
+  imported: Import,
+  personId: string,
+  toTeamId: string,
+): Import => {
+  if (imported.takes === "teams") return imported;
+  const from = imported.teams.find((team) => team.players.some((p) => p.id === personId));
   const to = imported.teams.find((team) => team.id === toTeamId);
-  const person = from?.players?.find((p) => p.id === personId);
-  if (!from?.players || !person || !to?.players || from.id === to.id) return imported;
+  const person = from?.players.find((p) => p.id === personId);
+  if (!from || !person || !to || from.id === to.id) return imported;
   const staying = from.players.filter((p) => p.id !== personId);
   const joined = [...to.players, person];
   return {
@@ -224,11 +249,11 @@ export const movePerson = (imported: ListImport, personId: string, toTeamId: str
  * field it is typed into never fights the keyboard. Names are trimmed when
  * they are compared and when the tournament is saved.
  */
-export const renameImportedTeam = (
-  imported: ListImport,
+export const renameImportedTeam = <Import extends ListImport>(
+  imported: Import,
   teamId: string,
   name: string,
-): ListImport => ({
+): Import => ({
   ...imported,
   teams: imported.teams.map((team) => (team.id === teamId ? { ...team, name } : team)),
 });

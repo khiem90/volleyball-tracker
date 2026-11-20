@@ -13,6 +13,7 @@ import {
   movePerson,
   renameImportedTeam,
   shuffleImport,
+  type ByPersonImport,
   type ImportReadiness,
   type ListImport,
 } from "@/lib/rsvpImport";
@@ -40,11 +41,11 @@ const choiceFor = (list: RsvpList, now: number): ImportChoice => {
  * person. Each new deal reads `Math.random`, which the pure module never
  * does itself.
  */
-const dealingOf = (current: ListImport, onChange: (next: ListImport) => void) => {
-  const people = current.people?.length ?? 0;
+const dealingOf = (current: ByPersonImport, onChange: (next: ListImport) => void) => {
+  const people = current.people.length;
   const teams = current.teams.length;
   return {
-    teamSize: current.teamSize ?? 1,
+    teamSize: current.teamSize,
     largestTeamSize: largestTeamSize(current),
     /** "14 people in 4 teams". */
     summary: `${people} ${people === 1 ? "person" : "people"} in ${teams} ${teams === 1 ? "team" : "teams"}`,
