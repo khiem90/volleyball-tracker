@@ -7,30 +7,26 @@ import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { deviceZone, timeLabel, type TimeLabel } from "@/lib/rsvp";
 import {
   firstListProblem,
+  listLocks,
   listSetupOf,
   listSetupProblems,
+  sameListSetup,
   type ListSetup,
   type ListSetupProblems,
 } from "@/lib/rsvpList";
 import { rsvpListLink } from "@/lib/shareLinks";
 import { messageOf } from "@/lib/utils";
+import { useListOwnerControls } from "./useListOwnerControls";
 import { useListRsvpView } from "./useListRsvpView";
 
 const NO_PROBLEMS: ListSetupProblems = {};
 
-const sameSetup = (a: ListSetup, b: ListSetup): boolean =>
-  a.name === b.name &&
-  a.takes === b.takes &&
-  a.capacity === b.capacity &&
-  a.scheduledAt === b.scheduledAt &&
-  a.opensAt === b.opensAt &&
-  a.enabled === b.enabled;
-
 /**
  * Everything a list's page needs: the list, when it is on this phone's
  * clock, the RSVPs and the viewer's own RSVP, and for its owner the
- * settings form and the RSVP link. A guest, and a phone holding only a
- * scorer link's silent identity, are sent to sign in and back here.
+ * settings form, the RSVP link, and the controls that manage the list. A
+ * guest, and a phone holding only a scorer link's silent identity, are
+ * sent to sign in and back here.
  */
 export const useListPage = (listId: string) => {
   const { user, isLoading: isAuthLoading } = useRequireAuth();
@@ -41,7 +37,16 @@ export const useListPage = (listId: string) => {
   const [zone] = useState(deviceZone);
 
   const isOwner = !!list && list.ownerId === uid;
+  const owner = useListOwnerControls(
+    isOwner ? list : null,
+    rsvp.rsvps?.length ?? null,
+    rsvp.hasError,
+    rsvp.isOver,
+  );
   const stored = list ? listSetupOf(list) : null;
+  // What the list already holds, which limits how its settings may change.
+  const locks = list ? listLocks(list, rsvp.rsvps?.length ?? 0, rsvp.now) : null;
+  const openTimeLocked = locks !== null && locks.arrivals > 0;
 
   // What the owner has changed and not yet saved. While it is null the
   // form shows the stored settings, so a save from another phone shows here.
@@ -50,9 +55,20 @@ export const useListPage = (listId: string) => {
   const [isSaving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  const setup = draft ?? stored;
-  const problems = setup ? listSetupProblems(setup) : NO_PROBLEMS;
-  const isDirty = draft !== null && stored !== null && !sameSetup(draft, stored);
+  // Once an RSVP is on the list the open time is the stored one, whatever
+  // was typed before the first RSVP arrived.
+  const typed = draft && stored && openTimeLocked ? { ...draft, opensAt: stored.opensAt } : draft;
+  const setup = typed ?? stored;
+  const problems = setup && locks ? listSetupProblems(setup, locks) : NO_PROBLEMS;
+  const isDirty = typed !== null && stored !== null && !sameListSetup(typed, stored);
+
+  // A problem that comes from what the list already holds shows as soon as
+  // an edit runs into it. The rest wait for a save to be tried.
+  const withoutLocks = setup ? listSetupProblems(setup) : NO_PROBLEMS;
+  const fromLocks: ListSetupProblems = {};
+  for (const field of Object.keys(problems) as (keyof ListSetupProblems)[]) {
+    if (problems[field] !== withoutLocks[field]) fromLocks[field] = problems[field];
+  }
 
   const change = (changes: Partial<ListSetup>) => {
     if (!setup) return;
@@ -89,7 +105,7 @@ export const useListPage = (listId: string) => {
       ? timeLabel(list.scheduledAt, list.scheduledZone, zone)
       : null;
 
-  const shown = attempted ? problems : NO_PROBLEMS;
+  const shown = attempted ? problems : fromLocks;
 
   return {
     /** True until the account and the list are known. */
@@ -105,15 +121,22 @@ export const useListPage = (listId: string) => {
     when,
     /** The RSVP link, or null while it is off. */
     link: list?.enabled ? rsvpListLink(origin, list.id) : null,
-    /** The owner's settings form. Null for anyone else. */
+    /** Close and Reopen, held spots, Remove, Duplicate, and Delete. Null for anyone but the owner. */
+    owner,
+    /**
+     * The owner's settings form. Null for anyone else, and for the owner
+     * once the list is over, when no setting can change.
+     */
     settings:
-      isOwner && setup
+      isOwner && setup && !rsvp.isOver
         ? {
             setup,
             zone,
             scheduledZone: list?.scheduledZone,
+            /** True once the list has an RSVP, which fixes the open time. */
+            openTimeLocked,
             change,
-            /** Shown once a save has been tried, and kept up to date after. */
+            /** A lock's problem at once, and the rest once a save has been tried. */
             problems: shown,
             /** The failed write's message, or the first problem to fix. */
             alert: saveError ?? firstListProblem(shown) ?? null,

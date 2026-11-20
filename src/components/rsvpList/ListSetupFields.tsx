@@ -4,6 +4,7 @@ import { CapacityField, DateTimeField } from "@/components/rsvp/RsvpFields";
 import { Choice } from "@/components/shared";
 import {
   LIST_NAME_MAX,
+  LIST_OPEN_TIME_LOCKED,
   TAKES_LABEL,
   type ListSetup,
   type ListSetupProblems,
@@ -31,6 +32,7 @@ export const ListSetupFields = ({
   problems,
   zone,
   scheduledZone,
+  openTimeLocked = false,
   onChange,
 }: {
   setup: ListSetup;
@@ -39,6 +41,8 @@ export const ListSetupFields = ({
   zone: string;
   /** The zone the stored scheduled time was set in, on a list that has one. */
   scheduledZone?: string;
+  /** True once the list has an RSVP. The open time is then read-only and says why. */
+  openTimeLocked?: boolean;
   onChange: (changes: Partial<ListSetup>) => void;
 }) => (
   <div className="flex flex-col gap-5 p-4">
@@ -105,8 +109,13 @@ export const ListSetupFields = ({
       label="Open time"
       value={setup.opensAt}
       zone={zone}
-      note="Nobody can RSVP before this, whatever their phone's clock says."
+      note={
+        openTimeLocked
+          ? `${LIST_OPEN_TIME_LOCKED} Anyone who already answered was told this time.`
+          : "Nobody can RSVP before this, whatever their phone's clock says."
+      }
       problem={problems.opensAt}
+      disabled={openTimeLocked}
       onChange={(opensAt) => onChange({ opensAt })}
     />
 

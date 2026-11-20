@@ -182,6 +182,8 @@ export const useListRsvpView = (
   };
 
   return {
+    /** This phone's clock as the page last read it: each second of a countdown, and at the scheduled time. */
+    now,
     /** Where the list stands on this phone's clock. Null until the list loads. */
     state,
     /** True once the scheduled time has passed on this phone's clock. The page is read-only. */

@@ -8,6 +8,7 @@ import { Panel, PanelError } from "@/components/matchbook/Panel";
 import { RsvpDialog } from "@/components/rsvp/RsvpDialog";
 import { ListPeoplePanel } from "@/components/rsvpList/ListPeoplePanel";
 import { ListRsvpPanel } from "@/components/rsvpList/ListRsvpPanel";
+import { ListOwnerPanel } from "@/components/rsvpList/ListOwnerPanel";
 import { ListSetupFields } from "@/components/rsvpList/ListSetupFields";
 import { useListPage } from "@/components/rsvpList/useListPage";
 
@@ -19,9 +20,11 @@ import { useListPage } from "@/components/rsvpList/useListPage";
  * scheduled time. After it the page is read-only.
  *
  * The owner sees the same and RSVPs the same way, and also gets the link
- * to copy and the settings to change. With the link off, anyone but the
- * owner gets the shared not found, the same as for a list that does not
- * exist. A guest is sent to sign in and back here.
+ * to copy, the settings to change, Remove on each row, the box for a held
+ * spot, and Close or Reopen, all until the scheduled time. Duplicate and
+ * Delete stay after it. With the link off, anyone but the owner gets the
+ * shared not found, the same as for a list that does not exist. A guest
+ * is sent to sign in and back here.
  */
 export default function RsvpListPage() {
   const params = useParams();
@@ -80,11 +83,11 @@ export default function RsvpListPage() {
             </Panel>
           )}
 
-          {/* The owner's controls for the whole list go here, as panels of their own. */}
+          {page.owner && <ListOwnerPanel controls={page.owner} />}
         </div>
 
         <div className="flex flex-col gap-4 lg:col-span-7">
-          <ListPeoplePanel view={rsvp} />
+          <ListPeoplePanel view={rsvp} controls={page.owner} />
 
           {settings && (
             <Panel title="Settings" icon="settings">
@@ -93,6 +96,7 @@ export default function RsvpListPage() {
                 problems={settings.problems}
                 zone={settings.zone}
                 scheduledZone={settings.scheduledZone}
+                openTimeLocked={settings.openTimeLocked}
                 onChange={settings.change}
               />
               <div className="flex flex-col gap-3 border-t border-mb-rule p-4">
