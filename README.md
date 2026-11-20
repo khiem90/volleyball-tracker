@@ -99,10 +99,13 @@ account's own RSVP to the server's time. Only that account can write it, and
 it can still write it after `scheduledAt`, so a notice newer than it has not
 been seen.
 
-Creating a tournament can import a by-team list that is closed or past
+Creating a tournament can import a list that is closed or past
 `scheduledAt`. The confirmed RSVPs are copied into its entries once
-(ADR-0005): a name the roster has enters that roster team, and a new name
-joins the roster. One batch writes the new roster teams, the tournament with
+(ADR-0005). On a by-team list a name the roster has enters that roster team,
+and a new name joins the roster. On a by-person list the people are dealt
+into mixed teams (ADR-0006): each entry gets a `teamId` generated for that
+tournament, a palette color, and `players`, the players' names, and no
+roster document is written. One batch writes the new roster teams, the tournament with
 `rsvpListId`, and the tournament's id appended to the list's `tournamentIds`,
 so all of it lands or none does. The rules refuse a tournament whose
 `rsvpListId` names a list another account owns, or no list, and never let
