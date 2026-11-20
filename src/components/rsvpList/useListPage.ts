@@ -46,7 +46,9 @@ export const useListPage = (listId: string) => {
   const stored = list ? listSetupOf(list) : null;
   // What the list already holds, which limits how its settings may change.
   const locks = list ? listLocks(list, rsvp.rsvps?.length ?? 0, rsvp.now) : null;
+  // The first RSVP locks the open time and the by-person or by-team choice.
   const openTimeLocked = locks !== null && locks.arrivals > 0;
+  const takesLocked = openTimeLocked;
 
   // What the owner has changed and not yet saved. While it is null the
   // form shows the stored settings, so a save from another phone shows here.
@@ -55,9 +57,13 @@ export const useListPage = (listId: string) => {
   const [isSaving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  // Once an RSVP is on the list the open time is the stored one, whatever
-  // was typed before the first RSVP arrived.
-  const typed = draft && stored && openTimeLocked ? { ...draft, opensAt: stored.opensAt } : draft;
+  // Once an RSVP is on the list the open time and the by-person or by-team
+  // choice are the stored ones, whatever was picked before the first RSVP
+  // arrived.
+  const typed =
+    draft && stored && openTimeLocked
+      ? { ...draft, opensAt: stored.opensAt, takes: stored.takes }
+      : draft;
   const setup = typed ?? stored;
   const problems = setup && locks ? listSetupProblems(setup, locks) : NO_PROBLEMS;
   const isDirty = typed !== null && stored !== null && !sameListSetup(typed, stored);
@@ -135,6 +141,8 @@ export const useListPage = (listId: string) => {
             scheduledZone: list?.scheduledZone,
             /** True once the list has an RSVP, which fixes the open time. */
             openTimeLocked,
+            /** True once the list has an RSVP, which fixes by person or by team. */
+            takesLocked,
             change,
             /** A lock's problem at once, and the rest once a save has been tried. */
             problems: shown,

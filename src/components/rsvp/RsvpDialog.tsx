@@ -13,6 +13,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { RSVP_NAME_MAX, RSVP_NOTE_MAX, rsvpEntryProblems, type RsvpEntry } from "@/lib/rsvp";
+import { listWording, type ListWording } from "@/lib/rsvpList";
+
+/** The dialog speaks to a person about themselves unless it is told the list takes teams. */
+const PERSON_WORDING = listWording("people").dialog;
 
 /**
  * The RSVP dialog: the name everyone on the list sees, prefilled, and an
@@ -22,10 +26,15 @@ import { RSVP_NAME_MAX, RSVP_NOTE_MAX, rsvpEntryProblems, type RsvpEntry } from 
  * Opened on an RSVP already on the list, the same dialog edits its name
  * and note, which keeps the person's place, and has Withdraw in the
  * footer. Withdraw asks once more before it takes the spot away.
+ *
+ * On a by-team list the page passes the team `wording`, and the dialog
+ * asks for a team name and speaks of the team.
  */
 export const RsvpDialog = ({
   open,
   name,
+  wording = PERSON_WORDING,
+  takesTeams = false,
   entry,
   isEditing = false,
   joinsWaitlist = false,
@@ -40,6 +49,10 @@ export const RsvpDialog = ({
   open: boolean;
   /** What the person is RSVPing to: the list's name. */
   name: string;
+  /** The dialog's words for a person or for a team, from listWording. A person's when left out. */
+  wording?: ListWording["dialog"];
+  /** True when the name is a team's, so the browser does not offer the person's own. */
+  takesTeams?: boolean;
   entry: RsvpEntry | null;
   /** True when the dialog edits the person's RSVP rather than making one. */
   isEditing?: boolean;
@@ -79,10 +92,7 @@ export const RsvpDialog = ({
               <MbIcon id="remove-user" size={18} className="shrink-0" />
               Withdraw?
             </DialogTitle>
-            <DialogDescription>
-              You come off the list for {name}, and the first person waiting takes your
-              place. If you RSVP again, you go to the back of the line.
-            </DialogDescription>
+            <DialogDescription>{wording.withdraw(name)}</DialogDescription>
           </DialogHeader>
           {error && (
             <p role="alert" className="text-[0.78rem] font-medium text-mb-red">
@@ -91,7 +101,7 @@ export const RsvpDialog = ({
           )}
           <DialogFooter>
             <Button variant="outline" className="sm:flex-1" onClick={() => setConfirming(false)}>
-              Keep my place
+              {wording.keep}
             </Button>
             <Button
               variant="destructive"
@@ -118,17 +128,17 @@ export const RsvpDialog = ({
           </DialogTitle>
           <DialogDescription>
             {isEditing
-              ? "Change your name or note. You keep your place on the list."
+              ? wording.edit
               : joinsWaitlist
-                ? `Every spot in ${name} is taken, so you join the waitlist and move up on your own when a spot frees. Everyone on the list sees your name.`
-                : `You are telling the owner of ${name} that you will play. Everyone on the list sees your name.`}
+                ? wording.waitlist(name)
+                : wording.fresh(name)}
           </DialogDescription>
         </DialogHeader>
 
         <form id="rsvp-form" onSubmit={submit} className="flex flex-col gap-5">
           <div className="flex flex-col gap-1.5">
             <label htmlFor="rsvp-name" className="mb-kicker">
-              Your name
+              {wording.nameLabel}
             </label>
             <span className={problems.name ? "mb-input border-mb-red" : "mb-input"}>
               <input
@@ -137,7 +147,7 @@ export const RsvpDialog = ({
                 value={entry?.name ?? ""}
                 onChange={(event) => onChange({ name: event.target.value })}
                 maxLength={RSVP_NAME_MAX + 10}
-                autoComplete="nickname"
+                autoComplete={takesTeams ? "off" : "nickname"}
                 autoFocus
                 aria-invalid={!!problems.name}
                 aria-describedby={problems.name ? "rsvp-name-problem" : undefined}

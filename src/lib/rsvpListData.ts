@@ -33,13 +33,14 @@ import {
   type AccountListRsvp,
   type AccountLists,
   type ListSetup,
+  type RememberedNames,
 } from "@/lib/rsvpList";
-import type { Notice, Rsvp, RsvpList } from "@/types/game";
+import type { Notice, Rsvp, RsvpList, RsvpTakes } from "@/types/game";
 
 /**
  * RSVP lists on Firestore: one document per list in the top-level
  * `rsvpLists` collection, owned by the account in `ownerId` (ADR-0005),
- * the RSVPs in the list's `rsvps` subcollection, and the name an account
+ * the RSVPs in the list's `rsvps` subcollection, and the names an account
  * last RSVP'd under on its own `users/{uid}` document. The pure
  * derivations are in src/lib/rsvpList.ts and src/lib/rsvp.ts.
  */
@@ -362,12 +363,33 @@ export class RsvpRefusedError extends Error {
   }
 }
 
-/** The name this account last RSVP'd under, or null before its first RSVP. */
-export const readRememberedName = async (db: Firestore, uid: string): Promise<string | null> => {
-  const snapshot = await getDoc(accountDoc(db, uid));
-  const name: unknown = snapshot.data()?.rsvpName;
-  return typeof name === "string" && name.length > 0 ? name : null;
+/**
+ * The field on the account's own document that remembers the name it last
+ * gave a list of each kind. The rules allow these two fields and no other.
+ */
+const REMEMBERED_FIELD: Record<RsvpTakes, string> = {
+  people: "rsvpName",
+  teams: "rsvpTeamName",
 };
+
+const nameOrNull = (value: unknown): string | null =>
+  typeof value === "string" && value.length > 0 ? value : null;
+
+/**
+ * The names this account last RSVP'd under: one from a by-person list and
+ * one from a by-team list. Each is null before its first RSVP of that kind.
+ */
+export const readRememberedNames = async (db: Firestore, uid: string): Promise<RememberedNames> => {
+  const stored = (await getDoc(accountDoc(db, uid))).data();
+  return {
+    person: nameOrNull(stored?.[REMEMBERED_FIELD.people]),
+    team: nameOrNull(stored?.[REMEMBERED_FIELD.teams]),
+  };
+};
+
+/** The name this account last RSVP'd under as a person, or null before its first such RSVP. */
+export const readRememberedName = async (db: Firestore, uid: string): Promise<string | null> =>
+  (await readRememberedNames(db, uid)).person;
 
 /**
  * Why the rules refused an RSVP to this list, from the list as the server
@@ -387,19 +409,22 @@ const whyRefused = async (db: Firestore, listId: string): Promise<string> => {
 
 /**
  * A batch that remembers `name` on the account, for the RSVP write to join,
- * with the entry trimmed as it is stored. A name or note the rules would
+ * with the entry trimmed as it is stored. The name is remembered as a
+ * person's or as a team's, by what the list takes, and the merge leaves
+ * the other remembered name as it was. A name or note the rules would
  * refuse is thrown before anything is written.
  */
 const rememberingBatch = (
   db: Firestore,
   uid: string,
   entry: RsvpEntry,
+  takes: RsvpTakes,
 ): { batch: WriteBatch; name: string; note: string } => {
   const [problem] = Object.values(rsvpEntryProblems(entry));
   if (problem) throw new Error(problem);
   const name = entry.name.trim();
   const batch = writeBatch(db);
-  batch.set(accountDoc(db, uid), { rsvpName: name }, { merge: true });
+  batch.set(accountDoc(db, uid), { [REMEMBERED_FIELD[takes]]: name }, { merge: true });
   return { batch, name, note: entry.note.trim() };
 };
 
@@ -411,14 +436,21 @@ const rememberingBatch = (
  * the server's clock, after a close, and with the link off. That refusal
  * rejects with an RsvpRefusedError saying which. A name or note the rules
  * would refuse is thrown before anything is written.
+ *
+ * `takes` is what the list takes. On a by-team list the name is a team's,
+ * the one RSVP stands for the whole team, and the name is remembered as
+ * the account's team name. The RSVP's id is the account's uid either way,
+ * so an account holds one person or one team per list, and the rules
+ * refuse a second RSVP from it.
  */
 export const sendListRsvp = async (
   db: Firestore,
   listId: string,
   uid: string,
   entry: RsvpEntry,
+  takes: RsvpTakes = "people",
 ): Promise<void> => {
-  const { batch, name, note } = rememberingBatch(db, uid, entry);
+  const { batch, name, note } = rememberingBatch(db, uid, entry, takes);
   batch.set(listRsvpDoc(db, listId, uid), { uid, name, note, createdAt: serverTimestamp() });
   try {
     await batch.commit();
@@ -431,16 +463,18 @@ export const sendListRsvp = async (
 /**
  * Change the name and note on the account's own RSVP, and remember the
  * name, in one batch. The arrival time is left alone, so the account keeps
- * its place. A name or note the rules would refuse is thrown before
- * anything is written.
+ * its place. `takes` is what the list takes, which says whether the name
+ * is remembered as a person's or as a team's. A name or note the rules
+ * would refuse is thrown before anything is written.
  */
 export const updateListRsvp = async (
   db: Firestore,
   listId: string,
   uid: string,
   entry: RsvpEntry,
+  takes: RsvpTakes = "people",
 ): Promise<void> => {
-  const { batch, name, note } = rememberingBatch(db, uid, entry);
+  const { batch, name, note } = rememberingBatch(db, uid, entry, takes);
   batch.update(listRsvpDoc(db, listId, uid), { name, note });
   await batch.commit();
 };

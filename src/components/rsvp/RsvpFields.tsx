@@ -1,8 +1,12 @@
 "use client";
 
 import { epochToWallClock, timeLabel, wallClockToEpoch } from "@/lib/rsvp";
+import { listWording } from "@/lib/rsvpList";
 
 const MAX_CAPACITY = 999;
+
+/** The capacity counts people unless the field is told otherwise. */
+const PEOPLE_CAPACITY_NOTE = listWording("people").capacityNote;
 
 const Problem = ({ id, problem }: { id: string; problem?: string }) =>
   problem ? (
@@ -75,11 +79,14 @@ export const CapacityField = ({
   problem,
   disabled = false,
   floor = 0,
+  note = PEOPLE_CAPACITY_NOTE,
   onFloor,
   onChange,
 }: {
   id: string;
   value: number;
+  /** What the capacity counts, said under the field, from listWording. People when left out. */
+  note?: string;
   problem?: string;
   disabled?: boolean;
   /** The lowest capacity the stepper goes to, such as the confirmed count. */
@@ -133,9 +140,7 @@ export const CapacityField = ({
           +
         </button>
       </div>
-      <span className="text-[0.72rem] text-mb-ink-muted">
-        People past this number join the waitlist in the order they answered.
-      </span>
+      <span className="text-[0.72rem] text-mb-ink-muted">{note}</span>
       <Problem id={`${id}-problem`} problem={problem} />
     </div>
   );

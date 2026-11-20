@@ -54,7 +54,7 @@ Everything a signed-in account owns is in Firestore, and the rules in
 
 | Path | Holds |
 | --- | --- |
-| `users/{uid}` | The account's own fields: `rsvpName`, the name it last RSVP'd under; only that account can read it |
+| `users/{uid}` | The account's own fields: `rsvpName`, the name it last RSVP'd under on a by-person list, and `rsvpTeamName`, the team name it last RSVP'd on a by-team list; only that account can read it |
 | `users/{uid}/teams/{teamId}` | The roster |
 | `users/{uid}/matches/{matchId}` | Quick matches, with `tournamentId: null` |
 | `tournaments/{tournamentId}` | One tournament: owner, format, status, entries, settings |

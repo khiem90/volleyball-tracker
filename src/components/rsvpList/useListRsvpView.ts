@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useListRsvps } from "@/context/useListRsvps";
 import {
   countdown,
-  prefillName,
   splitRsvps,
   standingIn,
   type RsvpEntry,
@@ -16,6 +15,8 @@ import {
   listPageState,
   listShutMessage,
   listTakesRsvps,
+  listWording,
+  prefillListName,
 } from "@/lib/rsvpList";
 import { RsvpRefusedError } from "@/lib/rsvpListData";
 import type { RsvpList } from "@/types/game";
@@ -45,7 +46,8 @@ const atMoment = (at: number, setNow: (now: number) => void): (() => void) => {
  * The RSVP side of a list's page: who is in and who is waiting, where the
  * viewer stands, the page state on this phone's clock, the countdown, and
  * the RSVP dialog. `list` is null until it loads and when the viewer cannot
- * read it.
+ * read it. On a by-team list the viewer's RSVP is their team's, and the
+ * wording here says so.
  *
  * The phone's clock decides what the page shows and nothing else. The rules
  * judge the open time and the scheduled time by the server's clock, so a
@@ -58,7 +60,7 @@ export const useListRsvpView = (
   user: { uid: string; displayName: string | null } | null,
 ) => {
   const uid = user?.uid ?? null;
-  const data = useListRsvps(listId, uid, list !== null);
+  const data = useListRsvps(listId, uid, list !== null, list?.takes ?? null);
   const { rsvps } = data;
 
   const [now, setNow] = useState(() => Date.now());
@@ -112,7 +114,7 @@ export const useListRsvpView = (
     listTakesRsvps(state) &&
     state.kind !== "not_open" &&
     !mine &&
-    data.rememberedName !== undefined;
+    data.remembered !== undefined;
   // Name, note, and withdrawal stay open until the scheduled time, even
   // after the owner closes the list. From then on the list is read-only.
   const canChange = mine !== null && !isOver;
@@ -125,10 +127,14 @@ export const useListRsvpView = (
       setDialogOpen(true);
       return;
     }
-    if (!canRsvp) return;
+    if (!canRsvp || !list) return;
     setEdit(null);
     setEntry(
-      (current) => current ?? { name: prefillName(data.rememberedName, user?.displayName), note: "" },
+      (current) =>
+        current ?? {
+          name: prefillListName(list.takes, data.remembered, user?.displayName),
+          note: "",
+        },
     );
     setDialogOpen(true);
   };
@@ -182,6 +188,8 @@ export const useListRsvpView = (
   };
 
   return {
+    /** The page's words for what the list takes, people or teams. A by-person list's until the list loads. */
+    wording: listWording(list?.takes ?? "people"),
     /** This phone's clock as the page last read it: each second of a countdown, and at the scheduled time. */
     now,
     /** Where the list stands on this phone's clock. Null until the list loads. */

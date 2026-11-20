@@ -5,6 +5,8 @@ import { Choice } from "@/components/shared";
 import {
   LIST_NAME_MAX,
   LIST_OPEN_TIME_LOCKED,
+  LIST_TAKES_LOCKED,
+  listWording,
   TAKES_LABEL,
   type ListSetup,
   type ListSetupProblems,
@@ -25,7 +27,8 @@ const LINK_CHOICES = [
  * A list's settings as a form: the name, by person or by team, the
  * capacity, both times, and the RSVP link. The new-list page and the
  * owner's settings on the list's page both show it. Times are entered on
- * this phone's clock, in `zone`.
+ * this phone's clock, in `zone`. The capacity's note says people or teams
+ * by what the list takes.
  */
 export const ListSetupFields = ({
   setup,
@@ -33,6 +36,7 @@ export const ListSetupFields = ({
   zone,
   scheduledZone,
   openTimeLocked = false,
+  takesLocked = false,
   onChange,
 }: {
   setup: ListSetup;
@@ -43,6 +47,8 @@ export const ListSetupFields = ({
   scheduledZone?: string;
   /** True once the list has an RSVP. The open time is then read-only and says why. */
   openTimeLocked?: boolean;
+  /** True once the list has an RSVP. By person or by team is then read-only and says why. */
+  takesLocked?: boolean;
   onChange: (changes: Partial<ListSetup>) => void;
 }) => (
   <div className="flex flex-col gap-5 p-4">
@@ -74,22 +80,31 @@ export const ListSetupFields = ({
       )}
     </div>
 
-    <Choice
-      id="list-takes"
-      label="RSVPs"
-      note={
-        setup.takes === "people"
-          ? "Each person RSVPs for themselves."
-          : "One person RSVPs a whole team under a team name."
-      }
-      value={setup.takes}
-      options={TAKES_CHOICES}
-      onChange={(takes) => onChange({ takes })}
-    />
+    {takesLocked ? (
+      <div className="flex flex-col gap-1.5">
+        <span className="mb-kicker">RSVPs</span>
+        <span className="text-[0.95rem] font-semibold">{TAKES_LABEL[setup.takes]}</span>
+        <p className="text-[0.72rem] text-mb-ink-muted">{LIST_TAKES_LOCKED}</p>
+      </div>
+    ) : (
+      <Choice
+        id="list-takes"
+        label="RSVPs"
+        note={
+          setup.takes === "people"
+            ? "Each person RSVPs for themselves."
+            : "One person RSVPs a whole team under a team name."
+        }
+        value={setup.takes}
+        options={TAKES_CHOICES}
+        onChange={(takes) => onChange({ takes })}
+      />
+    )}
 
     <CapacityField
       id="list-capacity"
       value={setup.capacity}
+      note={listWording(setup.takes).capacityNote}
       problem={problems.capacity}
       onChange={(capacity) => onChange({ capacity })}
     />
