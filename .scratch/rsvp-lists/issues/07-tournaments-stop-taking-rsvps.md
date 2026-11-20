@@ -13,15 +13,19 @@ Covers spec stories 91 to 93 and 99.
 
 **Blocked by:** 03, 04, 05
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] The creation page has no RSVP section, and the creation module's setup, problems, and input carry no RSVP settings or scheduled time. The creation tests are updated.
-- [ ] The console has no RSVP tab, no RSVP link in Settings, and no RSVP capability in its access. The console tests are updated.
-- [ ] The tournament RSVP route is removed and the RSVP page components serve lists only.
-- [ ] A new tournament is written without RSVP settings or a scheduled time, and the tournament type no longer has them.
-- [ ] The rules drop the RSVP link as a way to read a tournament and its matches, drop the check that an RSVP link has its times, and reduce the RSVP and notice paths under a tournament to owner-only read and delete. Rules tests show a real account that is not the owner reads neither, and the owner can still delete what is left there.
-- [ ] Deleting a tournament still sweeps RSVPs and notices left under it, and its confirmation no longer mentions people on a list. A data-module test covers the sweep.
-- [ ] Duplicating a tournament copies no capacity. The duplicate tests are updated.
-- [ ] The pure and data RSVP modules have no function that takes a tournament, and no test refers to one.
-- [ ] The README's data layout shows the list paths, drops the tournament's RSVP fields and paths, and says old data under tournaments is ignored.
-- [ ] The full suite passes.
+- [x] The creation page has no RSVP section, and the creation module's setup, problems, and input carry no RSVP settings or scheduled time. The creation tests are updated.
+- [x] The console has no RSVP tab, no RSVP link in Settings, and no RSVP capability in its access. The console tests are updated.
+- [x] The tournament RSVP route is removed and the RSVP page components serve lists only.
+- [x] A new tournament is written without RSVP settings or a scheduled time, and the tournament type no longer has them.
+- [x] The rules drop the RSVP link as a way to read a tournament and its matches, drop the check that an RSVP link has its times, and reduce the RSVP and notice paths under a tournament to owner-only read and delete. Rules tests show a real account that is not the owner reads neither, and the owner can still delete what is left there.
+- [x] Deleting a tournament still sweeps RSVPs and notices left under it, and its confirmation no longer mentions people on a list. A data-module test covers the sweep.
+- [x] Duplicating a tournament copies no capacity. The duplicate tests are updated.
+- [x] The pure and data RSVP modules have no function that takes a tournament, and no test refers to one.
+- [x] The README's data layout shows the list paths, drops the tournament's RSVP fields and paths, and says old data under tournaments is ignored.
+- [x] The full suite passes.
+
+## Comments
+
+- 2026-11-20: Built test-first on the integration branch `claude/rsvp-lists` (ticket branch tip 925fe32). Code review fixes landed in 98e2510..46a6cd2. All acceptance boxes ticked, and the full suite (1,032 tests) passes against the emulator. An account can still read its own RSVP left under an old tournament, through the rule that feeds Home. A rules test records it.

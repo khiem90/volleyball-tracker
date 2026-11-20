@@ -173,7 +173,7 @@ it to watch.
 94. As a developer, I want the open time and the scheduled time enforced in the Firestore rules against the server's clock, so that neither promise depends on a phone.
 95. As a developer, I want standing still derived from arrival order and capacity, so that ADR-0004 holds unchanged.
 96. As a developer, I want import to be a pure function from a list's RSVPs to the teams a tournament enters, with the randomness passed in, so that dealing is tested with plain values.
-97. As a developer, I want the engine untouched, so that nothing about formats changes.
+97. As a developer, I want the engine's formats untouched, so that nothing about how a format plays changes. The one engine change is that a team added back to a live tournament keeps its entry's players.
 98. As a developer, I want no server-side code in this feature, so that the app stays a browser talking to Firestore under the rules.
 99. As a developer, I want RSVP data left on old tournaments to be ignored and swept when its tournament is deleted, so that there is no migration to run.
 
@@ -354,7 +354,9 @@ RSVP settings, scheduled times, RSVPs, and notices already stored on
 tournaments are discarded with no migration (ADR-0005). The app stops reading
 them. Home's query for an account's own RSVPs ignores any that do not sit under
 a list. The rules keep the owner able to read and delete what is under an old
-tournament, and nobody else, so deleting that tournament still cleans up.
+tournament, so deleting that tournament still cleans up. An account can also
+still read its own RSVP there, through the same rule that feeds Home, and
+nobody else can read anything.
 
 ### Docs
 
@@ -496,3 +498,7 @@ tests.
 - This touches merged code across the rules, the creation page, the console,
   and Home. Splitting it into issues should put the standalone list first,
   then removal of tournament RSVPs, then import by team, then mixed teams.
+
+## Comments
+
+- 2026-11-20: Implemented on the integration branch `claude/rsvp-lists` through tickets 01 to 11, then a code review whose fixes landed in 98e2510..46a6cd2. Two sentences above changed to match what was built: story 97 now names the one engine line that carries a mixed team's players, and the note on old tournament RSVP data says an account can still read its own. Three things the review added beyond the spec: the read door through a list also checks that the list and the tournament have the same owner, deleting a tournament takes its id off its list, and a name or note change on an RSVP stops at the scheduled time.

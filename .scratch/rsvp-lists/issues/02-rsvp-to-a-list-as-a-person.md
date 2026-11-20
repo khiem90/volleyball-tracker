@@ -14,15 +14,19 @@ Covers spec stories 15 to 17, 19 to 28, 30, 45, 94, and 95.
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] RSVPs are stored under the list with the account's uid as the document id and the fields an RSVP has today.
-- [ ] The rules accept an RSVP from a real account as itself, with valid fields and the server's time as its arrival time, while the link is on, the list is not closed, and the request's time is at or after the open time and before the scheduled time. Rules tests cover each refusal, with times seeded relative to the test's clock.
-- [ ] The rules let an account change its own name and note and never its arrival time or uid, and let it withdraw before the scheduled time and not after. Rules tests cover each.
-- [ ] The rules let the owner and any real account with the link on read the RSVPs.
-- [ ] The pure page state for a list is one of: link off, not open yet, open, full, closed, and over. Pure tests cover each combination of link, closed, and now against the two times.
-- [ ] The split into confirmed and waitlisted, the standing, the countdown, the time labels, and the refusal messages are reused unchanged, and a refusal reads as "not open yet", closed, over, or link off as the case is.
-- [ ] The page shows the two sections by name, the viewer's standing, and the RSVP dialog with the name prefilled from the account's last RSVP. A second tap edits, with Withdraw in the footer.
-- [ ] The owner can RSVP to their own list from the same page.
-- [ ] A data-module test on the emulator lands two accounts at the same moment on a capacity-one list in server order, promotes the second when capacity goes up, and puts a withdrawn account behind when it RSVPs again.
-- [ ] The tournament RSVP page still passes its existing tests.
+- [x] RSVPs are stored under the list with the account's uid as the document id and the fields an RSVP has today.
+- [x] The rules accept an RSVP from a real account as itself, with valid fields and the server's time as its arrival time, while the link is on, the list is not closed, and the request's time is at or after the open time and before the scheduled time. Rules tests cover each refusal, with times seeded relative to the test's clock.
+- [x] The rules let an account change its own name and note and never its arrival time or uid, and let it withdraw before the scheduled time and not after. Rules tests cover each.
+- [x] The rules let the owner and any real account with the link on read the RSVPs.
+- [x] The pure page state for a list is one of: link off, not open yet, open, full, closed, and over. Pure tests cover each combination of link, closed, and now against the two times.
+- [x] The split into confirmed and waitlisted, the standing, the countdown, the time labels, and the refusal messages are reused unchanged, and a refusal reads as "not open yet", closed, over, or link off as the case is.
+- [x] The page shows the two sections by name, the viewer's standing, and the RSVP dialog with the name prefilled from the account's last RSVP. A second tap edits, with Withdraw in the footer.
+- [x] The owner can RSVP to their own list from the same page.
+- [x] A data-module test on the emulator lands two accounts at the same moment on a capacity-one list in server order, promotes the second when capacity goes up, and puts a withdrawn account behind when it RSVPs again.
+- [x] The tournament RSVP page still passes its existing tests.
+
+## Comments
+
+- 2026-11-20: Built test-first on the integration branch `claude/rsvp-lists` (ticket branch tip 0e5bf69). Code review fixes landed in 98e2510..46a6cd2. All acceptance boxes ticked, and the full suite (1,032 tests) passes against the emulator.
