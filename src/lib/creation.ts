@@ -6,7 +6,7 @@ import {
   type ListImport,
 } from "@/lib/rsvpImport";
 import { leastUsedColors } from "@/lib/teamColors";
-import type { NewTournamentInput } from "@/lib/tournaments";
+import type { EnteringMixedTeam, NewTournamentInput } from "@/lib/tournaments";
 import {
   DEFAULT_POINTS_FOR_LOSS,
   DEFAULT_POINTS_FOR_WIN,
@@ -133,19 +133,6 @@ export const setupSettings = (
  */
 export interface JoiningTeam {
   newName: string;
-}
-
-/**
- * A mixed team entering: dealt from a by-person list, and never on the
- * roster (ADR-0006). It has no id yet. The tournament gives it one as it
- * is built.
- */
-export interface EnteringMixedTeam {
-  name: string;
-  /** The palette color the tournament's teams use least. */
-  color: string;
-  /** The players' names, in the order the creation page shows them. */
-  players: string[];
 }
 
 /** A team entering a new tournament: one on the roster, one about to join it, or a mixed team. */

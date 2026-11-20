@@ -16,7 +16,6 @@ import {
   type Firestore,
   type Unsubscribe,
 } from "firebase/firestore";
-import type { EnteringMixedTeam } from "@/lib/creation";
 import { applyCommand, type MatchWrite } from "@/lib/engine";
 import { createdMatches } from "@/lib/engine/writes";
 import { editMixedTeam, isMixedTeam, type MixedTeamEdit } from "@/lib/entries";
@@ -194,6 +193,19 @@ export interface TeamToEnter {
   color?: string;
   /** The players' names, on a mixed team only. */
   players?: string[];
+}
+
+/**
+ * A mixed team entering: dealt from a by-person list, and never on the
+ * roster (ADR-0006). It has no id yet. The tournament gives it one as it
+ * is built.
+ */
+export interface EnteringMixedTeam {
+  name: string;
+  /** The palette color the tournament's teams use least. */
+  color: string;
+  /** The players' names, in the order the creation page shows them. */
+  players: string[];
 }
 
 export interface NewTournamentInput {
