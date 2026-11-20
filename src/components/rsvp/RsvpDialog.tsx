@@ -25,7 +25,7 @@ import { RSVP_NAME_MAX, RSVP_NOTE_MAX, rsvpEntryProblems, type RsvpEntry } from 
  */
 export const RsvpDialog = ({
   open,
-  tournamentName,
+  name,
   entry,
   isEditing = false,
   joinsWaitlist = false,
@@ -38,7 +38,8 @@ export const RsvpDialog = ({
   onClose,
 }: {
   open: boolean;
-  tournamentName: string;
+  /** What the person is RSVPing to: the tournament's name, or the list's. */
+  name: string;
   entry: RsvpEntry | null;
   /** True when the dialog edits the person's RSVP rather than making one. */
   isEditing?: boolean;
@@ -79,7 +80,7 @@ export const RsvpDialog = ({
               Withdraw?
             </DialogTitle>
             <DialogDescription>
-              You come off the list for {tournamentName}, and the first person waiting takes your
+              You come off the list for {name}, and the first person waiting takes your
               place. If you RSVP again, you go to the back of the line.
             </DialogDescription>
           </DialogHeader>
@@ -119,8 +120,8 @@ export const RsvpDialog = ({
             {isEditing
               ? "Change your name or note. You keep your place on the list."
               : joinsWaitlist
-                ? `Every spot in ${tournamentName} is taken, so you join the waitlist and move up on your own when a spot frees. Everyone on the list sees your name.`
-                : `You are telling the owner of ${tournamentName} that you will play. Everyone on the list sees your name.`}
+                ? `Every spot in ${name} is taken, so you join the waitlist and move up on your own when a spot frees. Everyone on the list sees your name.`
+                : `You are telling the owner of ${name} that you will play. Everyone on the list sees your name.`}
           </DialogDescription>
         </DialogHeader>
 

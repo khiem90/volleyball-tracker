@@ -248,7 +248,7 @@ export default function RsvpPage() {
 
       <RsvpDialog
         open={page.dialog.isOpen}
-        tournamentName={tournament.name}
+        name={tournament.name}
         entry={page.dialog.entry}
         isEditing={page.dialog.isEditing}
         joinsWaitlist={state.kind === "full"}
