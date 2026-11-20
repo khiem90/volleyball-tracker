@@ -20,10 +20,6 @@ describe("tabFor", () => {
     expect(tabFor("/rsvp/k3v9x2")).toBe("rsvp");
   });
 
-  it("leaves a tournament's old RSVP page under Tournaments", () => {
-    expect(tabFor("/competitions/k3v9x2/rsvp")).toBe("tournaments");
-  });
-
   it("puts quick match and the tools under Home, which is where they are reached from", () => {
     expect(tabFor("/quick-match")).toBe("home");
     expect(tabFor("/tools")).toBe("home");

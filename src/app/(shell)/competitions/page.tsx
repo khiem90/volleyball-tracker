@@ -13,8 +13,7 @@ import {
 } from "@/components/matchbook/useMatchbookCompete";
 
 import { TOURNAMENT_STATUS } from "@/components/matchbook/tournamentStatus";
-import { useRsvpCount } from "@/context/useRsvpList";
-import { deleteConfirmation } from "@/lib/console";
+import { deleteTournamentDescription } from "@/lib/console";
 
 const BracketBox = ({ cell }: { cell: MbBracketCell }) => {
   const side = (
@@ -184,9 +183,6 @@ export default function CompetitionsPage() {
   const { isLoading, isAuthenticated } = useRequireAuth();
   const data = useMatchbookCompete();
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  // The list is not held on this page, so the headcount is asked of the
-  // server when the confirmation opens, and Delete waits for it.
-  const headcount = useRsvpCount(deleteId);
 
   if (isLoading || !isAuthenticated) {
     return <PageLoadingSpinner />;
@@ -195,7 +191,6 @@ export default function CompetitionsPage() {
   const selected = data.selected;
   const status = selected ? TOURNAMENT_STATUS[selected.competition.status] : null;
   const deleteTarget = data.rows.find((r) => r.id === deleteId);
-  const confirmation = deleteConfirmation(deleteTarget?.name ?? "", headcount);
   const liveCount = data.rows.filter((r) => r.status === "live").length;
 
   return (
@@ -535,10 +530,8 @@ export default function CompetitionsPage() {
         open={deleteId !== null}
         onOpenChange={(open) => !open && setDeleteId(null)}
         title="Delete Competition?"
-        description={confirmation.description}
-        canConfirm={confirmation.canConfirm}
+        description={deleteTournamentDescription(deleteTarget?.name ?? "")}
         onConfirm={() => {
-          if (!confirmation.canConfirm) return;
           if (deleteId) data.deleteCompetition(deleteId);
           setDeleteId(null);
         }}

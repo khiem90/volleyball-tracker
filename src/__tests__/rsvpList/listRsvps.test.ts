@@ -8,7 +8,7 @@ import {
   type Timestamp,
 } from "firebase/firestore";
 import { expect, it } from "vitest";
-import { splitRsvps, standingIn, type AccountTournaments } from "@/lib/rsvp";
+import { splitRsvps, standingIn } from "@/lib/rsvp";
 import { listSetupOf, type ListSetup } from "@/lib/rsvpList";
 import {
   createRsvpList,
@@ -21,9 +21,6 @@ import {
   updateListRsvp,
   withdrawFromList,
 } from "@/lib/rsvpListData";
-import { sendRsvp, subscribeToAccountTournaments } from "@/lib/rsvping";
-import { createTournament } from "@/lib/tournaments";
-import { DEFAULT_TERMINOLOGY } from "@/types/competition-config";
 import type { Rsvp, RsvpList } from "@/types/game";
 import { describeFirestoreRules, minutesFromNow, modularFirestore, when } from "../rules/emulator";
 
@@ -295,39 +292,5 @@ describeFirestoreRules("RSVPing to a list on Firestore", (env) => {
     );
 
     await expect(rsvpsWhere(accountDb(eve), list.id, () => true)).rejects.toThrow();
-  });
-
-  it("keeps an RSVP to a list out of Home's feed of tournaments the account RSVP'd to", async () => {
-    const list = await openList();
-    const tournament = await createTournament(accountDb(owner), owner, {
-      name: "Friday night",
-      format: "round_robin",
-      teams: [
-        { id: "t1", name: "Aces", createdAt: 1 },
-        { id: "t2", name: "Blockers", createdAt: 2 },
-      ],
-      settings: {
-        courts: 1,
-        seriesLength: 1,
-        instantWin: false,
-        pointsForWin: 3,
-        pointsForLoss: 0,
-        terminology: DEFAULT_TERMINOLOGY,
-      },
-      scheduledAt: minutesFromNow(60 * 24),
-      scheduledZone: "America/New_York",
-      rsvp: { enabled: true, capacity: 12, opensAt: minutesFromNow(-1), closed: false },
-    });
-    const db = accountDb(dan);
-    await sendListRsvp(db, list.id, dan, { name: "Dan", note: "" });
-    await sendRsvp(db, tournament.id, dan, { name: "Dan", note: "" });
-
-    const read = await when<AccountTournaments>(
-      (onChange, onError) => subscribeToAccountTournaments(db, dan, onChange, onError),
-      (found) => found.mine.length > 0 && tournament.id in found.tournaments,
-    );
-
-    expect(read.mine.map((r) => r.tournamentId)).toEqual([tournament.id]);
-    expect(Object.keys(read.tournaments)).toEqual([tournament.id]);
   });
 });

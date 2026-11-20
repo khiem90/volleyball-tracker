@@ -270,8 +270,7 @@ export const LIST_IS_OVER = "This list is over.";
 
 /**
  * Why a list takes no RSVPs, as the page says it in place of the RSVP
- * button. Null for a list that takes them. The closed and link-off wording
- * is the tournament RSVP page's own.
+ * button. Null for a list that takes them.
  */
 export const listShutMessage = (state: ListPageState): string | null => {
   switch (state.kind) {

@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useApp } from "@/context/AppContext";
 import { useAuth } from "@/context/AuthContext";
 import { useHomeLists } from "@/context/useHomeLists";
-import { useHomeRsvps } from "@/context/useHomeRsvps";
 import { PageLoadingSpinner } from "@/components/shared";
 import { MbIcon } from "@/components/matchbook/MbIcon";
 import { PANEL_ROW, Panel, PanelEmpty, PanelError } from "@/components/matchbook/Panel";
@@ -20,7 +19,7 @@ import {
   type LiveTournament,
   type RecentResult,
 } from "@/lib/home";
-import { deviceZone, timeLabel, type HomeRsvpRow } from "@/lib/rsvp";
+import { deviceZone, timeLabel } from "@/lib/rsvp";
 import type { HomeListRow } from "@/lib/rsvpList";
 import { signInHref } from "@/lib/shell";
 import { plural } from "@/lib/utils";
@@ -133,7 +132,7 @@ type Standing = HomeListRow["standing"];
 const standingLabel = (standing: Standing) =>
   standing.kind === "confirmed" ? "You're in" : `Waitlist #${standing.position}`;
 
-/** What an RSVP row reads off a list, or off a tournament that still takes RSVPs. */
+/** What an RSVP row reads off a list. */
 type Scheduled = { name: string; scheduledAt?: number; scheduledZone?: string };
 
 /** One RSVP of the account's: what it is to, when, and where the account stands. */
@@ -142,14 +141,12 @@ const RsvpRow = ({
   standing,
   unread,
   href,
-  isLive = false,
   zone,
 }: {
   to: Scheduled;
   standing: Standing;
   unread: boolean;
   href: string;
-  isLive?: boolean;
   zone: string;
 }) => {
   const when =
@@ -165,15 +162,10 @@ const RsvpRow = ({
           {to.name}
         </p>
         {when && <p className="text-[0.72rem] text-mb-ink-muted">{when}</p>}
-        {(isLive || unread) && (
-          <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
-            {isLive && <LiveTag />}
-            {unread && (
-              <span className="flex items-center gap-1 text-mb-coral">
-                <MbIcon id="bell" size={11} />
-                <span className="matchbook-display text-[0.62rem] font-bold">New notice</span>
-              </span>
-            )}
+        {unread && (
+          <span className="flex items-center gap-1 text-mb-coral">
+            <MbIcon id="bell" size={11} />
+            <span className="matchbook-display text-[0.62rem] font-bold">New notice</span>
           </span>
         )}
       </div>
@@ -191,27 +183,16 @@ const RsvpRow = ({
 
 /**
  * The lists the account is on, soonest first, each opening the list's
- * page. Under them, until tournaments stop taking RSVPs, the tournaments
- * the account has RSVP'd to. Home leaves the panel out when both are empty.
+ * page. Home leaves the panel out when there are none.
  */
-const RsvpsPanel = ({
-  lists,
-  tournaments,
-}: {
-  lists: HomeListRow[];
-  tournaments: HomeRsvpRow[];
-}) => {
+const RsvpsPanel = ({ lists }: { lists: HomeListRow[] }) => {
   const [zone] = useState(deviceZone);
-  const counts = [
-    lists.length > 0 && plural(lists.length, "list"),
-    tournaments.length > 0 && plural(tournaments.length, "tournament"),
-  ].filter(Boolean);
 
   return (
     <Panel
       title="Your RSVPs"
       icon="calendar"
-      meta={<span className="mb-kicker">{counts.join(" • ")}</span>}
+      meta={<span className="mb-kicker">{plural(lists.length, "list")}</span>}
     >
       <div className="flex flex-col divide-y divide-mb-rule">
         {lists.map(({ list, standing, unread, href }) => (
@@ -221,17 +202,6 @@ const RsvpsPanel = ({
             standing={standing}
             unread={unread}
             href={href}
-            zone={zone}
-          />
-        ))}
-        {tournaments.map(({ tournament, standing, unread, href }) => (
-          <RsvpRow
-            key={tournament.id}
-            to={tournament}
-            standing={standing}
-            unread={unread}
-            href={href}
-            isLive={tournament.status === "live"}
             zone={zone}
           />
         ))}
@@ -308,7 +278,6 @@ export default function HomePage() {
   // Only a real account has RSVPs; a guest and a scorer link's silent
   // identity have no user, so they read nothing and see no panel.
   const listRows = useHomeLists(user?.uid ?? null);
-  const rsvpRows = useHomeRsvps(user?.uid ?? null);
 
   const live = useMemo(
     () => liveTournaments(tournaments, matches),
@@ -360,9 +329,7 @@ export default function HomePage() {
           ) : (
             <LivePanel rows={live} drafts={drafts} error={tournamentsError} />
           )}
-          {!isGuest && listRows.length + rsvpRows.length > 0 && (
-            <RsvpsPanel lists={listRows} tournaments={rsvpRows} />
-          )}
+          {!isGuest && listRows.length > 0 && <RsvpsPanel lists={listRows} />}
         </div>
         <div className="flex flex-col gap-4 lg:col-span-5">
           {!isGuest && <ResultsPanel results={results} error={tournamentsError} />}

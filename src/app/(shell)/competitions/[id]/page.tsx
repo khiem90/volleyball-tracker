@@ -13,9 +13,6 @@ import { CourtsPanel } from "@/components/console/CourtsPanel";
 import { CorrectResultDialog } from "@/components/console/CorrectResultDialog";
 import { EndTournamentDialog } from "@/components/console/EndTournamentDialog";
 import { SchedulePanel } from "@/components/console/SchedulePanel";
-import { NoticesPanel } from "@/components/console/NoticesPanel";
-import { RsvpListPanel } from "@/components/console/RsvpListPanel";
-import { RsvpPanel } from "@/components/console/RsvpPanel";
 import { SettingsPanel } from "@/components/console/SettingsPanel";
 import { StandingsPanel } from "@/components/console/StandingsPanel";
 import { StartTournamentDialog } from "@/components/console/StartTournamentDialog";
@@ -26,7 +23,6 @@ import { useConsole } from "@/components/console/useConsole";
 import { TOURNAMENT_STATUS } from "@/components/matchbook/tournamentStatus";
 import { courtLabel, courtsWord, type ConsoleRole } from "@/lib/console";
 import { formatLabel, isBracketFormat, isRotationFormat } from "@/lib/formats";
-import { DEFAULT_CAPACITY } from "@/lib/rsvp";
 
 const ROLE_LABEL: Record<Exclude<ConsoleRole, "owner">, string> = {
   scorer: "Scorer",
@@ -222,34 +218,6 @@ const TournamentConsole = () => {
             busy={page.isApplying}
           />
         </Section>
-        {page.tabs.some((spec) => spec.id === "rsvp") && (
-          <Section id="rsvp" active={page.tab} className="lg:col-span-4">
-            {page.access.canManageRsvp && (
-              <RsvpPanel
-                tournament={tournament}
-                list={page.listSoFar}
-                onSave={page.saveRsvp}
-                onTurnOff={page.turnRsvpLinkOff}
-                onSetClosed={page.setRsvpClosed}
-              />
-            )}
-            <RsvpListPanel
-              rsvps={page.rsvps}
-              error={page.rsvpListError}
-              capacity={tournament.rsvp?.capacity ?? DEFAULT_CAPACITY}
-              ownerUid={tournament.ownerId}
-              canChange={page.access.canManageRsvp}
-              onAddHeld={page.addHeldSpot}
-              onRemove={page.removeRsvp}
-              className={page.access.canManageRsvp ? "mt-4" : ""}
-            />
-            <NoticesPanel
-              tournamentId={tournament.id}
-              readOnly={!page.access.canManageRsvp}
-              className="mt-4"
-            />
-          </Section>
-        )}
         <Section id="settings" active={page.tab} className="lg:col-span-4">
           <SettingsPanel
             tournament={tournament}
@@ -297,8 +265,7 @@ const TournamentConsole = () => {
           if (!open && !page.isDeleting) page.setDeleteOpen(false);
         }}
         title="Delete the tournament?"
-        description={page.deleteConfirmation.description}
-        canConfirm={page.deleteConfirmation.canConfirm}
+        description={page.deleteDescription}
         isDeleting={page.isDeleting}
         onConfirm={page.remove}
       />

@@ -38,7 +38,7 @@ export const RsvpDialog = ({
   onClose,
 }: {
   open: boolean;
-  /** What the person is RSVPing to: the tournament's name, or the list's. */
+  /** What the person is RSVPing to: the list's name. */
   name: string;
   entry: RsvpEntry | null;
   /** True when the dialog edits the person's RSVP rather than making one. */

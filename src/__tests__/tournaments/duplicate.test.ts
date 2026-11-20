@@ -53,26 +53,18 @@ describe("duplicateInput", () => {
     expect(input.teams.map((team) => team.id)).toEqual(["t1", "t3", "t4"]);
   });
 
-  it("carries the RSVP capacity only: the link starts off, with no scheduled or open time", () => {
-    const draft = started("round_robin", 3).tournament;
-    const source: Tournament = {
-      ...draft,
+  it("carries nothing about RSVPs from a tournament that still stores RSVP settings and a scheduled time", () => {
+    // What a tournament saved before RSVP lists can still hold (ADR-0005).
+    const source = {
+      ...started("round_robin", 3).tournament,
       scheduledAt: 1_800_000_000_000,
       scheduledZone: "America/New_York",
       rsvp: { enabled: true, capacity: 16, opensAt: 1_799_000_000_000, closed: true },
-    };
+    } as Tournament;
 
     const input = duplicateInput(source, rosterOf(source));
 
-    expect(input.rsvp).toEqual({ enabled: false, capacity: 16, closed: false });
-    expect(input).not.toHaveProperty("scheduledAt");
-    expect(input).not.toHaveProperty("scheduledZone");
-  });
-
-  it("gives no RSVP settings to the duplicate of a tournament that had none", () => {
-    const done = playThrough(started("round_robin", 3));
-
-    expect(duplicateInput(done.tournament, rosterOf(done.tournament))).not.toHaveProperty("rsvp");
+    expect(Object.keys(input).sort()).toEqual(["format", "name", "settings", "teams"]);
   });
 
   it("brings a team that withdrew from the source back in", () => {

@@ -92,7 +92,6 @@ export default function NewTournamentPage() {
 
         <AdvancedSettings
           setup={setup}
-          problems={problems}
           open={page.advancedOpen}
           onToggle={() => page.setAdvancedOpen((open) => !open)}
           onChange={page.change}

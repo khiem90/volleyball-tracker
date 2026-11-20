@@ -6,9 +6,9 @@ import { deviceZone, millisOf, timeLabel } from "@/lib/rsvp";
 import type { Notice } from "@/types/game";
 
 /**
- * A tournament's notices, newest first, each with the time it was posted
- * on this phone's clock. The owner's console passes `onDelete` to put a
- * Delete on each one; the RSVP page shows them read-only.
+ * A list's notices, newest first, each with the time it was posted on
+ * this phone's clock. For the owner the list's page passes `onDelete`,
+ * which puts a Delete on each one. Everyone else reads them.
  */
 export const NoticeList = ({
   notices,

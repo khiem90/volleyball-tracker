@@ -13,7 +13,6 @@ import {
   type TournamentSetup,
 } from "@/lib/creation";
 import type { AddedTeams } from "@/lib/roster";
-import { deviceZone } from "@/lib/rsvp";
 import { messageOf } from "@/lib/utils";
 
 const NO_PROBLEMS: SetupProblems = {};
@@ -30,8 +29,7 @@ export type CreationAction = "draft" | "start";
 export const useCreation = () => {
   const router = useRouter();
   const { roster, isRosterLoading, addTeamsFromText: addToRoster, createTournament } = useApp();
-  // Times are entered on this phone's clock and saved with its zone.
-  const [setup, setSetup] = useState<TournamentSetup>(() => emptySetup(deviceZone()));
+  const [setup, setSetup] = useState<TournamentSetup>(emptySetup);
   const [attempted, setAttempted] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [busy, setBusy] = useState<CreationAction | null>(null);
@@ -102,8 +100,6 @@ export const useCreation = () => {
   const create = useCallback(
     async (action: CreationAction) => {
       setAttempted(true);
-      // The RSVP fields sit behind the disclosure, so it opens on their problems.
-      if (problems.scheduledAt || problems.opensAt || problems.capacity) setAdvancedOpen(true);
       if (busy || firstProblem(problems)) return;
       setBusy(action);
       setError(null);

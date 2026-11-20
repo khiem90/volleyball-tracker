@@ -56,21 +56,6 @@ export interface TournamentSettings {
  * their next write.
  */
 /**
- * How a tournament takes RSVPs. The rules refuse `enabled` without both the
- * tournament's `scheduledAt` and `opensAt`.
- */
-export interface RsvpSettings {
-  /** Whether the RSVP link is on. */
-  enabled: boolean;
-  /** The number of confirmed RSVPs the tournament takes. */
-  capacity: number;
-  /** The moment RSVPs open, in epoch milliseconds, judged by the server's clock. */
-  opensAt?: number;
-  /** Whether the owner has closed the list early. */
-  closed: boolean;
-}
-
-/**
  * An instant as the Firestore server writes it, kept to the microsecond so
  * two RSVPs at the open instant still have a definite order. A Firestore
  * `Timestamp` is one; nothing else in the app stores time this way.
@@ -81,10 +66,10 @@ export interface ServerTime {
 }
 
 /**
- * A person's RSVP to a tournament, stored under the tournament with the
- * account's uid as its id, or a held spot the owner added by name under a
- * generated id. Whether it is confirmed or waitlisted is not stored: it
- * follows from `createdAt` and the capacity (ADR-0004).
+ * An RSVP to an RSVP list, stored under the list with the account's uid as
+ * its id, or a held spot the owner added by name under a generated id.
+ * Whether it is confirmed or waitlisted is not stored: it follows from
+ * `createdAt` and the capacity (ADR-0004).
  */
 export interface Rsvp {
   id: string;
@@ -103,8 +88,8 @@ export interface Rsvp {
 }
 
 /**
- * A short message the owner posts on a tournament for everyone on its
- * list, stored in the tournament's `notices` subcollection.
+ * A short message the owner posts on an RSVP list for everyone on it,
+ * stored in the list's `notices` subcollection.
  */
 export interface Notice {
   id: string;
@@ -129,15 +114,6 @@ export interface Tournament {
   twoMatchRotationState?: TwoMatchRotationState;
   /** Whether the spectator link is on. Off means nobody but the owner can read it. */
   spectatorEnabled: boolean;
-  /** When the owner says the tournament will be played, in epoch milliseconds. Absent until set. */
-  scheduledAt?: number;
-  /** The IANA zone the scheduled time was set in, so another zone can be shown the owner's wall clock. */
-  scheduledZone?: string;
-  /**
-   * The RSVP settings. Absent on a tournament from before RSVPs, which
-   * behaves as if the RSVP link were off.
-   */
-  rsvp?: RsvpSettings;
   revision: string;
   /** The revision the last write was built on. Absent until a tournament's first write after it was added. */
   basedOn?: string;

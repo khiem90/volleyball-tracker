@@ -1,11 +1,4 @@
 import { isRotationFormat, isSeriesFormat, minimumTeams, minimumTeamsMessage } from "@/lib/formats";
-import {
-  DEFAULT_CAPACITY,
-  rsvpProblems,
-  rsvpSettingsOf,
-  type RsvpProblems,
-  type RsvpSetup,
-} from "@/lib/rsvp";
 import type { NewTournamentInput } from "@/lib/tournaments";
 import {
   DEFAULT_POINTS_FOR_LOSS,
@@ -38,17 +31,10 @@ export interface TournamentSetup {
   pointsForLoss: number;
   /** The tournament's word for a court: "court", "field", or "table". */
   courtWord: string;
-  /** The IANA zone the times are entered in: the owner's phone's. */
-  zone: string;
-  /** The scheduled time and RSVP settings, with `enabled` saying whether the link goes on as the tournament is saved. */
-  rsvp: RsvpSetup;
 }
 
-/**
- * The page as it opens: nothing chosen, one court, single games, no times,
- * and the RSVP link off. Times are entered in `zone`, the phone's own.
- */
-export const emptySetup = (zone = "UTC"): TournamentSetup => ({
+/** The page as it opens: nothing chosen, one court, single games. */
+export const emptySetup = (): TournamentSetup => ({
   name: "",
   format: null,
   teamIds: [],
@@ -58,8 +44,6 @@ export const emptySetup = (zone = "UTC"): TournamentSetup => ({
   pointsForWin: DEFAULT_POINTS_FOR_WIN,
   pointsForLoss: DEFAULT_POINTS_FOR_LOSS,
   courtWord: DEFAULT_TERMINOLOGY.venue,
-  zone,
-  rsvp: { enabled: false, capacity: DEFAULT_CAPACITY, scheduledAt: null, opensAt: null },
 });
 
 // ============================================
@@ -140,7 +124,7 @@ export const enteredTeams = (setup: TournamentSetup, roster: PersistentTeam[]): 
 };
 
 /** Why the setup cannot become a tournament yet, by field. Empty when it can. */
-export interface SetupProblems extends RsvpProblems {
+export interface SetupProblems {
   name?: string;
   format?: string;
   teams?: string;
@@ -150,7 +134,7 @@ export const setupProblems = (
   setup: TournamentSetup,
   roster: PersistentTeam[],
 ): SetupProblems => {
-  const problems: SetupProblems = rsvpProblems(setup.rsvp);
+  const problems: SetupProblems = {};
   if (setup.name.trim().length === 0) problems.name = "Give the tournament a name.";
   if (!setup.format) {
     problems.format = "Pick a format.";
@@ -165,38 +149,16 @@ export const setupProblems = (
 
 /**
  * The problems in the order to fix them: the format, since the rest depend
- * on it, then the name, the teams, and the RSVP section.
+ * on it, then the name, then the teams.
  */
 export const problemsInOrder = (problems: SetupProblems): string[] =>
-  [
-    problems.format,
-    problems.name,
-    problems.teams,
-    problems.scheduledAt,
-    problems.opensAt,
-    problems.capacity,
-  ].filter((problem): problem is string => problem !== undefined);
+  [problems.format, problems.name, problems.teams].filter(
+    (problem): problem is string => problem !== undefined,
+  );
 
 /** The first problem to fix. */
 export const firstProblem = (problems: SetupProblems): string | undefined =>
   problemsInOrder(problems)[0];
-
-/**
- * The scheduled time and RSVP settings the tournament is saved with. A
- * scheduled time carries the zone it was entered in. The RSVP map is
- * written once the link is on, an open time is set, or the capacity moves
- * off the default, so a tournament kept private for now keeps what the
- * owner entered; an untouched section adds nothing.
- */
-const scheduleInput = ({
-  rsvp,
-  zone,
-}: TournamentSetup): Pick<NewTournamentInput, "scheduledAt" | "scheduledZone" | "rsvp"> => ({
-  ...(rsvp.scheduledAt !== null && { scheduledAt: rsvp.scheduledAt, scheduledZone: zone }),
-  ...((rsvp.enabled || rsvp.opensAt !== null || rsvp.capacity !== DEFAULT_CAPACITY) && {
-    rsvp: rsvpSettingsOf(rsvp, false),
-  }),
-});
 
 /**
  * The input the draft is built from. The problems are checked again here,
@@ -211,6 +173,5 @@ export const setupInput = (setup: TournamentSetup, roster: PersistentTeam[]): Ne
     format: setup.format,
     teams: enteredTeams(setup, roster),
     settings: setupSettings(setup.format, setup),
-    ...scheduleInput(setup),
   };
 };
