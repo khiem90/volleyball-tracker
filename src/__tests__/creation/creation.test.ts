@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  emptyRosterMessage,
   emptySetup,
   firstProblem,
   problemsInOrder,
@@ -188,6 +189,19 @@ describe("setupInput", () => {
     expect(() => setupInput(setup({ teamIds: ["t1", "t2", "t3"] }), roster)).toThrow(
       "Pick a format.",
     );
+  });
+});
+
+describe("what the teams section says while the roster is empty", () => {
+  it("invites the owner to add a team while nothing is entering", () => {
+    expect(emptyRosterMessage(0)).toBe(
+      "No teams yet. Type a name above and press Enter, or paste a list.",
+    );
+  });
+
+  it("says nothing once imported teams are entering, since there are teams", () => {
+    expect(emptyRosterMessage(1)).toBeNull();
+    expect(emptyRosterMessage(8)).toBeNull();
   });
 });
 

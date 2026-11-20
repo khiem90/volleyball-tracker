@@ -233,6 +233,14 @@ const importProblem = (imported: ListImport, ticked: PersistentTeam[]): string |
   return `A ticked roster team is also called ${shared.name}. Rename the mixed team or untick the roster team.`;
 };
 
+/**
+ * What the teams section says in place of the roster while the roster is
+ * empty, or null when it says nothing. With `importedCount` teams from an
+ * import above it, "No teams yet" would be wrong, so the line goes.
+ */
+export const emptyRosterMessage = (importedCount: number): string | null =>
+  importedCount > 0 ? null : "No teams yet. Type a name above and press Enter, or paste a list.";
+
 /** Why the setup cannot become a tournament yet, by field. Empty when it can. */
 export interface SetupProblems {
   name?: string;

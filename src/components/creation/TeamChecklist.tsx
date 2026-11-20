@@ -3,6 +3,7 @@
 import { useCallback } from "react";
 import { AddTeamsForm } from "@/components/matchbook/AddTeamsForm";
 import { Panel, PanelEmpty } from "@/components/matchbook/Panel";
+import { emptyRosterMessage } from "@/lib/creation";
 import type { AddedTeams } from "@/lib/roster";
 import type { PersistentTeam } from "@/types/game";
 import { ListImportSection } from "./ListImportSection";
@@ -53,6 +54,7 @@ export const TeamChecklist = ({
   const isImported = (teamId: string) => imported?.rosterIds.has(teamId) ?? false;
   const allTicked =
     roster.length > 0 && roster.every((team) => ticked.has(team.id) || isImported(team.id));
+  const emptyMessage = emptyRosterMessage(imported?.rows.length ?? 0);
 
   return (
     <Panel
@@ -78,7 +80,7 @@ export const TeamChecklist = ({
       <AddTeamsForm onAdd={onAdd} />
       <ListImportSection view={listImport} problem={importProblem} />
       {roster.length === 0 ? (
-        <PanelEmpty message="No teams yet. Type a name above and press Enter, or paste a list." />
+        emptyMessage && <PanelEmpty message={emptyMessage} />
       ) : (
         <div
           className="max-h-[50vh] overflow-auto"
