@@ -20,6 +20,7 @@ import {
   type TeamChange,
 } from "@/lib/entries";
 import { isOffline, isRefused, lostRace, newToken, stripUndefined } from "@/lib/firestoreData";
+import { leastUsedColors, TEAM_COLORS } from "@/lib/teamColors";
 import { MAX_ATTEMPTS, tournamentDoc } from "@/lib/tournaments";
 import { nameKey } from "@/lib/utils";
 import type { PersistentTeam, Tournament } from "@/types/game";
@@ -42,19 +43,7 @@ export interface TeamInput {
   color?: string;
 }
 
-/** The colors a team can have, in the order the color picker shows them. */
-export const TEAM_COLORS = [
-  "#ef4444", // Red
-  "#f97316", // Orange
-  "#eab308", // Yellow
-  "#22c55e", // Green
-  "#14b8a6", // Teal
-  "#06b6d4", // Cyan
-  "#3b82f6", // Blue
-  "#6366f1", // Indigo
-  "#8b5cf6", // Purple
-  "#ec4899", // Pink
-];
+export { TEAM_COLORS };
 
 export interface ParsedTeamNames {
   /** The teams to add, in the order they were written, each with a color. */
@@ -70,12 +59,6 @@ export interface AddedTeams {
   alreadyOnRoster: ParsedTeamNames["alreadyOnRoster"];
 }
 
-/** The palette color with the fewest uses; palette order breaks ties. */
-const leastUsedColor = (uses: Map<string, number>): string =>
-  TEAM_COLORS.reduce((best, color) =>
-    (uses.get(color) ?? 0) < (uses.get(best) ?? 0) ? color : best
-  );
-
 /**
  * The teams to add for these names, one each. Blank names are dropped and
  * names are trimmed. A name the roster already has, or that came earlier
@@ -85,10 +68,7 @@ const leastUsedColor = (uses: Map<string, number>): string =>
  */
 const namedTeams = (names: string[], roster: PersistentTeam[]): ParsedTeamNames => {
   const taken = new Set(roster.map((team) => nameKey(team.name)));
-  const colorUses = new Map<string, number>();
-  for (const team of roster) {
-    if (team.color) colorUses.set(team.color, (colorUses.get(team.color) ?? 0) + 1);
-  }
+  const nextColor = leastUsedColors(roster.map((team) => team.color));
 
   const teams: TeamInput[] = [];
   const alreadyOnRoster: string[] = [];
@@ -100,9 +80,7 @@ const namedTeams = (names: string[], roster: PersistentTeam[]): ParsedTeamNames 
       continue;
     }
     taken.add(nameKey(name));
-    const color = leastUsedColor(colorUses);
-    colorUses.set(color, (colorUses.get(color) ?? 0) + 1);
-    teams.push({ name, color });
+    teams.push({ name, color: nextColor() });
   }
   return { teams, alreadyOnRoster };
 };
