@@ -1,4 +1,5 @@
 import {
+  addDoc,
   collection,
   deleteDoc,
   deleteField,
@@ -160,6 +161,33 @@ export const saveListSettings = async (
 
   await updateDoc(rsvpListDoc(db, list.id), { ...changes, updatedAt: Date.now() });
 };
+
+/**
+ * Add a held spot: an RSVP by name for someone without an account. It has
+ * a generated id and no uid, so no account can change or withdraw it, and
+ * the server writes its arrival time, so it takes the next place in order
+ * like any other RSVP. A name the rules would refuse is thrown before
+ * anything is written. Owner only, until the scheduled time, or on a list
+ * that has none yet.
+ */
+export const addListHeldSpot = async (db: Firestore, listId: string, name: string): Promise<void> => {
+  const problem = rsvpEntryProblems({ name, note: "" }).name;
+  if (problem) throw new Error(problem);
+  await addDoc(listRsvpsCollection(db, listId), {
+    uid: null,
+    held: true,
+    name: name.trim(),
+    createdAt: serverTimestamp(),
+  });
+};
+
+/**
+ * Take any RSVP off the list, a held spot included. As with a withdrawal,
+ * the first RSVP waiting moves up with no write of its own (ADR-0004).
+ * Owner only, at any time, after the scheduled time too.
+ */
+export const removeListRsvp = (db: Firestore, listId: string, rsvpId: string): Promise<void> =>
+  deleteDoc(listRsvpDoc(db, listId, rsvpId));
 
 // ============================================
 // The RSVPs on a list
