@@ -8,7 +8,7 @@
 import { splitRsvps, type Placed } from "@/lib/rsvp";
 import { isListOver } from "@/lib/rsvpList";
 import { nameKey } from "@/lib/utils";
-import type { PersistentTeam, Rsvp, RsvpList, RsvpTakes } from "@/types/game";
+import type { PersistentTeam, Rsvp, RsvpList } from "@/types/game";
 
 // ============================================
 // Whether a list can be imported
