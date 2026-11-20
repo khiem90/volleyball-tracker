@@ -109,6 +109,15 @@ so all of it lands or none does. The rules refuse a tournament whose
 `rsvpListId` change afterwards. Nothing that happens to the list later
 reaches the tournament.
 
+Once an imported tournament is live or completed, any signed-in account reads
+it and its matches while the list it names has `enabled` on. The list's page
+reads each id in `tournamentIds` and offers Watch or See results for the ones
+it can read, and the console takes that account as a spectator. A draft stays
+with its owner. Turning the list's link off, or deleting the list, closes this
+way in and leaves the tournament, its spectator link, and its scorer link as
+they were. Deleting a tournament leaves its id on the list, and the page
+skips it.
+
 A tournament takes no RSVPs and has no scheduled time. One saved before RSVP
 lists may still hold `scheduledAt`, `scheduledZone`, an `rsvp` map, and
 `rsvps` and `notices` subcollections of its own. The app ignores all of them,

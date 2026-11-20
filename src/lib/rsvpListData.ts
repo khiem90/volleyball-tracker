@@ -517,7 +517,7 @@ export const withdrawFromList = (db: Firestore, listId: string, uid: string): Pr
 // ============================================
 
 /** How long a list's page waits before it asks again for a tournament it could not read. */
-export const LIST_TOURNAMENT_RETRY_MS = 30_000;
+const LIST_TOURNAMENT_RETRY_MS = 30_000;
 
 /**
  * The tournaments imported from a list that the viewer can read, in the
