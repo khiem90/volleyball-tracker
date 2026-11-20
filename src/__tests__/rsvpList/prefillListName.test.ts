@@ -13,12 +13,12 @@ describe("prefillListName", () => {
   });
 
   it("falls back to the account's display name for a person, and to nothing for a team", () => {
-    const captainOnly = { person: null, team: "Spikers" };
+    const teamOnly = { person: null, team: "Spikers" };
     const personOnly = { person: "Dan from Tuesdays", team: null };
 
-    expect(prefillListName("people", captainOnly, "Daniel Okafor")).toBe("Daniel Okafor");
-    expect(prefillListName("people", captainOnly, null)).toBe("");
-    // A team is not called after its captain, so neither of the person's names fills it.
+    expect(prefillListName("people", teamOnly, "Daniel Okafor")).toBe("Daniel Okafor");
+    expect(prefillListName("people", teamOnly, null)).toBe("");
+    // A team is not called after the person who RSVPs it, so neither of the person's names fills it.
     expect(prefillListName("teams", personOnly, "Daniel Okafor")).toBe("");
   });
 

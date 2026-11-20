@@ -14,7 +14,7 @@ import type { ListRsvpView } from "./useListRsvpView";
 
 /**
  * The owner's box for a held spot: a name for someone without an account,
- * or on a by-team list a team name for a team whose captain has none. An
+ * or on a by-team list a team name for a team with nobody who has one. An
  * empty box only disables Add. A name over the limit says so.
  */
 const HeldSpotForm = ({

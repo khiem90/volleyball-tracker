@@ -152,7 +152,7 @@ export const DEFAULT_TEAM_SIZE = 4;
 
 /**
  * Import a list with these RSVPs on it. A by-team list gives one team per
- * confirmed RSVP, in arrival order, under the name the captain gave. A
+ * confirmed RSVP, in arrival order, under the name it was RSVP'd with. A
  * by-person list has its confirmed people dealt into mixed teams of the
  * default size, and `random` decides the deal. A by-team import never
  * reads it.

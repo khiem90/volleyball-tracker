@@ -349,7 +349,7 @@ export interface RememberedNames {
  * The name the RSVP form starts with on a list that takes `takes`. A
  * by-person list offers the remembered person name, then the account's
  * display name. A by-team list offers the remembered team name and nothing
- * else, since a team is not called after its captain. Either is cut to
+ * else, since a team is not called after the person who RSVPs it. Either is cut to
  * what an RSVP takes.
  */
 export const prefillListName = (
@@ -383,8 +383,8 @@ type OnTheList = Exclude<RsvpStanding, { kind: "none" }>;
 
 /**
  * What a list's pages say that depends on what the list takes. A by-person
- * list speaks to a person about themselves. A by-team list speaks to a
- * captain about their team.
+ * list speaks to a person about themselves. A by-team list speaks to the
+ * person who RSVP'd a team about that team.
  */
 export interface ListWording {
   /** A number of what the list takes: "1 person", "12 people", "8 teams". */
@@ -509,7 +509,7 @@ const TEAMS_WORDING: ListWording = {
   heldSpot: {
     label: "Add held spot for a team",
     placeholder: "Team name",
-    help: `For a team whose captain has no account. ${HELD_SPOT_PLACE}`,
+    help: `For a team with nobody who has an account. ${HELD_SPOT_PLACE}`,
   },
   capacityNote: "Teams past this number join the waitlist in the order they answered.",
   closeNote:

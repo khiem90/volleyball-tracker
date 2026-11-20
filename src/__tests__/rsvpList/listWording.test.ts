@@ -26,7 +26,7 @@ describe("listWording", () => {
     expect(teams.mine).toBe("Your team");
   });
 
-  it("says where a person stands, and where a captain's team stands", () => {
+  it("says where a person stands, and where a team stands to the person who RSVP'd it", () => {
     expect(people.standing({ kind: "confirmed", position: 3 }, "Dan", 12, true)).toBe(
       "You're in as Dan, spot 3 of 12.",
     );
@@ -108,7 +108,7 @@ describe("listWording", () => {
     expect(teams.heldSpot).toEqual({
       label: "Add held spot for a team",
       placeholder: "Team name",
-      help: "For a team whose captain has no account. It takes the next place in line, so on a full list it joins the waitlist.",
+      help: "For a team with nobody who has an account. It takes the next place in line, so on a full list it joins the waitlist.",
     });
   });
 

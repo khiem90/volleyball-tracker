@@ -60,7 +60,7 @@ describeFirestoreRules("RSVPing a team to a list on Firestore", (env) => {
     return found;
   };
 
-  it("RSVPs a captain's whole team under its team name, as one RSVP held by the captain's account", async () => {
+  it("RSVPs a whole team under its team name, as one RSVP held by the account that sent it", async () => {
     const list = await openList({ takes: "teams" });
 
     await sendListRsvp(accountDb(dan), list.id, dan, { name: " Spikers ", note: " Six of us " }, "teams");
@@ -90,7 +90,7 @@ describeFirestoreRules("RSVPing a team to a list on Firestore", (env) => {
     expect(await readRememberedNames(db, dan)).toEqual({ person: "Daniel", team: "Spikers" });
   });
 
-  it("remembers a team name for a captain who has never RSVP'd as a person", async () => {
+  it("remembers a team name for an account that has never RSVP'd as a person", async () => {
     const list = await openList({ takes: "teams" });
     const db = accountDb(eve);
 
@@ -99,7 +99,7 @@ describeFirestoreRules("RSVPing a team to a list on Firestore", (env) => {
     expect(await readRememberedNames(db, eve)).toEqual({ person: null, team: "Net Ninjas" });
   });
 
-  it("keeps a team's place when its captain renames it, and remembers the new team name", async () => {
+  it("keeps a team's place when the person who RSVP'd it renames it, and remembers the new team name", async () => {
     const list = await openList({ takes: "teams", capacity: 1 });
     await sendListRsvp(accountDb(dan), list.id, dan, { name: "Spikers", note: "" }, "teams");
     await sendListRsvp(accountDb(eve), list.id, eve, { name: "Net Ninjas", note: "" }, "teams");

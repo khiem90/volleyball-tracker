@@ -52,7 +52,7 @@ describeFirestoreRules("Creating a tournament from an RSVP list on Firestore", (
       "America/New_York",
     );
 
-  /** A captain RSVPs a team to the list. */
+  /** An account RSVPs a team to the list. */
   const rsvpTeam = (listId: string, uid: string, name: string) =>
     sendListRsvp(accountDb(uid), listId, uid, { name, note: "" }, "teams");
 
