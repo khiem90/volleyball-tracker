@@ -329,6 +329,47 @@ service cloud.firestore {
       }
     }
 
+    // An RSVP list stands on its own, with no tournament behind it, and is
+    // owned by the account that created it (ADR-0005). Only a real account
+    // owns one, so the silent identity a scorer link gives a phone never
+    // does. The owner reads and writes it. Any other real account reads it
+    // while the RSVP link is on, and nobody else reads it at all.
+    match /rsvpLists/{listId} {
+      function ownsList(data) {
+        return realAccount() && data.ownerId == request.auth.uid;
+      }
+
+      // A list takes RSVPs by person or by team, and nothing else.
+      function takesIsValid(data) {
+        return data.get('takes', null) in ['people', 'teams'];
+      }
+
+      // A list with its RSVP link on must say when it is and when RSVPs
+      // open, so the RSVP page can never be shared without them.
+      function listHasItsTimes(data) {
+        return data.get('enabled', false) != true
+          || (data.get('scheduledAt', null) is number
+            && data.get('opensAt', null) is number);
+      }
+
+      allow read: if
+        ownsList(resource.data)
+        || (realAccount() && resource.data.enabled == true);
+
+      allow create: if
+        ownsList(request.resource.data)
+        && takesIsValid(request.resource.data)
+        && listHasItsTimes(request.resource.data);
+
+      allow update: if
+        ownsList(resource.data)
+        && request.resource.data.ownerId == resource.data.ownerId
+        && takesIsValid(request.resource.data)
+        && listHasItsTimes(request.resource.data);
+
+      allow delete: if ownsList(resource.data);
+    }
+
     // The account-wide match query (History, team records) is a collection
     // group query, which needs a rule on this wildcard path. The query filters
     // on ownerId, so the rule can be proven from the filter alone.

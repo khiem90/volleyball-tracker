@@ -58,6 +58,8 @@ const noticeAt = (db: Firestore, tournamentId: string, noticeId: string) =>
   doc(db, "tournaments", tournamentId, "notices", noticeId);
 const noticesOf = (db: Firestore, tournamentId: string) =>
   collection(db, "tournaments", tournamentId, "notices");
+const listAt = (db: Firestore, id: string) => doc(db, "rsvpLists", id);
+const listsOf = (db: Firestore) => collection(db, "rsvpLists");
 
 const tournamentDoc = (spectatorEnabled: boolean) => ({
   ownerId: owner,
@@ -1290,6 +1292,191 @@ describeFirestoreRules("Firestore rules", (env) => {
             }),
           );
         });
+      });
+    });
+  });
+
+  describe("RSVP lists", () => {
+    const friday7pm = 1_800_000_000_000;
+    const thursday6pm = friday7pm - 25 * 3_600_000;
+
+    /** A by-person list as its owner stores it, with both times and the link on unless changed. */
+    const listDoc = (changes: Record<string, unknown> = {}) => ({
+      ownerId: owner,
+      name: "Friday pickup",
+      takes: "people",
+      capacity: 12,
+      scheduledAt: friday7pm,
+      scheduledZone: "America/New_York",
+      opensAt: thursday6pm,
+      enabled: true,
+      closed: false,
+      tournamentIds: [],
+      createdAt: 1_700_000_000_000,
+      updatedAt: 1_700_000_000_000,
+      ...changes,
+    });
+
+    /** The same list with one field left out. */
+    const listDocWithout = (field: string, changes: Record<string, unknown> = {}) => {
+      const doc: Record<string, unknown> = listDoc(changes);
+      delete doc[field];
+      return doc;
+    };
+
+    const seedList = (id: string, changes: Record<string, unknown> = {}) =>
+      env().withSecurityRulesDisabled((unrestricted) =>
+        setDoc(listAt(modularFirestore(unrestricted), id), listDoc(changes)),
+      );
+
+    const accountDb = (uid = otherAccount) => modularFirestore(env().authenticatedContext(uid));
+    const anonymousDb = (uid = "scorer-phone-uid") => modularFirestore(anonymousContext(env(), uid));
+    const signedOutDb = () => modularFirestore(env().unauthenticatedContext());
+
+    describe("reading a list", () => {
+      it("lets the owner read their own list, with the link on or off", async () => {
+        await seedList("list-on");
+        await seedList("list-off", { enabled: false });
+        await assertSucceeds(getDoc(listAt(accountDb(owner), "list-on")));
+        await assertSucceeds(getDoc(listAt(accountDb(owner), "list-off")));
+      });
+
+      it("lets another real account read it while the link is on", async () => {
+        await seedList("list-1");
+        await assertSucceeds(getDoc(listAt(accountDb(), "list-1")));
+      });
+
+      it("refuses another account while the link is off", async () => {
+        await seedList("list-1", { enabled: false });
+        await assertFails(getDoc(listAt(accountDb(), "list-1")));
+      });
+
+      it("refuses the account once the owner turns the link off", async () => {
+        await seedList("list-1");
+        const db = accountDb();
+        await assertSucceeds(getDoc(listAt(db, "list-1")));
+
+        await assertSucceeds(updateDoc(listAt(accountDb(owner), "list-1"), { enabled: false }));
+
+        await assertFails(getDoc(listAt(db, "list-1")));
+      });
+
+      it("refuses a signed-out request and the anonymous identity a scorer link creates, with the link on", async () => {
+        await seedList("list-1");
+        await assertFails(getDoc(listAt(signedOutDb(), "list-1")));
+        await assertFails(getDoc(listAt(anonymousDb(), "list-1")));
+      });
+
+      it("lets an account list its own lists, and nobody list another account's", async () => {
+        await seedList("list-1");
+        await seedList("list-2", { enabled: false });
+        const ownLists = (db: Firestore) =>
+          query(listsOf(db), where("ownerId", "==", owner), orderBy("createdAt", "desc"));
+
+        await assertSucceeds(getDocs(ownLists(accountDb(owner))));
+        await assertFails(getDocs(ownLists(accountDb())));
+        await assertFails(getDocs(ownLists(anonymousDb())));
+        await assertFails(getDocs(ownLists(signedOutDb())));
+      });
+    });
+
+    describe("creating a list", () => {
+      it("lets a real account create a list as its own owner, by person or by team", async () => {
+        const db = accountDb(owner);
+        await assertSucceeds(setDoc(listAt(db, "by-person"), listDoc({ takes: "people" })));
+        await assertSucceeds(setDoc(listAt(db, "by-team"), listDoc({ takes: "teams" })));
+      });
+
+      it("refuses a list owned by another account", async () => {
+        await assertFails(setDoc(listAt(accountDb(), "list-1"), listDoc()));
+      });
+
+      it("refuses a signed-out request and the anonymous identity, even as its own owner", async () => {
+        const phone = "scorer-phone-uid";
+        await assertFails(setDoc(listAt(signedOutDb(), "list-1"), listDoc()));
+        await assertFails(setDoc(listAt(anonymousDb(phone), "list-1"), listDoc({ ownerId: phone })));
+      });
+
+      it("refuses a list that takes anything but people or teams, or does not say", async () => {
+        const db = accountDb(owner);
+        await assertFails(setDoc(listAt(db, "list-1"), listDoc({ takes: "pairs" })));
+        await assertFails(setDoc(listAt(db, "list-1"), listDoc({ takes: true })));
+        await assertFails(setDoc(listAt(db, "list-1"), listDocWithout("takes")));
+      });
+
+      it("refuses the link on with either time missing", async () => {
+        const db = accountDb(owner);
+        await assertFails(setDoc(listAt(db, "list-1"), listDocWithout("scheduledAt")));
+        await assertFails(setDoc(listAt(db, "list-1"), listDocWithout("opensAt")));
+        await assertFails(setDoc(listAt(db, "list-1"), listDoc({ opensAt: "thursday" })));
+      });
+
+      it("lets a list with the link off go without its times", async () => {
+        const db = accountDb(owner);
+        await assertSucceeds(
+          setDoc(listAt(db, "list-1"), listDocWithout("scheduledAt", { enabled: false })),
+        );
+        await assertSucceeds(
+          setDoc(listAt(db, "list-2"), listDocWithout("opensAt", { enabled: false })),
+        );
+      });
+    });
+
+    describe("updating a list", () => {
+      it("lets the owner change its settings, naming only the fields that change", async () => {
+        await seedList("list-1");
+        const db = accountDb(owner);
+        await assertSucceeds(updateDoc(listAt(db, "list-1"), { name: "Friday pickup, court 2" }));
+        await assertSucceeds(updateDoc(listAt(db, "list-1"), { capacity: 16 }));
+        await assertSucceeds(updateDoc(listAt(db, "list-1"), { takes: "teams" }));
+      });
+
+      it("refuses everyone but the owner: another account, a signed-out request, the anonymous identity", async () => {
+        await seedList("list-1");
+        for (const db of [accountDb(), signedOutDb(), anonymousDb()]) {
+          await assertFails(updateDoc(listAt(db, "list-1"), { capacity: 99 }));
+        }
+      });
+
+      it("refuses the owner handing the list to another account", async () => {
+        await seedList("list-1");
+        await assertFails(updateDoc(listAt(accountDb(owner), "list-1"), { ownerId: otherAccount }));
+      });
+
+      it("refuses turning the link on with either time missing, and taking a time off a list with the link on", async () => {
+        await env().withSecurityRulesDisabled((unrestricted) => {
+          const { scheduledAt: _at, opensAt: _opens, ...noTimes } = listDoc({ enabled: false });
+          return setDoc(listAt(modularFirestore(unrestricted), "no-times"), noTimes);
+        });
+        await seedList("list-on");
+        const db = accountDb(owner);
+
+        await assertFails(updateDoc(listAt(db, "no-times"), { enabled: true }));
+        await assertFails(updateDoc(listAt(db, "no-times"), { enabled: true, scheduledAt: friday7pm }));
+        await assertFails(updateDoc(listAt(db, "list-on"), { scheduledAt: deleteField() }));
+        await assertFails(updateDoc(listAt(db, "list-on"), { opensAt: deleteField() }));
+        await assertSucceeds(
+          updateDoc(listAt(db, "no-times"), { enabled: true, scheduledAt: friday7pm, opensAt: thursday6pm }),
+        );
+      });
+
+      it("refuses a change to anything but people or teams", async () => {
+        await seedList("list-1");
+        await assertFails(updateDoc(listAt(accountDb(owner), "list-1"), { takes: "pairs" }));
+      });
+    });
+
+    describe("deleting a list", () => {
+      it("lets the owner delete it", async () => {
+        await seedList("list-1");
+        await assertSucceeds(deleteDoc(listAt(accountDb(owner), "list-1")));
+      });
+
+      it("refuses everyone else, with the link on", async () => {
+        await seedList("list-1");
+        for (const db of [accountDb(), signedOutDb(), anonymousDb()]) {
+          await assertFails(deleteDoc(listAt(db, "list-1")));
+        }
       });
     });
   });
