@@ -143,12 +143,31 @@ service cloud.firestore {
         || resource.data.spectatorEnabled == true
         || isScorer();
 
+      // A tournament created with an import names its RSVP list in
+      // rsvpListId (ADR-0005). The list must belong to the account creating
+      // the tournament, so nobody attaches a tournament to someone else's
+      // list. A list that does not exist makes the get() fail, which denies.
+      function namesNoListOrItsOwn(data) {
+        return !('rsvpListId' in data)
+          || get(/databases/$(database)/documents/rsvpLists/$(data.rsvpListId)).data.ownerId
+            == request.auth.uid;
+      }
+
+      // The list is named once, at creation, and never changed after. This
+      // reads no list, so the tournament outlives a list that is deleted.
+      function keepsItsList() {
+        return request.resource.data.get('rsvpListId', null)
+          == resource.data.get('rsvpListId', null);
+      }
+
       allow create: if
         signedIn()
-        && request.resource.data.ownerId == request.auth.uid;
+        && request.resource.data.ownerId == request.auth.uid
+        && namesNoListOrItsOwn(request.resource.data);
 
       allow update: if
         basedOnStoredRevision()
+        && keepsItsList()
         && ((signedIn()
             && resource.data.ownerId == request.auth.uid
             && request.resource.data.ownerId == resource.data.ownerId)

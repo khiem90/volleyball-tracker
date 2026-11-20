@@ -973,6 +973,56 @@ describeFirestoreRules("Firestore rules", (env) => {
       });
     });
 
+    describe("a tournament imported from a list", () => {
+      /** A tournament that says it was imported from the list `listId`. */
+      const importedFrom = (listId: string) => ({ ...tournamentDoc(false), rsvpListId: listId });
+
+      const seedTournament = (id: string, fields: Record<string, unknown>) =>
+        env().withSecurityRulesDisabled((unrestricted) =>
+          setDoc(tournamentAt(modularFirestore(unrestricted), id), fields),
+        );
+
+      it("lets an account create a tournament naming a list it owns", async () => {
+        await seedList("list-1", { takes: "teams", closed: true });
+        await assertSucceeds(
+          setDoc(tournamentAt(accountDb(owner), "tourn-1"), importedFrom("list-1")),
+        );
+      });
+
+      it("refuses a tournament naming a list another account owns, with its link on", async () => {
+        await seedList("list-1", { ownerId: otherAccount, takes: "teams", closed: true });
+        await assertFails(setDoc(tournamentAt(accountDb(owner), "tourn-1"), importedFrom("list-1")));
+      });
+
+      it("refuses a tournament naming a list that does not exist", async () => {
+        await assertFails(setDoc(tournamentAt(accountDb(owner), "tourn-1"), importedFrom("no-list")));
+      });
+
+      it("refuses the owner naming a list on a tournament after it was created", async () => {
+        await seedList("list-1", { takes: "teams", closed: true });
+        await seedTournament("tourn-1", tournamentDoc(false));
+        await assertFails(
+          updateDoc(tournamentAt(accountDb(owner), "tourn-1"), { rsvpListId: "list-1" }),
+        );
+      });
+
+      it("refuses the owner changing or dropping the list a tournament names", async () => {
+        await seedList("list-1", { takes: "teams", closed: true });
+        await seedList("list-2", { takes: "teams", closed: true });
+        await seedTournament("tourn-1", importedFrom("list-1"));
+        const db = accountDb(owner);
+        await assertFails(updateDoc(tournamentAt(db, "tourn-1"), { rsvpListId: "list-2" }));
+        await assertFails(updateDoc(tournamentAt(db, "tourn-1"), { rsvpListId: deleteField() }));
+      });
+
+      it("still lets the owner change the rest of an imported tournament, after its list is deleted too", async () => {
+        await seedTournament("tourn-1", importedFrom("list-gone"));
+        await assertSucceeds(
+          updateDoc(tournamentAt(accountDb(owner), "tourn-1"), { name: "Renamed" }),
+        );
+      });
+    });
+
     describe("the names an account last RSVP'd under", () => {
       const dan = "dan-uid";
       const seedAccount = (fields: Record<string, unknown>) =>
