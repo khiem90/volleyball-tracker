@@ -17,5 +17,6 @@ Every entry used to point at a roster team, and the roster is what an account ke
 - An entry may have no roster team behind it. The pages already cope with that, since a team deleted from the roster shows from its entry today.
 - A mixed team takes no part in roster features. It is not on the Teams page, has no record across tournaments, and cannot play a quick match.
 - Renaming a mixed team or changing its players writes to the tournament and nothing else. No roster change fans out to it. The owner can do this while the tournament is a draft or live.
+- That write is an exception to ADR-0003, which makes every change to a started tournament an engine command. A rename or a player change touches `entries` and no match, and the engine has nothing to work out for it, so it is not a command and does not go through the command queue. It reads the stored tournament, applies the edit to those entries, and writes them with `basedOn`. When the rules refuse it because the revision moved, it reads again and applies the edit to the fresh copy, up to five times. The rules still check it like any other write, and a withdrawal or a result that landed in between is kept.
 - Bringing a withdrawn mixed team back reads the entry, since there is no roster team to read.
 - Duplicating a tournament copies its mixed teams with their players.
