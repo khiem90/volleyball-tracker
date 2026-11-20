@@ -1,4 +1,5 @@
 import {
+  arrayRemove,
   collection,
   collectionGroup,
   deleteDoc,
@@ -461,18 +462,52 @@ export const saveMixedTeamEdit = (
   });
 
 /**
+ * The id of the RSVP list a tournament was imported from, or null when it
+ * names none. Null too when this phone cannot say, as with no connection
+ * and no copy in its cache, so the caller carries on without it.
+ */
+const listImportedFrom = async (db: Firestore, tournamentId: string): Promise<string | null> => {
+  try {
+    const snapshot = await getDoc(tournamentDoc(db, tournamentId));
+    return (snapshot.data() as Tournament | undefined)?.rsvpListId ?? null;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Take a deleted tournament's id off the record of the list it was
+ * imported from (ADR-0005), so the list's page stops asking for it. The
+ * write is sent and not waited for, and a refusal is dropped: the rules
+ * refuse it for a list that is gone, and with no connection it waits its
+ * turn. The list's path is spelled out because rsvpListData.ts imports
+ * this module.
+ */
+const forgetOnList = (db: Firestore, listId: string, tournamentId: string): void => {
+  updateDoc(doc(db, "rsvpLists", listId), {
+    tournamentIds: arrayRemove(tournamentId),
+    updatedAt: Date.now(),
+  }).catch(() => {});
+};
+
+/**
  * Delete a tournament with every match under it, its scorer key, and the
  * proofs of every phone that opened its scorer link, all in one cleanup
  * batch. A tournament from before RSVP lists may still hold RSVPs and
  * notices of its own, and the batch sweeps those too. Firestore no longer
  * caps a batch at 500 writes, so a big round robin still goes in one.
+ *
+ * A tournament imported from an RSVP list also comes off that list's
+ * record once it is deleted. That step never holds up or fails the delete
+ * (see forgetOnList).
  */
 export const deleteTournament = async (db: Firestore, tournamentId: string): Promise<void> => {
-  const [matches, proofs, rsvps, notices] = await Promise.all([
+  const [matches, proofs, rsvps, notices, listId] = await Promise.all([
     getDocs(matchesCollection(db, tournamentId)),
     getDocs(scorerProofsCollection(db, tournamentId)),
     getDocs(oldRsvpsCollection(db, tournamentId)),
     getDocs(oldNoticesCollection(db, tournamentId)),
+    listImportedFrom(db, tournamentId),
   ]);
   // The rules for everything under the tournament read the tournament
   // itself, so those go first and the tournament last, in its own write.
@@ -483,6 +518,7 @@ export const deleteTournament = async (db: Firestore, tournamentId: string): Pro
   batch.delete(scorerKeyDoc(db, tournamentId));
   await batch.commit();
   await deleteDoc(tournamentDoc(db, tournamentId));
+  if (listId !== null) forgetOnList(db, listId, tournamentId);
 };
 
 // ============================================

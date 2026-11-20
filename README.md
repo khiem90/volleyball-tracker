@@ -121,13 +121,16 @@ A scorer cannot write `entries`. Duplicating a tournament copies its mixed
 teams with their players under new ids and leaves `rsvpListId` behind.
 
 Once an imported tournament is live or completed, any signed-in account reads
-it and its matches while the list it names has `enabled` on. The list's page
+it and its matches while the list it names has `enabled` on and the same
+owner as the tournament. The owner check matters because any account can
+create a list under an id it knows, a deleted list's id included. The list's page
 reads each id in `tournamentIds` and offers Watch or See results for the ones
 it can read, and the console takes that account as a spectator. A draft stays
 with its owner. Turning the list's link off, or deleting the list, closes this
 way in and leaves the tournament, its spectator link, and its scorer link as
-they were. Deleting a tournament leaves its id on the list, and the page
-skips it.
+they were. Deleting a tournament takes its id off the list's `tournamentIds`
+in a write of its own, after the delete, and a refusal of that write is
+dropped. An id that stays behind leads nowhere, and the page skips it.
 
 A tournament takes no RSVPs and has no scheduled time. One saved before RSVP
 lists may still hold `scheduledAt`, `scheduledZone`, an `rsvp` map, and

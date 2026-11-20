@@ -527,8 +527,10 @@ const LIST_TOURNAMENT_RETRY_MS = 30_000;
  * delivery into the rows the list's page shows.
  *
  * A tournament the rules refuse is left out without failing the rest. That
- * is a draft for anyone but its owner, and a deleted one, whose id stays on
- * the list. A refused listener stays dead, so each refused id is asked for
+ * is a draft for anyone but its owner, and a deleted one. Deleting a
+ * tournament takes its id off the list, but a page that is open still
+ * holds it, and a delete that could not reach the list leaves it there.
+ * A refused listener stays dead, so each refused id is asked for
  * again every `retryEvery` milliseconds. That is how a page left open on a
  * draft gets the tournament once the owner starts it.
  *

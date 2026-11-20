@@ -1,5 +1,13 @@
 // @vitest-environment node
-import { collection, doc, getDocFromServer, getDocsFromServer } from "firebase/firestore";
+import {
+  collection,
+  disableNetwork,
+  doc,
+  enableNetwork,
+  getDoc,
+  getDocFromServer,
+  getDocsFromServer,
+} from "firebase/firestore";
 import { expect, it } from "vitest";
 import { applyTournamentCommand } from "@/lib/commandQueue";
 import { createTournamentFromSetup } from "@/lib/creationData";
@@ -17,6 +25,7 @@ import {
   deleteTournament,
   subscribeToTournament,
   subscribeToTournamentMatches,
+  subscribeToTournaments,
 } from "@/lib/tournaments";
 import {
   DEFAULT_POINTS_FOR_LOSS,
@@ -180,11 +189,12 @@ describeFirestoreRules("Watching a list's tournaments on Firestore", (env) => {
     const draft = await importedDraft(list, "Still arranging");
     await start(early.id);
     await start(late.id);
-    await deleteTournament(accountDb(owner), deleted.id);
-
     const recorded = await listRecording(list.id, 4);
     expect(recorded.tournamentIds).toEqual([early.id, deleted.id, late.id, draft.id]);
+    await deleteTournament(accountDb(owner), deleted.id);
 
+    // The ids are the list's record from before the delete, which is what a
+    // page still holds when a tournament goes while it is open.
     const namesFor = async (uid: string) => {
       const tournaments = await when<Tournament[]>(
         (onChange) => subscribeToListTournaments(accountDb(uid), recorded.tournamentIds, onChange),
@@ -194,6 +204,66 @@ describeFirestoreRules("Watching a list's tournaments on Firestore", (env) => {
     };
     expect(await namesFor(dan)).toEqual(["Early round", "Late round"]);
     expect(await namesFor(owner)).toEqual(["Early round", "Late round", "Still arranging"]);
+  });
+
+  /** Whether the tournament is still stored, read around the rules. */
+  const isStored = async (tournamentId: string): Promise<boolean> => {
+    let exists = true;
+    await env().withSecurityRulesDisabled(async (unrestricted) => {
+      const snapshot = await getDoc(doc(modularFirestore(unrestricted), "tournaments", tournamentId));
+      exists = snapshot.exists();
+    });
+    return exists;
+  };
+
+  it("takes a deleted tournament off its list's record and keeps the others in order", async () => {
+    const list = await closedListWithDan();
+    const early = await importedDraft(list, "Early round");
+    const deleted = await importedDraft(list, "Called off");
+    const late = await importedDraft(list, "Late round");
+    await listRecording(list.id, 3);
+
+    await deleteTournament(accountDb(owner), deleted.id);
+
+    const recorded = await listRecording(list.id, 2);
+    expect(recorded.tournamentIds).toEqual([early.id, late.id]);
+    expect(await isStored(deleted.id)).toBe(false);
+  });
+
+  it("still deletes a tournament whose list is gone", async () => {
+    const list = await closedListWithDan();
+    const created = await importedDraft(list);
+    await deleteRsvpList(accountDb(owner), list.id);
+
+    await deleteTournament(accountDb(owner), created.id);
+
+    expect(await isStored(created.id)).toBe(false);
+  });
+
+  it("deletes a tournament from a phone with no connection once it is back, and its list forgets it then", async () => {
+    const list = await closedListWithDan();
+    const created = await importedDraft(list);
+    const kept = await importedDraft(list, "Late round");
+    await listRecording(list.id, 2);
+    // The owner's phone holds its tournaments in its cache, as the app does.
+    const phone = accountDb(owner);
+    let stopHolding = () => {};
+    await new Promise<void>((resolve, reject) => {
+      stopHolding = subscribeToTournaments(phone, owner, (own) => own.length === 2 && resolve(), reject);
+    });
+
+    await disableNetwork(phone);
+    let deleting: Promise<void>;
+    try {
+      deleting = deleteTournament(phone, created.id);
+    } finally {
+      await enableNetwork(phone);
+    }
+    await deleting;
+    stopHolding();
+
+    expect(await isStored(created.id)).toBe(false);
+    expect((await listRecording(list.id, 1)).tournamentIds).toEqual([kept.id]);
   });
 
   it("gives a list's page nothing for a list that records no tournament", async () => {
