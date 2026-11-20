@@ -71,7 +71,9 @@ export type NotFoundReason = "not_found" | "stale_link";
  * The visitor is the owner when the account owns the tournament. Anyone
  * else reached it by link. With a scorer key in the address the phone
  * proves it holds the link and becomes a scorer, and without one it
- * watches as the spectator link allows.
+ * watches as the spectator link allows. An account that came from the
+ * page of the RSVP list the tournament was imported from watches the same
+ * way, as a spectator, once the tournament has started.
  */
 export const useConsole = (tournamentId: string) => {
   const router = useRouter();

@@ -31,7 +31,10 @@ export type LinkStatus =
   /** The tournament or its matches have not arrived. */
   | "loading"
   | "ready"
-  /** The rules refuse it, or it is gone. The spectator link is off, or the tournament was deleted. */
+  /**
+   * The rules refuse it, or it is gone. The spectator link is off and no
+   * RSVP list's link opens it, or the tournament was deleted.
+   */
   | "unavailable";
 
 /** Whether a tournament reached by link is still on its way. */
@@ -134,7 +137,10 @@ export const useLinkedTournaments = ({
     return () => unsubscribers.forEach((unsubscribe) => unsubscribe());
   }, [watchedKey, identityUid, isAuthLoading]);
 
-  /** Watch a tournament this account does not own, as its spectator link allows. */
+  /**
+   * Watch a tournament this account does not own, as its spectator link
+   * allows, or the link of the RSVP list it was imported from.
+   */
   const watchTournament = useCallback((tournamentId: string) => {
     setSpectating((prev) => withId(prev, tournamentId));
   }, []);

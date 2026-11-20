@@ -973,6 +973,146 @@ describeFirestoreRules("Firestore rules", (env) => {
       });
     });
 
+    describe("watching a tournament imported from a list", () => {
+      const phone = "scorer-phone-uid";
+      const scorerKey = "key-one";
+      type Status = "draft" | "live" | "completed";
+
+      /**
+       * A tournament with its spectator link off, one match, and its scorer
+       * key. It names the list `listId` as the one it was imported from, or
+       * no list when that is null.
+       */
+      const seedImported = (
+        id: string,
+        status: Status,
+        listId: string | null = "list-1",
+        changes: Record<string, unknown> = {},
+      ) =>
+        env().withSecurityRulesDisabled(async (unrestricted) => {
+          const db = modularFirestore(unrestricted);
+          await setDoc(tournamentAt(db, id), {
+            ...tournamentDoc(false),
+            status,
+            ...(listId !== null && { rsvpListId: listId }),
+            ...changes,
+          });
+          await setDoc(matchAt(db, id, "m1"), matchDoc(id));
+          await setDoc(scorerKeyAt(db, id), { key: scorerKey, updatedAt: 1_700_000_000_000 });
+        });
+
+      const seedProof = (tournamentId: string, uid: string) =>
+        env().withSecurityRulesDisabled((unrestricted) =>
+          setDoc(proofAt(modularFirestore(unrestricted), tournamentId, uid), {
+            key: scorerKey,
+            updatedAt: 1_700_000_000_000,
+          }),
+        );
+
+      const reads = async (db: Firestore, id: string) => {
+        await assertSucceeds(getDoc(tournamentAt(db, id)));
+        await assertSucceeds(getDocs(matchesOf(db, id)));
+        await assertSucceeds(getDoc(matchAt(db, id, "m1")));
+      };
+
+      const isRefused = async (db: Firestore, id: string) => {
+        await assertFails(getDoc(tournamentAt(db, id)));
+        await assertFails(getDocs(matchesOf(db, id)));
+        await assertFails(getDoc(matchAt(db, id, "m1")));
+      };
+
+      it.each(["live", "completed"] as const)(
+        "lets a real account read a %s tournament and its matches while its list's link is on",
+        async (status) => {
+          await seedList("list-1");
+          await seedImported("tourn-1", status);
+          await reads(accountDb(), "tourn-1");
+        },
+      );
+
+      it("keeps a draft with its owner", async () => {
+        await seedList("list-1");
+        await seedImported("tourn-1", "draft");
+        await isRefused(accountDb(), "tourn-1");
+        await reads(accountDb(owner), "tourn-1");
+      });
+
+      it("refuses a live tournament that names no list", async () => {
+        await seedList("list-1");
+        await seedImported("tourn-1", "live", null);
+        await isRefused(accountDb(), "tourn-1");
+      });
+
+      it("refuses while the list's link is off", async () => {
+        await seedList("list-1", { enabled: false });
+        await seedImported("tourn-1", "live");
+        await isRefused(accountDb(), "tourn-1");
+      });
+
+      it("cuts a watcher off once the owner turns the list's link off", async () => {
+        await seedList("list-1");
+        await seedImported("tourn-1", "live");
+        const db = accountDb();
+        await reads(db, "tourn-1");
+
+        await assertSucceeds(updateDoc(listAt(accountDb(owner), "list-1"), { enabled: false }));
+
+        await isRefused(db, "tourn-1");
+      });
+
+      it("refuses once the list is deleted, and the owner still reads the tournament", async () => {
+        await seedList("list-1");
+        await seedImported("tourn-1", "live");
+        const db = accountDb();
+        await reads(db, "tourn-1");
+
+        await assertSucceeds(deleteDoc(listAt(accountDb(owner), "list-1")));
+
+        await isRefused(db, "tourn-1");
+        await reads(accountDb(owner), "tourn-1");
+      });
+
+      it("refuses a signed-out request and the anonymous identity a scorer link creates", async () => {
+        await seedList("list-1");
+        await seedImported("tourn-1", "live");
+        await isRefused(signedOutDb(), "tourn-1");
+        await isRefused(anonymousDb(phone), "tourn-1");
+      });
+
+      it("gives a watcher nothing to write and no scorer key", async () => {
+        await seedList("list-1");
+        await seedImported("tourn-1", "live");
+        const db = accountDb();
+        await assertFails(updateDoc(tournamentAt(db, "tourn-1"), { name: "Hacked" }));
+        await assertFails(updateDoc(matchAt(db, "tourn-1", "m1"), { homeScore: 21 }));
+        await assertFails(deleteDoc(matchAt(db, "tourn-1", "m1")));
+        await assertFails(getDoc(scorerKeyAt(db, "tourn-1")));
+      });
+
+      it("leaves the spectator link working whatever the list's link says", async () => {
+        await seedList("list-1", { enabled: false });
+        await seedImported("off", "live", "list-1", { spectatorEnabled: true });
+        await seedImported("gone", "live", "list-gone", { spectatorEnabled: true });
+        await seedImported("draft", "draft", "list-1", { spectatorEnabled: true });
+        for (const id of ["off", "gone", "draft"]) {
+          await reads(signedOutDb(), id);
+          await reads(accountDb(), id);
+        }
+      });
+
+      it("leaves the scorer link working whatever the list's link says, for a phone and for an account", async () => {
+        await seedList("list-1", { enabled: false });
+        await seedImported("off", "live");
+        await seedImported("gone", "live", "list-gone");
+        for (const id of ["off", "gone"]) {
+          await seedProof(id, phone);
+          await seedProof(id, otherAccount);
+          await reads(anonymousDb(phone), id);
+          await reads(accountDb(), id);
+        }
+      });
+    });
+
     describe("a tournament imported from a list", () => {
       /** A tournament that says it was imported from the list `listId`. */
       const importedFrom = (listId: string) => ({ ...tournamentDoc(false), rsvpListId: listId });

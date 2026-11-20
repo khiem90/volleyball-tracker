@@ -11,6 +11,7 @@ import { ListPeoplePanel } from "@/components/rsvpList/ListPeoplePanel";
 import { ListRsvpPanel } from "@/components/rsvpList/ListRsvpPanel";
 import { ListOwnerPanel } from "@/components/rsvpList/ListOwnerPanel";
 import { ListSetupFields } from "@/components/rsvpList/ListSetupFields";
+import { ListTournamentsPanel } from "@/components/rsvpList/ListTournamentsPanel";
 import { useListPage } from "@/components/rsvpList/useListPage";
 
 /**
@@ -22,6 +23,10 @@ import { useListPage } from "@/components/rsvpList/useListPage";
  *
  * On a by-team list each RSVP is a team. A captain RSVPs the whole team
  * under a team name, and the page says teams where it would say people.
+ *
+ * Once a tournament imported from the list has started, the page offers
+ * it to everyone who can open the page: Watch while it is live, and See
+ * results once it is completed.
  *
  * The owner sees the same and RSVPs the same way, and also gets the link
  * to copy, the settings to change, Remove on each row, the box for a held
@@ -73,6 +78,8 @@ export default function RsvpListPage() {
         readerUid={rsvp.mine?.uid ?? null}
         className="mb-4"
       />
+
+      <ListTournamentsPanel list={list} className="mb-4" />
 
       <div className="grid gap-4 lg:grid-cols-12 lg:items-start">
         <div className="flex flex-col gap-4 lg:col-span-5">
