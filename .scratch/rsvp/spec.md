@@ -427,3 +427,10 @@ With plain values, in the style of `home.test.ts` and `console.test.ts`:
   and the exclusion of the new fields from the scorer's allowed keys.
 - A tournament created before this feature has no `rsvp` map; the console
   tab offers to set it up, and nothing else about such a tournament changes.
+
+## Comments
+
+2026-11-19: Replaced by `.scratch/rsvp-lists/spec.md`. RSVPs no longer belong to
+a tournament. An RSVP list stands on its own and a tournament imports a copy of
+it (ADR-0005). What this spec says about the open time, arrival order, held
+spots, notices, and the remembered name still holds, for a list.

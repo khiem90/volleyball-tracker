@@ -1,7 +1,7 @@
 /**
  * RSVPs, the pure part: what is wrong with a tournament's RSVP setup, and how
  * its times are entered and shown across time zones. Nothing in here
- * touches the database or React. See CONTEXT.md under "RSVP" and ADR-0004.
+ * touches the database or React. See GLOSSARY.md under "RSVP" and ADR-0004.
  */
 
 import type { Notice, Rsvp, RsvpSettings, ServerTime, Tournament } from "@/types/game";

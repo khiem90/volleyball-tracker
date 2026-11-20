@@ -7,8 +7,12 @@ An app for running small sports tournaments from a phone: a roster of teams, tou
 ### Teams
 
 **Team**:
-A named side that competes. Teams belong to an account's roster and can enter many tournaments.
+A named side that competes. Teams belong to an account's roster and can enter many tournaments, except a mixed team, which belongs to one tournament.
 _Avoid_: Club, group, side
+
+**Mixed team**:
+A team dealt from the people on a by-person RSVP list when the list is imported. It exists only in the tournament it was made for, is not on the roster, and keeps its players' names. A person entered alone is a mixed team of one. The owner can rename a mixed team and add, remove, or move its players while the tournament is a draft or live.
+_Avoid_: Random team, pickup team, temporary team
 
 **Roster**:
 All the teams an account has created, kept between tournaments.
@@ -23,7 +27,7 @@ A match result awarded to one team because the other withdrew or did not play. I
 _Avoid_: Walkover, bye (a bye is a scheduled empty slot, not a forfeit)
 
 **Entry**:
-A team's place in one tournament. An entry shows the roster team's current name and color while the tournament is a draft or live, and keeps them as they were once the tournament is completed.
+A team's place in one tournament. An entry shows the roster team's current name and color while the tournament is a draft or live, and keeps them as they were once the tournament is completed. A mixed team's entry has no roster team behind it and carries the team's name, color, and players' names itself.
 _Avoid_: Participant, registration
 
 ### Tournaments
@@ -40,7 +44,7 @@ _Avoid_: Type, mode
 A tournament that has been created but not started. Its teams and settings can still change.
 
 **Duplicate**:
-A new draft tournament made from an existing one, with the same format, settings, and entries.
+A new draft tournament made from an existing one, with the same format, settings, and entries. Also a new RSVP list made from an existing one, with the same by-person or by-team choice and capacity, and with no times, nobody on it, and its RSVP link off.
 _Avoid_: Clone, copy, rerun
 
 **Live**:
@@ -113,7 +117,7 @@ _Avoid_: Delete, cancel (for a quick match)
 ### People and access
 
 **Owner**:
-The account that created a tournament. Only the owner can end, delete, rename, or share it, or change its teams.
+The account that created a tournament or an RSVP list. Only the owner can end, delete, rename, or share a tournament, or change its teams. Only the owner can change a list's settings, close it, remove an RSVP from it, post a notice on it, or import it.
 _Avoid_: Creator, admin
 
 **Scorer**:
@@ -139,19 +143,23 @@ _Avoid_: Anonymous user
 ### RSVP
 
 **Scheduled time**:
-The date and time the owner says a tournament will be played, set in the owner's own time zone. A tournament need not have one; one that takes RSVPs must.
-_Avoid_: Start time, started at (the moment the owner actually started it)
+The date and time the owner says the people on an RSVP list will play, set in the owner's own time zone. A list needs one before its RSVP link can go on. Once it passes, by the server's clock, the list is over: nobody can RSVP or withdraw, and the owner cannot reopen it. A tournament has no scheduled time of its own.
+_Avoid_: Start time, started at (the moment the owner actually started a tournament)
+
+**RSVP list**:
+A list an account creates on its own, before any tournament exists, to find out who will play. Its owner chooses whether it takes RSVPs by person or by team; a list takes one kind and never both, and the choice locks once the first RSVP arrives. Deleting a list leaves the tournaments imported from it as they are. Called "the list" for short.
+_Avoid_: Event, night, sign-up sheet, the RSVP (which is one answer on the list)
 
 **RSVP**:
-A signed-in person's answer that they will play in a tournament. A person RSVPs as themselves under a name they choose, not as a team; the owner forms teams from the people who come. An RSVP is either confirmed or waitlisted, in the order it arrived. A person can withdraw an RSVP until the tournament starts, even after RSVPs have closed, and can RSVP again while they are open.
+A signed-in person's answer on an RSVP list that they will play. On a by-person list a person RSVPs as themselves under a name they choose. On a by-team list one person RSVPs a whole team under a team name; teammates do not join it in the app, and one account holds one team per list. An RSVP is either confirmed or waitlisted, in the order it arrived. A person can withdraw an RSVP until the scheduled time, even after RSVPs have closed, and can RSVP again while they are open.
 _Avoid_: Registration, sign-up, booking
 
 **Open time**:
-The moment, chosen by the owner, from which a tournament accepts RSVPs. It is one instant for everyone, judged by the server's clock, so nobody can RSVP before anyone else by changing their device's time.
+The moment, chosen by the owner, from which a list accepts RSVPs. It is one instant for everyone, judged by the server's clock, so nobody can RSVP before anyone else by changing their device's time.
 _Avoid_: Release time, go-live
 
 **Capacity**:
-The number of confirmed RSVPs a tournament takes. The owner can raise it at any time and lower it no further than the confirmed count.
+The number of confirmed RSVPs a list takes: people on a by-person list, teams on a by-team list. The owner can raise it at any time and lower it no further than the confirmed count.
 _Avoid_: Max players, limit, spots (as the setting)
 
 **Waitlist**:
@@ -159,19 +167,23 @@ The RSVPs beyond capacity, in arrival order. When a confirmed RSVP is withdrawn 
 _Avoid_: Queue (which is the teams waiting for a court), standby, overflow
 
 **Held spot**:
-An RSVP the owner adds by name for someone without an account. It takes its place in arrival order like any other RSVP.
+An RSVP the owner adds by name for someone without an account: a person on a by-person list, a team on a by-team list. It takes its place in arrival order like any other RSVP.
 _Avoid_: Manual RSVP, placeholder, guest
 
 **Close**:
-The owner's action that stops new RSVPs before the tournament starts; starting a tournament closes them too. A closed list can be reopened while the tournament is a draft. Withdrawals still work after a close.
+The owner's action that stops new RSVPs on a list. A closed list can be reopened until its scheduled time. Withdrawals still work after a close. A list must be closed before it is imported.
 _Avoid_: Lock, freeze, end (which completes a tournament)
 
+**Import**:
+Making a tournament's teams from a closed RSVP list, done by the list's owner while creating the tournament. Import takes the confirmed RSVPs and leaves the waitlist out. It copies the list as it stands, so a later change to the list does not reach the tournament, and one list can be imported into several tournaments. A by-team list gives one roster team per RSVP, reusing a roster team that already has that name. A by-person list is dealt into mixed teams no larger than a size the owner picks, and the owner can move people between teams before saving; a size of one makes each person a team. Two RSVPs under the same team name must be told apart before the tournament is saved. Imported teams can enter alongside teams picked from the roster. The tournament remembers the list it was imported from.
+_Avoid_: Transfer, sync, convert
+
 **RSVP link**:
-The link that lets a signed-in person see a tournament's RSVP page: its scheduled time, capacity, who is in and who is waiting, and RSVP themselves. Once the tournament starts, the same page shows it as a spectator would see it. The owner can switch the link off, which hides the page.
+The link that lets a signed-in person see a list's RSVP page: its name, scheduled time, capacity, who is in and who is waiting, and RSVP themselves. Once a tournament imported from the list is live, the same page lets them watch it as a spectator would. The owner can switch the link off, which hides the page.
 _Avoid_: Invite link, sign-up link
 
 **Notice**:
-A short message the owner posts on a tournament for everyone who has RSVP'd, confirmed or waitlisted. It shows on the RSVP page and on Home until read. A tournament keeps its notices in order; the newest is shown first.
+A short message the owner posts on an RSVP list for everyone who has RSVP'd, confirmed or waitlisted. It shows on the RSVP page and on Home until read. A list keeps its notices in order; the newest is shown first.
 _Avoid_: Announcement, broadcast, email, notification
 
 ### Records
@@ -181,5 +193,5 @@ An account's completed tournaments and past quick matches.
 _Avoid_: Summaries, summary, archive
 
 **Home**:
-The opening screen: live tournaments to resume, a quick match button, and recent results.
+The opening screen: live tournaments to resume, a quick match button, recent results, and the RSVP lists the account is on, each until a day after its scheduled time.
 _Avoid_: Dashboard, overview
