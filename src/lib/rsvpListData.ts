@@ -20,7 +20,7 @@ import {
   type WriteBatch,
 } from "firebase/firestore";
 import { isRefused, stripUndefined } from "@/lib/firestoreData";
-import { rsvpEntryProblems, type RsvpEntry } from "@/lib/rsvp";
+import { noticeProblem, rsvpEntryProblems, type RsvpEntry } from "@/lib/rsvp";
 import {
   duplicateListSetup,
   firstListProblem,
@@ -30,7 +30,7 @@ import {
   refusedListRsvpMessage,
   type ListSetup,
 } from "@/lib/rsvpList";
-import type { Rsvp, RsvpList } from "@/types/game";
+import type { Notice, Rsvp, RsvpList } from "@/types/game";
 
 /**
  * RSVP lists on Firestore: one document per list in the top-level
@@ -47,6 +47,9 @@ export const listRsvpsCollection = (db: Firestore, listId: string) =>
 /** An account's own RSVP to a list. Its id is the account's uid. */
 export const listRsvpDoc = (db: Firestore, listId: string, uid: string) =>
   doc(db, "rsvpLists", listId, "rsvps", uid);
+/** The owner's notices to everyone on a list. Deleting the list sweeps them with its RSVPs. */
+export const listNoticesCollection = (db: Firestore, listId: string) =>
+  collection(db, "rsvpLists", listId, "notices");
 /** The account's own document. Only that account can read or write it. */
 export const accountDoc = (db: Firestore, uid: string) => doc(db, "users", uid);
 
@@ -267,6 +270,61 @@ export const subscribeToListRsvps = (
       ),
     (error) => onError?.(error),
   );
+
+// ============================================
+// Notices
+// ============================================
+
+/**
+ * A list's notices, newest first, for the owner, or for any real account
+ * while the RSVP link is on. A notice this phone has just posted shows
+ * with the server time estimated until the server answers. Calls `onError`
+ * when the rules refuse the read, as they do once the owner turns the link
+ * off.
+ */
+export const subscribeToListNotices = (
+  db: Firestore,
+  listId: string,
+  onChange: (notices: Notice[]) => void,
+  onError?: (error: Error) => void,
+): Unsubscribe =>
+  onSnapshot(
+    query(listNoticesCollection(db, listId), orderBy("createdAt", "desc")),
+    (snapshot) =>
+      onChange(
+        snapshot.docs.map(
+          (d) => ({ ...d.data({ serverTimestamps: "estimate" }), id: d.id }) as Notice,
+        ),
+      ),
+    (error) => onError?.(error),
+  );
+
+/**
+ * Post a notice on a list, trimmed, at the server's time. The rules take
+ * one from the owner alone, at any time, after the scheduled time too. A
+ * body the rules would refuse is thrown before anything is written.
+ */
+export const postListNotice = async (db: Firestore, listId: string, body: string): Promise<void> => {
+  const problem = noticeProblem(body);
+  if (problem) throw new Error(problem);
+  await setDoc(doc(listNoticesCollection(db, listId)), {
+    body: body.trim(),
+    createdAt: serverTimestamp(),
+  });
+};
+
+/** Delete a notice posted by mistake. The rules take this from the owner alone. */
+export const deleteListNotice = (db: Firestore, listId: string, noticeId: string): Promise<void> =>
+  deleteDoc(doc(listNoticesCollection(db, listId), noticeId));
+
+/**
+ * Record on the account's own RSVP that it has seen the list's notices up
+ * to now, by the server's clock. Home compares that time with the newest
+ * notice. The rules take it after the scheduled time too, and refuse it
+ * for an account with no RSVP on the list.
+ */
+export const markListNoticesRead = (db: Firestore, listId: string, uid: string): Promise<void> =>
+  updateDoc(listRsvpDoc(db, listId, uid), { noticesReadAt: serverTimestamp() });
 
 // ============================================
 // RSVPing

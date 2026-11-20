@@ -459,6 +459,36 @@ service cloud.firestore {
         // after the owner closes the list. RSVPing again is a new create
         // with a new arrival time, which is the back of the line.
         allow delete: if isOwnRsvp() && !listIsOver(list());
+
+        // When the account last opened the list's page, which Home compares
+        // with the newest notice. Only the RSVP's own account records it,
+        // always as the server's time, and nothing else changes with it.
+        // The scheduled time does not stop it, since the owner still posts
+        // notices after it.
+        allow update: if
+          isOwnRsvp()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['noticesReadAt'])
+          && request.resource.data.noticesReadAt == request.time;
+      }
+
+      // A notice is a short message the owner posts for everyone on the
+      // list, confirmed or waiting. Only the owner posts or deletes one,
+      // and nobody edits one. Neither stops at the scheduled time, so
+      // "courts are running late" still goes out.
+      match /notices/{noticeId} {
+        // The same readers as the RSVPs.
+        allow read: if ownsList(list()) || (realAccount() && list().enabled == true);
+
+        allow create: if
+          ownsList(list())
+          && request.resource.data.keys().hasAll(['body', 'createdAt'])
+          && request.resource.data.keys().hasOnly(['body', 'createdAt'])
+          && request.resource.data.body is string
+          && request.resource.data.body.size() >= 1
+          && request.resource.data.body.size() <= 500
+          && request.resource.data.createdAt == request.time;
+
+        allow delete: if ownsList(list());
       }
     }
 

@@ -65,6 +65,7 @@ Everything a signed-in account owns is in Firestore, and the rules in
 | `tournaments/{tournamentId}/notices/{noticeId}` | A notice from the owner to everyone on the list: `body` and `createdAt`, the server's time |
 | `rsvpLists/{listId}` | One RSVP list, with no tournament behind it: owner, name, `takes` (`people` or `teams`), capacity, scheduled time, open time, `enabled` (the RSVP link), `closed`, and the ids of tournaments imported from it |
 | `rsvpLists/{listId}/rsvps/{uid}` | One account's RSVP to the list: `uid`, `name`, `note`, and `createdAt`, the server's time |
+| `rsvpLists/{listId}/notices/{noticeId}` | A notice from the owner to everyone on the list: `body` and `createdAt`, the server's time |
 
 An RSVP list's RSVP link is its own page, `/rsvp/{listId}`. The owner always
 reads the list, and any other signed-in account reads it while `enabled` is
@@ -92,6 +93,13 @@ until `scheduledAt`, and never its arrival time. It withdraws by deleting the RS
 `scheduledAt`, and an RSVP made after that is a new arrival at the back of
 the line. Who is confirmed and who waits is never stored. It follows from the
 arrival order and the capacity (ADR-0004).
+
+Only the owner posts or deletes a notice on a list, and nobody edits one.
+The owner can do both after `scheduledAt`. Whoever can read the RSVPs can
+read the notices. Opening the list's page sets `noticesReadAt` on the
+account's own RSVP to the server's time. Only that account can write it, and
+it can still write it after `scheduledAt`, so a notice newer than it has not
+been seen.
 
 A tournament may also carry `scheduledAt`, when the owner says it will be
 played, in epoch milliseconds, with `scheduledZone`, the IANA zone it was
