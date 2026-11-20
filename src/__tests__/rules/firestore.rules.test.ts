@@ -1731,6 +1731,157 @@ describeFirestoreRules("Firestore rules", (env) => {
           await assertSucceeds(setDoc(listRsvpAt(db, "list-1", dan), rsvpBy(dan)));
         });
       });
+
+      describe("notices on a list", () => {
+        const listNoticeAt = (db: Firestore, listId: string, noticeId: string) =>
+          doc(db, "rsvpLists", listId, "notices", noticeId);
+        const listNoticesOf = (db: Firestore, listId: string) =>
+          collection(db, "rsvpLists", listId, "notices");
+
+        const notice = (changes: Record<string, unknown> = {}) => ({
+          body: "We moved to 7:30.",
+          createdAt: serverTimestamp(),
+          ...changes,
+        });
+
+        const seedNotice = (listId: string, noticeId: string) =>
+          env().withSecurityRulesDisabled((unrestricted) =>
+            setDoc(listNoticeAt(modularFirestore(unrestricted), listId, noticeId), notice()),
+          );
+
+        it("are posted and deleted by the owner", async () => {
+          await seedOpenList("list-1");
+          const db = accountDb(owner);
+          await assertSucceeds(setDoc(listNoticeAt(db, "list-1", "n1"), notice()));
+          await assertSucceeds(deleteDoc(listNoticeAt(db, "list-1", "n1")));
+        });
+
+        it("carry a body of one to five hundred characters, the request's time, and nothing else", async () => {
+          await seedOpenList("list-1");
+          const db = accountDb(owner);
+          await assertFails(setDoc(listNoticeAt(db, "list-1", "n1"), notice({ body: "" })));
+          await assertFails(setDoc(listNoticeAt(db, "list-1", "n1"), notice({ body: "x".repeat(501) })));
+          await assertFails(setDoc(listNoticeAt(db, "list-1", "n1"), notice({ body: 7 })));
+          await assertFails(setDoc(listNoticeAt(db, "list-1", "n1"), notice({ createdAt: Date.now() })));
+          await assertFails(setDoc(listNoticeAt(db, "list-1", "n1"), { body: "No time on it" }));
+          await assertFails(setDoc(listNoticeAt(db, "list-1", "n1"), notice({ pinned: true })));
+          await assertSucceeds(setDoc(listNoticeAt(db, "list-1", "n1"), notice({ body: "x" })));
+          await assertSucceeds(setDoc(listNoticeAt(db, "list-1", "n2"), notice({ body: "x".repeat(500) })));
+        });
+
+        it("are read newest first by the owner, by a person on the list, and by an account that has not RSVP'd", async () => {
+          await seedOpenList("list-1", { rsvps: { [dan]: { name: "Dan" } } });
+          await seedNotice("list-1", "n1");
+          const newestFirst = (db: Firestore) =>
+            getDocs(query(listNoticesOf(db, "list-1"), orderBy("createdAt", "desc")));
+          await assertSucceeds(newestFirst(accountDb(owner)));
+          await assertSucceeds(newestFirst(accountDb(dan)));
+          await assertSucceeds(newestFirst(accountDb()));
+        });
+
+        it("refuse an account once the link is off, even one on the list, and the owner can still read them", async () => {
+          await seedOpenList("list-1", { enabled: false, rsvps: { [dan]: { name: "Dan" } } });
+          await seedNotice("list-1", "n1");
+          await assertFails(getDocs(listNoticesOf(accountDb(), "list-1")));
+          await assertFails(getDocs(listNoticesOf(accountDb(dan), "list-1")));
+          await assertFails(getDoc(listNoticeAt(accountDb(dan), "list-1", "n1")));
+          await assertSucceeds(getDocs(listNoticesOf(accountDb(owner), "list-1")));
+        });
+
+        it("refuse a signed-out request and the anonymous identity", async () => {
+          await seedOpenList("list-1");
+          await seedNotice("list-1", "n1");
+          await assertFails(getDocs(listNoticesOf(signedOutDb(), "list-1")));
+          await assertFails(getDocs(listNoticesOf(anonymousDb(), "list-1")));
+        });
+
+        it("cannot be posted or deleted by a person on the list, another account, a signed-out request, or the anonymous identity", async () => {
+          await seedOpenList("list-1", { rsvps: { [dan]: { name: "Dan" } } });
+          await seedNotice("list-1", "n1");
+          for (const db of [accountDb(dan), accountDb(), signedOutDb(), anonymousDb()]) {
+            await assertFails(setDoc(listNoticeAt(db, "list-1", "n2"), notice()));
+            await assertFails(deleteDoc(listNoticeAt(db, "list-1", "n1")));
+          }
+        });
+
+        it("cannot be posted or deleted by an account while the link is off", async () => {
+          await seedOpenList("list-1", { enabled: false });
+          await seedNotice("list-1", "n1");
+          await assertFails(setDoc(listNoticeAt(accountDb(), "list-1", "n2"), notice()));
+          await assertFails(deleteDoc(listNoticeAt(accountDb(), "list-1", "n1")));
+        });
+
+        it("cannot be edited once posted, even by the owner", async () => {
+          await seedOpenList("list-1");
+          await seedNotice("list-1", "n1");
+          await assertFails(updateDoc(listNoticeAt(accountDb(owner), "list-1", "n1"), { body: "Typo" }));
+        });
+
+        it("are posted and deleted by the owner after the scheduled time, closed, and with the link off", async () => {
+          await seedOpenList("list-over", { opensInMinutes: -60, scheduledInMinutes: -1 });
+          await seedOpenList("list-closed", { closed: true });
+          await seedOpenList("list-off", { enabled: false });
+          const db = accountDb(owner);
+          for (const listId of ["list-over", "list-closed", "list-off"]) {
+            await assertSucceeds(setDoc(listNoticeAt(db, listId, "n1"), notice()));
+            await assertSucceeds(deleteDoc(listNoticeAt(db, listId, "n1")));
+          }
+        });
+
+        it("cannot be posted on a list that does not exist, or by the owner of another list", async () => {
+          await seedOpenList("list-1");
+          await env().withSecurityRulesDisabled((unrestricted) =>
+            setDoc(listAt(modularFirestore(unrestricted), "list-2"), listDoc({ ownerId: otherAccount })),
+          );
+          await assertFails(setDoc(listNoticeAt(accountDb(owner), "no-such-list", "n1"), notice()));
+          await assertFails(setDoc(listNoticeAt(accountDb(owner), "list-2", "n1"), notice()));
+        });
+
+        describe("the time an RSVP last read them", () => {
+          const rsvps = { [dan]: { name: "Dan" }, [eve]: { name: "Eve" } };
+          const read = { noticesReadAt: serverTimestamp() };
+
+          it("is recorded by the account on its own RSVP, as the request's time", async () => {
+            await seedOpenList("list-1", { rsvps });
+            const db = accountDb(dan);
+            await assertSucceeds(updateDoc(listRsvpAt(db, "list-1", dan), read));
+            await assertSucceeds(updateDoc(listRsvpAt(db, "list-1", dan), read));
+            await assertFails(updateDoc(listRsvpAt(db, "list-1", dan), { noticesReadAt: Date.now() }));
+            await assertFails(
+              updateDoc(listRsvpAt(db, "list-1", dan), {
+                noticesReadAt: Timestamp.fromMillis(minutesFromNow(60 * 24 * 365)),
+              }),
+            );
+          });
+
+          it("is recorded on nobody else's RSVP: not by another person on the list, the owner, a signed-out request, or the anonymous identity", async () => {
+            await seedOpenList("list-1", { rsvps });
+            for (const db of [accountDb(eve), accountDb(owner), signedOutDb(), anonymousDb(dan)]) {
+              await assertFails(updateDoc(listRsvpAt(db, "list-1", dan), read));
+            }
+          });
+
+          it("cannot carry another change with it", async () => {
+            await seedOpenList("list-1", { rsvps });
+            const db = accountDb(dan);
+            await assertFails(updateDoc(listRsvpAt(db, "list-1", dan), { ...read, name: "Daniel" }));
+            await assertFails(updateDoc(listRsvpAt(db, "list-1", dan), { ...read, note: "Late" }));
+            await assertFails(
+              updateDoc(listRsvpAt(db, "list-1", dan), { ...read, createdAt: serverTimestamp() }),
+            );
+            await assertFails(updateDoc(listRsvpAt(db, "list-1", dan), { ...read, uid: eve }));
+          });
+
+          it("is still recorded after the scheduled time and after a close", async () => {
+            await seedOpenList("list-over", { opensInMinutes: -60, scheduledInMinutes: -1, rsvps });
+            await seedOpenList("list-closed", { closed: true, rsvps });
+            const db = accountDb(dan);
+            for (const listId of ["list-over", "list-closed"]) {
+              await assertSucceeds(updateDoc(listRsvpAt(db, listId, dan), read));
+            }
+          });
+        });
+      });
     });
   });
 });
