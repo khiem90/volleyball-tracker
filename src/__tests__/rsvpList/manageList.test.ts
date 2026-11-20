@@ -6,12 +6,14 @@ import type { ListSetup } from "@/lib/rsvpList";
 import {
   addListHeldSpot,
   createRsvpList,
+  deleteRsvpList,
   duplicateRsvpList,
   removeListRsvp,
   RsvpRefusedError,
   sendListRsvp,
   setListClosed,
   subscribeToListRsvps,
+  subscribeToRsvpList,
   withdrawFromList,
 } from "@/lib/rsvpListData";
 import type { Rsvp, RsvpList } from "@/types/game";
@@ -283,5 +285,72 @@ describeFirestoreRules("Managing a list on Firestore", (env) => {
     });
     expect(copy.scheduledAt).toBeUndefined();
     expect(copy.opensAt).toBeUndefined();
+  });
+
+  it("deletes a list with every RSVP on it, held spots included, and leaves another list alone", async () => {
+    const list = await openList();
+    const other = await openList({ name: "Saturday pickup" });
+    await danThenEve(list.id);
+    await addListHeldSpot(accountDb(owner), list.id, "Walk-in Sam");
+    await sendListRsvp(accountDb(dan), other.id, dan, { name: "Dan", note: "" });
+
+    await deleteRsvpList(accountDb(owner), list.id);
+
+    expect(await storedList(list.id)).toBeUndefined();
+    expect(await storedRsvps(list.id)).toEqual({});
+    expect(await storedList(other.id)).toMatchObject({ name: "Saturday pickup" });
+    expect(Object.keys(await storedRsvps(other.id))).toEqual([dan]);
+  });
+
+  it("deletes a list that is over, with the RSVPs nobody can withdraw any more", async () => {
+    const list = await openList();
+    await danThenEve(list.id);
+    await scheduledTimePasses(list.id);
+
+    await deleteRsvpList(accountDb(owner), list.id);
+
+    expect(await storedList(list.id)).toBeUndefined();
+    expect(await storedRsvps(list.id)).toEqual({});
+  });
+
+  it("ends the list for a person watching it, as a list that is gone or one the rules now refuse", async () => {
+    const list = await openList();
+    const danDb = accountDb(dan);
+    await sendListRsvp(danDb, list.id, dan, { name: "Dan", note: "" });
+    // The page shows not found for either ending.
+    const ended = new Promise<"gone" | "refused">((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error("the subscription never ended")), 5000);
+      const end = (how: "gone" | "refused") => {
+        clearTimeout(timer);
+        unsubscribe();
+        resolve(how);
+      };
+      const unsubscribe = subscribeToRsvpList(
+        danDb,
+        list.id,
+        (found) => found === null && end("gone"),
+        () => end("refused"),
+      );
+    });
+    await when<RsvpList | null>(
+      (onChange, onError) => subscribeToRsvpList(danDb, list.id, onChange, onError),
+      (found) => found !== null,
+    );
+
+    await deleteRsvpList(accountDb(owner), list.id);
+
+    expect(["gone", "refused"]).toContain(await ended);
+  });
+
+  it("refuses a delete from anyone but the owner, and removes nothing", async () => {
+    const list = await openList();
+    await danThenEve(list.id);
+
+    await expect(deleteRsvpList(accountDb(dan), list.id)).rejects.toMatchObject({
+      code: "permission-denied",
+    });
+
+    expect(await storedList(list.id)).toMatchObject({ name: "Friday pickup" });
+    expect(Object.keys(await storedRsvps(list.id)).sort()).toEqual([dan, eve]);
   });
 });

@@ -6,6 +6,7 @@ import {
   doc,
   getDoc,
   getDocFromServer,
+  getDocs,
   onSnapshot,
   orderBy,
   query,
@@ -222,6 +223,21 @@ export const addListHeldSpot = async (db: Firestore, listId: string, name: strin
  */
 export const removeListRsvp = (db: Firestore, listId: string, rsvpId: string): Promise<void> =>
   deleteDoc(listRsvpDoc(db, listId, rsvpId));
+
+/**
+ * Delete a list with every RSVP on it, held spots included, in one cleanup
+ * batch, so nobody watching sees it half gone. The rules judge each write
+ * in the batch against the list as it stood before the batch, so the list
+ * goes in the same batch as the RSVPs under it. A tournament imported from
+ * the list is not touched. Owner only, at any time.
+ */
+export const deleteRsvpList = async (db: Firestore, listId: string): Promise<void> => {
+  const rsvps = await getDocs(listRsvpsCollection(db, listId));
+  const batch = writeBatch(db);
+  rsvps.docs.forEach((d) => batch.delete(d.ref));
+  batch.delete(rsvpListDoc(db, listId));
+  await batch.commit();
+};
 
 // ============================================
 // The RSVPs on a list
