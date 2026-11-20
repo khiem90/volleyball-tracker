@@ -6,12 +6,15 @@ import {
   enableNetwork,
   getDoc,
   getDocs,
+  updateDoc,
   type Firestore,
 } from "firebase/firestore";
 import { describe, expect, it } from "vitest";
 import { applyTournamentCommand } from "@/lib/commandQueue";
+import { createTournamentFromSetup } from "@/lib/creationData";
 import {
   createTournament,
+  duplicateInput,
   saveMixedTeamEdit,
   subscribeToTournament,
   type NewTournamentInput,
@@ -181,6 +184,35 @@ describeFirestoreRules("Editing mixed teams on Firestore", (env) => {
       status: "completed",
       winnerId: "m2",
     });
+  });
+
+  it("a duplicate enters the mixed teams under new ids with their players, names no list, and adds nothing to the roster", async () => {
+    const db = ownerDevice();
+    const { id } = await liveNight(db);
+    await saveMixedTeamEdit(db, id, { kind: "rename", teamId: "m2", name: "Net Ninjas" });
+    await applyTournamentCommand(db, id, { type: "withdraw", teamId: "m4" });
+    // The source came from an RSVP list. A stored tournament cannot gain one, so it is seeded.
+    await env().withSecurityRulesDisabled(async (unrestricted) => {
+      await updateDoc(doc(modularFirestore(unrestricted), "tournaments", id), { rsvpListId: "list-1" });
+    });
+    const source = await tournamentDocOf(db, id);
+
+    const duplicate = await createTournamentFromSetup(db, owner, duplicateInput(source, []), []);
+
+    const stored = await tournamentDocOf(db, duplicate.id);
+    expect(stored.status).toBe("draft");
+    expect(stored.name).toBe("Friday mix (duplicate)");
+    expect(stored.entries.map(({ teamId: _teamId, ...rest }) => rest)).toEqual([
+      { name: "Team 1", color: "#ef4444", players: ["Ana", "Ben"] },
+      { name: "Net Ninjas", color: "#3b82f6", players: ["Cy", "Dee"] },
+      { name: "Team 3", color: "#22c55e", players: ["Eli", "Fay"] },
+      { name: "Team 4", color: "#f59e0b", players: ["Gus", "Hal"] },
+    ]);
+    const ids = stored.entries.map((entry) => entry.teamId);
+    expect(stored.teamIds).toEqual(ids);
+    expect(new Set([...ids, ...source.teamIds]).size).toBe(8);
+    expect("rsvpListId" in stored).toBe(false);
+    expect((await getDocs(collection(db, "users", owner, "teams"))).size).toBe(0);
   });
 
   describe("an edit whose base the tournament has moved past", () => {

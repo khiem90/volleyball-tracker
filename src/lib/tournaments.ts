@@ -15,10 +15,12 @@ import {
   type Firestore,
   type Unsubscribe,
 } from "firebase/firestore";
+import type { EnteringMixedTeam } from "@/lib/creation";
 import { applyCommand, type MatchWrite } from "@/lib/engine";
 import { createdMatches } from "@/lib/engine/writes";
 import { editMixedTeam, type MixedTeamEdit } from "@/lib/entries";
 import { isRefused, newToken, stripUndefined, toUpdatePayload } from "@/lib/firestoreData";
+import { leastUsedColors } from "@/lib/teamColors";
 import type {
   Entry,
   Match,
@@ -331,22 +333,38 @@ export const createTournament = async (
   return built.tournament;
 };
 
+/** What a duplicate is built from: roster teams as they stand, and mixed teams still to be given an id. */
+export interface DuplicateInput extends Omit<NewTournamentInput, "teams" | "rsvpListId"> {
+  teams: (PersistentTeam | EnteringMixedTeam)[];
+}
+
 /**
  * What a duplicate of `source` is made from: the same format and settings,
- * and the same teams in the same order, named as its duplicate. The teams come
- * from the roster, so each entry takes the team's current name and color
- * and a team that has since left the roster is left out. A team that had
- * withdrawn from the source is back in; a new draft has no withdrawals.
+ * and the same teams in the same order, named as its duplicate. A roster
+ * team comes from the roster, so its entry takes the team's current name
+ * and color, and a team that has since left the roster is left out. A
+ * mixed team has no roster team (ADR-0006), so it is copied from its entry
+ * with its name, color, and players, and without its id: the new tournament
+ * gives it one of its own (see buildTournamentFromSetup). A team that had
+ * withdrawn from the source is back in, since a new draft has no
+ * withdrawals. The list the source was imported from is not carried.
  */
-export const duplicateInput = (
-  source: Tournament,
-  roster: PersistentTeam[],
-): NewTournamentInput & { teams: PersistentTeam[] } => {
+export const duplicateInput = (source: Tournament, roster: PersistentTeam[]): DuplicateInput => {
   const rosterById = new Map(roster.map((team) => [team.id, team]));
+  // Every mixed team the app makes has a color. This covers one stored without.
+  const spareColor = leastUsedColors(source.entries.map((entry) => entry.color));
   return {
     name: `${source.name} (duplicate)`,
     format: source.format,
-    teams: source.entries.flatMap((entry) => rosterById.get(entry.teamId) ?? []),
+    teams: source.entries.flatMap((entry): (PersistentTeam | EnteringMixedTeam)[] => {
+      if (entry.players === undefined) {
+        const rosterTeam = rosterById.get(entry.teamId);
+        return rosterTeam ? [rosterTeam] : [];
+      }
+      return [
+        { name: entry.name, color: entry.color ?? spareColor(), players: [...entry.players] },
+      ];
+    }),
     settings: { ...source.settings, terminology: { ...source.settings.terminology } },
   };
 };

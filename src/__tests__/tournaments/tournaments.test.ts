@@ -16,6 +16,7 @@ import {
   queueTournamentCommand,
   ReversedCommandError,
 } from "@/lib/commandQueue";
+import { createTournamentFromSetup } from "@/lib/creationData";
 import { EngineError } from "@/lib/engine";
 import { addQuickMatch } from "@/lib/quickMatches";
 import {
@@ -510,7 +511,13 @@ describeFirestoreRules("Tournaments on Firestore", (env) => {
       const completed = await tournamentDocOf(db, source.id);
       const roster = rotationInput("win2out").teams;
 
-      const duplicate = await createTournament(db, owner, duplicateInput(completed, roster));
+      // The app's own path: a duplicate is saved like a tournament from the creation page.
+      const duplicate = await createTournamentFromSetup(
+        db,
+        owner,
+        duplicateInput(completed, roster),
+        roster,
+      );
 
       const stored = await tournamentDocOf(db, duplicate.id);
       expect(stored.id).not.toBe(source.id);
