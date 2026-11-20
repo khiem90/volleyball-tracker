@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { fanOutTeamChange, planTeamDeletion } from "@/lib/entries";
+import { entryTeams, fanOutTeamChange, planTeamDeletion } from "@/lib/entries";
 import {
   DEFAULT_POINTS_FOR_LOSS,
   DEFAULT_POINTS_FOR_WIN,
   DEFAULT_TERMINOLOGY,
 } from "@/types/competition-config";
-import type { Entry, Tournament, TournamentStatus } from "@/types/game";
+import type { Entry, PersistentTeam, Tournament, TournamentStatus } from "@/types/game";
 
 const aces: Entry = { teamId: "aces", name: "Aces", color: "#ef4444" };
 const blockers: Entry = { teamId: "blockers", name: "Blockers", color: "#3b82f6" };
@@ -133,5 +133,96 @@ describe("planTeamDeletion", () => {
     expect(plan.draftUpdates).toEqual([
       { tournamentId: "draft", entries: [aces, blockers], teamIds: ["aces", "blockers"] },
     ]);
+  });
+});
+
+/** Two mixed teams. No roster team has either id. */
+const sharks: Entry = {
+  teamId: "mixed-sharks",
+  name: "Sharks",
+  color: "#f97316",
+  players: ["Ana", "Ben"],
+};
+const teamTwo: Entry = { teamId: "mixed-two", name: "Team 2", color: "#eab308", players: ["Cy"] };
+
+describe("entryTeams", () => {
+  /** The roster after Aces was renamed and recolored. */
+  const roster: PersistentTeam[] = [
+    { id: "aces", name: "Ace Hitters", color: "#8b5cf6", createdAt: 7 },
+    { id: "blockers", name: "Blockers", color: "#3b82f6", createdAt: 8 },
+  ];
+
+  it.each<TournamentStatus>(["draft", "live", "completed"])(
+    "shows a mixed team from its own entry while the tournament is %s",
+    (status) => {
+      const teams = entryTeams(tournament("night", status, [aces, sharks, teamTwo]), roster);
+
+      expect(teams.slice(1)).toEqual([
+        { id: "mixed-sharks", name: "Sharks", color: "#f97316", createdAt: 1 },
+        { id: "mixed-two", name: "Team 2", color: "#eab308", createdAt: 1 },
+      ]);
+    },
+  );
+
+  it("shows a mixed team to someone with no roster at all, such as a spectator", () => {
+    const teams = entryTeams(tournament("night", "live", [sharks]), []);
+
+    expect(teams).toEqual([{ id: "mixed-sharks", name: "Sharks", color: "#f97316", createdAt: 1 }]);
+  });
+
+  it("shows a roster team beside it by the roster's name while live and by the entry's once completed", () => {
+    const live = entryTeams(tournament("night", "live", [aces, sharks]), roster);
+    const completed = entryTeams(tournament("night", "completed", [aces, sharks]), roster);
+
+    expect(live[0]).toMatchObject({ name: "Ace Hitters", color: "#8b5cf6" });
+    expect(completed[0]).toMatchObject({ name: "Aces", color: "#ef4444" });
+  });
+});
+
+describe("a roster change in a tournament with mixed teams", () => {
+  it("renames the roster team's entry and passes over the mixed teams", () => {
+    const live = tournament("live", "live", [sharks, aces, teamTwo]);
+
+    const [update] = fanOutTeamChange("aces", { name: "Ace Hitters" }, [live]);
+
+    expect(update.entries).toEqual([sharks, { ...aces, name: "Ace Hitters" }, teamTwo]);
+    expect(update.teamIds).toEqual(["mixed-sharks", "aces", "mixed-two"]);
+  });
+
+  it("recolors the roster team's entry and passes over the mixed teams", () => {
+    const draft = tournament("draft", "draft", [aces, sharks]);
+
+    const [update] = fanOutTeamChange("aces", { name: "Aces", color: "#f97316" }, [draft]);
+
+    expect(update.entries).toEqual([{ ...aces, color: "#f97316" }, sharks]);
+  });
+
+  it("reaches no tournament that holds only mixed teams", () => {
+    const live = tournament("live", "live", [sharks, teamTwo]);
+
+    expect(fanOutTeamChange("aces", { name: "Sharks" }, [live])).toEqual([]);
+  });
+
+  it("deletes the roster team from a draft and keeps the mixed teams with their players", () => {
+    const draft = tournament("draft", "draft", [sharks, aces, teamTwo]);
+
+    const plan = planTeamDeletion(["aces"], [draft]);
+
+    expect(plan.deletable).toEqual(["aces"]);
+    expect(plan.draftUpdates).toEqual([
+      {
+        tournamentId: "draft",
+        entries: [sharks, teamTwo],
+        teamIds: ["mixed-sharks", "mixed-two"],
+      },
+    ]);
+  });
+
+  it("lets a roster team go when the only live tournament holds mixed teams", () => {
+    const live = tournament("live", "live", [sharks, teamTwo]);
+
+    const plan = planTeamDeletion(["aces"], [live]);
+
+    expect(plan).toEqual({ deletable: ["aces"], kept: [], draftUpdates: [] });
   });
 });

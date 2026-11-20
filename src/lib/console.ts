@@ -327,6 +327,8 @@ export interface TeamRow {
   teamId: string;
   name: string;
   color?: string;
+  /** The players' names on a mixed team, for everyone who can see the tournament. Absent on a roster team. */
+  players?: string[];
   withdrawn: boolean;
   played: number;
   won: number;
@@ -336,8 +338,9 @@ export interface TeamRow {
 /**
  * The entries with each team's record in this tournament. Names and colors
  * come from `teams`, the entries as they should be shown (see entryTeams),
- * with the entry's own snapshot as the fallback. A forfeit counts as a win
- * and a loss; byes are not played.
+ * with the entry's own snapshot as the fallback. A mixed team's players come
+ * from its entry, which is the only place they are kept. A forfeit counts as
+ * a win and a loss; byes are not played.
  */
 export const teamsView = (
   tournament: Tournament,
@@ -365,6 +368,7 @@ export const teamsView = (
       teamId: entry.teamId,
       name: team?.name ?? entry.name,
       ...(color !== undefined && { color }),
+      ...(entry.players !== undefined && { players: entry.players }),
       withdrawn: entry.withdrawnAt !== undefined,
       ...(record.get(entry.teamId) ?? { played: 0, won: 0, lost: 0 }),
     };

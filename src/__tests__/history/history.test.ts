@@ -113,6 +113,33 @@ describe("historyItems", () => {
     );
   });
 
+  it("names a completed tournament's mixed teams from their entries, with no roster team to read", () => {
+    const played = withId(playThrough(started("single_elimination", 4)), "pickup");
+    const mixed: World = {
+      ...played,
+      tournament: {
+        ...played.tournament,
+        entries: played.tournament.entries.map((entry, i) => ({
+          ...entry,
+          name: `Mixed ${i + 1}`,
+          players: [`Player ${i + 1}a`, `Player ${i + 1}b`],
+        })),
+      },
+    };
+    const winnerNumber = Number(mixed.tournament.winnerId!.slice(1));
+
+    const [item] = historyItems([mixed.tournament], mixed.matches, []);
+    const rows = ledgerRows([mixed.tournament], mixed.matches, []);
+
+    expect(item.kind === "tournament" && item.winner?.name).toBe(`Mixed ${winnerNumber}`);
+    expect(rows).toHaveLength(3);
+    for (const row of rows) {
+      expect(row.home.name).toBe(`Mixed ${row.match.homeTeamId.slice(1)}`);
+      expect(row.away.name).toBe(`Mixed ${row.match.awayTeamId.slice(1)}`);
+      expect(row.home.deleted).toBeUndefined();
+    }
+  });
+
   it("gives a rotation tournament the owner ended no winner", () => {
     const world = run(started("win2out", 5), { type: "end" });
     expect(world.tournament.status).toBe("completed");

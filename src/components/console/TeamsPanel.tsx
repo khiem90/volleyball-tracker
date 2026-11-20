@@ -80,8 +80,9 @@ const AddTeamForm = ({
 };
 
 /**
- * The Teams tab: every entry with its record in this tournament. The owner
- * of a live tournament can withdraw a team here. In a rotation or round
+ * The Teams tab: every entry with its record in this tournament. A mixed
+ * team shows its players under its name, to everyone who can open the tab.
+ * The owner of a live tournament can withdraw a team here. In a rotation or round
  * robin tournament the owner can also add a team, which joins the back of
  * the queue or gets its matches, and bring a withdrawn one back; a bracket
  * takes nobody once it is drawn, and says so where the add strip would be.
@@ -160,6 +161,12 @@ export const TeamsPanel = ({
                     <TeamMark team={team(row.teamId)} size={20} />
                     {row.withdrawn && <span className="mb-kicker">Withdrawn</span>}
                   </span>
+                  {row.players && row.players.length > 0 && (
+                    <p className="mt-1 text-[0.72rem] text-mb-ink-muted">
+                      <span className="sr-only">Players: </span>
+                      {row.players.join(", ")}
+                    </p>
+                  )}
                 </td>
                 <td className="text-center tabular-nums">{row.won}</td>
                 <td className={`text-center tabular-nums ${canWithdraw ? "" : "pr-3"}`}>{row.lost}</td>

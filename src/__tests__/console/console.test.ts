@@ -318,6 +318,26 @@ describe("teamsView", () => {
     expect(rows[0]).toMatchObject({ name: "Team t1", won: 1, lost: 0 });
     expect(rows[1]).toMatchObject({ name: "Team t2", won: 0, lost: 1, withdrawn: true });
   });
+
+  it("gives a mixed team its players, withdrawn or not, and a roster team none", () => {
+    const world = started("win2out", 4);
+    const tournament = {
+      ...world.tournament,
+      entries: world.tournament.entries.map((entry) => {
+        if (entry.teamId === "t2") return { ...entry, name: "Sharks", players: ["Ana", "Ben"] };
+        if (entry.teamId === "t3") return { ...entry, players: ["Cy"], withdrawnAt: 5 };
+        return entry;
+      }),
+    };
+
+    // Nobody's roster has a mixed team, so none is passed for them.
+    const rows = teamsView(tournament, world.matches, [{ id: "t1", name: "Aces", createdAt: 0 }]);
+
+    expect(rows[0]).toMatchObject({ name: "Aces" });
+    expect("players" in rows[0]).toBe(false);
+    expect(rows[1]).toMatchObject({ name: "Sharks", players: ["Ana", "Ben"], withdrawn: false });
+    expect(rows[2]).toMatchObject({ name: "Team t3", players: ["Cy"], withdrawn: true });
+  });
 });
 
 describe("standingsView", () => {

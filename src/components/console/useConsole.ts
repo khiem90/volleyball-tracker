@@ -557,7 +557,9 @@ export const useConsole = (tournamentId: string) => {
 
   // A withdrawn team comes back through the same command. Its roster team
   // is normally still there; the entry's own snapshot covers the case where
-  // it is not, so the team never comes back as "Unknown".
+  // it is not, so the team never comes back as "Unknown". A mixed team has
+  // no roster team, so it always comes back from its entry, and the engine
+  // keeps its players.
   const rejoin = useCallback(
     (row: TeamRow) => {
       if (!tournament || !access.canManage) return;

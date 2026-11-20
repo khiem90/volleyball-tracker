@@ -6,6 +6,10 @@ import type { Entry, PersistentTeam, Tournament } from "@/types/game";
  * follows the roster, so a rename reaches the standings of tonight's
  * tournament; once the tournament is completed the copy stays as it was, so
  * history does not rewrite itself. Nothing in here touches the database.
+ *
+ * A mixed team has no roster team (ADR-0006). Its entry carries an id no
+ * roster team has, so every lookup below falls through to the entry itself
+ * in every status, and a roster rename, recolor, or delete never matches it.
  */
 
 /** Completed tournaments are history and never change; the other two can. */
