@@ -13,7 +13,7 @@ import {
   standingIn,
   type RsvpStanding,
 } from "@/lib/rsvp";
-import type { Notice, Rsvp, RsvpList, RsvpTakes } from "@/types/game";
+import type { Notice, Rsvp, RsvpList, RsvpTakes, Tournament } from "@/types/game";
 
 // ============================================
 // Setup
@@ -512,6 +512,46 @@ const TEAMS_WORDING: ListWording = {
  */
 export const listWording = (takes: RsvpTakes): ListWording =>
   takes === "teams" ? TEAMS_WORDING : PEOPLE_WORDING;
+
+// ============================================
+// Tournaments imported from a list
+// ============================================
+
+/** A row on a list's page: a tournament imported from the list that has started. */
+export interface ListTournamentRow {
+  id: string;
+  name: string;
+  /** True while the tournament is live. False once it is completed. */
+  isLive: boolean;
+  /** What opening the row does, as its button says it. */
+  action: "Watch" | "See results";
+  /** The tournament's console, where the viewer is a spectator unless they own it. */
+  href: string;
+}
+
+/**
+ * The rows a list's page shows for the tournaments imported from it.
+ * `tournaments` holds the ones the viewer can read, in the order they were
+ * imported. A live one gets Watch and a completed one See results. A draft
+ * gets no row. Only its owner can read one, and the owner reaches it from
+ * the Tournaments tab. Live tournaments come first, so Watch sits above an
+ * earlier tournament's results.
+ */
+export const listTournamentRows = (
+  tournaments: Pick<Tournament, "id" | "name" | "status">[],
+): ListTournamentRow[] => {
+  const row = ({ id, name, status }: (typeof tournaments)[number]): ListTournamentRow => ({
+    id,
+    name,
+    isLive: status === "live",
+    action: status === "live" ? "Watch" : "See results",
+    href: `/competitions/${id}`,
+  });
+  return [
+    ...tournaments.filter((tournament) => tournament.status === "live"),
+    ...tournaments.filter((tournament) => tournament.status === "completed"),
+  ].map(row);
+};
 
 // ============================================
 // Home
