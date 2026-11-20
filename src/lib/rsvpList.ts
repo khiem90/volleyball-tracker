@@ -411,6 +411,11 @@ export interface ListWording {
   dialog: {
     /** The label of the name field. */
     nameLabel: string;
+    /**
+     * What the browser may fill the name field with: the person's own
+     * nickname, or nothing when the name is a team's.
+     */
+    nameAutoComplete: "nickname" | "off";
     /** Under the title of a new RSVP to the list called `listName`. */
     fresh: (listName: string) => string;
     /** The same on a full list, where a new RSVP joins the waitlist. */
@@ -455,6 +460,7 @@ const PEOPLE_WORDING: ListWording = {
     standing.kind === "confirmed" ? "You're in" : `Waitlist #${standing.position}`,
   dialog: {
     nameLabel: "Your name",
+    nameAutoComplete: "nickname",
     fresh: (listName) =>
       `You are telling the owner of ${listName} that you will play. Everyone on the list sees your name.`,
     waitlist: (listName) =>
@@ -497,6 +503,7 @@ const TEAMS_WORDING: ListWording = {
     standing.kind === "confirmed" ? "Team is in" : `Team waitlist #${standing.position}`,
   dialog: {
     nameLabel: "Team name",
+    nameAutoComplete: "off",
     fresh: (listName) =>
       `You are telling the owner of ${listName} that your team will play. One RSVP covers the whole team, and everyone on the list sees its name.`,
     waitlist: (listName) =>

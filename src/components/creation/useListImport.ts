@@ -73,7 +73,7 @@ export const useListImport = (
   roster: PersistentTeam[],
   ticked: PersistentTeam[],
   onChange: (next: ListImport | null) => void,
-  mixedColors: string[] = [],
+  mixedColors: string[],
 ) => {
   const { user } = useAuth();
   const source = useImportSource(user?.uid ?? null);

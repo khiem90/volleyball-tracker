@@ -1,12 +1,8 @@
 "use client";
 
 import { epochToWallClock, timeLabel, wallClockToEpoch } from "@/lib/rsvp";
-import { listWording } from "@/lib/rsvpList";
 
 const MAX_CAPACITY = 999;
-
-/** The capacity counts people unless the field is told otherwise. */
-const PEOPLE_CAPACITY_NOTE = listWording("people").capacityNote;
 
 const Problem = ({ id, problem }: { id: string; problem?: string }) =>
   problem ? (
@@ -68,39 +64,23 @@ export const DateTimeField = ({
   );
 };
 
-/**
- * The number of confirmed RSVPs, typed or stepped one at a time. With a
- * `floor`, the minus button will not step below it and calls `onFloor`
- * instead, so the page can say why.
- */
+/** The number of confirmed RSVPs, typed or stepped one at a time. */
 export const CapacityField = ({
   id,
   value,
+  note,
   problem,
-  disabled = false,
-  floor = 0,
-  note = PEOPLE_CAPACITY_NOTE,
-  onFloor,
   onChange,
 }: {
   id: string;
   value: number;
-  /** What the capacity counts, said under the field, from listWording. People when left out. */
-  note?: string;
+  /** What the capacity counts, said under the field, from listWording. */
+  note: string;
   problem?: string;
-  disabled?: boolean;
-  /** The lowest capacity the stepper goes to, such as the confirmed count. */
-  floor?: number;
-  /** Called in place of a step below the floor. */
-  onFloor?: () => void;
   onChange: (value: number) => void;
 }) => {
   const step = "mb-btn mb-btn-outline-navy min-w-11 px-3 text-[1rem]";
   const clamp = (n: number) => Math.max(0, Math.min(MAX_CAPACITY, n));
-  const stepDown = () => {
-    if (value - 1 < floor && onFloor) onFloor();
-    else onChange(clamp(value - 1));
-  };
   return (
     <div className="flex flex-col gap-1.5">
       <label htmlFor={id} className="mb-kicker">
@@ -115,7 +95,6 @@ export const CapacityField = ({
             min={1}
             max={MAX_CAPACITY}
             value={value}
-            disabled={disabled}
             onChange={(event) => onChange(clamp(Math.floor(Number(event.target.value) || 0)))}
             aria-invalid={problem ? true : undefined}
             aria-describedby={problem ? `${id}-problem` : undefined}
@@ -123,8 +102,8 @@ export const CapacityField = ({
         </span>
         <button
           type="button"
-          onClick={stepDown}
-          disabled={disabled || value <= 1}
+          onClick={() => onChange(clamp(value - 1))}
+          disabled={value <= 1}
           aria-label="Lower the capacity by one"
           className={step}
         >
@@ -133,7 +112,7 @@ export const CapacityField = ({
         <button
           type="button"
           onClick={() => onChange(clamp(value + 1))}
-          disabled={disabled || value >= MAX_CAPACITY}
+          disabled={value >= MAX_CAPACITY}
           aria-label="Raise the capacity by one"
           className={step}
         >

@@ -154,7 +154,6 @@ export default function RsvpListPage() {
         open={rsvp.dialog.isOpen}
         name={list.name}
         wording={rsvp.wording.dialog}
-        takesTeams={list.takes === "teams"}
         entry={rsvp.dialog.entry}
         isEditing={rsvp.dialog.isEditing}
         joinsWaitlist={rsvp.state?.kind === "full"}

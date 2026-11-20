@@ -23,7 +23,7 @@ import { deviceZone, timeLabel } from "@/lib/rsvp";
 import { listWording, type HomeListRow } from "@/lib/rsvpList";
 import { signInHref } from "@/lib/shell";
 import { plural } from "@/lib/utils";
-import type { RsvpTakes } from "@/types/game";
+import type { RsvpList } from "@/types/game";
 
 /** "7:42 PM" for a result today, "Sep 27" for one before. */
 const whenLabel = (ts: number | undefined) => {
@@ -130,12 +130,8 @@ const GuestPanel = () => (
 
 type Standing = HomeListRow["standing"];
 
-/** The account being in or waiting, or on a by-team list its team. */
-const standingLabel = (standing: Standing, takes: RsvpTakes = "people") =>
-  listWording(takes).homeStanding(standing);
-
 /** What an RSVP row reads off a list. */
-type Scheduled = { name: string; scheduledAt?: number; scheduledZone?: string; takes?: RsvpTakes };
+type Scheduled = Pick<RsvpList, "name" | "scheduledAt" | "scheduledZone" | "takes">;
 
 /** One RSVP of the account's: what it is to, when, and where the account stands. */
 const RsvpRow = ({
@@ -176,7 +172,8 @@ const RsvpRow = ({
           standing.kind === "confirmed" ? "text-mb-green" : "text-mb-navy"
         }`}
       >
-        {standingLabel(standing, to.takes)}
+        {/* The account being in or waiting, or on a by-team list its team. */}
+        {listWording(to.takes).homeStanding(standing)}
         <MbIcon id="chevron-right" size={11} className="text-mb-ink-muted" />
       </span>
     </Link>

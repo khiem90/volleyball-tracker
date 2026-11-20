@@ -80,7 +80,7 @@ describeFirestoreRules("Notices on a list on Firestore", (env) => {
 
   it("delivers the notices newest first to a person on the list", async () => {
     const list = await openList();
-    await sendListRsvp(accountDb(dan), list.id, dan, { name: "Dan", note: "" });
+    await sendListRsvp(accountDb(dan), list.id, dan, { name: "Dan", note: "" }, "people");
     await postListNotice(accountDb(owner), list.id, "Bring a dark and a light shirt.");
     await postListNotice(accountDb(owner), list.id, "We moved to 7:30.");
 
@@ -104,7 +104,7 @@ describeFirestoreRules("Notices on a list on Firestore", (env) => {
 
   it("refuses a notice from anyone but the owner, and an empty or overlong one before anything is written", async () => {
     const list = await openList();
-    await sendListRsvp(accountDb(dan), list.id, dan, { name: "Dan", note: "" });
+    await sendListRsvp(accountDb(dan), list.id, dan, { name: "Dan", note: "" }, "people");
 
     await expect(postListNotice(accountDb(dan), list.id, "Courts are free.")).rejects.toThrow();
     await expect(postListNotice(accountDb(owner), list.id, "   ")).rejects.toThrow(
@@ -128,7 +128,7 @@ describeFirestoreRules("Notices on a list on Firestore", (env) => {
 
   it("takes a deleted notice off the page for a person on the list", async () => {
     const list = await openList();
-    await sendListRsvp(accountDb(dan), list.id, dan, { name: "Dan", note: "" });
+    await sendListRsvp(accountDb(dan), list.id, dan, { name: "Dan", note: "" }, "people");
     await postListNotice(accountDb(owner), list.id, "We moved to 7:30.");
     await postListNotice(accountDb(owner), list.id, "We moved to 6:30.");
     const [mistake] = await noticesWhere(accountDb(owner), list.id, (all) => all.length === 2);
@@ -142,7 +142,7 @@ describeFirestoreRules("Notices on a list on Firestore", (env) => {
 
   it("records on the viewer's own RSVP when they last read the notices, at the server's time", async () => {
     const list = await openList();
-    await sendListRsvp(accountDb(dan), list.id, dan, { name: "Dan", note: "Late" });
+    await sendListRsvp(accountDb(dan), list.id, dan, { name: "Dan", note: "Late" }, "people");
     await postListNotice(accountDb(owner), list.id, "We moved to 7:30.");
     const before = Date.now();
 
@@ -158,7 +158,7 @@ describeFirestoreRules("Notices on a list on Firestore", (env) => {
 
   it("still records the read time once the scheduled time has passed", async () => {
     const list = await openList({ scheduledAt: minutesFromNow(60) });
-    await sendListRsvp(accountDb(dan), list.id, dan, { name: "Dan", note: "" });
+    await sendListRsvp(accountDb(dan), list.id, dan, { name: "Dan", note: "" }, "people");
     await env().withSecurityRulesDisabled((unrestricted) =>
       updateDoc(doc(modularFirestore(unrestricted), "rsvpLists", list.id), {
         opensAt: minutesFromNow(-60),

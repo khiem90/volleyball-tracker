@@ -473,7 +473,7 @@ export const sendListRsvp = async (
   listId: string,
   uid: string,
   entry: RsvpEntry,
-  takes: RsvpTakes = "people",
+  takes: RsvpTakes,
 ): Promise<void> => {
   const { batch, name, note } = rememberingBatch(db, uid, entry, takes);
   batch.set(listRsvpDoc(db, listId, uid), { uid, name, note, createdAt: serverTimestamp() });
@@ -497,7 +497,7 @@ export const updateListRsvp = async (
   listId: string,
   uid: string,
   entry: RsvpEntry,
-  takes: RsvpTakes = "people",
+  takes: RsvpTakes,
 ): Promise<void> => {
   const { batch, name, note } = rememberingBatch(db, uid, entry, takes);
   batch.update(listRsvpDoc(db, listId, uid), { name, note });

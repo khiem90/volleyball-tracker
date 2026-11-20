@@ -17,21 +17,20 @@ export const RsvpSectionHead = ({ label, count }: { label: string; count: number
 
 /**
  * One section of an RSVP list in arrival order, by name and note, with a
- * held spot marked Held and the viewer's own row marked You, or with
- * `mineLabel` on a list that takes teams. With `onRemove`, each row has a
- * Remove button.
+ * held spot marked Held and the viewer's own row marked with `mineLabel`.
+ * With `onRemove`, each row has a Remove button.
  */
 export const RsvpRows = ({
   rsvps,
   viewerUid,
-  mineLabel = "You",
+  mineLabel,
   onRemove,
 }: {
   rsvps: Placed<Rsvp>[];
   /** The account looking at the list, whose row is marked; null for nobody. */
   viewerUid: string | null;
-  /** The badge on the viewer's own row, from listWording. */
-  mineLabel?: string;
+  /** The badge on the viewer's own row, from listWording: "You" or "Your team". */
+  mineLabel: string;
   onRemove?: (rsvp: Rsvp) => void;
 }) => (
   <ol className="flex flex-col">

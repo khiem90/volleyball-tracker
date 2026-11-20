@@ -82,15 +82,15 @@ describeFirestoreRules("RSVPing to a list on Firestore", (env) => {
 
   /** Dan RSVPs, then Eve, one after the other so the order is certain. */
   const danThenEve = async (listId: string) => {
-    await sendListRsvp(accountDb(dan), listId, dan, { name: "Dan", note: "" });
-    await sendListRsvp(accountDb(eve), listId, eve, { name: "Eve", note: "" });
+    await sendListRsvp(accountDb(dan), listId, dan, { name: "Dan", note: "" }, "people");
+    await sendListRsvp(accountDb(eve), listId, eve, { name: "Eve", note: "" }, "people");
   };
 
   it("stores an RSVP under the list with the account's uid as its id, trimmed, at the server's time", async () => {
     const list = await openList();
     const before = Date.now();
 
-    await sendListRsvp(accountDb(dan), list.id, dan, { name: "  Dan from Tuesdays ", note: " Late " });
+    await sendListRsvp(accountDb(dan), list.id, dan, { name: "  Dan from Tuesdays ", note: " Late " }, "people");
 
     const stored = await storedRsvps(list.id);
     expect(Object.keys(stored)).toEqual([dan]);
@@ -110,7 +110,7 @@ describeFirestoreRules("RSVPing to a list on Firestore", (env) => {
     const db = accountDb(dan);
     expect(await readRememberedName(db, dan)).toBeNull();
 
-    await sendListRsvp(db, list.id, dan, { name: "  Dan from Tuesdays ", note: "" });
+    await sendListRsvp(db, list.id, dan, { name: "  Dan from Tuesdays ", note: "" }, "people");
 
     expect(await readRememberedName(db, dan)).toBe("Dan from Tuesdays");
   });
@@ -119,8 +119,8 @@ describeFirestoreRules("RSVPing to a list on Firestore", (env) => {
     const list = await openList({ capacity: 1 });
 
     await Promise.all([
-      sendListRsvp(accountDb(dan), list.id, dan, { name: "Dan", note: "" }),
-      sendListRsvp(accountDb(eve), list.id, eve, { name: "Eve", note: "Bringing a ball" }),
+      sendListRsvp(accountDb(dan), list.id, dan, { name: "Dan", note: "" }, "people"),
+      sendListRsvp(accountDb(eve), list.id, eve, { name: "Eve", note: "Bringing a ball" }, "people"),
     ]);
 
     const delivered = await rsvpsWhere(accountDb(owner), list.id, (rsvps) => rsvps.length === 2);
@@ -178,7 +178,7 @@ describeFirestoreRules("RSVPing to a list on Firestore", (env) => {
     expect(standingIn(splitRsvps(afterWithdrawal, 1), eve)).toEqual({ kind: "confirmed", position: 1 });
     expect((await storedRsvps(list.id))[eve]).toEqual(eveStored);
 
-    await sendListRsvp(accountDb(dan), list.id, dan, { name: "Dan", note: "Back again" });
+    await sendListRsvp(accountDb(dan), list.id, dan, { name: "Dan", note: "Back again" }, "people");
 
     const afterReturn = await rsvpsWhere(eveDb, list.id, (rsvps) => rsvps.length === 2);
     expect(afterReturn.map((r) => r.uid)).toEqual([eve, dan]);
@@ -191,7 +191,7 @@ describeFirestoreRules("RSVPing to a list on Firestore", (env) => {
     const danDb = accountDb(dan);
     const arrived = (await storedRsvps(list.id))[dan].createdAt;
 
-    await updateListRsvp(danDb, list.id, dan, { name: " Daniel ", note: " Late " });
+    await updateListRsvp(danDb, list.id, dan, { name: " Daniel ", note: " Late " }, "people");
 
     const after = await rsvpsWhere(danDb, list.id, (rsvps) => rsvps[0]?.name === "Daniel");
     expect(after.map((r) => r.uid)).toEqual([dan, eve]);
@@ -204,17 +204,17 @@ describeFirestoreRules("RSVPing to a list on Firestore", (env) => {
     const list = await openList();
     const db = accountDb(dan);
 
-    await expect(sendListRsvp(db, list.id, dan, { name: "   ", note: "" })).rejects.toThrow(
+    await expect(sendListRsvp(db, list.id, dan, { name: "   ", note: "" }, "people")).rejects.toThrow(
       "Enter the name the owner will see.",
     );
     await expect(
-      sendListRsvp(db, list.id, dan, { name: "Dan", note: "x".repeat(141) }),
+      sendListRsvp(db, list.id, dan, { name: "Dan", note: "x".repeat(141) }, "people"),
     ).rejects.toThrow("Keep the note to 140 characters.");
     expect(await storedRsvps(list.id)).toEqual({});
     expect(await readRememberedName(db, dan)).toBeNull();
 
-    await sendListRsvp(db, list.id, dan, { name: "Dan", note: "" });
-    await expect(updateListRsvp(db, list.id, dan, { name: "", note: "" })).rejects.toThrow(
+    await sendListRsvp(db, list.id, dan, { name: "Dan", note: "" }, "people");
+    await expect(updateListRsvp(db, list.id, dan, { name: "", note: "" }, "people")).rejects.toThrow(
       "Enter the name the owner will see.",
     );
     expect((await storedRsvps(list.id))[dan].name).toBe("Dan");
@@ -224,7 +224,7 @@ describeFirestoreRules("RSVPing to a list on Firestore", (env) => {
     const list = await openList({ opensAt: minutesFromNow(5) });
     const db = accountDb(dan);
 
-    const refusal = await sendListRsvp(db, list.id, dan, { name: "Dan", note: "" }).catch(
+    const refusal = await sendListRsvp(db, list.id, dan, { name: "Dan", note: "" }, "people").catch(
       (error: unknown) => error,
     );
 
@@ -241,7 +241,7 @@ describeFirestoreRules("RSVPing to a list on Firestore", (env) => {
     const off = await openList({ enabled: false });
     const db = accountDb(dan);
     const refusalOn = (listId: string) =>
-      sendListRsvp(db, listId, dan, { name: "Dan", note: "" }).catch((error: unknown) => error);
+      sendListRsvp(db, listId, dan, { name: "Dan", note: "" }, "people").catch((error: unknown) => error);
 
     for (const [listId, message] of [
       [closed.id, "The owner has closed RSVPs."],
@@ -257,14 +257,14 @@ describeFirestoreRules("RSVPing to a list on Firestore", (env) => {
 
   it("lets a person withdraw from a closed list, and refuses once the scheduled time has passed", async () => {
     const closed = await openList();
-    await sendListRsvp(accountDb(dan), closed.id, dan, { name: "Dan", note: "" });
+    await sendListRsvp(accountDb(dan), closed.id, dan, { name: "Dan", note: "" }, "people");
     await ownerSets(closed.id, { closed: true });
 
     await withdrawFromList(accountDb(dan), closed.id, dan);
     expect(await storedRsvps(closed.id)).toEqual({});
 
     const over = await openList();
-    await sendListRsvp(accountDb(dan), over.id, dan, { name: "Dan", note: "" });
+    await sendListRsvp(accountDb(dan), over.id, dan, { name: "Dan", note: "" }, "people");
     await ownerSets(over.id, { opensAt: minutesFromNow(-60), scheduledAt: minutesFromNow(-1) });
 
     await expect(withdrawFromList(accountDb(dan), over.id, dan)).rejects.toThrow();
@@ -273,9 +273,9 @@ describeFirestoreRules("RSVPing to a list on Firestore", (env) => {
 
   it("lets the owner RSVP to their own list like anyone else", async () => {
     const list = await openList({ capacity: 1 });
-    await sendListRsvp(accountDb(dan), list.id, dan, { name: "Dan", note: "" });
+    await sendListRsvp(accountDb(dan), list.id, dan, { name: "Dan", note: "" }, "people");
 
-    await sendListRsvp(accountDb(owner), list.id, owner, { name: "The organiser", note: "" });
+    await sendListRsvp(accountDb(owner), list.id, owner, { name: "The organiser", note: "" }, "people");
 
     const rsvps = await rsvpsWhere(accountDb(owner), list.id, (found) => found.length === 2);
     expect(standingIn(splitRsvps(rsvps, 1), owner)).toEqual({ kind: "waitlisted", position: 1 });
@@ -283,7 +283,7 @@ describeFirestoreRules("RSVPing to a list on Firestore", (env) => {
 
   it("shows the RSVPs to another account holding the link, and refuses them once the link is off", async () => {
     const list = await openList();
-    await sendListRsvp(accountDb(dan), list.id, dan, { name: "Dan", note: "" });
+    await sendListRsvp(accountDb(dan), list.id, dan, { name: "Dan", note: "" }, "people");
 
     const seen = await rsvpsWhere(accountDb(eve), list.id, (rsvps) => rsvps.length === 1);
     expect(seen.map((r) => r.name)).toEqual(["Dan"]);

@@ -96,10 +96,10 @@ describeFirestoreRules("Home's lists on Firestore", (env) => {
     const friday = await openList("Friday");
     const saturday = await openList("Saturday", { capacity: 1 });
     const sunday = await openList("Sunday");
-    await sendListRsvp(accountDb(eve), saturday.id, eve, { name: "Eve", note: "" });
-    await sendListRsvp(accountDb(dan), friday.id, dan, { name: "Dan", note: "" });
-    await sendListRsvp(accountDb(dan), saturday.id, dan, { name: "Dan", note: "" });
-    await sendListRsvp(accountDb(eve), sunday.id, eve, { name: "Eve", note: "" });
+    await sendListRsvp(accountDb(eve), saturday.id, eve, { name: "Eve", note: "" }, "people");
+    await sendListRsvp(accountDb(dan), friday.id, dan, { name: "Dan", note: "" }, "people");
+    await sendListRsvp(accountDb(dan), saturday.id, dan, { name: "Dan", note: "" }, "people");
+    await sendListRsvp(accountDb(eve), sunday.id, eve, { name: "Eve", note: "" }, "people");
     const danDb = accountDb(dan);
     const watcher = watchAccountLists(danDb, dan);
 
@@ -145,7 +145,7 @@ describeFirestoreRules("Home's lists on Firestore", (env) => {
         createdAt: serverTimestamp(),
       }),
     );
-    await sendListRsvp(accountDb(dan), friday.id, dan, { name: "Dan", note: "" });
+    await sendListRsvp(accountDb(dan), friday.id, dan, { name: "Dan", note: "" }, "people");
     const watcher = watchAccountLists(accountDb(dan), dan);
 
     try {
@@ -161,8 +161,8 @@ describeFirestoreRules("Home's lists on Firestore", (env) => {
   it("drops a list whose link the owner turns off, and keeps the rest of the panel", async () => {
     const friday = await openList("Friday");
     const saturday = await openList("Saturday");
-    await sendListRsvp(accountDb(dan), friday.id, dan, { name: "Dan", note: "" });
-    await sendListRsvp(accountDb(dan), saturday.id, dan, { name: "Dan", note: "" });
+    await sendListRsvp(accountDb(dan), friday.id, dan, { name: "Dan", note: "" }, "people");
+    await sendListRsvp(accountDb(dan), saturday.id, dan, { name: "Dan", note: "" }, "people");
     const watcher = watchAccountLists(accountDb(dan), dan);
 
     try {
@@ -189,8 +189,8 @@ describeFirestoreRules("Home's lists on Firestore", (env) => {
   it("drops a list the owner deletes", async () => {
     const friday = await openList("Friday");
     const saturday = await openList("Saturday");
-    await sendListRsvp(accountDb(dan), friday.id, dan, { name: "Dan", note: "" });
-    await sendListRsvp(accountDb(dan), saturday.id, dan, { name: "Dan", note: "" });
+    await sendListRsvp(accountDb(dan), friday.id, dan, { name: "Dan", note: "" }, "people");
+    await sendListRsvp(accountDb(dan), saturday.id, dan, { name: "Dan", note: "" }, "people");
     const watcher = watchAccountLists(accountDb(dan), dan);
 
     try {
@@ -226,7 +226,7 @@ describeFirestoreRules("Home's lists on Firestore", (env) => {
     const lastNight = await openList("Last night");
     const lastWeek = await openList("Last week");
     for (const list of [lastNight, lastWeek]) {
-      await sendListRsvp(accountDb(dan), list.id, dan, { name: "Dan", note: "" });
+      await sendListRsvp(accountDb(dan), list.id, dan, { name: "Dan", note: "" }, "people");
       await postListNotice(accountDb(owner), list.id, "Thanks for coming.");
     }
     await moveBack(lastNight.id, 1);
@@ -263,7 +263,7 @@ describeFirestoreRules("Home's lists on Firestore", (env) => {
 
   it("lets go of a list's RSVPs and notices when its document comes to say it is 24 hours past", async () => {
     const friday = await openList("Friday");
-    await sendListRsvp(accountDb(dan), friday.id, dan, { name: "Dan", note: "" });
+    await sendListRsvp(accountDb(dan), friday.id, dan, { name: "Dan", note: "" }, "people");
     await postListNotice(accountDb(owner), friday.id, "Thanks for coming.");
     const watcher = watchAccountLists(accountDb(dan), dan);
 
@@ -287,7 +287,7 @@ describeFirestoreRules("Home's lists on Firestore", (env) => {
 
   it("marks a new notice until the account opens the list's page", async () => {
     const friday = await openList("Friday");
-    await sendListRsvp(accountDb(dan), friday.id, dan, { name: "Dan", note: "" });
+    await sendListRsvp(accountDb(dan), friday.id, dan, { name: "Dan", note: "" }, "people");
     const danDb = accountDb(dan);
     const watcher = watchAccountLists(danDb, dan);
     const unread = (read: AccountLists) => homeListRows(dan, read, Date.now())[0]?.unread;

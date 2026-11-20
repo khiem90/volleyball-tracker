@@ -92,8 +92,8 @@ describeFirestoreRules("Managing a list on Firestore", (env) => {
 
   /** Dan RSVPs, then Eve, one after the other so the order is certain. */
   const danThenEve = async (listId: string) => {
-    await sendListRsvp(accountDb(dan), listId, dan, { name: "Dan", note: "" });
-    await sendListRsvp(accountDb(eve), listId, eve, { name: "Eve", note: "" });
+    await sendListRsvp(accountDb(dan), listId, dan, { name: "Dan", note: "" }, "people");
+    await sendListRsvp(accountDb(eve), listId, eve, { name: "Eve", note: "" }, "people");
   };
 
   it("confirms the first RSVP waiting when the owner removes a confirmed one, with no write to it", async () => {
@@ -129,10 +129,10 @@ describeFirestoreRules("Managing a list on Firestore", (env) => {
 
   it("adds a held spot by name with no account behind it, in its place in arrival order", async () => {
     const list = await openList({ capacity: 2 });
-    await sendListRsvp(accountDb(dan), list.id, dan, { name: "Dan", note: "" });
+    await sendListRsvp(accountDb(dan), list.id, dan, { name: "Dan", note: "" }, "people");
 
     await addListHeldSpot(accountDb(owner), list.id, "  Walk-in Sam ");
-    await sendListRsvp(accountDb(eve), list.id, eve, { name: "Eve", note: "" });
+    await sendListRsvp(accountDb(eve), list.id, eve, { name: "Eve", note: "" }, "people");
 
     const rsvps = await rsvpsWhere(accountDb(eve), list.id, (found) => found.length === 3);
     expect(rsvps.map((r) => r.name)).toEqual(["Dan", "Walk-in Sam", "Eve"]);
@@ -189,12 +189,12 @@ describeFirestoreRules("Managing a list on Firestore", (env) => {
   it("stops new RSVPs on a close, leaves withdrawals working, and lets RSVPs in again on a reopen", async () => {
     const list = await openList();
     const ownerDb = accountDb(owner);
-    await sendListRsvp(accountDb(dan), list.id, dan, { name: "Dan", note: "" });
+    await sendListRsvp(accountDb(dan), list.id, dan, { name: "Dan", note: "" }, "people");
 
     await setListClosed(ownerDb, list, true);
 
     expect(await storedList(list.id)).toMatchObject({ closed: true });
-    const refusal = await sendListRsvp(accountDb(eve), list.id, eve, { name: "Eve", note: "" }).catch(
+    const refusal = await sendListRsvp(accountDb(eve), list.id, eve, { name: "Eve", note: "" }, "people").catch(
       (error: unknown) => error,
     );
     expect(refusal).toBeInstanceOf(RsvpRefusedError);
@@ -207,7 +207,7 @@ describeFirestoreRules("Managing a list on Firestore", (env) => {
     await setListClosed(ownerDb, list, false);
 
     expect(await storedList(list.id)).toMatchObject({ closed: false });
-    await sendListRsvp(accountDb(eve), list.id, eve, { name: "Eve", note: "" });
+    await sendListRsvp(accountDb(eve), list.id, eve, { name: "Eve", note: "" }, "people");
     expect(Object.keys(await storedRsvps(list.id))).toEqual([eve]);
   });
 
@@ -307,7 +307,7 @@ describeFirestoreRules("Managing a list on Firestore", (env) => {
     await addListHeldSpot(accountDb(owner), list.id, "Walk-in Sam");
     await postListNotice(accountDb(owner), list.id, "We moved to 7:30.");
     await postListNotice(accountDb(owner), list.id, "Bring a light shirt and a dark one.");
-    await sendListRsvp(accountDb(dan), other.id, dan, { name: "Dan", note: "" });
+    await sendListRsvp(accountDb(dan), other.id, dan, { name: "Dan", note: "" }, "people");
     await postListNotice(accountDb(owner), other.id, "Court 2 this week.");
     expect((await storedNotices(list.id)).sort()).toEqual([
       "Bring a light shirt and a dark one.",
@@ -340,7 +340,7 @@ describeFirestoreRules("Managing a list on Firestore", (env) => {
   it("ends the list for a person watching it, as a list that is gone or one the rules now refuse", async () => {
     const list = await openList();
     const danDb = accountDb(dan);
-    await sendListRsvp(danDb, list.id, dan, { name: "Dan", note: "" });
+    await sendListRsvp(danDb, list.id, dan, { name: "Dan", note: "" }, "people");
     // The page shows not found for either ending.
     const ended = new Promise<"gone" | "refused">((resolve, reject) => {
       const timer = setTimeout(() => reject(new Error("the subscription never ended")), 5000);

@@ -70,6 +70,9 @@ describe("listWording", () => {
   it("asks for a name in the RSVP dialog on a by-person list and a team name on a by-team list", () => {
     expect(people.dialog.nameLabel).toBe("Your name");
     expect(teams.dialog.nameLabel).toBe("Team name");
+    // The browser may offer a person their own name, and never offers it for a team.
+    expect(people.dialog.nameAutoComplete).toBe("nickname");
+    expect(teams.dialog.nameAutoComplete).toBe("off");
     expect(people.dialog.fresh("Friday pickup")).toBe(
       "You are telling the owner of Friday pickup that you will play. Everyone on the list sees your name.",
     );

@@ -13,10 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { RSVP_NAME_MAX, RSVP_NOTE_MAX, rsvpEntryProblems, type RsvpEntry } from "@/lib/rsvp";
-import { listWording, type ListWording } from "@/lib/rsvpList";
-
-/** The dialog speaks to a person about themselves unless it is told the list takes teams. */
-const PERSON_WORDING = listWording("people").dialog;
+import type { ListWording } from "@/lib/rsvpList";
 
 /**
  * The RSVP dialog: the name everyone on the list sees, prefilled, and an
@@ -27,14 +24,13 @@ const PERSON_WORDING = listWording("people").dialog;
  * and note, which keeps the person's place, and has Withdraw in the
  * footer. Withdraw asks once more before it takes the spot away.
  *
- * On a by-team list the page passes the team `wording`, and the dialog
- * asks for a team name and speaks of the team.
+ * The page passes the `wording` for what the list takes. With a by-team
+ * list's, the dialog asks for a team name and speaks of the team.
  */
 export const RsvpDialog = ({
   open,
   name,
-  wording = PERSON_WORDING,
-  takesTeams = false,
+  wording,
   entry,
   isEditing = false,
   joinsWaitlist = false,
@@ -49,10 +45,8 @@ export const RsvpDialog = ({
   open: boolean;
   /** What the person is RSVPing to: the list's name. */
   name: string;
-  /** The dialog's words for a person or for a team, from listWording. A person's when left out. */
-  wording?: ListWording["dialog"];
-  /** True when the name is a team's, so the browser does not offer the person's own. */
-  takesTeams?: boolean;
+  /** The dialog's words for a person or for a team, from listWording. */
+  wording: ListWording["dialog"];
   entry: RsvpEntry | null;
   /** True when the dialog edits the person's RSVP rather than making one. */
   isEditing?: boolean;
@@ -147,7 +141,7 @@ export const RsvpDialog = ({
                 value={entry?.name ?? ""}
                 onChange={(event) => onChange({ name: event.target.value })}
                 maxLength={RSVP_NAME_MAX + 10}
-                autoComplete={takesTeams ? "off" : "nickname"}
+                autoComplete={wording.nameAutoComplete}
                 autoFocus
                 aria-invalid={!!problems.name}
                 aria-describedby={problems.name ? "rsvp-name-problem" : undefined}
