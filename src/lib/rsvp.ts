@@ -401,7 +401,7 @@ export type Placed<T> = T & { position: number };
 type Arrival = Pick<Rsvp, "id" | "createdAt">;
 
 /** The list split by capacity, each section in arrival order. */
-export interface RsvpList<T extends Arrival = Rsvp> {
+export interface RsvpSplit<T extends Arrival = Rsvp> {
   confirmed: Placed<T>[];
   waitlisted: Placed<T>[];
 }
@@ -420,7 +420,7 @@ const byArrival = (a: Arrival, b: Arrival): number =>
  * done here rather than trusted from the subscription, with the document
  * id breaking a tie, so every phone works out the same split.
  */
-export const splitRsvps = <T extends Arrival>(rsvps: T[], capacity: number): RsvpList<T> => {
+export const splitRsvps = <T extends Arrival>(rsvps: T[], capacity: number): RsvpSplit<T> => {
   const ordered = [...rsvps].sort(byArrival);
   const cut = Math.max(0, capacity);
   return {
@@ -443,7 +443,7 @@ export type RsvpStanding =
  * standing; without an account, nobody is on the list.
  */
 export const standingIn = <T extends Arrival & { uid: string | null }>(
-  list: RsvpList<T>,
+  list: RsvpSplit<T>,
   uid: string | null,
 ): RsvpStanding => {
   if (uid === null) return { kind: "none" };
