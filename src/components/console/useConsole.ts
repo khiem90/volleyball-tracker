@@ -26,7 +26,7 @@ import {
 } from "@/lib/console";
 import type { AppliedCommand } from "@/lib/commandQueue";
 import { bracketAddRefusal } from "@/lib/engine";
-import { entryTeams, type MixedTeamEdit } from "@/lib/entries";
+import { entryTeams, isMixedTeam, type MixedTeamEdit } from "@/lib/entries";
 import { isBracketFormat, isRotationFormat, minimumTeams } from "@/lib/formats";
 import {
   scorerKeyIn,
@@ -594,7 +594,7 @@ export const useConsole = (tournamentId: string) => {
   // the owner can no longer edit, as when the last result completes the
   // tournament.
   const [editingTeamId, setEditingTeamId] = useState<string | null>(null);
-  const mixedTeams = useMemo(() => teamRows.filter((row) => row.players !== undefined), [teamRows]);
+  const mixedTeams = useMemo(() => teamRows.filter((row) => isMixedTeam(row)), [teamRows]);
   const editingTeam = useMemo(
     () =>
       (access.canEditMixedTeams && mixedTeams.find((row) => row.teamId === editingTeamId)) || null,

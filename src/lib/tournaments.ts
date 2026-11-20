@@ -19,7 +19,7 @@ import {
 import type { EnteringMixedTeam } from "@/lib/creation";
 import { applyCommand, type MatchWrite } from "@/lib/engine";
 import { createdMatches } from "@/lib/engine/writes";
-import { editMixedTeam, type MixedTeamEdit } from "@/lib/entries";
+import { editMixedTeam, isMixedTeam, type MixedTeamEdit } from "@/lib/entries";
 import { isRefused, newToken, stripUndefined, toUpdatePayload } from "@/lib/firestoreData";
 import { leastUsedColors } from "@/lib/teamColors";
 import type {
@@ -217,7 +217,7 @@ export const buildTournament = (
     teamId: team.id,
     name: team.name,
     ...(team.color !== undefined && { color: team.color }),
-    ...(team.players !== undefined && { players: [...team.players] }),
+    ...(isMixedTeam(team) && { players: [...team.players] }),
   }));
   return {
     id: doc(tournamentsCollection(db)).id,
@@ -358,7 +358,7 @@ export const duplicateInput = (source: Tournament, roster: PersistentTeam[]): Du
     name: `${source.name} (duplicate)`,
     format: source.format,
     teams: source.entries.flatMap((entry): (PersistentTeam | EnteringMixedTeam)[] => {
-      if (entry.players === undefined) {
+      if (!isMixedTeam(entry)) {
         const rosterTeam = rosterById.get(entry.teamId);
         return rosterTeam ? [rosterTeam] : [];
       }

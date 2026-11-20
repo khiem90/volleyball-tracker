@@ -5,6 +5,7 @@ import {
 } from "@/lib/doubleElimination";
 import { ReversedCommandError } from "@/lib/commandErrors";
 import { openMatchOn } from "@/lib/engine";
+import { isMixedTeam } from "@/lib/entries";
 import { isBracketFormat, isRotationFormat } from "@/lib/formats";
 import { calculateStandings } from "@/lib/roundRobin";
 import { seriesInfo } from "@/lib/series";
@@ -378,7 +379,7 @@ export const teamsView = (
       teamId: entry.teamId,
       name: team?.name ?? entry.name,
       ...(color !== undefined && { color }),
-      ...(entry.players !== undefined && { players: entry.players }),
+      ...(isMixedTeam(entry) && { players: entry.players }),
       withdrawn: entry.withdrawnAt !== undefined,
       ...(record.get(entry.teamId) ?? { played: 0, won: 0, lost: 0 }),
     };

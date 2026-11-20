@@ -4,6 +4,7 @@ import { useRef, useState, type FormEvent } from "react";
 import { MbIcon } from "@/components/matchbook/MbIcon";
 import { Panel, PanelEmpty, TeamMark } from "@/components/matchbook/Panel";
 import type { TeamRow } from "@/lib/console";
+import { isMixedTeam } from "@/lib/entries";
 import type { TeamLookup } from "./teamRefs";
 
 const SUGGESTIONS_ID = "console-roster-names";
@@ -126,7 +127,7 @@ export const TeamsPanel = ({
   /** True while a team edit is being saved. */
   busy: boolean;
 }) => {
-  const editable = (row: TeamRow) => canEditMixed && row.players !== undefined;
+  const editable = (row: TeamRow) => canEditMixed && isMixedTeam(row);
   // A draft has nobody to withdraw, so the column is there only for Edit.
   const hasActions = canWithdraw || rows.some(editable);
   return (

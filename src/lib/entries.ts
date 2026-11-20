@@ -190,11 +190,20 @@ export const PLAYER_HAS_GONE = "That player is no longer on the team.";
 
 type MixedEntry = Entry & { players: string[] };
 
+/**
+ * Whether this is a mixed team. Holding its own players is what marks one
+ * (ADR-0006), on an entry and on anything made from an entry, such as a
+ * row of the Teams tab.
+ */
+export const isMixedTeam = <Team extends { players?: string[] }>(
+  team: Team,
+): team is Team & { players: string[] } => team.players !== undefined;
+
 /** The mixed team with this id. A roster team's entry and a missing one are both refused. */
 const mixedTeamIn = (entries: Entry[], teamId: string): MixedEntry => {
   const entry = entries.find((e) => e.teamId === teamId);
-  if (entry?.players === undefined) throw new Error(NOT_A_MIXED_TEAM);
-  return entry as MixedEntry;
+  if (!entry || !isMixedTeam(entry)) throw new Error(NOT_A_MIXED_TEAM);
+  return entry;
 };
 
 /** Where the player sits now: the place given when the name still matches, else the first of that name. */
