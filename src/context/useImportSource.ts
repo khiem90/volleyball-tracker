@@ -3,7 +3,7 @@
 import { useCallback } from "react";
 import { db } from "@/lib/firebase";
 import { importList, type ListImport } from "@/lib/rsvpImport";
-import { readListRsvps, setListClosed } from "@/lib/rsvpListData";
+import { readListForImport } from "@/lib/rsvpListData";
 import type { RsvpList } from "@/types/game";
 import { useOwnLists } from "./useOwnLists";
 
@@ -22,8 +22,7 @@ export const useImportSource = (uid: string | null) => {
    */
   const take = useCallback(async (list: RsvpList, closeFirst: boolean): Promise<ListImport> => {
     if (!db) throw new Error("Not connected.");
-    if (closeFirst) await setListClosed(db, list, true);
-    return importList(list, await readListRsvps(db, list.id));
+    return importList(list, await readListForImport(db, list, { closeFirst }));
   }, []);
 
   return { lists, error, take };

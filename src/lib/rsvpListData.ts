@@ -288,14 +288,26 @@ export const subscribeToListRsvps = (
 
 /**
  * A list's RSVPs in arrival order, read once from the server, for an
- * import. An import copies the list as it stands, so the copy has to be
- * the server's and not whatever this phone last saw. With no connection
- * this rejects with Firestore's error. Readable by the owner, and by any
- * real account while the RSVP link is on.
+ * import. An import copies the list as it stands (ADR-0005), so the copy
+ * has to be the server's and not whatever this phone last saw. With
+ * `closeFirst` the list is closed before the read, which is what import
+ * offers for a list that is still open. Owner only.
+ *
+ * With no connection this rejects with Firestore's error and changes
+ * nothing. A close on its own would wait for a connection without end, so
+ * the server is asked for the list first, which fails at once.
  */
-export const readListRsvps = async (db: Firestore, listId: string): Promise<Rsvp[]> => {
+export const readListForImport = async (
+  db: Firestore,
+  list: Pick<RsvpList, "id" | "scheduledAt">,
+  { closeFirst }: { closeFirst: boolean },
+): Promise<Rsvp[]> => {
+  if (closeFirst) {
+    await getDocFromServer(rsvpListDoc(db, list.id));
+    await setListClosed(db, list, true);
+  }
   const snapshot = await getDocsFromServer(
-    query(listRsvpsCollection(db, listId), orderBy("createdAt")),
+    query(listRsvpsCollection(db, list.id), orderBy("createdAt")),
   );
   return snapshot.docs.map((d) => ({ ...d.data(), id: d.id }) as Rsvp);
 };

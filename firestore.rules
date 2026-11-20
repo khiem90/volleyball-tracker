@@ -68,9 +68,10 @@ service cloud.firestore {
     }
 
     // Tournaments are owned by the account that created them. The owner
-    // writes anything. A scorer, a phone holding the scorer link, may record
-    // results, reorder the queue, and swap courts while the tournament is
-    // live, and nothing else. Either one's write that moves the revision
+    // writes anything but the RSVP list a tournament was imported from,
+    // which is named once at creation. A scorer, a phone holding the
+    // scorer link, may record results, reorder the queue, and swap courts
+    // while the tournament is live, and nothing else. Either one's write that moves the revision
     // must be built on the stored revision. Anyone holding the link can read
     // while the spectator link is on; with it off, only the owner and
     // scorers can read the tournament or its matches.

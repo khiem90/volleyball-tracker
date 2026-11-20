@@ -67,6 +67,14 @@ describe("duplicateInput", () => {
     expect(Object.keys(input).sort()).toEqual(["format", "name", "settings", "teams"]);
   });
 
+  it("does not remember the RSVP list the source was imported from", () => {
+    const source: Tournament = { ...started("round_robin", 3).tournament, rsvpListId: "list-1" };
+
+    const input = duplicateInput(source, rosterOf(source));
+
+    expect("rsvpListId" in input).toBe(false);
+  });
+
   it("brings a team that withdrew from the source back in", () => {
     const live = started("round_robin", 4);
     const source: Tournament = {

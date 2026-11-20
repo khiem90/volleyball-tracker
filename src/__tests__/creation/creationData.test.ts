@@ -1,5 +1,12 @@
 // @vitest-environment node
-import { collection, doc, getDoc, getDocs } from "firebase/firestore";
+import {
+  collection,
+  disableNetwork,
+  doc,
+  enableNetwork,
+  getDoc,
+  getDocs,
+} from "firebase/firestore";
 import { expect, it } from "vitest";
 import { emptySetup, setupInput, type TournamentSetup } from "@/lib/creation";
 import { createTournamentFromSetup } from "@/lib/creationData";
@@ -8,7 +15,7 @@ import { importList } from "@/lib/rsvpImport";
 import {
   createRsvpList,
   deleteRsvpList,
-  readListRsvps,
+  readListForImport,
   sendListRsvp,
   setListClosed,
   withdrawFromList,
@@ -52,7 +59,10 @@ describeFirestoreRules("Creating a tournament from an RSVP list on Firestore", (
     ...emptySetup(),
     name: "Friday night",
     format: "single_elimination",
-    import: importList(list, await readListRsvps(accountDb(owner), list.id)),
+    import: importList(
+      list,
+      await readListForImport(accountDb(owner), list, { closeFirst: false }),
+    ),
     ...changes,
   });
 
@@ -201,6 +211,46 @@ describeFirestoreRules("Creating a tournament from an RSVP list on Firestore", (
       tournaments = (await getDocs(collection(modularFirestore(unrestricted), "tournaments"))).size;
     });
     expect(tournaments).toBe(0);
+  });
+
+  it("closes an open list when asked, then reads its RSVPs in arrival order", async () => {
+    const ownerDb = accountDb(owner);
+    const list = await teamList();
+    await rsvpTeam(list.id, eve, "Diggers");
+    await rsvpTeam(list.id, dan, "Spikers");
+
+    const rsvps = await readListForImport(ownerDb, list, { closeFirst: true });
+
+    expect(rsvps.map((rsvp) => rsvp.name)).toEqual(["Diggers", "Spikers"]);
+    expect((await stored<RsvpList>("rsvpLists", list.id))?.closed).toBe(true);
+  });
+
+  it("reads a closed list without writing to it", async () => {
+    const ownerDb = accountDb(owner);
+    const list = await teamList();
+    await rsvpTeam(list.id, dan, "Spikers");
+    await setListClosed(ownerDb, list, true);
+    const before = await stored<RsvpList>("rsvpLists", list.id);
+
+    const rsvps = await readListForImport(ownerDb, list, { closeFirst: false });
+
+    expect(rsvps.map((rsvp) => rsvp.name)).toEqual(["Spikers"]);
+    expect(await stored<RsvpList>("rsvpLists", list.id)).toEqual(before);
+  });
+
+  it("with no connection, refuses at once and leaves the list open", async () => {
+    const ownerDb = accountDb(owner);
+    const list = await teamList();
+    await rsvpTeam(list.id, dan, "Spikers");
+
+    await disableNetwork(ownerDb);
+    try {
+      await expect(readListForImport(ownerDb, list, { closeFirst: true })).rejects.toThrow();
+    } finally {
+      await enableNetwork(ownerDb);
+    }
+
+    expect((await stored<RsvpList>("rsvpLists", list.id))?.closed).toBe(false);
   });
 
   it("creates a tournament with no import as before, with no list on it", async () => {
