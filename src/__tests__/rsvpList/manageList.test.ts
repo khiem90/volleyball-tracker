@@ -8,6 +8,7 @@ import {
   createRsvpList,
   deleteRsvpList,
   duplicateRsvpList,
+  postListNotice,
   removeListRsvp,
   RsvpRefusedError,
   sendListRsvp,
@@ -66,6 +67,18 @@ describeFirestoreRules("Managing a list on Firestore", (env) => {
       for (const d of snapshot.docs) found[d.id] = d.data();
     });
     return found;
+  };
+
+  /** The bodies of a list's notices as stored, read around the rules. */
+  const storedNotices = async (listId: string): Promise<string[]> => {
+    const bodies: string[] = [];
+    await env().withSecurityRulesDisabled(async (unrestricted) => {
+      const snapshot = await getDocs(
+        collection(modularFirestore(unrestricted), "rsvpLists", listId, "notices"),
+      );
+      for (const d of snapshot.docs) bodies.push(d.data().body as string);
+    });
+    return bodies;
   };
 
   /** The scheduled time passes: both times move into the past, written around the rules. */
@@ -287,30 +300,41 @@ describeFirestoreRules("Managing a list on Firestore", (env) => {
     expect(copy.opensAt).toBeUndefined();
   });
 
-  it("deletes a list with every RSVP on it, held spots included, and leaves another list alone", async () => {
+  it("deletes a list with every RSVP on it, held spots included, and its notices, and leaves another list alone", async () => {
     const list = await openList();
     const other = await openList({ name: "Saturday pickup" });
     await danThenEve(list.id);
     await addListHeldSpot(accountDb(owner), list.id, "Walk-in Sam");
+    await postListNotice(accountDb(owner), list.id, "We moved to 7:30.");
+    await postListNotice(accountDb(owner), list.id, "Bring a light shirt and a dark one.");
     await sendListRsvp(accountDb(dan), other.id, dan, { name: "Dan", note: "" });
+    await postListNotice(accountDb(owner), other.id, "Court 2 this week.");
+    expect((await storedNotices(list.id)).sort()).toEqual([
+      "Bring a light shirt and a dark one.",
+      "We moved to 7:30.",
+    ]);
 
     await deleteRsvpList(accountDb(owner), list.id);
 
     expect(await storedList(list.id)).toBeUndefined();
     expect(await storedRsvps(list.id)).toEqual({});
+    expect(await storedNotices(list.id)).toEqual([]);
     expect(await storedList(other.id)).toMatchObject({ name: "Saturday pickup" });
     expect(Object.keys(await storedRsvps(other.id))).toEqual([dan]);
+    expect(await storedNotices(other.id)).toEqual(["Court 2 this week."]);
   });
 
-  it("deletes a list that is over, with the RSVPs nobody can withdraw any more", async () => {
+  it("deletes a list that is over, with the RSVPs nobody can withdraw any more and a notice posted since", async () => {
     const list = await openList();
     await danThenEve(list.id);
     await scheduledTimePasses(list.id);
+    await postListNotice(accountDb(owner), list.id, "Courts are running late.");
 
     await deleteRsvpList(accountDb(owner), list.id);
 
     expect(await storedList(list.id)).toBeUndefined();
     expect(await storedRsvps(list.id)).toEqual({});
+    expect(await storedNotices(list.id)).toEqual([]);
   });
 
   it("ends the list for a person watching it, as a list that is gone or one the rules now refuse", async () => {
@@ -345,6 +369,7 @@ describeFirestoreRules("Managing a list on Firestore", (env) => {
   it("refuses a delete from anyone but the owner, and removes nothing", async () => {
     const list = await openList();
     await danThenEve(list.id);
+    await postListNotice(accountDb(owner), list.id, "We moved to 7:30.");
 
     await expect(deleteRsvpList(accountDb(dan), list.id)).rejects.toMatchObject({
       code: "permission-denied",
@@ -352,5 +377,6 @@ describeFirestoreRules("Managing a list on Firestore", (env) => {
 
     expect(await storedList(list.id)).toMatchObject({ name: "Friday pickup" });
     expect(Object.keys(await storedRsvps(list.id)).sort()).toEqual([dan, eve]);
+    expect(await storedNotices(list.id)).toEqual(["We moved to 7:30."]);
   });
 });
