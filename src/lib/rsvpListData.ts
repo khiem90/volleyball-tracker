@@ -36,7 +36,8 @@ import {
   type ListSetup,
   type RememberedNames,
 } from "@/lib/rsvpList";
-import type { Notice, Rsvp, RsvpList, RsvpTakes } from "@/types/game";
+import { subscribeToTournament } from "@/lib/tournaments";
+import type { Notice, Rsvp, RsvpList, RsvpTakes, Tournament } from "@/types/game";
 
 /**
  * RSVP lists on Firestore: one document per list in the top-level
@@ -510,6 +511,91 @@ export const updateListRsvp = async (
  */
 export const withdrawFromList = (db: Firestore, listId: string, uid: string): Promise<void> =>
   deleteDoc(listRsvpDoc(db, listId, uid));
+
+// ============================================
+// Tournaments imported from a list
+// ============================================
+
+/** How long a list's page waits before it asks again for a tournament it could not read. */
+export const LIST_TOURNAMENT_RETRY_MS = 30_000;
+
+/**
+ * The tournaments imported from a list that the viewer can read, in the
+ * order of `tournamentIds`, which is the list's own record and so the order
+ * they were imported in. Each is read by its id, so nothing here queries
+ * across another account's tournaments. listTournamentRows turns a
+ * delivery into the rows the list's page shows.
+ *
+ * A tournament the rules refuse is left out without failing the rest. That
+ * is a draft for anyone but its owner, and a deleted one, whose id stays on
+ * the list. A refused listener stays dead, so each refused id is asked for
+ * again every `retryEvery` milliseconds. That is how a page left open on a
+ * draft gets the tournament once the owner starts it.
+ *
+ * Delivers once every id has answered, then again only when what it would
+ * deliver changes. With no ids it delivers an empty array.
+ */
+export const subscribeToListTournaments = (
+  db: Firestore,
+  tournamentIds: string[],
+  onChange: (tournaments: Tournament[]) => void,
+  { retryEvery = LIST_TOURNAMENT_RETRY_MS }: { retryEvery?: number } = {},
+): Unsubscribe => {
+  const read = new Map<string, Tournament>();
+  const answered = new Set<string>();
+  const watching = new Map<string, Unsubscribe>();
+  let stopped = false;
+
+  const deliver = () => {
+    if (stopped || answered.size < tournamentIds.length) return;
+    onChange(tournamentIds.flatMap((id) => read.get(id) ?? []));
+  };
+
+  /** Record that `id` has nothing to show, and say so only when that is news. */
+  const leaveOut = (id: string) => {
+    const isNews = read.delete(id) || !answered.has(id);
+    answered.add(id);
+    if (isNews) deliver();
+  };
+
+  const watch = (id: string) => {
+    watching.set(
+      id,
+      subscribeToTournament(
+        db,
+        id,
+        (tournament) => {
+          if (!tournament) return leaveOut(id);
+          read.set(id, tournament);
+          answered.add(id);
+          deliver();
+        },
+        () => {
+          watching.delete(id);
+          leaveOut(id);
+        },
+      ),
+    );
+  };
+
+  for (const id of new Set(tournamentIds)) watch(id);
+  // The first delivery never comes before this function returns, so the
+  // caller always holds the unsubscribe by then.
+  if (tournamentIds.length === 0) queueMicrotask(deliver);
+
+  const retry = setInterval(() => {
+    for (const id of new Set(tournamentIds)) {
+      if (!watching.has(id)) watch(id);
+    }
+  }, retryEvery);
+
+  return () => {
+    stopped = true;
+    clearInterval(retry);
+    watching.forEach((unsubscribe) => unsubscribe());
+    watching.clear();
+  };
+};
 
 // ============================================
 // Home
