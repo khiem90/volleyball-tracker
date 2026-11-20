@@ -176,7 +176,7 @@ const Players = ({
                 type="button"
                 onClick={() => onEdit({ kind: "remove_player", teamId: team.teamId, player })}
                 disabled={busy}
-                className="mb-btn mb-btn-outline-red"
+                className="mb-btn mb-btn-outline"
                 aria-label={`Remove ${name} from ${team.name}`}
               >
                 <MbIcon id="remove-user" size={14} />
