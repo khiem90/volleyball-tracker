@@ -387,10 +387,6 @@ export const readRememberedNames = async (db: Firestore, uid: string): Promise<R
   };
 };
 
-/** The name this account last RSVP'd under as a person, or null before its first such RSVP. */
-export const readRememberedName = async (db: Firestore, uid: string): Promise<string | null> =>
-  (await readRememberedNames(db, uid)).person;
-
 /**
  * Why the rules refused an RSVP to this list, from the list as the server
  * has it now. A refused read, or no list at all, means the link is off.

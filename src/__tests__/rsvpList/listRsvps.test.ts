@@ -12,7 +12,7 @@ import { splitRsvps, standingIn } from "@/lib/rsvp";
 import { listSetupOf, type ListSetup } from "@/lib/rsvpList";
 import {
   createRsvpList,
-  readRememberedName,
+  readRememberedNames,
   RsvpRefusedError,
   saveListSettings,
   sendListRsvp,
@@ -27,6 +27,10 @@ import { describeFirestoreRules, minutesFromNow, modularFirestore, when } from "
 const owner = "owner-uid";
 const dan = "dan-uid";
 const eve = "eve-uid";
+
+/** The name the account last RSVP'd under as a person. */
+const readRememberedName = async (db: Firestore, uid: string): Promise<string | null> =>
+  (await readRememberedNames(db, uid)).person;
 
 describeFirestoreRules("RSVPing to a list on Firestore", (env) => {
   const accountDb = (uid: string) => modularFirestore(env().authenticatedContext(uid));
