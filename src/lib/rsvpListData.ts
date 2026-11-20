@@ -87,7 +87,10 @@ export const subscribeToOwnLists = (
  * One list, for its owner or for a real account holding its RSVP link.
  * Calls `onError` when the rules refuse it, as they do while the link is
  * off, once the owner turns it off, and for a list that does not exist.
- * Delivers null when a list the reader could see is deleted.
+ * A list that is deleted while it is watched also ends in `onError`, with
+ * a refusal, since the read rule cannot judge a document that is gone.
+ * The phone that deleted it gets null first, from its own write. Treat
+ * null and a refusal alike, as a list that is not there.
  */
 export const subscribeToRsvpList = (
   db: Firestore,
@@ -232,16 +235,22 @@ export const removeListRsvp = (db: Firestore, listId: string, rsvpId: string): P
   deleteDoc(listRsvpDoc(db, listId, rsvpId));
 
 /**
- * Delete a list with every RSVP on it, held spots included, in one cleanup
- * batch, so nobody watching sees it half gone. The rules judge each write
- * in the batch against the list as it stood before the batch, so the list
- * goes in the same batch as the RSVPs under it. A tournament imported from
- * the list is not touched. Owner only, at any time.
+ * Delete a list with every RSVP on it, held spots included, and every
+ * notice, in one cleanup batch, so nobody watching sees it half gone. The
+ * rules judge each write in the batch against the list as it stood before
+ * the batch, so the list goes in the same batch as the RSVPs and notices
+ * under it. A tournament imported from the list is not touched. Owner
+ * only, at any time.
  */
 export const deleteRsvpList = async (db: Firestore, listId: string): Promise<void> => {
-  const rsvps = await getDocs(listRsvpsCollection(db, listId));
+  const [rsvps, notices] = await Promise.all([
+    getDocs(listRsvpsCollection(db, listId)),
+    getDocs(listNoticesCollection(db, listId)),
+  ]);
   const batch = writeBatch(db);
-  rsvps.docs.forEach((d) => batch.delete(d.ref));
+  for (const snapshot of [rsvps, notices]) {
+    snapshot.docs.forEach((d) => batch.delete(d.ref));
+  }
   batch.delete(rsvpListDoc(db, listId));
   await batch.commit();
 };
