@@ -21,6 +21,7 @@ import {
 } from "@/lib/entries";
 import { isOffline, isRefused, lostRace, newToken, stripUndefined } from "@/lib/firestoreData";
 import { MAX_ATTEMPTS, tournamentDoc } from "@/lib/tournaments";
+import { nameKey } from "@/lib/utils";
 import type { PersistentTeam, Tournament } from "@/types/game";
 
 /**
@@ -68,9 +69,6 @@ export interface AddedTeams {
   added: PersistentTeam[];
   alreadyOnRoster: ParsedTeamNames["alreadyOnRoster"];
 }
-
-// "Aces" and "aces" are the same team as far as the roster is concerned.
-const nameKey = (name: string) => name.trim().toLowerCase();
 
 /** The palette color with the fewest uses; palette order breaks ties. */
 const leastUsedColor = (uses: Map<string, number>): string =>

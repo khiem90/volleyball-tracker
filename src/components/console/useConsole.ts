@@ -34,13 +34,10 @@ import {
   spectatorLink,
   STALE_SCORER_LINK,
 } from "@/lib/shareLinks";
-import { messageOf } from "@/lib/utils";
+import { messageOf, nameKey } from "@/lib/utils";
 import type { Match, PersistentTeam } from "@/types/game";
 import { consoleTabs, type ConsoleTab } from "./ConsoleTabs";
 import { teamLookup } from "./teamRefs";
-
-// "Aces" and "aces" name the same roster team.
-const nameKey = (name: string) => name.trim().toLowerCase();
 
 /** A court count waiting for the owner to confirm it, because a court with a match in play would close. */
 export interface CourtsToClose {

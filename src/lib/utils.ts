@@ -9,6 +9,12 @@ export function cn(...inputs: ClassValue[]) {
 export const messageOf = (error: unknown, fallback: string): string =>
   error instanceof Error ? error.message : fallback;
 
+/**
+ * What two team names are compared by: "Aces" and " aces " are the same
+ * team as far as the roster and an import are concerned.
+ */
+export const nameKey = (name: string): string => name.trim().toLowerCase();
+
 /** "1 team", "3 teams", or with the plural given, "2 quick matches". */
 export const plural = (count: number, one: string, many = `${one}s`): string =>
   `${count} ${count === 1 ? one : many}`;
