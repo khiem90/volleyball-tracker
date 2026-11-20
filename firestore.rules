@@ -152,7 +152,17 @@ service cloud.firestore {
         return realAccount()
           && data.status in ['live', 'completed']
           && data.get('rsvpListId', null) is string
-          && get(/databases/$(database)/documents/rsvpLists/$(data.rsvpListId)).data.enabled == true;
+          && opensTheDoorFor(
+            get(/databases/$(database)/documents/rsvpLists/$(data.rsvpListId)).data,
+            data.ownerId);
+      }
+
+      // The list must belong to the tournament's owner. Any real account
+      // can create a list under an id it knows, a deleted list's id
+      // included, so a list with its link on proves nothing until its
+      // owner matches. Only the tournament's owner opens this door.
+      function opensTheDoorFor(list, tournamentOwnerId) {
+        return list.enabled == true && list.ownerId == tournamentOwnerId;
       }
 
       // The list door sits before the scorer door. A watcher from a list

@@ -1093,6 +1093,24 @@ describeFirestoreRules("Firestore rules", (env) => {
         await reads(accountDb(owner), "tourn-1");
       });
 
+      it("stays refused when another account creates a list under the deleted list's id, with its link on", async () => {
+        const mallory = "mallory-uid";
+        await seedList("list-1");
+        await seedImported("live", "live");
+        await seedImported("done", "completed");
+        await assertSucceeds(deleteDoc(listAt(accountDb(owner), "list-1")));
+
+        await assertSucceeds(
+          setDoc(listAt(accountDb(mallory), "list-1"), listDoc({ ownerId: mallory })),
+        );
+
+        for (const id of ["live", "done"]) {
+          await isRefused(accountDb(mallory), id);
+          await isRefused(accountDb(), id);
+          await reads(accountDb(owner), id);
+        }
+      });
+
       it("refuses a signed-out request and the anonymous identity a scorer link creates", async () => {
         await seedList("list-1");
         await seedImported("tourn-1", "live");
