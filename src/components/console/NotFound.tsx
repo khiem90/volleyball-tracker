@@ -11,32 +11,9 @@ import type { NotFoundReason } from "./useConsole";
  * shared with this phone, or the scorer link it opened has been replaced.
  * A guest is offered sign-in, coming back here, in case the tournament is
  * theirs.
- *
- * An RSVP list's page shows it with `subject` set to "list". The words
- * are the same whether the list was deleted, never existed, or has its
- * RSVP link off.
  */
-export const NotFound = ({
-  reason,
-  isGuest,
-  subject = "tournament",
-}: {
-  reason: NotFoundReason;
-  isGuest: boolean;
-  subject?: "tournament" | "list";
-}) => {
+export const NotFound = ({ reason, isGuest }: { reason: NotFoundReason; isGuest: boolean }) => {
   const pathname = usePathname();
-  if (subject === "list") {
-    return (
-      <Panel title="List not found">
-        <PanelEmpty
-          message="This RSVP list does not exist or is not being shared."
-          actionLabel="Back to RSVP"
-          href="/rsvp"
-        />
-      </Panel>
-    );
-  }
   const message =
     reason === "stale_link"
       ? STALE_SCORER_LINK

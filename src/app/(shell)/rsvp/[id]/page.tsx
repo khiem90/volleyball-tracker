@@ -1,11 +1,11 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { NotFound } from "@/components/console/NotFound";
 import { InlineSpinner, LinkField, PageLoadingSpinner } from "@/components/shared";
 import { MbIcon } from "@/components/matchbook/MbIcon";
 import { Panel, PanelError } from "@/components/matchbook/Panel";
 import { RsvpDialog } from "@/components/rsvpList/RsvpDialog";
+import { ListNotFound } from "@/components/rsvpList/ListNotFound";
 import { ListNoticesPanel } from "@/components/rsvpList/ListNoticesPanel";
 import { ListPeoplePanel } from "@/components/rsvpList/ListPeoplePanel";
 import { ListRsvpPanel } from "@/components/rsvpList/ListRsvpPanel";
@@ -49,7 +49,7 @@ export default function RsvpListPage() {
       </Panel>
     );
   }
-  if (!list) return <NotFound reason="not_found" isGuest={false} subject="list" />;
+  if (!list) return <ListNotFound />;
 
   return (
     <>
