@@ -3,6 +3,7 @@
 import { MbIcon } from "@/components/matchbook/MbIcon";
 import { Panel } from "@/components/matchbook/Panel";
 import { DeleteConfirmDialog, InlineSpinner } from "@/components/shared";
+import type { ListWording } from "@/lib/rsvpList";
 import type { ListOwnerControls } from "./useListOwnerControls";
 
 const Action = ({
@@ -38,8 +39,16 @@ const Action = ({
  * The owner's controls for the whole list: Close or Reopen until the
  * scheduled time, then Duplicate and Delete, which stay once the list is
  * over. Delete asks first and names how many RSVPs go with the list.
+ * `wording` says who can still withdraw from a closed list: people, or
+ * teams.
  */
-export const ListOwnerPanel = ({ controls }: { controls: ListOwnerControls }) => {
+export const ListOwnerPanel = ({
+  controls,
+  wording,
+}: {
+  controls: ListOwnerControls;
+  wording: Pick<ListWording, "closeNote" | "closedNote">;
+}) => {
   const { deletion } = controls;
 
   return (
@@ -58,11 +67,7 @@ export const ListOwnerPanel = ({ controls }: { controls: ListOwnerControls }) =>
           <Action
             icon={controls.isClosed ? "undo" : "lock"}
             label={controls.isClosed ? "Reopen" : "Close"}
-            note={
-              controls.isClosed
-                ? "The list is closed. Nobody new can RSVP, and people on it can still withdraw. Reopen it any time before the scheduled time."
-                : "Stops new RSVPs. People on the list can still withdraw, and you can reopen it until the scheduled time."
-            }
+            note={controls.isClosed ? wording.closedNote : wording.closeNote}
             onClick={controls.toggleClosed}
             isBusy={controls.isClosing}
           />

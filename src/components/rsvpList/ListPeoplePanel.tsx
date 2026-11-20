@@ -7,15 +7,23 @@ import { Panel, PanelEmpty, PanelError } from "@/components/matchbook/Panel";
 import { RsvpRows, RsvpSectionHead } from "@/components/rsvp/RsvpRows";
 import { InlineSpinner } from "@/components/shared";
 import { RSVP_NAME_MAX, rsvpEntryProblems } from "@/lib/rsvp";
+import type { ListWording } from "@/lib/rsvpList";
 import type { Rsvp } from "@/types/game";
 import type { ListOwnerControls } from "./useListOwnerControls";
 import type { ListRsvpView } from "./useListRsvpView";
 
 /**
- * The owner's box for a held spot: a name for someone without an account.
- * An empty box only disables Add. A name over the limit says so.
+ * The owner's box for a held spot: a name for someone without an account,
+ * or on a by-team list a team name for a team whose captain has none. An
+ * empty box only disables Add. A name over the limit says so.
  */
-const HeldSpotForm = ({ onAdd }: { onAdd: (name: string) => Promise<void> }) => {
+const HeldSpotForm = ({
+  wording,
+  onAdd,
+}: {
+  wording: ListWording["heldSpot"];
+  onAdd: (name: string) => Promise<void>;
+}) => {
   const [name, setName] = useState("");
   const [isAdding, setAdding] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,7 +50,7 @@ const HeldSpotForm = ({ onAdd }: { onAdd: (name: string) => Promise<void> }) => 
   return (
     <form onSubmit={add} className="flex flex-col gap-1.5 border-b border-mb-rule p-4">
       <label htmlFor="list-held-spot-name" className="mb-kicker">
-        Add held spot
+        {wording.label}
       </label>
       <div className="flex gap-2">
         <span className={`mb-input min-w-0 flex-1 ${shownProblem ? "border-mb-red" : ""}`}>
@@ -54,7 +62,7 @@ const HeldSpotForm = ({ onAdd }: { onAdd: (name: string) => Promise<void> }) => 
               setName(event.target.value);
               setError(null);
             }}
-            placeholder="Walk-in Sam"
+            placeholder={wording.placeholder}
             autoComplete="off"
             aria-invalid={shownProblem ? true : undefined}
             aria-describedby="list-held-spot-help"
@@ -72,8 +80,7 @@ const HeldSpotForm = ({ onAdd }: { onAdd: (name: string) => Promise<void> }) => 
           shownProblem ? "text-[0.78rem] font-medium text-mb-red" : "text-[0.72rem] text-mb-ink-muted"
         }
       >
-        {shownProblem ??
-          "For someone without an account. It takes the next place in line, so on a full list it joins the waitlist."}
+        {shownProblem ?? wording.help}
       </p>
       {error && (
         <p role="alert" className="text-[0.78rem] font-medium text-mb-red">
@@ -86,7 +93,8 @@ const HeldSpotForm = ({ onAdd }: { onAdd: (name: string) => Promise<void> }) => 
 
 /**
  * Everyone on the list by name, in arrival order, in two sections: who is
- * in, and who is on the waitlist. The viewer's own row is marked. With the
+ * in, and who is on the waitlist. On a by-team list each row is a team
+ * and the panel says teams. The viewer's own row is marked. With the
  * owner's `controls`, and until the list is over, each row has Remove and
  * the panel opens with the box for a held spot.
  */
@@ -98,7 +106,7 @@ export const ListPeoplePanel = ({
   /** The owner's controls. Null for anyone else. */
   controls?: ListOwnerControls | null;
 }) => {
-  const { split } = view;
+  const { split, wording } = view;
   const viewerUid = view.mine?.uid ?? null;
   const manage = controls?.canChange ? controls : null;
 
@@ -122,17 +130,17 @@ export const ListPeoplePanel = ({
 
   return (
     <Panel
-      title="Who's coming"
+      title={wording.heading}
       icon="teams"
       meta={
         view.rsvps && (
           <span className="matchbook-display text-[0.72rem] font-bold tracking-[0.1em]">
-            {view.rsvps.length}
+            {wording.count(view.rsvps.length)}
           </span>
         )
       }
     >
-      {manage && <HeldSpotForm onAdd={manage.addHeld} />}
+      {manage && <HeldSpotForm wording={wording.heldSpot} onAdd={manage.addHeld} />}
 
       {removeError && (
         <p role="alert" className="px-4 pt-3 text-[0.78rem] font-medium text-mb-red">
@@ -145,15 +153,25 @@ export const ListPeoplePanel = ({
       ) : split === null ? (
         <PanelEmpty message="Loading the RSVPs..." />
       ) : split.confirmed.length === 0 ? (
-        <PanelEmpty message="Nobody has RSVP'd yet." />
+        <PanelEmpty message={wording.empty} />
       ) : (
         <>
           <RsvpSectionHead label="In" count={split.confirmed.length} />
-          <RsvpRows rsvps={split.confirmed} viewerUid={viewerUid} onRemove={onRemove} />
+          <RsvpRows
+            rsvps={split.confirmed}
+            viewerUid={viewerUid}
+            mineLabel={wording.mine}
+            onRemove={onRemove}
+          />
           {split.waitlisted.length > 0 && (
             <>
               <RsvpSectionHead label="Waitlist" count={split.waitlisted.length} />
-              <RsvpRows rsvps={split.waitlisted} viewerUid={viewerUid} onRemove={onRemove} />
+              <RsvpRows
+                rsvps={split.waitlisted}
+                viewerUid={viewerUid}
+                mineLabel={wording.mine}
+                onRemove={onRemove}
+              />
             </>
           )}
         </>

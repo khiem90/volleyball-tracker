@@ -20,6 +20,9 @@ import { useListPage } from "@/components/rsvpList/useListPage";
  * RSVP from here, change their name and note, and withdraw, until the
  * scheduled time. After it the page is read-only.
  *
+ * On a by-team list each RSVP is a team. A captain RSVPs the whole team
+ * under a team name, and the page says teams where it would say people.
+ *
  * The owner sees the same and RSVPs the same way, and also gets the link
  * to copy, the settings to change, Remove on each row, the box for a held
  * spot, and Close or Reopen, all until the scheduled time. Duplicate and
@@ -89,7 +92,7 @@ export default function RsvpListPage() {
             </Panel>
           )}
 
-          {page.owner && <ListOwnerPanel controls={page.owner} />}
+          {page.owner && <ListOwnerPanel controls={page.owner} wording={rsvp.wording} />}
         </div>
 
         <div className="flex flex-col gap-4 lg:col-span-7">
@@ -103,6 +106,7 @@ export default function RsvpListPage() {
                 zone={settings.zone}
                 scheduledZone={settings.scheduledZone}
                 openTimeLocked={settings.openTimeLocked}
+                takesLocked={settings.takesLocked}
                 onChange={settings.change}
               />
               <div className="flex flex-col gap-3 border-t border-mb-rule p-4">
@@ -142,6 +146,8 @@ export default function RsvpListPage() {
       <RsvpDialog
         open={rsvp.dialog.isOpen}
         name={list.name}
+        wording={rsvp.wording.dialog}
+        takesTeams={list.takes === "teams"}
         entry={rsvp.dialog.entry}
         isEditing={rsvp.dialog.isEditing}
         joinsWaitlist={rsvp.state?.kind === "full"}

@@ -2,7 +2,7 @@
 
 import { MbIcon } from "@/components/matchbook/MbIcon";
 import { Panel } from "@/components/matchbook/Panel";
-import { NOT_OPEN_YET, type RsvpStanding } from "@/lib/rsvp";
+import { NOT_OPEN_YET } from "@/lib/rsvp";
 import { listTakesRsvps } from "@/lib/rsvpList";
 import type { RsvpList } from "@/types/game";
 import type { ListRsvpView } from "./useListRsvpView";
@@ -16,60 +16,35 @@ const Fact = ({ label, value }: { label: string; value: string }) => (
 
 /**
  * Where the viewer stands, in one line: in at a spot, or waiting at a
- * position. Once the list is over nobody moves up.
+ * position. `text` says it for a person or for a team.
  */
-const StandingLine = ({
-  standing,
-  name,
-  capacity,
-  canMoveUp,
-}: {
-  standing: RsvpStanding;
-  name: string;
-  capacity: number;
-  canMoveUp: boolean;
-}) => {
-  if (standing.kind === "confirmed") {
-    return (
-      <p className="flex items-start gap-2 text-[0.9rem] font-semibold text-mb-green">
-        <MbIcon id="check" size={16} className="mt-0.5 shrink-0" />
-        <span className="min-w-0 [overflow-wrap:anywhere]">
-          You&apos;re in as {name}, spot {standing.position} of {capacity}.
-        </span>
-      </p>
-    );
-  }
-  if (standing.kind === "waitlisted") {
-    return (
-      <p className="flex items-start gap-2 text-[0.9rem] font-semibold">
-        <MbIcon id="clock" size={16} className="mt-0.5 shrink-0" />
-        <span className="min-w-0 [overflow-wrap:anywhere]">
-          You&apos;re waiting as {name}, number {standing.position} on the waitlist.
-          {canMoveUp && " You move up on your own when a spot frees."}
-        </span>
-      </p>
-    );
-  }
-  return null;
-};
+const StandingLine = ({ isIn, text }: { isIn: boolean; text: string }) => (
+  <p
+    className={`flex items-start gap-2 text-[0.9rem] font-semibold ${isIn ? "text-mb-green" : ""}`}
+  >
+    <MbIcon id={isIn ? "check" : "clock"} size={16} className="mt-0.5 shrink-0" />
+    <span className="min-w-0 [overflow-wrap:anywhere]">{text}</span>
+  </p>
+);
 
 /**
- * The panel a person RSVPs from. It shows the capacity and how many are in
- * and waiting. Before the open time it counts down over a disabled button.
- * From then the button opens the RSVP dialog, and once every spot is taken
- * it joins the waitlist. Someone on the list sees where they stand and a
- * button to change their RSVP, until the scheduled time. A list that takes
- * no RSVPs says why in place of the button.
+ * The panel a person RSVPs from, for themselves or on a by-team list for
+ * their team. It shows the capacity in people or in teams and how many
+ * are in and waiting. Before the open time it counts down over a disabled
+ * button. From then the button opens the RSVP dialog, and once every spot
+ * is taken it joins the waitlist. Someone on the list sees where they
+ * stand and a button to change their RSVP, until the scheduled time. A
+ * list that takes no RSVPs says why in place of the button.
  */
 export const ListRsvpPanel = ({ list, view }: { list: RsvpList; view: ListRsvpView }) => {
-  const { state, split } = view;
+  const { state, split, standing, wording } = view;
   const showsButton = state !== null && listTakesRsvps(state);
   const isFull = state?.kind === "full";
 
   return (
     <Panel title="The list" icon="calendar">
       <div className="grid grid-cols-3 gap-3 border-b border-mb-rule p-4">
-        <Fact label="Capacity" value={String(list.capacity)} />
+        <Fact label="Capacity" value={wording.count(list.capacity)} />
         <Fact label="In" value={split ? String(split.confirmed.length) : "..."} />
         <Fact label="Waiting" value={split ? String(split.waitlisted.length) : "..."} />
       </div>
@@ -86,12 +61,12 @@ export const ListRsvpPanel = ({ list, view }: { list: RsvpList; view: ListRsvpVi
 
         {view.mine ? (
           <>
-            <StandingLine
-              standing={view.standing}
-              name={view.mine.name}
-              capacity={list.capacity}
-              canMoveUp={!view.isOver}
-            />
+            {standing.kind !== "none" && (
+              <StandingLine
+                isIn={standing.kind === "confirmed"}
+                text={wording.standing(standing, view.mine.name, list.capacity, !view.isOver)}
+              />
+            )}
             {view.canChange && (
               <button
                 type="button"
@@ -108,8 +83,7 @@ export const ListRsvpPanel = ({ list, view }: { list: RsvpList; view: ListRsvpVi
             <>
               {isFull && (
                 <p className="text-[0.85rem]">
-                  Every spot is taken. RSVP now and you join the waitlist
-                  {split ? ` at number ${split.waitlisted.length + 1}` : ""}.
+                  {wording.full(split ? split.waitlisted.length + 1 : null)}
                 </p>
               )}
               <button

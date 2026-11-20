@@ -21,9 +21,10 @@ import {
   type RecentResult,
 } from "@/lib/home";
 import { deviceZone, timeLabel, type HomeRsvpRow } from "@/lib/rsvp";
-import type { HomeListRow } from "@/lib/rsvpList";
+import { listWording, type HomeListRow } from "@/lib/rsvpList";
 import { signInHref } from "@/lib/shell";
 import { plural } from "@/lib/utils";
+import type { RsvpTakes } from "@/types/game";
 
 /** "7:42 PM" for a result today, "Sep 27" for one before. */
 const whenLabel = (ts: number | undefined) => {
@@ -130,11 +131,12 @@ const GuestPanel = () => (
 
 type Standing = HomeListRow["standing"];
 
-const standingLabel = (standing: Standing) =>
-  standing.kind === "confirmed" ? "You're in" : `Waitlist #${standing.position}`;
+/** The account being in or waiting, or on a by-team list its team. */
+const standingLabel = (standing: Standing, takes: RsvpTakes = "people") =>
+  listWording(takes).homeStanding(standing);
 
 /** What an RSVP row reads off a list, or off a tournament that still takes RSVPs. */
-type Scheduled = { name: string; scheduledAt?: number; scheduledZone?: string };
+type Scheduled = { name: string; scheduledAt?: number; scheduledZone?: string; takes?: RsvpTakes };
 
 /** One RSVP of the account's: what it is to, when, and where the account stands. */
 const RsvpRow = ({
@@ -182,7 +184,7 @@ const RsvpRow = ({
           standing.kind === "confirmed" ? "text-mb-green" : "text-mb-navy"
         }`}
       >
-        {standingLabel(standing)}
+        {standingLabel(standing, to.takes)}
         <MbIcon id="chevron-right" size={11} className="text-mb-ink-muted" />
       </span>
     </Link>
