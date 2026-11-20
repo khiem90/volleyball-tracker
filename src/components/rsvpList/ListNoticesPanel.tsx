@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { MbIcon } from "@/components/matchbook/MbIcon";
 import { Panel, PanelEmpty, PanelError } from "@/components/matchbook/Panel";
-import { NoticeList } from "@/components/rsvp/NoticeList";
+import { NoticeList } from "@/components/rsvpList/NoticeList";
 import { DeleteConfirmDialog } from "@/components/shared";
 import { useListNotices } from "@/context/useListNotices";
 import { NOTICE_BODY_MAX, noticeProblem } from "@/lib/rsvp";

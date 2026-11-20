@@ -4,7 +4,7 @@ import { useState, type FormEvent } from "react";
 import { ConfirmDialog } from "@/components/console/ConfirmDialog";
 import { MbIcon } from "@/components/matchbook/MbIcon";
 import { Panel, PanelEmpty, PanelError } from "@/components/matchbook/Panel";
-import { RsvpRows, RsvpSectionHead } from "@/components/rsvp/RsvpRows";
+import { RsvpRows, RsvpSectionHead } from "@/components/rsvpList/RsvpRows";
 import { InlineSpinner } from "@/components/shared";
 import { RSVP_NAME_MAX, rsvpEntryProblems } from "@/lib/rsvp";
 import type { ListWording } from "@/lib/rsvpList";

@@ -5,7 +5,7 @@ import { NotFound } from "@/components/console/NotFound";
 import { InlineSpinner, LinkField, PageLoadingSpinner } from "@/components/shared";
 import { MbIcon } from "@/components/matchbook/MbIcon";
 import { Panel, PanelError } from "@/components/matchbook/Panel";
-import { RsvpDialog } from "@/components/rsvp/RsvpDialog";
+import { RsvpDialog } from "@/components/rsvpList/RsvpDialog";
 import { ListNoticesPanel } from "@/components/rsvpList/ListNoticesPanel";
 import { ListPeoplePanel } from "@/components/rsvpList/ListPeoplePanel";
 import { ListRsvpPanel } from "@/components/rsvpList/ListRsvpPanel";

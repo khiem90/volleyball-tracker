@@ -1,6 +1,6 @@
 "use client";
 
-import { CapacityField, DateTimeField } from "@/components/rsvp/RsvpFields";
+import { CapacityField, DateTimeField } from "@/components/rsvpList/RsvpFields";
 import { Choice } from "@/components/shared";
 import {
   LIST_NAME_MAX,
