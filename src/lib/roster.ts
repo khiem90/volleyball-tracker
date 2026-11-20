@@ -77,12 +77,13 @@ const leastUsedColor = (uses: Map<string, number>): string =>
   );
 
 /**
- * Turn typed or pasted text, one team per line, into the teams to add. Blank
- * lines are dropped and names are trimmed. A name the roster already has is
- * reported rather than added again. Each new team gets the palette color the
- * roster uses least, so teams stay easy to tell apart on the court.
+ * The teams to add for these names, one each. Blank names are dropped and
+ * names are trimmed. A name the roster already has, or that came earlier
+ * in the names, is reported and not added again. Each new team gets the
+ * palette color the roster uses least, so teams stay easy to tell apart on
+ * the court.
  */
-export const parseTeamNames = (text: string, roster: PersistentTeam[]): ParsedTeamNames => {
+const namedTeams = (names: string[], roster: PersistentTeam[]): ParsedTeamNames => {
   const taken = new Set(roster.map((team) => nameKey(team.name)));
   const colorUses = new Map<string, number>();
   for (const team of roster) {
@@ -91,8 +92,8 @@ export const parseTeamNames = (text: string, roster: PersistentTeam[]): ParsedTe
 
   const teams: TeamInput[] = [];
   const alreadyOnRoster: string[] = [];
-  for (const line of text.split(/\r?\n/)) {
-    const name = line.trim();
+  for (const written of names) {
+    const name = written.trim();
     if (name.length === 0) continue;
     if (taken.has(nameKey(name))) {
       alreadyOnRoster.push(name);
@@ -106,10 +107,14 @@ export const parseTeamNames = (text: string, roster: PersistentTeam[]): ParsedTe
   return { teams, alreadyOnRoster };
 };
 
+/** Turn typed or pasted text, one team per line, into the teams to add. See namedTeams. */
+export const parseTeamNames = (text: string, roster: PersistentTeam[]): ParsedTeamNames =>
+  namedTeams(text.split(/\r?\n/), roster);
+
 export const rosterCollection = (db: Firestore, uid: string) =>
   collection(db, "users", uid, "teams");
 
-const teamDoc = (db: Firestore, uid: string, teamId: string) =>
+export const rosterTeamDoc = (db: Firestore, uid: string, teamId: string) =>
   doc(rosterCollection(db, uid), teamId);
 
 // Teams added in the same millisecond, as a pasted list does, would otherwise tie
@@ -151,6 +156,20 @@ export const buildRosterTeam = (db: Firestore, uid: string, input: TeamInput): P
 });
 
 /**
+ * New teams built for these names, in the order given, ready to save, each
+ * with the palette color the roster uses least. A blank name, a name the
+ * roster already has, and a second copy of a name are left out, as they
+ * are from a pasted list.
+ */
+export const buildRosterTeamsNamed = (
+  db: Firestore,
+  uid: string,
+  names: string[],
+  roster: PersistentTeam[],
+): PersistentTeam[] =>
+  namedTeams(names, roster).teams.map((input) => buildRosterTeam(db, uid, input));
+
+/**
  * Save built teams to the roster in one batch, so a pasted list lands whole.
  * Resolves once the server has accepted the write.
  */
@@ -160,7 +179,7 @@ export const saveRosterTeams = async (
   teams: PersistentTeam[],
 ): Promise<void> => {
   const batch = writeBatch(db);
-  for (const team of teams) batch.set(teamDoc(db, uid, team.id), team);
+  for (const team of teams) batch.set(rosterTeamDoc(db, uid,team.id), team);
   await batch.commit();
 };
 
@@ -267,7 +286,7 @@ export const updateRosterTeam = async (
 ): Promise<void> => {
   const fields: Record<string, string> = { name: changes.name };
   if (changes.color !== undefined) fields.color = changes.color;
-  const ref = teamDoc(db, uid, teamId);
+  const ref = rosterTeamDoc(db, uid,teamId);
   const candidates = draftOrLiveTournamentsWith([teamId], tournaments);
   if (candidates.length === 0) {
     await updateDoc(ref, fields);
@@ -315,7 +334,7 @@ export const deleteRosterTeams = async (
   const candidates = draftOrLiveTournamentsWith(teamIds, tournaments);
   if (candidates.length === 0) {
     const batch = writeBatch(db);
-    for (const teamId of teamIds) batch.delete(teamDoc(db, uid, teamId));
+    for (const teamId of teamIds) batch.delete(rosterTeamDoc(db, uid,teamId));
     await batch.commit();
     return { deleted: teamIds, kept: [] };
   }
@@ -325,7 +344,7 @@ export const deleteRosterTeams = async (
     const fresh = await freshCopies(tx, db, candidates);
     plan = planTeamDeletion(teamIds, fresh);
     writeEntriesUpdates(tx, db, plan.draftUpdates, fresh, Date.now());
-    for (const teamId of plan.deletable) tx.delete(teamDoc(db, uid, teamId));
+    for (const teamId of plan.deletable) tx.delete(rosterTeamDoc(db, uid,teamId));
   });
   return { deleted: plan.deletable, kept: plan.kept };
 };

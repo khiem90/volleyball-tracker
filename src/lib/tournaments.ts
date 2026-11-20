@@ -185,6 +185,8 @@ export interface NewTournamentInput {
   /** The roster teams entering, in seed order. Each becomes an entry. */
   teams: PersistentTeam[];
   settings: TournamentSettings;
+  /** The RSVP list the teams were imported from, when there is one. */
+  rsvpListId?: string;
 }
 
 /** A draft tournament with its id assigned, ready to save. */
@@ -209,6 +211,7 @@ export const buildTournament = (
     teamIds: input.teams.map((team) => team.id),
     settings: input.settings,
     spectatorEnabled: false,
+    ...(input.rsvpListId !== undefined && { rsvpListId: input.rsvpListId }),
     revision: newToken(),
     createdAt: now,
     updatedAt: now,
@@ -275,15 +278,27 @@ export const buildTournamentToSave = (
  */
 export const saveTournamentAndMatches = async (
   db: Firestore,
+  toSave: TournamentToSave,
+): Promise<void> => {
+  const saved = saveTournament(db, toSave.tournament);
+  await Promise.all([saved, saveScorerKeyAndMatches(db, toSave)]);
+};
+
+/**
+ * The second write of a new tournament: its scorer key and its matches in
+ * one batch. Issue it after the write that creates the tournament, since
+ * the rules for both read the stored tournament.
+ */
+export const saveScorerKeyAndMatches = async (
+  db: Firestore,
   { tournament, matches, scorerKey }: TournamentToSave,
 ): Promise<void> => {
-  const saved = saveTournament(db, tournament);
   const batch = writeBatch(db);
   batch.set(scorerKeyDoc(db, tournament.id), scorerKey);
   for (const match of matches) {
     batch.set(matchDoc(db, tournament.id, match.id), stripUndefined(match));
   }
-  await Promise.all([saved, batch.commit()]);
+  await batch.commit();
 };
 
 /**

@@ -8,6 +8,7 @@ import {
   getDoc,
   getDocFromServer,
   getDocs,
+  getDocsFromServer,
   limit,
   onSnapshot,
   orderBy,
@@ -284,6 +285,20 @@ export const subscribeToListRsvps = (
       ),
     (error) => onError?.(error),
   );
+
+/**
+ * A list's RSVPs in arrival order, read once from the server, for an
+ * import. An import copies the list as it stands, so the copy has to be
+ * the server's and not whatever this phone last saw. With no connection
+ * this rejects with Firestore's error. Readable by the owner, and by any
+ * real account while the RSVP link is on.
+ */
+export const readListRsvps = async (db: Firestore, listId: string): Promise<Rsvp[]> => {
+  const snapshot = await getDocsFromServer(
+    query(listRsvpsCollection(db, listId), orderBy("createdAt")),
+  );
+  return snapshot.docs.map((d) => ({ ...d.data(), id: d.id }) as Rsvp);
+};
 
 // ============================================
 // Notices

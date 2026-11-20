@@ -31,17 +31,16 @@ import {
   subscribeToScorerKey as subscribeToScorerKeyDoc,
 } from "@/lib/sharing";
 import { queueTournamentCommand, type AppliedCommand } from "@/lib/commandQueue";
+import type { SetupInput } from "@/lib/creation";
+import { buildTournamentFromSetup, saveNewTournament } from "@/lib/creationData";
 import {
-  buildTournamentToSave,
   deleteTournament as deleteTournamentDoc,
   duplicateInput,
   renameTournament as renameTournamentDoc,
-  saveTournamentAndMatches,
   subscribeToAccountMatches,
   subscribeToTournaments,
   updateMatch as updateTournamentMatch,
   type CreateTournamentOptions,
-  type NewTournamentInput,
 } from "@/lib/tournaments";
 import {
   buildQuickMatch,
@@ -121,10 +120,12 @@ interface AppContextValue {
    * Create a draft, or with `start` a tournament that is live from the
    * moment it exists. Resolves with the id as soon as the local write is
    * issued; rejects, with nothing written, when the format cannot start
-   * with these teams.
+   * with these teams. An input from an import also adds its new teams to
+   * the roster and records the tournament on its RSVP list, in the same
+   * write as the tournament.
    */
   createTournament: (
-    input: NewTournamentInput,
+    input: SetupInput,
     options?: CreateTournamentOptions
   ) => Promise<string>;
   /**
@@ -443,15 +444,17 @@ export const AppProvider = ({ children }: AppProviderProps) => {
   // The id is known before the write, and the subscription shows the new
   // tournament from the local cache at once, so nobody waits for the server.
   // A phone with no signal can still set up a tournament, and start it: the
-  // engine runs here on the draft, so there is nothing to read back.
+  // engine runs here on the draft, so there is nothing to read back. An
+  // import's new roster teams and its list's record of the tournament ride
+  // in the same write, queued with it when there is no signal.
   const createTournament = useCallback(
-    async (input: NewTournamentInput, options?: CreateTournamentOptions) => {
+    async (input: SetupInput, options?: CreateTournamentOptions) => {
       const account = requireAccount();
-      const built = buildTournamentToSave(account.db, account.uid, input, options);
-      saveTournamentAndMatches(account.db, built).catch(logFailure("save tournament"));
+      const built = buildTournamentFromSetup(account.db, account.uid, input, roster, options);
+      saveNewTournament(account.db, account.uid, built).catch(logFailure("save tournament"));
       return built.tournament.id;
     },
-    [requireAccount]
+    [requireAccount, roster]
   );
 
   // A field write, so a rename can never paper over a result a court just
