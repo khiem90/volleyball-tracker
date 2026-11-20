@@ -32,11 +32,13 @@ import {
 } from "@/lib/sharing";
 import { queueTournamentCommand, type AppliedCommand } from "@/lib/commandQueue";
 import type { SetupInput } from "@/lib/creation";
+import type { MixedTeamEdit } from "@/lib/entries";
 import { buildTournamentFromSetup, saveNewTournament } from "@/lib/creationData";
 import {
   deleteTournament as deleteTournamentDoc,
   duplicateInput,
   renameTournament as renameTournamentDoc,
+  saveMixedTeamEdit,
   subscribeToAccountMatches,
   subscribeToTournaments,
   updateMatch as updateTournamentMatch,
@@ -134,6 +136,13 @@ interface AppContextValue {
    * server refuses it.
    */
   renameTournament: (id: string, name: string) => Promise<void>;
+  /**
+   * Rename a mixed team or change its players. Owner only, while the
+   * tournament is a draft or live. The change shows from the local cache
+   * as soon as the stored tournament has been read; the promise settles
+   * when the server has the write, and rejects if the edit is refused.
+   */
+  editMixedTeam: (tournamentId: string, edit: MixedTeamEdit) => Promise<void>;
   /**
    * Make a new draft from a tournament, with the same format, settings, and
    * teams. Resolves with the draft's id as soon as the local write is issued.
@@ -464,6 +473,12 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     await renameTournamentDoc(requireDb(), id, name);
   }, []);
 
+  // A field write on the entries, built on the stored tournament, so it
+  // never undoes a withdrawal or a result that landed a moment before.
+  const editMixedTeam = useCallback(async (tournamentId: string, edit: MixedTeamEdit) => {
+    await saveMixedTeamEdit(requireDb(), tournamentId, edit);
+  }, []);
+
   // A duplicate is created like any other draft, so the console can open
   // it as soon as the id is known.
   const duplicateTournament = useCallback(
@@ -731,6 +746,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     deleteTeams,
     createTournament,
     renameTournament,
+    editMixedTeam,
     duplicateTournament,
     deleteTournament,
     startTournament,

@@ -417,4 +417,24 @@ describe("editMixedTeam", () => {
 
     expect(entries).toEqual(before);
   });
+
+  // The schedule, the standings, and the scoring page all name a team
+  // through entryTeams, so this is the one place a rename has to reach.
+  it.each<[string, PersistentTeam[]]>([
+    ["the owner, whose roster has a team called Sharks", [{ id: "roster-sharks", name: "Sharks", createdAt: 3 }]],
+    ["a scorer or spectator, who has no roster", []],
+  ])("shows a renamed mixed team under its new name in a live tournament to %s", (_who, roster) => {
+    const live = tournament("night", "live", [aces, sharks, teamTwo]);
+
+    const renamed = {
+      ...live,
+      entries: editMixedTeam(live.entries, { kind: "rename", teamId: "mixed-sharks", name: "Net Ninjas" }),
+    };
+
+    expect(entryTeams(renamed, roster).map((team) => [team.id, team.name])).toEqual([
+      ["aces", "Aces"],
+      ["mixed-sharks", "Net Ninjas"],
+      ["mixed-two", "Team 2"],
+    ]);
+  });
 });

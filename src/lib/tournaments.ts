@@ -378,7 +378,9 @@ export const duplicateInput = (source: Tournament, roster: PersistentTeam[]): Du
  * fresh one instead of writing the old fields back. The stored revision is
  * read first and sent as the base;
  * when the rules refuse the write because the tournament moved on meanwhile,
- * the fields are rebuilt on the fresh copy, a bounded number of times. A
+ * the same fields go out again on the fresh copy's revision, a bounded
+ * number of times. Fields that depend on what is stored, such as the
+ * entries, must go through updateTournamentFrom instead. A
  * refusal that persists, such as a scorer's attempt at an owner-only field,
  * rejects with Firestore's error. Offline, the base comes from the cache and
  * the write waits for the connection like any field update.

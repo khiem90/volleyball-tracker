@@ -202,7 +202,13 @@ describeFirestoreRules("Editing mixed teams on Firestore", (env) => {
     const stored = await tournamentDocOf(db, duplicate.id);
     expect(stored.status).toBe("draft");
     expect(stored.name).toBe("Friday mix (duplicate)");
-    expect(stored.entries.map(({ teamId: _teamId, ...rest }) => rest)).toEqual([
+    const copied = stored.entries.map(({ name, color, players, withdrawnAt }) => ({
+      name,
+      color,
+      players,
+      withdrawnAt,
+    }));
+    expect(copied).toEqual([
       { name: "Team 1", color: "#ef4444", players: ["Ana", "Ben"] },
       { name: "Net Ninjas", color: "#3b82f6", players: ["Cy", "Dee"] },
       { name: "Team 3", color: "#22c55e", players: ["Eli", "Fay"] },

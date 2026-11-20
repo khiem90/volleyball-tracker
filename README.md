@@ -112,6 +112,14 @@ so all of it lands or none does. The rules refuse a tournament whose
 `rsvpListId` change afterwards. Nothing that happens to the list later
 reaches the tournament.
 
+The owner renames a mixed team and adds, removes, or moves its players from
+the console's Teams tab while the tournament is a draft or live. The write
+names only `entries`, applies the edit to the stored entries, and carries
+`basedOn`, so a refused one is applied again to the fresh copy and a
+withdrawal or a result that landed in between is kept. No match is written.
+A scorer cannot write `entries`. Duplicating a tournament copies its mixed
+teams with their players under new ids and leaves `rsvpListId` behind.
+
 Once an imported tournament is live or completed, any signed-in account reads
 it and its matches while the list it names has `enabled` on. The list's page
 reads each id in `tournamentIds` and offers Watch or See results for the ones

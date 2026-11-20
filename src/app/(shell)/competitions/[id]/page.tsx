@@ -18,6 +18,7 @@ import { StandingsPanel } from "@/components/console/StandingsPanel";
 import { StartTournamentDialog } from "@/components/console/StartTournamentDialog";
 import { TeamsPanel } from "@/components/console/TeamsPanel";
 import { ConfirmDialog } from "@/components/console/ConfirmDialog";
+import { MixedTeamDialog } from "@/components/console/MixedTeamDialog";
 import { NotFound } from "@/components/console/NotFound";
 import { useConsole } from "@/components/console/useConsole";
 import { TOURNAMENT_STATUS } from "@/components/matchbook/tournamentStatus";
@@ -209,12 +210,14 @@ const TournamentConsole = () => {
             team={page.team}
             canAdd={page.canAddTeams}
             canWithdraw={page.canWithdrawTeams}
+            canEditMixed={page.canEditMixedTeams}
             addRefusal={page.addRefusal}
             suggestions={page.suggestions}
             joinedNote={page.joinedNote}
             onAdd={page.addTeam}
             onWithdraw={page.setWithdrawing}
             onRejoin={page.rejoin}
+            onEdit={page.openTeamEdit}
             busy={page.isApplying}
           />
         </Section>
@@ -316,6 +319,14 @@ const TournamentConsole = () => {
         busyLabel="Withdrawing..."
         isBusy={page.isApplying && page.withdrawing !== null}
         onConfirm={page.withdraw}
+      />
+
+      <MixedTeamDialog
+        team={page.editingTeam}
+        mixedTeams={page.mixedTeams}
+        error={page.editingTeam ? page.actionError : null}
+        onEdit={page.editTeam}
+        onClose={page.closeTeamEdit}
       />
 
       <CorrectResultDialog

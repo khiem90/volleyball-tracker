@@ -26,7 +26,7 @@ import {
 } from "@/lib/console";
 import type { AppliedCommand } from "@/lib/commandQueue";
 import { bracketAddRefusal } from "@/lib/engine";
-import { entryTeams } from "@/lib/entries";
+import { entryTeams, type MixedTeamEdit } from "@/lib/entries";
 import { isBracketFormat, isRotationFormat, minimumTeams } from "@/lib/formats";
 import {
   scorerKeyIn,
@@ -65,8 +65,8 @@ export type NotFoundReason = "not_found" | "stale_link";
  * Everything the console page needs for one tournament: the tournament and
  * its matches from the provider, the visitor's role and what it allows, the
  * five views, the actions on the shell and in Settings, the court, queue,
- * and team edits of a live tournament, the correction of its results, and
- * the share links.
+ * and team edits of a live tournament, the owner's edits to a mixed team,
+ * the correction of its results, and the share links.
  *
  * The visitor is the owner when the account owns the tournament. Anyone
  * else reached it by link. With a scorer key in the address the phone
@@ -87,6 +87,7 @@ export const useConsole = (tournamentId: string) => {
     startTournament,
     endTournament,
     renameTournament,
+    editMixedTeam,
     duplicateTournament,
     deleteTournament,
     addTeamToTournament,
@@ -585,6 +586,41 @@ export const useConsole = (tournamentId: string) => {
   }, [tournament, withdrawing, access.canManage, apply, withdrawTeam]);
 
   // ============================================
+  // Mixed teams
+  // ============================================
+
+  // The mixed team being edited is held by id and read fresh, so the dialog
+  // shows its name and players as they now stand. It closes by itself when
+  // the owner can no longer edit, as when the last result completes the
+  // tournament.
+  const [editingTeamId, setEditingTeamId] = useState<string | null>(null);
+  const mixedTeams = useMemo(() => teamRows.filter((row) => row.players !== undefined), [teamRows]);
+  const editingTeam = useMemo(
+    () =>
+      (access.canEditMixedTeams && mixedTeams.find((row) => row.teamId === editingTeamId)) || null,
+    [access.canEditMixedTeams, mixedTeams, editingTeamId],
+  );
+  const openTeamEdit = useCallback((row: TeamRow) => {
+    setActionError(null);
+    setEditingTeamId(row.teamId);
+  }, []);
+  const closeTeamEdit = useCallback(() => setEditingTeamId(null), []);
+
+  // Like a rename, an edit shows as soon as the local write lands and
+  // nothing waits on the server. A refusal is reported when it comes.
+  const editTeam = useCallback(
+    (edit: MixedTeamEdit) => {
+      if (!tournament || !access.canEditMixedTeams) return;
+      setActionError(null);
+      editMixedTeam(tournament.id, edit).catch((error: unknown) => {
+        console.error("Failed to change the mixed team:", error);
+        reportFailure("The team could not be changed.", error);
+      });
+    },
+    [tournament, access.canEditMixedTeams, editMixedTeam, reportFailure],
+  );
+
+  // ============================================
   // Results
   // ============================================
 
@@ -700,6 +736,16 @@ export const useConsole = (tournamentId: string) => {
     withdrawing,
     setWithdrawing,
     withdraw,
+    // Mixed teams
+    /** Whether a mixed team can be renamed and its players changed: the owner of a draft or live tournament. */
+    canEditMixedTeams: access.canEditMixedTeams,
+    /** Every mixed team, which is where a player can be moved. */
+    mixedTeams,
+    /** The mixed team being edited, if one is. */
+    editingTeam,
+    openTeamEdit,
+    closeTeamEdit,
+    editTeam,
     // Results
     /** Whether completed results can be corrected: the owner of a live round robin or bracket. */
     canCorrectResults,

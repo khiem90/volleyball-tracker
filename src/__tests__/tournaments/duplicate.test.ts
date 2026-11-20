@@ -178,11 +178,9 @@ describe("duplicateInput for a tournament with mixed teams", () => {
 
   it("gives a mixed team stored without a color the palette color the source's teams use least", () => {
     const source = mixedSource();
-    const entries = source.entries.map((entry) => {
-      if (entry.teamId !== "t4") return entry;
-      const { color: _color, ...colorless } = entry;
-      return colorless;
-    });
+    const entries = source.entries.map((entry) =>
+      entry.teamId === "t4" ? { teamId: "t4", name: entry.name, players: entry.players } : entry,
+    );
 
     const input = duplicateInput({ ...source, entries }, rosterFor(source));
 
