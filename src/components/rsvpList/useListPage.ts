@@ -45,9 +45,11 @@ export const useListPage = (listId: string) => {
   );
   const stored = list ? listSetupOf(list) : null;
   // What the list already holds, which limits how its settings may change.
-  const locks = list ? listLocks(list, rsvp.rsvps?.length ?? 0, rsvp.now) : null;
+  // The count is null until the RSVPs load, and no change saves without it.
+  const rsvpCount = rsvp.rsvps?.length ?? null;
+  const locks = list ? listLocks(list, rsvpCount, rsvp.now) : null;
   // The first RSVP locks the open time and the by-person or by-team choice.
-  const openTimeLocked = locks !== null && locks.arrivals > 0;
+  const openTimeLocked = (locks?.arrivals ?? 0) > 0;
   const takesLocked = openTimeLocked;
 
   // What the owner has changed and not yet saved. While it is null the
@@ -89,7 +91,7 @@ export const useListPage = (listId: string) => {
   };
 
   const save = async () => {
-    if (!setup || isSaving) return;
+    if (!setup || isSaving || rsvpCount === null) return;
     setAttempted(true);
     if (firstListProblem(problems)) return;
     setSaving(true);
@@ -149,6 +151,8 @@ export const useListPage = (listId: string) => {
             /** The failed write's message, or the first problem to fix. */
             alert: saveError ?? firstListProblem(shown) ?? null,
             isDirty,
+            /** False until the RSVPs load. The locks count them, so nothing saves without them. */
+            canSave: rsvpCount !== null,
             isSaving,
             save,
             discard,

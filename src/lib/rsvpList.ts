@@ -82,6 +82,8 @@ export const duplicateListSetup = (source: Pick<RsvpList, "name" | "takes" | "ca
 export interface ListSetupProblems {
   /** The list is over, so none of its settings can change. No other problem comes with it. */
   over?: string;
+  /** The RSVPs are unread, so nobody knows what a change would break. No other problem comes with it. */
+  unread?: string;
   name?: string;
   takes?: string;
   scheduledAt?: string;
@@ -100,20 +102,22 @@ export interface ListLocks {
   confirmed: number;
   /**
    * How many RSVPs have arrived, held spots included. The first one locks
-   * the open time and the by-person or by-team choice.
+   * the open time and the by-person or by-team choice. Null while the
+   * RSVPs are unread, when no setting can change.
    */
-  arrivals: number;
+  arrivals: number | null;
   /** True once the scheduled time has passed. No setting changes after it. */
   isOver: boolean;
 }
 
 /**
  * The locks on a stored list with `rsvpCount` RSVPs on it, held spots
- * included, at `now`. On a page `now` is the phone's clock.
+ * included, at `now`. On a page `now` is the phone's clock. A null count
+ * is a list whose RSVPs are still loading or could not be read.
  */
-export const listLocks = (list: RsvpList, rsvpCount: number, now: number): ListLocks => ({
+export const listLocks = (list: RsvpList, rsvpCount: number | null, now: number): ListLocks => ({
   stored: listSetupOf(list),
-  confirmed: Math.min(rsvpCount, list.capacity),
+  confirmed: Math.min(rsvpCount ?? 0, list.capacity),
   arrivals: rsvpCount,
   isOver: isListOver(list, now),
 });
@@ -136,6 +140,9 @@ export const LIST_TAKES_LOCKED = "The list has RSVPs, so its by-person or by-tea
 /** Why no setting of a list that is over can change. */
 export const LIST_SETTINGS_LOCKED = "This list is over, so its settings cannot change.";
 
+/** Why no setting can be saved while the list's RSVPs are unread. */
+export const LIST_RSVPS_UNREAD = "The RSVPs have not loaded, so the settings cannot be saved yet.";
+
 /**
  * The problems with a list setup. A list needs a name, since the RSVP page
  * says what people are saying yes to. The link cannot go on without both
@@ -150,13 +157,20 @@ export const LIST_SETTINGS_LOCKED = "This list is over, so its settings cannot c
  * choice, so eight people do not turn into eight teams named after
  * people. And once the list is over no setting can change, so the record
  * of who came stops moving.
+ *
+ * Those locks count the RSVPs. While the RSVPs are unread there is nothing
+ * to count, so no change is taken until they arrive.
  */
 export const listSetupProblems = (setup: ListSetup, locks?: ListLocks): ListSetupProblems => {
   if (locks?.isOver) return sameListSetup(setup, locks.stored) ? {} : { over: LIST_SETTINGS_LOCKED };
+  if (locks && locks.arrivals === null) {
+    return sameListSetup(setup, locks.stored) ? {} : { unread: LIST_RSVPS_UNREAD };
+  }
+  const arrivals = locks?.arrivals ?? 0;
 
   const problems: ListSetupProblems = {};
   if (setup.name.trim().length === 0) problems.name = "Give the list a name.";
-  if (locks && locks.arrivals > 0 && setup.takes !== locks.stored.takes) {
+  if (locks && arrivals > 0 && setup.takes !== locks.stored.takes) {
     problems.takes = LIST_TAKES_LOCKED;
   }
   if (!(setup.capacity >= 1)) {
@@ -167,7 +181,7 @@ export const listSetupProblems = (setup: ListSetup, locks?: ListLocks): ListSetu
   if (setup.enabled && setup.scheduledAt === null) {
     problems.scheduledAt = "Set the scheduled time before turning the RSVP link on.";
   }
-  if (locks && locks.arrivals > 0 && setup.opensAt !== locks.stored.opensAt) {
+  if (locks && arrivals > 0 && setup.opensAt !== locks.stored.opensAt) {
     problems.opensAt = LIST_OPEN_TIME_LOCKED;
   } else if (setup.enabled && setup.opensAt === null) {
     problems.opensAt = "Set the open time before turning the RSVP link on.";
@@ -184,6 +198,7 @@ export const listSetupProblems = (setup: ListSetup, locks?: ListLocks): ListSetu
 /** The first problem to fix, in the order the form shows its fields. */
 export const firstListProblem = (problems: ListSetupProblems): string | undefined =>
   problems.over ??
+  problems.unread ??
   problems.name ??
   problems.takes ??
   problems.capacity ??

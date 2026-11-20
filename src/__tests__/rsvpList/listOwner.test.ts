@@ -160,6 +160,28 @@ describe("listSetupProblems against what the list already holds", () => {
     expect(listSetupProblems(listSetupOf(stored), listLocks(stored, 3, friday7pm + 60_000))).toEqual({});
   });
 
+  it("refuses any settings change while the RSVPs are unread, since nobody knows what the list holds", () => {
+    const stored = list({ capacity: 8 });
+    const setup = listSetupOf(stored);
+    const unread = { unread: "The RSVPs have not loaded, so the settings cannot be saved yet." };
+    const locks = listLocks(stored, null, thursdayNoon);
+
+    for (const change of [
+      { name: "Friday at 7:30" },
+      { takes: "teams" as const },
+      { capacity: 2 },
+      { capacity: 16 },
+      { opensAt: thursdayNoon },
+      { enabled: false },
+    ]) {
+      expect(listSetupProblems({ ...setup, ...change }, locks)).toEqual(unread);
+    }
+    expect(firstListProblem(listSetupProblems({ ...setup, name: "" }, locks))).toBe(unread.unread);
+    expect(listSetupProblems(setup, locks)).toEqual({});
+    // Once they are read, with nobody on the list, the same changes go through.
+    expect(listSetupProblems({ ...setup, capacity: 2 }, listLocks(stored, 0, thursdayNoon))).toEqual({});
+  });
+
   it("never counts a list with no scheduled time as over", () => {
     const stored = list({ enabled: false });
     delete stored.scheduledAt;

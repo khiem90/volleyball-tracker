@@ -129,7 +129,7 @@ export default function RsvpListPage() {
                   <button
                     type="button"
                     onClick={settings.save}
-                    disabled={!settings.isDirty || settings.isSaving}
+                    disabled={!settings.isDirty || !settings.canSave || settings.isSaving}
                     className="mb-btn mb-btn-navy sm:flex-1"
                   >
                     {settings.isSaving ? <InlineSpinner /> : <MbIcon id="save" size={14} />}
