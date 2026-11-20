@@ -420,13 +420,40 @@ service cloud.firestore {
           && request.resource.data.get('noticesReadAt', request.time) == request.time
           && rsvpsAreOpen();
 
+        // A held spot is the owner's RSVP for someone without an account,
+        // under a generated id with no uid, so no account can ever change
+        // or withdraw it. It takes its place in arrival order like any
+        // other RSVP, so its arrival time is the server's too. The owner
+        // adds one until the scheduled time, or on a list that has none
+        // yet. The open time, a close, and the link being off stop RSVPs
+        // from accounts and not the owner's held spots. Nobody updates one.
+        allow create: if
+          ownsList(list())
+          && !listIsOver(list())
+          && request.resource.data.keys().hasAll(['uid', 'held', 'name', 'createdAt'])
+          && request.resource.data.keys().hasOnly(['uid', 'held', 'name', 'createdAt'])
+          && request.resource.data.uid == null
+          && request.resource.data.held == true
+          && request.resource.data.name is string
+          && request.resource.data.name.size() >= 1
+          && request.resource.data.name.size() <= 40
+          && request.resource.data.createdAt == request.time;
+
         // A person fixes their name or note without losing their place.
         // The arrival time and the uid never change, so neither does the
-        // order. This works after a close too, like a withdrawal.
+        // order. This works after a close too, like a withdrawal, and like
+        // a withdrawal it stops at the scheduled time. The check sits on
+        // this rule alone, so it bounds the name and the note and no other
+        // field an account may write on its own RSVP.
         allow update: if
           isOwnRsvp()
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'note'])
-          && rsvpFieldsAreValid(request.resource.data);
+          && rsvpFieldsAreValid(request.resource.data)
+          && !listIsOver(list());
+
+        // The owner removes anyone, a held spot included, at any time. The
+        // delete of a whole list relies on it after the scheduled time.
+        allow delete: if ownsList(list());
 
         // A withdrawal is a delete, open until the scheduled time, even
         // after the owner closes the list. RSVPing again is a new create

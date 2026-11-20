@@ -1659,6 +1659,130 @@ describeFirestoreRules("Firestore rules", (env) => {
         });
       });
 
+      describe("the owner removing anyone", () => {
+        const rsvps = { [dan]: { name: "Dan" }, [eve]: { name: "Eve" } };
+
+        it("lets the owner remove an RSVP before the scheduled time and after it", async () => {
+          await seedOpenList("list-open", { rsvps });
+          await seedOpenList("list-over", { opensInMinutes: -60, scheduledInMinutes: -1, rsvps });
+          await assertSucceeds(deleteDoc(listRsvpAt(accountDb(owner), "list-open", dan)));
+          await assertSucceeds(deleteDoc(listRsvpAt(accountDb(owner), "list-over", dan)));
+        });
+
+        it("lets the owner remove an RSVP after the list is closed and with the link off", async () => {
+          await seedOpenList("list-closed", { closed: true, rsvps });
+          await seedOpenList("list-off", { enabled: false, rsvps });
+          await assertSucceeds(deleteDoc(listRsvpAt(accountDb(owner), "list-closed", dan)));
+          await assertSucceeds(deleteDoc(listRsvpAt(accountDb(owner), "list-off", dan)));
+        });
+
+        it("refuses anyone who is not the owner removing someone else, on the list or not", async () => {
+          await seedOpenList("list-1", { rsvps });
+          for (const db of [accountDb(eve), accountDb(), anonymousDb(), signedOutDb()]) {
+            await assertFails(deleteDoc(listRsvpAt(db, "list-1", dan)));
+          }
+        });
+      });
+
+      describe("held spots", () => {
+        const held = (changes: Record<string, unknown> = {}) => ({
+          uid: null,
+          held: true,
+          name: "Walk-in Sam",
+          createdAt: serverTimestamp(),
+          ...changes,
+        });
+
+        const seedHeld = (listId: string, heldId: string) =>
+          env().withSecurityRulesDisabled((unrestricted) =>
+            setDoc(listRsvpAt(modularFirestore(unrestricted), listId, heldId), held()),
+          );
+
+        it("are added by the owner under a generated id a minute before the scheduled time", async () => {
+          await seedOpenList("list-1", { scheduledInMinutes: 1 });
+          await assertSucceeds(setDoc(doc(listRsvpsOf(accountDb(owner), "list-1")), held()));
+        });
+
+        it("are added to a list with no scheduled time yet", async () => {
+          await env().withSecurityRulesDisabled((unrestricted) =>
+            setDoc(
+              listAt(modularFirestore(unrestricted), "list-1"),
+              listDocWithout("scheduledAt", { enabled: false }),
+            ),
+          );
+          await assertSucceeds(setDoc(doc(listRsvpsOf(accountDb(owner), "list-1")), held()));
+        });
+
+        it("are added before the open time, after a close, and with the link off, which only stop RSVPs from accounts", async () => {
+          await seedOpenList("list-early", { opensInMinutes: 60 });
+          await seedOpenList("list-closed", { closed: true });
+          await seedOpenList("list-off", { enabled: false });
+          for (const listId of ["list-early", "list-closed", "list-off"]) {
+            await assertSucceeds(setDoc(doc(listRsvpsOf(accountDb(owner), listId)), held()));
+          }
+        });
+
+        it("are refused a minute after the scheduled time, when the list is over", async () => {
+          await seedOpenList("list-1", { opensInMinutes: -60, scheduledInMinutes: -1 });
+          await assertFails(setDoc(doc(listRsvpsOf(accountDb(owner), "list-1")), held()));
+        });
+
+        it("are added by nobody but the owner", async () => {
+          await seedOpenList("list-1");
+          for (const db of [accountDb(), anonymousDb(), signedOutDb()]) {
+            await assertFails(setDoc(doc(listRsvpsOf(db, "list-1")), held()));
+          }
+        });
+
+        it("must be held, with no uid, a name of one to forty characters, the request's time, and nothing else", async () => {
+          await seedOpenList("list-1");
+          const db = accountDb(owner);
+          const add = (changes: Record<string, unknown>) =>
+            setDoc(doc(listRsvpsOf(db, "list-1")), held(changes));
+          await assertFails(add({ held: false }));
+          await assertFails(add({ uid: otherAccount }));
+          await assertFails(add({ uid: owner }));
+          await assertFails(add({ name: "" }));
+          await assertFails(add({ name: "x".repeat(41) }));
+          await assertFails(add({ name: 7 }));
+          await assertFails(add({ createdAt: Date.now() }));
+          await assertFails(add({ note: "Brings a ball" }));
+          await assertSucceeds(add({ name: "x".repeat(40) }));
+
+          const withoutHeld: Record<string, unknown> = held();
+          delete withoutHeld.held;
+          await assertFails(setDoc(doc(listRsvpsOf(db, "list-1")), withoutHeld));
+        });
+
+        it("are changed by nobody, not even the owner", async () => {
+          await seedOpenList("list-1");
+          await seedHeld("list-1", "held-1");
+          for (const db of [accountDb(owner), accountDb()]) {
+            await assertFails(updateDoc(listRsvpAt(db, "list-1", "held-1"), { name: "Sam" }));
+            await assertFails(updateDoc(listRsvpAt(db, "list-1", "held-1"), { note: "Late" }));
+          }
+        });
+
+        it("are removed by the owner and nobody else, after the scheduled time too", async () => {
+          await seedOpenList("list-1");
+          await seedOpenList("list-over", { opensInMinutes: -60, scheduledInMinutes: -1 });
+          await seedHeld("list-1", "held-1");
+          await seedHeld("list-over", "held-1");
+          await assertFails(deleteDoc(listRsvpAt(accountDb(), "list-1", "held-1")));
+          await assertSucceeds(deleteDoc(listRsvpAt(accountDb(owner), "list-1", "held-1")));
+          await assertSucceeds(deleteDoc(listRsvpAt(accountDb(owner), "list-over", "held-1")));
+        });
+
+        it("are listed with everyone else's RSVPs", async () => {
+          await seedOpenList("list-1", { rsvps: { [dan]: { name: "Dan" } } });
+          await seedHeld("list-1", "held-1");
+          const snapshot = await assertSucceeds(
+            getDocs(query(listRsvpsOf(accountDb(), "list-1"), orderBy("createdAt"))),
+          );
+          expect(snapshot.docs.map((d) => d.id)).toEqual([dan, "held-1"]);
+        });
+      });
+
       describe("changing an RSVP", () => {
         const rsvps = { [dan]: { name: "Dan", note: "Late" }, [eve]: { name: "Eve" } };
 
@@ -1673,6 +1797,21 @@ describeFirestoreRules("Firestore rules", (env) => {
         it("lets the account change them after the owner closes the list", async () => {
           await seedOpenList("list-1", { closed: true, rsvps });
           await assertSucceeds(updateDoc(listRsvpAt(accountDb(dan), "list-1", dan), { name: "Daniel" }));
+        });
+
+        it("lets the account change its name and note a minute before the scheduled time", async () => {
+          await seedOpenList("list-1", { scheduledInMinutes: 1, rsvps });
+          const db = accountDb(dan);
+          await assertSucceeds(updateDoc(listRsvpAt(db, "list-1", dan), { name: "Daniel" }));
+          await assertSucceeds(updateDoc(listRsvpAt(db, "list-1", dan), { note: "On time after all" }));
+        });
+
+        it("refuses a change to the name or the note a minute after the scheduled time, when the list is over", async () => {
+          await seedOpenList("list-1", { opensInMinutes: -60, scheduledInMinutes: -1, rsvps });
+          const db = accountDb(dan);
+          await assertFails(updateDoc(listRsvpAt(db, "list-1", dan), { name: "Daniel" }));
+          await assertFails(updateDoc(listRsvpAt(db, "list-1", dan), { note: "On time after all" }));
+          await assertFails(updateDoc(listRsvpAt(db, "list-1", dan), { note: deleteField() }));
         });
 
         it("never lets the account move its arrival time or its uid", async () => {
