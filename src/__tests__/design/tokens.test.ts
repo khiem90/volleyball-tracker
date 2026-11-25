@@ -308,8 +308,15 @@ const migrated: string[] = [
   "components/shared/Chip.tsx",
   "components/shared/DateTile.tsx",
   "components/shared/RecentForm.tsx",
+  "components/shared/ScoreLine.tsx",
+  "components/shared/TeamMark.tsx",
+  "components/shared/TeamName.tsx",
   "components/ui/button.tsx",
   "lib/dateTile.ts",
+  "lib/scoreLine.ts",
+  "lib/teamColors.ts",
+  "lib/teamShapes.ts",
+  "lib/teamStats.ts",
   "lib/tournamentStatus.ts",
 ];
 

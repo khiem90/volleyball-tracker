@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { MbIcon } from "@/components/matchbook/MbIcon";
-import { Crest, Panel, PanelEmpty, TeamMark } from "@/components/matchbook/Panel";
+import { Crest, Panel, PanelEmpty, TeamName } from "@/components/matchbook/Panel";
 import {
   capitalize,
   courtLabel,
@@ -242,7 +242,7 @@ const Queue = ({
               <span className="matchbook-display w-5 shrink-0 text-center text-[0.8rem] font-bold tabular-nums text-mb-ink-muted">
                 {i + 1}
               </span>
-              <TeamMark team={ref} size={20} className="min-w-0 flex-1" />
+              <TeamName team={ref} size={20} className="min-w-0 flex-1" />
               {i === 0 && <span className="mb-kicker shrink-0 text-mb-coral">Next up</span>}
               {controls &&
                 (controls.swapping ? (

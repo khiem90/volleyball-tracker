@@ -8,13 +8,14 @@ import { useQuickMatchPage } from "@/hooks/useQuickMatchPage";
 import { PageLoadingSpinner } from "@/components/shared";
 import { ConfirmDialog } from "@/components/console/ConfirmDialog";
 import { MbIcon } from "@/components/matchbook/MbIcon";
-import { Crest, FormLetters, Panel, PanelEmpty, TeamMark } from "@/components/matchbook/Panel";
+import { Crest, FormLetters, Panel, PanelEmpty, TeamName } from "@/components/matchbook/Panel";
 import {
   useMatchbookQuickMatch,
   type MbAbandonedMatchRow,
   type MbTeamFormSummary,
 } from "@/components/matchbook/useMatchbookQuickMatch";
-import { crestForTeam } from "@/components/matchbook/types";
+import { TeamMark } from "@/components/shared/TeamMark";
+import { GUEST_AWAY_TEAM, GUEST_HOME_TEAM } from "@/constants/guestTeams";
 import { signInHref } from "@/lib/shell";
 
 /* ------------------------- Small building blocks ------------------------- */
@@ -29,42 +30,52 @@ const TeamSelect = ({
   label: string;
   value: string;
   disabledId: string;
-  teams: { id: string; name: string }[];
+  teams: { id: string; name: string; color?: string }[];
   onChange: (id: string) => void;
-}) => (
-  <div className="min-w-0 flex-1">
-    <p className="mb-kicker mb-1 text-center">{label}</p>
-    <div className="flex flex-col items-center gap-2">
-      <Image
-        src={value ? crestForTeam(value, teams.find((t) => t.id === value)?.name ?? "") : "/assets/matchbook/brand/crest.svg"}
-        alt=""
-        width={56}
-        height={65}
-        className={value ? "" : "opacity-25 grayscale"}
-      />
-      <div className="relative w-full">
-        <select
-          className="mb-select-native"
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-          aria-label={label}
-        >
-          <option value="">Select team…</option>
-          {teams.map((team) => (
-            <option key={team.id} value={team.id} disabled={team.id === disabledId}>
-              {team.name}
-            </option>
-          ))}
-        </select>
-        <MbIcon
-          id="chevron-down"
-          size={14}
-          className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-mb-ink-muted"
-        />
+}) => {
+  const picked = teams.find((team) => team.id === value);
+  return (
+    <div className="min-w-0 flex-1">
+      <p className="mb-kicker mb-1 text-center">{label}</p>
+      <div className="flex flex-col items-center gap-2">
+        {/* The same height with a team picked or not, so the select below does not jump. */}
+        <span className="flex h-[65px] items-center">
+          {picked ? (
+            <TeamMark name={picked.name} color={picked.color} size={56} />
+          ) : (
+            <Image
+              src="/assets/matchbook/brand/crest.svg"
+              alt=""
+              width={56}
+              height={65}
+              className="opacity-25 grayscale"
+            />
+          )}
+        </span>
+        <div className="relative w-full">
+          <select
+            className="mb-select-native"
+            value={value}
+            onChange={(event) => onChange(event.target.value)}
+            aria-label={label}
+          >
+            <option value="">Select team…</option>
+            {teams.map((team) => (
+              <option key={team.id} value={team.id} disabled={team.id === disabledId}>
+                {team.name}
+              </option>
+            ))}
+          </select>
+          <MbIcon
+            id="chevron-down"
+            size={14}
+            className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-mb-ink-muted"
+          />
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 const ScorePreviewSide = ({
   summary,
@@ -123,11 +134,11 @@ const AbandonedMatch = ({
 }) => (
   <div className="flex flex-col gap-2 px-3 py-3">
     <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-      <TeamMark team={match.home} className="justify-self-start" />
+      <TeamName team={match.home} className="justify-self-start" />
       <span className="matchbook-display whitespace-nowrap text-[0.95rem] font-bold tabular-nums">
         {match.homeScore} – {match.awayScore}
       </span>
-      <TeamMark team={match.away} reverse className="justify-self-end" />
+      <TeamName team={match.away} reverse className="justify-self-end" />
     </div>
     <div className="flex flex-wrap items-center justify-between gap-2">
       <p className="mb-kicker">Started {match.started}</p>
@@ -182,8 +193,8 @@ export default function QuickMatchPage() {
     return <PageLoadingSpinner />;
   }
 
-  const guestHome = { name: "Team A", crest: crestForTeam("guest-team-a", "Team A") };
-  const guestAway = { name: "Team B", crest: crestForTeam("guest-team-b", "Team B") };
+  const guestHome = { name: "Team A", color: GUEST_HOME_TEAM.color };
+  const guestAway = { name: "Team B", color: GUEST_AWAY_TEAM.color };
 
   const homeSummary = isGuest
     ? { team: guestHome, form: [], record: "0–0", won: 0, lost: 0, pointsFor: 0, pointsAgainst: 0 }
@@ -410,11 +421,11 @@ export default function QuickMatchPage() {
                         <p className="matchbook-display text-[0.66rem] font-bold leading-tight text-mb-ink-muted">
                           {m.date}
                         </p>
-                        <TeamMark team={m.home} className="justify-self-start" />
+                        <TeamName team={m.home} className="justify-self-start" />
                         <span className="matchbook-display whitespace-nowrap text-[0.95rem] font-bold tabular-nums">
                           {m.homeScore} – {m.awayScore}
                         </span>
-                        <TeamMark team={m.away} reverse className="justify-self-end" />
+                        <TeamName team={m.away} reverse className="justify-self-end" />
                         <span
                           className="h-2.5 w-2.5 justify-self-end rounded-full"
                           style={{

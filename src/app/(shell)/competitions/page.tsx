@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { PageLoadingSpinner, DeleteConfirmDialog } from "@/components/shared";
 import { MbIcon } from "@/components/matchbook/MbIcon";
-import { Crest, Panel, PanelEmpty, TeamMark } from "@/components/matchbook/Panel";
+import { Crest, Panel, PanelEmpty, TeamName } from "@/components/matchbook/Panel";
 import {
   useMatchbookCompete,
   type MbBracketCell,
@@ -159,7 +159,7 @@ const MainPanel = ({ selected }: { selected: MbCompeteSelected }) => {
                     {i + 1}
                   </td>
                   <td>
-                    <TeamMark team={line.team} size={20} />
+                    <TeamName team={line.team} size={20} />
                   </td>
                   <td className="text-center tabular-nums">{line.won}</td>
                   <td className="text-center tabular-nums">{line.lost}</td>
@@ -401,11 +401,11 @@ export default function CompetitionsPage() {
                     <p className="matchbook-display border-r border-mb-rule pr-2 text-[0.7rem] font-bold">
                       {line.court}
                     </p>
-                    <TeamMark team={line.home} className="justify-self-start" />
+                    <TeamName team={line.home} className="justify-self-start" />
                     <span className="matchbook-display whitespace-nowrap text-[0.95rem] font-bold tabular-nums text-mb-coral">
                       {line.homeScore} – {line.awayScore}
                     </span>
-                    <TeamMark team={line.away} reverse className="justify-self-end" />
+                    <TeamName team={line.away} reverse className="justify-self-end" />
                     <span className="flex items-center gap-1">
                       <span className="mb-live-dot" />
                       <span className="matchbook-display text-[0.62rem] font-bold text-action">
@@ -467,11 +467,11 @@ export default function CompetitionsPage() {
                     <p className="matchbook-display text-[0.64rem] font-bold text-mb-ink-muted">
                       {line.label}
                     </p>
-                    <TeamMark team={line.home} size={18} className="justify-self-start" />
+                    <TeamName team={line.home} size={18} className="justify-self-start" />
                     <span className="matchbook-display whitespace-nowrap text-[0.85rem] font-bold tabular-nums">
                       {line.homeScore} – {line.awayScore}
                     </span>
-                    <TeamMark team={line.away} size={18} reverse className="justify-self-end" />
+                    <TeamName team={line.away} size={18} reverse className="justify-self-end" />
                   </div>
                 ))}
               </div>

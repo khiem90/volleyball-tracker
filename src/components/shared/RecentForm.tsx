@@ -1,5 +1,4 @@
-/** One result in a team's recent form: a win or a loss. */
-type FormResult = "W" | "L";
+import type { FormResult } from "@/lib/teamShapes";
 
 /*
  * A win is green. A loss is soft ink, never red, because red is for

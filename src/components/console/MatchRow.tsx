@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { MbIcon } from "@/components/matchbook/MbIcon";
-import { TeamMark } from "@/components/matchbook/Panel";
+import { TeamName } from "@/components/matchbook/Panel";
 import { isPlayable, type ConsoleAccess } from "@/lib/console";
 import { scoringHref } from "@/lib/scoring";
 import type { Match } from "@/types/game";
@@ -38,7 +38,7 @@ const Side = ({
   faded?: boolean;
 }) =>
   teamId ? (
-    <TeamMark
+    <TeamName
       team={team(teamId)}
       size={18}
       reverse={reverse}

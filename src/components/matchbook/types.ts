@@ -1,78 +1,19 @@
-// Matchbook panel shapes and team-crest helpers.
+// The old names for the shapes in src/lib/teamShapes.ts, kept until every
+// screen has moved to the new ones, and the crest helpers, which go with them.
 
-export interface MbTeam {
-  name: string;
-  crest: string;
-}
-
-export type MbFormResult = "W" | "L";
-
-export interface MbScheduleItem {
-  day: string;
-  date: string;
-  time: string;
-  home: MbTeam;
-  away: MbTeam;
-  venue: string;
-}
-
-export type MbReadinessStatus = "READY" | "GOOD" | "NEEDS ATTN";
-
-export interface MbReadinessRow {
-  team: MbTeam;
-  percent: number;
-  form: MbFormResult[];
-  status: MbReadinessStatus;
-}
-
-export interface MbStatTotal {
-  label: string;
-  value: string;
-}
-
-/* ----------------------------- Team directory ----------------------------- */
-
-export type MbTeamStatus = "ACTIVE" | "IDLE";
-
-export interface MbNextMatch {
-  date: string;
-  time: string;
-  opponent: MbTeam;
-  isHome: boolean;
-  competition: string;
-}
-
-export interface MbTeamRow {
-  id: string;
-  team: MbTeam;
-  color?: string;
-  competitions: string[];
-  played: number;
-  won: number;
-  lost: number;
-  pointsFor: number;
-  pointsAgainst: number;
-  nextMatch: MbNextMatch | null;
-  status: MbTeamStatus;
-  form: MbFormResult[];
-}
-
-export interface MbFormRow {
-  team: MbTeam;
-  form: MbFormResult[];
-  record: string;
-}
-
-export interface MbTeamsData {
-  dateLine: string;
-  matchesCompleted: number;
-  teamCount: number;
-  rows: MbTeamRow[];
-  snapshot: MbStatTotal[];
-  readiness: MbReadinessRow[];
-  fixtures: MbScheduleItem[];
-  recentForm: MbFormRow[];
-}
+export type {
+  FormResult as MbFormResult,
+  FormRow as MbFormRow,
+  NextMatch as MbNextMatch,
+  ReadinessRow as MbReadinessRow,
+  ReadinessStatus as MbReadinessStatus,
+  ScheduleItem as MbScheduleItem,
+  StatTotal as MbStatTotal,
+  Team as MbTeam,
+  TeamRow as MbTeamRow,
+  TeamsData as MbTeamsData,
+  TeamStatus as MbTeamStatus,
+} from "@/lib/teamShapes";
 
 export const crestPath = (slug: string) => `/assets/matchbook/teams/${slug}.svg`;
 
@@ -87,7 +28,7 @@ const CREST_SLUGS = [
   "riptide",
 ] as const;
 
-// Deterministically assign one of the eight pack crests to a real team.
+// Fills the crest field of a team shape. Nothing draws the picture any more.
 export const crestForTeam = (teamId: string, teamName: string): string => {
   const named = CREST_SLUGS.find((slug) => teamName.toLowerCase().includes(slug));
   if (named) return crestPath(named);
