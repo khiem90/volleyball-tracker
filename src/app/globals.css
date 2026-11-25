@@ -360,10 +360,11 @@
   }
 
   /*
-   * Buttons. Four kinds on one base, each a pill at least 44px tall:
+   * Buttons. Five kinds on one base, each a pill at least 44px tall:
    * btn-action is the green main button, btn-ink the black pill for a row's
-   * own action, btn-fill the grey button for secondary actions, and
-   * btn-danger the red button for a destructive action.
+   * own action, btn-fill the grey button for secondary actions, btn-danger
+   * the red button that confirms a destructive dialog, and btn-danger-quiet
+   * the white button with red text for a destructive action on a row.
    */
   .btn,
   .mb-btn {
@@ -413,10 +414,23 @@
     color: var(--ink);
   }
 
-  .btn-danger,
-  .mb-btn-outline-red {
+  .btn-danger {
     background: var(--danger);
     color: #fff;
+  }
+
+  /*
+   * Remove, Discard, and Delete repeat down a list, where a column of filled
+   * red reads as an alarm. This one is white with red text and the control
+   * edge, so the red is in the word and the filled button is left for the
+   * confirm. Red text needs white under it: on fill it drops to 4.28 to 1.
+   */
+  .btn-danger-quiet,
+  .mb-btn-outline-red {
+    border: 1px solid var(--control-line);
+    background: var(--surface);
+    color: var(--danger);
+    transition: background-color 0.15s ease, border-color 0.15s ease;
   }
 
   /* Hover, where there is a pointer to hover with. */
@@ -437,9 +451,13 @@
       background: color-mix(in srgb, var(--fill) 93%, var(--ink));
     }
 
-    .btn-danger:hover:not(:disabled),
-    .mb-btn-outline-red:hover:not(:disabled) {
+    .btn-danger:hover:not(:disabled) {
       background: color-mix(in srgb, var(--danger) 88%, var(--ink));
+    }
+
+    .btn-danger-quiet:hover:not(:disabled),
+    .mb-btn-outline-red:hover:not(:disabled) {
+      border-color: var(--danger);
     }
   }
 
@@ -460,9 +478,14 @@
     background: color-mix(in srgb, var(--fill) 86%, var(--ink));
   }
 
-  .btn-danger:active:not(:disabled),
-  .mb-btn-outline-red:active:not(:disabled) {
+  .btn-danger:active:not(:disabled) {
     background: color-mix(in srgb, var(--danger) 78%, var(--ink));
+  }
+
+  .btn-danger-quiet:active:not(:disabled),
+  .mb-btn-outline-red:active:not(:disabled) {
+    border-color: var(--danger);
+    background: var(--danger-tint);
   }
 
   .btn:focus-visible,
@@ -475,6 +498,7 @@
   .btn-action:focus-visible,
   .mb-btn-coral:focus-visible,
   .btn-danger:focus-visible,
+  .btn-danger-quiet:focus-visible,
   .mb-btn-outline-red:focus-visible {
     outline-color: var(--ink);
   }
