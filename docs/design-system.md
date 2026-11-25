@@ -128,7 +128,7 @@ same element wins:
 - Fields: `.mb-input` (a wrapper around a bare `<input>`), `.mb-textarea`, `.mb-select-native`, `.mb-search`, `.mb-checkbox`.
 - Small pieces: `.mb-live-dot`, `.mb-form-square`, `.mb-spinner`, `.mb-shadow-panel`.
 
-In `src/components`: `MbIcon` (`matchbook/MbIcon.tsx`), `Panel` and
+In `src/components`: `Icon` (`shared/Icon.tsx`), `Panel` and
 `AddTeamsForm` (`matchbook/`), `Button`, `Badge`, `Avatar`, `Dialog`, and
 `DropdownMenu` (`ui/`), and `InlineSpinner`, `PageLoadingSpinner`, and
 `DeleteConfirmDialog` (`shared/`). `<Button>` renders the same classes as a
@@ -150,25 +150,61 @@ button shows `<InlineSpinner />` in place of its glyph and keeps its label.
 ## Icons
 
 Every icon is a `<symbol>` in `public/assets/matchbook/icons/sprite.svg`,
-rendered with `<MbIcon id="trash" size={14} />`. It is `aria-hidden`; a button
-that is only an icon carries the `aria-label`. Color comes from `currentColor`,
-so set `text-mb-*` on the icon or its parent. Sizes in use: 14 inside a
-button, 16 in a panel title or a row, 18 in a dialog title, 20 for the close
-and back controls, 24 on the scoring page. There is no bare tick; `check` is a
-circled tick. A left chevron is `chevron-left`, not a rotated `chevron-right`.
+rendered with `<Icon id="trash" size={14} />` from `@/components/shared/Icon`.
+The old name, `MbIcon`, still resolves until every screen has moved off it.
+The icon is `aria-hidden`; a button that is only an icon carries the
+`aria-label`. Color comes from `currentColor`, so set a text color on the icon
+or its parent. Sizes in use: 14 inside a button, 16 in a panel title or a row,
+18 in a dialog title, 20 for the close and back controls, 24 on the scoring
+page. There is no bare tick; `check` is a circled tick. A left chevron is
+`chevron-left`, not a rotated `chevron-right`.
 
-To add a glyph, reuse first: 54 ids exist (`manifest.json` lists them, and
-`/assets/matchbook/preview.html` draws them). If none carries the meaning,
-draw one in the sprite's style: a 24px grid (`viewBox="0 0 24 24"`), 1.8px
-stroke (2px for `plus`, `minus`, and the chevrons), `stroke-linecap="round"`
-and `stroke-linejoin="round"`, `fill="none" stroke="currentColor"`, and only a
-dot as a filled shape. One `<symbol id="..." viewBox="0 0 24 24">` on one line
-before the closing `</svg>`, like the neighbours. The id is listed in three
-places and all three change together: the sprite, `iconIds` in
-`public/assets/matchbook/manifest.json`, and the `ids` array in
-`public/assets/matchbook/preview.html`. Show the drawing beside the icon it
-replaces before committing it. The service worker precaches the sprite, so an
-installed browser sees a new glyph after the update banner.
+The drawings are the regular weight of Phosphor Icons, copied into the sprite.
+Phosphor is MIT licensed and its notice is `PHOSPHOR-LICENSE.txt` beside the
+sprite. The app has no icon package and fetches no icon from another host.
+Each of the five tab icons also has a filled drawing for the active tab, under
+the tab's id plus `-fill`: `overview-fill`, `teams-fill`, `compete-fill`,
+`history-fill`, and `rsvp-fill`. No other glyph is filled.
+
+Each id and the Phosphor glyph it draws:
+
+| id | glyph | id | glyph | id | glyph |
+| --- | --- | --- | --- | --- | --- |
+| `overview` | house | `teams` | users-three | `quick` | lightning |
+| `compete` | trophy | `history` | clock-counter-clockwise | `tools` | wrench |
+| `settings` | gear | `help` | question | `bell` | bell |
+| `plus` | plus | `export` | upload-simple | `import` | download-simple |
+| `share` | share-network | `print` | printer | `save` | floppy-disk |
+| `search` | magnifying-glass | `filter` | funnel | `calendar` | calendar-blank |
+| `clock` | clock | `location` | map-pin | `volleyball` | volleyball |
+| `bracket` | tree-structure, mirrored | `chart` | chart-bar | `swap` | arrows-left-right |
+| `court` | drawn by hand | `check` | check-circle | `warning` | warning |
+| `live` | broadcast | `menu` | list | `chevron-right` | caret-right |
+| `chevron-down` | caret-down | `clipboard` | clipboard-text | `star` | star |
+| `mail` | envelope-simple | `lock` | lock | `login` | sign-in |
+| `cloud` | cloud-arrow-up | `close` | x | `trash` | trash |
+| `chevron-left` | caret-left | `flag` | flag | `maximize` | arrows-out-simple |
+| `minimize` | arrows-in-simple | `undo` | arrow-u-up-left | `crown` | crown |
+| `minus` | minus | `trophy` | trophy | `play` | play |
+| `pencil` | pencil-simple | `remove-user` | user-minus | `logout` | sign-out |
+| `eye` | eye | `eye-off` | eye-slash | `rsvp` | calendar-check |
+
+To add a glyph, reuse first: `manifest.json` lists the ids and
+`/assets/matchbook/preview.html` draws them. If none carries the meaning, copy
+the path from Phosphor's regular SVG file into one line before the closing
+`</svg>`: `<symbol id="..." viewBox="0 0 256 256"><path fill="currentColor"
+d="..."/></symbol>`. If Phosphor has no fitting glyph, draw one on the same
+256 grid with `fill="none" stroke="currentColor" stroke-width="16"` and round
+caps and joins, which is the weight of Phosphor's outlines. `court` is drawn
+that way. The id is listed in three places and all three change together: the
+sprite, `iconIds` in `public/assets/matchbook/manifest.json`, and the `ids`
+array in `public/assets/matchbook/preview.html`.
+
+The guard test in `src/__tests__/design/tokens.test.ts` fails when source asks
+for an id the sprite lacks, when one of the 54 ids goes missing, and when a
+drawing leaves the grid, the weight, or `currentColor`. The sprite's URL
+carries a hash of the file, so an installed copy of the app fetches a changed
+sprite instead of its cached one.
 
 ## The dialog
 
@@ -221,7 +257,7 @@ frame: `DropdownMenuContent` and `UndoToast` carry their own colors and
 - Colors outside the palette: Tailwind's named colors (`slate-500`, `amber-200`), new hex values, oklch literals. Team colors are the exception.
 - Black overlays, backdrop blur, gradients, and any shadow other than the panel's.
 - One exception to the two rules above: the scoring page's team-color panels (`TeamScorePanel`) sit on the team color, not on paper, so they keep their translucent white controls and the amber Leading/Winner pill with its backdrop blur. Nothing else may use a named Tailwind color or backdrop blur.
-- `shadcn add` output as it comes. `components.json` still says `"iconLibrary": "lucide"`, so a generated component imports `lucide-react`; swap those imports for `MbIcon` before it is used, because lint refuses them.
+- `shadcn add` output as it comes. `components.json` still says `"iconLibrary": "lucide"`, so a generated component imports `lucide-react`; swap those imports for `Icon` before it is used, because lint refuses them.
 
 ## The legacy token block
 

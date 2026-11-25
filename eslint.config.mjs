@@ -20,7 +20,7 @@ const eslintConfig = defineConfig([
     // A directory pattern, so ESLint skips the folder instead of walking every file in it.
     ".claude/",
   ]),
-  // Icons come from the matchbook sprite. The two libraries are uninstalled; this keeps them out by habit.
+  // Icons come from the one sprite. The two libraries are uninstalled; this keeps them out by habit.
   {
     rules: {
       "no-restricted-imports": [
@@ -30,7 +30,7 @@ const eslintConfig = defineConfig([
             {
               group: ["lucide-react", "lucide-react/*", "@heroicons/react", "@heroicons/react/*"],
               message:
-                'Icons come from the matchbook sprite: <MbIcon id="..." /> from "@/components/matchbook/MbIcon". See docs/design-system.md.',
+                'Icons come from the sprite: <Icon id="..." /> from "@/components/shared/Icon". See docs/design-system.md.',
             },
           ],
         },
