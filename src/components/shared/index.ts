@@ -8,3 +8,4 @@ export { MoveToSelect } from "./MoveToSelect";
 export { StepButtons } from "./StepButtons";
 export { TeamMark } from "./TeamMark";
 export { TeamName } from "./TeamName";
+export { ScoreLine } from "./ScoreLine";
