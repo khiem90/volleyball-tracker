@@ -150,6 +150,7 @@ export const useMatchbookCompete = (): MbCompeteData => {
         return {
           name: team?.name ?? "Unknown",
           crest: crestForTeam(teamId, team?.name ?? ""),
+          ...(team?.color !== undefined && { color: team.color }),
         };
       };
 

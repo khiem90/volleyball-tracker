@@ -44,7 +44,14 @@ const buildTeams = (
   });
 
   const teamRefs = new Map<string, MbTeam>(
-    roster.map((t) => [t.id, { name: t.name, crest: crestForTeam(t.id, t.name) }])
+    roster.map((t) => [
+      t.id,
+      {
+        name: t.name,
+        crest: crestForTeam(t.id, t.name),
+        ...(t.color !== undefined && { color: t.color }),
+      },
+    ])
   );
   const refFor = (teamId: string): MbTeam =>
     teamRefs.get(teamId) ?? { name: "Unknown", crest: crestForTeam(teamId, "") };

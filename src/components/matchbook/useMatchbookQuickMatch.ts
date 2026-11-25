@@ -77,6 +77,7 @@ export const useMatchbookQuickMatch = (): MbQuickMatchData => {
       return {
         name: team?.name ?? "Unknown",
         crest: crestForTeam(teamId, team?.name ?? ""),
+        ...(team?.color !== undefined && { color: team.color }),
       };
     };
 

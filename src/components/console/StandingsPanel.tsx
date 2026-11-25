@@ -1,7 +1,7 @@
 "use client";
 
 import { Panel, PanelEmpty } from "@/components/matchbook/Panel";
-import { TeamMark } from "@/components/matchbook/Panel";
+import { TeamName } from "@/components/matchbook/Panel";
 import { courtLabel, type StandingsView } from "@/lib/console";
 import type { Tournament } from "@/types/game";
 import type { TeamLookup } from "./teamRefs";
@@ -19,7 +19,7 @@ const TeamCell = ({
 }) => (
   <td className={withdrawn ? "opacity-60" : undefined}>
     <span className="flex items-center gap-2">
-      <TeamMark team={team(teamId)} size={20} />
+      <TeamName team={team(teamId)} size={20} />
       {withdrawn && <span className="mb-kicker">Withdrawn</span>}
     </span>
   </td>

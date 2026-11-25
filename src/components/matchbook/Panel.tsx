@@ -1,5 +1,5 @@
 import Link from "next/link";
-import Image from "next/image";
+import { TeamMark } from "@/components/shared/TeamMark";
 import { MbIcon } from "./MbIcon";
 import type { MbFormResult, MbTeam } from "./types";
 
@@ -52,38 +52,13 @@ export const Panel = ({
   );
 };
 
+/** The old name for a team's mark. New code draws TeamMark from components/shared. */
 export const Crest = ({ team, size = 26 }: { team: MbTeam; size?: number }) => (
-  <Image
-    src={team.crest}
-    alt=""
-    width={size}
-    height={Math.round(size * (112 / 96))}
-    className="shrink-0"
-  />
+  <TeamMark name={team.name} color={team.color} size={size} />
 );
 
-export const TeamMark = ({
-  team,
-  size = 24,
-  reverse = false,
-  className = "",
-}: {
-  team: MbTeam;
-  size?: number;
-  reverse?: boolean;
-  className?: string;
-}) => (
-  <span
-    className={`inline-flex items-center gap-2 min-w-0 ${
-      reverse ? "flex-row-reverse" : ""
-    } ${className}`}
-  >
-    <Crest team={team} size={size} />
-    <span className="matchbook-display font-semibold text-[0.82rem] truncate">
-      {team.name}
-    </span>
-  </span>
-);
+/** The mark and name row that was called TeamMark here. Its home is components/shared. */
+export { TeamName } from "@/components/shared/TeamName";
 
 const FORM_COLORS: Record<MbFormResult, string> = {
   W: "var(--mb-green)",
