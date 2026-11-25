@@ -1,18 +1,12 @@
 import type { Metadata, Viewport } from "next";
-import { Outfit, Oswald } from "next/font/google";
+import { Figtree } from "next/font/google";
 import { Providers } from "@/components/Providers";
 import "./globals.css";
 
-const outfit = Outfit({
-  variable: "--font-outfit",
+// The one typeface, as a variable font, so every weight from 300 to 900 is one file.
+const figtree = Figtree({
+  variable: "--font-figtree",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800", "900"],
-});
-
-const oswald = Oswald({
-  variable: "--font-oswald",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -51,9 +45,11 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // The font's variable goes on <html> because the stylesheet's theme reads it
+  // on :root. On <body> it is one element too low and no screen gets the face.
   return (
-    <html lang="en">
-      <body className={`${outfit.variable} ${oswald.variable} font-sans antialiased`}>
+    <html lang="en" className={figtree.variable}>
+      <body className="font-sans antialiased">
         <Providers>{children}</Providers>
       </body>
     </html>

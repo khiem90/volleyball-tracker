@@ -1,6 +1,6 @@
 # 09: Oswald and Outfit never apply
 
-**Status:** needs-triage
+**Status:** resolved
 
 **Type:** task
 
@@ -24,3 +24,11 @@ it lands.
 
 Not fixed in the design-consistency branch so that the restyle stays a
 restyle.
+
+## Comments
+
+- 2026-11-25: Resolved by the app redesign, in
+  `.scratch/app-redesign/issues/01-role-tokens-figtree-and-the-contrast-check.md`.
+  Oswald and Outfit are gone. Figtree is the one typeface, and its font
+  variable sits on `<html>`, where the stylesheet's theme reads it. The design
+  guard fails if the variable moves back to `<body>`.
