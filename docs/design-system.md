@@ -1,13 +1,18 @@
 # Design system
 
-The app is moving from the matchbook design to the look in
-`.scratch/app-redesign/spec.md`. The role tokens, the two scales, and the
-typeface below are the new foundation, and new UI uses them. The sections
-after "Type" still describe the matchbook classes. Those keep working until
-each screen moves off them, and their colors now resolve to the role tokens.
-Light only. There is no dark mode and nothing is added for one. Read this
-before touching UI, and when something here and the stylesheet disagree, the
-stylesheet wins and this page needs a fix.
+The look is the one in `.scratch/app-redesign/spec.md`: white cards on a pale
+grey ground, one green for the next thing to tap, red for destructive actions
+only, and Figtree throughout. Light only. There is no dark mode and nothing is
+added for one.
+
+Read this before touching UI. When this page and `src/app/globals.css`
+disagree, the stylesheet wins and this page needs a fix.
+
+The app is part way through the move from the matchbook design. The tokens,
+the scales, and the shared pieces below are final, and new UI uses them. A
+screen that has not moved yet still writes the old class names, and each of
+those now draws the new piece. "Old names" near the end lists them. The dialog
+and the menus still have the old frame until their own rework lands.
 
 ## Role tokens
 
@@ -25,34 +30,34 @@ the opacity form, as in `bg-ink/55`. An inline style reads `var(--action)`.
 | `fill` | `#f1f3f4` | Grey buttons, chips, date tiles, score pills. |
 | `action` | `#087a4d` | The main button, live, confirmed, the active underline. |
 | `action-tint` | `#e2f4eb` | The background of a green chip. |
-| `danger` | `#cf3f32` | Destructive actions only. |
-| `danger-tint` | `#fff7f6` | The background of a red chip or notice. |
+| `danger` | `#cf3f32` | Destructive actions and error messages. |
+| `danger-tint` | `#fff7f6` | The background of an error message. |
 
-White (`#ffffff`) is the text on a green or red button. Team colors are the
-user's own and are painted as inline styles. They are the one color source
-outside this table.
+White (`#ffffff`, `text-white`) is the text on a green, black, or red button.
+Team colors are the user's own and are painted as inline styles. They are the
+one color source outside this table.
 
 `src/__tests__/design/tokens.test.ts` reads these values from the stylesheet
 and fails when a text pair drops under 4.5 to 1. The pairs are ink on surface
 and ground, ink-soft on surface, ground, and fill, white on action, action on
 surface and action-tint, white on danger, and danger on danger-tint. Danger
-sits at 4.76 to 1 on white, which is why its tint is nearly white. A stronger
-tint needs a darker danger first.
+sits at 4.76 to 1 on white, which is why its tint is nearly white. Danger on
+`fill` gives 4.28, so red text never goes on a grey button or a grey chip.
 
-### The old names
+### What green and red mean
 
-Each matchbook color resolves to a role, so a screen that still uses an old
-name already shows the new palette.
+Green is the next thing to tap, anything live, and anything confirmed. Red is
+a destructive action, its confirm, and an error message. Nothing else is red:
+live is green, a loss is soft ink on fill, and a draft or a completed
+tournament is a grey chip.
 
-| Old token | Role |
-| --- | --- |
-| `--mb-paper` | `ground` |
-| `--mb-paper-bright` | `surface` |
-| `--mb-navy` | `ink` |
-| `--mb-ink-muted`, `--mb-gold`, `--mb-plum` | `ink-soft` |
-| `--mb-rule` | `line` |
-| `--mb-coral`, `--mb-green`, `--mb-teal` | `action` |
-| `--mb-red` | `danger` |
+### The control edge
+
+`line` gives 1.16 to 1 on a white card, too faint to show where a field is.
+Form controls use `--control-line` instead, which is `ink-soft` at 75% and
+gives 3.27 to 1 on `surface`. It is not a role token and has no utility. The
+control classes carry it, and a control built by hand writes
+`border-ink-soft/75` for the same edge.
 
 ## Radius scale
 
@@ -62,8 +67,8 @@ and `rounded-none` squares a corner off.
 | Utility | Size | What it is for |
 | --- | --- | --- |
 | `rounded-card` | 14px | Cards and dialogs. |
-| `rounded-tile` | 10px | Tiles and square controls. |
-| `rounded-chip` | 8px | Small square chips and icon backings. A status chip is a pill. |
+| `rounded-tile` | 10px | Tiles, fields, and other square controls. |
+| `rounded-chip` | 8px | Icon backings, the checkbox, small square chips. A status chip is a pill. |
 | `rounded-pill` | full | Buttons and status chips. |
 
 A class in the stylesheet or an inline style reads `var(--radius-card)` and
@@ -74,90 +79,242 @@ its neighbours.
 Figtree is the only typeface. `src/app/layout.tsx` loads it as a variable font
 through `next/font/google` and sets `--font-figtree` on `<html>`, because the
 stylesheet's theme reads it on `:root`. Set on `<body>` it is one element too
-low, and that is why Oswald and Outfit never applied. Scores and other
-changing numbers use `tabular-nums`.
+low, and that is why the old theme's two fonts never applied.
 
 | Utility | Size | What it is for |
 | --- | --- | --- |
 | `text-page-title` | 28px on a phone, 30px from a tablet's width | A page's title. |
-| `text-title` | 16px | A card's title and a row's name. |
+| `text-title` | 16px | A card's title, a row's name, the text in a field, the main button's label. |
 | `text-body` | 15px | Body text. |
-| `text-label` | 14px | The label of a button or a control. |
-| `text-caption` | 13px | Secondary text. |
+| `text-label` | 14px | The label of a button or a link, a table cell. |
+| `text-caption` | 13px | Secondary text, a chip, a table's column heads. |
 | `text-tab` | 10.5px | A tab's label. |
 | `text-score` | 44px | A court's score on the console. |
+
+Write words in the case they should read in. No class forces uppercase, and
+the `uppercase` utility is not used on headings or labels. A number that
+changes in place, such as a score or a count, takes `tabular-nums`.
 
 `cn()` in `src/lib/utils.ts` knows the steps of both scales by name. A new
 step goes in the stylesheet and in that list together, or `cn()` takes
 `text-title` for a color and drops it beside `text-ink`.
 
-`.matchbook-display` and the `mb-*` classes that carried the old display face
-now set Figtree. They still uppercase their text until those classes are
-restyled.
+## Shared pieces
 
-## Radius, borders, and shadow
+The classes are in the components layer of `src/app/globals.css`, so a utility
+on the same element wins over them. The components are in
+`src/components/shared` and `src/components/ui`.
+`src/__tests__/design/sharedClasses.test.ts` reads the classes and holds them
+to the numbers on this page.
 
-The corner radius is 4px: `rounded-[4px]`, or nothing, because `.mb-panel`,
-`.mb-dialog`, `.mb-btn`, `.mb-input`, and the other classes carry it. The
-score box is 3px and the 11px form square is 2px. `rounded-full` is for
-circles only: the avatar, the live dot, the scoring page's 56px plus and minus
-buttons. Nothing goes above 4px.
+### Card
 
-Borders are 1.5px navy on panels, dialogs, menus, buttons, swatches, chips,
-the avatar ring, and the badge; the panel and the dialog add a 4px top rule.
-Hairlines are 1px in the rule color. A field is 1.5px in the rule color and
-turns navy on focus. The base layer gives every element a 2px coral outline on
-`focus-visible`; a control that hides that outline uses `ring-mb-coral`, and
-no other ring color exists.
+A card is a `surface` with a 14px radius, no border, and no shadow. It
+separates from the ground by its color alone. Rows inside it are divided by a
+`line` rule.
 
-One shadow exists, `--mb-shadow-panel` (`0 8px 22px rgba(57, 41, 23, 0.08)`),
-the soft brown lift under panels, dialogs, menus, the toast, and the
-fullscreen bar. `.mb-panel` and `.mb-dialog` carry it; anything else that
-needs it takes the `.mb-shadow-panel` class rather than spelling the value
-out. Nothing else casts one. Text gets no shadow except the big score
-(`.mb-score-text`).
+```tsx
+import { Card, CardEmpty, CardError, CARD_ROW } from "@/components/shared/Card";
 
-## Component classes
+<Card title="Live tournaments" icon="live" meta="2 live">
+  <ul className="divide-y divide-line">
+    <li>
+      <Link href={href} className={`flex items-center gap-3 ${CARD_ROW}`}>...</Link>
+    </li>
+  </ul>
+</Card>
+```
 
-In `src/app/globals.css`, all inside `@layer components` so a utility on the
-same element wins:
+- `Card` takes `title`, `icon`, `meta`, `action` with `href`, `className`, and `children`. Without a title it has no head.
+- The head shows the glyph on a grey backing, the title, and one thing on the right. `action` and `href` together make a text link there. Otherwise `meta` shows. A `meta` of plain text is written as secondary text, and anything else, such as a chip or a live tag, is drawn as it comes.
+- `CARD_ROW` is the class string for a tappable row: 44px at least, 16px side padding, and a hover wash.
+- `CardEmpty` says why a card has nothing to show, with one grey button or a control of the page's own under it. `CardError` is an error message in danger. It takes a `className`, so it also serves outside a card.
+- The classes behind them are `card`, `card-head`, `card-title`, `card-icon`, and `card-link`. `card-link` is also the text link at a card's foot and a page's way back.
 
-- Surfaces: `.matchbook-surface`, `.mb-panel`, `.mb-panel-head`, `.mb-panel-link`, `.mb-dialog`.
-- Type: `.matchbook-display`, `.mb-kicker`, `.mb-score-text`, `.mb-score-box`, `.mb-table` and `.mb-table-compact`.
-- Buttons: `.mb-btn` with one of `.mb-btn-navy`, `.mb-btn-coral`, `.mb-btn-red`, `.mb-btn-outline-navy`, `.mb-btn-outline`, `.mb-btn-outline-red`.
-- Fields: `.mb-input` (a wrapper around a bare `<input>`), `.mb-textarea`, `.mb-select-native`, `.mb-search`, `.mb-checkbox`.
-- Small pieces: `.mb-live-dot`, `.mb-form-square`, `.mb-spinner`, `.mb-shadow-panel`.
-
-In `src/components`: `Icon` (`shared/Icon.tsx`), `Panel` and
-`AddTeamsForm` (`matchbook/`), `Button`, `Badge`, `Avatar`, `Dialog`, and
-`DropdownMenu` (`ui/`), and `InlineSpinner`, `PageLoadingSpinner`, and
-`DeleteConfirmDialog` (`shared/`). `<Button>` renders the same classes as a
-plain `<button className="mb-btn mb-btn-navy">`; use whichever reads better in
-the file.
+A card fills the height of its grid cell. Add `h-auto` where it should not. A
+card clips at its round corners, so a focus ring that reaches past the card's
+edge is cut off. `CARD_ROW` and `card-link` draw theirs inside. Anything else
+that touches the edge needs `focus-visible:-outline-offset-2`.
 
 ### Which button
 
-- The main action: `mb-btn mb-btn-navy`, or `<Button>`. Save, Add, Start, Sign in, a dialog's confirm.
-- The one call to action on a screen: `mb-btn mb-btn-coral`. New tournament, Start a quick match, Undo in the toast. At most one per screen.
-- Cancel and secondary actions: `mb-btn mb-btn-outline-navy`, or `<Button variant="outline">`. Every dialog's Cancel, Back, Keep playing.
-- A light inline action beside content: `mb-btn mb-btn-outline` (coral outline). Copy a link, the add-teams form's second action, a row's small action.
-- Destructive: `mb-btn mb-btn-red`, or `<Button variant="destructive">`, only as the confirm of a destructive dialog. A row action that opens that dialog is `mb-btn mb-btn-outline-red` (Discard, Delete).
-- A text link in a panel head: `.mb-panel-link`.
+Four buttons, each a pill at least 44px tall. `<Button>` from
+`@/components/ui/button` writes the same classes, so use whichever reads
+better in the file.
 
-Every button is at least 44px tall through `.mb-btn`; do not shrink it. A busy
-button shows `<InlineSpinner />` in place of its glyph and keeps its label.
+| Class | Component | Look | Use it for |
+| --- | --- | --- | --- |
+| `btn btn-action` | `<Button variant="action">` | Green, white label, 52px | The one main action on a screen: Quick match, New tournament, Start, Score. Full width on a phone. |
+| `btn btn-ink` | `<Button>` | Black, white label | A row's own action, such as Resume or Add, and a dialog's main action. |
+| `btn btn-fill` | `<Button variant="outline">` | Grey, ink label | Secondary actions: Cancel, Back, Swap, Copy, a "won" button. |
+| `btn btn-danger` | `<Button variant="destructive">` | Red, white label | A destructive action and the confirm of its dialog: Delete, Discard, Remove, End. |
+
+- Green is the main action of a screen or of one card, such as each court's Score button. An action beside a green button is black or grey, never a second green.
+- Hover darkens the button, and the black pill lightens. Pressed goes one step further and the button shrinks a touch. Focus is a 2px ring with a 2px gap, green on the black and grey buttons and ink on the green and red ones. Disabled is 45% opacity with a cursor that says no.
+- A link drawn as a button has no disabled state of its own. Give it `aria-disabled="true"` for the disabled look.
+- A button that is only an icon is `<Button size="icon">`, a 44px circle, and carries an `aria-label`.
+- A busy button shows `<InlineSpinner />` in place of its glyph and keeps its label.
+- Do not shrink a button under 44px, and do not put the grey button on the ground. It is the ground's color and has no edge there. It belongs on a card or in the page header.
+
+### Chip
+
+A status chip is a small pill beside the thing it describes, so the name reads
+first and the status second.
+
+```tsx
+import { Chip } from "@/components/shared/Chip";
+import { TOURNAMENT_STATUS } from "@/lib/tournamentStatus";
+
+<Chip>Draft</Chip>
+<Chip tone="action">You're in</Chip>
+<Chip live>Live</Chip>
+
+const status = TOURNAMENT_STATUS[tournament.status];
+<Chip tone={status.tone} live={status.live}>{status.label}</Chip>
+```
+
+The default is `fill` with ink text. `tone="action"` is `action` on
+`action-tint`, for what is live or confirmed. `live` makes the chip green and
+puts the pulsing live dot before its words. The classes are `chip` and
+`chip-action`. No chip is red.
+
+### Date tile
+
+A date tile shows a short month over the day of the month, on `fill` with a
+10px radius. It leads a row wherever an RSVP list's scheduled time appears in
+a list.
+
+```tsx
+import { DateTile } from "@/components/shared/DateTile";
+
+<DateTile at={list.scheduledAt} zone={zone} />
+```
+
+`at` is the time in epoch milliseconds and `zone` is the viewer's time zone,
+as `deviceZone()` in `src/lib/rsvp.ts` gives it. The month and the day are
+read in that zone by `dateTileParts` in `src/lib/dateTile.ts`. The classes are
+`date-tile` and `date-tile-month`.
+
+### Team mark
+
+A team is drawn as its mark: a small shield with the team's initial on the
+team's own color. `TeamMark` in `src/components/shared/TeamMark.tsx` takes a
+`name`, a `color`, and a `size` in px (22 by default). Every place that drew
+one of the eight crest pictures draws the mark now, and the old `Crest`
+component is a wrapper around it until its callers move over.
+
+```tsx
+<TeamMark name={team.name} color={team.color} size={22} />
+```
+
+- The shield's corners are 28% on top and 44% at the foot. That shape is the
+  `.team-mark` class in `src/app/globals.css`, and it is the one radius that
+  is not a step of the scale. Do not spell it out anywhere else.
+- The letter is the name's first character in capitals, at half the mark's
+  size and weight 800. An empty name shows "?".
+- The letter is ink or white, whichever contrasts more with the team's
+  color. `letterColor(color)` in `src/lib/teamColors.ts` decides. The roster
+  palette is bright, and white on its yellow is 1.92 to 1, so most marks
+  carry an ink letter and only indigo and purple carry a white one. The
+  tests hold every palette color to 3 to 1, the level for a graphic.
+- A team with no color gets `fallbackColor(name)`, a palette color picked by
+  a hash of the name, so the same team gets the same color on every screen.
+  Case and outer spaces do not count. Pass no `color` and the mark does this
+  itself. The same function serves anything with a name and no color, such
+  as an RSVP by team.
+- The mark is `aria-hidden`, so the team's name always sits beside it. A
+  mark never stands alone.
+- The score line draws it at 22 in a row and 44 on a court.
+- Anything else that puts text on a team's color uses `letterColor` too. A
+  fixed white letter fails on yellow.
+
+`TeamName` in `src/components/shared/TeamName.tsx` is the mark with the
+team's name beside it, cut short when the row runs out of room. It takes a
+`team`, the mark's `size`, and `reverse` to put the name first.
+
+The shape a screen passes for a team is `Team` in `src/lib/teamShapes.ts`: a
+`name` and an optional `color`. A mixed team's entry carries its own name and
+color, so a mark drawn from `entryTeams()` shows a mixed team like any other.
+
+### Score line
+
+`ScoreLine` in `src/components/shared/ScoreLine.tsx` is one match on one
+line: a team, the score, the other team. It comes in two sizes. Each screen
+that shows a match moves to it as that screen is redesigned, and no match is
+drawn by hand after that.
+
+```tsx
+<ScoreLine home={home} away={away} homeScore={21} awayScore={15} />
+<ScoreLine size="court" home={home} away={away} homeScore={8} awayScore={11} />
+```
+
+- `size="row"`, the default, is a result in a list. Each name sits beside a
+  22px mark, with the two marks next to the score, and the score is 16px in a
+  `fill` chip. It is built from spans, so it can sit inside a link or a
+  button.
+- `size="court"` is the same line made large for a court on the console.
+  Each name sits under a 44px mark and the score is `text-score`, the
+  largest type on the page. `homeBelow` and `awayBelow` put a side's notes
+  or its swap control under its name.
+- The winner or the leader is bold in ink, and the other side's name and
+  score are dimmed to `ink-soft`. While the score is level, neither side is
+  dimmed.
+- Pass `winner` (`"home"` or `"away"`) once a match has one. A forfeit and an
+  instant win end with no points played, so the score alone cannot say who
+  won. `boldSide()` in `src/lib/scoreLine.ts` holds the rule.
+- Leave both scores out, or pass `null`, and the middle is a "vs" pill.
+- The two sides are equal columns and a long name is cut short, so the score
+  stays in the middle of the line whatever the names' lengths.
+- Scores use `tabular-nums`, so a digit holds its place as the score changes.
+
+### Form controls
+
+Every control is a 10px box on `surface` with the control edge. On focus the
+edge turns green under a 2px ring. Text in a control is 16px, the size below
+which a phone zooms the page when a field takes focus.
+
+| Class | What it is |
+| --- | --- |
+| `field` | The box around a bare `<input>`. An icon or a small button can sit inside the box beside the input. Put the class on a `<label>` or a `<span>`, not on the input. |
+| `field-area` | A `<textarea>`. |
+| `field-select` | A native `<select>`. The caller lays a `chevron-down` glyph over its right end. |
+| `field-search` | A search box: a glyph and a bare `<input>` of a fixed 9rem width. |
+| `field-check` | A checkbox, drawn in the stylesheet so it looks the same on every phone: an 8px-radius box that fills with `action` and a white tick. |
+
+- A label above a control is `text-caption font-medium text-ink-soft`.
+- A control with a problem adds `border-danger`, and the message under it is `text-caption font-medium text-danger` with `role="alert"`.
+- A disabled control turns `fill` with soft text.
+- `field`, `field-select`, and `field-search` are 44px tall. A checkbox is 22px, so its row or its label is the 44px target.
+- These controls sit on a card. On the ground the control edge drops just under 3 to 1.
+
+`Choice`, `LinkField`, `MoveToSelect`, `StepButtons`, and `AddTeamsForm` in
+`src/components/shared` are built from these.
+
+### Table
+
+`data-table` on a `<table>` gives column heads in soft ink over a `line` rule,
+rows divided by `line` rules, and tabular figures. Add `data-table-compact`
+for tighter columns with each cell kept on one line. Wrap a wide table in
+`overflow-x-auto`.
+
+### Small pieces
+
+- `live-dot` is the 7px green dot that pulses. `<Chip live>` carries one.
+- `spinner` is a 16px ring in the color of the text around it. `<InlineSpinner />` draws it. `<PageLoadingSpinner />` is the large one for a page that is loading.
+- `FormDots` and `FormLetters` from `@/components/shared/RecentForm` show a team's recent results. A win is green. A loss is soft ink.
+- `team-panel-score` is the soft shadow under the white digits on the scoring page's team-color panels. Nothing else has a text shadow.
 
 ## Icons
 
 Every icon is a `<symbol>` in `public/assets/matchbook/icons/sprite.svg`,
 rendered with `<Icon id="trash" size={14} />` from `@/components/shared/Icon`.
 The old name, `MbIcon`, still resolves until every screen has moved off it.
-The icon is `aria-hidden`; a button that is only an icon carries the
+The icon is `aria-hidden`, and a button that is only an icon carries the
 `aria-label`. Color comes from `currentColor`, so set a text color on the icon
-or its parent. Sizes in use: 14 inside a button, 16 in a panel title or a row,
-18 in a dialog title, 20 for the close and back controls, 24 on the scoring
-page. There is no bare tick; `check` is a circled tick. A left chevron is
-`chevron-left`, not a rotated `chevron-right`.
+or its parent. Sizes in use: 14 inside a button or a card's title, 16 in a
+row, 18 in a dialog title, 20 for the close and back controls, 24 on the
+scoring page. There is no bare tick, and `check` is a circled tick. A left
+chevron is `chevron-left`, not a rotated `chevron-right`.
 
 The drawings are the regular weight of Phosphor Icons, copied into the sprite.
 Phosphor is MIT licensed and its notice is `PHOSPHOR-LICENSE.txt` beside the
@@ -206,93 +363,20 @@ drawing leaves the grid, the weight, or `currentColor`. The sprite's URL
 carries a hash of the file, so an installed copy of the app fetches a changed
 sprite instead of its cached one.
 
-## The team mark
-
-A team is drawn as its mark: a small shield with the team's initial on the
-team's own color. `TeamMark` in `src/components/shared/TeamMark.tsx` takes a
-`name`, a `color`, and a `size` in px (22 by default). Every place that drew
-one of the eight crest pictures draws the mark now, and the old `Crest`
-component is a wrapper around it until its callers move over.
-
-```tsx
-<TeamMark name={team.name} color={team.color} size={22} />
-```
-
-- The shield's corners are 28% on top and 44% at the foot. That shape is the
-  `.team-mark` class in `src/app/globals.css`, and it is the one radius that
-  is not a step of the scale. Do not spell it out anywhere else.
-- The letter is the name's first character in capitals, at half the mark's
-  size and weight 800. An empty name shows "?".
-- The letter is ink or white, whichever contrasts more with the team's
-  color. `letterColor(color)` in `src/lib/teamColors.ts` decides. The roster
-  palette is bright, and white on its yellow is 1.92 to 1, so most marks
-  carry an ink letter and only indigo and purple carry a white one. The
-  tests hold every palette color to 3 to 1, the level for a graphic.
-- A team with no color gets `fallbackColor(name)`, a palette color picked by
-  a hash of the name, so the same team gets the same color on every screen.
-  Case and outer spaces do not count. Pass no `color` and the mark does this
-  itself. The same function serves anything with a name and no color, such
-  as an RSVP by team.
-- The mark is `aria-hidden`, so the team's name always sits beside it. A
-  mark never stands alone.
-- The score line draws it at 22 in a row and 44 on a court.
-- Anything else that puts text on a team's color uses `letterColor` too. A
-  fixed white letter fails on yellow.
-
-`TeamName` in `src/components/shared/TeamName.tsx` is the mark with the
-team's name beside it, cut short when the row runs out of room. It takes a
-`team`, the mark's `size`, and `reverse` to put the name first.
-
-The shape a screen passes for a team is `Team` in `src/lib/teamShapes.ts`: a
-`name` and an optional `color`. A mixed team's entry carries its own name and
-color, so a mark drawn from `entryTeams()` shows a mixed team like any other.
-
-## The score line
-
-`ScoreLine` in `src/components/shared/ScoreLine.tsx` is one match on one
-line: a team, the score, the other team. It comes in two sizes. Each screen
-that shows a match moves to it as that screen is redesigned, and no match is
-drawn by hand after that.
-
-```tsx
-<ScoreLine home={home} away={away} homeScore={21} awayScore={15} />
-<ScoreLine size="court" home={home} away={away} homeScore={8} awayScore={11} />
-```
-
-- `size="row"`, the default, is a result in a list. Each name sits beside a
-  22px mark, with the two marks next to the score, and the score is 16px in a
-  `fill` chip. It is built from spans, so it can sit inside a link or a
-  button.
-- `size="court"` is the same line made large for a court on the console.
-  Each name sits under a 44px mark and the score is `text-score`, the
-  largest type on the page. `homeBelow` and `awayBelow` put a side's notes
-  or its swap control under its name.
-- The winner or the leader is bold in ink, and the other side's name and
-  score are dimmed to `ink-soft`. While the score is level, neither side is
-  dimmed.
-- Pass `winner` (`"home"` or `"away"`) once a match has one. A forfeit and an
-  instant win end with no points played, so the score alone cannot say who
-  won. `boldSide()` in `src/lib/scoreLine.ts` holds the rule.
-- Leave both scores out, or pass `null`, and the middle is a "vs" pill.
-- The two sides are equal columns and a long name is cut short, so the score
-  stays in the middle of the line whatever the names' lengths.
-- Scores use `tabular-nums`, so a digit holds its place as the score changes.
-
 ## The dialog
 
-`src/components/ui/dialog.tsx` is the one dialog. `DialogContent` draws the
-navy overlay (`bg-mb-navy/55`), the `.mb-dialog` frame (paper-bright, 1.5px
-navy border, 4px top rule, 4px radius, the panel shadow, navy ink and the
-body font because it portals outside the surface), the fade and zoom, and the
-close control (sprite `close` at 20px, navy, 44px hit area, top right). Radix
-keeps the focus trap, Escape, and the labelling.
+`src/components/ui/dialog.tsx` is the one dialog. Radix keeps the focus trap,
+Escape, and the labelling. `DialogContent` draws the overlay, the frame, the
+fade and zoom, and the close control. The frame is `.mb-dialog` and still has
+the old theme's border and shadow. It becomes a white card when the dialogs
+are reworked, and this section is rewritten then.
 
 ```tsx
 <Dialog open={open} onOpenChange={onOpenChange}>
   <DialogContent className="sm:max-w-md">
     <DialogHeader>
       <DialogTitle>
-        <MbIcon id="trash" size={18} className="shrink-0" />
+        <Icon id="trash" size={18} className="shrink-0" />
         Delete this tournament?
       </DialogTitle>
       <DialogDescription>What happens, in one or two sentences.</DialogDescription>
@@ -300,7 +384,7 @@ keeps the focus trap, Escape, and the labelling.
     <DialogFooter>
       <Button variant="outline" className="sm:flex-1" onClick={onCancel}>Cancel</Button>
       <Button variant="destructive" className="sm:flex-1" onClick={onConfirm} disabled={isBusy}>
-        {isBusy ? <InlineSpinner /> : <MbIcon id="trash" size={14} />}
+        {isBusy ? <InlineSpinner /> : <Icon id="trash" size={14} />}
         Delete
       </Button>
     </DialogFooter>
@@ -308,28 +392,72 @@ keeps the focus trap, Escape, and the labelling.
 </Dialog>
 ```
 
-The title is display face, navy, with a leading glyph at 18px; it stays navy
-on a destructive dialog, where only the confirm button is red. The description
-is body text in the muted ink; pass it no color. The footer stacks the buttons
-full width on a phone with the main action on top and puts them side by side
-from `sm`, each `sm:flex-1`. A box inside a dialog (a score block, a kept-teams
-list, a play-in row) is paper or paper-bright with a 1px rule-color border
-(`border border-mb-rule`), the navy border and the 6% wash when selected. Only
-a box that is itself the result, like the guest dialog's winner box, takes the
-1.5px navy frame. Menus and the toast follow the same
-frame: `DropdownMenuContent` and `UndoToast` carry their own colors and
-`font-sans` for the same portal reason.
+The title stays ink on a destructive dialog, where only the confirm button is
+red. The description is secondary text, so pass it no color. The footer stacks
+the buttons full width on a phone with the main action on top and puts them
+side by side from `sm`, each `sm:flex-1`. A dialog portals to `<body>`, so the
+frame, the menu, and the toast each set their own ink and `font-sans`.
+
+## Old names
+
+Each old class is drawn by the same rule as its new name, so the two look
+alike. Each old component is a re-export of the new one. A screen moves by
+swapping the names, and the old ones are deleted when nothing uses them. In a
+folder on the guard's migrated list, an old name fails the build.
+
+| Old | New |
+| --- | --- |
+| `mb-panel` | `card` |
+| `mb-panel-head` | `card-head` |
+| `mb-panel-link` | `card-link` |
+| `mb-btn` | `btn` |
+| `mb-btn-coral` | `btn-action`. The old class stays 44px tall, and the new one is 52px. |
+| `mb-btn-navy` | `btn-ink` |
+| `mb-btn-outline-navy`, `mb-btn-outline` | `btn-fill` |
+| `mb-btn-outline-red`, `mb-btn-red` | `btn-danger` |
+| `mb-input` | `field` |
+| `mb-textarea` | `field-area` |
+| `mb-select-native` | `field-select` |
+| `mb-search` | `field-search` |
+| `mb-checkbox` | `field-check` |
+| `mb-table`, `mb-table-compact` | `data-table`, `data-table-compact` |
+| `mb-live-dot` | `live-dot` |
+| `mb-spinner` | `spinner` |
+| `mb-score-text` | `team-panel-score` |
+| `mb-score-box` | `chip` with `text-ink-soft` |
+| `mb-kicker` | `text-caption font-medium text-ink-soft` |
+| `matchbook-display` | No class. The type scale's utilities, and `tabular-nums` on a number. |
+| `matchbook-surface` | No class. `<body>` sets the ground and the ink. |
+| `mb-form-square` | `form-dot`, through `FormDots` |
+| `Panel`, `PanelEmpty`, `PanelError`, `PANEL_ROW` from `@/components/matchbook/Panel` | `Card`, `CardEmpty`, `CardError`, `CARD_ROW` from `@/components/shared/Card`. `Panel` still accepts `tone` and ignores it. |
+| `FormSquares`, `FormLetters` from `@/components/matchbook/Panel` | `FormDots`, `FormLetters` from `@/components/shared/RecentForm` |
+| `AddTeamsForm` from `@/components/matchbook/AddTeamsForm` | The same name from `@/components/shared/AddTeamsForm` |
+| `TOURNAMENT_STATUS` from `@/components/matchbook/tournamentStatus` | The same name from `@/lib/tournamentStatus` |
+| `Crest` from `@/components/matchbook/Panel` | `TeamMark` from `@/components/shared/TeamMark`, which takes a `name` and a `color` |
+| The `Mb` shapes from `@/components/matchbook/types` | The same shapes without the prefix from `@/lib/teamShapes` |
+| `@/components/matchbook/teamStats` | `@/lib/teamStats` |
+| `MbIcon` | `Icon` from `@/components/shared/Icon` |
+
+The old color tokens resolve to roles: `--mb-paper` to `ground`,
+`--mb-paper-bright` to `surface`, `--mb-navy` to `ink`, `--mb-ink-muted`,
+`--mb-gold`, and `--mb-plum` to `ink-soft`, `--mb-rule` to `line`,
+`--mb-coral`, `--mb-green`, and `--mb-teal` to `action`, and `--mb-red` to
+`danger`.
 
 ## Forbidden
 
 - The old token classes: `bg-background`, `text-foreground`, `bg-card`, `bg-popover`, `bg-primary`, `text-primary-foreground`, `bg-secondary`, `bg-muted`, `text-muted-foreground`, `bg-accent`, `text-destructive`, `border-border`, `border-input`, `ring-ring`, and every other utility built on `background`, `foreground`, `card`, `popover`, `primary`, `secondary`, `muted`, `accent`, `destructive`, `border`, `input`, or `ring`. `src/__tests__/design/tokens.test.ts` scans every source file outside the volleyball tools and fails on one.
-- `lucide-react` and `@heroicons/react`. Both are uninstalled and `eslint.config.mjs` rejects an import of either.
-- A radius above 4px on a matchbook surface: `rounded-xl` and up, `rounded-[8px]`, and so on. The same test catches these.
+- The old theme's names in new code: the `mb-` prefix, `Mb` on a component or a type, "matchbook", and the two old font names. The same test fails on one in any folder or file on its migrated list.
+- A radius off the scale. On the migrated list only `rounded-card`, `rounded-tile`, `rounded-chip`, `rounded-pill`, `rounded-full`, and `rounded-none` pass. Everywhere else the test still fails on `rounded-xl` and up and on an arbitrary radius above 4px.
 - `dark:` utilities. The design is light only.
-- Colors outside the palette: Tailwind's named colors (`slate-500`, `amber-200`), new hex values, oklch literals. Team colors are the exception.
-- Black overlays, backdrop blur, gradients, and any shadow other than the panel's.
-- One exception to the two rules above: the scoring page's team-color panels (`TeamScorePanel`) sit on the team color, not on paper, so they keep their translucent white controls and the amber Leading/Winner pill with its backdrop blur. Nothing else may use a named Tailwind color or backdrop blur.
-- `shadcn add` output as it comes. `components.json` still says `"iconLibrary": "lucide"`, so a generated component imports `lucide-react`; swap those imports for `Icon` before it is used, because lint refuses them.
+- Colors outside the role tokens: Tailwind's named colors (`slate-500`, `amber-200`), new hex values, oklch literals. Team colors are the exception.
+- Red on anything that is not a destructive action or an error. No red for live, for a loss, or for a status.
+- A border or a shadow on a card, and red text on `fill`.
+- Forced uppercase, by a class or by the `uppercase` utility on a heading or a label.
+- A tappable control under 44px tall.
+- `lucide-react` and `@heroicons/react`. Both are uninstalled and `eslint.config.mjs` rejects an import of either.
+- Black overlays, backdrop blur, and gradients. The one exception is the scoring page's team-color panels (`TeamScorePanel`), which sit on the team color and keep their translucent white controls and the amber Leading and Winner pill with its backdrop blur.
+- `shadcn add` output as it comes. `components.json` still says `"iconLibrary": "lucide"`, so a generated component imports `lucide-react`. Swap those imports for `Icon` before it is used, because lint refuses them.
 
 ## The legacy token block
 
@@ -337,6 +465,6 @@ The `:root` block at the foot of `src/app/globals.css` (`--background`,
 `--primary`, `--border`, and the rest) and the `@theme inline` maps at the top
 of the file are not a second palette. Only `src/components/volleyball/` and
 `src/app/(shell)/tools/volleyball-rotations/` still read them, plus the base
-layer's element defaults, and each one resolves to a matchbook value so those
-pages drift toward the design without being redesigned. The block goes with
-the volleyball redesign. Nothing new is written against it.
+layer's element defaults, and each one resolves to a role token through an old
+name, so those pages already show the new palette. The block goes when the
+volleyball tools are reworked. Nothing new is written against it.

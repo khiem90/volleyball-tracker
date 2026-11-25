@@ -5,25 +5,28 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 /*
- * The matchbook buttons. Each variant is a pair of the matchbook classes in
- * globals.css, so <Button> and <button className="mb-btn mb-btn-navy"> are the
- * same control. Hover, disabled, the 4px radius, and the 44px minimum come
- * from .mb-btn; focus is the base layer's coral outline.
+ * The four buttons. Each variant is a pair of the button classes in
+ * globals.css, so <Button variant="action"> and
+ * <button className="btn btn-action"> are the same control. The pill, the
+ * 44px minimum, hover, pressed, focus, and disabled all come from those
+ * classes.
  */
 const buttonVariants = cva(
-  "shrink-0 cursor-pointer disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0",
+  "shrink-0 disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        /* The main action: filled navy. */
-        default: "mb-btn mb-btn-navy",
-        /* The confirm of a destructive dialog: filled red. */
-        destructive: "mb-btn mb-btn-red",
-        /* Cancel and secondary actions: navy outline. */
-        outline: "mb-btn mb-btn-outline-navy",
+        /* The black pill: a row's own action, and a dialog's main action. */
+        default: "btn btn-ink",
+        /* The green main button, 52px tall: the one thing to tap next on a screen. */
+        action: "btn btn-action",
+        /* The grey button: Cancel and secondary actions. */
+        outline: "btn btn-fill",
+        /* The red button: a destructive action and its confirm. */
+        destructive: "btn btn-danger",
       },
       size: {
-        // The 44px minimum comes from .mb-btn; the default size adds nothing.
+        // The 44px minimum comes from the btn class; the default size adds nothing.
         default: "",
         icon: "size-11 p-0",
       },

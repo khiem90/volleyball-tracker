@@ -12,7 +12,7 @@ import type { TeamLookup } from "./teamRefs";
 export const LiveTag = ({ label = "Live" }: { label?: string }) => (
   <span className="flex items-center gap-1">
     <span className="mb-live-dot" />
-    <span className="matchbook-display text-[0.62rem] font-bold text-mb-red">{label}</span>
+    <span className="matchbook-display text-[0.62rem] font-bold text-action">{label}</span>
   </span>
 );
 

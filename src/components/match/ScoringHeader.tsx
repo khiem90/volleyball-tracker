@@ -6,7 +6,7 @@ import { statusLabel, type SeriesInfo } from "@/lib/scoring";
 import type { MatchStatus } from "@/types/game";
 
 const STATUS_COLOR: Record<MatchStatus, string> = {
-  in_progress: "var(--mb-red)",
+  in_progress: "var(--action)",
   completed: "var(--mb-green)",
   pending: "var(--mb-ink-muted)",
 };

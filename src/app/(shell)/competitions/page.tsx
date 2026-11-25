@@ -56,7 +56,7 @@ const BracketBox = ({ cell }: { cell: MbBracketCell }) => {
       {cell.live && (
         <div className="flex items-center justify-end gap-1 border-t border-mb-rule px-2 py-0.5">
           <span className="mb-live-dot" />
-          <span className="matchbook-display text-[0.56rem] font-bold text-mb-red">
+          <span className="matchbook-display text-[0.56rem] font-bold text-action">
             Live
           </span>
         </div>
@@ -408,7 +408,7 @@ export default function CompetitionsPage() {
                     <TeamName team={line.away} reverse className="justify-self-end" />
                     <span className="flex items-center gap-1">
                       <span className="mb-live-dot" />
-                      <span className="matchbook-display text-[0.62rem] font-bold text-mb-red">
+                      <span className="matchbook-display text-[0.62rem] font-bold text-action">
                         Live
                       </span>
                     </span>
