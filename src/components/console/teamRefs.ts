@@ -1,10 +1,10 @@
-import { crestForTeam, type MbTeam } from "@/components/matchbook/types";
+import { crestForTeam } from "@/components/matchbook/types";
+import type { Team } from "@/lib/teamShapes";
 import type { PersistentTeam } from "@/types/game";
 
-/** A team as the console shows it: matchbook crest and name, plus its color. */
-export interface ConsoleTeam extends MbTeam {
+/** A team as the console shows it: its name and color, plus its id. */
+export interface ConsoleTeam extends Team {
   id: string;
-  color?: string;
 }
 
 export type TeamLookup = (teamId: string) => ConsoleTeam;
