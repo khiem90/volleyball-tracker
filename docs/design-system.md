@@ -1,54 +1,99 @@
 # Design system
 
-The matchbook design is the only design. It is defined by the `mb-*` custom
-properties and component classes in `src/app/globals.css`, the icon sprite at
-`public/assets/matchbook/icons/sprite.svg`, and the rules on this page. Light
-only; there is no dark mode and nothing is added for one. Read this before
-touching UI, and when something here and the stylesheet disagree, the
+The app is moving from the matchbook design to the look in
+`.scratch/app-redesign/spec.md`. The role tokens, the two scales, and the
+typeface below are the new foundation, and new UI uses them. The sections
+after "Type" still describe the matchbook classes. Those keep working until
+each screen moves off them, and their colors now resolve to the role tokens.
+Light only. There is no dark mode and nothing is added for one. Read this
+before touching UI, and when something here and the stylesheet disagree, the
 stylesheet wins and this page needs a fix.
 
-## Palette
+## Role tokens
 
-Every color on a matchbook screen is one of these. The utilities are
-`bg-mb-*`, `text-mb-*`, `border-mb-*`, and the opacity form (`bg-mb-navy/55`).
+Every color is one of these, defined on `:root` in `src/app/globals.css` and
+named for what it does. The utilities are `bg-*`, `text-*`, `border-*`, and
+the opacity form, as in `bg-ink/55`. An inline style reads `var(--action)`.
 
 | Token | Value | What it is for |
 | --- | --- | --- |
-| `--mb-paper` | `#f7f0e4` | The page. `html`, `body`, and `.matchbook-surface` (with the paper-grain texture). |
-| `--mb-paper-bright` | `#fffaf1` | Anything that sits on the page: panels, dialogs, menus, fields, chips, the fill of outline buttons. |
-| `--mb-navy` | `#07324d` | Ink. Text, borders, the top rule, filled main buttons. At 55% it is the dialog overlay; at 6% (`rgba(7, 50, 77, 0.06)`) it is the hover and selected wash. |
-| `--mb-coral` | `#ee4b34` | The accent. The one call to action on a screen, active navigation, link hover, the focus ring, text selection, the `mb-checkbox` tick. |
-| `--mb-red` | `#cf3f32` | Danger. The confirm button of a destructive dialog, error text, invalid field borders, the live dot. |
-| `--mb-green` | `#16885f` | Good news. A winner, a completed match, a synced state. |
-| `--mb-gold` | `#e6a01f` | A highlight. The glyph in a navy panel head, the leader in standings, the history tab's star. |
-| `--mb-teal` | `#148f89` | A second status accent, used sparingly: tool cards, standings. |
-| `--mb-plum` | `#5a347d` | In the palette, unused by any screen today. Reach for it before inventing a purple. |
-| `--mb-ink-muted` | `#5d6c70` | Secondary text: descriptions, kickers, labels, placeholders, table headings. |
-| `--mb-rule` | `rgba(7, 50, 77, 0.28)` | Hairlines: table rows, field borders, menu separators, the border of a box inside a dialog. |
+| `ground` | `#f1f3f4` | The page behind the cards. |
+| `surface` | `#ffffff` | Cards, headers, the tab bar, dialogs. |
+| `ink` | `#15181b` | Primary text and the black pill button. |
+| `ink-soft` | `#626971` | Secondary text and inactive tab labels. |
+| `line` | `#eceef0` | Dividers inside a card. |
+| `fill` | `#f1f3f4` | Grey buttons, chips, date tiles, score pills. |
+| `action` | `#087a4d` | The main button, live, confirmed, the active underline. |
+| `action-tint` | `#e2f4eb` | The background of a green chip. |
+| `danger` | `#cf3f32` | Destructive actions only. |
+| `danger-tint` | `#fff7f6` | The background of a red chip or notice. |
 
-White (`#fff`) appears only as the text on a coral or red button. Team colors
-are the user's own and are painted as inline styles; they are the one color
-source outside this table, and the scoring page's full-bleed team panels are
-built on them.
+White (`#ffffff`) is the text on a green or red button. Team colors are the
+user's own and are painted as inline styles. They are the one color source
+outside this table.
+
+`src/__tests__/design/tokens.test.ts` reads these values from the stylesheet
+and fails when a text pair drops under 4.5 to 1. The pairs are ink on surface
+and ground, ink-soft on surface, ground, and fill, white on action, action on
+surface and action-tint, white on danger, and danger on danger-tint. Danger
+sits at 4.76 to 1 on white, which is why its tint is nearly white. A stronger
+tint needs a darker danger first.
+
+### The old names
+
+Each matchbook color resolves to a role, so a screen that still uses an old
+name already shows the new palette.
+
+| Old token | Role |
+| --- | --- |
+| `--mb-paper` | `ground` |
+| `--mb-paper-bright` | `surface` |
+| `--mb-navy` | `ink` |
+| `--mb-ink-muted`, `--mb-gold`, `--mb-plum` | `ink-soft` |
+| `--mb-rule` | `line` |
+| `--mb-coral`, `--mb-green`, `--mb-teal` | `action` |
+| `--mb-red` | `danger` |
+
+## Radius scale
+
+Four steps, and source uses no other radius. `rounded-full` is for a circle
+and `rounded-none` squares a corner off.
+
+| Utility | Size | What it is for |
+| --- | --- | --- |
+| `rounded-card` | 14px | Cards and dialogs. |
+| `rounded-tile` | 10px | Tiles and square controls. |
+| `rounded-chip` | 8px | Small square chips and icon backings. A status chip is a pill. |
+| `rounded-pill` | full | Buttons and status chips. |
+
+A class in the stylesheet or an inline style reads `var(--radius-card)` and
+its neighbours.
 
 ## Type
 
-Two faces, both loaded in `src/app/layout.tsx` through `next/font/google`.
+Figtree is the only typeface. `src/app/layout.tsx` loads it as a variable font
+through `next/font/google` and sets `--font-figtree` on `<html>`, because the
+stylesheet's theme reads it on `:root`. Set on `<body>` it is one element too
+low, and that is why Oswald and Outfit never applied. Scores and other
+changing numbers use `tabular-nums`.
 
-Oswald is the display face. `.matchbook-display` sets it with uppercase and
-0.02em tracking, and `.mb-btn`, `.mb-kicker`, `.mb-panel-link`, the table
-headings, the score box, and `.mb-select-native` carry it themselves. Dialog
-titles, panel titles, buttons, and kickers are display; a sentence of body
-text is not.
+| Utility | Size | What it is for |
+| --- | --- | --- |
+| `text-page-title` | 28px on a phone, 30px from a tablet's width | A page's title. |
+| `text-title` | 16px | A card's title and a row's name. |
+| `text-body` | 15px | Body text. |
+| `text-label` | 14px | The label of a button or a control. |
+| `text-caption` | 13px | Secondary text. |
+| `text-tab` | 10.5px | A tab's label. |
+| `text-score` | 44px | A court's score on the console. |
 
-Outfit is the body face through `--font-sans`. `.matchbook-surface`, `body`,
-`.mb-dialog`, and the menu content set it, because dialogs and menus portal to
-`<body>` and inherit nothing from the surface.
+`cn()` in `src/lib/utils.ts` knows the steps of both scales by name. A new
+step goes in the stylesheet and in that list together, or `cn()` takes
+`text-title` for a color and drops it beside `text-ink`.
 
-Known bug (issue 09): `next/font` puts `--font-oswald` and `--font-outfit` on
-`<body>` and the stylesheet reads them on `:root`, so neither face applies and
-the system sans shows instead. Write styles against the tokens as they are
-meant to work; the fix is a layout change, not a style change.
+`.matchbook-display` and the `mb-*` classes that carried the old display face
+now set Figtree. They still uppercase their text until those classes are
+restyled.
 
 ## Radius, borders, and shadow
 
