@@ -4,7 +4,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-outfit);
+  /* Figtree. src/app/layout.tsx sets --font-figtree on <html>, where this is read. */
+  --font-sans: var(--font-figtree), system-ui, sans-serif;
   --color-chart-5: var(--chart-5);
   --color-chart-4: var(--chart-4);
   --color-chart-3: var(--chart-3);
@@ -46,25 +47,113 @@
   --color-mb-red: var(--mb-red);
   --color-mb-ink-muted: var(--mb-ink-muted);
   --color-mb-rule: var(--mb-rule);
+
+  /* The role tokens: bg-ground, text-ink-soft, border-line, and so on. */
+  --color-ground: var(--ground);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-line: var(--line);
+  --color-fill: var(--fill);
+  --color-action: var(--action);
+  --color-action-tint: var(--action-tint);
+  --color-danger: var(--danger);
+  --color-danger-tint: var(--danger-tint);
 }
 
-/* ===================== Matchbook (home screen redesign) ===================== */
+/*
+ * The radius scale and the type scale. Static, so each step is on :root
+ * whether or not a utility uses it, and a class in this file or an inline
+ * style can read var(--radius-card) or var(--text-title).
+ */
+@theme static {
+  /* rounded-card: cards and dialogs. */
+  --radius-card: 14px;
+  /* rounded-tile: tiles and square controls. */
+  --radius-tile: 10px;
+  /* rounded-chip: small square chips and icon backings. A status chip is a pill. */
+  --radius-chip: 8px;
+  /* rounded-pill: buttons and status chips. */
+  --radius-pill: 9999px;
+
+  /* text-page-title: 28px on a phone, 30px from a tablet's width up. */
+  --text-page-title: clamp(1.75rem, 1.6rem + 0.6vw, 1.875rem);
+  --text-page-title--line-height: 1.1;
+  --text-page-title--letter-spacing: -0.02em;
+  /* text-title: a card's title and a row's name, 16px. */
+  --text-title: 1rem;
+  /* text-body: body text, 15px. */
+  --text-body: 0.9375rem;
+  /* text-label: the label of a button or a control, 14px. */
+  --text-label: 0.875rem;
+  /* text-caption: secondary text, 13px. */
+  --text-caption: 0.8125rem;
+  /* text-tab: a tab's label, 10.5px. */
+  --text-tab: 0.65625rem;
+  /* text-score: a court's score on the console, 44px. */
+  --text-score: 2.75rem;
+  --text-score--line-height: 1;
+}
+
+/*
+ * The role tokens. Every color in the app is one of these, named for what it
+ * does and never for its hue, so a second theme changes the values and no
+ * name. src/__tests__/design/tokens.test.ts reads them from here and fails
+ * when a text pair drops under 4.5 to 1.
+ */
+:root {
+  /* The page behind the cards. */
+  --ground: #f1f3f4;
+  /* Cards, headers, the tab bar, dialogs. */
+  --surface: #ffffff;
+  /* Primary text and the black pill button. */
+  --ink: #15181b;
+  /* Secondary text and inactive tab labels. */
+  --ink-soft: #626971;
+  /* Dividers inside a card. */
+  --line: #eceef0;
+  /* Grey buttons, chips, date tiles, score pills. */
+  --fill: #f1f3f4;
+  /* The main button, live, confirmed, the active underline. */
+  --action: #087a4d;
+  /* The background of a green chip. */
+  --action-tint: #e2f4eb;
+  /* Destructive actions only. */
+  --danger: #cf3f32;
+  /*
+   * The background of a red chip or notice. Danger sits at 4.76 to 1 on white,
+   * so its tint has to stay this close to white for danger text to reach 4.5.
+   */
+  --danger-tint: #fff7f6;
+}
+
+/*
+ * ===================== The old theme (matchbook) =====================
+ *
+ * Its names stay until every screen has moved to the role tokens, and each
+ * color resolves to the role that fits how it was used, so a screen that
+ * still reads an old name already shows the new palette. New code uses the
+ * role tokens above and none of the names from here down.
+ */
 
 :root {
-  --mb-paper: #f7f0e4;
-  --mb-paper-bright: #fffaf1;
-  --mb-navy: #07324d;
-  --mb-coral: #ee4b34;
-  --mb-teal: #148f89;
-  --mb-gold: #e6a01f;
-  --mb-plum: #5a347d;
-  --mb-green: #16885f;
-  --mb-red: #cf3f32;
-  --mb-ink-muted: #5d6c70;
-  --mb-rule: rgba(7, 50, 77, 0.28);
+  --mb-paper: var(--ground);
+  --mb-paper-bright: var(--surface);
+  --mb-navy: var(--ink);
+  /* The call to action, a winner or a completed match, a leader in standings. */
+  --mb-coral: var(--action);
+  --mb-green: var(--action);
+  --mb-teal: var(--action);
+  /* A draft, a middling reading, a highlight that is neither good news nor a warning. */
+  --mb-gold: var(--ink-soft);
+  --mb-plum: var(--ink-soft);
+  --mb-red: var(--danger);
+  --mb-ink-muted: var(--ink-soft);
+  --mb-rule: var(--line);
   /* The one shadow: the soft brown lift under panels, dialogs, menus, the toast, and the fullscreen bar. */
   --mb-shadow-panel: 0 8px 22px rgba(57, 41, 23, 0.08);
-  --mb-display-font: var(--font-oswald), "Arial Narrow", "Roboto Condensed", Impact, sans-serif;
+  /* There is one face now, so the old display font is the body font. */
+  --mb-display-font: var(--font-sans);
 
   /* Light only: native controls, scrollbars, and form fields stay light too. */
   color-scheme: light;
@@ -85,15 +174,20 @@
 /* In the components layer, so a utility on a matchbook element wins over it. */
 @layer components {
   .matchbook-surface {
-    color: var(--mb-navy);
-    background: var(--mb-paper) url("/assets/matchbook/textures/paper-grain.svg");
+    color: var(--ink);
+    background: var(--ground);
     font-family: var(--font-sans), system-ui, sans-serif;
   }
 
+  /*
+   * Headings and figures. Tabular figures, because most scores and counts
+   * carry this class and a digit must hold its place as the number changes.
+   */
   .matchbook-display {
     font-family: var(--mb-display-font);
     text-transform: uppercase;
     letter-spacing: 0.02em;
+    font-variant-numeric: tabular-nums;
   }
 
   .mb-panel {
@@ -207,7 +301,7 @@
   }
 
   .mb-btn-outline:hover {
-    background: rgba(238, 75, 52, 0.08);
+    background: color-mix(in srgb, var(--mb-coral) 8%, transparent);
     filter: none;
   }
 
@@ -218,7 +312,7 @@
   }
 
   .mb-btn-outline-navy:hover {
-    background: rgba(7, 50, 77, 0.06);
+    background: color-mix(in srgb, var(--mb-navy) 6%, transparent);
     filter: none;
   }
 
@@ -229,7 +323,7 @@
   }
 
   .mb-btn-outline-red:hover {
-    background: rgba(207, 63, 50, 0.08);
+    background: color-mix(in srgb, var(--mb-red) 8%, transparent);
     filter: none;
   }
   .mb-btn:disabled {
@@ -287,6 +381,8 @@
   /* The big score on a team-color panel: a soft shadow lifts the white digits off the color. */
   .mb-score-text {
     text-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    /* Tabular figures, so the digits hold their place as the score changes. */
+    font-variant-numeric: tabular-nums;
   }
 
   .mb-score-box {
@@ -302,6 +398,7 @@
     font-family: var(--mb-display-font);
     font-weight: 700;
     font-size: 0.95rem;
+    font-variant-numeric: tabular-nums;
   }
 
   .mb-table th {
@@ -320,6 +417,7 @@
     padding: 0.5rem 0.5rem;
     border-bottom: 1px solid var(--mb-rule);
     font-size: 0.85rem;
+    font-variant-numeric: tabular-nums;
   }
 
   .mb-table tr:last-child td {
@@ -454,9 +552,9 @@ body {
   overflow-x: hidden;
 }
 
-/* Paper shows past the page's edges when it is pulled beyond them. */
+/* The ground shows past the page's edges when it is pulled beyond them. */
 html {
-  background-color: var(--mb-paper);
+  background-color: var(--ground);
 }
 
 body {
@@ -478,12 +576,12 @@ body {
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb {
-  background-color: oklch(0.7 0.08 25 / 0.3);
+  background-color: color-mix(in srgb, var(--ink-soft) 35%, transparent);
   border-radius: 999px;
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background-color: oklch(0.5 0.15 25 / 0.5);
+  background-color: color-mix(in srgb, var(--ink-soft) 70%, transparent);
 }
 
 /* Prevent text selection on score panels */
@@ -506,10 +604,11 @@ body {
  * through bg-primary, text-muted-foreground, border-border, and the rest), by
  * the @theme inline maps at the top of this file, and by the base layer
  * defaults below. They go with the volleyball redesign, and the base layer
- * goes with them. Each one resolves to a matchbook value, so those pages
- * drift toward the design without being touched. Matchbook screens use the
- * mb-* tokens and classes above; src/__tests__/design/tokens.test.ts fails
- * if one of them reads a legacy token, and docs/design-system.md has the rules.
+ * goes with them. Each one resolves to a matchbook value, and that resolves
+ * to a role token, so those pages take the new palette without being
+ * touched. Matchbook screens use the mb-* tokens and classes above;
+ * src/__tests__/design/tokens.test.ts fails if one of them reads a legacy
+ * token, and docs/design-system.md has the rules.
  *
  * Mapping: background to paper; card and popover to paper-bright; foreground
  * to navy; primary to navy with a paper-bright foreground; secondary, muted,
@@ -533,13 +632,13 @@ body {
   --primary: var(--mb-navy);
   --primary-foreground: var(--mb-paper-bright);
 
-  --secondary: rgba(7, 50, 77, 0.06);
+  --secondary: color-mix(in srgb, var(--mb-navy) 6%, transparent);
   --secondary-foreground: var(--mb-navy);
 
-  --muted: rgba(7, 50, 77, 0.06);
+  --muted: color-mix(in srgb, var(--mb-navy) 6%, transparent);
   --muted-foreground: var(--mb-ink-muted);
 
-  --accent: rgba(7, 50, 77, 0.06);
+  --accent: color-mix(in srgb, var(--mb-navy) 6%, transparent);
   --accent-foreground: var(--mb-navy);
 
   --destructive: var(--mb-red);
@@ -564,22 +663,22 @@ body {
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-ground text-ink;
   }
 
   :focus-visible {
-    outline: 2px solid var(--mb-coral);
+    outline: 2px solid var(--action);
     outline-offset: 2px;
   }
 
   ::placeholder {
-    color: oklch(0.6 0.015 60);
+    color: var(--ink-soft);
     opacity: 1;
   }
 
   ::selection {
-    background: rgba(238, 75, 52, 0.2);
-    color: var(--mb-navy);
+    background: var(--action-tint);
+    color: var(--ink);
   }
 }
 
