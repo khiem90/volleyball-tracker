@@ -1,7 +1,7 @@
 import { useCallback, type ReactNode } from "react";
 import Link from "next/link";
 import { MbIcon } from "./MbIcon";
-import { Crest, FormLetters, FormSquares, Panel, PanelEmpty, TeamMark } from "./Panel";
+import { Crest, FormLetters, FormSquares, Panel, PanelEmpty, TeamName } from "./Panel";
 import { readinessColor } from "./teamStats";
 import type {
   MbFormRow,
@@ -144,7 +144,7 @@ export const TeamDirectoryPanel = ({
                       </td>
                     )}
                     <td>
-                      <TeamMark team={row.team} />
+                      <TeamName team={row.team} />
                     </td>
                     <td className="text-[0.76rem] text-mb-ink-muted">
                       {row.competitions.length === 0 ? (
@@ -538,7 +538,7 @@ export const RecentFormPanel = ({ rows }: { rows: MbFormRow[] }) => (
             key={row.team.name}
             className="flex items-center justify-between gap-2 px-3 py-2.5"
           >
-            <TeamMark team={row.team} size={22} className="min-w-0 flex-1" />
+            <TeamName team={row.team} size={22} className="min-w-0 flex-1" />
             <FormLetters form={row.form} />
             <span className="matchbook-display w-10 text-right text-[0.76rem] font-bold tabular-nums">
               {row.record}

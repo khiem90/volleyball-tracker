@@ -2,7 +2,7 @@
 
 import { useRef, useState, type FormEvent } from "react";
 import { MbIcon } from "@/components/matchbook/MbIcon";
-import { Panel, PanelEmpty, TeamMark } from "@/components/matchbook/Panel";
+import { Panel, PanelEmpty, TeamName } from "@/components/matchbook/Panel";
 import type { TeamRow } from "@/lib/console";
 import { isMixedTeam } from "@/lib/entries";
 import type { TeamLookup } from "./teamRefs";
@@ -171,7 +171,7 @@ export const TeamsPanel = ({
                           aria-hidden="true"
                         />
                       )}
-                      <TeamMark team={team(row.teamId)} size={20} />
+                      <TeamName team={team(row.teamId)} size={20} />
                       {row.withdrawn && <span className="mb-kicker">Withdrawn</span>}
                     </span>
                     {row.players && row.players.length > 0 && (

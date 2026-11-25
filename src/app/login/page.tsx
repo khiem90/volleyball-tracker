@@ -4,8 +4,8 @@ import { Suspense } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { MbIcon } from "@/components/matchbook/MbIcon";
-import { crestPath } from "@/components/matchbook/types";
 import { PageLoadingSpinner } from "@/components/shared";
+import { TeamMark } from "@/components/shared/TeamMark";
 import { useLoginPage } from "@/hooks/useLoginPage";
 
 const SHOWCASE_CRESTS = [
@@ -249,12 +249,7 @@ const LoginPageContent = () => {
           <div className="grid grid-cols-3 gap-x-6 gap-y-5">
             {SHOWCASE_CRESTS.map((crest) => (
               <div key={crest.slug} className="flex flex-col items-center gap-2">
-                <Image
-                  src={crestPath(crest.slug)}
-                  alt=""
-                  width={86}
-                  height={100}
-                />
+                <TeamMark name={crest.name} size={86} />
                 <span className="matchbook-display text-[0.9rem] font-bold tracking-[0.1em]">
                   {crest.name}
                 </span>
@@ -282,7 +277,7 @@ const LoginPageContent = () => {
             <span className="matchbook-display rounded-[2px] bg-mb-coral px-1.5 py-0.5 text-[0.6rem] font-bold tracking-[0.14em] text-white">
               Live
             </span>
-            <Image src={crestPath("surge")} alt="" width={26} height={30} />
+            <TeamMark name="Surge" size={26} />
             <span className="matchbook-display text-[0.85rem] font-bold tracking-[0.08em]">
               Surge
             </span>
@@ -292,7 +287,7 @@ const LoginPageContent = () => {
             <span className="matchbook-display text-[0.85rem] font-bold tracking-[0.08em]">
               Tide
             </span>
-            <Image src={crestPath("tide")} alt="" width={26} height={30} />
+            <TeamMark name="Tide" size={26} />
             <span className="mb-kicker text-[rgba(255,250,241,0.7)]">• Final</span>
           </div>
 

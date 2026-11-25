@@ -540,6 +540,24 @@
   }
 }
 
+/*
+ * The team mark, drawn by src/components/shared/TeamMark.tsx. The shield's
+ * corners are a shape of their own, 28% on top and 44% at the foot, and no
+ * step of the radius scale. The component sets the size, the letter's size,
+ * and the team's color inline. In the components layer, so a utility on the
+ * mark wins over it.
+ */
+@layer components {
+  .team-mark {
+    display: inline-grid;
+    place-items: center;
+    flex: none;
+    border-radius: 28% 28% 44% 44%;
+    font-weight: 800;
+    line-height: 1;
+  }
+}
+
 * {
   box-sizing: border-box;
 }
