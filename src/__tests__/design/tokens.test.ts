@@ -303,6 +303,14 @@ describe("the typeface", () => {
  * sorted place, and from then on the two rules below hold for everything in it.
  */
 const migrated: string[] = [
+  "components/shared/AddTeamsForm.tsx",
+  "components/shared/Card.tsx",
+  "components/shared/Chip.tsx",
+  "components/shared/DateTile.tsx",
+  "components/shared/RecentForm.tsx",
+  "components/ui/button.tsx",
+  "lib/dateTile.ts",
+  "lib/tournamentStatus.ts",
 ];
 
 /*
