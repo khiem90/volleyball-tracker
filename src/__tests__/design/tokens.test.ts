@@ -119,6 +119,131 @@ describe("the forbidden list", () => {
   });
 });
 
+describe("the icon sprite", () => {
+  const src = fileURLToPath(new URL("../../", import.meta.url));
+  const icons = fileURLToPath(new URL("../../../public/assets/matchbook/icons/", import.meta.url));
+  const sprite = readFileSync(join(icons, "sprite.svg"), "utf8");
+
+  /* The ids every screen may ask for. A screen never has to change which one it names. */
+  const requiredIds = [
+    "overview", "teams", "quick", "compete", "history", "tools",
+    "settings", "help", "bell", "plus", "export", "import", "share",
+    "print", "save", "search", "filter", "calendar", "clock", "location",
+    "volleyball", "bracket", "chart", "swap", "court", "check",
+    "warning", "live", "menu", "chevron-right", "chevron-down", "clipboard", "star",
+    "mail", "lock", "login", "cloud", "close", "trash",
+    "chevron-left", "flag", "maximize", "minimize", "undo", "crown", "minus", "trophy",
+    "play", "pencil", "remove-user", "logout",
+    "eye", "eye-off", "rsvp",
+  ];
+
+  /* The places source names a glyph. Group 1 is a bare string, group 2 an expression. */
+  const askingPatterns = [
+    /* The id of an icon tag, under either name of the component. */
+    /<(?:Mb)?Icon\b[^>]*?\sid=(?:"([^"]*)"|\{([^}]*)\})/g,
+    /* An icon prop, key, or default: icon="x", filledIcon: "x", icon = "x", icon={a ? "x" : "y"}. */
+    /\b\w*[iI]con\s*[:=]\s*(?:"([a-z]+(?:-[a-z]+)*)"|\{([^}]*)\})/g,
+    /* A lookup table of glyphs: const STAT_ICONS = { Wins: "compete" }. */
+    /\b[A-Z][A-Z_]*ICONS\b(?::[^=]*)?\s*=\s*()\{([^}]*)\}/g,
+  ];
+
+  /* Every icon id a piece of source text asks for, in order. */
+  function iconIdsIn(text: string): string[] {
+    const found: [number, string][] = [];
+    for (const pattern of askingPatterns) {
+      for (const match of text.matchAll(pattern)) {
+        const ids = match[1] ? [match[1]] : [...(match[2] ?? "").matchAll(/["']([^"']*)["']/g)].map((m) => m[1]);
+        ids.forEach((id, order) => found.push([match.index + order / 100, id]));
+      }
+    }
+    /* "..." stands for an id in the recipes written in comments. */
+    return found
+      .sort((a, b) => a[0] - b[0])
+      .map(([, id]) => id)
+      .filter((id) => id !== "...");
+  }
+
+  /* The ids from a list that have no symbol in a sprite. */
+  function missingFrom(spriteText: string, ids: string[]): string[] {
+    const drawn = new Set([...spriteText.matchAll(/<symbol\b[^>]*?\sid="([^"]+)"/g)].map((m) => m[1]));
+    return ids.filter((id) => !drawn.has(id));
+  }
+
+  it("reads the ids a piece of source asks for", () => {
+    expect(iconIdsIn('<Icon id="trash" size={14} />')).toEqual(["trash"]);
+    expect(iconIdsIn('<MbIcon id="chevron-left" size={20} />')).toEqual(["chevron-left"]);
+    expect(iconIdsIn('<Icon\n  id="chevron-down"\n  size={13}\n/>')).toEqual(["chevron-down"]);
+    expect(iconIdsIn('<Icon id={copied ? "check" : "clipboard"} size={14} />')).toEqual([
+      "check",
+      "clipboard",
+    ]);
+    expect(iconIdsIn('<Icon id={STAT_ICONS[stat.label] ?? "chart"} />')).toEqual(["chart"]);
+    expect(iconIdsIn('<Panel icon="calendar" title="Schedule">')).toEqual(["calendar"]);
+    expect(iconIdsIn('icon={controls.isClosed ? "undo" : "lock"}')).toEqual(["undo", "lock"]);
+    expect(iconIdsIn('{ id: "home", href: "/", icon: "overview", filledIcon: "overview-fill" }')).toEqual([
+      "overview",
+      "overview-fill",
+    ]);
+    expect(iconIdsIn('icon = "warning",')).toEqual(["warning"]);
+    expect(
+      iconIdsIn('const STAT_ICONS: Record<string, string> = {\n  Wins: "compete",\n  Teams: "teams",\n};'),
+    ).toEqual(["compete", "teams"]);
+  });
+
+  it("leaves alone what is not an icon id", () => {
+    const notIcons = [
+      '<input id="team-name" />',
+      '<section id={panelId(id)}>',
+      "icon?: string;",
+      "icon: string;",
+      '<Icon id={tab.icon} size={18} />',
+      /* A size variant of the button, not a glyph. */
+      'icon: "size-11 p-0",',
+      /* The placeholder in a recipe comment. */
+      '<Icon id="..." size={18} />',
+      'icons: { icon: "/icons/icon-192x192.png" }',
+    ];
+    for (const text of notIcons) {
+      expect(iconIdsIn(text), text).toEqual([]);
+    }
+  });
+
+  it("names the ids a sprite lacks", () => {
+    const small = '<svg><symbol id="plus" viewBox="0 0 256 256"/><symbol id="minus" viewBox="0 0 256 256"/></svg>';
+    expect(missingFrom(small, ["plus", "minus"])).toEqual([]);
+    expect(missingFrom(small, ["plus", "trash", "minus", "pluss"])).toEqual(["trash", "pluss"]);
+    const withoutRsvp = sprite.replace('<symbol id="rsvp"', '<symbol id="rsvp-old"');
+    expect(missingFrom(withoutRsvp, requiredIds)).toEqual(["rsvp"]);
+  });
+
+  it("still has all 54 ids", () => {
+    expect(new Set(requiredIds).size).toBe(54);
+    expect(missingFrom(sprite, requiredIds)).toEqual([]);
+  });
+
+  it("has every icon id the source asks for", () => {
+    const walk = (dir: string): string[] =>
+      readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+        const file = join(dir, entry.name);
+        if (entry.isDirectory()) return walk(file);
+        return /\.tsx?$/.test(entry.name) ? [file] : [];
+      });
+    /* This file spells out ids no sprite has. */
+    const guard = join("__tests__", "design") + sep;
+
+    const offenders: string[] = [];
+    for (const file of walk(src)) {
+      const path = relative(src, file);
+      if (path.startsWith(guard)) continue;
+      const asked = iconIdsIn(readFileSync(file, "utf8"));
+      for (const id of missingFrom(sprite, asked)) {
+        offenders.push(`${path.split(sep).join("/")} ${id}`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+});
+
 describe("the source outside the volleyball tools", () => {
   const src = fileURLToPath(new URL("../../", import.meta.url));
 
