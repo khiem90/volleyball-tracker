@@ -206,6 +206,78 @@ drawing leaves the grid, the weight, or `currentColor`. The sprite's URL
 carries a hash of the file, so an installed copy of the app fetches a changed
 sprite instead of its cached one.
 
+## The team mark
+
+A team is drawn as its mark: a small shield with the team's initial on the
+team's own color. `TeamMark` in `src/components/shared/TeamMark.tsx` takes a
+`name`, a `color`, and a `size` in px (22 by default). Every place that drew
+one of the eight crest pictures draws the mark now, and the old `Crest`
+component is a wrapper around it until its callers move over.
+
+```tsx
+<TeamMark name={team.name} color={team.color} size={22} />
+```
+
+- The shield's corners are 28% on top and 44% at the foot. That shape is the
+  `.team-mark` class in `src/app/globals.css`, and it is the one radius that
+  is not a step of the scale. Do not spell it out anywhere else.
+- The letter is the name's first character in capitals, at half the mark's
+  size and weight 800. An empty name shows "?".
+- The letter is ink or white, whichever contrasts more with the team's
+  color. `letterColor(color)` in `src/lib/teamColors.ts` decides. The roster
+  palette is bright, and white on its yellow is 1.92 to 1, so most marks
+  carry an ink letter and only indigo and purple carry a white one. The
+  tests hold every palette color to 3 to 1, the level for a graphic.
+- A team with no color gets `fallbackColor(name)`, a palette color picked by
+  a hash of the name, so the same team gets the same color on every screen.
+  Case and outer spaces do not count. Pass no `color` and the mark does this
+  itself. The same function serves anything with a name and no color, such
+  as an RSVP by team.
+- The mark is `aria-hidden`, so the team's name always sits beside it. A
+  mark never stands alone.
+- The score line draws it at 22 in a row and 44 on a court.
+- Anything else that puts text on a team's color uses `letterColor` too. A
+  fixed white letter fails on yellow.
+
+`TeamName` in `src/components/shared/TeamName.tsx` is the mark with the
+team's name beside it, cut short when the row runs out of room. It takes a
+`team`, the mark's `size`, and `reverse` to put the name first.
+
+The shape a screen passes for a team is `Team` in `src/lib/teamShapes.ts`: a
+`name` and an optional `color`. A mixed team's entry carries its own name and
+color, so a mark drawn from `entryTeams()` shows a mixed team like any other.
+
+## The score line
+
+`ScoreLine` in `src/components/shared/ScoreLine.tsx` is one match on one
+line: a team, the score, the other team. It comes in two sizes. Each screen
+that shows a match moves to it as that screen is redesigned, and no match is
+drawn by hand after that.
+
+```tsx
+<ScoreLine home={home} away={away} homeScore={21} awayScore={15} />
+<ScoreLine size="court" home={home} away={away} homeScore={8} awayScore={11} />
+```
+
+- `size="row"`, the default, is a result in a list. Each name sits beside a
+  22px mark, with the two marks next to the score, and the score is 16px in a
+  `fill` chip. It is built from spans, so it can sit inside a link or a
+  button.
+- `size="court"` is the same line made large for a court on the console.
+  Each name sits under a 44px mark and the score is `text-score`, the
+  largest type on the page. `homeBelow` and `awayBelow` put a side's notes
+  or its swap control under its name.
+- The winner or the leader is bold in ink, and the other side's name and
+  score are dimmed to `ink-soft`. While the score is level, neither side is
+  dimmed.
+- Pass `winner` (`"home"` or `"away"`) once a match has one. A forfeit and an
+  instant win end with no points played, so the score alone cannot say who
+  won. `boldSide()` in `src/lib/scoreLine.ts` holds the rule.
+- Leave both scores out, or pass `null`, and the middle is a "vs" pill.
+- The two sides are equal columns and a long name is cut short, so the score
+  stays in the middle of the line whatever the names' lengths.
+- Scores use `tabular-nums`, so a digit holds its place as the score changes.
+
 ## The dialog
 
 `src/components/ui/dialog.tsx` is the one dialog. `DialogContent` draws the
