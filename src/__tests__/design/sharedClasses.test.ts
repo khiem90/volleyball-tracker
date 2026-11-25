@@ -8,7 +8,8 @@ import { contrastRatio } from "@/lib/contrast";
 
 /*
  * The shared classes in src/app/globals.css: the card, the four buttons, the
- * chip, the date tile, the form controls, and the table. This file reads the
+ * dialog's frame, the menu, the ink bar, the chip, the date tile, the form
+ * controls, and the table. This file reads the
  * stylesheet's rules and holds them to the numbers in
  * .scratch/app-redesign/spec.md, which are the ones a thumb or an eye notices:
  * 44px to tap, 52px for the main button, a pill, a 14px card, readable text.
@@ -223,6 +224,95 @@ describe("the card", () => {
   });
 });
 
+describe("the dialog's frame", () => {
+  /* The overlay dims the page behind it, so the frame needs no edge and no lift. */
+  it("is a surface with a 14px radius, no border, and no shadow", () => {
+    const frame = classLook("dialog");
+    expect(frame.background).toBe("var(--surface)");
+    expect(frame["border-radius"]).toBe("var(--radius-card)");
+    expect(edges(frame)).toEqual([]);
+  });
+
+  /* A dialog opens in a portal on <body>, so it cannot count on a screen's own text color. */
+  it("writes in ink, readable on the frame", () => {
+    expect(classLook("dialog").color).toBe("var(--ink)");
+    expect(labelContrast(classLook("dialog"))).toBeGreaterThanOrEqual(4.5);
+  });
+
+  /* The three volleyball modals write the old name on a frame of their own. */
+  it("is drawn the same under its old name", () => {
+    expect(classLook("mb-dialog")).toEqual(classLook("dialog"));
+  });
+});
+
+describe("the lift", () => {
+  /* Brown was the old paper's shadow. This one is the ink, thinned. */
+  it("is one shadow mixed from ink, with no color of its own", () => {
+    const lift = classLook("lift");
+    expect(edges(lift)).toEqual(["box-shadow"]);
+    expect(lift["box-shadow"]).toContain("var(--ink)");
+    expect(lift["box-shadow"]).not.toMatch(/#[0-9a-f]{3}|rgba?\(/i);
+  });
+
+  /* The fullscreen bar on the scoring page still writes the old name. */
+  it("is drawn the same under its old name", () => {
+    expect(classLook("mb-shadow-panel")).toEqual(classLook("lift"));
+  });
+});
+
+describe("the menu", () => {
+  it("is a surface with a 10px radius", () => {
+    const menu = classLook("menu");
+    expect(menu.background).toBe("var(--surface)");
+    expect(menu["border-radius"]).toBe("var(--radius-tile)");
+    expect(labelContrast(menu)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it("gives each item 44px to tap", () => {
+    expect(px(classLook("menu-item")["min-height"])).toBeGreaterThanOrEqual(44);
+  });
+
+  it("washes the item the pointer or the arrow keys are on", () => {
+    expect(lookOf(".menu-item:focus").background).toBe("var(--fill)");
+  });
+
+  /*
+   * Sign out, Delete. Red text on the grey wash gives 4.28 to 1, and the
+   * danger tint is too near white to show on a white menu, so the row with
+   * the focus fills with danger and writes in white.
+   */
+  it("writes a destructive item in danger, and in white on danger once it has focus", () => {
+    const item = { ...classLook("menu"), ...classLook("menu-item"), ...classLook("menu-item-danger") };
+    expect(item.color).toBe("var(--danger)");
+    expect(labelContrast(item)).toBeGreaterThanOrEqual(4.5);
+    const focused = { ...item, ...lookOf(".menu-item:focus"), ...lookOf(".menu-item-danger:focus") };
+    expect(focused.background).toBe("var(--danger)");
+    expect(focused.color).toBe("#fff");
+    expect(labelContrast(focused)).toBeGreaterThanOrEqual(4.5);
+  });
+});
+
+describe("the ink bar", () => {
+  /* The undo toast and the reload banner. */
+  it("writes white on ink", () => {
+    const bar = classLook("ink-bar");
+    expect(bar.background).toBe("var(--ink)");
+    expect(bar.color).toBe("#fff");
+    expect(labelContrast(bar)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  /*
+   * The green button's focus ring is ink, which cannot be seen on ink, and the
+   * default green ring gives 3.3 to 1 there. On the bar every ring is white.
+   */
+  it.each([[".ink-bar :focus-visible"], [".ink-bar .btn:focus-visible"], [".ink-bar .mb-btn:focus-visible"]])(
+    "%s draws its ring in white",
+    (selector) => {
+      expect(lookOf(selector)["outline-color"]).toBe("#fff");
+    },
+  );
+});
+
 describe("the status chip", () => {
   const green = () => ({ ...classLook("chip"), ...classLook("chip-action") });
 
@@ -418,6 +508,8 @@ describe("the old class names", () => {
     ["mb-btn-outline-navy", "btn-fill"],
     ["mb-btn-outline", "btn-fill"],
     ["mb-btn-outline-red", "btn-danger"],
+    ["mb-dialog", "dialog"],
+    ["mb-shadow-panel", "lift"],
     ["mb-live-dot", "live-dot"],
     ["mb-spinner", "spinner"],
     ["mb-score-text", "team-panel-score"],

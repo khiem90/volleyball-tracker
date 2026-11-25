@@ -157,8 +157,6 @@
   --mb-red: var(--danger);
   --mb-ink-muted: var(--ink-soft);
   --mb-rule: var(--line);
-  /* The one shadow: the soft brown lift under panels, dialogs, menus, the toast, and the fullscreen bar. */
-  --mb-shadow-panel: 0 8px 22px rgba(57, 41, 23, 0.08);
   /* There is one face now, so the old display font is the body font. */
   --mb-display-font: var(--font-sans);
 
@@ -225,23 +223,101 @@
   }
 
   /*
-   * A dialog's frame: the panel's paper, border, top rule, radius, and shadow
-   * without the panel's flex layout. A dialog portals to <body>, outside
-   * .matchbook-surface, so it carries the ink color and the body font itself.
+   * A dialog's frame: a card's surface and radius without a card's layout. The
+   * overlay dims the page behind it, so it needs no border and no shadow. It
+   * sets its own ink and font, because a dialog opens in a portal on <body>.
    */
+  .dialog,
   .mb-dialog {
-    color: var(--mb-navy);
-    background: var(--mb-paper-bright);
-    border: 1.5px solid var(--mb-navy);
-    border-top-width: 4px;
-    border-radius: 4px;
-    box-shadow: var(--mb-shadow-panel);
+    color: var(--ink);
+    background: var(--surface);
+    border-radius: var(--radius-card);
     font-family: var(--font-sans), system-ui, sans-serif;
   }
 
-  /* The panel shadow on something that is not a panel: the menu, the toast, the fullscreen bar. */
+  /*
+   * The one shadow, for what floats over a page that is not dimmed: a menu,
+   * the undo toast, the fullscreen bar. A hairline marks the edge where white
+   * sits on white, and a soft drop lifts it. Both are the ink, thinned.
+   */
+  .lift,
   .mb-shadow-panel {
-    box-shadow: var(--mb-shadow-panel);
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--ink) 8%, transparent),
+      0 8px 24px color-mix(in srgb, var(--ink) 14%, transparent);
+  }
+
+  /*
+   * A bar on ink with white text: the undo toast and the reload banner. A
+   * green button sits on it as the one thing to tap. Every focus ring on the
+   * bar is white, because the green button's own ring is ink and the default
+   * green ring is faint on ink. The button selectors are spelled out so the
+   * bar outranks the ring each button sets for itself further down.
+   */
+  .ink-bar {
+    background: var(--ink);
+    color: #fff;
+  }
+
+  .ink-bar :focus-visible,
+  .ink-bar .btn:focus-visible,
+  .ink-bar .mb-btn:focus-visible {
+    outline-color: #fff;
+  }
+
+  /*
+   * A dropdown menu: a small surface that opens under its trigger, with the
+   * lift class beside it for its edge. Like a dialog it opens in a portal on
+   * <body>, so it sets its own ink and font.
+   */
+  .menu {
+    padding: 0.25rem;
+    border-radius: var(--radius-tile);
+    background: var(--surface);
+    color: var(--ink);
+    font-family: var(--font-sans), system-ui, sans-serif;
+  }
+
+  /* One row of a menu. The row under the pointer or the arrow keys has the focus, and is washed grey. */
+  .menu-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 2.75rem;
+    padding: 0 0.75rem;
+    border-radius: var(--radius-chip);
+    font-size: var(--text-label);
+    font-weight: 600;
+    cursor: pointer;
+    user-select: none;
+    outline-offset: -2px;
+  }
+
+  .menu-item:focus {
+    background: var(--fill);
+  }
+
+  .menu-item[data-disabled] {
+    opacity: 0.45;
+    pointer-events: none;
+  }
+
+  /*
+   * A destructive row. Red text fails on the grey wash and the danger tint is
+   * too near white to show on a white menu, so with the focus the row fills
+   * with danger and writes in white, like the red button.
+   */
+  .menu-item-danger {
+    color: var(--danger);
+  }
+
+  .menu-item-danger:focus {
+    background: var(--danger);
+    color: #fff;
+  }
+
+  .menu-item-danger:focus-visible {
+    outline-color: var(--ink);
   }
 
   /* A card's head: the title on the left, and on the right a link or the meta slot. */
