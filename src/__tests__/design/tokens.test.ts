@@ -119,6 +119,55 @@ describe("the forbidden list", () => {
   });
 });
 
+describe("the source outside the volleyball tools", () => {
+  const src = fileURLToPath(new URL("../../", import.meta.url));
+
+  /* The volleyball tools keep the old tokens until their redesign. */
+  const skipped = [
+    join("components", "volleyball"),
+    join("app", "(shell)", "tools", "volleyball-rotations"),
+    /* Defines the legacy token block and the base layer that reads it. */
+    join("app", "globals.css"),
+    /* This file, which spells the forbidden classes out. */
+    join("__tests__", "design"),
+  ];
+
+  const walk = (dir: string): string[] =>
+    readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+      const file = join(dir, entry.name);
+      if (entry.isDirectory()) return walk(file);
+      return /\.(tsx?|css)$/.test(entry.name) ? [file] : [];
+    });
+
+  const sourceFiles = walk(src).filter((file) => {
+    const path = relative(src, file);
+    return !skipped.some((prefix) => path === prefix || path.startsWith(prefix + sep));
+  });
+
+  it("reads the screens, the primitives, and the stylesheet's neighbours", () => {
+    const paths = sourceFiles.map((file) => relative(src, file).split(sep).join("/"));
+    expect(paths).toContain("components/ui/dialog.tsx");
+    expect(paths).toContain("components/shared/DeleteConfirmDialog.tsx");
+    expect(paths).toContain("app/(shell)/competitions/[id]/page.tsx");
+    expect(paths).not.toContain("components/volleyball/RotationControls.tsx");
+    expect(paths).not.toContain("app/(shell)/tools/volleyball-rotations/page.tsx");
+    expect(paths).not.toContain("app/globals.css");
+  });
+
+  it("uses no old token class, radius above 4px, or dark-mode utility", () => {
+    const offenders: string[] = [];
+    for (const file of sourceFiles) {
+      const lines = readFileSync(file, "utf8").split("\n");
+      lines.forEach((line, index) => {
+        for (const hit of violationsIn(line)) {
+          offenders.push(`${relative(src, file).split(sep).join("/")}:${index + 1} ${hit}`);
+        }
+      });
+    }
+    expect(offenders).toEqual([]);
+  });
+});
+
 describe("the icon sprite", () => {
   const src = fileURLToPath(new URL("../../", import.meta.url));
   const icons = fileURLToPath(new URL("../../../public/assets/matchbook/icons/", import.meta.url));
@@ -167,6 +216,39 @@ describe("the icon sprite", () => {
   function missingFrom(spriteText: string, ids: string[]): string[] {
     const drawn = new Set([...spriteText.matchAll(/<symbol\b[^>]*?\sid="([^"]+)"/g)].map((m) => m[1]));
     return ids.filter((id) => !drawn.has(id));
+  }
+
+  const attribute = (attributes: string, name: string): string | undefined =>
+    attributes.match(new RegExp(`(?:^|\\s)${name}="([^"]*)"`))?.[1];
+
+  /*
+   * What is wrong with a sprite's drawings, one "id: fault" per fault. A glyph
+   * sits on the 256 grid. Each shape is filled with the text color, or stroked
+   * with it at 16 units, the weight of the filled outlines.
+   */
+  function drawingFaultsIn(spriteText: string): string[] {
+    const faults: string[] = [];
+    for (const symbol of spriteText.matchAll(/<symbol\b([^>]*)>([\s\S]*?)<\/symbol>/g)) {
+      const id = attribute(symbol[1], "id");
+      const fault = (what: string) => faults.push(`${id}: ${what}`);
+      const grid = attribute(symbol[1], "viewBox");
+      if (grid !== "0 0 256 256") fault(`grid ${grid}`);
+      for (const [, tag, attributes] of symbol[2].matchAll(/<([a-z]+)\b([^>]*)>/g)) {
+        if (!["path", "rect", "circle", "line"].includes(tag)) {
+          fault(tag);
+          continue;
+        }
+        const fill = attribute(attributes, "fill");
+        const stroke = attribute(attributes, "stroke");
+        const width = attribute(attributes, "stroke-width");
+        if (fill === undefined) fault("fill missing");
+        else if (fill !== "currentColor" && fill !== "none") fault(`fill ${fill}`);
+        if (stroke !== undefined && stroke !== "currentColor") fault(`stroke ${stroke}`);
+        if (fill === "none" && stroke === undefined) fault("nothing drawn");
+        if (stroke !== undefined && width !== "16") fault(`stroke width ${width}`);
+      }
+    }
+    return faults;
   }
 
   it("reads the ids a piece of source asks for", () => {
@@ -221,6 +303,46 @@ describe("the icon sprite", () => {
     expect(missingFrom(sprite, requiredIds)).toEqual([]);
   });
 
+  it("has a filled drawing for each of the five tabs", () => {
+    const filled = ["overview-fill", "teams-fill", "compete-fill", "history-fill", "rsvp-fill"];
+    expect(missingFrom(sprite, filled)).toEqual([]);
+  });
+
+  it("names a drawing off the grid, off the weight, or in a color of its own", () => {
+    const good =
+      '<symbol id="a" viewBox="0 0 256 256"><path fill="currentColor" d="M0,0Z"/></symbol>' +
+      '<symbol id="b" viewBox="0 0 256 256"><path fill="none" stroke="currentColor" stroke-width="16" d="M0,0Z"/></symbol>';
+    expect(drawingFaultsIn(good)).toEqual([]);
+    expect(drawingFaultsIn('<symbol id="old" viewBox="0 0 24 24"><path fill="currentColor" d="M0,0Z"/></symbol>')).toEqual([
+      "old: grid 0 0 24 24",
+    ]);
+    expect(
+      drawingFaultsIn(
+        '<symbol id="thin" viewBox="0 0 256 256"><path fill="none" stroke="currentColor" stroke-width="12" d="M0,0Z"/></symbol>',
+      ),
+    ).toEqual(["thin: stroke width 12"]);
+    expect(
+      drawingFaultsIn('<symbol id="navy" viewBox="0 0 256 256"><path fill="#172a3a" d="M0,0Z"/></symbol>'),
+    ).toEqual(["navy: fill #172a3a"]);
+    /* With no fill of its own a shape is drawn black, whatever the text color. */
+    expect(drawingFaultsIn('<symbol id="bare" viewBox="0 0 256 256"><path d="M0,0Z"/></symbol>')).toEqual([
+      "bare: fill missing",
+    ]);
+    expect(
+      drawingFaultsIn('<symbol id="far" viewBox="0 0 256 256"><image href="https://example.com/a.svg"/></symbol>'),
+    ).toEqual(["far: image"]);
+  });
+
+  it("draws every glyph on one grid, in one weight, in the color of the text around it", () => {
+    expect(drawingFaultsIn(sprite)).toEqual([]);
+  });
+
+  it("keeps Phosphor's license notice beside it", () => {
+    const notice = readFileSync(join(icons, "PHOSPHOR-LICENSE.txt"), "utf8");
+    expect(notice).toContain("MIT License");
+    expect(notice).toContain("Copyright (c) 2023 Phosphor Icons");
+  });
+
   it("has every icon id the source asks for", () => {
     const walk = (dir: string): string[] =>
       readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -239,55 +361,6 @@ describe("the icon sprite", () => {
       for (const id of missingFrom(sprite, asked)) {
         offenders.push(`${path.split(sep).join("/")} ${id}`);
       }
-    }
-    expect(offenders).toEqual([]);
-  });
-});
-
-describe("the source outside the volleyball tools", () => {
-  const src = fileURLToPath(new URL("../../", import.meta.url));
-
-  /* The volleyball tools keep the old tokens until their redesign. */
-  const skipped = [
-    join("components", "volleyball"),
-    join("app", "(shell)", "tools", "volleyball-rotations"),
-    /* Defines the legacy token block and the base layer that reads it. */
-    join("app", "globals.css"),
-    /* This file, which spells the forbidden classes out. */
-    join("__tests__", "design"),
-  ];
-
-  const walk = (dir: string): string[] =>
-    readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-      const file = join(dir, entry.name);
-      if (entry.isDirectory()) return walk(file);
-      return /\.(tsx?|css)$/.test(entry.name) ? [file] : [];
-    });
-
-  const sourceFiles = walk(src).filter((file) => {
-    const path = relative(src, file);
-    return !skipped.some((prefix) => path === prefix || path.startsWith(prefix + sep));
-  });
-
-  it("reads the screens, the primitives, and the stylesheet's neighbours", () => {
-    const paths = sourceFiles.map((file) => relative(src, file).split(sep).join("/"));
-    expect(paths).toContain("components/ui/dialog.tsx");
-    expect(paths).toContain("components/shared/DeleteConfirmDialog.tsx");
-    expect(paths).toContain("app/(shell)/competitions/[id]/page.tsx");
-    expect(paths).not.toContain("components/volleyball/RotationControls.tsx");
-    expect(paths).not.toContain("app/(shell)/tools/volleyball-rotations/page.tsx");
-    expect(paths).not.toContain("app/globals.css");
-  });
-
-  it("uses no old token class, radius above 4px, or dark-mode utility", () => {
-    const offenders: string[] = [];
-    for (const file of sourceFiles) {
-      const lines = readFileSync(file, "utf8").split("\n");
-      lines.forEach((line, index) => {
-        for (const hit of violationsIn(line)) {
-          offenders.push(`${relative(src, file).split(sep).join("/")}:${index + 1} ${hit}`);
-        }
-      });
     }
     expect(offenders).toEqual([]);
   });
