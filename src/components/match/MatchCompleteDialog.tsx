@@ -79,7 +79,7 @@ export const FinalScore = ({
  * guest's result is taller, so the dialog stops 16px short of each edge and
  * scrolls inside.
  */
-export const RESULT_DIALOG = "max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-md";
+export const RESULT_DIALOG = "sm:max-w-md";
 
 /** The confirm before a result is recorded: the score, the winner, and a way back to playing. */
 export const MatchCompleteDialog = memo(function MatchCompleteDialog({
