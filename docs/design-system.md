@@ -632,7 +632,7 @@ neither does the dialog, because the overlay already sets it apart.
 - Forced uppercase, by a class or by the `uppercase` utility on a heading or a label.
 - A tappable control under 44px tall.
 - `lucide-react`, `@heroicons/react`, and `@phosphor-icons/react`. None is installed and `eslint.config.mjs` rejects an import of any of them.
-- Black overlays, backdrop blur, and gradients. The one exception is the scoring page's team-color panels (`TeamScorePanel`), which sit on the team color and keep their translucent white controls and the amber Leading and Winner pill with its backdrop blur.
+- Black overlays, backdrop blur, and gradients. The one exception is the scoring page: its team-color panels (`TeamScorePanel`), which sit on the team color and keep their translucent white controls and the amber Leading and Winner pill with its backdrop blur, and the `bg-black` ground `ScoringScreen` puts behind them in fullscreen. Each panel's color thins toward one corner and lets what is behind it through, so the black is part of how a fullscreen panel looks. The guard has no pattern for either, so they are held to this page by review.
 - `shadcn add` output as it comes. `components.json` names Phosphor as the icon library, because the sprite's drawings are Phosphor's. A generated component imports `@phosphor-icons/react`, or `lucide-react` from a CLI that does not know Phosphor. Neither is installed and lint refuses both. Swap the import for `Icon`, with the id the table under "Icons" gives for the glyph.
 
 ## The court's palette
