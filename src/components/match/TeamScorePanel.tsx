@@ -2,7 +2,7 @@
 
 import { memo } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { MbIcon } from "@/components/matchbook/MbIcon";
+import { Icon } from "@/components/shared/Icon";
 import type { Side } from "@/lib/scoring";
 
 /** The badge over a team: it leads while the match is played, it won once the match is over. */
@@ -80,8 +80,8 @@ export const TeamScorePanel = memo(function TeamScorePanel({
               exit={{ opacity: 0, scale: 0.8, y: -10 }}
               className="mb-2 flex items-center gap-1.5 rounded-full border border-amber-300/40 bg-amber-500/30 px-3 py-1 backdrop-blur-sm landscape:mb-1"
             >
-              <MbIcon id="crown" size={16} className="text-amber-200" />
-              <span className="matchbook-display text-[0.7rem] font-bold tracking-[0.12em] text-white">
+              <Icon id="crown" size={16} className="text-amber-200" />
+              <span className="text-[0.7rem] font-bold tracking-[0.12em] text-white">
                 {crowned === "winner" ? "Winner" : "Leading"}
               </span>
             </motion.div>
@@ -89,7 +89,7 @@ export const TeamScorePanel = memo(function TeamScorePanel({
         </AnimatePresence>
 
         <h2
-          className={`matchbook-display max-w-full px-2 text-center font-bold text-white/90 [overflow-wrap:anywhere] ${
+          className={`max-w-full tabular-nums px-2 text-center font-bold text-white/90 [overflow-wrap:anywhere] ${
             isFullscreen ? "mb-1 text-2xl md:text-3xl" : "mb-2 text-lg md:text-xl landscape:mb-1"
           }`}
         >
@@ -103,7 +103,7 @@ export const TeamScorePanel = memo(function TeamScorePanel({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -30, scale: 0.8 }}
             transition={{ type: "spring", stiffness: 300, damping: 25 }}
-            className={`mb-score-text inline-block min-w-[1.5ch] text-center font-black leading-none tracking-tighter text-white ${
+            className={`team-panel-score inline-block min-w-[1.5ch] text-center font-black leading-none tracking-tighter text-white ${
               isFullscreen
                 ? "text-[clamp(6rem,40vmin,20rem)]"
                 : "text-[clamp(4.5rem,24vmin,12rem)]"
@@ -121,9 +121,9 @@ export const TeamScorePanel = memo(function TeamScorePanel({
               aria-label={`Take a point from ${teamName}`}
               className={BUTTON}
             >
-              <MbIcon id="minus" size={24} />
+              <Icon id="minus" size={24} />
             </button>
-            <span className="matchbook-display text-[0.7rem] font-semibold tracking-[0.12em] text-white/60">
+            <span className="text-[0.7rem] font-semibold tracking-[0.12em] text-white/60">
               Tap to score
             </span>
             <button
@@ -132,13 +132,13 @@ export const TeamScorePanel = memo(function TeamScorePanel({
               aria-label={`Add a point to ${teamName}`}
               className={BUTTON}
             >
-              <MbIcon id="plus" size={24} />
+              <Icon id="plus" size={24} />
             </button>
           </div>
         )}
 
         {canScore && isFullscreen && (
-          <span className="matchbook-display mt-3 text-[0.7rem] font-semibold tracking-[0.12em] text-white/60">
+          <span className="mt-3 text-[0.7rem] font-semibold tracking-[0.12em] text-white/60">
             Tap to score
           </span>
         )}
