@@ -90,7 +90,8 @@ export const AdvancedSettings = ({
           {used.courts && (
             <Choice
               id="courts"
-              label={`${courtWords} in play`}
+              // The owner's word is kept in lower case, and this label starts with it.
+              label={`${courtWords.charAt(0).toUpperCase()}${courtWords.slice(1)} in play`}
               note={`Each ${courtWord} needs two teams; the rest wait in the queue.`}
               value={setup.courts}
               options={COURT_CHOICES.map((count) => ({
