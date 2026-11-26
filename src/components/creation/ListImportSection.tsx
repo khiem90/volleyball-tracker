@@ -9,12 +9,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { MbIcon } from "@/components/matchbook/MbIcon";
-import { InlineSpinner, MoveToSelect, StepButtons } from "@/components/shared";
+import { Icon, InlineSpinner, MoveToSelect, StepButtons, TeamMark } from "@/components/shared";
 import { RSVP_NAME_MAX } from "@/lib/rsvp";
 import type { ListImportView } from "./useListImport";
 
-const ALERT = "text-[0.78rem] font-medium text-mb-red";
+const ALERT = "text-caption font-medium text-danger";
 
 /** The owner's lists to import from, by-person and by-team alike. */
 const ImportPicker = ({ view }: { view: ListImportView }) => {
@@ -24,7 +23,7 @@ const ImportPicker = ({ view }: { view: ListImportView }) => {
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>
-            <MbIcon id="import" size={18} className="shrink-0" />
+            <Icon id="import" size={18} className="shrink-0" />
             Import from an RSVP list
           </DialogTitle>
           <DialogDescription>
@@ -35,13 +34,13 @@ const ImportPicker = ({ view }: { view: ListImportView }) => {
         </DialogHeader>
 
         {picker.choices === null ? (
-          <p className="text-[0.85rem] text-mb-ink-muted">
+          <p className="text-body text-ink-soft">
             {picker.hasLoadError
               ? "Your lists could not be loaded. Check your connection and reload."
               : "Loading your lists..."}
           </p>
         ) : picker.choices.length === 0 ? (
-          <p className="text-[0.85rem] text-mb-ink-muted">
+          <p className="text-body text-ink-soft">
             You have no RSVP lists yet. Create one from the RSVP tab.
           </p>
         ) : (
@@ -52,12 +51,10 @@ const ImportPicker = ({ view }: { view: ListImportView }) => {
                   type="button"
                   onClick={() => picker.choose(list)}
                   disabled={isBusy}
-                  className="flex min-h-11 w-full flex-col items-start gap-0.5 rounded-[4px] border border-mb-rule bg-mb-paper-bright px-3 py-2 text-left hover:border-mb-navy hover:bg-[rgba(7,50,77,0.06)] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:border-mb-rule disabled:hover:bg-mb-paper-bright"
+                  className="flex min-h-11 w-full cursor-pointer flex-col items-start gap-0.5 rounded-tile border border-transparent bg-fill px-3 py-2.5 text-left transition-colors hover:border-ink-soft/75 focus-visible:-outline-offset-2 disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:border-transparent"
                 >
-                  <span className="matchbook-display max-w-full truncate text-[0.85rem] font-semibold">
-                    {list.name}
-                  </span>
-                  <span className="text-[0.72rem] text-mb-ink-muted">{detail}</span>
+                  <span className="max-w-full truncate text-body font-semibold">{list.name}</span>
+                  <span className="text-caption text-ink-soft">{detail}</span>
                 </button>
               </li>
             ))}
@@ -83,7 +80,7 @@ const CloseOffer = ({ view }: { view: ListImportView }) => {
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>
-            <MbIcon id="lock" size={18} className="shrink-0" />
+            <Icon id="lock" size={18} className="shrink-0" />
             Close the list first?
           </DialogTitle>
           <DialogDescription>{closeOffer.description}</DialogDescription>
@@ -98,7 +95,7 @@ const CloseOffer = ({ view }: { view: ListImportView }) => {
             Cancel
           </Button>
           <Button className="sm:flex-1" onClick={closeOffer.confirm} disabled={isBusy}>
-            {isBusy ? <InlineSpinner /> : <MbIcon id="lock" size={14} />}
+            {isBusy ? <InlineSpinner /> : <Icon id="lock" size={14} />}
             {isBusy ? "Closing..." : "Close and import"}
           </Button>
         </DialogFooter>
@@ -112,13 +109,13 @@ type Dealing = NonNullable<Imported["dealing"]>;
 
 /** The team size stepper and Shuffle of a by-person import. Either one deals everyone again. */
 const DealControls = ({ dealing }: { dealing: Dealing }) => (
-  <div className="flex flex-col gap-1.5 border-t border-mb-rule px-3 py-2.5">
+  <div className="flex flex-col gap-1.5 border-t border-line px-4 py-3">
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div className="flex flex-col gap-0.5">
-        <span className="mb-kicker">Team size</span>
-        <span className="text-[0.85rem] font-semibold">{dealing.teamSize}</span>
+        <span className="text-caption font-medium text-ink-soft">Team size</span>
+        <span className="text-title font-bold tabular-nums">{dealing.teamSize}</span>
       </div>
-      <span className="flex gap-1">
+      <span className="flex gap-1.5">
         <StepButtons
           what="team size"
           value={dealing.teamSize}
@@ -126,16 +123,16 @@ const DealControls = ({ dealing }: { dealing: Dealing }) => (
           max={dealing.largestTeamSize}
           onChange={dealing.setTeamSize}
         />
-        <button type="button" onClick={dealing.shuffle} className="mb-btn mb-btn-outline">
-          <MbIcon id="swap" size={14} />
+        <button type="button" onClick={dealing.shuffle} className="btn btn-fill">
+          <Icon id="swap" size={16} />
           Shuffle
         </button>
       </span>
     </div>
-    <p className="text-[0.85rem] font-semibold" aria-live="polite">
+    <p className="text-body font-semibold" aria-live="polite">
       {dealing.summary}
     </p>
-    <p className="text-[0.72rem] text-mb-ink-muted">
+    <p className="text-caption text-ink-soft">
       No dealt team goes over the team size, and a size of 1 enters each person alone. Changing
       the size or shuffling deals everyone again, so rename teams and move people after that.
     </p>
@@ -146,7 +143,7 @@ const DealControls = ({ dealing }: { dealing: Dealing }) => (
 const teamLabel = (name: string, index: number) => name.trim() || `Team ${index + 1}`;
 
 /**
- * What a row of an imported team holds, by-team and mixed alike: its color,
+ * What a row of an imported team holds, by-team and mixed alike: its mark,
  * a name the owner can change, and a word on where it stands. `label`
  * names the field for a screen reader. A blank name and a clash both mark
  * the field, and a clash also replaces `status` with "Same name".
@@ -169,12 +166,8 @@ const TeamNameRow = ({
   const isInvalid = clashes || team.name.trim().length === 0;
   return (
     <>
-      <span
-        className="h-3 w-3 shrink-0 rounded-full border border-mb-navy"
-        style={{ background: color ?? "transparent" }}
-        aria-hidden="true"
-      />
-      <span className={`mb-input min-w-0 flex-1 ${isInvalid ? "border-mb-red" : ""}`}>
+      <TeamMark name={team.name} color={color} />
+      <span className={`field min-w-0 flex-1 ${isInvalid ? "border-danger" : ""}`}>
         <input
           type="text"
           value={team.name}
@@ -185,13 +178,15 @@ const TeamNameRow = ({
           aria-invalid={isInvalid ? true : undefined}
         />
       </span>
-      <span className="mb-kicker shrink-0">{clashes ? "Same name" : status}</span>
+      <span className="shrink-0 text-caption font-medium text-ink-soft">
+        {clashes ? "Same name" : status}
+      </span>
     </>
   );
 };
 
 /**
- * A by-person import's mixed teams in number order, each with its color, a
+ * A by-person import's mixed teams in number order, each with its mark, a
  * name the owner can change, and its players. A player moves through the
  * menu beside their name.
  */
@@ -213,7 +208,7 @@ const MixedTeams = ({
           : { id: other.team.id, name: teamLabel(other.team.name, otherIndex) },
       );
       return (
-        <li key={team.id} className="border-t border-mb-rule px-3 py-2">
+        <li key={team.id} className="border-t border-line px-4 py-2">
           <div className="flex min-h-11 items-center gap-3">
             <TeamNameRow
               team={team}
@@ -224,10 +219,11 @@ const MixedTeams = ({
               onRename={imported.rename}
             />
           </div>
-          <ul aria-label={`Players on ${teamLabel(team.name, index)}`} className="pl-6">
+          {/* The players line up under the team's name, past its mark. */}
+          <ul aria-label={`Players on ${teamLabel(team.name, index)}`} className="pl-[34px]">
             {players.map((person) => (
               <li key={person.id} className="flex min-h-11 items-center justify-between gap-3 py-1">
-                <span className="min-w-0 truncate text-[0.85rem]">{person.name}</span>
+                <span className="min-w-0 truncate text-body">{person.name}</span>
                 {others.length > 0 && (
                   <MoveToSelect
                     player={person.name}
@@ -257,27 +253,21 @@ export const ListImportSection = ({ view, problem }: { view: ListImportView; pro
   const shownProblem = imported?.problem ?? problem;
 
   return (
-    <div className="border-b border-mb-rule">
+    <div className="border-b border-line">
       {imported ? (
         <>
-          <div className="flex items-center justify-between gap-3 px-3 py-2">
+          <div className="flex items-center justify-between gap-3 px-4 py-2.5">
             <div className="min-w-0">
-              <span className="mb-kicker">Imported from</span>
-              <p className="matchbook-display truncate text-[0.85rem] font-semibold">
-                {imported.listName}
-              </p>
+              <span className="text-caption font-medium text-ink-soft">Imported from</span>
+              <p className="truncate text-body font-semibold">{imported.listName}</p>
             </div>
-            <button
-              type="button"
-              onClick={imported.remove}
-              className="mb-btn mb-btn-outline-navy shrink-0"
-            >
-              <MbIcon id="close" size={14} />
+            <button type="button" onClick={imported.remove} className="btn btn-fill shrink-0">
+              <Icon id="close" size={16} />
               Remove import
             </button>
           </div>
           {imported.rows.length === 0 ? (
-            <p className="border-t border-mb-rule px-3 py-3 text-[0.85rem] text-mb-ink-muted">
+            <p className="border-t border-line px-4 py-3 text-body text-ink-soft">
               This list has no confirmed RSVPs, so it brings no teams.
             </p>
           ) : imported.dealing ? (
@@ -297,7 +287,7 @@ export const ListImportSection = ({ view, problem }: { view: ListImportView; pro
               {imported.rows.map(({ team, rosterTeam, clashes }, index) => (
                 <li
                   key={team.id}
-                  className="flex min-h-11 items-center gap-3 border-t border-mb-rule px-3 py-2"
+                  className="flex min-h-11 items-center gap-3 border-t border-line px-4 py-2"
                 >
                   <TeamNameRow
                     team={team}
@@ -313,14 +303,14 @@ export const ListImportSection = ({ view, problem }: { view: ListImportView; pro
           )}
         </>
       ) : (
-        <div className="flex flex-col items-start gap-2 px-3 py-3">
+        <div className="flex flex-col items-start gap-2 px-4 py-3">
           <button
             type="button"
             onClick={view.picker.open}
             disabled={view.isBusy}
-            className="mb-btn mb-btn-outline"
+            className="btn btn-fill"
           >
-            {view.isBusy ? <InlineSpinner /> : <MbIcon id="import" size={14} />}
+            {view.isBusy ? <InlineSpinner /> : <Icon id="import" size={16} />}
             Import from an RSVP list
           </button>
           {view.error && (
@@ -331,11 +321,7 @@ export const ListImportSection = ({ view, problem }: { view: ListImportView; pro
         </div>
       )}
       {shownProblem && (
-        <p
-          id="import-problem"
-          role="alert"
-          className={`border-t border-mb-rule px-3 py-2 ${ALERT}`}
-        >
+        <p id="import-problem" role="alert" className={`border-t border-line px-4 py-2.5 ${ALERT}`}>
           {shownProblem}
         </p>
       )}

@@ -304,6 +304,8 @@ describe("the typeface", () => {
  */
 const migrated: string[] = [
   "app/(shell)/competitions/[id]/page.tsx",
+  "app/(shell)/competitions/new",
+  "app/(shell)/competitions/page.tsx",
   "app/(shell)/layout.tsx",
   "app/(shell)/page.tsx",
   "app/(shell)/quick-match",
@@ -320,6 +322,7 @@ const migrated: string[] = [
   "components/console/CourtsPanel.tsx",
   "components/console/MatchRow.tsx",
   "components/console/teamRefs.ts",
+  "components/creation",
   "components/dialogs",
   "components/match",
   "components/rsvpList/ListLinkPanel.tsx",
@@ -339,9 +342,12 @@ const migrated: string[] = [
   "components/shared/Brand.tsx",
   "components/shared/Card.tsx",
   "components/shared/Chip.tsx",
+  "components/shared/Choice.tsx",
   "components/shared/DateTile.tsx",
+  "components/shared/MoveToSelect.tsx",
   "components/shared/RecentForm.tsx",
   "components/shared/ScoreLine.tsx",
+  "components/shared/StepButtons.tsx",
   "components/shared/TeamMark.tsx",
   "components/shared/TeamName.tsx",
   "components/shell",
@@ -360,6 +366,7 @@ const migrated: string[] = [
   "hooks/useQuickMatchPage.ts",
   "hooks/useTeamsData.ts",
   "hooks/useTeamsPage.ts",
+  "hooks/useTournamentsPage.ts",
   "hooks/useWakeLock.ts",
   "lib/dateTile.ts",
   "lib/history.ts",
@@ -373,6 +380,7 @@ const migrated: string[] = [
   "lib/teamStats.ts",
   "lib/teamsData.ts",
   "lib/tournamentStatus.ts",
+  "lib/tournamentsPage.ts",
 ];
 
 /*
