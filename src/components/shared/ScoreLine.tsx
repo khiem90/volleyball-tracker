@@ -167,14 +167,17 @@ export const ScoreLine = ({
     );
   }
 
+  // The gaps are 2px under the picture's. With a phone's 16px gutters that is
+  // what lets a bold name of eleven letters, such as "Sand Sharks", stay whole
+  // at 390px.
   return (
-    <span className={cn(COLUMNS, "gap-2.5 text-body", className)}>
-      <span className="flex min-w-0 items-center justify-end gap-2">
+    <span className={cn(COLUMNS, "gap-2 text-body", className)}>
+      <span className="flex min-w-0 items-center justify-end gap-1.5">
         {name("home", home, "font-medium text-ink", "truncate")}
         <Mark team={home} />
       </span>
       <span className="flex min-w-[78px] justify-center">{middle}</span>
-      <span className="flex min-w-0 items-center gap-2">
+      <span className="flex min-w-0 items-center gap-1.5">
         <Mark team={away} />
         {name("away", away, "font-medium text-ink", "truncate")}
       </span>
