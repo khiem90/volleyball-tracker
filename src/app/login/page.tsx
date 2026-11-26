@@ -3,23 +3,12 @@
 import { Suspense } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { CardError, Icon, InlineSpinner, PageLoadingSpinner } from "@/components/shared";
+import { Brand, CardError, Icon, InlineSpinner, PageLoadingSpinner } from "@/components/shared";
 import { useLoginPage } from "@/hooks/useLoginPage";
-import { CREST_SRC, GOOGLE_MARK_SRC } from "@/lib/assetPaths";
+import { GOOGLE_MARK_SRC } from "@/lib/assetPaths";
 
 /* The words above a field. */
 const FIELD_LABEL = "mb-1 block text-caption font-medium text-ink-soft";
-
-/**
- * The crest and the wordmark, as a link home. This is the page's one copy of
- * the brand, so a shared brand piece can take its place here and nowhere else.
- */
-const Brand = () => (
-  <Link href="/" className="inline-flex min-h-11 items-center gap-2.5">
-    <Image src={CREST_SRC} alt="" width={36} height={42} priority />
-    <span className="text-title font-extrabold tracking-tight">Tournament Tracker</span>
-  </Link>
-);
 
 /** The shared spinner on the page's ground, while the app checks who is signed in. */
 const SignInLoading = () => (
@@ -64,7 +53,10 @@ const LoginPageContent = () => {
     <main className="flex min-h-dvh flex-col items-center justify-center bg-surface pt-[max(1.5rem,env(safe-area-inset-top))] pr-[max(1.25rem,env(safe-area-inset-right))] pb-[max(1.5rem,env(safe-area-inset-bottom))] pl-[max(1.25rem,env(safe-area-inset-left))]">
       {/* Full width on a phone, a centered column on anything wider. */}
       <div className="w-full max-w-[25rem]">
-        <Brand />
+        {/* The brand, as a link home. */}
+        <Link href="/" className="inline-flex min-h-11 items-center">
+          <Brand size="page" />
+        </Link>
 
         <h1 className="mt-6 text-page-title font-bold">
           {isSignUp ? "Join the Club" : "Welcome Back"}

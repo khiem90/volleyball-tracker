@@ -11,25 +11,60 @@ export interface ShellTab {
   label: string;
   /** The page the tab opens. */
   href: string;
-  /** The matchbook sprite icon. */
+  /** The tab's glyph in the sprite, as an outline. */
   icon: string;
+  /** The same glyph filled, for the tab the page sits under. */
+  filledIcon: string;
   /** Whether the tab's pages need an account. A guest is sent to sign in first. */
   needsAccount: boolean;
 }
 
 export const SHELL_TABS: readonly ShellTab[] = [
-  { id: "home", label: "Home", href: "/", icon: "overview", needsAccount: false },
-  { id: "teams", label: "Teams", href: "/teams", icon: "teams", needsAccount: true },
+  {
+    id: "home",
+    label: "Home",
+    href: "/",
+    icon: "overview",
+    filledIcon: "overview-fill",
+    needsAccount: false,
+  },
+  {
+    id: "teams",
+    label: "Teams",
+    href: "/teams",
+    icon: "teams",
+    filledIcon: "teams-fill",
+    needsAccount: true,
+  },
   {
     id: "tournaments",
     label: "Tournaments",
     href: "/competitions",
     icon: "compete",
+    filledIcon: "compete-fill",
     needsAccount: true,
   },
-  { id: "history", label: "History", href: "/summaries", icon: "history", needsAccount: true },
-  { id: "rsvp", label: "RSVP", href: "/rsvp", icon: "rsvp", needsAccount: true },
+  {
+    id: "history",
+    label: "History",
+    href: "/summaries",
+    icon: "history",
+    filledIcon: "history-fill",
+    needsAccount: true,
+  },
+  {
+    id: "rsvp",
+    label: "RSVP",
+    href: "/rsvp",
+    icon: "rsvp",
+    filledIcon: "rsvp-fill",
+    needsAccount: true,
+  },
 ];
+
+/** The glyph a tab is drawn with: filled for the tab the page sits under, an outline for the rest. */
+export const tabGlyph = (tab: ShellTab, active: boolean): string =>
+  active ? tab.filledIcon : tab.icon;
 
 /** The sign-in page, coming back to `returnTo` once signed in. */
 export const signInHref = (returnTo: string): string =>

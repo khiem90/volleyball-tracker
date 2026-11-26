@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { UnsyncedChangesError } from "@/lib/deviceData";
 import { signInHref } from "@/lib/shell";
-import { MbIcon } from "@/components/matchbook/MbIcon";
+import { Icon } from "@/components/shared/Icon";
 import { ConfirmDialog } from "@/components/console/ConfirmDialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -41,10 +41,7 @@ export const AccountMenu = () => {
 
   if (!user) {
     return (
-      <Link
-        href={signInHref(pathname)}
-        className="mb-btn mb-btn-outline-navy px-3 text-[0.72rem]"
-      >
+      <Link href={signInHref(pathname)} className="btn btn-fill">
         Sign in
       </Link>
     );
@@ -76,22 +73,21 @@ export const AccountMenu = () => {
       <DropdownMenu modal={false}>
         <DropdownMenuTrigger
           aria-label={`Account menu, signed in as ${name}`}
-          className="flex min-h-11 min-w-11 cursor-pointer items-center justify-center gap-1 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-mb-coral"
+          className="flex size-11 cursor-pointer items-center justify-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-action"
         >
           <Avatar>
             {user.photoURL && <AvatarImage src={user.photoURL} alt="" />}
             <AvatarFallback>{initial}</AvatarFallback>
           </Avatar>
-          <MbIcon id="chevron-down" size={12} className="text-mb-ink-muted" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-64">
           <DropdownMenuLabel>
-            <span className="mb-kicker block">Signed in as</span>
+            <span className="block text-caption font-medium text-ink-soft">Signed in as</span>
             {user.displayName && (
-              <span className="block truncate text-[0.9rem] font-semibold">{user.displayName}</span>
+              <span className="block truncate text-body font-semibold">{user.displayName}</span>
             )}
             {user.email && (
-              <span className="block truncate text-[0.8rem] font-normal text-mb-ink-muted">
+              <span className="block truncate text-caption font-normal text-ink-soft">
                 {user.email}
               </span>
             )}
@@ -106,11 +102,11 @@ export const AccountMenu = () => {
               void runSignOut(false);
             }}
           >
-            <MbIcon id="logout" size={16} />
+            <Icon id="logout" size={16} />
             {signOutState === "signing_out" ? "Signing out..." : "Sign out"}
           </DropdownMenuItem>
           {error && (
-            <p role="alert" className="px-3 pb-2 text-[0.78rem] font-medium text-mb-red">
+            <p role="alert" className="px-3 pb-2 text-caption font-medium text-danger">
               {error}
             </p>
           )}
