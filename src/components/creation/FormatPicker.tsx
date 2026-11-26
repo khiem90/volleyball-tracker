@@ -1,6 +1,6 @@
 "use client";
 
-import { MbIcon } from "@/components/matchbook/MbIcon";
+import { Icon } from "@/components/shared";
 import { FORMATS } from "@/lib/formats";
 import type { TournamentFormat } from "@/types/game";
 
@@ -21,7 +21,10 @@ const OPTIONS: { format: TournamentFormat; icon: string; how: string }[] = [
   },
 ];
 
-/** One button per format; the chosen one is outlined in coral. */
+/**
+ * One grey tile per format. The chosen one turns to the green tint with a
+ * green edge and a tick, so the choice does not rest on color alone.
+ */
 export const FormatPicker = ({
   value,
   onChange,
@@ -31,7 +34,7 @@ export const FormatPicker = ({
   onChange: (format: TournamentFormat) => void;
   problem?: string;
 }) => (
-  <div className="flex flex-col gap-2 p-3">
+  <div className="flex flex-col gap-2 p-4">
     <div
       role="radiogroup"
       aria-label="Format"
@@ -47,32 +50,31 @@ export const FormatPicker = ({
             role="radio"
             aria-checked={selected}
             onClick={() => onChange(format)}
-            className={`flex min-h-11 items-start gap-3 rounded-[4px] border-[1.5px] px-3 py-2.5 text-left transition-colors ${
+            className={`flex min-h-11 cursor-pointer items-start gap-3 rounded-tile border px-3 py-3 text-left transition-colors ${
               selected
-                ? "border-mb-coral bg-[rgba(238,75,52,0.08)]"
-                : "border-mb-rule bg-mb-paper-bright hover:border-mb-navy"
+                ? "border-action bg-action-tint"
+                : "border-transparent bg-fill hover:border-ink-soft/75"
             }`}
           >
-            <MbIcon
+            <Icon
               id={icon}
-              size={18}
-              className={`mt-0.5 shrink-0 ${selected ? "text-mb-coral" : "text-mb-navy"}`}
+              size={20}
+              className={`mt-0.5 shrink-0 ${selected ? "text-action" : "text-ink"}`}
             />
-            <span className="flex min-w-0 flex-col gap-0.5">
-              <span
-                className={`matchbook-display text-[0.85rem] font-bold ${selected ? "text-mb-coral" : ""}`}
-              >
-                {FORMATS[format].label}
+            <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+              <span className="text-title font-semibold">{FORMATS[format].label}</span>
+              <span className="text-label text-ink-soft">{how}</span>
+              <span className="text-caption font-medium text-ink-soft">
+                At least {FORMATS[format].minTeams} teams
               </span>
-              <span className="text-[0.76rem] leading-snug text-mb-ink-muted">{how}</span>
-              <span className="mb-kicker">At least {FORMATS[format].minTeams} teams</span>
             </span>
+            {selected && <Icon id="check" size={20} className="mt-0.5 shrink-0 text-action" />}
           </button>
         );
       })}
     </div>
     {problem && (
-      <p id="format-problem" role="alert" className="text-[0.78rem] font-medium text-mb-red">
+      <p id="format-problem" role="alert" className="text-caption font-medium text-danger">
         {problem}
       </p>
     )}

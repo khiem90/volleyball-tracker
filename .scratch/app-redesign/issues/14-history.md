@@ -13,7 +13,7 @@ Covers spec stories 31, 32, 60, and 61.
 **Status:** ready-for-agent
 
 - [x] History shows the same results in the same groups and order as today.
-- [ ] Every match is a row-size score line with marks, the winner in bold, and the loser dimmed.
+- [x] Every match is a row-size score line with marks, the winner in bold, and the loser dimmed.
 - [x] A completed tournament's group shows its name, format, date, and champion, with the champion's mark.
 - [x] Any filter or search on the page works as today in the new form controls.
 - [x] Deleting or discarding a record, where History allows it today, uses the shared destructive dialog.
@@ -24,6 +24,6 @@ Covers spec stories 31, 32, 60, and 61.
 
 ## Comments
 
-- Score lines: History draws every match through `MatchRow`, which ticket 09 owns and is moving to the shared `ScoreLine`. The bold winner and the dimmed loser reach History when 09 merges. This ticket did not edit `MatchRow`, so that criterion stays open until then.
+- Score lines: History draws every match through `MatchRow`, which ticket 09 moved to the shared `ScoreLine`. A merger saw both cards in the app after that merge, at 390px and 1280px: every match is a score line with the winner bold and the loser dimmed.
 - Groups, not applicable: History has no group per tournament. A completed tournament is one row that opens its console, and the ledger groups every match by day. Both are kept. The row shows the name, format, teams, matches, date, and "Winner: name" with the winner's mark where the star was.
 - Delete and discard, not applicable: History has neither, so it opens no dialog.

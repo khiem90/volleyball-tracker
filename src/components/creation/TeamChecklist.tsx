@@ -1,8 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
-import { AddTeamsForm } from "@/components/matchbook/AddTeamsForm";
-import { Panel, PanelEmpty } from "@/components/matchbook/Panel";
+import { AddTeamsForm, Card, CardEmpty, TeamMark } from "@/components/shared";
 import { emptyRosterMessage } from "@/lib/creation";
 import type { AddedTeams } from "@/lib/roster";
 import type { PersistentTeam } from "@/types/game";
@@ -57,18 +56,18 @@ export const TeamChecklist = ({
   const emptyMessage = emptyRosterMessage(imported?.rows.length ?? 0);
 
   return (
-    <Panel
+    <Card
       title="Teams"
       meta={
         <span className="flex items-center gap-3">
-          <span className="mb-kicker">
+          <span className="text-caption font-medium tabular-nums text-ink-soft">
             {enteredCount} {imported ? "entering" : "ticked"}
           </span>
           {roster.length > 0 && (
             <button
               type="button"
               onClick={() => onSetAll(!allTicked)}
-              className="mb-btn mb-btn-outline-navy"
+              className="btn btn-fill"
               aria-pressed={allTicked}
             >
               {allTicked ? "Untick all" : "Tick all"}
@@ -80,10 +79,10 @@ export const TeamChecklist = ({
       <AddTeamsForm onAdd={onAdd} />
       <ListImportSection view={listImport} problem={importProblem} />
       {roster.length === 0 ? (
-        emptyMessage && <PanelEmpty message={emptyMessage} />
+        emptyMessage && <CardEmpty message={emptyMessage} />
       ) : (
         <div
-          className="max-h-[50vh] overflow-auto"
+          className="max-h-[50vh] divide-y divide-line overflow-auto"
           role="group"
           aria-label="Roster"
           aria-describedby={problem ? "teams-problem" : undefined}
@@ -95,27 +94,25 @@ export const TeamChecklist = ({
               <label
                 key={team.id}
                 ref={team.id === revealId ? reveal : undefined}
-                className={`flex min-h-11 items-center gap-3 border-b border-mb-rule px-3 py-2 last:border-b-0 ${
+                className={`flex min-h-12 items-center gap-3 px-4 py-2 transition-colors ${
                   fromImport ? "cursor-default" : "cursor-pointer"
-                } ${checked ? "bg-[rgba(238,75,52,0.06)]" : "hover:bg-[rgba(7,50,77,0.04)]"}`}
+                } ${checked ? "bg-action-tint/40" : "hover:bg-ink/4"}`}
               >
                 <input
                   type="checkbox"
-                  className="mb-checkbox"
+                  className="field-check"
                   checked={checked}
                   disabled={fromImport}
                   onChange={() => onToggle(team.id)}
                   aria-label={`Tick ${team.name}`}
                 />
-                <span
-                  className="h-3 w-3 shrink-0 rounded-full border border-mb-navy"
-                  style={{ background: team.color ?? "transparent" }}
-                  aria-hidden="true"
-                />
-                <span className="matchbook-display min-w-0 flex-1 truncate text-[0.85rem] font-semibold">
-                  {team.name}
-                </span>
-                {fromImport && <span className="mb-kicker shrink-0">From the list</span>}
+                <TeamMark name={team.name} color={team.color} />
+                <span className="min-w-0 flex-1 truncate text-body font-medium">{team.name}</span>
+                {fromImport && (
+                  <span className="shrink-0 text-caption font-medium text-ink-soft">
+                    From the list
+                  </span>
+                )}
               </label>
             );
           })}
@@ -125,11 +122,11 @@ export const TeamChecklist = ({
         <p
           id="teams-problem"
           role="alert"
-          className="border-t border-mb-rule px-3 py-2 text-[0.78rem] font-medium text-mb-red"
+          className="border-t border-line px-4 py-2.5 text-caption font-medium text-danger"
         >
           {problem}
         </p>
       )}
-    </Panel>
+    </Card>
   );
 };

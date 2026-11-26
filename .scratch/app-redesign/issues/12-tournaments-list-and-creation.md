@@ -13,17 +13,21 @@ Covers spec stories 57, 58, 59, and 65.
 
 **Status:** ready-for-agent
 
-- [ ] The list shows the same tournaments in the same groups and order as today. Each row has the name, the format, a chip for draft, live, or completed, and its facts.
-- [ ] Duplicating and deleting a tournament are reached the same way as today and use the shared menu and dialog.
-- [ ] The action that starts a new tournament is the page's green main button.
-- [ ] The format picker shows each format as a selectable card with its name and description, with a clear selected state.
-- [ ] The team checklist shows each roster team's mark beside its name, and the count of chosen teams.
-- [ ] Importing from an RSVP list shows its rows with marks and the same "move to" controls as today.
-- [ ] Adding teams by typing names works as today in the new form controls.
-- [ ] The advanced settings are grouped in a card with the same options and defaults.
-- [ ] The step buttons are the shared buttons, with the forward step in green.
-- [ ] The files for the list and for creation contain no old-theme name and are on the guard's list of migrated folders.
-- [ ] The creation and tournaments tests pass unedited, along with the rest of the suite outside the design folder. Lint and the type checker are clean.
+- [x] The list shows the same tournaments in the same groups and order as today. Each row has the name, the format, a chip for draft, live, or completed, and its facts.
+- [x] Duplicating and deleting a tournament are reached the same way as today and use the shared menu and dialog.
+- [x] The action that starts a new tournament is the page's green main button.
+- [x] The format picker shows each format as a selectable card with its name and description, with a clear selected state.
+- [x] The team checklist shows each roster team's mark beside its name, and the count of chosen teams.
+- [x] Importing from an RSVP list shows its rows with marks and the same "move to" controls as today.
+- [x] Adding teams by typing names works as today in the new form controls.
+- [x] The advanced settings are grouped in a card with the same options and defaults.
+- [x] The step buttons are the shared buttons, with the forward step in green.
+- [x] The files for the list and for creation contain no old-theme name and are on the guard's list of migrated folders.
+- [x] The creation and tournaments tests pass unedited, along with the rest of the suite outside the design folder. Lint and the type checker are clean.
 - [ ] The owner has created a tournament of each format on a phone, and what they flagged is fixed.
 
 ## Comments
+
+- Not applicable, by ruling 1. The list is one group, live then draft, with completed tournaments in History. The page has no menu and no duplicate: delete is the bin button on a row, and it opens the shared delete dialog. Duplicate stays in the console's Settings.
+- Not applicable, by ruling 1. Creation has no steps. Its two buttons are "Save as draft" in grey and "Create and start" in green, on a card at the foot.
+- The Tournaments page keeps its dashboard of one selected tournament. Its court, schedule, and result rows are the shared score line under a centered label. Nothing here has been seen in a browser.

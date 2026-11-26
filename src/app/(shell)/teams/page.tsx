@@ -3,16 +3,15 @@
 import { useCallback, useMemo, useState } from "react";
 import { useTeamsPage } from "@/hooks/useTeamsPage";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
-import { PageLoadingSpinner } from "@/components/shared";
+import { AddTeamsForm, CardError, Chip, Icon, PageLoadingSpinner } from "@/components/shared";
+import { PageHeader } from "@/components/shell/PageHeader";
 import { TeamForm } from "@/components/dialogs/team-form";
 import {
   DeleteTeamsDialog,
   TeamInLiveTournamentDialog,
   type KeptTeamRow,
 } from "@/components/dialogs/delete-teams";
-import { MbIcon } from "@/components/matchbook/MbIcon";
-import { AddTeamsForm } from "@/components/matchbook/AddTeamsForm";
-import { useMatchbookTeams } from "@/components/matchbook/useMatchbookTeams";
+import { useTeamsData } from "@/hooks/useTeamsData";
 import {
   ClubSnapshotPanel,
   RecentFormPanel,
@@ -21,11 +20,11 @@ import {
   TeamReadinessPanel,
   TeamSelectionBar,
   UpcomingFixturesPanel,
-} from "@/components/matchbook/teamPanels";
+} from "@/components/teams/teamPanels";
 import type { KeptTeam } from "@/lib/entries";
 import { isOffline } from "@/lib/firestoreData";
 import type { DeletedTeams } from "@/lib/roster";
-import { listNames } from "@/lib/utils";
+import { listNames, plural } from "@/lib/utils";
 
 /** The one line the page shows after a delete. */
 const deleteNoticeFor = (outcome: DeletedTeams, nameOf: (id: string) => string): string => {
@@ -51,7 +50,7 @@ const nothingPending: PendingDelete = { ids: [], deleting: [], kept: [] };
 
 export default function TeamsPage() {
   const { isLoading, isAuthenticated } = useRequireAuth();
-  const data = useMatchbookTeams();
+  const data = useTeamsData();
   const {
     teams,
     isRosterLoading,
@@ -211,52 +210,28 @@ export default function TeamsPage() {
 
   return (
     <>
-      {/* Masthead */}
-      <header className="mb-5 flex flex-wrap items-center gap-x-6 gap-y-4">
-        <div className="flex min-w-0 items-center gap-4">
-          <h1 className="matchbook-display min-w-0 text-4xl font-bold leading-none tracking-[0.01em] sm:text-5xl">
-            Team <span className="text-mb-coral">Directory</span>
-          </h1>
-          <div className="flex flex-col items-center border-[2px] border-mb-coral px-2.5 py-1 text-mb-coral">
-            <span className="matchbook-display text-2xl font-bold leading-none tabular-nums">
-              {data.teamCount}
-            </span>
-            <span className="matchbook-display text-[0.6rem] font-bold tracking-[0.28em]">
-              Teams
-            </span>
-          </div>
-          <div className="hidden sm:block">
-            <p
-              className="matchbook-display text-[0.74rem] font-bold tracking-[0.1em]"
-              suppressHydrationWarning
-            >
-              {data.dateLine}
-            </p>
-            <p className="mb-kicker">
-              {data.matchesCompleted} matches completed
-            </p>
-          </div>
-        </div>
-      </header>
+      {/* The page has no main action. A team is added in the directory card's own strip. */}
+      <PageHeader
+        title="Teams"
+        status={<Chip className="tabular-nums">{plural(data.teamCount, "team")}</Chip>}
+        line={
+          <span suppressHydrationWarning>
+            {data.dateLine} • {data.matchesCompleted} matches completed
+          </span>
+        }
+      />
 
-      {rosterError && (
-        <p
-          role="alert"
-          className="mb-4 border-[1.5px] border-mb-red px-3 py-2 text-[0.8rem] font-medium text-mb-red"
-        >
-          {rosterError}
-        </p>
-      )}
+      {rosterError && <CardError message={rosterError} className="mb-4" />}
 
       {deleteNotice && (
-        <p role="status" className="mb-4 text-[0.8rem] font-medium text-mb-ink-muted">
+        <p role="status" className="mb-4 text-label font-medium text-ink-soft">
           {deleteNotice}
         </p>
       )}
 
       {/* Panel grid */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-12">
-        <div className="md:col-span-2 xl:col-span-7">
+        <div className="min-w-0 md:col-span-2 xl:col-span-7">
           <TeamDirectoryPanel
             rows={filteredRows}
             totalTeams={data.teamCount}
@@ -269,10 +244,10 @@ export default function TeamsPage() {
               <button
                 type="button"
                 onClick={toggleSelectMode}
-                className="mb-btn mb-btn-outline-navy px-3 py-1.5 text-[0.72rem]"
+                className="btn btn-fill"
                 aria-pressed={selectMode}
               >
-                <MbIcon id="check" size={13} />
+                <Icon id="check" size={14} />
                 {selectMode ? "Done" : "Select"}
               </button>
             }
@@ -292,23 +267,23 @@ export default function TeamsPage() {
             selection={selectMode ? { checked, onToggle: toggleChecked } : undefined}
           />
         </div>
-        <div className="md:col-span-2 xl:col-span-5 flex flex-col gap-4">
+        <div className="flex min-w-0 flex-col gap-4 md:col-span-2 xl:col-span-5">
           <ClubSnapshotPanel stats={data.snapshot} />
           <div className="flex-1">
             <TeamReadinessPanel rows={data.readiness} />
           </div>
         </div>
-        <div className="md:col-span-2 xl:col-span-5">
+        <div className="min-w-0 md:col-span-2 xl:col-span-5">
           <TeamProfilePanel
             row={selectedRow}
             onEdit={() => selectedTeam && handleEditTeam(selectedTeam)}
             onDelete={() => selectedTeam && requestDelete([selectedTeam.id])}
           />
         </div>
-        <div className="xl:col-span-4">
+        <div className="min-w-0 xl:col-span-4">
           <UpcomingFixturesPanel items={data.fixtures} />
         </div>
-        <div className="xl:col-span-3">
+        <div className="min-w-0 xl:col-span-3">
           <RecentFormPanel rows={data.recentForm} />
         </div>
       </div>
