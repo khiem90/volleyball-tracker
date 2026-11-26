@@ -267,6 +267,7 @@ const TournamentConsole = () => {
         open={page.regenerateOpen}
         onOpenChange={page.setRegenerateOpen}
         icon="swap"
+        tone="plain"
         title="Regenerate the scorer link?"
         description="Every phone on the current link is locked out the next time it saves a result. Share the new link with the helpers who should keep scoring."
         confirmLabel="Regenerate"
@@ -281,11 +282,20 @@ const TournamentConsole = () => {
           if (!open) page.cancelDecidingTap();
         }}
         icon="trophy"
+        tone="plain"
         title="This is the last match"
         description={`Recording ${
           page.decidingTap ? page.team(page.decidingTap.winnerId).name : "this team"
         } as the winner completes the tournament. Nothing in it can be changed after that.`}
-        confirmLabel={`${page.decidingTap ? page.team(page.decidingTap.winnerId).name : "Team"} won`}
+        // A long name is cut short and the word "won" stays.
+        confirmLabel={
+          <span className="flex min-w-0 gap-1">
+            <span className="truncate">
+              {page.decidingTap ? page.team(page.decidingTap.winnerId).name : "Team"}
+            </span>{" "}
+            <span className="shrink-0">won</span>
+          </span>
+        }
         busyLabel="Recording..."
         isBusy={false}
         onConfirm={page.confirmDecidingTap}
@@ -336,6 +346,7 @@ const TournamentConsole = () => {
           if (!open && !page.isApplying) page.setCourtsToClose(null);
         }}
         icon="court"
+        tone="plain"
         title={`Close ${
           page.courtsToClose ? courtLabel(tournament, page.courtsToClose.inPlay) : "the court"
         }?`}
