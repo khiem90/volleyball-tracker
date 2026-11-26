@@ -306,6 +306,7 @@ const migrated: string[] = [
   "app/(shell)/layout.tsx",
   "app/login",
   "components/shared/AddTeamsForm.tsx",
+  "components/shared/Brand.tsx",
   "components/shared/Card.tsx",
   "components/shared/Chip.tsx",
   "components/shared/DateTile.tsx",
