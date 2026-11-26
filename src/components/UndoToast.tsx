@@ -2,8 +2,7 @@
 
 import { memo } from "react";
 import { motion } from "framer-motion";
-import { MbIcon } from "@/components/matchbook/MbIcon";
-import { InlineSpinner } from "@/components/shared";
+import { Icon, InlineSpinner } from "@/components/shared";
 import type { UndoToastProps } from "@/types/undo";
 
 const toastVariants = {
@@ -13,10 +12,10 @@ const toastVariants = {
 };
 
 /**
- * The offer to take back an instant win on a rotation court: a navy bar in
- * the shape of the reload banner, with the saved result in paper, a coral
- * Undo, and a paper X. It renders outside .matchbook-surface, so it carries
- * the body font itself.
+ * The offer to take back an instant win on a rotation court: an ink bar
+ * with the saved result in white, a green Undo, and a white X. It floats at
+ * the foot of the screen, above the tab bar where there is one. It renders
+ * outside the page, on <body>, so it sets the body font itself.
  */
 export const UndoToast = memo(
   ({
@@ -57,10 +56,10 @@ export const UndoToast = memo(
         role="alert"
         aria-live="polite"
       >
-        <div className="flex items-center gap-2 rounded-[4px] border-[1.5px] border-mb-navy bg-mb-navy py-1 pr-1 pl-3 text-mb-paper-bright mb-shadow-panel">
-          <MbIcon id="check" size={18} className="shrink-0" />
+        <div className="ink-bar lift flex items-center gap-2 rounded-card py-1.5 pr-1.5 pl-4">
+          <Icon id="check" size={18} className="shrink-0" />
 
-          <span className="min-w-0 flex-1 truncate text-[0.85rem] font-medium">
+          <span className="min-w-0 flex-1 truncate text-label font-medium">
             {entry.description}
           </span>
 
@@ -69,7 +68,8 @@ export const UndoToast = memo(
             onClick={handleUndo}
             onKeyDown={handleKeyDown}
             disabled={isUndoing}
-            className="mb-btn mb-btn-coral shrink-0 px-4"
+            // The green button at the toast's 44px, not the main button's 52px.
+            className="btn btn-action min-h-11 shrink-0 px-4 text-label"
             aria-label={`Undo action${additionalUndos > 0 ? `, ${additionalUndos} more available` : ""}`}
             tabIndex={0}
           >
@@ -80,11 +80,11 @@ export const UndoToast = memo(
           <button
             type="button"
             onClick={onDismiss}
-            className="flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-[4px] text-mb-paper-bright transition-colors hover:bg-mb-paper/10"
+            className="flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full text-white transition-colors hover:bg-white/15"
             aria-label="Dismiss notification and clear undo history"
             tabIndex={0}
           >
-            <MbIcon id="close" size={20} />
+            <Icon id="close" size={20} />
           </button>
         </div>
       </motion.div>

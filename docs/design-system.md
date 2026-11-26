@@ -11,8 +11,7 @@ disagree, the stylesheet wins and this page needs a fix.
 The app is part way through the move from the matchbook design. The tokens,
 the scales, and the shared pieces below are final, and new UI uses them. A
 screen that has not moved yet still writes the old class names, and each of
-those now draws the new piece. "Old names" near the end lists them. The dialog
-and the menus still have the old frame until their own rework lands.
+those now draws the new piece. "Old names" near the end lists them.
 
 ## Role tokens
 
@@ -456,11 +455,18 @@ sprite instead of its cached one.
 
 ## The dialog
 
-`src/components/ui/dialog.tsx` is the one dialog. Radix keeps the focus trap,
-Escape, and the labelling. `DialogContent` draws the overlay, the frame, the
-fade and zoom, and the close control. The frame is `.mb-dialog` and still has
-the old theme's border and shadow. It becomes a white card when the dialogs
-are reworked, and this section is rewritten then.
+`src/components/ui/dialog.tsx` is the one dialog. It opens in the middle of
+the screen on a phone and on a desktop alike, as a white card over the page
+dimmed with `bg-ink/55`. Radix keeps the focus trap, Escape, the labelling,
+and the return of focus to the control that opened the dialog.
+`DialogContent` draws the overlay, the frame, the fade and zoom, and the close
+control.
+
+- The frame is the `dialog` class: `surface`, a 14px radius, 24px of padding, no border, and no shadow. The dimmed page is what sets it apart.
+- The title is `text-title` in bold ink, written in the case it should read in, with an 18px glyph before it. It stays ink on a destructive dialog, where only the confirm button is red.
+- The description is `text-body` in soft ink. Pass it no color.
+- The close control is a 44px circle in the top right corner, drawn by `DialogContent`. `DialogHeader` keeps the title clear of it.
+- The footer stacks its buttons full width on a phone with the main action on top, and puts them side by side from `sm`, each `sm:flex-1`.
 
 ```tsx
 <Dialog open={open} onOpenChange={onOpenChange}>
@@ -483,11 +489,79 @@ are reworked, and this section is rewritten then.
 </Dialog>
 ```
 
-The title stays ink on a destructive dialog, where only the confirm button is
-red. The description is secondary text, so pass it no color. The footer stacks
-the buttons full width on a phone with the main action on top and puts them
-side by side from `sm`, each `sm:flex-1`. A dialog portals to `<body>`, so the
-frame, the menu, and the toast each set their own ink and `font-sans`.
+### Which button in a dialog
+
+| Button | Component | Use it for |
+| --- | --- | --- |
+| Grey | `<Button variant="outline">` | Cancel, and any other way out that changes nothing. |
+| Black | `<Button>` | The main action of a dialog that destroys nothing: Save, Start, Confirm result. |
+| Red | `<Button variant="destructive">` | The confirm of a dialog that deletes, discards, removes, or ends something. |
+
+A dialog's main action is the black pill and never the green one. Green is the
+next step on the screen itself, and the dialog is a question about a step the
+user has already taken. The green button is also 52px tall, and a footer's
+buttons are all 44px so Cancel and the main action sit level.
+
+`ConfirmDialog` in `src/components/console/ConfirmDialog.tsx` is the recipe
+with a title, a sentence, and two buttons filled in. Its confirm is red by
+default. Pass `tone="plain"` for the black pill when the action destroys
+nothing, such as regenerating a schedule.
+
+A dialog, a menu, and the toast each open in a portal on `<body>`, outside the
+page, so each sets its own ink and font. `dialog`, `menu`, and `ink-bar` do
+that, and a floating piece built by hand adds `font-sans`.
+
+## Menus
+
+`src/components/ui/dropdown-menu.tsx` is the one menu. Radix keeps the arrow
+keys, Escape, and the return of focus to the trigger.
+
+```tsx
+<DropdownMenu>
+  <DropdownMenuTrigger aria-label="Tournament actions">...</DropdownMenuTrigger>
+  <DropdownMenuContent align="end">
+    <DropdownMenuItem onSelect={onDuplicate}>
+      <Icon id="clipboard" size={16} />
+      Duplicate
+    </DropdownMenuItem>
+    <DropdownMenuSeparator />
+    <DropdownMenuItem variant="destructive" onSelect={onDelete}>
+      <Icon id="trash" size={16} />
+      Delete
+    </DropdownMenuItem>
+  </DropdownMenuContent>
+</DropdownMenu>
+```
+
+- The content is the `menu` class with `lift`: `surface`, a 10px radius, and 4px of padding around the rows.
+- A row is `menu-item`: 44px tall, 14px semibold ink, an 8px radius, and a 16px glyph before the words. The row under the pointer or the arrow keys is washed with `fill`. A keyboard user also gets the focus ring, drawn inside the row.
+- A destructive row takes `variant="destructive"`, which adds `menu-item-danger`: red text, and white on red once the row has the focus. Red text fails on the grey wash, and the danger tint is too near white to show on a white menu.
+- `DropdownMenuLabel` is text that heads the menu, such as who is signed in. `DropdownMenuSeparator` is a `line` rule.
+- A menu holds actions. A status or a choice between values is a chip or a form control.
+
+## The toast and the reload banner
+
+Both are an `ink-bar`: ink ground, white text, and one green button. The
+`ink-bar` class also turns every focus ring inside it white, because the green
+button's own ring is ink and cannot be seen on ink.
+
+- The undo toast (`src/components/UndoToast.tsx`) floats at the foot of the screen with a 14px radius and `lift`. Its `bottom` adds `--tab-bar-space` and the safe-area inset, so it sits above the phone tab bar and the home indicator. Anything else fixed to the foot of the screen does the same.
+- The reload banner (`src/components/shell/UpdateBanner.tsx`) is a strip in the flow under the top bar or the scoring header. It covers nothing and needs no offset.
+- The button on a bar is `btn btn-action min-h-11 text-label`: the green button at 44px, since the bar is not the place for the 52px one.
+- The dismiss control is a 44px circle with a white glyph, washed `bg-white/15` on hover.
+- One toast shows at a time. The app has no toast for success or for an error. An error is a `CardError` beside what failed.
+
+## The lift
+
+`lift` is the one shadow: a hairline and a soft drop, both mixed from ink. It
+goes on what floats over a page that is not dimmed, which is the menu, the
+undo toast, and the scoring page's fullscreen bar. A card has no shadow, and
+neither does the dialog, because the overlay already sets it apart.
+
+## Avatar and badge
+
+- `Avatar` in `src/components/ui/avatar.tsx` is the account's picture: a 36px circle in `fill` showing the photo, or else the initial in bold ink. It has no ring. It sits on a `surface`, since on the ground a `fill` circle has no edge.
+- `Badge` in `src/components/ui/badge.tsx` is a small grey pill with ink text, drawn by the `chip` class. It marks a row with a word, such as "Held" or "You". For a status use `Chip`, which also has the green tone and the live dot.
 
 ## Old names
 
@@ -506,6 +580,8 @@ folder on the guard's migrated list, an old name fails the build.
 | `mb-btn-navy` | `btn-ink` |
 | `mb-btn-outline-navy`, `mb-btn-outline` | `btn-fill` |
 | `mb-btn-outline-red` | `btn-danger-quiet` |
+| `mb-dialog` | `dialog`. The three volleyball modals still write the old name on frames of their own. |
+| `mb-shadow-panel` | `lift` |
 | `mb-input` | `field` |
 | `mb-textarea` | `field-area` |
 | `mb-select-native` | `field-select` |
@@ -545,6 +621,8 @@ The old color tokens resolve to roles: `--mb-paper` to `ground`,
 - Red on anything that is not a destructive action or an error. No red for live, for a loss, or for a status.
 - A border or a shadow on a card, and red text on `fill`.
 - A filled red button on a row of a list. That one is `btn-danger-quiet`.
+- A shadow other than `lift`, and `lift` on anything that does not float over the page.
+- The green button in a dialog's footer.
 - Forced uppercase, by a class or by the `uppercase` utility on a heading or a label.
 - A tappable control under 44px tall.
 - `lucide-react` and `@heroicons/react`. Both are uninstalled and `eslint.config.mjs` rejects an import of either.

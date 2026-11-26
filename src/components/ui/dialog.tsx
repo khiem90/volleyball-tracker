@@ -4,19 +4,20 @@ import * as React from "react"
 import * as DialogPrimitive from "@radix-ui/react-dialog"
 
 import { cn } from "@/lib/utils"
-import { MbIcon } from "@/components/matchbook/MbIcon"
+import { Icon } from "@/components/shared/Icon"
 
 /*
- * The matchbook dialog. A centered paper panel in the .mb-dialog frame under a
- * navy overlay, with a navy uppercase title, muted description, a navy close
- * glyph with a 44px hit area, and a footer of 44px matchbook buttons that
- * stack on a phone and sit side by side from sm up. Radix keeps the focus
- * trap, Escape, and the labelling; tw-animate-css keeps the fade and zoom.
+ * The one dialog. A white card in the middle of the screen, over the page
+ * dimmed with ink. It has a 16px title in ink, a description in soft ink, a
+ * close control with a 44px target, and a footer of pill buttons that stack
+ * on a phone and share a row from sm up. Radix keeps the focus trap, Escape,
+ * the return of focus to the opener, and the labelling. tw-animate-css keeps
+ * the fade and zoom.
  *
  * Recipe for a dialog:
  *   <DialogContent className="sm:max-w-md">
  *     <DialogHeader>
- *       <DialogTitle><MbIcon id="..." size={18} className="shrink-0" />Title</DialogTitle>
+ *       <DialogTitle><Icon id="..." size={18} className="shrink-0" />Title</DialogTitle>
  *       <DialogDescription>Body text.</DialogDescription>
  *     </DialogHeader>
  *     <DialogFooter>
@@ -24,6 +25,9 @@ import { MbIcon } from "@/components/matchbook/MbIcon"
  *       <Button className="sm:flex-1">Main action</Button>   (variant="destructive" on a destructive confirm)
  *     </DialogFooter>
  *   </DialogContent>
+ *
+ * The main action is the black pill, never the green one. The footer's
+ * buttons are one height, and green stays the screen's own next step.
  */
 
 function Dialog({
@@ -38,7 +42,7 @@ function DialogPortal({
   return <DialogPrimitive.Portal data-slot="dialog-portal" {...props} />
 }
 
-/* Navy, not black, so the paper behind it stays warm. */
+/* Ink at a little over half, so the page behind is dimmed and still there. */
 function DialogOverlay({
   className,
   ...props
@@ -47,7 +51,7 @@ function DialogOverlay({
     <DialogPrimitive.Overlay
       data-slot="dialog-overlay"
       className={cn(
-        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-mb-navy/55",
+        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-ink/55",
         className
       )}
       {...props}
@@ -66,7 +70,7 @@ function DialogContent({
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          "mb-dialog data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 p-6 duration-200 outline-none sm:max-w-lg",
+          "dialog data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 p-6 duration-200 outline-none sm:max-w-lg",
           className
         )}
         {...props}
@@ -74,9 +78,9 @@ function DialogContent({
         {children}
         <DialogPrimitive.Close
           data-slot="dialog-close"
-          className="absolute top-1 right-1 flex size-11 cursor-pointer items-center justify-center rounded-[4px] text-mb-navy transition-colors hover:bg-mb-navy/6 disabled:pointer-events-none"
+          className="absolute top-2 right-2 flex size-11 cursor-pointer items-center justify-center rounded-full text-ink-soft transition-colors hover:bg-fill hover:text-ink disabled:pointer-events-none"
         >
-          <MbIcon id="close" size={20} />
+          <Icon id="close" size={20} />
           <span className="sr-only">Close</span>
         </DialogPrimitive.Close>
       </DialogPrimitive.Content>
@@ -84,6 +88,7 @@ function DialogContent({
   )
 }
 
+/* The right padding keeps a long title clear of the close control. */
 function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
@@ -94,7 +99,7 @@ function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
   )
 }
 
-/* Buttons fill the width on a phone and share a row from sm up. */
+/* Buttons fill the width on a phone, main action on top, and share a row from sm up. */
 function DialogFooter({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
@@ -108,7 +113,7 @@ function DialogFooter({ className, ...props }: React.ComponentProps<"div">) {
   )
 }
 
-/* Navy on every dialog, a destructive one included: the heading is the question, the red button is the warning. */
+/* Ink on every dialog, a destructive one included. The heading is the question, and the red button is the warning. */
 function DialogTitle({
   className,
   ...props
@@ -117,7 +122,7 @@ function DialogTitle({
     <DialogPrimitive.Title
       data-slot="dialog-title"
       className={cn(
-        "matchbook-display flex items-center gap-2 text-[1.05rem] font-bold leading-tight text-mb-navy",
+        "flex items-center gap-2 text-title leading-tight font-bold text-ink",
         className
       )}
       {...props}
@@ -132,7 +137,7 @@ function DialogDescription({
   return (
     <DialogPrimitive.Description
       data-slot="dialog-description"
-      className={cn("text-sm leading-relaxed text-mb-ink-muted", className)}
+      className={cn("text-body leading-relaxed text-ink-soft", className)}
       {...props}
     />
   )
