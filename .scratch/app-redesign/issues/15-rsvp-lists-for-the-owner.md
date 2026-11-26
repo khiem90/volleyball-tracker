@@ -12,7 +12,7 @@ Covers spec stories 62, 64, and 66.
 
 **Blocked by:** 03, 05, 06
 
-**Status:** ready-for-agent
+**Status:** ready-for-human
 
 - [x] The tab lists the same RSVP lists in the same order as today, upcoming first. Each row has a date tile, the name, the scheduled time, and the count against capacity.
 - [x] The new-list page has the same fields, defaults, and validation as today in the new form controls, with the save action in green.
@@ -32,3 +32,4 @@ Covers spec stories 62, 64, and 66.
 - Not applicable, menu and moving: the owner's one control on a row is Remove, the quiet red button, with the shared confirm in red. Nobody can be moved.
 - A live tournament's row draws `LiveTag`, which ticket 09 is rebuilding. A completed one draws a grey chip.
 - Left open: `rsvp/[id]/page.tsx` keeps its hand-written header for ticket 16 and is not on the guard's list. The By person or By team choice and the link's On or Off choice are `Choice`, which ticket 12 restyles. Nothing was looked at in a browser.
+- Merged on the integration branch `claude/grill-with-docs-redesign-27d048` and through the code review. The one open box is the owner's own look on a phone, so the status is `ready-for-human` until they have had it.

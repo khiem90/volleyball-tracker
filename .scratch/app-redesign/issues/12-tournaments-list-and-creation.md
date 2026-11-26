@@ -11,7 +11,7 @@ Covers spec stories 57, 58, 59, and 65.
 
 **Blocked by:** 03, 05, 06
 
-**Status:** ready-for-agent
+**Status:** ready-for-human
 
 - [x] The list shows the same tournaments in the same groups and order as today. Each row has the name, the format, a chip for draft, live, or completed, and its facts.
 - [x] Duplicating and deleting a tournament are reached the same way as today and use the shared menu and dialog.
@@ -31,3 +31,4 @@ Covers spec stories 57, 58, 59, and 65.
 - Not applicable, by ruling 1. The list is one group, live then draft, with completed tournaments in History. The page has no menu and no duplicate: delete is the bin button on a row, and it opens the shared delete dialog. Duplicate stays in the console's Settings.
 - Not applicable, by ruling 1. Creation has no steps. Its two buttons are "Save as draft" in grey and "Create and start" in green, on a card at the foot.
 - The Tournaments page keeps its dashboard of one selected tournament. Its court, schedule, and result rows are the shared score line under a centered label. Nothing here has been seen in a browser.
+- Merged on the integration branch `claude/grill-with-docs-redesign-27d048` and through the code review. The one open box is the owner's own look on a phone, so the status is `ready-for-human` until they have had it.

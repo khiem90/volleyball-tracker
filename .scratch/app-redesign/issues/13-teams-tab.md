@@ -10,7 +10,7 @@ Covers spec stories 25, 29, and 30.
 
 **Blocked by:** 03, 05, 06
 
-**Status:** ready-for-agent
+**Status:** ready-for-human
 
 - [x] The roster lists the same teams in the same order as today, each with its mark, name, and the same facts and status.
 - [x] Search and any filters work as today in the new form controls.
@@ -26,3 +26,4 @@ Covers spec stories 25, 29, and 30.
 - "Adding a team is the page's main action" is not applicable. The page has no action in its header and gets none. A team is added in the inline form at the top of the directory card, as today.
 - The directory and the readiness list are rows now, not tables, so neither scrolls sideways. The selected row is washed with `action-tint`. The teal edge on the top row is gone, and its rank number still says it leads.
 - The page's title reads "Teams". It was "Team Directory", which the first card still says. Status words read "Active", "Idle", "Ready", "Good", and "Needs attention" where the data holds capitals.
+- Merged on the integration branch `claude/grill-with-docs-redesign-27d048` and through the code review. The one open box is the owner's own look on a phone, so the status is `ready-for-human` until they have had it.

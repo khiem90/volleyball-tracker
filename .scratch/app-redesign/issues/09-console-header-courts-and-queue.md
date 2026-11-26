@@ -19,7 +19,7 @@ Covers spec stories 42 to 49 and 52.
 
 **Blocked by:** 03, 05, 06
 
-**Status:** ready-for-agent
+**Status:** ready-for-human
 
 - [x] The header uses the shared header block with a back link, the name, a status chip for draft, live, or completed, and the same facts as today.
 - [x] The console's tabs are text tabs. The active one has ink text and a green underline. The same tabs show for the same formats and roles as today.
@@ -38,3 +38,4 @@ Covers spec stories 42 to 49 and 52.
 - Not applicable in part, by ruling 1. Court cards and the queue show for the two rotation formats only, and the other formats keep one card of "Live now" and "Up next" rows. The "won" buttons show only with instant win on. The tab strip shows below `lg`, and from `lg` up every section is on screen as today.
 - Kept from today where the picture differs: the queue's count is a bare number, not "N waiting", and a court's status word is "Waiting" or "Empty". The word "Completed" is gone from a match row, because the bold winner says it.
 - Nobody has looked at this in a browser. The owner check is open.
+- Merged on the integration branch `claude/grill-with-docs-redesign-27d048` and through the code review. The one open box is the owner's own look on a phone, so the status is `ready-for-human` until they have had it.

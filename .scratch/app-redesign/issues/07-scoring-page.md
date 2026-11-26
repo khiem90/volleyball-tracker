@@ -14,7 +14,7 @@ Covers spec stories 3, 4, 53, 54, 55, and 56.
 
 **Blocked by:** 03, 05
 
-**Status:** ready-for-agent
+**Status:** ready-for-human
 
 - [x] The team-color panels keep their size, layout, colors, and tap targets. Text on a panel keeps the contrast handling it has today.
 - [x] The scoring header uses the role tokens and shows team marks where it showed crests.
@@ -31,3 +31,4 @@ Covers spec stories 3, 4, 53, 54, 55, and 56.
 - Not applicable, by ruling 11. The header never showed crests, and the page has no menu, no score entry, and no toast. Undo is a button in the header and in the fullscreen bar, and both now use the shared grey button.
 - The panels changed in name only. Fullscreen keeps its black ground, because a panel's color thins toward one corner and the ground shows through it.
 - Nobody has seen this in a browser. Check at 390px: the header with Fullscreen, Undo, and End beside two chips, and the result dialogs, where the 44px score leaves each team's name about 60px.
+- Merged on the integration branch `claude/grill-with-docs-redesign-27d048` and through the code review. The one open box is the owner's own look on a phone, so the status is `ready-for-human` until they have had it.

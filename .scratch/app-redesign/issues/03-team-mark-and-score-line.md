@@ -16,7 +16,7 @@ Covers spec stories 24 to 28, 31, and 32.
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [x] The mark takes a name, a color, and a size, and draws the shield with the name's first letter. The shield's corners are 28% on top and 44% on the bottom, from the prototype.
 - [x] The letter color function returns ink or white for any color. For every color in the roster palette its choice gives at least 3 to 1. Tests pin ink on the palette's yellow and white on its indigo.
@@ -34,3 +34,4 @@ Covers spec stories 24 to 28, 31, and 32.
 - 2026-11-25: Built test-first. Nobody has looked at the mark or the score line in a browser yet. The tests cover the two color rules and which side is bold, and the truncation and the centered score rest on the layout classes alone.
 - Ink wins on eight of the ten palette colors. Only indigo and purple get a white letter, so most marks read dark on bright.
 - Beyond the criteria: the team shapes and `teamStats` moved to `src/lib` with the old paths left as re-exports, the old crest-and-name row is `TeamName` in `components/shared`, and a readiness reading short of ready is `ink-soft` where it was red. No test file existed for the team colors, so the new cases are `src/__tests__/roster/teamColors.test.ts`, and the bold-side rule has its own file under `src/__tests__/scoreLine/`.
+- Merged on the integration branch `claude/grill-with-docs-redesign-27d048` and resolved after the code review.

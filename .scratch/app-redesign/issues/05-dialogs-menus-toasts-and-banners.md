@@ -14,7 +14,7 @@ Covers spec stories 16, 55, 68, 69, and 70.
 
 **Blocked by:** 04
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [x] The dialog panel is a surface with a 14px radius over a dimmed overlay. Its title is in sentence case at the card-title size, and its close control is a 44px target.
 - [x] Footer buttons are the shared buttons from ticket 04. A destructive confirm uses the red button and its title stays ink.
@@ -31,3 +31,4 @@ Covers spec stories 16, 55, 68, 69, and 70.
 - Nothing here was looked at in a browser. The merger checks a dialog, the account menu, and the undo toast at 390px and 1280px.
 - The reload banner already draws ink with a green button through the old names. Its file belongs to ticket 06, which adds the `ink-bar` class there so the button's focus ring shows white.
 - The inside of a dialog (the color squares in the team form, the score box in match complete) still has the old 4px boxes. Each screen ticket restyles its own.
+- Merged on the integration branch `claude/grill-with-docs-redesign-27d048` and resolved after the code review.

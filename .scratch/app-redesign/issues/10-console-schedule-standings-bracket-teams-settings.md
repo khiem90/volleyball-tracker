@@ -12,7 +12,7 @@ Covers spec stories 50, 51, 52, and 61.
 
 **Blocked by:** 09
 
-**Status:** ready-for-agent
+**Status:** ready-for-human
 
 - [x] Schedule shows each match as a row-size score line with its court and state, and the same actions per match as today, including a correction.
 - [x] Standings shows the same columns and order as today in the shared table, with a mark beside each team and the champion marked as today.
@@ -30,3 +30,4 @@ Covers spec stories 50, 51, 52, and 61.
 - Not applicable, by ruling 1: no tournament row has a menu, and the links have no share action. Duplicate, End, and Delete are buttons in Settings, and each link has Copy.
 - The leader of the standings is marked by a green place number. The teal bar was an inset shadow on the cell.
 - Settings is three cards now: the name, courts, and facts, then the two links, then Duplicate, End, and Delete. End and Delete are the quiet red button, and each dialog confirms in filled red.
+- Merged on the integration branch `claude/grill-with-docs-redesign-27d048` and through the code review. The one open box is the owner's own look on a phone, so the status is `ready-for-human` until they have had it.

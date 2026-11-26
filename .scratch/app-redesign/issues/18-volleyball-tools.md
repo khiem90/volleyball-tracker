@@ -16,7 +16,7 @@ Covers spec stories 1, 75, and 76.
 
 **Blocked by:** 05, 06
 
-**Status:** ready-for-agent
+**Status:** ready-for-human
 
 - [x] The tools page lists the same tools with the same copy, in a card.
 - [x] The rotations tool has the same controls and the same behavior, built from the shared pieces.
@@ -34,3 +34,4 @@ Covers spec stories 1, 75, and 76.
 - Player colors are the court's own palette, not role tokens: seven hues in `src/lib/volleyball/constants.ts`, each with an ink or white label at 4.5 to 1 or better. The big zone numbers behind the players stay faint on purpose, since each player carries its own zone label.
 - Three things behave a little differently. The shared dialog closes the editor on Escape, saving a draft as Cancel does. Deleting on My Formations waits in the dialog and no longer cancels itself after 3 seconds. In the editor on a phone the court comes before the controls so it can be reached. The rotations page keeps its browser confirm for delete and gains no back link, since it has none today.
 - Nothing here was seen in a browser. The owner check is open, and the two carried defects (labels over the net on the Tools page, the editor's see-through footer at 390px) are fixed in markup only.
+- Merged on the integration branch `claude/grill-with-docs-redesign-27d048` and through the code review. The one open box is the owner's own look on a phone, so the status is `ready-for-human` until they have had it.

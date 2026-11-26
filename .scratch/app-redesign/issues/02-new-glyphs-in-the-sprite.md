@@ -15,7 +15,7 @@ Covers spec stories 71 and 80.
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [x] All 54 ids are still in the sprite, each with a new drawing on one grid in one stroke weight.
 - [x] The ids the prototype mapped use the glyphs the spec names. The rest are chosen by the same judgment, and the ticket's comments list every id with its glyph.
@@ -59,3 +59,4 @@ a heavier outline, so on that tab the ink label carries most of the active state
 
 The component is `Icon` in `src/components/shared/Icon.tsx`. The version stamp
 is a hash of the sprite file, so it changed with the drawings and needed no edit.
+- Merged on the integration branch `claude/grill-with-docs-redesign-27d048` and resolved after the code review.

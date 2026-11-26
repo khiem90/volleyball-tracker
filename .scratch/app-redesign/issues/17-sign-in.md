@@ -9,7 +9,7 @@ Covers spec story 67.
 
 **Blocked by:** 04
 
-**Status:** ready-for-agent
+**Status:** ready-for-human
 
 - [x] The page is a surface with the wordmark above the form, centered on a wide screen and full width on a phone.
 - [x] Every way to sign in that exists today is present with its copy unchanged, including continuing as a guest.
@@ -26,3 +26,4 @@ Covers spec story 67.
 - Built from source and the guard only. Nobody has looked at the page in a browser yet, at 390px or at 1280px.
 - Gone with the poster: the "All Events" stamp beside the heading and the accent color on "Back" and "the Club". The heading's words are unchanged. The crest file is the old one until ticket 19.
 - The Google button is the grey button with Google's mark unchanged, in its own colors. Its grey is `fill` (`#f1f3f4`), one step off the `#f2f2f2` Google names for its neutral button.
+- Merged on the integration branch `claude/grill-with-docs-redesign-27d048` and through the code review. The one open box is the owner's own look on a phone, so the status is `ready-for-human` until they have had it.

@@ -17,7 +17,7 @@ Covers spec stories 18, 33, and 35 to 41.
 
 **Blocked by:** 03, 05, 06
 
-**Status:** ready-for-agent
+**Status:** ready-for-human
 
 - [x] The header block shows "Home", today's date, and the Quick Match button as the main action.
 - [x] The live tournaments card lists the same tournaments in the same order as today, each with its facts, a Resume pill, and the count of matches being scored when there is one.
@@ -34,3 +34,4 @@ Covers spec stories 18, 33, and 35 to 41.
 - The results criterion was open until ticket 09 rebuilt `MatchRow` on the shared score line. A merger saw the rows in the app after that merge, at 390px and 1280px: the winner is bold, the loser is dimmed, and a long name is cut short beside the score. Home's file did not change.
 - "Each with a count" is not applicable to Recent results and Tools, which have no count today. Live tournaments and Your RSVPs keep theirs.
 - Dropped to match the picture: the chevron in the Resume pill, the chevron after an RSVP's standing, and the court glyph on the tools row. Recent results gains the `history` glyph in its head. A list with no scheduled time shows a calendar glyph on a grey tile where the date tile would be.
+- Merged on the integration branch `claude/grill-with-docs-redesign-27d048` and through the code review. The one open box is the owner's own look on a phone, so the status is `ready-for-human` until they have had it.

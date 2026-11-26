@@ -11,7 +11,7 @@ Covers spec stories 6, 63, 64, and 66.
 
 **Blocked by:** 15
 
-**Status:** ready-for-agent
+**Status:** ready-for-human
 
 - [x] The page shows the same list details as today. The person's standing is the most prominent element, as a large chip or line that is green when they are in.
 - [x] The action to RSVP is the green main button. Withdrawing uses the shared destructive dialog.
@@ -31,3 +31,4 @@ Covers spec stories 6, 63, 64, and 66.
 - An RSVP by team has no color, so its mark is drawn in the color picked from its name. Ticket 15 built that.
 - The cards changed order. The standing card comes first, then tournaments and notices under it, where both sat above it before.
 - Nothing here was looked at in a browser.
+- Merged on the integration branch `claude/grill-with-docs-redesign-27d048` and through the code review. The one open box is the owner's own look on a phone, so the status is `ready-for-human` until they have had it.

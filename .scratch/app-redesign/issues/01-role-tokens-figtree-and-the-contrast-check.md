@@ -21,7 +21,7 @@ Covers spec stories 9 to 15, 79, and 81.
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [x] The prototype route is not on the work branch. Its code is kept on a throwaway branch, and the spec's opening paragraph names that branch.
 - [x] The role tokens hold the values in the spec's token table, and the danger tint is chosen so danger text on it reaches 4.5 to 1.
@@ -42,3 +42,4 @@ Covers spec stories 9 to 15, 79, and 81.
 - The danger tint is `#fff7f6`, close to white. Danger is 4.76 to 1 on white, so any stronger tint puts danger text under 4.5. A visible red chip needs a darker danger, which is the spec's call.
 - Beyond the criteria: the paper-grain texture is off the page ground, and the contrast math is `contrastRatio` in `src/lib/contrast.ts` for ticket 03 to reuse.
 - Left for later tickets: the live dot and error text still read the old red, so live shows in danger until ticket 04 restyles it. The forced uppercase stays on `.matchbook-display` and the `mb-*` classes for ticket 04 to drop, so story 13's sentence case lands there. The page's theme-color tag is still the old paper and belongs to ticket 19. Field borders in `line` are faint on a white card until ticket 04.
+- Merged on the integration branch `claude/grill-with-docs-redesign-27d048` and resolved after the code review.

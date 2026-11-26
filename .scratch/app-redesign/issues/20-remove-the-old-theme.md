@@ -16,7 +16,7 @@ Covers spec stories 1, 7, 77, and 78.
 
 **Blocked by:** 07, 08, 10, 11, 12, 13, 14, 16, 18, 19
 
-**Status:** ready-for-agent
+**Status:** ready-for-human
 
 - [x] A search of the source finds no use of an old token, an old shared class, or the old icon component name. Anything found is moved to the new names first.
 - [x] The old token names and the old shared classes are deleted from the stylesheet.
@@ -37,3 +37,4 @@ Covers spec stories 1, 7, 77, and 78.
 - `components.json` names Phosphor as its icon library and the lint rule also refuses `@phosphor-icons/react`. Lint has no errors. Its 10 warnings are unused functions in `src/lib/volleyball`, which this ticket did not touch.
 - The Teams page's directory list fills its card from `xl` up, the defect carried from ticket 13. A merger saw it at 1280px with 11 teams: the list ends at the card's foot, level with Team Readiness, and scrolls inside. At 1024px and 390px it keeps the 60% cap.
 - The phone-and-laptop sweep ran on the dev server in a 390px touch context and at 1280px, not on a real phone. It covered the five tabs, the seeded RSVP list, the Win 2 & Out console's five tabs, the guest scoring page, sign-in, Quick Match, Tools, and the rotations tool. Every icon drew from the sprite's new address, no page was wider than its window, no console logged an error, and no element carried the old fonts, palette, uppercase, 1.5px border, or 4px corner.
+- The code review's findings are fixed and merged at `5940127`. The one open box is the owner's word that the branch is ready to merge, so the status is `ready-for-human`.

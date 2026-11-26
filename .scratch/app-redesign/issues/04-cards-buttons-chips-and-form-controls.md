@@ -15,7 +15,7 @@ Covers spec stories 10, 11, 17 to 23, and 77.
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [x] A card is a surface with a 14px radius and no border. Rows inside it are divided by a line rule. Its head takes an icon, a title, and a meta slot.
 - [x] There are four buttons: the green main button at 52px, the black pill for a row's own action, the grey button for secondary actions, and the red button for destructive confirms. Each has hover, pressed, focus, and disabled states.
@@ -39,3 +39,4 @@ Covers spec stories 10, 11, 17 to 23, and 77.
 - 2026-11-25, after review: the first pass drew `mb-btn-outline-red` as the filled red button. Remove, Discard, and Delete repeat on rows, and a column of filled red pills reads as an alarm, so the old red outline moved to `btn-danger-quiet`.
 - Three things differ from a plain reading of the criteria. The 52px belongs to `btn-action` only, and `mb-btn-coral` stays 44px, because the old class also sits in toolbars beside 44px buttons. `Panel` still takes `tone` and ignores it, since a card has one head. The checkbox takes the 8px step, because 10px on a 22px box is a circle.
 - Left open. Fields use a new `--control-line` (ink-soft at 75%, 3.27 to 1 on white), which is not in the spec's token table. The grey button and the grey chip have no edge on the ground, so unmigrated mastheads show them as bare text until ticket 06's white header. Red still marks an away win on Quick Match, for ticket 08.
+- Merged on the integration branch `claude/grill-with-docs-redesign-27d048` and resolved after the code review.

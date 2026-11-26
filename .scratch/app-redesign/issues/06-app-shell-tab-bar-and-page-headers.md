@@ -15,7 +15,7 @@ Covers spec stories 1, 5, 8, 72, and 78.
 
 **Blocked by:** 02, 04
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [x] The tab bar shows Home, Teams, Tournaments, History, and RSVP in that order, with the same routes and the same rule for which tabs need an account.
 - [x] The active tab uses the filled glyph and ink text. Inactive tabs use ink-soft, which passes 4.5 to 1 on the bar.
@@ -32,3 +32,4 @@ Covers spec stories 1, 5, 8, 72, and 78.
 - No page uses `PageHeader` yet. Each screen ticket swaps its own masthead for it, so until then a page shows the white top bar over its old masthead on the ground.
 - On a phone, a page that passes `back` has no brand row and so no account button. That is the spec's layout. The account button is one tap back.
 - Nothing here was looked at in a browser.
+- Merged on the integration branch `claude/grill-with-docs-redesign-27d048` and resolved after the code review.

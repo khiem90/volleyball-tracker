@@ -9,7 +9,7 @@ Covers spec stories 3, 4, 19, 20, and 56.
 
 **Blocked by:** 03, 05, 06
 
-**Status:** ready-for-agent
+**Status:** ready-for-human
 
 - [x] The page uses the shared header block, cards, form controls, and buttons, with the same fields, defaults, and copy as today.
 - [x] Teams chosen from the roster show their marks. A team typed in by name gets a mark from the fallback color.
@@ -25,3 +25,4 @@ Covers spec stories 3, 4, 19, 20, and 56.
 - Not applicable: "a team typed in by name". The page has no field for a typed name. Teams come from two selects, or are the guest's fixed pair. A roster team with no color, and a team that has left the roster, get the fallback color.
 - Both start buttons stay. "Start Match" in the header is the green one, and "Start Scoring" in the preview card is the black pill.
 - A row's bold winner replaces the green or red win dot. A slot with no team picked is a grey shield, not the greyed app crest. Nothing here was looked at in a browser.
+- Merged on the integration branch `claude/grill-with-docs-redesign-27d048` and through the code review. The one open box is the owner's own look on a phone, so the status is `ready-for-human` until they have had it.

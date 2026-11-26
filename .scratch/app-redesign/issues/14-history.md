@@ -10,7 +10,7 @@ Covers spec stories 31, 32, 60, and 61.
 
 **Blocked by:** 03, 05, 06
 
-**Status:** ready-for-agent
+**Status:** ready-for-human
 
 - [x] History shows the same results in the same groups and order as today.
 - [x] Every match is a row-size score line with marks, the winner in bold, and the loser dimmed.
@@ -27,3 +27,4 @@ Covers spec stories 31, 32, 60, and 61.
 - Score lines: History draws every match through `MatchRow`, which ticket 09 moved to the shared `ScoreLine`. A merger saw both cards in the app after that merge, at 390px and 1280px: every match is a score line with the winner bold and the loser dimmed.
 - Groups, not applicable: History has no group per tournament. A completed tournament is one row that opens its console, and the ledger groups every match by day. Both are kept. The row shows the name, format, teams, matches, date, and "Winner: name" with the winner's mark where the star was.
 - Delete and discard, not applicable: History has neither, so it opens no dialog.
+- Merged on the integration branch `claude/grill-with-docs-redesign-27d048` and through the code review. The one open box is the owner's own look on a phone, so the status is `ready-for-human` until they have had it.
