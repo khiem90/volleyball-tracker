@@ -73,8 +73,9 @@ and `rounded-none` squares a corner off.
 | `rounded-chip` | 8px | Icon backings, the checkbox, small square chips. A status chip is a pill. |
 | `rounded-pill` | full | Buttons and status chips. |
 
-A class in the stylesheet or an inline style reads `var(--radius-card)` and
-its neighbours.
+A class in the stylesheet reads `var(--radius-card)` and its neighbours. A
+`border-radius` declaration holds those tokens, `0`, or `50%`, and nothing
+else. Markup takes the utility, so an inline style sets no radius at all.
 
 ## Type
 
@@ -617,7 +618,7 @@ neither does the dialog, because the overlay already sets it apart.
 
 - The old token classes: `bg-background`, `text-foreground`, `bg-card`, `bg-popover`, `bg-primary`, `text-primary-foreground`, `bg-secondary`, `bg-muted`, `text-muted-foreground`, `bg-accent`, `text-destructive`, `border-border`, `border-input`, `ring-ring`, and every other utility built on `background`, `foreground`, `card`, `popover`, `primary`, `secondary`, `muted`, `accent`, `destructive`, `border`, `input`, or `ring`. `src/__tests__/design/tokens.test.ts` scans every source file and the stylesheet and fails on one. None of them is defined any more, so one that slipped through would draw nothing.
 - A name or a color from the theme this design replaced: its prefix on a class, a token, a component, or a type, its name in a path, its two typefaces, and its palette's hex values. The same test holds the patterns and fails on one anywhere in `src`, in this page, and in the config files that point at assets.
-- A radius off the scale. Only `rounded-card`, `rounded-tile`, `rounded-chip`, `rounded-pill`, `rounded-full`, and `rounded-none` pass, on any side or corner and behind any variant. A bare `rounded`, Tailwind's own steps such as `rounded-md`, and an arbitrary radius all fail. The test reads words and not markup, so the word in a comment fails too. Write "round corners" there.
+- A radius off the scale. Only `rounded-card`, `rounded-tile`, `rounded-chip`, `rounded-pill`, `rounded-full`, and `rounded-none` pass, on any side or corner and behind any variant. A bare `rounded`, Tailwind's own steps such as `rounded-md`, and an arbitrary radius all fail. The test reads words and not markup, so the word in a comment fails too. Write "round corners" there. A `border-radius` declaration in a stylesheet fails unless every value is a radius token, `0`, or `50%`, and an inline `borderRadius` fails whatever its value. The team mark's shield is the one declaration let through, by its exact value and only in `src/app/globals.css`.
 - `dark:` utilities. The design is light only.
 - Colors outside the role tokens: Tailwind's named colors (`slate-500`, `amber-200`), new hex values, oklch literals. Team colors and the court's palette are the exceptions.
 - Red on anything that is not a destructive action or an error. No red for live, for a loss, or for a status.

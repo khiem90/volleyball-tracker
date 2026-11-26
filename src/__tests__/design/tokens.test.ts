@@ -10,7 +10,8 @@ import { contrastRatio } from "@/lib/contrast";
  * scales, and the shared classes in src/app/globals.css. This file reads every
  * source file, the stylesheet included, and fails on a name from either of the
  * two designs that came before, on a radius that is not a step of the scale,
- * and on a dark-mode utility, so no screen can quietly be restyled back. The
+ * whether a utility, a declaration, or an inline style writes it, and on a
+ * dark-mode utility, so no screen can quietly be restyled back. The
  * lists live here and nowhere else; docs/design-system.md repeats them in
  * prose.
  */
@@ -319,6 +320,29 @@ function radiiOffTheScaleIn(text: string): string[] {
     .filter((utility) => !onTheScale.test(utility));
 }
 
+/* A radius written as a CSS declaration, on all four corners or on one: border-radius: 4px; */
+const radiusDeclaration =
+  /(?<![\w-])border-(?:(?:top|bottom|start|end)-(?:left|right|start|end)-)?radius\s*:\s*([^;{}]+)/g;
+
+/* What a declaration may hold: a step of the scale, 0 for a square corner, 50% for a circle. */
+const radiusValueOnTheScale = /^(?:var\(--radius-(?:card|tile|chip|pill)\)|0|50%)$/;
+
+/* A radius set through an inline style, on all four corners or on one: style={{ borderRadius: 6 }}. */
+const inlineRadius =
+  /(?<![\w-])border(?:(?:Top|Bottom|Start|End)(?:Left|Right|Start|End))?Radius(?![\w-])/g;
+
+/*
+ * Every radius in one piece of source text that is written out and not taken
+ * from the scale. A declaration is named with its value. An inline style is
+ * named whatever its value, because a radius in markup is a utility.
+ */
+function writtenRadiiOffTheScaleIn(text: string): string[] {
+  const declared = [...text.matchAll(radiusDeclaration)]
+    .filter((match) => !match[1].trim().split(/[\s/]+/).every((value) => radiusValueOnTheScale.test(value)))
+    .map((match) => match[0].trim().replace(/\s+/g, " "));
+  return [...declared, ...[...text.matchAll(inlineRadius)].map((match) => match[0])];
+}
+
 describe("the old theme's names", () => {
   it("flags the mb prefix on a class, a token, and a component", () => {
     expect(oldThemeNamesIn('className="mb-btn mb-btn-navy"')).toEqual(["mb-btn", "mb-btn-navy"]);
@@ -415,6 +439,56 @@ describe("the named radius rule", () => {
   });
 });
 
+describe("the written radius rule", () => {
+  it("flags a declaration whose radius is not a step of the scale", () => {
+    expect(writtenRadiiOffTheScaleIn("  border-radius: 999px;")).toEqual(["border-radius: 999px"]);
+    expect(writtenRadiiOffTheScaleIn(".a { border-radius:4px }")).toEqual(["border-radius:4px"]);
+    expect(writtenRadiiOffTheScaleIn("border-radius: 0.5rem 0.5rem 0 0;")).toEqual([
+      "border-radius: 0.5rem 0.5rem 0 0",
+    ]);
+    expect(writtenRadiiOffTheScaleIn("border-top-left-radius: 6px;")).toEqual(["border-top-left-radius: 6px"]);
+    expect(writtenRadiiOffTheScaleIn("border-start-end-radius: 1em;")).toEqual(["border-start-end-radius: 1em"]);
+    /* A token that is not a step, and a step mixed with a length. */
+    expect(writtenRadiiOffTheScaleIn("border-radius: var(--radius);")).toEqual(["border-radius: var(--radius)"]);
+    expect(writtenRadiiOffTheScaleIn("border-radius: var(--radius-card) 4px;")).toEqual([
+      "border-radius: var(--radius-card) 4px",
+    ]);
+    /* The team mark's shield. The stylesheet may hold it once, and the whole-source check says where. */
+    expect(writtenRadiiOffTheScaleIn("border-radius: 28% 28% 44% 44%;")).toEqual([
+      "border-radius: 28% 28% 44% 44%",
+    ]);
+  });
+
+  it("flags a radius set through an inline style, whatever its value", () => {
+    expect(writtenRadiiOffTheScaleIn("style={{ borderRadius: 6 }}")).toEqual(["borderRadius"]);
+    expect(writtenRadiiOffTheScaleIn('style={{ borderRadius: "var(--radius-card)" }}')).toEqual(["borderRadius"]);
+    expect(writtenRadiiOffTheScaleIn("{ borderTopLeftRadius: 4, borderBottomRightRadius: 4 }")).toEqual([
+      "borderTopLeftRadius",
+      "borderBottomRightRadius",
+    ]);
+  });
+
+  it("lets a step of the scale, a square corner, and a circle through", () => {
+    const allowed = [
+      "border-radius: var(--radius-card);",
+      "border-radius: var(--radius-tile) var(--radius-tile) 0 0;",
+      "border-radius: var(--radius-pill);",
+      "border-top-right-radius: var(--radius-chip);",
+      "border-radius: 0;",
+      "border-radius: 50%;",
+      /* The scale's own steps are custom properties, not declarations. */
+      "--radius-card: 14px;",
+      "--radius-pill: 9999px;",
+      "rounded-card",
+      "playerNodeRadius",
+      "const radius = 12;",
+    ];
+    for (const text of allowed) {
+      expect(writtenRadiiOffTheScaleIn(text), text).toEqual([]);
+    }
+  });
+});
+
 /* Where the guard looks: every .ts, .tsx, and .css file under src, apart from its own folder. */
 const src = fileURLToPath(new URL("../../", import.meta.url));
 
@@ -480,6 +554,16 @@ describe("the whole source", () => {
 
   it("uses no radius off the scale", () => {
     expect(offendersOf(radiiOffTheScaleIn)).toEqual([]);
+  });
+
+  /*
+   * The team mark's shield is the one shape that is not a step of the scale.
+   * The stylesheet holds it once, in the team-mark class, and nothing else
+   * writes a radius out.
+   */
+  it("writes no radius out but the team mark's shield, once, in the stylesheet", () => {
+    const withoutLine = offendersOf(writtenRadiiOffTheScaleIn).map((hit) => hit.replace(/:\d+ /, " "));
+    expect(withoutLine).toEqual(["app/globals.css border-radius: 28% 28% 44% 44%"]);
   });
 });
 
