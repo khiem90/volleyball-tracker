@@ -245,6 +245,8 @@ export default function TournamentsPage() {
           }`
         }
         action={
+          // Side by side on a phone, as before. The green button gives up
+          // side padding there so the pair fits a 360px screen.
           <div className="flex flex-wrap gap-2">
             {consoleHref && (
               <Link href={consoleHref} className="btn btn-ink flex-1 sm:flex-none">
@@ -252,7 +254,10 @@ export default function TournamentsPage() {
                 Manage Event
               </Link>
             )}
-            <Link href="/competitions/new" className="btn btn-action flex-1 sm:flex-none">
+            <Link
+              href="/competitions/new"
+              className="btn btn-action flex-1 px-3 sm:flex-none sm:px-6"
+            >
               <Icon id="plus" size={18} />
               New Tournament
             </Link>
