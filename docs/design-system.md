@@ -107,8 +107,11 @@ step goes in the stylesheet and in that list together, or `cn()` takes
 The classes are in the components layer of `src/app/globals.css`, so a utility
 on the same element wins over them. The components are in
 `src/components/shared` and `src/components/ui`.
-`src/__tests__/design/sharedClasses.test.ts` reads the classes and holds them
-to the numbers on this page.
+`src/__tests__/design/sharedClasses.test.ts` reads the classes and checks
+what a test can: each class's text reaches 4.5 to 1 on its own background, a
+control is 44px tall, a card has no border or shadow, the lift is the only
+shadow, and only the destructive classes read `danger`. It does not pin how a
+class looks. That is checked by eye.
 
 ### Card
 

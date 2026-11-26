@@ -112,8 +112,8 @@
  * The shared classes: the card, the buttons, the chip, the date tile, the form
  * controls, the table. They sit in the components layer, so a utility on the
  * same element wins over them. src/__tests__/design/sharedClasses.test.ts
- * reads these rules and holds them to the sizes and the contrast the design
- * asks for.
+ * reads these rules and holds them to the contrast and the 44px the design
+ * asks for, and to the forbidden list where a stylesheet can break it.
  */
 @layer components {
   /*
