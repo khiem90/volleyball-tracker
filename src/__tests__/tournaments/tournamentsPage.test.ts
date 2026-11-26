@@ -71,7 +71,7 @@ describe("selectedTournament", () => {
 
     const { recent } = selectedTournament(played.tournament, matches, roster);
 
-    expect(recent.map((line) => [line.homeScore, line.awayScore, line.winner])).toEqual([
+    expect(recent.map(({ line }) => [line.homeScore, line.awayScore, line.winner])).toEqual([
       [20, 25, "away"],
       [25, 20, "home"],
     ]);
@@ -87,6 +87,23 @@ describe("selectedTournament", () => {
       label: "Round 1",
       home: { name: `Roster ${world.matches[0].homeTeamId}`, color: "#22c55e" },
       away: { name: `Roster ${world.matches[0].awayTeamId}`, color: "#22c55e" },
+      line: { homeScore: null, awayScore: null, winner: null, decidedBy: null, live: false },
+    });
+  });
+
+  it("lists a match being scored under its court, with its score and marked live", () => {
+    const world = started("round_robin", 4);
+    const [first] = world.matches;
+    const matches = world.matches.map((m) =>
+      m.id === first.id ? { ...m, status: "in_progress" as const, homeScore: 4, awayScore: 2 } : m,
+    );
+
+    const { liveCourts } = selectedTournament(world.tournament, matches, roster);
+
+    expect(liveCourts).toHaveLength(1);
+    expect(liveCourts[0]).toMatchObject({
+      label: "Court 1",
+      line: { homeScore: 4, awayScore: 2, winner: null, live: true },
     });
   });
 
@@ -97,7 +114,10 @@ describe("selectedTournament", () => {
 
     const { recent } = selectedTournament(world.tournament, world.matches, roster);
 
-    const line = recent.find((r) => r.home.name === "Roster t4" || r.away.name === "Roster t4");
-    expect(line?.winner).toBe(line?.home.name === "Roster t4" ? "away" : "home");
+    const row = recent.find((r) => r.home.name === "Roster t4" || r.away.name === "Roster t4");
+    expect(row?.line).toMatchObject({
+      decidedBy: "forfeit",
+      winner: row?.home.name === "Roster t4" ? "away" : "home",
+    });
   });
 });

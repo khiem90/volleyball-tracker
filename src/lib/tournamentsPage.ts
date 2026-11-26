@@ -1,7 +1,7 @@
 import { entryTeams } from "@/lib/entries";
 import { FORMAT_LABELS, isBracketFormat, isRotationFormat } from "@/lib/formats";
 import { calculateStandings } from "@/lib/roundRobin";
-import type { ScoreSide } from "@/lib/scoreLine";
+import { matchLine, type MatchLine } from "@/lib/scoreLine";
 import type { Team } from "@/lib/teamShapes";
 import type { Match, PersistentTeam, Tournament } from "@/types/game";
 
@@ -82,26 +82,14 @@ export interface StandingLine {
   diff: string;
 }
 
-/** A match being scored now. */
-export interface CourtLine {
-  court: string;
-  home: Team;
-  away: Team;
-  homeScore: number;
-  awayScore: number;
-}
-
-/** A match waiting to be played, or one with a result. */
-export interface MatchLine {
-  /** The round of a waiting match, or the day a result came in. */
+/** A match in one of the page's three lists: being scored, waiting, or with a result. */
+export interface ListedMatch {
+  /** The court of a match being scored, the round of a waiting one, or the day a result came in. */
   label: string;
   home: Team;
   away: Team;
-  /** Left out while the match has not been played. */
-  homeScore?: number;
-  awayScore?: number;
-  /** The side that won. A forfeit has one with no score to tell it by. */
-  winner?: ScoreSide;
+  /** What its score line shows, by the rule every score line reads. */
+  line: MatchLine;
 }
 
 /** What the page shows of the tournament picked in the list. */
@@ -118,9 +106,9 @@ export interface SelectedTournament {
   winner: Team | null;
   bracket: BracketRound[];
   standings: StandingLine[];
-  liveCourts: CourtLine[];
-  schedule: MatchLine[];
-  recent: MatchLine[];
+  liveCourts: ListedMatch[];
+  schedule: ListedMatch[];
+  recent: ListedMatch[];
   createdDate: string;
   seriesLabel: string;
 }
@@ -161,12 +149,6 @@ const smallBracket = (matches: Match[], teamOf: (teamId: string) => Team): Brack
   return rounds.slice(0, 4);
 };
 
-/** The side of a match its winner played on, when it has a winner. */
-const winningSide = (match: Match): ScoreSide | undefined => {
-  if (!match.winnerId) return undefined;
-  return match.winnerId === match.homeTeamId ? "home" : "away";
-};
-
 /** Everything the page shows of one tournament. `allMatches` may hold other tournaments' matches too. */
 export const selectedTournament = (
   tournament: Tournament,
@@ -189,6 +171,12 @@ export const selectedTournament = (
   const live = matches.filter((m) => m.status === "in_progress");
   const pending = matches.filter((m) => m.status === "pending");
   const isElimination = isBracketFormat(tournament.format);
+  const listed = (match: Match, label: string): ListedMatch => ({
+    label,
+    home: teamOf(match.homeTeamId),
+    away: teamOf(match.awayTeamId),
+    line: matchLine(match),
+  });
 
   const standings = isElimination
     ? []
@@ -215,32 +203,15 @@ export const selectedTournament = (
     winner: tournament.winnerId ? teamOf(tournament.winnerId) : null,
     bracket: isElimination ? smallBracket(matches, teamOf) : [],
     standings,
-    liveCourts: live.slice(0, 4).map((m, i) => ({
-      court: `Court ${i + 1}`,
-      home: teamOf(m.homeTeamId),
-      away: teamOf(m.awayTeamId),
-      homeScore: m.homeScore,
-      awayScore: m.awayScore,
-    })),
+    liveCourts: live.slice(0, 4).map((m, i) => listed(m, `Court ${i + 1}`)),
     schedule: pending
       .filter((m) => m.homeTeamId && m.awayTeamId)
       .slice(0, 5)
-      .map((m) => ({
-        label: `Round ${m.round}`,
-        home: teamOf(m.homeTeamId),
-        away: teamOf(m.awayTeamId),
-      })),
+      .map((m) => listed(m, `Round ${m.round}`)),
     recent: [...completed]
       .sort((a, b) => (b.completedAt ?? 0) - (a.completedAt ?? 0))
       .slice(0, 5)
-      .map((m) => ({
-        label: shortDate(m.completedAt),
-        home: teamOf(m.homeTeamId),
-        away: teamOf(m.awayTeamId),
-        homeScore: m.homeScore,
-        awayScore: m.awayScore,
-        winner: winningSide(m),
-      })),
+      .map((m) => listed(m, shortDate(m.completedAt))),
     createdDate: new Date(tournament.createdAt).toLocaleDateString("en-US", {
       month: "long",
       day: "numeric",

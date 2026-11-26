@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { useTournamentsPage } from "@/hooks/useTournamentsPage";
@@ -19,7 +19,7 @@ import { PageHeader } from "@/components/shell/PageHeader";
 import { deleteTournamentDescription } from "@/lib/console";
 import type { Team } from "@/lib/teamShapes";
 import { TOURNAMENT_STATUS } from "@/lib/tournamentStatus";
-import type { BracketCell, SelectedTournament } from "@/lib/tournamentsPage";
+import type { BracketCell, ListedMatch, SelectedTournament } from "@/lib/tournamentsPage";
 import { cn } from "@/lib/utils";
 
 /** One side of a bracket match. The winner is bold, and the side it beat is dimmed. */
@@ -104,27 +104,25 @@ const Fact = ({
   </div>
 );
 
-/** A match in a card's list: a line saying where or when, and the score line under it. */
-const MatchLineRow = ({
-  label,
-  live = false,
-  children,
-}: {
-  label: string;
-  live?: boolean;
-  children: ReactNode;
-}) => (
-  <li className="flex flex-col gap-1.5 px-3.5 pb-3 pt-2.5">
-    <p className="flex items-center justify-center gap-2 text-caption text-ink-soft">
-      {label}
-      {live && (
-        <span className="flex items-center gap-1.5 font-semibold text-action">
+/**
+ * A match in a card's list: a line saying where or when, and the score line
+ * under it. It is the console's match row without a tap, drawn from the
+ * page's own lines. A live match says Live and a forfeit says Forfeit
+ * beside the label.
+ */
+const MatchLineRow = ({ match }: { match: ListedMatch }) => (
+  <li className="flex flex-col gap-1.5 px-4 pb-3 pt-2.5">
+    <span className="flex min-w-0 items-center justify-center gap-2 text-caption text-ink-soft">
+      <span className="truncate">{match.label}</span>
+      {match.line.live && (
+        <span className="inline-flex shrink-0 items-center gap-1.5 font-semibold text-action">
           <span className="live-dot" aria-hidden="true" />
           Live
         </span>
       )}
-    </p>
-    {children}
+      {match.line.decidedBy === "forfeit" && <span className="shrink-0 font-semibold">Forfeit</span>}
+    </span>
+    <ScoreLine home={match.home} away={match.away} {...match.line} />
   </li>
 );
 
@@ -384,15 +382,8 @@ export default function TournamentsPage() {
               <CardEmpty message="No live matches exist yet — matches in progress will appear here." />
             ) : (
               <ul className="divide-y divide-line">
-                {selected.liveCourts.map((line, i) => (
-                  <MatchLineRow key={i} label={line.court} live>
-                    <ScoreLine
-                      home={line.home}
-                      away={line.away}
-                      homeScore={line.homeScore}
-                      awayScore={line.awayScore}
-                    />
-                  </MatchLineRow>
+                {selected.liveCourts.map((match, i) => (
+                  <MatchLineRow key={i} match={match} />
                 ))}
               </ul>
             )}
@@ -406,10 +397,8 @@ export default function TournamentsPage() {
               <CardEmpty message="No upcoming matches exist yet." />
             ) : (
               <ul className="divide-y divide-line">
-                {selected.schedule.map((line, i) => (
-                  <MatchLineRow key={i} label={line.label}>
-                    <ScoreLine home={line.home} away={line.away} />
-                  </MatchLineRow>
+                {selected.schedule.map((match, i) => (
+                  <MatchLineRow key={i} match={match} />
                 ))}
               </ul>
             )}
@@ -423,16 +412,8 @@ export default function TournamentsPage() {
               <CardEmpty message="No results exist yet — finished matches will land here." />
             ) : (
               <ul className="divide-y divide-line">
-                {selected.recent.map((line, i) => (
-                  <MatchLineRow key={i} label={line.label}>
-                    <ScoreLine
-                      home={line.home}
-                      away={line.away}
-                      homeScore={line.homeScore}
-                      awayScore={line.awayScore}
-                      winner={line.winner}
-                    />
-                  </MatchLineRow>
+                {selected.recent.map((match, i) => (
+                  <MatchLineRow key={i} match={match} />
                 ))}
               </ul>
             )}
