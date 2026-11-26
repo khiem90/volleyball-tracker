@@ -36,7 +36,7 @@ export const ListTournamentsPanel = ({
           <li key={row.id}>
             <Link href={row.href} className={`flex items-center gap-3 ${CARD_ROW}`}>
               <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2.5 gap-y-1">
-                <span className="min-w-0 text-title font-bold leading-tight wrap-anywhere">
+                <span className="min-w-0 text-title font-semibold leading-snug wrap-anywhere">
                   {row.name}
                 </span>
                 {row.isLive ? <LiveTag /> : <Chip>Completed</Chip>}

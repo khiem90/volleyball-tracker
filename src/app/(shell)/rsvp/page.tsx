@@ -10,6 +10,7 @@ import {
   Chip,
   DateTile,
   Icon,
+  NoDateTile,
   PageLoadingSpinner,
 } from "@/components/shared";
 import { PageHeader } from "@/components/shell/PageHeader";
@@ -20,8 +21,7 @@ import type { RsvpList } from "@/types/game";
 
 /**
  * One list: a date tile, its name, when it is, what it takes and how many,
- * and whether its link is on. A list with no scheduled time yet gets a tile
- * with a calendar in it, so every name starts at the same place.
+ * and whether its link is on. The row is built like the RSVP rows on Home.
  */
 const ListRow = ({ list, zone }: { list: RsvpList; zone: string }) => {
   const when =
@@ -32,14 +32,12 @@ const ListRow = ({ list, zone }: { list: RsvpList; zone: string }) => {
   return (
     <Link href={`/rsvp/${list.id}`} className={`flex items-center gap-3 ${CARD_ROW}`}>
       {list.scheduledAt === undefined ? (
-        <span className="date-tile min-h-11 justify-center text-ink-soft" aria-hidden="true">
-          <Icon id="calendar" size={18} />
-        </span>
+        <NoDateTile />
       ) : (
         <DateTile at={list.scheduledAt} zone={zone} />
       )}
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className="text-title font-bold leading-tight wrap-anywhere">{list.name}</span>
+        <span className="text-title font-semibold leading-snug wrap-anywhere">{list.name}</span>
         <span className="text-caption text-ink-soft">{when}</span>
         <span className="text-caption text-ink-soft">
           {TAKES_LABEL[list.takes]} • Capacity {list.capacity}
