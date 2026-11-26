@@ -25,7 +25,7 @@ Covers spec stories 1, 7, 77, and 78.
 - [x] Shared components that no screen ticket owned, such as the choice control, the link field, the step buttons, the spinners, and the motion helpers, are on the new names and the new look.
 - [x] The guard test bans the old theme's prefix, the word "matchbook", and the two old font names across the whole source, with no list of migrated folders and no exempt folder apart from its own.
 - [x] The guard's named-radius rule covers the whole source.
-- [ ] The design-system document matches what was built, with no mention of the old theme. The project instructions' design-system paragraph is rewritten to match.
+- [x] The design-system document matches what was built, with no mention of the old theme. The project instructions' design-system paragraph is rewritten to match.
 - [ ] Each of the five tabs, the console, the scoring page, sign-in, and the volleyball tool has been opened on a phone and on a laptop with no leftover piece of the old look.
 - [x] The full suite passes. Lint, the type checker, and a production build are clean.
 - [ ] The owner has said the branch is ready to merge.

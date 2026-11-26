@@ -493,6 +493,7 @@ describe("the files around the source", () => {
   const root = fileURLToPath(new URL("../../../", import.meta.url));
 
   it.each([
+    "CLAUDE.md",
     "docs/design-system.md",
     "next.config.ts",
     "eslint.config.mjs",

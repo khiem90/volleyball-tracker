@@ -18,4 +18,4 @@ Single-context layout, with one `GLOSSARY.md` and `docs/adr/` at the repo root. 
 
 ## Design system
 
-Every screen uses the matchbook design: the `mb-*` tokens and classes in `src/app/globals.css`, Oswald and Outfit, 4px radii, 1.5px navy borders, and the one icon sprite. See `docs/design-system.md` before touching UI; it has the palette, which button to use, the dialog recipe, and what is forbidden.
+Every screen is built from the role tokens and the shared classes in `src/app/globals.css`: white cards on a grey ground, Figtree, the four-step radius scale, one green for the next thing to tap, red for destructive actions only, and the one icon sprite. See `docs/design-system.md` before touching UI; it has the tokens, which button to use, the dialog recipe, and what is forbidden. The guard test `src/__tests__/design/tokens.test.ts` fails on anything from the forbidden list that a pattern can catch.
