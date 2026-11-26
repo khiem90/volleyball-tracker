@@ -1,15 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { MbIcon } from "@/components/matchbook/MbIcon";
+import { Chip } from "@/components/shared/Chip";
+import { Icon } from "@/components/shared/Icon";
 import { statusLabel, type SeriesInfo } from "@/lib/scoring";
 import type { MatchStatus } from "@/types/game";
 
-const STATUS_COLOR: Record<MatchStatus, string> = {
-  in_progress: "var(--action)",
-  completed: "var(--mb-green)",
-  pending: "var(--mb-ink-muted)",
-};
+/* The bar's grey button. Holding a glyph alone, it is a 44px circle. */
+const BAR_BUTTON = "btn btn-fill min-w-11 shrink-0 px-2.5";
 
 type ScoringHeaderProps = {
   backHref: string;
@@ -33,8 +31,10 @@ type ScoringHeaderProps = {
 
 /**
  * The scoring page's top bar: Back, the match's status, and the controls a
- * scorer needs. Every control is at least 44px tall. It pads for the status
- * bar and, in landscape, for the notch.
+ * scorer needs. It is a white surface, which gives the grey buttons their
+ * edge. Ending the game is the bar's one green button, held to the 44px of
+ * the buttons beside it. It pads for the status bar and, in landscape, for
+ * the notch.
  */
 export const ScoringHeader = ({
   backHref,
@@ -52,37 +52,26 @@ export const ScoringHeader = ({
   onFullscreen,
   onUndo,
   onOpenCompleteDialog,
-}: ScoringHeaderProps) => {
-  const color = STATUS_COLOR[status];
-  return (
-  <header className="z-20 border-b border-mb-rule bg-mb-paper-bright pt-[env(safe-area-inset-top)] pr-[max(0.75rem,env(safe-area-inset-right))] pl-[max(0.75rem,env(safe-area-inset-left))]">
+}: ScoringHeaderProps) => (
+  <header className="z-20 border-b border-line bg-surface pt-[env(safe-area-inset-top)] pr-[max(0.75rem,env(safe-area-inset-right))] pl-[max(0.75rem,env(safe-area-inset-left))]">
     <div className="mx-auto flex max-w-4xl items-center justify-between gap-2 py-2">
       <Link
         href={backHref}
         aria-label={`Back to ${backLabel}`}
-        className="mb-btn mb-btn-outline-navy min-w-11 shrink-0 px-2.5 sm:px-3"
+        className={`${BAR_BUTTON} sm:px-3`}
       >
-        <MbIcon id="chevron-left" size={20} />
+        <Icon id="chevron-left" size={20} />
         <span className="hidden sm:inline">{backLabel}</span>
       </Link>
 
       <div className="min-w-0 text-center">
         <div className="flex flex-wrap items-center justify-center gap-1.5">
-          <span
-            className="matchbook-display inline-flex items-center gap-1.5 border-[2px] px-2 py-1 text-[0.7rem] font-bold leading-none tracking-[0.14em]"
-            style={{ borderColor: color, color }}
-          >
-            {status === "in_progress" && <span className="mb-live-dot" aria-hidden />}
-            {statusLabel({ status })}
-          </span>
-          {tag && (
-            <span className="matchbook-display border-[2px] border-mb-gold px-2 py-1 text-[0.7rem] font-bold leading-none tracking-[0.14em] text-mb-gold">
-              {tag}
-            </span>
-          )}
+          {/* Green with the live dot while the match is played, grey before and after. */}
+          <Chip live={status === "in_progress"}>{statusLabel({ status })}</Chip>
+          {tag && <Chip>{tag}</Chip>}
         </div>
         {series.isSeries && (
-          <p className="mb-kicker mt-1 truncate">
+          <p className="mt-1 truncate text-caption font-medium text-ink-soft">
             Best of {series.seriesLength} · Game {series.gameNumber} · {homeName} {series.homeWins}
             –{series.awayWins} {awayName}
           </p>
@@ -95,9 +84,9 @@ export const ScoringHeader = ({
             type="button"
             onClick={onFullscreen}
             aria-label="Fullscreen"
-            className="mb-btn mb-btn-outline-navy min-w-11 px-2.5"
+            className={BAR_BUTTON}
           >
-            <MbIcon id="maximize" size={16} />
+            <Icon id="maximize" size={16} />
           </button>
         )}
         {canScore && (
@@ -107,9 +96,9 @@ export const ScoringHeader = ({
               onClick={onUndo}
               disabled={!canUndo}
               aria-label="Undo the last point"
-              className="mb-btn mb-btn-outline-navy min-w-11 px-2.5 sm:px-3"
+              className={`${BAR_BUTTON} sm:px-3`}
             >
-              <MbIcon id="undo" size={16} />
+              <Icon id="undo" size={16} />
               <span className="hidden sm:inline">Undo</span>
             </button>
             <button
@@ -117,9 +106,9 @@ export const ScoringHeader = ({
               onClick={onOpenCompleteDialog}
               disabled={!canComplete}
               aria-label={endLabel}
-              className="mb-btn mb-btn-coral px-3"
+              className="btn btn-action min-h-11 px-3 text-label"
             >
-              <MbIcon id="flag" size={16} />
+              <Icon id="flag" size={16} />
               <span className="sm:hidden">End</span>
               <span className="hidden sm:inline">{endLabel}</span>
             </button>
@@ -128,5 +117,4 @@ export const ScoringHeader = ({
       </div>
     </div>
   </header>
-  );
-};
+);
