@@ -1,1 +1,6 @@
-export { ScoringScreen, type ScoringSide, type CompleteDialogState } from "./ScoringScreen";
+export {
+  ScoringScreen,
+  STOCK_COLOR,
+  type ScoringSide,
+  type CompleteDialogState,
+} from "./ScoringScreen";
