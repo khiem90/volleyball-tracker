@@ -270,7 +270,7 @@ export default function SharedFormationPage() {
             </div>
           </Card>
 
-          <Card title="Court Diagram" icon="court">
+          <Card>
             <div className="p-4">
               <VolleyballCourt
                 players={players}
@@ -288,7 +288,7 @@ export default function SharedFormationPage() {
 
         {/* Right Sidebar: Legend */}
         <div className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-20">
-          <Card title="Position Guide" icon="teams">
+          <Card>
             <div className="p-4">
               <LegendPanel
                 players={players}

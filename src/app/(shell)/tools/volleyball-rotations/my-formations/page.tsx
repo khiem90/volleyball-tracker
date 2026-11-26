@@ -234,7 +234,7 @@ export default function MyFormationsPage() {
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
         title="Delete this formation?"
-        description={`${deleteTarget?.name ?? "It"} will be removed from your formations.`}
+        description={deleteTarget?.name}
         onConfirm={handleConfirmDelete}
         isDeleting={isDeleting}
       />

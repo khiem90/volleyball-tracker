@@ -105,7 +105,10 @@ export default function ToolsPage() {
                       <span className={ROW_NAME}>{tool.title}</span>
                       <span className={ROW_FACTS}>{tool.description}</span>
                     </span>
-                    <Icon id="chevron-right" size={14} className="shrink-0 text-ink-soft" />
+                    <span className="flex shrink-0 items-center gap-1 text-caption font-semibold text-ink-soft">
+                      Open Tool
+                      <Icon id="chevron-right" size={14} />
+                    </span>
                   </Link>
                 </li>
               ))}
@@ -121,7 +124,7 @@ export default function ToolsPage() {
           >
             {isGuest ? (
               <CardEmpty
-                message="No formations exist yet. Sign in to save and share your rotation layouts."
+                message="No formations exist yet — sign in to save and share your rotation layouts."
                 actionLabel="Sign in"
                 href={signInHref("/tools")}
               />
@@ -130,10 +133,10 @@ export default function ToolsPage() {
                 Loading saved formations…
               </p>
             ) : formationsState === "error" ? (
-              <CardEmpty message="Saved formations could not be loaded right now. Try again from My Formations." />
+              <CardEmpty message="Saved formations could not be loaded right now — try again from My Formations." />
             ) : formations.length === 0 ? (
               <CardEmpty
-                message="No formations exist yet. Save a layout from the rotation designer to see it here."
+                message="No formations exist yet — save a layout from the rotation designer to see it here."
                 actionLabel="Open designer"
                 href="/tools/volleyball-rotations"
               />
