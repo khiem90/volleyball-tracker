@@ -10,7 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { MbIcon } from "@/components/matchbook/MbIcon";
+import { Icon } from "@/components/shared/Icon";
 import { InlineSpinner } from "@/components/shared/InlineSpinner";
 import { listNames } from "@/lib/utils";
 import type { Tournament } from "@/types/game";
@@ -23,21 +23,25 @@ export interface KeptTeamRow {
   tournaments: Pick<Tournament, "id" | "name">[];
 }
 
-/** One line per kept team, each naming the live tournaments holding it. Links are navy, coral on hover. */
+/**
+ * One line per kept team, each naming the live tournaments holding it. A
+ * link is underlined ink at the height of a button, and turns green under
+ * the pointer.
+ */
 const KeptTeamsList = ({ kept }: { kept: KeptTeamRow[] }) => (
-  <ul className="flex flex-col gap-2 text-sm">
+  <ul className="flex flex-col gap-2 text-body">
     {kept.map((team) => (
-      <li key={team.teamId} className="flex flex-col gap-1">
+      <li key={team.teamId} className="flex flex-col">
         <span>
           <span className="font-semibold">{team.name}</span> is in{" "}
           {listNames(team.tournaments.map((t) => t.name))}.
         </span>
-        <span className="flex flex-wrap gap-2">
+        <span className="flex flex-wrap gap-x-4">
           {team.tournaments.map((tournament) => (
             <Link
               key={tournament.id}
               href={`/competitions/${tournament.id}`}
-              className="font-medium text-mb-navy underline-offset-4 transition-colors hover:text-mb-coral hover:underline"
+              className="inline-flex min-h-11 items-center text-label font-semibold text-ink underline underline-offset-4 transition-colors wrap-anywhere hover:text-action"
             >
               Open {tournament.name} to withdraw
             </Link>
@@ -69,7 +73,7 @@ export const TeamInLiveTournamentDialog = ({
     <DialogContent className="sm:max-w-md">
       <DialogHeader>
         <DialogTitle>
-          <MbIcon id="warning" size={18} className="shrink-0" />
+          <Icon id="warning" size={18} className="shrink-0" />
           {kept.length === 1
             ? `${kept[0].name} is in a live tournament`
             : "These teams are in live tournaments"}
@@ -99,7 +103,7 @@ interface DeleteTeamsDialogProps {
 }
 
 /**
- * One confirm for one team or many: a navy question, and only the Delete
+ * One confirm for one team or many: the question in ink, and only the Delete
  * button in red. Teams a live tournament keeps back are named here so nobody
  * is surprised when they are still on the roster after.
  */
@@ -117,7 +121,7 @@ export const DeleteTeamsDialog = ({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>
-            <MbIcon id="trash" size={18} className="shrink-0" />
+            <Icon id="trash" size={18} className="shrink-0" />
             {one ? `Delete ${deleting[0]}?` : `Delete ${deleting.length} teams?`}
           </DialogTitle>
           <DialogDescription>
@@ -127,8 +131,8 @@ export const DeleteTeamsDialog = ({
           </DialogDescription>
         </DialogHeader>
         {kept.length > 0 && (
-          <div className="flex flex-col gap-2 rounded-[4px] border border-mb-rule bg-mb-paper-bright p-3">
-            <p className="mb-kicker">Kept on the roster</p>
+          <div className="flex flex-col gap-2 rounded-tile bg-fill p-3">
+            <p className="text-caption font-medium text-ink-soft">Kept on the roster</p>
             <KeptTeamsList kept={kept} />
           </div>
         )}
@@ -147,7 +151,7 @@ export const DeleteTeamsDialog = ({
             disabled={isDeleting}
             className="sm:flex-1"
           >
-            {isDeleting ? <InlineSpinner /> : <MbIcon id="trash" size={14} />}
+            {isDeleting ? <InlineSpinner /> : <Icon id="trash" size={14} />}
             {isDeleting ? "Deleting..." : one ? "Delete" : `Delete ${deleting.length} teams`}
           </Button>
         </DialogFooter>

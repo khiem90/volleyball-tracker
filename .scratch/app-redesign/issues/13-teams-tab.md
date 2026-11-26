@@ -12,13 +12,17 @@ Covers spec stories 25, 29, and 30.
 
 **Status:** ready-for-agent
 
-- [ ] The roster lists the same teams in the same order as today, each with its mark, name, and the same facts and status.
-- [ ] Search and any filters work as today in the new form controls.
-- [ ] The team form has the same fields and validation. The color picker shows the same palette, and a mark beside it previews the chosen color with the team's initial.
-- [ ] Selecting several teams and deleting them works as today and confirms in the shared destructive dialog.
-- [ ] An empty roster shows today's empty state in the new look.
-- [ ] The Teams tab's files and the team dialogs contain no old-theme name and are on the guard's list of migrated folders.
-- [ ] The roster tests pass unedited, along with the rest of the suite outside the design folder. Lint and the type checker are clean.
+- [x] The roster lists the same teams in the same order as today, each with its mark, name, and the same facts and status.
+- [x] Search and any filters work as today in the new form controls.
+- [x] The team form has the same fields and validation. The color picker shows the same palette, and a mark beside it previews the chosen color with the team's initial.
+- [x] Selecting several teams and deleting them works as today and confirms in the shared destructive dialog.
+- [x] An empty roster shows today's empty state in the new look.
+- [x] The Teams tab's files and the team dialogs contain no old-theme name and are on the guard's list of migrated folders.
+- [x] The roster tests pass unedited, along with the rest of the suite outside the design folder. Lint and the type checker are clean.
 - [ ] The owner has added, edited, and deleted a team on a phone, and what they flagged is fixed.
 
 ## Comments
+
+- "Adding a team is the page's main action" is not applicable. The page has no action in its header and gets none. A team is added in the inline form at the top of the directory card, as today.
+- The directory and the readiness list are rows now, not tables, so neither scrolls sideways. The selected row is washed with `action-tint`. The teal edge on the top row is gone, and its rank number still says it leads.
+- The page's title reads "Teams". It was "Team Directory", which the first card still says. Status words read "Active", "Idle", "Ready", "Good", and "Needs attention" where the data holds capitals.
