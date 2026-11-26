@@ -666,7 +666,16 @@ The setter's red is the hue the tool has always given that role. It marks a
 player and is not the `danger` token, so the rule that red means a
 destructive action or an error does not reach it.
 
-The controls around the court share four class strings from
+The controls around the court share three class strings from
 `src/components/volleyball/styles.ts`. A button that is one of a set, or a
-switch, is `toggleClass`: filled with ink when it is on. A tile that picks a
+switch, is `toggleClass`: filled with ink when it is on, white with the
+control edge when it is off. The six rotation buttons and Serving and
+Receiving, on the page and in the editor, the page's Libero, Overlaps, and
+Arrows switches, and the formation category tabs are all this one control. A
+tile that picks a
 formation is `choiceTileClass`: the green tint and a green edge when chosen.
+`GROUP_LABEL` is the small heading over a group of controls.
+
+The tool has no button kind of its own. Every other button there is one of
+the five under "Which button". Edit, Duplicate, and Share on a saved
+formation are the grey button.

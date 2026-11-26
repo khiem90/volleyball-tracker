@@ -4,7 +4,7 @@ import { memo } from "react";
 import type { UserFormation } from "@/lib/volleyball/types";
 import { Chip } from "@/components/shared/Chip";
 import { Icon } from "@/components/shared/Icon";
-import { QUIET_BUTTON } from "./styles";
+import { cn } from "@/lib/utils";
 
 type FormationCardProps = {
   formation: UserFormation;
@@ -35,6 +35,10 @@ export const FormationCard = memo(
         year: "numeric",
       });
     };
+
+    // Edit, Duplicate, and Share are the grey button. On the green tint it
+    // turns white, as the chips do, so it keeps an edge.
+    const secondary = cn("btn btn-fill px-3", isSelected && "bg-surface hover:bg-fill");
 
     return (
       <div
@@ -112,7 +116,7 @@ export const FormationCard = memo(
                 <button
                   type="button"
                   onClick={onEdit}
-                  className={QUIET_BUTTON}
+                  className={secondary}
                   aria-label="Edit formation"
                 >
                   Edit
@@ -123,7 +127,7 @@ export const FormationCard = memo(
                 <button
                   type="button"
                   onClick={onDuplicate}
-                  className={QUIET_BUTTON}
+                  className={secondary}
                   aria-label="Duplicate formation"
                 >
                   Duplicate
@@ -134,7 +138,7 @@ export const FormationCard = memo(
                 <button
                   type="button"
                   onClick={onShare}
-                  className={QUIET_BUTTON}
+                  className={secondary}
                   aria-label="Share formation"
                 >
                   Share
@@ -159,7 +163,7 @@ export const FormationCard = memo(
             <button
               type="button"
               onClick={onDuplicate}
-              className={QUIET_BUTTON}
+              className={secondary}
               aria-label="Copy to My Formations"
             >
               Copy to My Formations

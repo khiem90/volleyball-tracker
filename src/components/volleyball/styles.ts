@@ -24,6 +24,3 @@ export const choiceTileClass = (chosen: boolean): string =>
       ? "border-action bg-action-tint"
       : "border-ink-soft/75 bg-surface hover:border-ink"
   }`;
-
-/** A button with no fill of its own, for the lesser actions beside a row's main one. */
-export const QUIET_BUTTON = "btn px-3 text-ink-soft hover:bg-ink/8 hover:text-ink";
