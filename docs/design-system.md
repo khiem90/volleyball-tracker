@@ -8,10 +8,10 @@ added for one.
 Read this before touching UI. When this page and `src/app/globals.css`
 disagree, the stylesheet wins and this page needs a fix.
 
-The app is part way through the move from the matchbook design. The tokens,
-the scales, and the shared pieces below are final, and new UI uses them. A
-screen that has not moved yet still writes the old class names, and each of
-those now draws the new piece. "Old names" near the end lists them.
+Every screen is built from the tokens, the scales, and the shared pieces
+below. `src/__tests__/design/tokens.test.ts` is the guard: it reads every file
+under `src` and fails the suite on anything in "Forbidden" that a pattern can
+catch.
 
 ## Role tokens
 
@@ -81,7 +81,7 @@ its neighbours.
 Figtree is the only typeface. `src/app/layout.tsx` loads it as a variable font
 through `next/font/google` and sets `--font-figtree` on `<html>`, because the
 stylesheet's theme reads it on `:root`. Set on `<body>` it is one element too
-low, and that is why the old theme's two fonts never applied.
+low, and every screen falls back to the system font.
 
 | Utility | Size | What it is for |
 | --- | --- | --- |
@@ -209,9 +209,7 @@ name starts at the same edge. Home's RSVP rows and the RSVP tab both use it.
 
 A team is drawn as its mark: a small shield with the team's initial on the
 team's own color. `TeamMark` in `src/components/shared/TeamMark.tsx` takes a
-`name`, a `color`, and a `size` in px (22 by default). Every place that drew
-one of the eight crest pictures draws the mark now, and the old `Crest`
-component is a wrapper around it until its callers move over.
+`name`, a `color`, and a `size` in px (22 by default).
 
 ```tsx
 <TeamMark name={team.name} color={team.color} size={22} />
@@ -249,9 +247,8 @@ color, so a mark drawn from `entryTeams()` shows a mixed team like any other.
 ### Score line
 
 `ScoreLine` in `src/components/shared/ScoreLine.tsx` is one match on one
-line: a team, the score, the other team. It comes in two sizes. Each screen
-that shows a match moves to it as that screen is redesigned, and no match is
-drawn by hand after that.
+line: a team, the score, the other team. It comes in two sizes. Every screen
+that shows a match draws it with this, and no match is drawn by hand.
 
 ```tsx
 <ScoreLine home={home} away={away} homeScore={21} awayScore={15} />
@@ -432,10 +429,8 @@ holds those to the stylesheet and checks each icon's size and ground.
 
 ## Icons
 
-Every icon is a `<symbol>` in `public/assets/matchbook/icons/sprite.svg`,
-rendered with `<Icon id="trash" size={14} />` from `@/components/shared/Icon`.
-The old name, `MbIcon`, still resolves until every screen has moved off it.
-The icon is `aria-hidden`, and a button that is only an icon carries the
+Every icon is a `<symbol>` in `public/assets/icons/sprite.svg`, rendered with
+`<Icon id="trash" size={14} />` from `@/components/shared/Icon`. The icon is `aria-hidden`, and a button that is only an icon carries the
 `aria-label`. Color comes from `currentColor`, so set a text color on the icon
 or its parent. Sizes in use: 14 inside a button or a card's title, 16 in a
 row, 18 in a dialog title, 20 for the close and back controls, 24 on the
@@ -472,16 +467,13 @@ Each id and the Phosphor glyph it draws:
 | `pencil` | pencil-simple | `remove-user` | user-minus | `logout` | sign-out |
 | `eye` | eye | `eye-off` | eye-slash | `rsvp` | calendar-check |
 
-To add a glyph, reuse first: `manifest.json` lists the ids and
-`/assets/matchbook/preview.html` draws them. If none carries the meaning, copy
-the path from Phosphor's regular SVG file into one line before the closing
-`</svg>`: `<symbol id="..." viewBox="0 0 256 256"><path fill="currentColor"
+To add a glyph, reuse first: the table above lists every id. If none carries
+the meaning, copy the path from Phosphor's regular SVG file into one line
+before the closing `</svg>`: `<symbol id="..." viewBox="0 0 256 256"><path fill="currentColor"
 d="..."/></symbol>`. If Phosphor has no fitting glyph, draw one on the same
 256 grid with `fill="none" stroke="currentColor" stroke-width="16"` and round
 caps and joins, which is the weight of Phosphor's outlines. `court` is drawn
-that way. The id is listed in three places and all three change together: the
-sprite, `iconIds` in `public/assets/matchbook/manifest.json`, and the `ids`
-array in `public/assets/matchbook/preview.html`.
+that way. Then add the id and its glyph to the table above.
 
 The guard test in `src/__tests__/design/tokens.test.ts` fails when source asks
 for an id the sprite lacks, when one of the 54 ids goes missing, and when a
@@ -599,59 +591,11 @@ neither does the dialog, because the overlay already sets it apart.
 - `Avatar` in `src/components/ui/avatar.tsx` is the account's picture: a 36px circle in `fill` showing the photo, or else the initial in bold ink. It has no ring. It sits on a `surface`, since on the ground a `fill` circle has no edge.
 - `Badge` in `src/components/ui/badge.tsx` is a small grey pill with ink text, drawn by the `chip` class. It marks a row with a word, such as "Held" or "You". For a status use `Chip`, which also has the green tone and the live dot.
 
-## Old names
-
-Each old class is drawn by the same rule as its new name, so the two look
-alike. Each old component is a re-export of the new one. A screen moves by
-swapping the names, and the old ones are deleted when nothing uses them. In a
-folder on the guard's migrated list, an old name fails the build.
-
-| Old | New |
-| --- | --- |
-| `mb-panel` | `card` |
-| `mb-panel-head` | `card-head` |
-| `mb-panel-link` | `card-link` |
-| `mb-btn` | `btn` |
-| `mb-btn-coral` | `btn-action`. The old class stays 44px tall, and the new one is 52px. |
-| `mb-btn-navy` | `btn-ink` |
-| `mb-btn-outline-navy`, `mb-btn-outline` | `btn-fill` |
-| `mb-btn-outline-red` | `btn-danger-quiet` |
-| `mb-dialog` | `dialog`. Nothing writes it by hand any more: every dialog is the shared `Dialog`. |
-| `mb-shadow-panel` | `lift` |
-| `mb-input` | `field` |
-| `mb-textarea` | `field-area` |
-| `mb-select-native` | `field-select` |
-| `mb-search` | `field-search` |
-| `mb-checkbox` | `field-check` |
-| `mb-table`, `mb-table-compact` | `data-table`, `data-table-compact` |
-| `mb-live-dot` | `live-dot` |
-| `mb-spinner` | `spinner` |
-| `mb-score-text` | `team-panel-score` |
-| `mb-score-box` | `chip` with `text-ink-soft` |
-| `mb-kicker` | `text-caption font-medium text-ink-soft` |
-| `matchbook-display` | No class. The type scale's utilities, and `tabular-nums` on a number. |
-| `matchbook-surface` | No class. `<body>` sets the ground and the ink. |
-| `mb-form-square` | `form-dot`, through `FormDots` |
-| `Panel`, `PanelEmpty`, `PanelError`, `PANEL_ROW` from `@/components/matchbook/Panel` | `Card`, `CardEmpty`, `CardError`, `CARD_ROW` from `@/components/shared/Card`. `Panel` still accepts `tone` and ignores it. |
-| `FormSquares`, `FormLetters` from `@/components/matchbook/Panel` | `FormDots`, `FormLetters` from `@/components/shared/RecentForm` |
-| `AddTeamsForm` from `@/components/matchbook/AddTeamsForm` | The same name from `@/components/shared/AddTeamsForm` |
-| `TOURNAMENT_STATUS` from `@/components/matchbook/tournamentStatus` | The same name from `@/lib/tournamentStatus` |
-| `Crest` from `@/components/matchbook/Panel` | `TeamMark` from `@/components/shared/TeamMark`, which takes a `name` and a `color` |
-| The `Mb` shapes from `@/components/matchbook/types` | The same shapes without the prefix from `@/lib/teamShapes` |
-| `@/components/matchbook/teamStats` | `@/lib/teamStats` |
-| `MbIcon` | `Icon` from `@/components/shared/Icon` |
-
-The old color tokens resolve to roles: `--mb-paper` to `ground`,
-`--mb-paper-bright` to `surface`, `--mb-navy` to `ink`, `--mb-ink-muted`,
-`--mb-gold`, and `--mb-plum` to `ink-soft`, `--mb-rule` to `line`,
-`--mb-coral`, `--mb-green`, and `--mb-teal` to `action`, and `--mb-red` to
-`danger`.
-
 ## Forbidden
 
 - The old token classes: `bg-background`, `text-foreground`, `bg-card`, `bg-popover`, `bg-primary`, `text-primary-foreground`, `bg-secondary`, `bg-muted`, `text-muted-foreground`, `bg-accent`, `text-destructive`, `border-border`, `border-input`, `ring-ring`, and every other utility built on `background`, `foreground`, `card`, `popover`, `primary`, `secondary`, `muted`, `accent`, `destructive`, `border`, `input`, or `ring`. `src/__tests__/design/tokens.test.ts` scans every source file and the stylesheet and fails on one. None of them is defined any more, so one that slipped through would draw nothing.
-- The old theme's names in new code: the `mb-` prefix, `Mb` on a component or a type, "matchbook", and the two old font names. The same test fails on one in any folder or file on its migrated list.
-- A radius off the scale. On the migrated list only `rounded-card`, `rounded-tile`, `rounded-chip`, `rounded-pill`, `rounded-full`, and `rounded-none` pass. Everywhere else the test fails on `rounded-md` and up and on an arbitrary radius above 4px. The old radius scale is gone, so those names are Tailwind's own sizes now, and a bare `rounded` or `rounded-sm` is 4px.
+- A name or a color from the theme this design replaced: its prefix on a class, a token, a component, or a type, its name in a path, its two typefaces, and its palette's hex values. The same test holds the patterns and fails on one anywhere in `src`, in this page, and in the config files that point at assets.
+- A radius off the scale. Only `rounded-card`, `rounded-tile`, `rounded-chip`, `rounded-pill`, `rounded-full`, and `rounded-none` pass, on any side or corner and behind any variant. A bare `rounded`, Tailwind's own steps such as `rounded-md`, and an arbitrary radius all fail. The test reads words and not markup, so the word in a comment fails too. Write "round corners" there.
 - `dark:` utilities. The design is light only.
 - Colors outside the role tokens: Tailwind's named colors (`slate-500`, `amber-200`), new hex values, oklch literals. Team colors and the court's palette are the exceptions.
 - Red on anything that is not a destructive action or an error. No red for live, for a loss, or for a status.
@@ -661,9 +605,9 @@ The old color tokens resolve to roles: `--mb-paper` to `ground`,
 - The green button in a dialog's footer.
 - Forced uppercase, by a class or by the `uppercase` utility on a heading or a label.
 - A tappable control under 44px tall.
-- `lucide-react` and `@heroicons/react`. Both are uninstalled and `eslint.config.mjs` rejects an import of either.
+- `lucide-react`, `@heroicons/react`, and `@phosphor-icons/react`. None is installed and `eslint.config.mjs` rejects an import of any of them.
 - Black overlays, backdrop blur, and gradients. The one exception is the scoring page's team-color panels (`TeamScorePanel`), which sit on the team color and keep their translucent white controls and the amber Leading and Winner pill with its backdrop blur.
-- `shadcn add` output as it comes. `components.json` still says `"iconLibrary": "lucide"`, so a generated component imports `lucide-react`. Swap those imports for `Icon` before it is used, because lint refuses them.
+- `shadcn add` output as it comes. `components.json` names Phosphor as the icon library, because the sprite's drawings are Phosphor's. A generated component imports `@phosphor-icons/react`, or `lucide-react` from a CLI that does not know Phosphor. Neither is installed and lint refuses both. Swap the import for `Icon`, with the id the table under "Icons" gives for the glyph.
 
 ## The court's palette
 

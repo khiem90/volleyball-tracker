@@ -483,6 +483,34 @@ describe("the whole source", () => {
   });
 });
 
+/*
+ * Outside src the old theme lived in the asset folder that carried its name,
+ * in the design document, and in the lines of the config files that pointed
+ * at either. .scratch is left out on purpose: its specs and tickets name the
+ * old theme as history.
+ */
+describe("the files around the source", () => {
+  const root = fileURLToPath(new URL("../../../", import.meta.url));
+
+  it.each([
+    "docs/design-system.md",
+    "next.config.ts",
+    "eslint.config.mjs",
+    "components.json",
+    "scripts/generate-icons.mjs",
+  ])("%s uses no name from the old theme", (file) => {
+    const text = readFileSync(join(root, file), "utf8");
+    expect(hitsIn(file, text, oldThemeNamesIn)).toEqual([]);
+    expect(hitsIn(file, text, oldPaletteIn)).toEqual([]);
+  });
+
+  it("keep no asset under a path that carries one", () => {
+    const paths = walk(join(root, "public"), /./).map((file) => relative(root, file).split(sep).join("/"));
+    expect(paths).toContain("public/assets/icons/sprite.svg");
+    expect(paths.flatMap((path) => hitsIn(path, path, oldThemeNamesIn))).toEqual([]);
+  });
+});
+
 describe("the icon sprite", () => {
   const icons = fileURLToPath(new URL("../../../public/assets/icons/", import.meta.url));
   const sprite = readFileSync(join(icons, "sprite.svg"), "utf8");
