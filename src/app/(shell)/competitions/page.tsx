@@ -185,8 +185,9 @@ const MainCard = ({ selected }: { selected: SelectedTournament }) => {
                   <td className={cn("pl-4 text-center font-bold", i === 0 && "text-action")}>
                     {i + 1}
                   </td>
-                  <td>
-                    <TeamName team={line.team} size={20} />
+                  {/* The name takes the width the numbers leave and is cut there, so a long one cannot push them off a phone. */}
+                  <td className="w-full max-w-0">
+                    <TeamName team={line.team} size={20} className="flex" />
                   </td>
                   <td className="text-center">{line.won}</td>
                   <td className="text-center">{line.lost}</td>
