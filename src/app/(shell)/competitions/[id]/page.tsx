@@ -1,12 +1,17 @@
 "use client";
 
 import { Suspense, type ReactNode } from "react";
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { DeleteConfirmDialog, PageLoadingSpinner } from "@/components/shared";
-import { MbIcon } from "@/components/matchbook/MbIcon";
-import { Crest } from "@/components/matchbook/Panel";
+import {
+  CardError,
+  Chip,
+  DeleteConfirmDialog,
+  Icon,
+  PageLoadingSpinner,
+  TeamMark,
+} from "@/components/shared";
+import { PageHeader } from "@/components/shell/PageHeader";
 import { BracketPanel } from "@/components/console/BracketPanel";
 import { ConsoleTabs, panelId, tabId, type ConsoleTab } from "@/components/console/ConsoleTabs";
 import { CourtsPanel } from "@/components/console/CourtsPanel";
@@ -21,9 +26,9 @@ import { ConfirmDialog } from "@/components/console/ConfirmDialog";
 import { MixedTeamDialog } from "@/components/console/MixedTeamDialog";
 import { NotFound } from "@/components/console/NotFound";
 import { useConsole } from "@/components/console/useConsole";
-import { TOURNAMENT_STATUS } from "@/components/matchbook/tournamentStatus";
 import { courtLabel, courtsWord, type ConsoleRole } from "@/lib/console";
 import { formatLabel, isBracketFormat, isRotationFormat } from "@/lib/formats";
+import { TOURNAMENT_STATUS } from "@/lib/tournamentStatus";
 
 const ROLE_LABEL: Record<Exclude<ConsoleRole, "owner">, string> = {
   scorer: "Scorer",
@@ -81,78 +86,63 @@ const TournamentConsole = () => {
     tournament.status === "completed"
       ? { href: "/summaries", label: "History" }
       : { href: "/competitions", label: "Tournaments" };
+  const notice = page.actionError ?? page.staleNotice;
 
   return (
     <>
-      {/* Masthead */}
-      <header className="mb-4 flex flex-col gap-3">
-        {page.role === "owner" && (
-          <Link href={back.href} className="mb-panel-link self-start">
-            <MbIcon id="chevron-right" size={11} className="rotate-180" />
-            {back.label}
-          </Link>
-        )}
-
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-          <h1 className="matchbook-display min-w-0 max-w-full text-3xl font-bold leading-none tracking-[0.01em] [overflow-wrap:anywhere] sm:text-5xl">
-            {tournament.name}
-          </h1>
-          <span
-            className="matchbook-display border-[2px] px-2.5 py-1.5 text-[0.9rem] font-bold tracking-[0.14em]"
-            style={{ borderColor: status.color, color: status.color }}
-          >
-            {status.label}
-          </span>
-          {page.role !== "owner" && (
-            <span className="matchbook-display border-[1.5px] border-mb-navy px-2 py-1.5 text-[0.62rem] font-bold tracking-[0.12em] text-mb-navy">
-              {ROLE_LABEL[page.role]}
-            </span>
-          )}
-        </div>
-
-        <p className="matchbook-display text-[0.74rem] font-bold tracking-[0.1em]">
-          {formatLabel(tournament.format)} • {tournament.entries.length} Teams •{" "}
-          {page.matches.length} Matches
-          {rotation
-            ? ` • ${tournament.settings.courts} ${courtsWord(tournament, tournament.settings.courts)}`
-            : ""}
-        </p>
-
+      {/*
+        The header: the way back for the owner, the name with its status, the
+        facts, and at its foot on a phone the tab strip. A scorer or spectator
+        came in by a link and has no list to go back to.
+      */}
+      <PageHeader
+        back={page.role === "owner" ? back : undefined}
+        title={tournament.name}
+        status={
+          <>
+            <Chip tone={status.tone} live={status.live}>
+              {status.label}
+            </Chip>
+            {page.role !== "owner" && <Chip>{ROLE_LABEL[page.role]}</Chip>}
+          </>
+        }
+        line={
+          <>
+            {formatLabel(tournament.format)} • {tournament.entries.length} Teams •{" "}
+            {page.matches.length} Matches
+            {rotation
+              ? ` • ${tournament.settings.courts} ${courtsWord(tournament, tournament.settings.courts)}`
+              : ""}
+          </>
+        }
+        action={
+          page.access.canStart ? (
+            <button
+              type="button"
+              onClick={() => page.setStartOpen(true)}
+              disabled={page.isStarting}
+              className="btn btn-action"
+            >
+              <Icon id="live" size={18} />
+              {page.isStarting ? "Starting..." : "Start tournament"}
+            </button>
+          ) : undefined
+        }
+      >
         {winner && (
-          <div className="flex items-center gap-3">
-            <Crest team={winner} size={36} />
-            <div>
-              <p className="mb-kicker">Winner</p>
-              <p className="matchbook-display text-[1.2rem] font-bold leading-tight">
-                {winner.name}
-              </p>
+          <div className="flex items-center gap-3 pb-3.5">
+            <TeamMark name={winner.name} color={winner.color} size={36} />
+            <div className="min-w-0">
+              <p className="text-caption font-medium text-ink-soft">Winner</p>
+              <p className="truncate text-title font-bold">{winner.name}</p>
             </div>
           </div>
         )}
 
-        {page.access.canStart && (
-          <button
-            type="button"
-            onClick={() => page.setStartOpen(true)}
-            disabled={page.isStarting}
-            className="mb-btn mb-btn-coral self-start"
-          >
-            <MbIcon id="live" size={14} />
-            {page.isStarting ? "Starting..." : "Start tournament"}
-          </button>
-        )}
+        {notice && <CardError message={notice} className="mb-3.5" />}
 
-        {(page.actionError ?? page.staleNotice) && (
-          <p
-            role="alert"
-            className="border-[1.5px] border-mb-red px-3 py-2 text-[0.8rem] font-medium text-mb-red"
-          >
-            {page.actionError ?? page.staleNotice}
-          </p>
-        )}
-      </header>
-
-      <ConsoleTabs tabs={page.tabs} active={page.tab} onChange={page.setTab} />
+        <ConsoleTabs tabs={page.tabs} active={page.tab} onChange={page.setTab} />
+      </PageHeader>
 
       {/* Columns from lg up; one section at a time below */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
