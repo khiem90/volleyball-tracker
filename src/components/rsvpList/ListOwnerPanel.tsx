@@ -1,39 +1,46 @@
 "use client";
 
+import type { ReactNode } from "react";
 import Link from "next/link";
-import { MbIcon } from "@/components/matchbook/MbIcon";
-import { Panel } from "@/components/matchbook/Panel";
-import { DeleteConfirmDialog, InlineSpinner } from "@/components/shared";
+import { Card, CardError, DeleteConfirmDialog, Icon, InlineSpinner } from "@/components/shared";
 import type { ListWording } from "@/lib/rsvpList";
 import type { ListOwnerControls } from "./useListOwnerControls";
 
+/** One action in the card: its button, with what it does written under it. */
+const ActionRow = ({ note, children }: { note: string; children: ReactNode }) => (
+  <div className="flex flex-col gap-2 px-4 py-3.5 sm:items-start">
+    {children}
+    <p className="text-caption text-ink-soft">{note}</p>
+  </div>
+);
+
+/** A button that acts on the list in place. Delete is the quiet red one, and its dialog confirms in filled red. */
 const Action = ({
   icon,
   label,
   note,
   onClick,
   isBusy = false,
-  tone = "navy",
+  tone = "fill",
 }: {
   icon: string;
   label: string;
   note: string;
   onClick: () => void;
   isBusy?: boolean;
-  tone?: "navy" | "red";
+  tone?: "fill" | "danger";
 }) => (
-  <div className="flex flex-col gap-1.5">
+  <ActionRow note={note}>
     <button
       type="button"
       onClick={onClick}
       disabled={isBusy}
-      className={`mb-btn ${tone === "red" ? "mb-btn-outline-red" : "mb-btn-outline-navy"}`}
+      className={`btn ${tone === "danger" ? "btn-danger-quiet" : "btn-fill"}`}
     >
-      {isBusy ? <InlineSpinner /> : <MbIcon id={icon} size={14} />}
+      {isBusy ? <InlineSpinner /> : <Icon id={icon} size={14} />}
       {label}
     </button>
-    <p className="text-[0.72rem] text-mb-ink-muted">{note}</p>
-  </div>
+  </ActionRow>
 );
 
 /**
@@ -55,17 +62,10 @@ export const ListOwnerPanel = ({
   const { deletion } = controls;
 
   return (
-    <Panel title="Manage" icon="clipboard">
-      <div className="flex flex-col gap-4 p-4">
-        {controls.error && (
-          <p
-            role="alert"
-            className="border-[1.5px] border-mb-red px-3 py-2 text-[0.8rem] font-medium text-mb-red"
-          >
-            {controls.error}
-          </p>
-        )}
+    <Card title="Manage" icon="clipboard">
+      {controls.error && <CardError message={controls.error} className="mx-4 mt-4" />}
 
+      <div className="flex flex-col divide-y divide-line">
         {controls.canChange ? (
           <Action
             icon={controls.isClosed ? "undo" : "lock"}
@@ -75,22 +75,18 @@ export const ListOwnerPanel = ({
             isBusy={controls.isClosing}
           />
         ) : (
-          <p className="text-[0.85rem] text-mb-ink-muted">
+          <p className="px-4 py-3.5 text-label text-ink-soft">
             This list is over, so nothing on it changes. Duplicate it for next time.
           </p>
         )}
 
         {controls.importHref && (
-          <div className="flex flex-col gap-1.5">
-            <Link href={controls.importHref} className="mb-btn mb-btn-navy">
-              <MbIcon id="compete" size={14} />
+          <ActionRow note="Opens a new tournament with this list chosen. Import takes the confirmed RSVPs, leaves the waitlist out, and asks to close the list first if it is still open.">
+            <Link href={controls.importHref} className="btn btn-ink">
+              <Icon id="compete" size={14} />
               Create tournament
             </Link>
-            <p className="text-[0.72rem] text-mb-ink-muted">
-              Opens a new tournament with this list chosen. Import takes the confirmed RSVPs,
-              leaves the waitlist out, and asks to close the list first if it is still open.
-            </p>
-          </div>
+          </ActionRow>
         )}
 
         <Action
@@ -103,7 +99,7 @@ export const ListOwnerPanel = ({
 
         <Action
           icon="trash"
-          tone="red"
+          tone="danger"
           label="Delete list"
           note="Removes the list and every RSVP on it. This cannot be undone."
           onClick={deletion.open}
@@ -119,6 +115,6 @@ export const ListOwnerPanel = ({
         isDeleting={deletion.isDeleting}
         canConfirm={deletion.canConfirm}
       />
-    </Panel>
+    </Card>
   );
 };

@@ -2,21 +2,20 @@
 
 import Link from "next/link";
 import { LiveTag } from "@/components/console/MatchRow";
-import { MbIcon } from "@/components/matchbook/MbIcon";
-import { Panel, PANEL_ROW } from "@/components/matchbook/Panel";
+import { Card, CARD_ROW, Chip, Icon } from "@/components/shared";
 import { useAuth } from "@/context/AuthContext";
 import { useListTournaments } from "@/context/useListTournaments";
 import type { RsvpList } from "@/types/game";
 
 /**
  * The tournaments imported from a list that have started, on the list's
- * page. Each row opens the tournament's console: Watch for a live one,
- * See results for a completed one. Anyone who can open the page gets the
- * rows, and lands in the console as a spectator unless they own the
- * tournament.
+ * page. Each row is the tournament's name with its status beside it, and
+ * opens the tournament's console: Watch for a live one, See results for a
+ * completed one. Anyone who can open the page gets the rows, and lands in
+ * the console as a spectator unless they own the tournament.
  *
  * A draft gets no row, and neither does a tournament that was deleted.
- * The panel is left out until there is a row to show.
+ * The card is left out until there is a row to show.
  */
 export const ListTournamentsPanel = ({
   list,
@@ -31,31 +30,25 @@ export const ListTournamentsPanel = ({
   if (rows.length === 0) return null;
 
   return (
-    <Panel title="Tournaments" icon="compete" className={className}>
-      <div className="flex flex-col divide-y divide-mb-rule">
+    <Card title="Tournaments" icon="compete" className={className}>
+      <ul className="divide-y divide-line">
         {rows.map((row) => (
-          <Link
-            key={row.id}
-            href={row.href}
-            className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 ${PANEL_ROW}`}
-          >
-            <div className="flex min-w-0 flex-col gap-1">
-              <p className="matchbook-display text-[0.95rem] font-bold leading-tight [overflow-wrap:anywhere]">
-                {row.name}
-              </p>
-              {row.isLive ? <LiveTag /> : <span className="mb-kicker">Completed</span>}
-            </div>
-            <span
-              className={`mb-btn px-3 text-[0.72rem] ${
-                row.isLive ? "mb-btn-navy" : "mb-btn-outline-navy"
-              }`}
-            >
-              {row.action}
-              <MbIcon id="chevron-right" size={11} />
-            </span>
-          </Link>
+          <li key={row.id}>
+            <Link href={row.href} className={`flex items-center gap-3 ${CARD_ROW}`}>
+              <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2.5 gap-y-1">
+                <span className="min-w-0 text-title font-semibold leading-snug wrap-anywhere">
+                  {row.name}
+                </span>
+                {row.isLive ? <LiveTag /> : <Chip>Completed</Chip>}
+              </span>
+              <span className={`btn shrink-0 ${row.isLive ? "btn-ink" : "btn-fill"}`}>
+                {row.action}
+                <Icon id="chevron-right" size={14} />
+              </span>
+            </Link>
+          </li>
         ))}
-      </div>
-    </Panel>
+      </ul>
+    </Card>
   );
 };
