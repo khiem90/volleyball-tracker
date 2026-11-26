@@ -1,6 +1,11 @@
 "use client";
 
-import { CapacityField, DateTimeField } from "@/components/rsvpList/RsvpFields";
+import {
+  CapacityField,
+  DateTimeField,
+  FIELD_LABEL,
+  FIELD_NOTE,
+} from "@/components/rsvpList/RsvpFields";
 import { Choice } from "@/components/shared";
 import {
   LIST_NAME_MAX,
@@ -53,10 +58,10 @@ export const ListSetupFields = ({
 }) => (
   <div className="flex flex-col gap-5 p-4">
     <div className="flex flex-col gap-1.5">
-      <label htmlFor="list-name" className="mb-kicker">
+      <label htmlFor="list-name" className={FIELD_LABEL}>
         Name
       </label>
-      <span className={`mb-input ${problems.name ? "border-mb-red" : ""}`}>
+      <span className={`field ${problems.name ? "border-danger" : ""}`}>
         <input
           id="list-name"
           type="text"
@@ -70,11 +75,11 @@ export const ListSetupFields = ({
           aria-describedby={problems.name ? "list-name-problem" : undefined}
         />
       </span>
-      <span className="text-[0.72rem] text-mb-ink-muted">
+      <span className={FIELD_NOTE}>
         The RSVP page shows it, so people know what they are saying yes to.
       </span>
       {problems.name && (
-        <p id="list-name-problem" role="alert" className="text-[0.78rem] font-medium text-mb-red">
+        <p id="list-name-problem" role="alert" className="text-caption font-medium text-danger">
           {problems.name}
         </p>
       )}
@@ -82,9 +87,9 @@ export const ListSetupFields = ({
 
     {takesLocked ? (
       <div className="flex flex-col gap-1.5">
-        <span className="mb-kicker">RSVPs</span>
-        <span className="text-[0.95rem] font-semibold">{TAKES_LABEL[setup.takes]}</span>
-        <p className="text-[0.72rem] text-mb-ink-muted">{LIST_TAKES_LOCKED}</p>
+        <span className={FIELD_LABEL}>RSVPs</span>
+        <span className="text-body font-semibold">{TAKES_LABEL[setup.takes]}</span>
+        <p className={FIELD_NOTE}>{LIST_TAKES_LOCKED}</p>
       </div>
     ) : (
       <Choice

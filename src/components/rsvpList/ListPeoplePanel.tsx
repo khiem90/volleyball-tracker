@@ -2,13 +2,12 @@
 
 import { useState, type FormEvent } from "react";
 import { ConfirmDialog } from "@/components/console/ConfirmDialog";
-import { MbIcon } from "@/components/matchbook/MbIcon";
-import { Panel, PanelEmpty, PanelError } from "@/components/matchbook/Panel";
+import { FIELD_LABEL, FIELD_NOTE } from "@/components/rsvpList/RsvpFields";
 import { RsvpRows, RsvpSectionHead } from "@/components/rsvpList/RsvpRows";
-import { InlineSpinner } from "@/components/shared";
+import { Card, CardEmpty, CardError, Icon, InlineSpinner } from "@/components/shared";
 import { RSVP_NAME_MAX, rsvpEntryProblems } from "@/lib/rsvp";
 import type { ListWording } from "@/lib/rsvpList";
-import type { Rsvp } from "@/types/game";
+import type { Rsvp, RsvpTakes } from "@/types/game";
 import type { ListOwnerControls } from "./useListOwnerControls";
 import type { ListRsvpView } from "./useListRsvpView";
 
@@ -48,12 +47,12 @@ const HeldSpotForm = ({
   };
 
   return (
-    <form onSubmit={add} className="flex flex-col gap-1.5 border-b border-mb-rule p-4">
-      <label htmlFor="list-held-spot-name" className="mb-kicker">
+    <form onSubmit={add} className="flex flex-col gap-1.5 border-b border-line p-4">
+      <label htmlFor="list-held-spot-name" className={FIELD_LABEL}>
         {wording.label}
       </label>
       <div className="flex gap-2">
-        <span className={`mb-input min-w-0 flex-1 ${shownProblem ? "border-mb-red" : ""}`}>
+        <span className={`field min-w-0 flex-1 ${shownProblem ? "border-danger" : ""}`}>
           <input
             id="list-held-spot-name"
             value={name}
@@ -68,22 +67,20 @@ const HeldSpotForm = ({
             aria-describedby="list-held-spot-help"
           />
         </span>
-        <button type="submit" className="mb-btn mb-btn-navy" disabled={!!problem || isAdding}>
-          {isAdding ? <InlineSpinner /> : <MbIcon id="plus" size={14} />}
+        <button type="submit" className="btn btn-ink shrink-0" disabled={!!problem || isAdding}>
+          {isAdding ? <InlineSpinner /> : <Icon id="plus" size={14} />}
           Add
         </button>
       </div>
       <p
         id="list-held-spot-help"
         role={shownProblem ? "alert" : undefined}
-        className={
-          shownProblem ? "text-[0.78rem] font-medium text-mb-red" : "text-[0.72rem] text-mb-ink-muted"
-        }
+        className={shownProblem ? "text-caption font-medium text-danger" : FIELD_NOTE}
       >
         {shownProblem ?? wording.help}
       </p>
       {error && (
-        <p role="alert" className="text-[0.78rem] font-medium text-mb-red">
+        <p role="alert" className="text-caption font-medium text-danger">
           {error}
         </p>
       )}
@@ -93,22 +90,27 @@ const HeldSpotForm = ({
 
 /**
  * Everyone on the list by name, in arrival order, in two sections: who is
- * in, and who is on the waitlist. On a by-team list each row is a team
- * and the panel says teams. The viewer's own row is marked. With the
- * owner's `controls`, and until the list is over, each row has Remove and
- * the panel opens with the box for a held spot.
+ * in, under a green band, and who is on the waitlist, under a grey one. On
+ * a by-team list each row is a team with its mark, and the card says
+ * teams. The viewer's own row is marked. With the owner's `controls`, and
+ * until the list is over, each row has Remove and the card opens with the
+ * box for a held spot.
  */
 export const ListPeoplePanel = ({
   view,
+  takes,
   controls = null,
 }: {
   view: ListRsvpView;
+  /** What the list takes. On a by-team list each row draws a team's mark. */
+  takes: RsvpTakes;
   /** The owner's controls. Null for anyone else. */
   controls?: ListOwnerControls | null;
 }) => {
   const { split, wording } = view;
   const viewerUid = view.mine?.uid ?? null;
   const manage = controls?.canChange ? controls : null;
+  const isByTeam = takes === "teams";
 
   const [removing, setRemoving] = useState<Rsvp | null>(null);
   const [removeError, setRemoveError] = useState<string | null>(null);
@@ -129,38 +131,29 @@ export const ListPeoplePanel = ({
   const onRemove = manage ? setRemoving : undefined;
 
   return (
-    <Panel
+    <Card
       title={wording.heading}
       icon="teams"
-      meta={
-        view.rsvps && (
-          <span className="matchbook-display text-[0.72rem] font-bold tracking-[0.1em]">
-            {wording.count(view.rsvps.length)}
-          </span>
-        )
-      }
+      meta={view.rsvps ? wording.count(view.rsvps.length) : undefined}
     >
       {manage && <HeldSpotForm wording={wording.heldSpot} onAdd={manage.addHeld} />}
 
-      {removeError && (
-        <p role="alert" className="px-4 pt-3 text-[0.78rem] font-medium text-mb-red">
-          {removeError}
-        </p>
-      )}
+      {removeError && <CardError message={removeError} className="mx-4 mt-4" />}
 
       {view.hasError ? (
-        <PanelError message="The RSVPs could not be loaded. Check your connection and reload." />
+        <CardError message="The RSVPs could not be loaded. Check your connection and reload." />
       ) : split === null ? (
-        <PanelEmpty message="Loading the RSVPs..." />
+        <CardEmpty message="Loading the RSVPs..." />
       ) : split.confirmed.length === 0 ? (
-        <PanelEmpty message={wording.empty} />
+        <CardEmpty message={wording.empty} />
       ) : (
         <>
-          <RsvpSectionHead label="In" count={split.confirmed.length} />
+          <RsvpSectionHead label="In" count={split.confirmed.length} tone="action" />
           <RsvpRows
             rsvps={split.confirmed}
             viewerUid={viewerUid}
             mineLabel={wording.mine}
+            teams={isByTeam}
             onRemove={onRemove}
           />
           {split.waitlisted.length > 0 && (
@@ -170,6 +163,7 @@ export const ListPeoplePanel = ({
                 rsvps={split.waitlisted}
                 viewerUid={viewerUid}
                 mineLabel={wording.mine}
+                teams={isByTeam}
                 onRemove={onRemove}
               />
             </>
@@ -192,6 +186,6 @@ export const ListPeoplePanel = ({
         isBusy={false}
         onConfirm={confirmRemove}
       />
-    </Panel>
+    </Card>
   );
 };

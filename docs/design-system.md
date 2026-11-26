@@ -200,6 +200,10 @@ as `deviceZone()` in `src/lib/rsvp.ts` gives it. The month and the day are
 read in that zone by `dateTileParts` in `src/lib/dateTile.ts`. The classes are
 `date-tile` and `date-tile-month`.
 
+A list with no scheduled time gets `<NoDateTile />` from the same file in the
+tile's place: a 44px `fill` square with the `calendar` glyph, so every row's
+name starts at the same edge. Home's RSVP rows and the RSVP tab both use it.
+
 ### Team mark
 
 A team is drawn as its mark: a small shield with the team's initial on the
