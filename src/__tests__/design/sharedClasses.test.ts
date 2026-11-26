@@ -131,9 +131,12 @@ describe("reading a class's colors", () => {
   });
 });
 
-describe("the four buttons", () => {
-  /* The green main button, the black pill, the grey button, the red button. */
-  const kinds = ["action", "ink", "fill", "danger"];
+describe("the buttons", () => {
+  /*
+   * The green main button, the black pill, the grey button, the red button,
+   * and the quiet red one for a destructive action that repeats down a list.
+   */
+  const kinds = ["action", "ink", "fill", "danger", "danger-quiet"];
   const look = (kind: string) => ({ ...classLook("btn"), ...classLook(`btn-${kind}`) });
 
   it.each(kinds)("btn-%s is a pill at least 44px tall", (kind) => {
@@ -150,6 +153,7 @@ describe("the four buttons", () => {
     ["ink", "#fff", "var(--ink)"],
     ["fill", "var(--ink)", "var(--fill)"],
     ["danger", "#fff", "var(--danger)"],
+    ["danger-quiet", "var(--danger)", "var(--surface)"],
   ])("btn-%s writes %s on %s", (kind, color, background) => {
     expect(look(kind).color).toBe(color);
     expect(look(kind).background).toBe(background);
@@ -157,6 +161,19 @@ describe("the four buttons", () => {
 
   it.each(kinds)("btn-%s has a label that reaches 4.5 to 1", (kind) => {
     expect(labelContrast(look(kind))).toBeGreaterThanOrEqual(4.5);
+  });
+
+  /* White on a white card, so the control edge is what gives the quiet red button its shape. */
+  it("the quiet red button is edged like a form control and filled like none", () => {
+    expect(look("danger-quiet").border).toBe("1px solid var(--control-line)");
+    expect(look("danger").border).toBeUndefined();
+  });
+
+  /* Hover and pressed keep red text on a ground where it still reaches 4.5 to 1. */
+  it.each(["hover:not(:disabled)", "active:not(:disabled)"])("the quiet red button stays readable on :%s", (state) => {
+    const stated = { ...look("danger-quiet"), ...lookOf(`.btn-danger-quiet:${state}`) };
+    expect(lookOf(`.btn-danger-quiet:${state}`)).not.toEqual({});
+    expect(labelContrast(stated)).toBeGreaterThanOrEqual(4.5);
   });
 
   const states = ["hover", "active", "focus-visible", "disabled"];
@@ -169,13 +186,13 @@ describe("the four buttons", () => {
     expect(Object.keys(found[0].declarations).length).toBeGreaterThan(0);
   });
 
-  /* The six old variants on the four buttons. */
+  /* The old variants on the new buttons. The red outline is the quiet red button. */
   it.each([
     ["mb-btn-coral", "action"],
     ["mb-btn-navy", "ink"],
     ["mb-btn-outline-navy", "fill"],
     ["mb-btn-outline", "fill"],
-    ["mb-btn-outline-red", "danger"],
+    ["mb-btn-outline-red", "danger-quiet"],
   ])("the old %s draws btn-%s", (old, kind) => {
     expect(classLook("mb-btn")).toEqual(classLook("btn"));
     expect(classLook(old).background).toBe(classLook(`btn-${kind}`).background);
@@ -507,7 +524,7 @@ describe("the old class names", () => {
     ["mb-btn-navy", "btn-ink"],
     ["mb-btn-outline-navy", "btn-fill"],
     ["mb-btn-outline", "btn-fill"],
-    ["mb-btn-outline-red", "btn-danger"],
+    ["mb-btn-outline-red", "btn-danger-quiet"],
     ["mb-dialog", "dialog"],
     ["mb-shadow-panel", "lift"],
     ["mb-live-dot", "live-dot"],

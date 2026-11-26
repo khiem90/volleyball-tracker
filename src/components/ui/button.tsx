@@ -5,11 +5,12 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 /*
- * The four buttons. Each variant is a pair of the button classes in
+ * Four of the five buttons. Each variant is a pair of the button classes in
  * globals.css, so <Button variant="action"> and
  * <button className="btn btn-action"> are the same control. The pill, the
  * 44px minimum, hover, pressed, focus, and disabled all come from those
- * classes.
+ * classes. The fifth, the quiet red button for a row, has no variant: write
+ * "btn btn-danger-quiet".
  */
 const buttonVariants = cva(
   "shrink-0 disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0",
@@ -22,7 +23,7 @@ const buttonVariants = cva(
         action: "btn btn-action",
         /* The grey button: Cancel and secondary actions. */
         outline: "btn btn-fill",
-        /* The red button: a destructive action and its confirm. */
+        /* The filled red button: the confirm of a destructive dialog. */
         destructive: "btn btn-danger",
       },
       size: {

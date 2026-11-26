@@ -32,7 +32,8 @@ the opacity form, as in `bg-ink/55`. An inline style reads `var(--action)`.
 | `danger` | `#cf3f32` | Destructive actions and error messages. |
 | `danger-tint` | `#fff7f6` | The background of an error message. |
 
-White (`#ffffff`, `text-white`) is the text on a green, black, or red button.
+White (`#ffffff`, `text-white`) is the text on a green, black, or filled red
+button.
 Team colors are the user's own and are painted as inline styles. They are the
 one color source outside this table.
 
@@ -42,6 +43,7 @@ and ground, ink-soft on surface, ground, and fill, white on action, action on
 surface and action-tint, white on danger, and danger on danger-tint. Danger
 sits at 4.76 to 1 on white, which is why its tint is nearly white. Danger on
 `fill` gives 4.28, so red text never goes on a grey button or a grey chip.
+The quiet red button is white for that reason.
 
 ### What green and red mean
 
@@ -137,19 +139,23 @@ that touches the edge needs `focus-visible:-outline-offset-2`.
 
 ### Which button
 
-Four buttons, each a pill at least 44px tall. `<Button>` from
-`@/components/ui/button` writes the same classes, so use whichever reads
-better in the file.
+Five buttons, each a pill at least 44px tall. `<Button>` from
+`@/components/ui/button` writes the classes of the first four, so use
+whichever reads better in the file. The quiet red button has no variant, so
+write its classes.
 
 | Class | Component | Look | Use it for |
 | --- | --- | --- | --- |
 | `btn btn-action` | `<Button variant="action">` | Green, white label, 52px | The one main action on a screen: Quick match, New tournament, Start, Score. Full width on a phone. |
 | `btn btn-ink` | `<Button>` | Black, white label | A row's own action, such as Resume or Add, and a dialog's main action. |
 | `btn btn-fill` | `<Button variant="outline">` | Grey, ink label | Secondary actions: Cancel, Back, Swap, Copy, a "won" button. |
-| `btn btn-danger` | `<Button variant="destructive">` | Red, white label | A destructive action and the confirm of its dialog: Delete, Discard, Remove, End. |
+| `btn btn-danger` | `<Button variant="destructive">` | Red, white label | The confirm button of a destructive dialog: Delete, Discard, End. |
+| `btn btn-danger-quiet` | None | White, red label, the control edge | A destructive action on a row or beside a main action: Remove, Discard, Delete. |
 
 - Green is the main action of a screen or of one card, such as each court's Score button. An action beside a green button is black or grey, never a second green.
-- Hover darkens the button, and the black pill lightens. Pressed goes one step further and the button shrinks a touch. Focus is a 2px ring with a 2px gap, green on the black and grey buttons and ink on the green and red ones. Disabled is 45% opacity with a cursor that says no.
+- Filled red is for one button at a time, the one that confirms. Remove, Discard, and Delete repeat down a list, and a column of filled red pills reads as an alarm, so on a row the button is the quiet one. It opens the dialog, and the dialog's confirm is filled.
+- The quiet red button sits on a card or the ground. Its white fill keeps the red label at 4.76 to 1 on either.
+- Hover darkens the button, and the black pill lightens. Pressed goes one step further and the button shrinks a touch. The quiet red button keeps its white fill on hover and turns its edge red, and pressed adds the danger tint. Focus is a 2px ring with a 2px gap, green on the black and grey buttons and ink on the green and both red ones. Disabled is 45% opacity with a cursor that says no.
 - A link drawn as a button has no disabled state of its own. Give it `aria-disabled="true"` for the disabled look.
 - A button that is only an icon is `<Button size="icon">`, a 44px circle, and carries an `aria-label`.
 - A busy button shows `<InlineSpinner />` in place of its glyph and keeps its label.
@@ -488,7 +494,7 @@ folder on the guard's migrated list, an old name fails the build.
 | `mb-btn-coral` | `btn-action`. The old class stays 44px tall, and the new one is 52px. |
 | `mb-btn-navy` | `btn-ink` |
 | `mb-btn-outline-navy`, `mb-btn-outline` | `btn-fill` |
-| `mb-btn-outline-red`, `mb-btn-red` | `btn-danger` |
+| `mb-btn-outline-red` | `btn-danger-quiet` |
 | `mb-dialog` | `dialog`. The three volleyball modals still write the old name on frames of their own. |
 | `mb-shadow-panel` | `lift` |
 | `mb-input` | `field` |
@@ -529,6 +535,7 @@ The old color tokens resolve to roles: `--mb-paper` to `ground`,
 - Colors outside the role tokens: Tailwind's named colors (`slate-500`, `amber-200`), new hex values, oklch literals. Team colors are the exception.
 - Red on anything that is not a destructive action or an error. No red for live, for a loss, or for a status.
 - A border or a shadow on a card, and red text on `fill`.
+- A filled red button on a row of a list. That one is `btn-danger-quiet`.
 - A shadow other than `lift`, and `lift` on anything that does not float over the page.
 - The green button in a dialog's footer.
 - Forced uppercase, by a class or by the `uppercase` utility on a heading or a label.
