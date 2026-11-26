@@ -309,6 +309,85 @@ for tighter columns with each cell kept on one line. Wrap a wide table in
 - `FormDots` and `FormLetters` from `@/components/shared/RecentForm` show a team's recent results. A win is green. A loss is soft ink.
 - `team-panel-score` is the soft shadow under the white digits on the scoring page's team-color panels. Nothing else has a text shadow.
 
+## The shell
+
+`AppShell` in `src/components/shell` frames every page but sign-in and
+scoring. It draws a white top bar, the page, and the tab bar. The tabs, their
+order, and which need an account are `SHELL_TABS` in `src/lib/shell.ts`.
+
+### Top bar
+
+A 56px `surface` bar with a `line` rule under it, stuck to the top of the
+screen. It holds the brand as a link home and the account button, and from
+`lg` up the five tabs as a row between them. Its top padding is the device's
+top safe area, so the status bar always sits on white.
+
+The account button is the avatar in a 44px target, and it opens the shared
+menu. A guest gets a grey Sign in button there instead.
+
+### Tab bar
+
+Below `lg` the tabs are a bar fixed to the foot of the screen: `surface`, a
+`line` rule on top, 60px tall, with the bottom safe area under it. Each tab is
+a 22px glyph over a 10.5px label (`text-tab`, weight 600).
+
+- The tab the page sits under is in `ink` and draws its filled glyph. `tabGlyph(tab, active)` in `src/lib/shell.ts` picks the id. The other tabs are in `ink-soft`, which is 5.56 to 1 on the bar. Nothing else marks the open tab in the bar.
+- In the `lg` row a tab is a 16px glyph beside a 14px label, and the open tab also has a 3px `action` underline.
+- A tab a guest must sign in for carries a 12px `lock`. It sits to the right of the glyph in the bar and after the label in the row, and never on top of the glyph.
+- Anything else fixed to the foot of the screen sits above the bar by reading `--tab-bar-space`, which is the bar's height while the bar shows and 0 otherwise.
+
+### Page header
+
+A page inside the shell opens with `PageHeader`: a `surface` block with a
+`line` rule under it that reaches the screen's edges and sits against the top
+bar. On a phone the brand row and the block read as one white header.
+
+```tsx
+import { PageHeader } from "@/components/shell/PageHeader";
+
+<PageHeader
+  title="Home"
+  line={today}
+  action={
+    <Link href="/quick-match" className="btn btn-action">
+      <Icon id="quick" size={18} />
+      Quick match
+    </Link>
+  }
+/>
+
+<PageHeader
+  back={{ href: "/competitions", label: "Tournaments" }}
+  title={tournament.name}
+  status={<Chip live>Live</Chip>}
+  line="Win 2 & Out • 8 teams • 2 courts"
+>
+  <ConsoleTabs />
+</PageHeader>
+```
+
+- `title` is the page's one `h1`, at `text-page-title` and weight 800.
+- `status` is a chip beside the title.
+- `line` is a short line of secondary text beside the title. It drops under the title when the two do not fit on one row.
+- `action` is the page's main action. On a phone it runs the full width under the title. From `sm` up it sits at the end of the title's row.
+- `back` is for a page one level down. The link sits above the title in soft ink with `chevron-left`. On a phone it takes the place of the brand row: the shell hides that row while a back link is on the page, so the account button is one tap back.
+- `children` come last, for a tab strip or a filter row.
+- `className` is the gap under the block, `mb-4` unless the page says otherwise.
+
+It must be the first thing in the page, with nothing above it and no wrapper
+that adds padding, because it pulls itself out through the shell's gutter. It
+works only inside `AppShell`, which sets the gutter widths it reads. Grey
+buttons and grey chips are the ground's color, so a page's secondary actions
+and its status chip belong in this block or on a card.
+
+### Brand
+
+`Brand` from `@/components/shared/Brand` draws the crest and "Tournament
+Tracker", and it is the only place either is drawn. `size="bar"` is the top
+bar's and `size="page"` is sign-in's. It is not a link, so wrap it in one
+where it should lead home. The crest's path is `CREST_SRC` in
+`src/lib/assetPaths.ts`.
+
 ## Icons
 
 Every icon is a `<symbol>` in `public/assets/matchbook/icons/sprite.svg`,

@@ -14,3 +14,4 @@ export { StepButtons } from "./StepButtons";
 export { TeamMark } from "./TeamMark";
 export { TeamName } from "./TeamName";
 export { ScoreLine } from "./ScoreLine";
+export { Brand } from "./Brand";
