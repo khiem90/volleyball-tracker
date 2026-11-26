@@ -134,7 +134,10 @@ const TournamentConsole = () => {
             <TeamMark name={winner.name} color={winner.color} size={36} />
             <div className="min-w-0">
               <p className="text-caption font-medium text-ink-soft">Winner</p>
-              <p className="truncate text-title font-bold">{winner.name}</p>
+              {/* Two lines before it is cut: on a phone one line holds about 35 letters. */}
+              <p className="line-clamp-2 text-title font-bold leading-snug wrap-break-word">
+                {winner.name}
+              </p>
             </div>
           </div>
         )}
