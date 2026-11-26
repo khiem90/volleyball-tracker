@@ -75,7 +75,7 @@ const SwapButton = ({ teamId, controls }: { teamId: string; controls: CourtContr
       aria-pressed={starting}
       className={`${SMALL_BUTTON} mt-1 ${starting ? "btn-ink" : "btn-fill"}`}
     >
-      <Icon id="swap" size={13} />
+      <Icon id="swap" size={14} />
       {starting ? "Cancel" : controls.swapping ? "Swap here" : "Swap"}
     </button>
   );
@@ -253,7 +253,7 @@ const Queue = ({
                     disabled={controls.busy}
                     className={`${SMALL_BUTTON} btn-fill`}
                   >
-                    <Icon id="swap" size={13} />
+                    <Icon id="swap" size={14} />
                     Swap here
                   </button>
                 ) : (

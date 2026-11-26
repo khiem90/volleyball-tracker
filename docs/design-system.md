@@ -418,7 +418,7 @@ import { PageHeader } from "@/components/shell/PageHeader";
 - `status` is a chip beside the title.
 - `line` is a short line of secondary text beside the title. It drops under the title when the two do not fit on one row.
 - `action` is the page's main action. On a phone it runs the full width under the title. From `sm` up it sits at the end of the title's row.
-- `back` is for a page one level down. The link sits above the title in soft ink with `chevron-left`. On a phone it takes the place of the brand row: the shell hides that row while a back link is on the page, so the account button is one tap back.
+- `back` is for a page one level down. The link sits above the title in soft ink with `chevron-left` at 18, the size the chosen prototype drew it. On a phone it takes the place of the brand row: the shell hides that row while a back link is on the page, so the account button is one tap back.
 - `children` come last, for a tab strip or a filter row.
 - `className` is the gap under the block, `mb-4` unless the page says otherwise.
 
@@ -458,10 +458,22 @@ holds those to the stylesheet and checks each icon's size and ground.
 Every icon is a `<symbol>` in `public/assets/icons/sprite.svg`, rendered with
 `<Icon id="trash" size={14} />` from `@/components/shared/Icon`. The icon is `aria-hidden`, and a button that is only an icon carries the
 `aria-label`. Color comes from `currentColor`, so set a text color on the icon
-or its parent. Sizes in use: 14 inside a button or a card's title, 16 in a
-row, 18 in a dialog title, 20 for the close and back controls, 24 on the
-scoring page. There is no bare tick, and `check` is a circled tick. A left
+or its parent. There is no bare tick, and `check` is a circled tick. A left
 chevron is `chevron-left`, not a rotated `chevron-right`.
+
+An icon is drawn at one of these eight sizes. The second column says where
+each mostly goes.
+
+| Size | Where |
+| --- | --- |
+| 12 | The chevron that ends a text link, a tab's lock, and a glyph inside a line of caption text. |
+| 14 | Inside a button, and in a card's title. |
+| 16 | In a row, a menu item, and a tab of the `lg` row. |
+| 18 | A dialog's title, the green main button, a glyph on a grey tile, and the page header's back chevron. |
+| 20 | The close control, the scoring page's back control, a button that is only a chevron, and a format or tool tile's glyph. |
+| 22 | A tab in the phone tab bar, and the glyph over a Club Snapshot number. |
+| 24 | The plus and minus on the scoring page. |
+| 28 | Beside words at the page title's size, which is the RSVP standing line. |
 
 The drawings are the regular weight of Phosphor Icons, copied into the sprite.
 Phosphor is MIT licensed and its notice is `PHOSPHOR-LICENSE.txt` beside the

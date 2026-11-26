@@ -75,11 +75,12 @@
   --action: #087a4d;
   /* The background of a green chip. */
   --action-tint: #e2f4eb;
-  /* Destructive actions only. */
+  /* Destructive actions and error messages. */
   --danger: #cf3f32;
   /*
-   * The background of a red chip or notice. Danger sits at 4.76 to 1 on white,
-   * so its tint has to stay this close to white for danger text to reach 4.5.
+   * The background of an error message, and of the quiet red button while it
+   * is pressed. No chip is red. Danger sits at 4.76 to 1 on white, so its tint
+   * has to stay this close to white for danger text to reach 4.5.
    */
   --danger-tint: #fff7f6;
   /*
