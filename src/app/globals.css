@@ -5,19 +5,6 @@
   /* Figtree. src/app/layout.tsx sets --font-figtree on <html>, where this is read. */
   --font-sans: var(--font-figtree), system-ui, sans-serif;
 
-  /* Matchbook palette (home redesign) */
-  --color-mb-paper: var(--mb-paper);
-  --color-mb-paper-bright: var(--mb-paper-bright);
-  --color-mb-navy: var(--mb-navy);
-  --color-mb-coral: var(--mb-coral);
-  --color-mb-teal: var(--mb-teal);
-  --color-mb-gold: var(--mb-gold);
-  --color-mb-plum: var(--mb-plum);
-  --color-mb-green: var(--mb-green);
-  --color-mb-red: var(--mb-red);
-  --color-mb-ink-muted: var(--mb-ink-muted);
-  --color-mb-rule: var(--mb-rule);
-
   /* The role tokens: bg-ground, text-ink-soft, border-line, and so on. */
   --color-ground: var(--ground);
   --color-surface: var(--surface);
@@ -104,32 +91,7 @@
   --control-line: color-mix(in srgb, var(--ink-soft) 75%, transparent);
 }
 
-/*
- * ===================== The old theme (matchbook) =====================
- *
- * Its names stay until every screen has moved to the role tokens, and each
- * color resolves to the role that fits how it was used, so a screen that
- * still reads an old name already shows the new palette. New code uses the
- * role tokens above and none of the names from here down.
- */
-
 :root {
-  --mb-paper: var(--ground);
-  --mb-paper-bright: var(--surface);
-  --mb-navy: var(--ink);
-  /* The call to action, a winner or a completed match, a leader in standings. */
-  --mb-coral: var(--action);
-  --mb-green: var(--action);
-  --mb-teal: var(--action);
-  /* A draft, a middling reading, a highlight that is neither good news nor a warning. */
-  --mb-gold: var(--ink-soft);
-  --mb-plum: var(--ink-soft);
-  --mb-red: var(--danger);
-  --mb-ink-muted: var(--ink-soft);
-  --mb-rule: var(--line);
-  /* There is one face now, so the old display font is the body font. */
-  --mb-display-font: var(--font-sans);
-
   /* Light only: native controls, scrollbars, and form fields stay light too. */
   color-scheme: light;
 
@@ -149,41 +111,18 @@
 /*
  * The shared classes: the card, the buttons, the chip, the date tile, the form
  * controls, the table. They sit in the components layer, so a utility on the
- * same element wins over them.
- *
- * Each rule names a class twice: its own name, and beside it the old theme's
- * name for the same piece, so a screen that still writes mb-btn or mb-panel
- * draws the new piece without an edit. New code writes the first name only.
- * The old names go when the last screen has moved off them, and
- * src/__tests__/design/sharedClasses.test.ts fails if a rule draws a new name
- * without its old one before then.
+ * same element wins over them. src/__tests__/design/sharedClasses.test.ts
+ * reads these rules and holds them to the sizes and the contrast the design
+ * asks for.
  */
 @layer components {
-  /* Old only. The page ground and ink, which <body> now sets for every page. */
-  .matchbook-surface {
-    color: var(--ink);
-    background: var(--ground);
-    font-family: var(--font-sans), system-ui, sans-serif;
-  }
-
-  /*
-   * Old only. It was the display face and forced uppercase. All that is left
-   * is tabular figures, because most scores and counts carry this class. New
-   * code writes the type scale's utilities, and tabular-nums on a number.
-   */
-  .matchbook-display {
-    font-family: var(--mb-display-font);
-    font-variant-numeric: tabular-nums;
-  }
-
   /*
    * A card: a white surface on the ground, with no border and no shadow. It
    * fills its grid cell and stacks its head and its rows. It clips to its
    * round corners, so a row's hover wash and a foot link stop at them, and it
    * does that with clip, which leaves anything sticky inside it working.
    */
-  .card,
-  .mb-panel {
+  .card {
     display: flex;
     flex-direction: column;
     height: 100%;
@@ -197,8 +136,7 @@
    * overlay dims the page behind it, so it needs no border and no shadow. It
    * sets its own ink and font, because a dialog opens in a portal on <body>.
    */
-  .dialog,
-  .mb-dialog {
+  .dialog {
     color: var(--ink);
     background: var(--surface);
     border-radius: var(--radius-card);
@@ -210,8 +148,7 @@
    * the undo toast, the fullscreen bar. A hairline marks the edge where white
    * sits on white, and a soft drop lifts it. Both are the ink, thinned.
    */
-  .lift,
-  .mb-shadow-panel {
+  .lift {
     box-shadow:
       0 0 0 1px color-mix(in srgb, var(--ink) 8%, transparent),
       0 8px 24px color-mix(in srgb, var(--ink) 14%, transparent);
@@ -230,8 +167,7 @@
   }
 
   .ink-bar :focus-visible,
-  .ink-bar .btn:focus-visible,
-  .ink-bar .mb-btn:focus-visible {
+  .ink-bar .btn:focus-visible {
     outline-color: #fff;
   }
 
@@ -291,8 +227,7 @@
   }
 
   /* A card's head: the title on the left, and on the right a link or the meta slot. */
-  .card-head,
-  .mb-panel-head {
+  .card-head {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -326,8 +261,7 @@
   }
 
   /* A text link: in a card's head, at a card's foot, or as a page's way back. */
-  .card-link,
-  .mb-panel-link {
+  .card-link {
     display: inline-flex;
     align-items: center;
     gap: 0.2rem;
@@ -339,21 +273,16 @@
   }
 
   /* In a card's head the link spans the head's height and does not grow it. */
-  .card-head > .card-link,
-  .card-head > .mb-panel-link,
-  .mb-panel-head > .card-link,
-  .mb-panel-head > .mb-panel-link {
+  .card-head > .card-link {
     margin-block: calc(-1 * var(--head-pad));
   }
 
-  .card-link:hover,
-  .mb-panel-link:hover {
+  .card-link:hover {
     color: var(--action);
   }
 
   /* Drawn inside the link's box, because a card clips what reaches past its edge. */
-  .card-link:focus-visible,
-  .mb-panel-link:focus-visible {
+  .card-link:focus-visible {
     outline-offset: -2px;
   }
 
@@ -412,8 +341,7 @@
    * the red button that confirms a destructive dialog, and btn-danger-quiet
    * the white button with red text for a destructive action on a row.
    */
-  .btn,
-  .mb-btn {
+  .btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -429,33 +357,22 @@
     transition: background-color 0.15s ease, color 0.15s ease;
   }
 
-  .btn-action,
-  .mb-btn-coral {
+  /* The main button is 52px. In a toolbar or on the ink bar, min-h-11 brings it back to 44px. */
+  .btn-action {
     background: var(--action);
     color: #fff;
-  }
-
-  /*
-   * The main button's 52px comes with the new name only. The old coral class
-   * also sits in toolbars beside 44px buttons, and those keep their height
-   * until their screens move.
-   */
-  .btn-action {
     min-height: 3.25rem;
     padding-inline: 1.5rem;
     font-size: var(--text-title);
   }
 
-  .btn-ink,
-  .mb-btn-navy {
+  .btn-ink {
     background: var(--ink);
     color: #fff;
   }
 
   /* On the ground this button has no edge. It belongs on a surface. */
-  .btn-fill,
-  .mb-btn-outline-navy,
-  .mb-btn-outline {
+  .btn-fill {
     background: var(--fill);
     color: var(--ink);
   }
@@ -471,8 +388,7 @@
    * edge, so the red is in the word and the filled button is left for the
    * confirm. Red text needs white under it: on fill it drops to 4.28 to 1.
    */
-  .btn-danger-quiet,
-  .mb-btn-outline-red {
+  .btn-danger-quiet {
     border: 1px solid var(--control-line);
     background: var(--surface);
     color: var(--danger);
@@ -481,19 +397,15 @@
 
   /* Hover, where there is a pointer to hover with. */
   @media (hover: hover) {
-    .btn-action:hover:not(:disabled),
-    .mb-btn-coral:hover:not(:disabled) {
+    .btn-action:hover:not(:disabled) {
       background: color-mix(in srgb, var(--action) 88%, var(--ink));
     }
 
-    .btn-ink:hover:not(:disabled),
-    .mb-btn-navy:hover:not(:disabled) {
+    .btn-ink:hover:not(:disabled) {
       background: color-mix(in srgb, var(--ink) 84%, var(--surface));
     }
 
-    .btn-fill:hover:not(:disabled),
-    .mb-btn-outline-navy:hover:not(:disabled),
-    .mb-btn-outline:hover:not(:disabled) {
+    .btn-fill:hover:not(:disabled) {
       background: color-mix(in srgb, var(--fill) 93%, var(--ink));
     }
 
@@ -501,26 +413,21 @@
       background: color-mix(in srgb, var(--danger) 88%, var(--ink));
     }
 
-    .btn-danger-quiet:hover:not(:disabled),
-    .mb-btn-outline-red:hover:not(:disabled) {
+    .btn-danger-quiet:hover:not(:disabled) {
       border-color: var(--danger);
     }
   }
 
   /* Pressed: one step further than hover. Every <button> also shrinks a touch, below. */
-  .btn-action:active:not(:disabled),
-  .mb-btn-coral:active:not(:disabled) {
+  .btn-action:active:not(:disabled) {
     background: color-mix(in srgb, var(--action) 78%, var(--ink));
   }
 
-  .btn-ink:active:not(:disabled),
-  .mb-btn-navy:active:not(:disabled) {
+  .btn-ink:active:not(:disabled) {
     background: color-mix(in srgb, var(--ink) 72%, var(--surface));
   }
 
-  .btn-fill:active:not(:disabled),
-  .mb-btn-outline-navy:active:not(:disabled),
-  .mb-btn-outline:active:not(:disabled) {
+  .btn-fill:active:not(:disabled) {
     background: color-mix(in srgb, var(--fill) 86%, var(--ink));
   }
 
@@ -528,41 +435,28 @@
     background: color-mix(in srgb, var(--danger) 78%, var(--ink));
   }
 
-  .btn-danger-quiet:active:not(:disabled),
-  .mb-btn-outline-red:active:not(:disabled) {
+  .btn-danger-quiet:active:not(:disabled) {
     border-color: var(--danger);
     background: var(--danger-tint);
   }
 
-  .btn:focus-visible,
-  .mb-btn:focus-visible {
+  .btn:focus-visible {
     outline: 2px solid var(--action);
     outline-offset: 2px;
   }
 
   /* A green ring beside a green or red button reads as part of it, so theirs is ink. */
   .btn-action:focus-visible,
-  .mb-btn-coral:focus-visible,
   .btn-danger:focus-visible,
-  .btn-danger-quiet:focus-visible,
-  .mb-btn-outline-red:focus-visible {
+  .btn-danger-quiet:focus-visible {
     outline-color: var(--ink);
   }
 
   /* aria-disabled is for a link drawn as a button, which has no disabled state of its own. */
   .btn:disabled,
-  .mb-btn:disabled,
-  .btn[aria-disabled="true"],
-  .mb-btn[aria-disabled="true"] {
+  .btn[aria-disabled="true"] {
     opacity: 0.45;
     cursor: not-allowed;
-  }
-
-  /* Old only. A small label, now secondary text. New code writes text-caption font-medium text-ink-soft. */
-  .mb-kicker {
-    font-size: var(--text-caption);
-    font-weight: 500;
-    color: var(--ink-soft);
   }
 
   /* One result in a run of recent form. The component colors it: action for a win, soft ink for a loss. */
@@ -575,8 +469,7 @@
   }
 
   /* Live is green and pulses. It sits before a count or inside a green chip. */
-  .live-dot,
-  .mb-live-dot {
+  .live-dot {
     display: inline-block;
     flex: none;
     width: 7px;
@@ -592,8 +485,7 @@
   }
 
   /* A 16px ring in the color of the text around it, for a button that is busy. */
-  .spinner,
-  .mb-spinner {
+  .spinner {
     display: inline-block;
     flex: none;
     width: 1rem;
@@ -609,26 +501,9 @@
   }
 
   /* The big score on a team-color panel: a soft shadow lifts the white digits off the color. */
-  .team-panel-score,
-  .mb-score-text {
+  .team-panel-score {
     text-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     /* Tabular figures, so the digits hold their place as the score changes. */
-    font-variant-numeric: tabular-nums;
-  }
-
-  /* The "VS" between two teams, as a grey pill. New code writes a chip in soft ink. */
-  .mb-score-box {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 1.75rem;
-    height: 1.75rem;
-    padding: 0 0.625rem;
-    border-radius: var(--radius-pill);
-    background: var(--fill);
-    color: var(--ink-soft);
-    font-size: var(--text-caption);
-    font-weight: 700;
     font-variant-numeric: tabular-nums;
   }
 
@@ -637,8 +512,7 @@
    * rules, digits held in place. The compact size tightens the columns and
    * keeps each cell on one line.
    */
-  .data-table th,
-  .mb-table th {
+  .data-table th {
     padding-block: 0.5rem;
     padding-inline: 0.5rem;
     border-bottom: 1px solid var(--line);
@@ -648,8 +522,7 @@
     text-align: left;
   }
 
-  .data-table td,
-  .mb-table td {
+  .data-table td {
     padding-block: 0.625rem;
     padding-inline: 0.5rem;
     border-bottom: 1px solid var(--line);
@@ -657,15 +530,12 @@
     font-variant-numeric: tabular-nums;
   }
 
-  .data-table tr:last-child td,
-  .mb-table tr:last-child td {
+  .data-table tr:last-child td {
     border-bottom: none;
   }
 
   .data-table-compact th,
-  .mb-table-compact th,
-  .data-table-compact td,
-  .mb-table-compact td {
+  .data-table-compact td {
     padding-inline: 0.35rem;
     white-space: nowrap;
   }
@@ -679,8 +549,7 @@
    * inside it. The input fills the box top to bottom, and a tap anywhere in
    * the box lands on it.
    */
-  .field,
-  .mb-input {
+  .field {
     display: flex;
     align-items: center;
     gap: 0.6rem;
@@ -692,15 +561,13 @@
     transition: border-color 0.15s ease;
   }
 
-  .field:focus-within,
-  .mb-input:focus-within {
+  .field:focus-within {
     border-color: var(--action);
     outline: 2px solid var(--action);
     outline-offset: -1px;
   }
 
-  .field input,
-  .mb-input input {
+  .field input {
     flex: 1;
     align-self: stretch;
     min-width: 0;
@@ -711,8 +578,7 @@
     color: var(--ink);
   }
 
-  .field-area,
-  .mb-textarea {
+  .field-area {
     width: 100%;
     border: 1px solid var(--control-line);
     border-radius: var(--radius-tile);
@@ -725,16 +591,14 @@
     transition: border-color 0.15s ease;
   }
 
-  .field-area:focus,
-  .mb-textarea:focus {
+  .field-area:focus {
     border-color: var(--action);
     outline: 2px solid var(--action);
     outline-offset: -1px;
   }
 
   /* A native select. The caller lays a chevron-down glyph over its right end. */
-  .field-select,
-  .mb-select-native {
+  .field-select {
     width: 100%;
     min-height: 2.75rem;
     appearance: none;
@@ -749,16 +613,14 @@
     cursor: pointer;
   }
 
-  .field-select:focus,
-  .mb-select-native:focus {
+  .field-select:focus {
     border-color: var(--action);
     outline: 2px solid var(--action);
     outline-offset: -1px;
   }
 
   /* A search field: a glyph, then a bare <input> of a fixed width. */
-  .field-search,
-  .mb-search {
+  .field-search {
     display: flex;
     align-items: center;
     gap: 0.4rem;
@@ -770,15 +632,13 @@
     color: var(--ink-soft);
   }
 
-  .field-search:focus-within,
-  .mb-search:focus-within {
+  .field-search:focus-within {
     border-color: var(--action);
     outline: 2px solid var(--action);
     outline-offset: -1px;
   }
 
-  .field-search input,
-  .mb-search input {
+  .field-search input {
     align-self: stretch;
     width: 9rem;
     min-width: 0;
@@ -790,8 +650,7 @@
   }
 
   /* A checkbox, drawn here so it looks the same on every phone: a white tick on action when checked. */
-  .field-check,
-  .mb-checkbox {
+  .field-check {
     appearance: none;
     flex: none;
     width: 1.375rem;
@@ -804,39 +663,32 @@
     transition: background-color 0.15s ease, border-color 0.15s ease;
   }
 
-  .field-check:checked,
-  .mb-checkbox:checked {
+  .field-check:checked {
     border-color: var(--action);
     background-color: var(--action);
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23fff' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 8.5l3 3 6-7'/%3E%3C/svg%3E");
   }
 
-  .field-check:focus-visible,
-  .mb-checkbox:focus-visible {
+  .field-check:focus-visible {
     outline: 2px solid var(--action);
     outline-offset: 2px;
   }
 
   /* Disabled: a grey box with soft text, and a cursor that says no. */
   .field:has(input:disabled),
-  .mb-input:has(input:disabled),
   .field-area:disabled,
-  .mb-textarea:disabled,
-  .field-select:disabled,
-  .mb-select-native:disabled {
+  .field-select:disabled {
     background: var(--fill);
     color: var(--ink-soft);
     cursor: not-allowed;
   }
 
-  .field input:disabled,
-  .mb-input input:disabled {
+  .field input:disabled {
     color: var(--ink-soft);
     cursor: not-allowed;
   }
 
-  .field-check:disabled,
-  .mb-checkbox:disabled {
+  .field-check:disabled {
     opacity: 0.45;
     cursor: not-allowed;
   }
@@ -919,7 +771,7 @@ body {
 }
 
 /*
- * Defaults for every element. In the base layer, so a matchbook class or a
+ * Defaults for every element. In the base layer, so a shared class or a
  * utility that restyles an element wins over them. A border with no color of
  * its own is a line rule.
  */

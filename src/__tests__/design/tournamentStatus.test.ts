@@ -27,9 +27,4 @@ describe("a tournament's status", () => {
       expect(status.color).toBe("var(--ink)");
     }
   });
-
-  it("is the same record under its old path", async () => {
-    const old = await import("@/components/matchbook/tournamentStatus");
-    expect(old.TOURNAMENT_STATUS).toBe(TOURNAMENT_STATUS);
-  });
 });

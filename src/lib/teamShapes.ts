@@ -9,11 +9,6 @@ export interface Team {
   name: string;
   /** The team's own color. A team without one is drawn in fallbackColor(name). */
   color?: string;
-  /**
-   * The path of one of the eight crest pictures the app used to draw. Nothing
-   * draws it now, and it goes once no page hook fills it in.
-   */
-  crest?: string;
 }
 
 export type FormResult = "W" | "L";

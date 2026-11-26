@@ -243,33 +243,16 @@ describe("the radius and type scales", () => {
 });
 
 /*
- * Until the old theme is deleted its color names stay, and each one hands a
- * screen that still uses it the role that fits how the color was used.
+ * The theme this design replaced named its colors by hue. Its names are caught
+ * by the name ban further down. Its nine hex values and the two rgb triplets
+ * its washes were mixed from are caught here.
  */
-describe("the old theme's colors", () => {
-  it.each([
-    ["mb-paper", "ground"],
-    ["mb-paper-bright", "surface"],
-    ["mb-navy", "ink"],
-    ["mb-ink-muted", "ink-soft"],
-    ["mb-rule", "line"],
-    /* The call to action, a winner, a leader. */
-    ["mb-coral", "action"],
-    ["mb-green", "action"],
-    ["mb-teal", "action"],
-    /* A draft, a middling reading, a highlight that is neither good news nor a warning. */
-    ["mb-gold", "ink-soft"],
-    ["mb-plum", "ink-soft"],
-    ["mb-red", "danger"],
-  ])("%s resolves to %s", (old, role) => {
-    expect(tokens[old]).toBe(`var(--${role})`);
-  });
-
-  it("leave no color of their own in the stylesheet", () => {
+describe("the old theme's palette", () => {
+  it("has no color left in the stylesheet", () => {
     for (const hex of ["f7f0e4", "fffaf1", "07324d", "ee4b34", "148f89", "e6a01f", "5a347d", "16885f", "5d6c70"]) {
       expect(stylesheet, hex).not.toContain(hex);
     }
-    expect(stylesheet).not.toMatch(/rgba\((?:7, 50, 77|238, 75, 52)/);
+    expect(stylesheet).not.toMatch(/rgba[(](?:7, 50, 77|238, 75, 52)/);
   });
 });
 

@@ -2,7 +2,6 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { PANEL_ROW } from "@/components/matchbook/Panel";
 import { CARD_ROW } from "@/components/shared/Card";
 import { contrastRatio } from "@/lib/contrast";
 
@@ -51,7 +50,7 @@ describe("reading the stylesheet's rules", () => {
     @layer components {
       /* A comment with a { brace } in it. */
       .btn,
-      .old-btn {
+      .button {
         min-height: 2.75rem;
         color: #fff;
       }
@@ -65,7 +64,7 @@ describe("reading the stylesheet's rules", () => {
 
   it("lists each rule's selectors and declarations", () => {
     expect(sample).toEqual([
-      { selectors: [".btn", ".old-btn"], declarations: { "min-height": "2.75rem", color: "#fff" } },
+      { selectors: [".btn", ".button"], declarations: { "min-height": "2.75rem", color: "#fff" } },
       { selectors: [".btn:hover"], declarations: { color: "red" } },
       { selectors: [".btn-action"], declarations: { "min-height": "3.25rem" } },
       { selectors: [".card > .btn"], declarations: { gap: "1px" } },
@@ -74,7 +73,7 @@ describe("reading the stylesheet's rules", () => {
 
   it("gathers what one selector sets", () => {
     expect(declarationsFor(sample, ".btn")).toEqual({ "min-height": "2.75rem", color: "#fff" });
-    expect(declarationsFor(sample, ".old-btn")).toEqual({ "min-height": "2.75rem", color: "#fff" });
+    expect(declarationsFor(sample, ".button")).toEqual({ "min-height": "2.75rem", color: "#fff" });
     expect(declarationsFor(sample, ".btn:hover")).toEqual({ color: "red" });
     expect(declarationsFor(sample, ".card > .btn")).toEqual({ gap: "1px" });
     expect(declarationsFor(sample, ".missing")).toEqual({});
@@ -91,9 +90,8 @@ describe("case", () => {
 
 describe("the live dot", () => {
   /* Live is green. Red is for destructive actions. */
-  it("is drawn in action, under its new name and its old one", () => {
+  it("is drawn in action", () => {
     expect(classLook("live-dot").background).toBe("var(--action)");
-    expect(classLook("mb-live-dot").background).toBe("var(--action)");
   });
 });
 
@@ -186,23 +184,6 @@ describe("the buttons", () => {
     expect(Object.keys(found[0].declarations).length).toBeGreaterThan(0);
   });
 
-  /* The old variants on the new buttons. The red outline is the quiet red button. */
-  it.each([
-    ["mb-btn-coral", "action"],
-    ["mb-btn-navy", "ink"],
-    ["mb-btn-outline-navy", "fill"],
-    ["mb-btn-outline", "fill"],
-    ["mb-btn-outline-red", "danger-quiet"],
-  ])("the old %s draws btn-%s", (old, kind) => {
-    expect(classLook("mb-btn")).toEqual(classLook("btn"));
-    expect(classLook(old).background).toBe(classLook(`btn-${kind}`).background);
-    expect(classLook(`btn-${kind}`)).toMatchObject(classLook(old));
-  });
-
-  /* An unmigrated bar that holds a green button beside 44px ones keeps its height. */
-  it("the old coral button stays at 44px", () => {
-    expect(px({ ...classLook("mb-btn"), ...classLook("mb-btn-coral") }["min-height"])).toBe(44);
-  });
 });
 
 /* The properties of a look that draw an edge or a lift. */
@@ -225,19 +206,9 @@ describe("the card", () => {
     expect(px(classLook("card-link")["min-height"])).toBeGreaterThanOrEqual(44);
   });
 
-  /* min-h-11 is 44px. The old name hands out the same row. */
+  /* min-h-11 is 44px. */
   it("gives a tappable row 44px", () => {
     expect(CARD_ROW.split(" ")).toContain("min-h-11");
-    expect(PANEL_ROW).toBe(CARD_ROW);
-  });
-
-  it.each([
-    ["mb-panel", "card"],
-    ["mb-panel-head", "card-head"],
-    ["mb-panel-link", "card-link"],
-  ])("the old %s draws %s", (old, name) => {
-    expect(classLook(name)).not.toEqual({});
-    expect(classLook(old)).toEqual(classLook(name));
   });
 });
 
@@ -255,25 +226,15 @@ describe("the dialog's frame", () => {
     expect(classLook("dialog").color).toBe("var(--ink)");
     expect(labelContrast(classLook("dialog"))).toBeGreaterThanOrEqual(4.5);
   });
-
-  /* Nothing writes the old name by hand any more. The pair goes with the other old names. */
-  it("is drawn the same under its old name", () => {
-    expect(classLook("mb-dialog")).toEqual(classLook("dialog"));
-  });
 });
 
 describe("the lift", () => {
-  /* Brown was the old paper's shadow. This one is the ink, thinned. */
+  /* The ink, thinned. A shadow with a hue of its own would be a color outside the role tokens. */
   it("is one shadow mixed from ink, with no color of its own", () => {
     const lift = classLook("lift");
     expect(edges(lift)).toEqual(["box-shadow"]);
     expect(lift["box-shadow"]).toContain("var(--ink)");
     expect(lift["box-shadow"]).not.toMatch(/#[0-9a-f]{3}|rgba?\(/i);
-  });
-
-  /* The fullscreen bar on the scoring page still writes the old name. */
-  it("is drawn the same under its old name", () => {
-    expect(classLook("mb-shadow-panel")).toEqual(classLook("lift"));
   });
 });
 
@@ -322,12 +283,9 @@ describe("the ink bar", () => {
    * The green button's focus ring is ink, which cannot be seen on ink, and the
    * default green ring gives 3.3 to 1 there. On the bar every ring is white.
    */
-  it.each([[".ink-bar :focus-visible"], [".ink-bar .btn:focus-visible"], [".ink-bar .mb-btn:focus-visible"]])(
-    "%s draws its ring in white",
-    (selector) => {
-      expect(lookOf(selector)["outline-color"]).toBe("#fff");
-    },
-  );
+  it.each([[".ink-bar :focus-visible"], [".ink-bar .btn:focus-visible"]])("%s draws its ring in white", (selector) => {
+    expect(lookOf(selector)["outline-color"]).toBe("#fff");
+  });
 });
 
 describe("the status chip", () => {
@@ -423,23 +381,6 @@ describe("the form controls", () => {
     expect(classLook("field-check")["border-radius"]).toBe("var(--radius-chip)");
     expect(lookOf(".field-check:checked")["background-color"]).toBe("var(--action)");
   });
-
-  it.each([
-    [".mb-input", ".field"],
-    [".mb-input:focus-within", ".field:focus-within"],
-    [".mb-input input", ".field input"],
-    [".mb-textarea", ".field-area"],
-    [".mb-textarea:focus", ".field-area:focus"],
-    [".mb-select-native", ".field-select"],
-    [".mb-select-native:focus", ".field-select:focus"],
-    [".mb-search", ".field-search"],
-    [".mb-search input", ".field-search input"],
-    [".mb-checkbox", ".field-check"],
-    [".mb-checkbox:checked", ".field-check:checked"],
-  ])("the old %s draws %s", (old, name) => {
-    expect(lookOf(name)).not.toEqual({});
-    expect(lookOf(old)).toEqual(lookOf(name));
-  });
 });
 
 describe("the table", () => {
@@ -460,87 +401,13 @@ describe("the table", () => {
     const compact = px(lookOf(".data-table-compact td")["padding-inline"]);
     expect(compact).toBeLessThan(regular);
   });
-
-  it.each([
-    [".mb-table th", ".data-table th"],
-    [".mb-table td", ".data-table td"],
-    [".mb-table tr:last-child td", ".data-table tr:last-child td"],
-    [".mb-table-compact th", ".data-table-compact th"],
-    [".mb-table-compact td", ".data-table-compact td"],
-  ])("the old %s draws %s", (old, name) => {
-    expect(lookOf(name)).not.toEqual({});
-    expect(lookOf(old)).toEqual(lookOf(name));
-  });
 });
 
 describe("the spinner", () => {
-  it("is drawn the same under its new name and its old one", () => {
-    expect(classLook("spinner")).not.toEqual({});
-    expect(classLook("mb-spinner")).toEqual(classLook("spinner"));
-  });
-});
-
-/*
- * Until the old theme is deleted, a screen that still writes an old class gets
- * the new piece: every rule that names a new class names the old one beside
- * it, states and descendants included. Ticket 20 deletes the old names and
- * this block with them.
- */
-
-/* The selectors a rule would need for `old` to be drawn wherever `name` is, and does not have. */
-function missingTwins(rules: CssRule[], old: string, name: string, newOnly: string[] = []): string[] {
-  const named = new RegExp(`\\.${name}(?![\\w-])`, "g");
-  const missing: string[] = [];
-  for (const rule of rules) {
-    for (const selector of rule.selectors) {
-      if (newOnly.includes(selector) && rule.selectors.length === 1) continue;
-      const twin = selector.replace(named, `.${old}`);
-      if (twin !== selector && !rule.selectors.includes(twin)) missing.push(twin);
-    }
-  }
-  return missing;
-}
-
-describe("the old class names", () => {
-  it("are missed where a rule draws only the new name", () => {
-    const sample = rulesIn(`
-      .btn, .old-btn { gap: 1px; }
-      .btn:hover { gap: 2px; }
-      .card > .btn, .card > .old-btn { gap: 3px; }
-      .btn-action { gap: 4px; }
-      .btn { gap: 5px; }
-    `);
-    expect(missingTwins(sample, "old-btn", "btn")).toEqual([".old-btn:hover", ".old-btn"]);
-    expect(missingTwins(sample, "old-btn", "btn", [".btn"])).toEqual([".old-btn:hover"]);
-    expect(missingTwins(sample, "old-card", "card")).toEqual([".old-card > .btn", ".old-card > .old-btn"]);
-  });
-
-  it.each([
-    ["mb-panel", "card"],
-    ["mb-panel-head", "card-head"],
-    ["mb-panel-link", "card-link"],
-    ["mb-btn", "btn"],
-    ["mb-btn-coral", "btn-action"],
-    ["mb-btn-navy", "btn-ink"],
-    ["mb-btn-outline-navy", "btn-fill"],
-    ["mb-btn-outline", "btn-fill"],
-    ["mb-btn-outline-red", "btn-danger-quiet"],
-    ["mb-dialog", "dialog"],
-    ["mb-shadow-panel", "lift"],
-    ["mb-live-dot", "live-dot"],
-    ["mb-spinner", "spinner"],
-    ["mb-score-text", "team-panel-score"],
-    ["mb-table", "data-table"],
-    ["mb-table-compact", "data-table-compact"],
-    ["mb-input", "field"],
-    ["mb-textarea", "field-area"],
-    ["mb-select-native", "field-select"],
-    ["mb-search", "field-search"],
-    ["mb-checkbox", "field-check"],
-  ])("%s is drawn by every rule that draws %s", (old, name) => {
-    const named = new RegExp(`\\.${name}(?![\\w-])`);
-    expect(rules.some((rule) => rule.selectors.some((selector) => named.test(selector)))).toBe(true);
-    /* The main button's 52px is the one thing a new name has that its old name lacks. */
-    expect(missingTwins(rules, old, name, [".btn-action"])).toEqual([]);
+  it("is a ring in the color of the text around it", () => {
+    const ring = classLook("spinner");
+    expect(ring["border-radius"]).toBe("var(--radius-pill)");
+    expect(ring.border).toBe("2px solid currentColor");
+    expect(ring["border-top-color"]).toBe("transparent");
   });
 });
