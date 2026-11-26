@@ -5,10 +5,18 @@ import Link from "next/link";
 import { useApp } from "@/context/AppContext";
 import { useAuth } from "@/context/AuthContext";
 import { useHomeLists } from "@/context/useHomeLists";
-import { PageLoadingSpinner } from "@/components/shared";
-import { MbIcon } from "@/components/matchbook/MbIcon";
-import { PANEL_ROW, Panel, PanelEmpty, PanelError } from "@/components/matchbook/Panel";
-import { LiveTag, MatchRow } from "@/components/console/MatchRow";
+import {
+  CARD_ROW,
+  Card,
+  CardEmpty,
+  CardError,
+  Chip,
+  DateTile,
+  Icon,
+  PageLoadingSpinner,
+} from "@/components/shared";
+import { PageHeader } from "@/components/shell/PageHeader";
+import { MatchRow } from "@/components/console/MatchRow";
 import { teamLookup } from "@/components/console/teamRefs";
 import { courtsWord } from "@/lib/console";
 import { formatLabel, isRotationFormat } from "@/lib/formats";
@@ -34,6 +42,15 @@ const whenLabel = (ts: number | undefined) => {
     : date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 };
 
+/* A row that opens something: its words on the left and one thing on the right. */
+const ROW = `flex items-center gap-3 ${CARD_ROW}`;
+const ROW_TEXT = "flex min-w-0 flex-1 flex-col gap-0.5";
+/* A long name wraps, mid-word if it must, so it never pushes the right side out of the row. */
+const ROW_NAME = "text-title font-semibold leading-snug wrap-anywhere";
+const ROW_FACTS = "text-caption text-ink-soft";
+/* The green line under a row's facts: what is being scored, a notice not yet read. */
+const ROW_FLAG = "mt-0.5 flex items-center gap-1.5 text-caption font-semibold text-action";
+
 /* ---------------------------- Live tournaments ---------------------------- */
 
 const LiveRow = ({ row }: { row: LiveTournament }) => {
@@ -44,28 +61,26 @@ const LiveRow = ({ row }: { row: LiveTournament }) => {
     : [`${played} of ${total} played`];
 
   return (
-    <Link
-      href={`/competitions/${tournament.id}`}
-      className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 ${PANEL_ROW}`}
-    >
-      <div className="flex min-w-0 flex-col gap-1">
-        <p className="matchbook-display text-[0.95rem] font-bold leading-tight [overflow-wrap:anywhere]">
-          {tournament.name}
-        </p>
-        <p className="text-[0.72rem] text-mb-ink-muted">
+    <Link href={`/competitions/${tournament.id}`} className={ROW}>
+      <span className={ROW_TEXT}>
+        <span className={ROW_NAME}>{tournament.name}</span>
+        <span className={ROW_FACTS}>
           {[formatLabel(tournament.format), plural(teams, "team"), ...facts].join(" • ")}
-        </p>
-        {inPlay > 0 && <LiveTag label={`${inPlay} being scored`} />}
-      </div>
-      <span className="mb-btn mb-btn-navy px-3 text-[0.72rem]">
-        Resume
-        <MbIcon id="chevron-right" size={11} />
+        </span>
+        {inPlay > 0 && (
+          <span className={ROW_FLAG}>
+            <span className="live-dot" aria-hidden="true" />
+            {inPlay} being scored
+          </span>
+        )}
       </span>
+      {/* The whole row is the link, so the pill is drawn and is not a control of its own. */}
+      <span className="btn btn-ink shrink-0">Resume</span>
     </Link>
   );
 };
 
-const LivePanel = ({
+const LiveCard = ({
   rows,
   drafts,
   error,
@@ -74,56 +89,58 @@ const LivePanel = ({
   drafts: number;
   error: string | null;
 }) => (
-  <Panel
+  <Card
     title="Live tournaments"
     icon="live"
-    meta={rows.length > 0 ? <span className="mb-kicker">{rows.length} live</span> : undefined}
+    meta={rows.length > 0 ? `${rows.length} live` : undefined}
   >
     {error ? (
-      <PanelError message={error} />
+      <CardError message={error} />
     ) : rows.length > 0 ? (
-      <div className="flex flex-col divide-y divide-mb-rule">
+      <ul className="divide-y divide-line">
         {rows.map((row) => (
-          <LiveRow key={row.tournament.id} row={row} />
+          <li key={row.tournament.id}>
+            <LiveRow row={row} />
+          </li>
         ))}
-      </div>
+      </ul>
     ) : drafts > 0 ? (
-      <PanelEmpty
+      <CardEmpty
         message={`Nothing is live. ${plural(drafts, "draft")} ${drafts === 1 ? "is" : "are"} ready to start.`}
         action={
-          <Link href="/competitions" className="mb-btn mb-btn-outline-navy">
-            <MbIcon id="compete" size={14} />
+          <Link href="/competitions" className="btn btn-fill">
+            <Icon id="compete" size={14} />
             Open tournaments
           </Link>
         }
       />
     ) : (
-      <PanelEmpty
+      <CardEmpty
         message="Nothing is live. Create a tournament and start it to see it here."
         action={
-          <Link href="/competitions/new" className="mb-btn mb-btn-outline-navy">
-            <MbIcon id="plus" size={14} />
+          <Link href="/competitions/new" className="btn btn-fill">
+            <Icon id="plus" size={14} />
             New tournament
           </Link>
         }
       />
     )}
-  </Panel>
+  </Card>
 );
 
 /** In place of the live tournaments for a guest, who has none. */
-const GuestPanel = () => (
-  <Panel title="Your tournaments" icon="compete">
-    <PanelEmpty
+const GuestCard = () => (
+  <Card title="Your tournaments" icon="compete">
+    <CardEmpty
       message="Sign in to keep a roster, run tournaments, and see your results here. As a guest you can score a quick match, which is not saved."
       action={
-        <Link href={signInHref("/")} className="mb-btn mb-btn-navy">
-          <MbIcon id="login" size={14} />
+        <Link href={signInHref("/")} className="btn btn-ink">
+          <Icon id="login" size={14} />
           Sign in
         </Link>
       }
     />
-  </Panel>
+  </Card>
 );
 
 /* ---------------------------------- RSVPs --------------------------------- */
@@ -132,6 +149,13 @@ type Standing = HomeListRow["standing"];
 
 /** What an RSVP row reads off a list. */
 type Scheduled = Pick<RsvpList, "name" | "scheduledAt" | "scheduledZone" | "takes">;
+
+/** In the date tile's place on a list with no scheduled time, so every row's name starts at the same edge. */
+const NoDateTile = () => (
+  <span className="grid size-11 shrink-0 place-items-center rounded-tile bg-fill text-ink-soft">
+    <Icon id="calendar" size={18} />
+  </span>
+);
 
 /** One RSVP of the account's: what it is to, when, and where the account stands. */
 const RsvpRow = ({
@@ -151,61 +175,47 @@ const RsvpRow = ({
     to.scheduledAt === undefined ? null : timeLabel(to.scheduledAt, to.scheduledZone, zone).viewer;
 
   return (
-    <Link
-      href={href}
-      className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 ${PANEL_ROW}`}
-    >
-      <div className="flex min-w-0 flex-col gap-1">
-        <p className="matchbook-display text-[0.95rem] font-bold leading-tight [overflow-wrap:anywhere]">
-          {to.name}
-        </p>
-        {when && <p className="text-[0.72rem] text-mb-ink-muted">{when}</p>}
+    <Link href={href} className={ROW}>
+      {to.scheduledAt === undefined ? (
+        <NoDateTile />
+      ) : (
+        <DateTile at={to.scheduledAt} zone={zone} />
+      )}
+      <span className={ROW_TEXT}>
+        <span className={ROW_NAME}>{to.name}</span>
+        {when && <span className={ROW_FACTS}>{when}</span>}
         {unread && (
-          <span className="flex items-center gap-1 text-mb-coral">
-            <MbIcon id="bell" size={11} />
-            <span className="matchbook-display text-[0.62rem] font-bold">New notice</span>
+          <span className={ROW_FLAG}>
+            <Icon id="bell" size={12} />
+            New notice
           </span>
         )}
-      </div>
-      <span
-        className={`matchbook-display flex items-center gap-1 text-[0.72rem] font-bold ${
-          standing.kind === "confirmed" ? "text-mb-green" : "text-mb-navy"
-        }`}
-      >
-        {/* The account being in or waiting, or on a by-team list its team. */}
-        {listWording(to.takes).homeStanding(standing)}
-        <MbIcon id="chevron-right" size={11} className="text-mb-ink-muted" />
       </span>
+      {/* The account being in or waiting, or on a by-team list its team. */}
+      <Chip tone={standing.kind === "confirmed" ? "action" : "fill"}>
+        {listWording(to.takes).homeStanding(standing)}
+      </Chip>
     </Link>
   );
 };
 
 /**
  * The lists the account is on, soonest first, each opening the list's
- * page. Home leaves the panel out when there are none.
+ * page. Home leaves the card out when there are none.
  */
-const RsvpsPanel = ({ lists }: { lists: HomeListRow[] }) => {
+const RsvpsCard = ({ lists }: { lists: HomeListRow[] }) => {
   const [zone] = useState(deviceZone);
 
   return (
-    <Panel
-      title="Your RSVPs"
-      icon="calendar"
-      meta={<span className="mb-kicker">{plural(lists.length, "list")}</span>}
-    >
-      <div className="flex flex-col divide-y divide-mb-rule">
+    <Card title="Your RSVPs" icon="calendar" meta={plural(lists.length, "list")}>
+      <ul className="divide-y divide-line">
         {lists.map(({ list, standing, unread, href }) => (
-          <RsvpRow
-            key={list.id}
-            to={list}
-            standing={standing}
-            unread={unread}
-            href={href}
-            zone={zone}
-          />
+          <li key={list.id}>
+            <RsvpRow to={list} standing={standing} unread={unread} href={href} zone={zone} />
+          </li>
         ))}
-      </div>
-    </Panel>
+      </ul>
+    </Card>
   );
 };
 
@@ -220,46 +230,43 @@ const ResultRow = ({ result }: { result: RecentResult }) => (
   />
 );
 
-const ResultsPanel = ({ results, error }: { results: RecentResult[]; error: string | null }) => (
-  <Panel title="Recent results">
+const ResultsCard = ({ results, error }: { results: RecentResult[]; error: string | null }) => (
+  <Card title="Recent results" icon="history">
     {error ? (
-      <PanelError message={error} />
+      <CardError message={error} />
     ) : results.length > 0 ? (
-      <div className="flex flex-col divide-y divide-mb-rule">
+      <ul className="divide-y divide-line">
         {results.map((result) => (
-          <ResultRow key={result.match.id} result={result} />
+          <li key={result.match.id}>
+            <ResultRow result={result} />
+          </li>
         ))}
-      </div>
+      </ul>
     ) : (
-      <PanelEmpty message="No results yet. Completed matches from your tournaments and quick matches show here." />
+      <CardEmpty message="No results yet. Completed matches from your tournaments and quick matches show here." />
     )}
     <Link
       href="/summaries"
-      className={`mb-panel-link justify-center border-t border-mb-rule ${PANEL_ROW}`}
+      className={`card-link justify-center border-t border-line text-body font-bold text-action ${CARD_ROW}`}
     >
       Every result in History
-      <MbIcon id="chevron-right" size={11} />
+      <Icon id="chevron-right" size={14} />
     </Link>
-  </Panel>
+  </Card>
 );
 
 /* ---------------------------------- Tools --------------------------------- */
 
-const ToolsPanel = () => (
-  <Panel title="Tools" icon="tools">
-    <Link href="/tools" className={`flex items-center gap-3 ${PANEL_ROW}`}>
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-[1.5px] border-mb-navy text-mb-navy">
-        <MbIcon id="court" size={18} />
+const ToolsCard = () => (
+  <Card title="Tools" icon="tools">
+    <Link href="/tools" className={ROW}>
+      <span className={ROW_TEXT}>
+        <span className={ROW_NAME}>Volleyball rotations</span>
+        <span className={ROW_FACTS}>Design rotations and keep your formations.</span>
       </span>
-      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className="matchbook-display text-[0.9rem] font-bold">Volleyball rotations</span>
-        <span className="text-[0.72rem] text-mb-ink-muted">
-          Design rotations and keep your formations.
-        </span>
-      </span>
-      <MbIcon id="chevron-right" size={11} className="shrink-0 text-mb-ink-muted" />
+      <Icon id="chevron-right" size={14} className="shrink-0 text-ink-soft" />
     </Link>
-  </Panel>
+  </Card>
 );
 
 /* ---------------------------------- Page ---------------------------------- */
@@ -275,7 +282,7 @@ export default function HomePage() {
   const { roster, tournaments, matches, isRosterLoading, isTournamentsLoading, tournamentsError } =
     useApp();
   // Only a real account has RSVPs; a guest and a scorer link's silent
-  // identity have no user, so they read nothing and see no panel.
+  // identity have no user, so they read nothing and see no card.
   const listRows = useHomeLists(user?.uid ?? null);
 
   const live = useMemo(
@@ -300,39 +307,33 @@ export default function HomePage() {
 
   return (
     <>
-      {/* Masthead */}
-      <header className="mb-5 flex flex-wrap items-end gap-x-6 gap-y-4">
-        <div className="flex flex-col gap-2">
-          <h1 className="matchbook-display text-4xl font-bold leading-none tracking-[0.01em] sm:text-5xl">
-            Home
-          </h1>
-          <p className="matchbook-display text-[0.74rem] font-bold tracking-[0.1em]">{today}</p>
-        </div>
-        {/* A guest has nothing to pick, so the match starts at once. */}
-        <Link
-          href={isGuest ? "/match/guest" : "/quick-match"}
-          className="mb-btn mb-btn-coral min-h-12 w-full text-[0.9rem] sm:ml-auto sm:w-auto"
-        >
-          <MbIcon id="quick" size={16} />
-          Quick match
-        </Link>
-      </header>
+      <PageHeader
+        title="Home"
+        line={today}
+        action={
+          /* A guest has nothing to pick, so the match starts at once. */
+          <Link href={isGuest ? "/match/guest" : "/quick-match"} className="btn btn-action">
+            <Icon id="quick" size={18} />
+            Quick match
+          </Link>
+        }
+      />
 
-      {/* Start-aligned so each panel is as tall as its rows, not its column. */}
+      {/* Start-aligned so each card is as tall as its rows, not its column. */}
       <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-12">
         {/* The RSVPs sit under the live tournaments, which on a phone,
             where the columns stack, is also above the recent results. */}
-        <div className="flex flex-col gap-4 lg:col-span-7">
+        <div className="flex min-w-0 flex-col gap-4 lg:col-span-7">
           {isGuest ? (
-            <GuestPanel />
+            <GuestCard />
           ) : (
-            <LivePanel rows={live} drafts={drafts} error={tournamentsError} />
+            <LiveCard rows={live} drafts={drafts} error={tournamentsError} />
           )}
-          {!isGuest && listRows.length > 0 && <RsvpsPanel lists={listRows} />}
+          {!isGuest && listRows.length > 0 && <RsvpsCard lists={listRows} />}
         </div>
-        <div className="flex flex-col gap-4 lg:col-span-5">
-          {!isGuest && <ResultsPanel results={results} error={tournamentsError} />}
-          <ToolsPanel />
+        <div className="flex min-w-0 flex-col gap-4 lg:col-span-5">
+          {!isGuest && <ResultsCard results={results} error={tournamentsError} />}
+          <ToolsCard />
         </div>
       </div>
     </>
