@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Chip } from "@/components/shared/Chip";
 import { Icon } from "@/components/shared/Icon";
 import { ScoreLine } from "@/components/shared/ScoreLine";
 import { isPlayable, type ConsoleAccess } from "@/lib/console";
@@ -9,13 +10,12 @@ import { scoringHref } from "@/lib/scoring";
 import type { Match } from "@/types/game";
 import type { TeamLookup } from "./teamRefs";
 
-/** The live dot and its word in green, "Live" unless the place it sits says more. */
-export const LiveTag = ({ label = "Live" }: { label?: string }) => (
-  <span className="inline-flex items-center gap-1.5 text-caption font-semibold text-action">
-    <span className="live-dot" aria-hidden="true" />
-    {label}
-  </span>
-);
+/**
+ * The green chip with the live dot, "Live" unless the place it sits says
+ * more. It is the size of any other chip, so it can stand in a card's head
+ * or beside a grey chip in a list.
+ */
+export const LiveTag = ({ label = "Live" }: { label?: string }) => <Chip live>{label}</Chip>;
 
 /**
  * Where a tap on the match goes: its scoring page while the role may score
@@ -83,7 +83,13 @@ export const MatchRow = ({
           <span />
           <span className="flex min-w-0 items-center justify-center gap-x-2">
             {label && <span className="truncate">{label}</span>}
-            {line.live && <LiveTag />}
+            {/* The dot and the word at the label's size. A chip would make this line taller than the score. */}
+            {line.live && (
+              <span className="inline-flex shrink-0 items-center gap-1.5 font-semibold text-action">
+                <span className="live-dot" aria-hidden="true" />
+                Live
+              </span>
+            )}
             {forfeit && <span className="shrink-0 font-semibold">Forfeit</span>}
           </span>
           <span className="flex items-center justify-end gap-1">
@@ -95,7 +101,8 @@ export const MatchRow = ({
       <ScoreLine home={side(match.homeTeamId)} away={side(match.awayTeamId)} {...line} />
     </>
   );
-  const className = "flex min-h-11 flex-col justify-center gap-1.5 px-3.5 pb-3 pt-2.5";
+  // 16px at the sides, the same as a card's other rows.
+  const className = "flex min-h-11 flex-col justify-center gap-1.5 px-4 pb-3 pt-2.5";
   // The focus ring is drawn inside the row, because a card clips what reaches past its edge.
   const tappable = `${className} transition-colors hover:bg-ink/4 focus-visible:-outline-offset-2`;
 
@@ -115,7 +122,7 @@ export const MatchRow = ({
   return (
     <div className="flex flex-col">
       {row}
-      <div className="grid grid-cols-2 gap-2 px-3.5 pb-3">
+      <div className="grid grid-cols-2 gap-2 px-4 pb-3">
         <WinButton name={team(match.homeTeamId).name} onClick={() => onInstantWin(match.homeTeamId)} />
         <WinButton name={team(match.awayTeamId).name} onClick={() => onInstantWin(match.awayTeamId)} />
       </div>

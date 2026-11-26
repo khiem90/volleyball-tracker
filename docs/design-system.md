@@ -270,7 +270,8 @@ drawn by hand after that.
 - Leave both scores out, or pass `null`, and the middle is a "vs" pill.
 - The two sides are equal columns, so the score stays in the middle of the
   line whatever the names' lengths. A long name is cut short in a row. On a
-  court it takes a second line first.
+  court it takes a second line first, and the two marks and the score stay
+  on one level whatever runs under a name.
 - Scores use `tabular-nums`, so a digit holds its place as the score changes.
 - `decidedBy` is for a result with no score. `"bye"` puts a "Bye" pill in the
   middle, and `"forfeit"` a lone dash in the score's chip.
@@ -287,8 +288,9 @@ drawn by hand after that.
 a list needs around it: a soft line over the score saying where the match
 sits, the link or button that makes the whole row tappable, and the two
 instant win buttons under it. Home, History, and the console's lists draw
-their matches with it. `LiveTag` in the same file is the live dot with its
-word in green, for a place that has no room for a chip.
+their matches with it. `LiveTag` in the same file is the green chip with the
+live dot, "Live" unless it is given other words. It goes in a card's head or
+beside a grey chip in a list.
 
 ### Form controls
 

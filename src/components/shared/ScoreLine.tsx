@@ -155,10 +155,13 @@ export const ScoreLine = ({
         {below}
       </div>
     );
+    // The sides hang from the top and the middle is as tall as a mark, so the
+    // two marks and the score stay on one level when one side's name or notes
+    // run longer than the other's.
     return (
-      <div className={cn(COLUMNS, "gap-2", className)}>
+      <div className={cn(COLUMNS, "items-start gap-2", className)}>
         {side("home", home, homeBelow)}
-        {middle}
+        <div className="flex h-11 items-center">{middle}</div>
         {side("away", away, awayBelow)}
       </div>
     );
