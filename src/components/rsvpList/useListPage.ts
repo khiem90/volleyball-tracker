@@ -161,3 +161,6 @@ export const useListPage = (listId: string) => {
         : null,
   };
 };
+
+/** The owner's settings form as the list's page hands it to the settings card. */
+export type ListSettings = NonNullable<ReturnType<typeof useListPage>["settings"]>;

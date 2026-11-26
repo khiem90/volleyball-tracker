@@ -1,20 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { MbIcon } from "@/components/matchbook/MbIcon";
-import { TeamName } from "@/components/matchbook/Panel";
+import { Chip } from "@/components/shared/Chip";
+import { Icon } from "@/components/shared/Icon";
+import { ScoreLine } from "@/components/shared/ScoreLine";
 import { isPlayable, type ConsoleAccess } from "@/lib/console";
+import { matchLine } from "@/lib/scoreLine";
 import { scoringHref } from "@/lib/scoring";
 import type { Match } from "@/types/game";
 import type { TeamLookup } from "./teamRefs";
 
-/** The live dot and its word, "Live" unless the place it sits says more. */
-export const LiveTag = ({ label = "Live" }: { label?: string }) => (
-  <span className="flex items-center gap-1">
-    <span className="mb-live-dot" />
-    <span className="matchbook-display text-[0.62rem] font-bold text-action">{label}</span>
-  </span>
-);
+/**
+ * The green chip with the live dot, "Live" unless the place it sits says
+ * more. It is the size of any other chip, so it can stand in a card's head
+ * or beside a grey chip in a list.
+ */
+export const LiveTag = ({ label = "Live" }: { label?: string }) => <Chip live>{label}</Chip>;
 
 /**
  * Where a tap on the match goes: its scoring page while the role may score
@@ -25,76 +26,34 @@ export const scoringLink = (match: Match, access: ConsoleAccess): string | undef
     ? scoringHref(match)
     : undefined;
 
-/** A team in a row, or the empty slot a bracket has not filled yet. */
-const Side = ({
-  teamId,
-  team,
-  reverse = false,
-  faded = false,
-}: {
-  teamId: string;
-  team: TeamLookup;
-  reverse?: boolean;
-  faded?: boolean;
-}) =>
-  teamId ? (
-    <TeamName
-      team={team(teamId)}
-      size={18}
-      reverse={reverse}
-      className={`${reverse ? "justify-self-end" : "justify-self-start"} ${faded ? "opacity-50" : ""}`}
-    />
-  ) : (
-    <span
-      className={`matchbook-display text-[0.78rem] font-semibold text-mb-ink-muted ${
-        reverse ? "justify-self-end" : "justify-self-start"
-      }`}
-    >
-      TBD
-    </span>
-  );
-
-/** The middle of a row: the score once there is one, "vs" until then. A forfeit has no score. */
-const Outcome = ({ match }: { match: Match }) => {
-  if (match.isBye) return <span className="mb-kicker">Bye</span>;
-  if (match.forfeitedBy) {
-    return (
-      <span className="matchbook-display text-[0.95rem] font-bold text-mb-ink-muted">–</span>
-    );
-  }
-  if (match.status === "pending") {
-    return (
-      <span className="matchbook-display text-[0.7rem] font-semibold text-mb-ink-muted">vs</span>
-    );
-  }
-  return (
-    <span
-      className={`matchbook-display whitespace-nowrap text-[0.95rem] font-bold tabular-nums ${
-        match.status === "in_progress" ? "text-mb-coral" : ""
-      }`}
-    >
-      {match.homeScore} – {match.awayScore}
-    </span>
-  );
-};
-
-const Status = ({ match }: { match: Match }) => {
-  if (match.status === "in_progress") return <LiveTag />;
-  if (match.forfeitedBy) return <span className="mb-kicker">Forfeit</span>;
-  if (match.status === "completed" && !match.isBye) {
-    return (
-      <span className="matchbook-display text-[0.62rem] font-bold text-mb-green">Completed</span>
-    );
-  }
-  return null;
-};
+/**
+ * "Reds won": the instant win button for one side of a match. A long name
+ * is cut short and the word "won" stays, so two of these fit side by side
+ * under a court or a row.
+ */
+export const WinButton = ({ name, onClick }: { name: string; onClick: () => void }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    aria-label={`${name} won`}
+    className="btn btn-fill min-w-0 gap-1 px-3"
+  >
+    <span className="truncate">{name}</span>
+    <span className="shrink-0">won</span>
+  </button>
+);
 
 /**
- * One match as a row: where it sits, its two teams, and its score or
- * status. With `href` the whole row opens that page, which is how a tap on
- * a match opens scoring. With `onCorrect` the whole row is a button that
- * opens the correction of its result. With `onInstantWin` the row ends in
- * a button per team that records that team as the winner.
+ * One match as a row: a line saying where it sits, then its score line.
+ * With `href` the whole row opens that page, which is how a tap on a match
+ * opens scoring. With `onCorrect` the whole row is a button that opens the
+ * correction of its result. With `onInstantWin` the row ends in a button
+ * per team that records that team as the winner.
+ *
+ * A side with no team id is a bracket slot nobody holds yet. The winner is
+ * bold and the other side dimmed, which is how a completed match reads as
+ * completed. A live match says Live and a forfeit says Forfeit beside the
+ * label.
  */
 export const MatchRow = ({
   match,
@@ -112,30 +71,40 @@ export const MatchRow = ({
   onCorrect?: () => void;
   onInstantWin?: (winnerId: string) => void;
 }) => {
-  const completed = match.status === "completed";
-  const homeLost = completed && !match.isBye && match.winnerId === match.awayTeamId;
-  const awayLost = completed && !match.isBye && match.winnerId === match.homeTeamId;
+  const line = matchLine(match);
   const opens = href !== undefined || onCorrect !== undefined;
+  const forfeit = line.decidedBy === "forfeit";
+  const side = (teamId: string) => (teamId ? team(teamId) : null);
   const body = (
     <>
-      {(label || match.status !== "pending" || match.forfeitedBy) && (
-        <div className="col-span-3 flex min-h-4 items-center justify-between gap-2">
-          <span className="mb-kicker">{label}</span>
-          <span className="flex items-center gap-2">
-            <Status match={match} />
-            {onCorrect && <span className="mb-kicker text-mb-navy">Correct</span>}
-            {opens && <MbIcon id="chevron-right" size={11} className="text-mb-ink-muted" />}
+      {(label || line.live || forfeit || opens) && (
+        // The label sits over the score, and what a tap does sits at the row's end.
+        <span className="grid grid-cols-[1fr_minmax(0,auto)_1fr] items-center gap-x-2 text-caption text-ink-soft">
+          <span />
+          <span className="flex min-w-0 items-center justify-center gap-x-2">
+            {label && <span className="truncate">{label}</span>}
+            {/* The dot and the word at the label's size. A chip would make this line taller than the score. */}
+            {line.live && (
+              <span className="inline-flex shrink-0 items-center gap-1.5 font-semibold text-action">
+                <span className="live-dot" aria-hidden="true" />
+                Live
+              </span>
+            )}
+            {forfeit && <span className="shrink-0 font-semibold">Forfeit</span>}
           </span>
-        </div>
+          <span className="flex items-center justify-end gap-1">
+            {onCorrect && <span className="font-semibold text-ink">Correct</span>}
+            {opens && <Icon id="chevron-right" size={12} />}
+          </span>
+        </span>
       )}
-      <Side teamId={match.homeTeamId} team={team} faded={homeLost} />
-      <Outcome match={match} />
-      <Side teamId={match.awayTeamId} team={team} reverse faded={awayLost} />
+      <ScoreLine home={side(match.homeTeamId)} away={side(match.awayTeamId)} {...line} />
     </>
   );
-  const className =
-    "grid min-h-11 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-2 gap-y-1 px-3 py-2";
-  const tappable = `${className} transition-colors hover:bg-[rgba(7,50,77,0.04)]`;
+  // 16px at the sides, the same as a card's other rows.
+  const className = "flex min-h-11 flex-col justify-center gap-1.5 px-4 pb-3 pt-2.5";
+  // The focus ring is drawn inside the row, because a card clips what reaches past its edge.
+  const tappable = `${className} transition-colors hover:bg-ink/4 focus-visible:-outline-offset-2`;
 
   const row = href ? (
     <Link href={href} className={tappable}>
@@ -153,21 +122,10 @@ export const MatchRow = ({
   return (
     <div className="flex flex-col">
       {row}
-      <div className="flex gap-2 px-3 pb-2">
+      <div className="grid grid-cols-2 gap-2 px-4 pb-3">
         <WinButton name={team(match.homeTeamId).name} onClick={() => onInstantWin(match.homeTeamId)} />
         <WinButton name={team(match.awayTeamId).name} onClick={() => onInstantWin(match.awayTeamId)} />
       </div>
     </div>
   );
 };
-
-/** "Reds won": the instant win button for one side of a match. */
-const WinButton = ({ name, onClick }: { name: string; onClick: () => void }) => (
-  <button
-    type="button"
-    onClick={onClick}
-    className="mb-btn mb-btn-outline-navy min-w-0 flex-1 whitespace-normal py-1.5 leading-tight"
-  >
-    {name} won
-  </button>
-);

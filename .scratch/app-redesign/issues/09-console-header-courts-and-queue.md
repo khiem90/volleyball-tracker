@@ -21,16 +21,20 @@ Covers spec stories 42 to 49 and 52.
 
 **Status:** ready-for-agent
 
-- [ ] The header uses the shared header block with a back link, the name, a status chip for draft, live, or completed, and the same facts as today.
-- [ ] The console's tabs are text tabs. The active one has ink text and a green underline. The same tabs show for the same formats and roles as today.
-- [ ] A live court shows the court-size score line with the leader in bold and each team's notes under its name, such as a champion's streak.
-- [ ] A waiting court shows "vs" and a 44px Swap control under each team. Swap behaves as today.
-- [ ] Each court has two grey "won" buttons for an instant win and a green button that opens the scoring page, labeled as today for a live and a waiting court.
-- [ ] The queue lists teams in order with position, mark, and name. The first row has the "Next up" chip. The up and down buttons are 44px, reorder as today, and are disabled at the ends.
-- [ ] An empty court, an empty queue, and a tournament that is a draft or completed each show the state they show today, in the new look.
-- [ ] A scorer and a spectator see the same cards with the controls their link allows.
-- [ ] The files for the console's header, tabs, courts, and queue contain no old-theme name and are on the guard's list of migrated folders.
-- [ ] The console tests pass unedited, along with the rest of the suite outside the design folder. Lint and the type checker are clean.
+- [x] The header uses the shared header block with a back link, the name, a status chip for draft, live, or completed, and the same facts as today.
+- [x] The console's tabs are text tabs. The active one has ink text and a green underline. The same tabs show for the same formats and roles as today.
+- [x] A live court shows the court-size score line with the leader in bold and each team's notes under its name, such as a champion's streak.
+- [x] A waiting court shows "vs" and a 44px Swap control under each team. Swap behaves as today.
+- [x] Each court has two grey "won" buttons for an instant win and a green button that opens the scoring page, labeled as today for a live and a waiting court.
+- [x] The queue lists teams in order with position, mark, and name. The first row has the "Next up" chip. The up and down buttons are 44px, reorder as today, and are disabled at the ends.
+- [x] An empty court, an empty queue, and a tournament that is a draft or completed each show the state they show today, in the new look.
+- [x] A scorer and a spectator see the same cards with the controls their link allows.
+- [x] The files for the console's header, tabs, courts, and queue contain no old-theme name and are on the guard's list of migrated folders.
+- [x] The console tests pass unedited, along with the rest of the suite outside the design folder. Lint and the type checker are clean.
 - [ ] The owner has looked at Courts on a phone with a live court, a waiting court, and a queue, and what they flagged is fixed.
 
 ## Comments
+
+- Not applicable in part, by ruling 1. Court cards and the queue show for the two rotation formats only, and the other formats keep one card of "Live now" and "Up next" rows. The "won" buttons show only with instant win on. The tab strip shows below `lg`, and from `lg` up every section is on screen as today.
+- Kept from today where the picture differs: the queue's count is a bare number, not "N waiting", and a court's status word is "Waiting" or "Empty". The word "Completed" is gone from a match row, because the bold winner says it.
+- Nobody has looked at this in a browser. The owner check is open.

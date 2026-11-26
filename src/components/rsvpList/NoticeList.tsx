@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { MbIcon } from "@/components/matchbook/MbIcon";
+import { Icon } from "@/components/shared";
 import { deviceZone, millisOf, timeLabel } from "@/lib/rsvp";
 import type { Notice } from "@/types/game";
 
@@ -19,23 +19,20 @@ export const NoticeList = ({
 }) => {
   const [zone] = useState(deviceZone);
   return (
-    <ol className="flex flex-col">
+    <ol className="flex flex-col divide-y divide-line">
       {notices.map((notice) => (
-        <li
-          key={notice.id}
-          className="flex flex-col gap-1.5 border-b border-mb-rule px-4 py-3 last:border-b-0"
-        >
-          <span className="mb-kicker">
+        <li key={notice.id} className="flex flex-col gap-1.5 px-4 py-3.5">
+          <span className="text-caption font-medium text-ink-soft">
             {timeLabel(millisOf(notice.createdAt), undefined, zone).viewer}
           </span>
-          <p className="whitespace-pre-wrap text-[0.9rem] [overflow-wrap:anywhere]">{notice.body}</p>
+          <p className="whitespace-pre-wrap text-body wrap-anywhere">{notice.body}</p>
           {onDelete && (
             <button
               type="button"
-              className="mb-btn mb-btn-outline-red self-start"
+              className="btn btn-danger-quiet mt-1 self-start"
               onClick={() => onDelete(notice)}
             >
-              <MbIcon id="trash" size={14} />
+              <Icon id="trash" size={14} />
               Delete
             </button>
           )}

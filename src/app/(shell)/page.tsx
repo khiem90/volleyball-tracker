@@ -13,6 +13,7 @@ import {
   Chip,
   DateTile,
   Icon,
+  NoDateTile,
   PageLoadingSpinner,
 } from "@/components/shared";
 import { PageHeader } from "@/components/shell/PageHeader";
@@ -149,13 +150,6 @@ type Standing = HomeListRow["standing"];
 
 /** What an RSVP row reads off a list. */
 type Scheduled = Pick<RsvpList, "name" | "scheduledAt" | "scheduledZone" | "takes">;
-
-/** In the date tile's place on a list with no scheduled time, so every row's name starts at the same edge. */
-const NoDateTile = () => (
-  <span className="grid size-11 shrink-0 place-items-center rounded-tile bg-fill text-ink-soft">
-    <Icon id="calendar" size={18} />
-  </span>
-);
 
 /** One RSVP of the account's: what it is to, when, and where the account stands. */
 const RsvpRow = ({

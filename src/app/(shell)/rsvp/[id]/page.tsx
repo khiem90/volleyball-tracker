@@ -1,16 +1,15 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { InlineSpinner, LinkField, PageLoadingSpinner } from "@/components/shared";
-import { MbIcon } from "@/components/matchbook/MbIcon";
-import { Panel, PanelError } from "@/components/matchbook/Panel";
+import { Card, CardError, PageLoadingSpinner } from "@/components/shared";
 import { RsvpDialog } from "@/components/rsvpList/RsvpDialog";
+import { ListLinkPanel } from "@/components/rsvpList/ListLinkPanel";
 import { ListNotFound } from "@/components/rsvpList/ListNotFound";
 import { ListNoticesPanel } from "@/components/rsvpList/ListNoticesPanel";
 import { ListPeoplePanel } from "@/components/rsvpList/ListPeoplePanel";
 import { ListRsvpPanel } from "@/components/rsvpList/ListRsvpPanel";
 import { ListOwnerPanel } from "@/components/rsvpList/ListOwnerPanel";
-import { ListSetupFields } from "@/components/rsvpList/ListSetupFields";
+import { ListSettingsPanel } from "@/components/rsvpList/ListSettingsPanel";
 import { ListTournamentsPanel } from "@/components/rsvpList/ListTournamentsPanel";
 import { useListPage } from "@/components/rsvpList/useListPage";
 
@@ -44,9 +43,9 @@ export default function RsvpListPage() {
   const { list, settings, rsvp } = page;
   if (page.hasLoadError) {
     return (
-      <Panel title="RSVP list">
-        <PanelError message="The list could not be loaded. Check your connection and reload." />
-      </Panel>
+      <Card title="RSVP list">
+        <CardError message="The list could not be loaded. Check your connection and reload." />
+      </Card>
     );
   }
   if (!list) return <ListNotFound />;
@@ -85,68 +84,15 @@ export default function RsvpListPage() {
         <div className="flex flex-col gap-4 lg:col-span-5">
           <ListRsvpPanel list={list} view={rsvp} />
 
-          {page.isOwner && (
-            <Panel title="RSVP link" icon="share">
-              <div className="flex flex-col gap-1.5 p-4">
-                <span className="text-[0.85rem] font-semibold">{page.link ? "On" : "Off"}</span>
-                {page.link && <LinkField id="rsvp-list-link" value={page.link} label="RSVP link" />}
-                <p className="text-[0.72rem] text-mb-ink-muted">
-                  {page.link
-                    ? "Anyone with the link can sign in and see this page. Turn it off in the settings and the link shows not found."
-                    : "Only you can open this page. Set both times in the settings, then turn the link on."}
-                </p>
-              </div>
-            </Panel>
-          )}
+          {page.isOwner && <ListLinkPanel link={page.link} />}
 
           {page.owner && <ListOwnerPanel controls={page.owner} wording={rsvp.wording} />}
         </div>
 
         <div className="flex flex-col gap-4 lg:col-span-7">
-          <ListPeoplePanel view={rsvp} controls={page.owner} />
+          <ListPeoplePanel view={rsvp} takes={list.takes} controls={page.owner} />
 
-          {settings && (
-            <Panel title="Settings" icon="settings">
-              <ListSetupFields
-                setup={settings.setup}
-                problems={settings.problems}
-                zone={settings.zone}
-                scheduledZone={settings.scheduledZone}
-                openTimeLocked={settings.openTimeLocked}
-                takesLocked={settings.takesLocked}
-                onChange={settings.change}
-              />
-              <div className="flex flex-col gap-3 border-t border-mb-rule p-4">
-                {settings.alert && (
-                  <p
-                    role="alert"
-                    className="border-[1.5px] border-mb-red px-3 py-2 text-[0.8rem] font-medium text-mb-red"
-                  >
-                    {settings.alert}
-                  </p>
-                )}
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <button
-                    type="button"
-                    onClick={settings.save}
-                    disabled={!settings.isDirty || !settings.canSave || settings.isSaving}
-                    className="mb-btn mb-btn-navy sm:flex-1"
-                  >
-                    {settings.isSaving ? <InlineSpinner /> : <MbIcon id="save" size={14} />}
-                    Save settings
-                  </button>
-                  <button
-                    type="button"
-                    onClick={settings.reset}
-                    disabled={!settings.isDirty || settings.isSaving}
-                    className="mb-btn mb-btn-outline-navy sm:flex-1"
-                  >
-                    Reset
-                  </button>
-                </div>
-              </div>
-            </Panel>
-          )}
+          {settings && <ListSettingsPanel settings={settings} />}
         </div>
       </div>
 

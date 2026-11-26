@@ -59,7 +59,8 @@ export const UndoToast = memo(
         <div className="ink-bar lift flex items-center gap-2 rounded-card py-1.5 pr-1.5 pl-4">
           <Icon id="check" size={18} className="shrink-0" />
 
-          <span className="min-w-0 flex-1 truncate text-label font-medium">
+          {/* Up to three lines, which fit the bar's height, so a long team name keeps the word "won". */}
+          <span className="line-clamp-3 min-w-0 flex-1 text-label font-medium leading-tight wrap-break-word">
             {entry.description}
           </span>
 
