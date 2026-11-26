@@ -494,8 +494,9 @@ export const UpcomingFixturesPanel = ({ items }: { items: ScheduleItem[] }) => (
     ) : (
       <ul className="divide-y divide-line">
         {items.map((item, i) => (
-          <li key={i} className="flex flex-col gap-2 px-4 py-3">
-            <span className="text-caption text-ink-soft wrap-anywhere">
+          // A centered label over the score line, as the other screens draw a match.
+          <li key={i} className="flex flex-col gap-1.5 px-4 pt-2.5 pb-3">
+            <span className="text-center text-caption text-ink-soft wrap-anywhere">
               {[`${item.day} ${item.date}`.trim(), item.time, item.venue].join(" • ")}
             </span>
             <ScoreLine home={item.home} away={item.away} />
