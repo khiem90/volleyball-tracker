@@ -72,13 +72,14 @@ export const RsvpRows = ({
           )}
         </span>
         {onRemove && (
+          /* On a phone the button is the word alone with less padding, so a name and its badge keep one line. */
           <button
             type="button"
             onClick={() => onRemove(rsvp)}
-            className="btn btn-danger-quiet shrink-0"
+            className="btn btn-danger-quiet shrink-0 px-3.5 sm:px-4.5"
             aria-label={`Remove ${rsvp.name}`}
           >
-            <Icon id="remove-user" size={14} />
+            <Icon id="remove-user" size={14} className="hidden sm:block" />
             Remove
           </button>
         )}
