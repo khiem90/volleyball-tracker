@@ -114,7 +114,7 @@ const MatchLineRow = ({
   live?: boolean;
   children: ReactNode;
 }) => (
-  <li className="flex flex-col gap-1.5 px-4 py-3">
+  <li className="flex flex-col gap-1.5 px-3.5 pb-3 pt-2.5">
     <p className="flex items-center justify-center gap-2 text-caption text-ink-soft">
       {label}
       {live && (
@@ -265,7 +265,7 @@ export default function TournamentsPage() {
         }
       />
 
-      <div className="grid grid-cols-1 gap-3 xl:grid-cols-12">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
         {/* The list */}
         <div className="xl:col-span-7">
           <Card

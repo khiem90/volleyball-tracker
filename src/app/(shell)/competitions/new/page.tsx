@@ -37,7 +37,7 @@ function NewTournamentContent() {
         line="Pick a format, name it, tick the teams or import them from an RSVP list, then start it now or keep it as a draft."
       />
 
-      <div className="flex max-w-3xl flex-col gap-3">
+      <div className="flex max-w-3xl flex-col gap-4">
         <Card title="Format">
           <FormatPicker
             value={setup.format}
