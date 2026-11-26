@@ -1,9 +1,8 @@
 // @vitest-environment node
-import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { CARD_ROW } from "@/components/shared/Card";
 import { contrastRatio } from "@/lib/contrast";
+import { stylesheet, tokens } from "./stylesheet";
 
 /*
  * The shared classes in src/app/globals.css: the card, the five buttons, the
@@ -54,7 +53,6 @@ function selectorsPaintingWith(rules: CssRule[], property: string): string[] {
     .flatMap((rule) => rule.selectors);
 }
 
-const stylesheet = readFileSync(fileURLToPath(new URL("../../app/globals.css", import.meta.url)), "utf8");
 const rules = rulesIn(stylesheet);
 const lookOf = (selector: string) => declarationsFor(rules, selector);
 const classLook = (className: string) => lookOf(`.${className}`);
@@ -130,15 +128,12 @@ describe("red", () => {
 const px = (length: string | undefined): number =>
   length === undefined ? NaN : length.endsWith("rem") ? parseFloat(length) * 16 : parseFloat(length);
 
-/* The role tokens' values, read from the stylesheet. */
-const tokens: Record<string, string> = {};
-for (const [, name, value] of stylesheet.matchAll(/--([\w-]+):\s*(#[0-9a-f]{6});/g)) tokens[name] = value;
-
-/* The hex color a declaration paints: white, or a role token. */
+/* The hex color a declaration paints: white, or a role token whose value is a hex color. */
 function hexOf(value: string | undefined): string {
   if (value === "#fff" || value === "#ffffff") return "#ffffff";
   const role = value?.match(/^var\(--([\w-]+)\)$/)?.[1];
-  return (role && tokens[role]) || `not a color: ${value}`;
+  const hex = role ? tokens[role] : undefined;
+  return hex && /^#[0-9a-f]{6}$/.test(hex) ? hex : `not a color: ${value}`;
 }
 
 /* The text of a class on its own background. */
@@ -150,6 +145,8 @@ describe("reading a class's colors", () => {
     expect(hexOf("var(--action)")).toBe("#087a4d");
     expect(hexOf("var(--ink)")).toBe("#15181b");
     expect(hexOf("blue")).toBe("not a color: blue");
+    /* The control edge is a mix, not a hex color. */
+    expect(hexOf("var(--control-line)")).toBe("not a color: var(--control-line)");
     expect(hexOf(undefined)).toBe("not a color: undefined");
   });
 
@@ -310,7 +307,7 @@ describe("the form controls", () => {
    * reach 3 to 1 on the card it sits on. The line token gives 1.16.
    */
   it("have an edge that reaches 3 to 1 on a surface", () => {
-    const edge = stylesheet.match(/--control-line:\s*([^;]+);/)?.[1].trim();
+    const edge = tokens["control-line"];
     expect(contrastRatio(mixedOver(edge, tokens.surface), tokens.surface)).toBeGreaterThanOrEqual(3);
     expect(contrastRatio(tokens.line, tokens.surface)).toBeLessThan(3);
   });

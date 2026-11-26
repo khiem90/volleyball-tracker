@@ -4,7 +4,8 @@ import { memo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { FormationVisibility } from "@/lib/volleyball/types";
 import { Icon } from "@/components/shared/Icon";
-import { GROUP_LABEL, toggleClass } from "../styles";
+import { toggleClass } from "../styles";
+import { LABEL } from "@/components/shared/classes";
 
 type FormationDetailsProps = {
   expanded: boolean;
@@ -19,7 +20,7 @@ type FormationDetailsProps = {
   onVisibilityChange: (visibility: FormationVisibility) => void;
 };
 
-const FIELD_LABEL = "mb-1 block text-caption font-medium text-ink-soft";
+const FIELD_LABEL = `mb-1 block ${LABEL}`;
 
 export const FormationDetails = memo(function FormationDetails({
   expanded,
@@ -42,7 +43,7 @@ export const FormationDetails = memo(function FormationDetails({
         aria-expanded={expanded}
         aria-controls="formation-details-content"
       >
-        <h3 className={GROUP_LABEL}>Formation Details</h3>
+        <h3 className={LABEL}>Formation Details</h3>
         <Icon
           id="chevron-down"
           size={16}

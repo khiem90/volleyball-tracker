@@ -134,6 +134,7 @@ import { Card, CardEmpty, CardError, CARD_ROW } from "@/components/shared/Card";
 - `Card` takes `title`, `icon`, `meta`, `action` with `href`, `className`, and `children`. Without a title it has no head.
 - The head shows the glyph on a grey backing, the title, and one thing on the right. `action` and `href` together make a text link there. Otherwise `meta` shows. A `meta` of plain text is written as secondary text, and anything else, such as a chip or a live tag, is drawn as it comes.
 - `CARD_ROW` is the class string for a tappable row: 44px at least, 16px side padding, and a hover wash.
+- `CARD_FOOT_LINK` is the class string for the link at a card's foot that leads to the rest of its list, such as "Every result in History": `card-link` in bold green, in the middle of a row of its own under a `line` rule.
 - `CardEmpty` says why a card has nothing to show, with one grey button or a control of the page's own under it. `CardError` is an error message in danger. It takes a `className`, so it also serves outside a card.
 - The classes behind them are `card`, `card-head`, `card-title`, `card-icon`, and `card-link`. `card-link` is also the text link at a card's foot and a page's way back.
 
@@ -334,7 +335,7 @@ which a phone zooms the page when a field takes focus.
 | `field-search` | A search box: a glyph and a bare `<input>` of a fixed 9rem width. |
 | `field-check` | A checkbox, drawn in the stylesheet so it looks the same on every phone: an 8px-radius box that fills with `action` and a white tick. |
 
-- A label above a control is `text-caption font-medium text-ink-soft`.
+- A label above a control is `text-caption font-medium text-ink-soft`. `LABEL` from `@/components/shared` holds that string, so write `className={LABEL}`. It is also the small label over a value and the heading over a group of controls.
 - A control with a problem adds `border-danger`, and the message under it is `text-caption font-medium text-danger` with `role="alert"`.
 - A disabled control turns `fill` with soft text.
 - `field`, `field-select`, and `field-search` are 44px tall. A checkbox is 22px, so its row or its label is the 44px target.
@@ -678,7 +679,7 @@ The setter's red is the hue the tool has always given that role. It marks a
 player and is not the `danger` token, so the rule that red means a
 destructive action or an error does not reach it.
 
-The controls around the court share three class strings from
+The controls around the court share two class strings from
 `src/components/volleyball/styles.ts`. A button that is one of a set, or a
 switch, is `toggleClass`: filled with ink when it is on, white with the
 control edge when it is off. The six rotation buttons and Serving and
@@ -686,7 +687,7 @@ Receiving, on the page and in the editor, the page's Libero, Overlaps, and
 Arrows switches, and the formation category tabs are all this one control. A
 tile that picks a
 formation is `choiceTileClass`: the green tint and a green edge when chosen.
-`GROUP_LABEL` is the small heading over a group of controls.
+The small heading over a group of controls is the shared `LABEL`.
 
 The tool has no button kind of its own. Every other button there is one of
 the five under "Which button". Edit, Duplicate, and Share on a saved

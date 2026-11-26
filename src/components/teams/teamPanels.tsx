@@ -1,6 +1,7 @@
 import { useCallback, type ReactNode } from "react";
 import Link from "next/link";
 import {
+  CARD_FOOT_LINK,
   CARD_ROW,
   Card,
   CardEmpty,
@@ -24,6 +25,7 @@ import type {
   TeamStatus,
 } from "@/lib/teamShapes";
 import { cn } from "@/lib/utils";
+import { LABEL } from "@/components/shared/classes";
 
 const SNAPSHOT_ICONS: Record<string, string> = {
   Wins: "compete",
@@ -42,12 +44,6 @@ const READINESS_LABEL: Record<ReadinessStatus, string> = {
   GOOD: "Good",
   "NEEDS ATTN": "Needs attention",
 };
-
-/* The small label over a fact. */
-const LABEL = "text-caption font-medium text-ink-soft";
-
-/* The link at a card's foot, green and bold as on Home. */
-const FOOT_LINK = `card-link mt-auto justify-center border-t border-line text-body font-bold text-action ${CARD_ROW}`;
 
 /* ----------------------------- Team directory ----------------------------- */
 
@@ -511,7 +507,7 @@ export const UpcomingFixturesPanel = ({ items }: { items: ScheduleItem[] }) => (
         ))}
       </ul>
     )}
-    <Link href="/competitions" className={FOOT_LINK}>
+    <Link href="/competitions" className={CARD_FOOT_LINK}>
       View Full Fixture List
       <Icon id="chevron-right" size={14} />
     </Link>
@@ -541,7 +537,7 @@ export const RecentFormPanel = ({ rows }: { rows: FormRow[] }) => (
         ))}
       </ul>
     )}
-    <Link href="/summaries" className={FOOT_LINK}>
+    <Link href="/summaries" className={CARD_FOOT_LINK}>
       View Full Match History
       <Icon id="chevron-right" size={14} />
     </Link>

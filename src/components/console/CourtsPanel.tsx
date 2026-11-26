@@ -19,6 +19,7 @@ import { scoringHref } from "@/lib/scoring";
 import { getChampionCount } from "@/lib/win2out";
 import type { Match, Tournament } from "@/types/game";
 import { LiveTag, MatchRow, WinButton, scoringLink } from "./MatchRow";
+import { ROW_BUTTON } from "./parts";
 import type { TeamLookup } from "./teamRefs";
 
 /** The court and queue controls an owner or scorer gets while a rotation tournament is live. */
@@ -33,9 +34,6 @@ export interface CourtControls {
   /** True while a court or queue edit is being saved. */
   busy: boolean;
 }
-
-/** A pill for a control inside a card: 44px tall, with a label one step smaller than a button's. It takes a button kind beside it. */
-const SMALL_BUTTON = "btn shrink-0 gap-1.5 px-3.5 text-caption font-semibold";
 
 /** A 44px round button that holds one glyph. */
 const ROUND_BUTTON = "btn btn-fill size-11 shrink-0 p-0";
@@ -73,7 +71,7 @@ const SwapButton = ({ teamId, controls }: { teamId: string; controls: CourtContr
       onClick={() => (starting ? controls.onCancelSwap() : controls.onSwap(teamId))}
       disabled={controls.busy}
       aria-pressed={starting}
-      className={`${SMALL_BUTTON} mt-1 ${starting ? "btn-ink" : "btn-fill"}`}
+      className={`${ROW_BUTTON} mt-1 ${starting ? "btn-ink" : "btn-fill"}`}
     >
       <Icon id="swap" size={14} />
       {starting ? "Cancel" : controls.swapping ? "Swap here" : "Swap"}
@@ -206,7 +204,7 @@ const SwapNotice = ({ teamName, onCancel }: { teamName: string; onCancel: () => 
     <button
       type="button"
       onClick={onCancel}
-      className={`${SMALL_BUTTON} bg-surface text-ink`}
+      className={`${ROW_BUTTON} bg-surface text-ink`}
     >
       Cancel
     </button>
@@ -251,7 +249,7 @@ const Queue = ({
                     type="button"
                     onClick={() => controls.onSwap(teamId)}
                     disabled={controls.busy}
-                    className={`${SMALL_BUTTON} btn-fill`}
+                    className={`${ROW_BUTTON} btn-fill`}
                   >
                     <Icon id="swap" size={14} />
                     Swap here

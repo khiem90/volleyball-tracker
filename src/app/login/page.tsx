@@ -6,9 +6,10 @@ import Link from "next/link";
 import { Brand, CardError, Icon, InlineSpinner, PageLoadingSpinner } from "@/components/shared";
 import { useLoginPage } from "@/hooks/useLoginPage";
 import { GOOGLE_MARK_SRC } from "@/lib/assetPaths";
+import { LABEL } from "@/components/shared/classes";
 
 /* The words above a field. */
-const FIELD_LABEL = "mb-1 block text-caption font-medium text-ink-soft";
+const FIELD_LABEL = `mb-1 block ${LABEL}`;
 
 /** The shared spinner on the page's ground, while the app checks who is signed in. */
 const SignInLoading = () => (

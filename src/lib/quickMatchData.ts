@@ -1,3 +1,4 @@
+import { shortDate } from "@/lib/dates";
 import { abandonedQuickMatches } from "@/lib/quickMatches";
 import type { ScoreSide } from "@/lib/scoreLine";
 import type { FormResult, Team } from "@/lib/teamShapes";
@@ -60,11 +61,6 @@ export interface QuickMatchData {
   /** A team's side of the comparison, or null while no team is picked. */
   summaryFor: (teamId: string | null) => TeamFormSummary | null;
 }
-
-const shortDate = (ts?: number) =>
-  ts
-    ? new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric" })
-    : "TBD";
 
 const dateAndTime = (ts: number) =>
   new Date(ts).toLocaleString("en-US", {

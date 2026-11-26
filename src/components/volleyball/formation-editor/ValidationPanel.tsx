@@ -1,7 +1,7 @@
 "use client";
 
 import { memo } from "react";
-import { GROUP_LABEL } from "../styles";
+import { LABEL } from "@/components/shared/classes";
 
 type ValidationError = {
   message: string;
@@ -22,7 +22,7 @@ export const ValidationPanel = memo(function ValidationPanel({
 
   return (
     <div className="flex flex-col gap-2">
-      <h3 className={GROUP_LABEL}>Validation</h3>
+      <h3 className={LABEL}>Validation</h3>
 
       {blockingErrors.length > 0 && (
         <div className="rounded-tile border border-danger/40 bg-danger-tint p-3 text-danger">

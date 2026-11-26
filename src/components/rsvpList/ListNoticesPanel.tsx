@@ -2,11 +2,12 @@
 
 import { useState, type FormEvent } from "react";
 import { NoticeList } from "@/components/rsvpList/NoticeList";
-import { FIELD_LABEL, FIELD_NOTE } from "@/components/rsvpList/RsvpFields";
+import { FIELD_NOTE } from "@/components/rsvpList/RsvpFields";
 import { Card, CardEmpty, CardError, DeleteConfirmDialog, Icon } from "@/components/shared";
 import { useListNotices } from "@/context/useListNotices";
 import { NOTICE_BODY_MAX, noticeProblem } from "@/lib/rsvp";
 import type { Notice } from "@/types/game";
+import { LABEL } from "@/components/shared/classes";
 
 /**
  * A list's notices, newest first, on the list's page. Everyone who can
@@ -76,7 +77,7 @@ export const ListNoticesPanel = ({
     >
       {isOwner && (
         <form onSubmit={submit} className="flex flex-col gap-1.5 border-b border-line p-4">
-          <label htmlFor="list-notice-body" className={FIELD_LABEL}>
+          <label htmlFor="list-notice-body" className={LABEL}>
             New notice
           </label>
           <textarea

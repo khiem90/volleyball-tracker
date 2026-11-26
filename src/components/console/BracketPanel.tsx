@@ -7,8 +7,8 @@ import { isCorrectable, type BracketView, type ConsoleAccess } from "@/lib/conso
 import { matchLine } from "@/lib/scoreLine";
 import type { Match, Tournament } from "@/types/game";
 import { scoringLink } from "./MatchRow";
-import { LABEL } from "./parts";
 import type { TeamLookup } from "./teamRefs";
+import { LABEL } from "@/components/shared/classes";
 
 /** What a tile that opens the correction of its result says at its foot. */
 const CORRECT = (

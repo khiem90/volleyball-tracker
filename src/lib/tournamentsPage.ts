@@ -1,3 +1,4 @@
+import { shortDate } from "@/lib/dates";
 import { entryTeams } from "@/lib/entries";
 import { FORMAT_LABELS, isBracketFormat, isRotationFormat } from "@/lib/formats";
 import { calculateStandings } from "@/lib/roundRobin";
@@ -108,9 +109,6 @@ export interface SelectedTournament {
   createdDate: string;
   seriesLabel: string;
 }
-
-const shortDate = (ts?: number) =>
-  ts ? new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "TBD";
 
 const roundLabel = (round: number, maxRound: number, cellsInRound: number): string => {
   if (round === maxRound) return cellsInRound > 1 ? `Round ${round}` : "Final";

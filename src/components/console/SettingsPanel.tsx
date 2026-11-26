@@ -7,8 +7,9 @@ import { courtsWord, type ConsoleAccess } from "@/lib/console";
 import { formatLabel, isRotationFormat } from "@/lib/formats";
 import type { Tournament } from "@/types/game";
 import { ShareLinks } from "./ShareLinks";
-import { LABEL, NOTE } from "./parts";
+import { NOTE } from "./parts";
 import type { ShareLinksView } from "./useConsole";
+import { LABEL } from "@/components/shared/classes";
 
 const longDate = (ts?: number) =>
   ts

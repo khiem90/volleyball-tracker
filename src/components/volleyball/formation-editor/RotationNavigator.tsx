@@ -2,7 +2,8 @@
 
 import { memo } from "react";
 import type { RotationNumber, GameMode } from "@/lib/volleyball/types";
-import { GROUP_LABEL, toggleClass } from "../styles";
+import { toggleClass } from "../styles";
+import { LABEL } from "@/components/shared/classes";
 
 type RotationNavigatorProps = {
   currentRotation: RotationNumber;
@@ -15,7 +16,7 @@ type RotationNavigatorProps = {
 
 const ROTATION_BUTTONS: RotationNumber[] = [1, 2, 3, 4, 5, 6];
 
-const SUB_LABEL = "mb-1 block text-caption font-medium text-ink-soft";
+const SUB_LABEL = `mb-1 block ${LABEL}`;
 
 export const RotationNavigator = memo(function RotationNavigator({
   currentRotation,
@@ -27,7 +28,7 @@ export const RotationNavigator = memo(function RotationNavigator({
 }: RotationNavigatorProps) {
   return (
     <div className="flex flex-col gap-3">
-      <h3 className={GROUP_LABEL}>Rotation Navigator</h3>
+      <h3 className={LABEL}>Rotation Navigator</h3>
 
       {/* Rotation Selector */}
       <div>

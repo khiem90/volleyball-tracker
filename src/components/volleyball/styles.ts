@@ -3,9 +3,6 @@
  * the page and one in the editor are the same control.
  */
 
-/** The small heading over a group of controls. */
-export const GROUP_LABEL = "text-caption font-medium text-ink-soft";
-
 /**
  * A button that is one of a set, or a switch. Filled with ink when it is
  * chosen or on, white with the control edge when it is not.

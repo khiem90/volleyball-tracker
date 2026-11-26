@@ -7,7 +7,7 @@ import { useQuickMatchData } from "@/hooks/useQuickMatchData";
 import { useQuickMatchPage } from "@/hooks/useQuickMatchPage";
 import { ConfirmDialog } from "@/components/console/ConfirmDialog";
 import {
-  CARD_ROW,
+  CARD_FOOT_LINK,
   Card,
   CardEmpty,
   CardError,
@@ -23,11 +23,9 @@ import { GUEST_AWAY_TEAM, GUEST_HOME_TEAM } from "@/constants/guestTeams";
 import type { AbandonedMatchRow, TeamFormSummary } from "@/lib/quickMatchData";
 import { signInHref } from "@/lib/shell";
 import type { Team } from "@/lib/teamShapes";
+import { LABEL } from "@/components/shared/classes";
 
 /* ------------------------- Small building blocks ------------------------- */
-
-/** A small label over a control or a figure. */
-const LABEL = "text-caption font-medium text-ink-soft";
 
 /** A team on one side with the score in the middle, which stays centered whatever the names' lengths. */
 const SIDES = "grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-2";
@@ -413,7 +411,7 @@ export default function QuickMatchPage() {
                 )}
                 <Link
                   href="/summaries"
-                  className={`card-link mt-auto justify-center border-t border-line text-body font-bold text-action ${CARD_ROW}`}
+                  className={CARD_FOOT_LINK}
                 >
                   View Full Match History
                   <Icon id="chevron-right" size={14} />

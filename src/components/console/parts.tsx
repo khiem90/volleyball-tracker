@@ -28,8 +28,5 @@ export const TeamLabel = ({ team, children }: { team: Team; children?: ReactNode
 /** A small line under a team's name or a control: 13px in soft ink. */
 export const NOTE = "text-caption text-ink-soft";
 
-/** A label over a value or a field: 13px, medium, in soft ink. */
-export const LABEL = "text-caption font-medium text-ink-soft";
-
-/** A pill for a control on a row: 44px tall, with a label one step smaller than a button's. It takes a button kind beside it. */
+/** A pill for a control on a row or beside a court: 44px tall, with a label one step smaller than a button's. It takes a button kind beside it. */
 export const ROW_BUTTON = "btn shrink-0 gap-1.5 px-3.5 text-caption";

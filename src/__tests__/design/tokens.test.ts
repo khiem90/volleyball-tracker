@@ -4,6 +4,7 @@ import { join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { contrastRatio } from "@/lib/contrast";
+import { customProperties, stylesheet, token, tokens } from "./stylesheet";
 
 /*
  * The design-system guard. Every screen is built from the role tokens, the two
@@ -111,26 +112,18 @@ describe("the contrast ratio", () => {
   });
 });
 
-const stylesheet = readFileSync(
-  fileURLToPath(new URL("../../app/globals.css", import.meta.url)),
-  "utf8",
-);
-
-/* Every custom property in a piece of CSS with its value: "--ink: #15181b;" gives ink. */
-function customProperties(css: string): Record<string, string> {
-  const found: Record<string, string> = {};
-  for (const [, name, value] of css.matchAll(/--([\w-]+):\s*([^;]+);/g)) found[name] = value.trim();
-  return found;
-}
-
-const tokens = customProperties(stylesheet);
-
 describe("the role tokens", () => {
   it("reads a custom property's value from a piece of CSS", () => {
     expect(customProperties(":root {\n  --ink: #15181b;\n  --radius-card:14px;\n}")).toEqual({
       ink: "#15181b",
       "radius-card": "14px",
     });
+  });
+
+  /* A misspelled token throws, so it cannot pass a check as undefined. */
+  it("reads one token by name, and refuses a name the stylesheet lacks", () => {
+    expect(token("radius-card")).toBe("14px");
+    expect(() => token("inky")).toThrow("No --inky in globals.css");
   });
 
   /* The spec's token table. */

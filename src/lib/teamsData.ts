@@ -1,4 +1,5 @@
 import type { Match, PersistentTeam, Tournament } from "@/types/game";
+import { shortDate, todayLine } from "./dates";
 import type {
   FormRow,
   ReadinessRow,
@@ -14,11 +15,6 @@ import {
   readinessStatus,
   recentForm,
 } from "./teamStats";
-
-const shortDate = (ts?: number) =>
-  ts
-    ? new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric" })
-    : "TBD";
 
 const shortDay = (ts?: number) =>
   ts ? new Date(ts).toLocaleDateString("en-US", { weekday: "short" }) : "";
@@ -38,12 +34,7 @@ export const buildTeamsData = (
   matches: Match[],
   roster: PersistentTeam[]
 ): TeamsData => {
-  const dateLine = new Date().toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  });
+  const dateLine = todayLine({ year: true });
 
   // A team is drawn from its name and its color. One with no stored color
   // leaves the color out, and its mark picks one from the name.

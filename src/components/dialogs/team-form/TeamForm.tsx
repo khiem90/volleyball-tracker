@@ -14,9 +14,7 @@ import { TeamMark } from "@/components/shared/TeamMark";
 import { TEAM_COLORS } from "@/lib/roster";
 import type { PersistentTeam } from "@/types/game";
 import { useTeamForm } from "./useTeamForm";
-
-/* The small label over a field. */
-const LABEL = "text-caption font-medium text-ink-soft";
+import { LABEL } from "@/components/shared/classes";
 
 interface ColorSwatchesProps {
   value: string;

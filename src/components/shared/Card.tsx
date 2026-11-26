@@ -64,6 +64,13 @@ export const CARD_ROW =
   "min-h-11 px-4 py-3 transition-colors hover:bg-ink/4 focus-visible:-outline-offset-2";
 
 /**
+ * The link at a card's foot that leads to the rest of its list: green and
+ * bold, in the middle of a row of its own under a line rule. It keeps to the
+ * foot when the card is taller than its rows.
+ */
+export const CARD_FOOT_LINK = `card-link mt-auto justify-center border-t border-line text-body font-bold text-action ${CARD_ROW}`;
+
+/**
  * Something that went wrong, in danger. Inside a card it explains why the
  * card has nothing to show. Pass a className to place it anywhere else.
  */

@@ -3,7 +3,7 @@
 import { memo } from "react";
 import type { PlayerRole, CourtPosition } from "@/lib/volleyball/types";
 import { Icon } from "@/components/shared/Icon";
-import { GROUP_LABEL } from "../styles";
+import { LABEL } from "@/components/shared/classes";
 
 type ArrowControlsProps = {
   isDrawingArrow: boolean;
@@ -26,7 +26,7 @@ export const ArrowControls = memo(function ArrowControls({
 }: ArrowControlsProps) {
   return (
     <div className="flex flex-col gap-2">
-      <h3 className={GROUP_LABEL}>Movement Arrows</h3>
+      <h3 className={LABEL}>Movement Arrows</h3>
 
       {/* Draw Arrow Button / Drawing State */}
       {isDrawingArrow ? (
