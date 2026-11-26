@@ -3,9 +3,13 @@ import { Slot } from "@radix-ui/react-slot"
 
 import { cn } from "@/lib/utils"
 
-/* A small navy-framed label on paper, in the shape of the matchbook score box. */
+/*
+ * A small grey pill with ink text, drawn by the chip class. It marks a row
+ * with a word, such as "Held" or "You". For a status, use Chip from
+ * components/shared, which also has the green tone and the live dot.
+ */
 const badgeClass =
-  "inline-flex w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-[4px] border-[1.5px] border-mb-navy bg-mb-paper-bright px-2 py-0.5 text-xs font-medium whitespace-nowrap text-mb-navy [&>svg]:pointer-events-none [&>svg]:size-3"
+  "chip w-fit justify-center overflow-hidden [&>svg]:pointer-events-none [&>svg]:size-3"
 
 function Badge({
   className,

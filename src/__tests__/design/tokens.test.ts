@@ -304,6 +304,8 @@ describe("the typeface", () => {
  */
 const migrated: string[] = [
   "app/login",
+  "components/GlobalUndoToast.tsx",
+  "components/UndoToast.tsx",
   "components/shared/AddTeamsForm.tsx",
   "components/shared/Card.tsx",
   "components/shared/Chip.tsx",
@@ -312,7 +314,11 @@ const migrated: string[] = [
   "components/shared/ScoreLine.tsx",
   "components/shared/TeamMark.tsx",
   "components/shared/TeamName.tsx",
+  "components/ui/avatar.tsx",
+  "components/ui/badge.tsx",
   "components/ui/button.tsx",
+  "components/ui/dialog.tsx",
+  "components/ui/dropdown-menu.tsx",
   "hooks/useLoginPage.ts",
   "lib/dateTile.ts",
   "lib/scoreLine.ts",
