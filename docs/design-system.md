@@ -276,6 +276,7 @@ the match sits in a bracket, and no match is drawn by hand.
   court it takes a second line first, and the two marks and the score stay
   on one level whatever runs under a name.
 - Scores use `tabular-nums`, so a digit holds its place as the score changes.
+  An en dash sits between the two, at both sizes. A hyphen is the wrong mark.
 - `decidedBy` is for a result with no score. `"bye"` puts a "Bye" pill in the
   middle, and `"forfeit"` a lone dash in the score's chip.
 - `live` turns a row's score green on `action-tint`. A court's score stays

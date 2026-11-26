@@ -67,7 +67,8 @@ const Middle = ({
       )}
     >
       {!forfeit && <span className={scoreTone("home", bold, tinted)}>{homeScore}</span>}
-      <span className={cn(!tinted && "text-ink-soft", court && "text-[0.64em]")}>-</span>
+      {/* An en dash at both sizes, the mark the app has always put between two scores. Not a hyphen. */}
+      <span className={cn(!tinted && "text-ink-soft", court && "text-[0.64em]")}>–</span>
       {!forfeit && <span className={scoreTone("away", bold, tinted)}>{awayScore}</span>}
     </span>
   );
