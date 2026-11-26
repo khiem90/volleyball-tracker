@@ -7,11 +7,25 @@ import { PageLoadingSpinner } from "@/components/shared";
 import { useMatchPage } from "@/hooks/useMatchPage";
 import { STALE_SCORER_LINK } from "@/lib/shareLinks";
 
-/** The paper page behind the spinner and the not-found message. */
+/**
+ * The page behind the spinner and the two dead ends. It is white, because
+ * the grey Home button is the ground's color and has no edge there.
+ */
 const Frame = ({ children }: { children: ReactNode }) => (
-  <div className="matchbook-surface flex min-h-dvh flex-col items-center justify-center px-4 text-center">
+  <div className="flex min-h-dvh flex-col items-center justify-center bg-surface px-4 text-center">
     {children}
   </div>
+);
+
+/** A match that cannot be scored from here: what happened, why, and the way home. */
+const DeadEnd = ({ title, children }: { title: string; children: ReactNode }) => (
+  <Frame>
+    <h1 className="text-page-title font-bold">{title}</h1>
+    <p className="mt-2 max-w-sm text-body text-ink-soft">{children}</p>
+    <Link href="/" className="btn btn-fill mt-5">
+      Home
+    </Link>
+  </Frame>
 );
 
 export default function MatchPage() {
@@ -26,29 +40,15 @@ export default function MatchPage() {
   }
 
   if (page.staleLink) {
-    return (
-      <Frame>
-        <h1 className="matchbook-display text-2xl font-bold text-mb-navy">Scorer link replaced</h1>
-        <p className="mt-2 max-w-sm text-[0.85rem] text-mb-ink-muted">{STALE_SCORER_LINK}</p>
-        <Link href="/" className="mb-btn mb-btn-outline-navy mt-5">
-          Home
-        </Link>
-      </Frame>
-    );
+    return <DeadEnd title="Scorer link replaced">{STALE_SCORER_LINK}</DeadEnd>;
   }
 
   const { match, homeTeam, awayTeam, series } = page;
   if (!match || !homeTeam || !awayTeam || !series) {
     return (
-      <Frame>
-        <h1 className="matchbook-display text-2xl font-bold text-mb-navy">Match not found</h1>
-        <p className="mt-2 max-w-sm text-[0.85rem] text-mb-ink-muted">
-          This match does not exist or belongs to another account.
-        </p>
-        <Link href="/" className="mb-btn mb-btn-outline-navy mt-5">
-          Home
-        </Link>
-      </Frame>
+      <DeadEnd title="Match not found">
+        This match does not exist or belongs to another account.
+      </DeadEnd>
     );
   }
 
