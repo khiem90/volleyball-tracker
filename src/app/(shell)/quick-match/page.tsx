@@ -30,7 +30,7 @@ import type { Team } from "@/lib/teamShapes";
 const LABEL = "text-caption font-medium text-ink-soft";
 
 /** A team on one side with the score in the middle, which stays centered whatever the names' lengths. */
-const SIDES = "grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2";
+const SIDES = "grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-2";
 
 /** Where a team's mark will sit once a team is picked: the mark's shape in grey, with no letter. */
 const EmptyMark = ({ size }: { size: number }) => (
@@ -103,8 +103,11 @@ const ScorePreviewSide = ({
     {summary ? (
       <>
         <TeamMark name={summary.team.name} color={summary.team.color} size={64} />
-        {/* The selects cut a long name short, so here it wraps and shows in full. */}
-        <span className="mt-1 max-w-full text-body font-bold leading-tight wrap-anywhere">
+        {/* The selects cut a long name to one line. Here it takes up to three before it is cut. */}
+        <span
+          title={summary.team.name}
+          className="mt-1 line-clamp-3 max-w-full text-body font-bold leading-tight wrap-break-word"
+        >
           {summary.team.name}
         </span>
         <span className={`${LABEL} tabular-nums`}>({summary.record})</span>
@@ -356,9 +359,11 @@ export default function QuickMatchPage() {
         <div className="min-w-0 xl:col-span-5">
           <Card title="Scoreboard Preview" icon="live">
             <div className="flex flex-1 flex-col gap-4 p-4">
-              <div className={SIDES}>
+              {/* The sides hang from the top and the score is as tall as a mark, so the
+                  two marks and the score stay level when one name wraps further. */}
+              <div className={`${SIDES} items-start`}>
                 <ScorePreviewSide summary={homeSummary} placeholder="Home team" />
-                <div className="flex items-center gap-2 text-score font-extrabold leading-none tabular-nums">
+                <div className="flex h-16 items-center gap-2 text-score font-extrabold leading-none tabular-nums">
                   <span>0</span>
                   <span className="chip text-ink-soft">VS</span>
                   <span>0</span>
@@ -423,7 +428,7 @@ export default function QuickMatchPage() {
                   <CardEmpty message="No comparison exists yet — select both teams to compare their form." />
                 ) : (
                   <div className="flex flex-1 flex-col p-4">
-                    <div className={`${SIDES} border-b border-line pb-3`}>
+                    <div className={`${SIDES} items-center border-b border-line pb-3`}>
                       <FormSide summary={homeSummary} />
                       <div className="text-center">
                         <p className={LABEL}>Record</p>
