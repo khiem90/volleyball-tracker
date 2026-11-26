@@ -304,6 +304,7 @@ describe("the typeface", () => {
  */
 const migrated: string[] = [
   "app/(shell)/layout.tsx",
+  "app/(shell)/quick-match",
   "app/login",
   "app/match",
   "components/GlobalUndoToast.tsx",
@@ -329,8 +330,11 @@ const migrated: string[] = [
   "hooks/useGuestQuickMatch.ts",
   "hooks/useLoginPage.ts",
   "hooks/useMatchPage.ts",
+  "hooks/useQuickMatchData.ts",
+  "hooks/useQuickMatchPage.ts",
   "hooks/useWakeLock.ts",
   "lib/dateTile.ts",
+  "lib/quickMatchData.ts",
   "lib/scoreLine.ts",
   "lib/shell.ts",
   "lib/teamColors.ts",
