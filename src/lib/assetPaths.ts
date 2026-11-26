@@ -1,9 +1,8 @@
 /*
- * Pictures under public/ that a component draws by path. The crest has its
- * own folder, public/brand. Google's mark still sits in a folder that carries
- * the old theme's name, and a file on the design guard's migrated list cannot
- * spell that folder, so it reads the path from here. When that folder is
- * renamed, the last line changes and nothing else does.
+ * Pictures under public/ that a component draws by path. The crest is in
+ * public/brand and everything else is in public/assets. The icon sprite is
+ * there too, at public/assets/icons/sprite.svg, and only the Icon component
+ * spells its path.
  */
 
 /**
@@ -14,4 +13,4 @@
 export const CREST_SRC = "/brand/crest.svg";
 
 /** Google's own "G", in Google's colors. */
-export const GOOGLE_MARK_SRC = "/assets/matchbook/auth/google-g.svg";
+export const GOOGLE_MARK_SRC = "/assets/auth/google-g.svg";

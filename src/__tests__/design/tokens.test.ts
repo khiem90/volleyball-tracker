@@ -589,7 +589,7 @@ describe("the whole source", () => {
 
 describe("the icon sprite", () => {
   const src = fileURLToPath(new URL("../../", import.meta.url));
-  const icons = fileURLToPath(new URL("../../../public/assets/matchbook/icons/", import.meta.url));
+  const icons = fileURLToPath(new URL("../../../public/assets/icons/", import.meta.url));
   const sprite = readFileSync(join(icons, "sprite.svg"), "utf8");
 
   /* The ids every screen may ask for. A screen never has to change which one it names. */
