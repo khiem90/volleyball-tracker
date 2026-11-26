@@ -41,9 +41,14 @@ const LEDGER_PAGE = 25;
 
 const NO_FILTERS: LedgerFilters = { tournamentId: "", teamId: "", query: "" };
 
-/** "Sep 27, 2026": History reaches back past this year. */
+/**
+ * "Sep 27, 2026": History reaches back past this year. The spaces do not
+ * break, so a line of facts wraps before the date and never inside it.
+ */
 const dateLabel = (ts: number) =>
-  new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  new Date(ts)
+    .toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+    .replaceAll(" ", " ");
 
 /** "7:42 PM": the ledger's day heading already gives the date. */
 const timeLabel = (ts: number | undefined) =>
