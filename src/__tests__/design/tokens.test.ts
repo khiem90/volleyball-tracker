@@ -305,11 +305,13 @@ describe("the typeface", () => {
 const migrated: string[] = [
   "app/(shell)/layout.tsx",
   "app/(shell)/page.tsx",
+  "app/(shell)/teams",
   "app/login",
   "app/match",
   "components/GlobalUndoToast.tsx",
   "components/GuestMatchComplete.tsx",
   "components/UndoToast.tsx",
+  "components/dialogs",
   "components/match",
   "components/shared/AddTeamsForm.tsx",
   "components/shared/Brand.tsx",
@@ -321,6 +323,7 @@ const migrated: string[] = [
   "components/shared/TeamMark.tsx",
   "components/shared/TeamName.tsx",
   "components/shell",
+  "components/teams",
   "components/ui/avatar.tsx",
   "components/ui/badge.tsx",
   "components/ui/button.tsx",
@@ -331,6 +334,8 @@ const migrated: string[] = [
   "hooks/useGuestQuickMatch.ts",
   "hooks/useLoginPage.ts",
   "hooks/useMatchPage.ts",
+  "hooks/useTeamsData.ts",
+  "hooks/useTeamsPage.ts",
   "hooks/useWakeLock.ts",
   "lib/dateTile.ts",
   "lib/home.ts",
@@ -339,6 +344,7 @@ const migrated: string[] = [
   "lib/teamColors.ts",
   "lib/teamShapes.ts",
   "lib/teamStats.ts",
+  "lib/teamsData.ts",
   "lib/tournamentStatus.ts",
 ];
 
