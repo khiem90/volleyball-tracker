@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { MbIcon } from "@/components/matchbook/MbIcon";
+import { Icon } from "./Icon";
 
 /** Copies a link to the clipboard and says so for a moment. */
 const CopyButton = ({ value, label }: { value: string; label: string }) => {
@@ -30,9 +30,9 @@ const CopyButton = ({ value, label }: { value: string; label: string }) => {
       type="button"
       onClick={copy}
       aria-label={copied ? "Copied" : label}
-      className="mb-btn mb-btn-outline-navy shrink-0"
+      className="btn btn-fill shrink-0"
     >
-      <MbIcon id={copied ? "check" : "clipboard"} size={14} />
+      <Icon id={copied ? "check" : "clipboard"} size={14} />
       {copied ? "Copied" : "Copy"}
     </button>
   );
@@ -44,7 +44,7 @@ const CopyButton = ({ value, label }: { value: string; label: string }) => {
  */
 export const LinkField = ({ id, value, label }: { id: string; value: string; label: string }) => (
   <div className="flex gap-2">
-    <span className="mb-input min-w-0 flex-1">
+    <span className="field min-w-0 flex-1">
       <input
         id={id}
         type="text"

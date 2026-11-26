@@ -196,7 +196,14 @@ export const TeamDirectoryPanel = ({
       ) : rows.length === 0 ? (
         <CardEmpty message={`No teams match “${search}”.`} />
       ) : (
-        <ul className="max-h-[60vh] divide-y divide-line overflow-y-auto">
+        /*
+         * The list scrolls inside the card. Up to xl the card sits in a row of
+         * its own, so the list stops at 60% of the window. From xl the card is
+         * stretched to the two cards beside it, and the list fills what the
+         * card has: it grows from a basis of nothing, so the row's height comes
+         * from those two cards and not from the length of the roster.
+         */
+        <ul className="max-h-[60vh] divide-y divide-line overflow-y-auto xl:max-h-none xl:min-h-36 xl:grow xl:basis-0">
           {rows.map((row, i) => {
             const selected = !selection && row.id === selectedId;
             return (

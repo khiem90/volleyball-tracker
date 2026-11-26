@@ -17,19 +17,12 @@ describe("a tournament's status", () => {
   it("draws live as a green chip with the live dot", () => {
     expect(TOURNAMENT_STATUS.live.tone).toBe("action");
     expect(TOURNAMENT_STATUS.live.live).toBe(true);
-    expect(TOURNAMENT_STATUS.live.color).toBe("var(--action)");
   });
 
-  it("draws draft and completed as grey chips with ink text and no dot", () => {
+  it("draws draft and completed as grey chips with no dot", () => {
     for (const status of [TOURNAMENT_STATUS.draft, TOURNAMENT_STATUS.completed]) {
       expect(status.tone).toBe("fill");
       expect(status.live).toBe(false);
-      expect(status.color).toBe("var(--ink)");
     }
-  });
-
-  it("is the same record under its old path", async () => {
-    const old = await import("@/components/matchbook/tournamentStatus");
-    expect(old.TOURNAMENT_STATUS).toBe(TOURNAMENT_STATUS);
   });
 });

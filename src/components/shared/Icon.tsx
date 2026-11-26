@@ -14,7 +14,7 @@ export const Icon = ({
 }) => (
   <svg width={size} height={size} className={className} aria-hidden="true">
     <use
-      href={`/assets/matchbook/icons/sprite.svg?v=${process.env.NEXT_PUBLIC_SPRITE_VERSION}#${id}`}
+      href={`/assets/icons/sprite.svg?v=${process.env.NEXT_PUBLIC_SPRITE_VERSION}#${id}`}
     />
   </svg>
 );
