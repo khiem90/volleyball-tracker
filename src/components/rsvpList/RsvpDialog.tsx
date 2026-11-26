@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { InlineSpinner } from "@/components/shared";
-import { MbIcon } from "@/components/matchbook/MbIcon";
+import { FIELD_LABEL, FIELD_NOTE } from "@/components/rsvpList/RsvpFields";
+import { Icon, InlineSpinner } from "@/components/shared";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -14,6 +14,9 @@ import {
 } from "@/components/ui/dialog";
 import { RSVP_NAME_MAX, RSVP_NOTE_MAX, rsvpEntryProblems, type RsvpEntry } from "@/lib/rsvp";
 import type { ListWording } from "@/lib/rsvpList";
+
+/** A field's problem, and why a send or a withdrawal failed. */
+const PROBLEM = "text-caption font-medium text-danger";
 
 /**
  * The RSVP dialog: the name everyone on the list sees, prefilled, and an
@@ -83,13 +86,13 @@ export const RsvpDialog = ({
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
-              <MbIcon id="remove-user" size={18} className="shrink-0" />
+              <Icon id="remove-user" size={18} className="shrink-0" />
               Withdraw?
             </DialogTitle>
             <DialogDescription>{wording.withdraw(name)}</DialogDescription>
           </DialogHeader>
           {error && (
-            <p role="alert" className="text-[0.78rem] font-medium text-mb-red">
+            <p role="alert" className={PROBLEM}>
               {error}
             </p>
           )}
@@ -103,7 +106,7 @@ export const RsvpDialog = ({
               onClick={onWithdraw}
               disabled={isWithdrawing}
             >
-              {isWithdrawing ? <InlineSpinner /> : <MbIcon id="remove-user" size={14} />}
+              {isWithdrawing ? <InlineSpinner /> : <Icon id="remove-user" size={14} />}
               Withdraw
             </Button>
           </DialogFooter>
@@ -117,7 +120,7 @@ export const RsvpDialog = ({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>
-            <MbIcon id={isEditing ? "pencil" : "calendar"} size={18} className="shrink-0" />
+            <Icon id={isEditing ? "pencil" : "calendar"} size={18} className="shrink-0" />
             {isEditing ? "Your RSVP" : "RSVP"}
           </DialogTitle>
           <DialogDescription>
@@ -131,10 +134,10 @@ export const RsvpDialog = ({
 
         <form id="rsvp-form" onSubmit={submit} className="flex flex-col gap-5">
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="rsvp-name" className="mb-kicker">
+            <label htmlFor="rsvp-name" className={FIELD_LABEL}>
               {wording.nameLabel}
             </label>
-            <span className={problems.name ? "mb-input border-mb-red" : "mb-input"}>
+            <span className={problems.name ? "field border-danger" : "field"}>
               <input
                 id="rsvp-name"
                 type="text"
@@ -148,19 +151,19 @@ export const RsvpDialog = ({
               />
             </span>
             {problems.name && (
-              <p id="rsvp-name-problem" role="alert" className="text-[0.78rem] font-medium text-mb-red">
+              <p id="rsvp-name-problem" role="alert" className={PROBLEM}>
                 {problems.name}
               </p>
             )}
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="rsvp-note" className="mb-kicker">
+            <label htmlFor="rsvp-note" className={FIELD_LABEL}>
               Note (optional)
             </label>
             <textarea
               id="rsvp-note"
-              className={problems.note ? "mb-textarea border-mb-red" : "mb-textarea"}
+              className={problems.note ? "field-area border-danger" : "field-area"}
               rows={2}
               value={entry?.note ?? ""}
               onChange={(event) => onChange({ note: event.target.value })}
@@ -171,18 +174,14 @@ export const RsvpDialog = ({
             <p
               id="rsvp-note-help"
               role={problems.note ? "alert" : undefined}
-              className={
-                problems.note
-                  ? "text-[0.78rem] font-medium text-mb-red"
-                  : "text-[0.72rem] text-mb-ink-muted"
-              }
+              className={problems.note ? PROBLEM : FIELD_NOTE}
             >
               {problems.note ?? `Up to ${RSVP_NOTE_MAX} characters. Everyone on the list sees it.`}
             </p>
           </div>
 
           {error && (
-            <p role="alert" className="text-[0.78rem] font-medium text-mb-red">
+            <p role="alert" className={PROBLEM}>
               {error}
             </p>
           )}
@@ -192,11 +191,11 @@ export const RsvpDialog = ({
           {isEditing && onWithdraw && (
             <button
               type="button"
-              className="mb-btn mb-btn-outline-red sm:flex-1"
+              className="btn btn-danger-quiet sm:flex-1"
               onClick={() => setConfirming(true)}
               disabled={isSending}
             >
-              <MbIcon id="remove-user" size={14} />
+              <Icon id="remove-user" size={14} />
               Withdraw
             </button>
           )}
@@ -204,7 +203,7 @@ export const RsvpDialog = ({
             Cancel
           </Button>
           <Button type="submit" form="rsvp-form" className="sm:flex-1" disabled={!canSend}>
-            {isSending ? <InlineSpinner /> : <MbIcon id={isEditing ? "save" : "check"} size={14} />}
+            {isSending ? <InlineSpinner /> : <Icon id={isEditing ? "save" : "check"} size={14} />}
             {isEditing ? "Save" : joinsWaitlist ? "Join the waitlist" : "RSVP"}
           </Button>
         </DialogFooter>

@@ -187,7 +187,7 @@ puts the pulsing live dot before its words. The classes are `chip` and
 
 A date tile shows a short month over the day of the month, on `fill` with a
 10px radius. It leads a row wherever an RSVP list's scheduled time appears in
-a list.
+a list, and it sits beside the time in the header of the list's own page.
 
 ```tsx
 import { DateTile } from "@/components/shared/DateTile";
