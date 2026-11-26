@@ -10,7 +10,7 @@ export const PageLoadingSpinner = memo(function PageLoadingSpinner() {
       <motion.div
         animate={{ rotate: 360 }}
         transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-        className="h-8 w-8 rounded-full border-2 border-mb-coral border-t-transparent"
+        className="h-8 w-8 rounded-full border-2 border-action border-t-transparent"
       />
     </div>
   );
