@@ -1,9 +1,7 @@
 import Image from "next/image";
 import { CREST_SRC } from "@/lib/assetPaths";
 
-/* The crest file is 96 by 112. */
-const CREST_HEIGHT = 112 / 96;
-
+/* The crest is square, so each size is its width and its height. */
 const SIZES = {
   bar: { crest: 30, name: "text-body" },
   page: { crest: 36, name: "text-title" },
@@ -31,7 +29,7 @@ export const Brand = ({
         src={CREST_SRC}
         alt=""
         width={crest}
-        height={Math.round(crest * CREST_HEIGHT)}
+        height={crest}
         priority
         className="shrink-0"
       />

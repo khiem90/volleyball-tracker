@@ -312,6 +312,7 @@ const migrated: string[] = [
   "app/(shell)/rsvp",
   "app/(shell)/summaries",
   "app/(shell)/teams",
+  "app/layout.tsx",
   "app/login",
   "app/match",
   "components/GlobalUndoToast.tsx",
