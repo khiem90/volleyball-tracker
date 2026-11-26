@@ -26,7 +26,7 @@ Covers spec stories 6, 63, 64, and 66.
 
 ## Comments
 
-- The standing is a band at the top of the first card: green for in, grey for waiting, and grey with "Not on the list" for an account with no RSVP. That last line is new copy. The page showed nothing there before.
+- The standing is a band at the top of the first card, green for in and grey for waiting. An account with no RSVP gets no band, as before. Its card shows the RSVP button and the text it already had.
 - Not applicable, under ruling 1. Held spots stay "Held" badges on rows of In or Waitlist, not a third group. A notice has no unread mark on this page and never had one. Home's row carries it.
 - An RSVP by team has no color, so its mark is drawn in the color picked from its name. Ticket 15 built that.
 - The cards changed order. The standing card comes first, then tournaments and notices under it, where both sat above it before.

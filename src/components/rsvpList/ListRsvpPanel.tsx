@@ -6,41 +6,41 @@ import { listTakesRsvps } from "@/lib/rsvpList";
 import type { RsvpList } from "@/types/game";
 import type { ListRsvpView } from "./useListRsvpView";
 
-/** What the page says to an account with no RSVP on the list. */
-const NOT_ON_THE_LIST = "Not on the list";
+/** A standing on the list: in, or waiting. */
+type OnTheListKind = Exclude<RsvpStanding["kind"], "none">;
 
-/** The band's ground and text for each standing. Green is for in and nothing else. */
-const STANDING_TONE: Record<RsvpStanding["kind"], string> = {
+/** The band's ground and text. Green is for in and nothing else. */
+const STANDING_TONE: Record<OnTheListKind, string> = {
   confirmed: "bg-action-tint text-action",
   waitlisted: "bg-fill text-ink",
-  none: "bg-fill text-ink-soft",
 };
 
-/** The glyph before the words. Someone who is not on the list gets none. */
-const STANDING_ICONS: Record<Exclude<RsvpStanding["kind"], "none">, string> = {
+/** The glyph before the band's words. */
+const STANDING_ICONS: Record<OnTheListKind, string> = {
   confirmed: "check",
   waitlisted: "clock",
 };
 
 /**
  * Where the viewer stands, as the band the card opens with and the largest
- * type under the page's title: in on green, waiting with the position on
- * grey, or not on the list.
+ * type under the page's title: in on green, or waiting with the position
+ * on grey.
  */
-const StandingBand = ({ kind, text }: { kind: RsvpStanding["kind"]; text: string }) => (
+const StandingBand = ({ kind, text }: { kind: OnTheListKind; text: string }) => (
   <p
     className={`flex items-center gap-2.5 px-4 py-4 text-page-title font-extrabold ${STANDING_TONE[kind]}`}
   >
-    {kind !== "none" && <Icon id={STANDING_ICONS[kind]} size={28} className="shrink-0" />}
+    <Icon id={STANDING_ICONS[kind]} size={28} className="shrink-0" />
     <span className="min-w-0 wrap-anywhere">{text}</span>
   </p>
 );
 
 /**
  * The card a person RSVPs from, for themselves or on a by-team list for
- * their team. It opens with where they stand, then says it in a sentence
- * with the name they gave. Before the open time it counts down over a
- * disabled button. From then the green button opens the RSVP dialog, and
+ * their team. For someone on the list it opens with where they stand, then
+ * says it in a sentence with the name they gave. Someone with no RSVP gets
+ * no band. Before the open time the card counts down over a disabled
+ * button. From then the green button opens the RSVP dialog, and
  * once every spot is taken it joins the waitlist. Someone on the list gets
  * a button to change their RSVP or withdraw, until the scheduled time. A
  * list that takes no RSVPs says why in place of the button.
@@ -52,12 +52,8 @@ export const ListRsvpPanel = ({ list, view }: { list: RsvpList; view: ListRsvpVi
 
   return (
     <Card>
-      {/* The standing is worked out from the RSVPs, so it waits for them. */}
-      {split !== null && (
-        <StandingBand
-          kind={standing.kind}
-          text={standing.kind === "none" ? NOT_ON_THE_LIST : wording.homeStanding(standing)}
-        />
+      {view.mine && standing.kind !== "none" && (
+        <StandingBand kind={standing.kind} text={wording.homeStanding(standing)} />
       )}
 
       <div className="flex flex-col gap-3 p-4">
