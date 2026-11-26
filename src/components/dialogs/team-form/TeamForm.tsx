@@ -9,10 +9,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { MbIcon } from "@/components/matchbook/MbIcon";
+import { Icon } from "@/components/shared/Icon";
+import { TeamMark } from "@/components/shared/TeamMark";
 import { TEAM_COLORS } from "@/lib/roster";
 import type { PersistentTeam } from "@/types/game";
 import { useTeamForm } from "./useTeamForm";
+
+/* The small label over a field. */
+const LABEL = "text-caption font-medium text-ink-soft";
 
 interface ColorSwatchesProps {
   value: string;
@@ -20,10 +24,10 @@ interface ColorSwatchesProps {
 }
 
 /**
- * The team colors as 44px navy-bordered squares, the chosen one carrying the
- * sprite's check in navy on a small paper-bright disc, so it reads on the
- * light swatches too. The form is the only place these are picked, so the
- * swatches live here rather than in a shared primitive.
+ * The team colors as 44px tiles, the chosen one carrying the sprite's check
+ * in ink on a small white disc, so it reads on the light colors and the dark
+ * ones alike. The form is the only place these are picked, so the swatches
+ * live here and not in a shared piece.
  */
 const ColorSwatches = ({ value, onChange }: ColorSwatchesProps) => (
   <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Color selection">
@@ -36,13 +40,13 @@ const ColorSwatches = ({ value, onChange }: ColorSwatchesProps) => (
           role="radio"
           aria-checked={isSelected}
           onClick={() => onChange(color)}
-          className="flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-[4px] border-[1.5px] border-mb-navy"
+          className="flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-tile"
           style={{ backgroundColor: color }}
           aria-label={`Select color ${color}`}
         >
           {isSelected && (
-            <span className="flex size-7 items-center justify-center rounded-full bg-mb-paper-bright text-mb-navy">
-              <MbIcon id="check" size={20} />
+            <span className="flex size-7 items-center justify-center rounded-full bg-surface text-ink">
+              <Icon id="check" size={20} />
             </span>
           )}
         </button>
@@ -59,9 +63,8 @@ interface TeamFormProps {
 }
 
 /**
- * The team form: a matchbook name field, the color swatches, and a flat
- * preview block of the team color carrying the name, like the add strip
- * beside it on the Teams page.
+ * The team form: the name field, the color swatches, and a preview of the
+ * team as every screen draws it, its mark in the chosen color beside its name.
  */
 export const TeamForm = ({ open, onOpenChange, team, onSubmit }: TeamFormProps) => {
   const {
@@ -69,7 +72,6 @@ export const TeamForm = ({ open, onOpenChange, team, onSubmit }: TeamFormProps) 
     color,
     error,
     isEditing,
-    previewInitial,
     previewName,
     handleNameChange,
     handleColorSelect,
@@ -88,7 +90,7 @@ export const TeamForm = ({ open, onOpenChange, team, onSubmit }: TeamFormProps) 
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>
-            <MbIcon id="teams" size={18} className="shrink-0" />
+            <Icon id="teams" size={18} className="shrink-0" />
             {isEditing ? "Edit Team" : "Create Team"}
           </DialogTitle>
           <DialogDescription>
@@ -99,12 +101,12 @@ export const TeamForm = ({ open, onOpenChange, team, onSubmit }: TeamFormProps) 
         </DialogHeader>
 
         <div className="flex flex-col gap-5">
-          {/* Team name. The wrapper turns red with the message, focused or not. */}
+          {/* Team name. The box turns red with the message, focused or not. */}
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="team-name" className="mb-kicker">
+            <label htmlFor="team-name" className={LABEL}>
               Team Name
             </label>
-            <span className={error ? "mb-input border-mb-red" : "mb-input"}>
+            <span className={error ? "field border-danger" : "field"}>
               <input
                 id="team-name"
                 type="text"
@@ -118,7 +120,11 @@ export const TeamForm = ({ open, onOpenChange, team, onSubmit }: TeamFormProps) 
               />
             </span>
             {error && (
-              <p id="team-name-error" className="text-sm text-mb-red">
+              <p
+                id="team-name-error"
+                role="alert"
+                className="text-caption font-medium text-danger"
+              >
                 {error}
               </p>
             )}
@@ -126,23 +132,19 @@ export const TeamForm = ({ open, onOpenChange, team, onSubmit }: TeamFormProps) 
 
           {/* Team color */}
           <div className="flex flex-col gap-1.5">
-            <span className="mb-kicker">Team Color</span>
+            <span className={LABEL}>Team Color</span>
             <ColorSwatches value={color} onChange={handleColorSelect} />
           </div>
 
-          {/* Preview: a flat block of the team color with the name on it. */}
+          {/*
+           * Preview: the team's mark in the chosen color, with its initial.
+           * The mark picks ink or white for the letter, so yellow reads too.
+           */}
           <div className="flex flex-col gap-1.5">
-            <span className="mb-kicker">Preview</span>
-            <div
-              className="flex items-center gap-3 rounded-[4px] border-[1.5px] border-mb-navy p-3 text-white"
-              style={{ backgroundColor: color }}
-            >
-              <span className="matchbook-display flex size-11 shrink-0 items-center justify-center rounded-[4px] border-[1.5px] border-mb-paper-bright/70 text-xl font-bold">
-                {previewInitial}
-              </span>
-              <span className="matchbook-display min-w-0 truncate text-lg font-bold">
-                {previewName}
-              </span>
+            <span className={LABEL}>Preview</span>
+            <div className="flex items-center gap-3 rounded-tile bg-fill p-3">
+              <TeamMark name={previewName} color={color} size={44} />
+              <span className="min-w-0 truncate text-title font-bold">{previewName}</span>
             </div>
           </div>
         </div>
@@ -152,7 +154,7 @@ export const TeamForm = ({ open, onOpenChange, team, onSubmit }: TeamFormProps) 
             Cancel
           </Button>
           <Button onClick={handleSubmit} className="sm:flex-1">
-            <MbIcon id="check" size={14} />
+            <Icon id="check" size={14} />
             {isEditing ? "Save Changes" : "Create Team"}
           </Button>
         </DialogFooter>
