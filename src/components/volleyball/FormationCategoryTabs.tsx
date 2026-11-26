@@ -54,25 +54,19 @@ export const FormationCategoryTabs = memo(
               key={category.id}
               type="button"
               onClick={() => onCategoryChange(category.id)}
-              className={`
-                min-h-11 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200
-                focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1
-                ${
-                  isActive
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "bg-accent/50 text-muted-foreground hover:bg-accent hover:text-foreground"
-                }
-              `}
+              className={`inline-flex min-h-11 items-center gap-1.5 rounded-pill px-4 text-label font-semibold transition-colors ${
+                isActive
+                  ? "bg-ink text-white"
+                  : "bg-fill text-ink hover:bg-ink/10"
+              }`}
               aria-pressed={isActive}
               title={category.description}
             >
               {category.label}
               {typeof count === "number" && count > 0 && (
                 <span
-                  className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs ${
-                    isActive
-                      ? "bg-primary-foreground/20 text-primary-foreground"
-                      : "bg-muted text-muted-foreground"
+                  className={`rounded-pill px-1.5 py-0.5 text-caption tabular-nums ${
+                    isActive ? "bg-white/20 text-white" : "bg-surface text-ink-soft"
                   }`}
                 >
                   {count}

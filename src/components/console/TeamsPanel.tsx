@@ -1,10 +1,11 @@
 "use client";
 
 import { useRef, useState, type FormEvent } from "react";
-import { MbIcon } from "@/components/matchbook/MbIcon";
-import { Panel, PanelEmpty, TeamName } from "@/components/matchbook/Panel";
+import { Card, CardEmpty } from "@/components/shared/Card";
+import { Icon } from "@/components/shared/Icon";
 import type { TeamRow } from "@/lib/console";
 import { isMixedTeam } from "@/lib/entries";
+import { NOTE, ROW_BUTTON, TEAM_CELL, TeamLabel } from "./parts";
 import type { TeamLookup } from "./teamRefs";
 
 const SUGGESTIONS_ID = "console-roster-names";
@@ -42,10 +43,10 @@ const AddTeamForm = ({
   };
 
   return (
-    <div className="border-b border-mb-rule">
-      <form onSubmit={submit} className="flex items-center gap-2 px-3 py-2.5">
-        <label className="mb-input min-w-0 flex-1">
-          <MbIcon id="plus" size={14} className="shrink-0 text-mb-ink-muted" />
+    <div className="border-b border-line">
+      <form onSubmit={submit} className="flex items-center gap-2 px-4 py-3">
+        <label className="field min-w-0 flex-1">
+          <Icon id="plus" size={16} className="shrink-0 text-ink-soft" />
           <input
             ref={nameInput}
             type="text"
@@ -63,16 +64,12 @@ const AddTeamForm = ({
             <option key={suggestion} value={suggestion} />
           ))}
         </datalist>
-        <button
-          type="submit"
-          className="mb-btn mb-btn-navy"
-          disabled={busy || name.trim().length === 0}
-        >
+        <button type="submit" className="btn btn-ink" disabled={busy || name.trim().length === 0}>
           Add
         </button>
       </form>
       {notice && (
-        <p role="status" className="px-3 pb-2.5 text-[0.78rem] font-medium text-mb-ink-muted">
+        <p role="status" className={`px-4 pb-3 font-medium ${NOTE}`}>
           {notice}
         </p>
       )}
@@ -131,103 +128,102 @@ export const TeamsPanel = ({
   // A draft has nobody to withdraw, so the column is there only for Edit.
   const hasActions = canWithdraw || rows.some(editable);
   return (
-    <Panel title="Teams" meta={<span className="mb-kicker">{rows.length} entered</span>}>
+    <Card title="Teams" meta={`${rows.length} entered`}>
       {canAdd && (
         <AddTeamForm suggestions={suggestions} joinedNote={joinedNote} onAdd={onAdd} busy={busy} />
       )}
       {!canAdd && canWithdraw && addRefusal && (
-        <p className="border-b border-mb-rule px-3 py-2.5 text-[0.78rem] font-medium text-mb-ink-muted">
-          {addRefusal}
-        </p>
+        <p className={`border-b border-line px-4 py-3 font-medium ${NOTE}`}>{addRefusal}</p>
       )}
       {rows.length === 0 ? (
-        <PanelEmpty message="No teams are entered." />
+        <CardEmpty message="No teams are entered." />
       ) : (
-        <div className="overflow-x-auto">
-          <table className="mb-table mb-table-compact w-full border-collapse">
+        // Positioned, so the labels written for screen readers alone stay inside
+        // the wrapper. Left to the page, they made a phone's page wider than its screen.
+        <div className="relative overflow-x-auto">
+          <table className="data-table data-table-compact w-full border-collapse">
             <thead>
               <tr>
-                <th className="w-8 pl-3 text-center">#</th>
+                <th className="pl-4 text-center">#</th>
                 <th>Team</th>
                 <th className="text-center">W</th>
-                <th className={hasActions ? "text-center" : "pr-3 text-center"}>L</th>
+                <th className={hasActions ? "text-center" : "pr-4 text-center"}>L</th>
                 {hasActions && (
-                  <th className="pr-3">
+                  <th className="pr-4">
                     <span className="sr-only">Actions</span>
                   </th>
                 )}
               </tr>
             </thead>
             <tbody>
-              {rows.map((row, i) => (
-                <tr key={row.teamId} className={row.withdrawn ? "opacity-60" : undefined}>
-                  <td className="matchbook-display pl-3 text-center font-bold">{i + 1}</td>
-                  <td>
-                    <span className="flex items-center gap-2">
-                      {row.color && (
-                        <span
-                          className="h-3 w-3 shrink-0 rounded-full border border-mb-navy"
-                          style={{ background: row.color }}
-                          aria-hidden="true"
-                        />
-                      )}
-                      <TeamName team={team(row.teamId)} size={20} />
-                      {row.withdrawn && <span className="mb-kicker">Withdrawn</span>}
-                    </span>
-                    {row.players && row.players.length > 0 && (
-                      <p className="mt-1 text-[0.72rem] text-mb-ink-muted">
-                        <span className="sr-only">Players: </span>
-                        {row.players.join(", ")}
-                      </p>
-                    )}
-                  </td>
-                  <td className="text-center tabular-nums">{row.won}</td>
-                  <td className={`text-center tabular-nums ${hasActions ? "" : "pr-3"}`}>{row.lost}</td>
-                  {hasActions && (
-                    <td className="pr-3">
-                      <span className="flex flex-wrap justify-end gap-1.5">
-                        {editable(row) && (
-                          <button
-                            type="button"
-                            onClick={() => onEdit(row)}
-                            className="mb-btn mb-btn-outline-navy px-3 text-[0.66rem]"
-                            aria-label={`Edit ${row.name}`}
-                          >
-                            <MbIcon id="pencil" size={14} />
-                            Edit
-                          </button>
+              {rows.map((row, i) => {
+                // A withdrawn team's record is dimmed. Its buttons are not, or Rejoin would read as switched off.
+                const dim = row.withdrawn ? "opacity-60" : "";
+                return (
+                  <tr key={row.teamId}>
+                    <td className={`pl-4 text-center font-bold ${dim}`}>{i + 1}</td>
+                    <td className={`${TEAM_CELL} ${dim}`}>
+                      <TeamLabel team={team(row.teamId)}>
+                        {row.withdrawn && <span className={`font-medium ${NOTE}`}>Withdrawn</span>}
+                        {row.players && row.players.length > 0 && (
+                          <span className={`wrap-break-word ${NOTE}`}>
+                            <span className="sr-only">Players: </span>
+                            {row.players.join(", ")}
+                          </span>
                         )}
-                        {canWithdraw &&
-                          (row.withdrawn ? (
-                            canAdd && (
-                              <button
-                                type="button"
-                                onClick={() => onRejoin(row)}
-                                disabled={busy}
-                                className="mb-btn mb-btn-outline-navy px-3 text-[0.66rem]"
-                              >
-                                Rejoin
-                              </button>
-                            )
-                          ) : (
+                      </TeamLabel>
+                    </td>
+                    <td className={`text-center tabular-nums ${dim}`}>{row.won}</td>
+                    <td className={`text-center tabular-nums ${hasActions ? "" : "pr-4"} ${dim}`}>
+                      {row.lost}
+                    </td>
+                    {hasActions && (
+                      <td className="pr-4">
+                        {/* Two buttons stack, so the team's name keeps its width in a narrow card. */}
+                        <span className="flex flex-wrap justify-end gap-1.5">
+                          {editable(row) && (
                             <button
                               type="button"
-                              onClick={() => onWithdraw(row)}
-                              disabled={busy}
-                              className="mb-btn mb-btn-outline px-3 text-[0.66rem]"
+                              onClick={() => onEdit(row)}
+                              className={`${ROW_BUTTON} btn-fill`}
+                              aria-label={`Edit ${row.name}`}
                             >
-                              Withdraw
+                              <Icon id="pencil" size={14} />
+                              Edit
                             </button>
-                          ))}
-                      </span>
-                    </td>
-                  )}
-                </tr>
-              ))}
+                          )}
+                          {canWithdraw &&
+                            (row.withdrawn ? (
+                              canAdd && (
+                                <button
+                                  type="button"
+                                  onClick={() => onRejoin(row)}
+                                  disabled={busy}
+                                  className={`${ROW_BUTTON} btn-fill`}
+                                >
+                                  Rejoin
+                                </button>
+                              )
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => onWithdraw(row)}
+                                disabled={busy}
+                                className={`${ROW_BUTTON} btn-danger-quiet`}
+                              >
+                                Withdraw
+                              </button>
+                            ))}
+                        </span>
+                      </td>
+                    )}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
       )}
-    </Panel>
+    </Card>
   );
 };

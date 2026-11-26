@@ -10,16 +10,20 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { MbIcon } from "@/components/matchbook/MbIcon";
 import { InlineSpinner } from "@/components/shared";
+import { Icon } from "@/components/shared/Icon";
 
 interface ConfirmDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: string;
   description: ReactNode;
-  /** The confirm button's label, and what it says while the action runs. */
-  confirmLabel: string;
+  /**
+   * The confirm button's label, and what it says while the action runs. A
+   * label too long for the button is cut short. Pass spans in place of a
+   * string to choose which part is cut.
+   */
+  confirmLabel: ReactNode;
   busyLabel: string;
   isBusy: boolean;
   onConfirm: () => void;
@@ -52,10 +56,11 @@ export const ConfirmDialog = ({
   tone = "danger",
 }: ConfirmDialogProps) => (
   <Dialog open={open} onOpenChange={onOpenChange}>
-    <DialogContent className="sm:max-w-md">
+    {/* One column that cannot grow past the dialog, so a long label is cut short where it would have widened it. */}
+    <DialogContent className="grid-cols-1 sm:max-w-md">
       <DialogHeader>
         <DialogTitle>
-          <MbIcon id={icon} size={18} className="shrink-0" />
+          <Icon id={icon} size={18} className="shrink-0" />
           {title}
         </DialogTitle>
         <DialogDescription>{description}</DialogDescription>
@@ -73,10 +78,16 @@ export const ConfirmDialog = ({
           variant={tone === "danger" ? "destructive" : "default"}
           onClick={onConfirm}
           disabled={isBusy}
-          className="sm:flex-1"
+          className="min-w-0 sm:flex-1"
         >
-          {isBusy ? <InlineSpinner /> : <MbIcon id={icon} size={14} />}
-          {isBusy ? busyLabel : confirmLabel}
+          {isBusy ? <InlineSpinner /> : <Icon id={icon} size={14} />}
+          {isBusy ? (
+            busyLabel
+          ) : typeof confirmLabel === "string" ? (
+            <span className="truncate">{confirmLabel}</span>
+          ) : (
+            confirmLabel
+          )}
         </Button>
       </DialogFooter>
     </DialogContent>

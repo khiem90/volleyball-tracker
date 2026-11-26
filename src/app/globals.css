@@ -2,38 +2,8 @@
 @import "tw-animate-css";
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
   /* Figtree. src/app/layout.tsx sets --font-figtree on <html>, where this is read. */
   --font-sans: var(--font-figtree), system-ui, sans-serif;
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary: var(--primary);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
-  --color-card: var(--card);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --radius-2xl: calc(var(--radius) + 8px);
-  --radius-3xl: calc(var(--radius) + 12px);
-  --radius-4xl: calc(var(--radius) + 16px);
 
   /* Matchbook palette (home redesign) */
   --color-mb-paper: var(--mb-paper);
@@ -949,68 +919,13 @@ body {
 }
 
 /*
- * LEGACY TOKENS. Not a second palette. Read only by the volleyball tools
- * (src/components/volleyball and src/app/(shell)/tools/volleyball-rotations,
- * through bg-primary, text-muted-foreground, border-border, and the rest), by
- * the @theme inline maps at the top of this file, and by the base layer
- * defaults below. They go with the volleyball redesign, and the base layer
- * goes with them. Each one resolves to a matchbook value, and that resolves
- * to a role token, so those pages take the new palette without being
- * touched. Matchbook screens use the mb-* tokens and classes above;
- * src/__tests__/design/tokens.test.ts fails if one of them reads a legacy
- * token, and docs/design-system.md has the rules.
- *
- * Mapping: background to paper; card and popover to paper-bright; foreground
- * to navy; primary to navy with a paper-bright foreground; secondary, muted,
- * and accent to the light navy wash with navy foreground; destructive to the
- * matchbook red; muted foreground to the muted ink; border and input to the
- * rule color; ring to coral; the charts to navy, coral, teal, gold, and plum;
- * the base radius to 4px so the derived radii follow.
- */
-:root {
-  --radius: 4px;
-
-  --background: var(--mb-paper);
-  --foreground: var(--mb-navy);
-
-  --card: var(--mb-paper-bright);
-  --card-foreground: var(--mb-navy);
-
-  --popover: var(--mb-paper-bright);
-  --popover-foreground: var(--mb-navy);
-
-  --primary: var(--mb-navy);
-  --primary-foreground: var(--mb-paper-bright);
-
-  --secondary: color-mix(in srgb, var(--mb-navy) 6%, transparent);
-  --secondary-foreground: var(--mb-navy);
-
-  --muted: color-mix(in srgb, var(--mb-navy) 6%, transparent);
-  --muted-foreground: var(--mb-ink-muted);
-
-  --accent: color-mix(in srgb, var(--mb-navy) 6%, transparent);
-  --accent-foreground: var(--mb-navy);
-
-  --destructive: var(--mb-red);
-
-  --border: var(--mb-rule);
-  --input: var(--mb-rule);
-  --ring: var(--mb-coral);
-
-  --chart-1: var(--mb-navy);
-  --chart-2: var(--mb-coral);
-  --chart-3: var(--mb-teal);
-  --chart-4: var(--mb-gold);
-  --chart-5: var(--mb-plum);
-}
-
-/*
  * Defaults for every element. In the base layer, so a matchbook class or a
- * utility that restyles an element wins over them.
+ * utility that restyles an element wins over them. A border with no color of
+ * its own is a line rule.
  */
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-line outline-action/50;
   }
   body {
     @apply bg-ground text-ink;

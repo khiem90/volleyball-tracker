@@ -53,7 +53,7 @@ export const ArrowLayer = memo(function ArrowLayer({
               y1={startY}
               x2={endX}
               y2={endY}
-              className="stroke-primary/70 stroke-[2.5]"
+              className="stroke-ink-soft stroke-[2.5]"
               markerEnd="url(#editorArrowhead)"
               strokeLinecap="round"
             />
@@ -82,7 +82,7 @@ export const ArrowLayer = memo(function ArrowLayer({
             y1={startY}
             x2={cursorPos.x}
             y2={cursorPos.y}
-            className="stroke-primary/50 stroke-2"
+            className="stroke-ink-soft stroke-2"
             strokeDasharray="6 4"
             markerEnd="url(#editorArrowhead)"
             strokeLinecap="round"

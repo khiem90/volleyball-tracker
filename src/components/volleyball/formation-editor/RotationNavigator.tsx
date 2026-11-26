@@ -2,6 +2,7 @@
 
 import { memo } from "react";
 import type { RotationNumber, GameMode } from "@/lib/volleyball/types";
+import { GROUP_LABEL, toggleClass } from "../styles";
 
 type RotationNavigatorProps = {
   currentRotation: RotationNumber;
@@ -14,6 +15,8 @@ type RotationNavigatorProps = {
 
 const ROTATION_BUTTONS: RotationNumber[] = [1, 2, 3, 4, 5, 6];
 
+const SUB_LABEL = "mb-1 block text-caption font-medium text-ink-soft";
+
 export const RotationNavigator = memo(function RotationNavigator({
   currentRotation,
   currentMode,
@@ -23,25 +26,20 @@ export const RotationNavigator = memo(function RotationNavigator({
   onLiberoChange,
 }: RotationNavigatorProps) {
   return (
-    <div className="space-y-3">
-      <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">
-        Rotation Navigator
-      </h3>
+    <div className="flex flex-col gap-3">
+      <h3 className={GROUP_LABEL}>Rotation Navigator</h3>
 
       {/* Rotation Selector */}
       <div>
-        <label className="block text-sm font-medium mb-1">Rotation</label>
-        <div className="flex gap-0.5">
+        <label className={SUB_LABEL}>Rotation</label>
+        <div className="flex gap-1">
           {ROTATION_BUTTONS.map((r) => (
             <button
               key={r}
               type="button"
               onClick={() => onRotationChange(r)}
-              className={`flex-1 min-h-11 px-3 py-2 rounded-lg text-sm font-bold transition-colors ${
-                currentRotation === r
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-accent hover:bg-accent/80"
-              }`}
+              className={`${toggleClass(currentRotation === r)} flex-1 px-0 tabular-nums`}
+              aria-pressed={currentRotation === r}
             >
               R{r}
             </button>
@@ -51,27 +49,21 @@ export const RotationNavigator = memo(function RotationNavigator({
 
       {/* Mode Toggle */}
       <div>
-        <label className="block text-sm font-medium mb-1">Mode</label>
+        <label className={SUB_LABEL}>Mode</label>
         <div className="flex gap-2">
           <button
             type="button"
             onClick={() => onModeChange("serving")}
-            className={`flex-1 min-h-11 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-              currentMode === "serving"
-                ? "bg-primary text-primary-foreground"
-                : "bg-accent hover:bg-accent/80"
-            }`}
+            className={`${toggleClass(currentMode === "serving")} flex-1`}
+            aria-pressed={currentMode === "serving"}
           >
             Serving
           </button>
           <button
             type="button"
             onClick={() => onModeChange("receiving")}
-            className={`flex-1 min-h-11 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-              currentMode === "receiving"
-                ? "bg-primary text-primary-foreground"
-                : "bg-accent hover:bg-accent/80"
-            }`}
+            className={`${toggleClass(currentMode === "receiving")} flex-1`}
+            aria-pressed={currentMode === "receiving"}
           >
             Receiving
           </button>
@@ -79,17 +71,15 @@ export const RotationNavigator = memo(function RotationNavigator({
       </div>
 
       {/* Libero Toggle */}
-      <div>
-        <label className="flex min-h-11 items-center gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={liberoActive}
-            onChange={(e) => onLiberoChange(e.target.checked)}
-            className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
-          />
-          <span className="text-sm font-medium">Show Libero</span>
-        </label>
-      </div>
+      <label className="flex min-h-11 cursor-pointer items-center gap-2.5 text-label font-medium">
+        <input
+          type="checkbox"
+          checked={liberoActive}
+          onChange={(e) => onLiberoChange(e.target.checked)}
+          className="field-check"
+        />
+        Show Libero
+      </label>
     </div>
   );
 });

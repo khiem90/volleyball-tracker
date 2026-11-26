@@ -12,6 +12,7 @@ import { getTemplateFormations } from "@/lib/volleyball/templateFormations";
 import { resolveFormation } from "@/lib/volleyball/formationChoice";
 import { FormationCategoryTabs } from "./FormationCategoryTabs";
 import { FormationCard } from "./FormationCard";
+import { choiceTileClass } from "./styles";
 
 // Simple mode for backward compatibility
 type SimpleModeProps = {
@@ -44,6 +45,37 @@ const isEnhancedMode = (props: FormationSelectorProps): props is EnhancedModePro
   return props.enhanced === true;
 };
 
+/** One built-in formation or template to pick: its name over two lines of what it is for. */
+const ChoiceTile = ({
+  name,
+  description,
+  chosen,
+  onChoose,
+}: {
+  name: string;
+  description: string;
+  chosen: boolean;
+  onChoose: () => void;
+}) => (
+  <button
+    type="button"
+    onClick={onChoose}
+    className={choiceTileClass(chosen)}
+    aria-pressed={chosen}
+  >
+    <span className="text-label font-semibold text-ink">{name}</span>
+    <span className="line-clamp-2 text-caption text-ink-soft">{description}</span>
+  </button>
+);
+
+/** The grey note under the choices: a lead word, then what it says about the chosen formation. */
+const ChoiceNote = ({ lead, children }: { lead: string; children: React.ReactNode }) => (
+  <div className="rounded-tile bg-fill p-3 text-caption text-ink-soft">
+    <span className="font-medium text-ink">{lead}: </span>
+    {children}
+  </div>
+);
+
 export const FormationSelector = memo((props: FormationSelectorProps) => {
   const { formation, rotation, onFormationChange } = props;
 
@@ -56,46 +88,28 @@ export const FormationSelector = memo((props: FormationSelectorProps) => {
   const builtinFormations = getFormations();
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-foreground">Formation</h3>
-        <span className="text-xs text-muted-foreground">
-          Rotation {rotation}
-        </span>
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="text-label font-semibold">Formation</h3>
+        <span className="text-caption text-ink-soft">Rotation {rotation}</span>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
         {builtinFormations.map((f) => (
-          <button
+          <ChoiceTile
             key={f.id}
-            type="button"
-            onClick={() => onFormationChange(f.id)}
-            className={`
-              p-3 rounded-xl text-left transition-all duration-200
-              border-2 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1
-              ${
-                formation === f.id
-                  ? "bg-primary/10 border-primary text-foreground shadow-sm"
-                  : "bg-accent/30 border-transparent text-muted-foreground hover:border-primary/30 hover:bg-accent/50"
-              }
-            `}
-            aria-pressed={formation === f.id}
-          >
-            <div className="font-semibold text-sm mb-1">{f.name}</div>
-            <div className="text-xs opacity-80 line-clamp-2">
-              {f.description}
-            </div>
-          </button>
+            name={f.name}
+            description={f.description}
+            chosen={formation === f.id}
+            onChoose={() => onFormationChange(f.id)}
+          />
         ))}
       </div>
 
       {/* Selected formation details */}
-      <div className="p-3 rounded-lg bg-accent/30 border border-border">
-        <div className="text-xs text-muted-foreground">
-          <span className="font-medium text-foreground">Trade-offs: </span>
-          {builtinFormations.find((f) => f.id === formation)?.tradeoffs}
-        </div>
-      </div>
+      <ChoiceNote lead="Trade-offs">
+        {builtinFormations.find((f) => f.id === formation)?.tradeoffs}
+      </ChoiceNote>
     </div>
   );
 });
@@ -163,29 +177,19 @@ const EnhancedFormationSelector = memo((props: EnhancedModeProps) => {
   }, []);
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-4">
       {/* Header with Create button */}
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-foreground">Formation</h3>
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="text-label font-semibold">Formation</h3>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">
-            Rotation {rotation}
-          </span>
+          <span className="text-caption text-ink-soft">Rotation {rotation}</span>
           {isAuthenticated && onCreateFormation && (
-            <button
-              type="button"
-              onClick={onCreateFormation}
-              className="min-h-11 px-3 py-1 text-xs font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-            >
+            <button type="button" onClick={onCreateFormation} className="btn btn-ink px-4">
               + Create
             </button>
           )}
           {!isAuthenticated && onSignInClick && (
-            <button
-              type="button"
-              onClick={onSignInClick}
-              className="min-h-11 px-3 py-1 text-xs font-medium bg-accent text-foreground rounded-lg hover:bg-accent/80 transition-colors"
-            >
+            <button type="button" onClick={onSignInClick} className="btn btn-fill px-4">
               Sign in to create
             </button>
           )}
@@ -202,59 +206,33 @@ const EnhancedFormationSelector = memo((props: EnhancedModeProps) => {
       />
 
       {/* Formation Grid based on category */}
-      <div className="space-y-2">
+      <div className="flex flex-col gap-2">
         {/* Built-in Formations */}
         {activeCategory === "builtin" && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
             {builtinFormations.map((f) => (
-              <button
+              <ChoiceTile
                 key={f.id}
-                type="button"
-                onClick={() => onFormationChange(f.id)}
-                className={`
-                  p-3 rounded-xl text-left transition-all duration-200
-                  border-2 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1
-                  ${
-                    formation === f.id
-                      ? "bg-primary/10 border-primary text-foreground shadow-sm"
-                      : "bg-accent/30 border-transparent text-muted-foreground hover:border-primary/30 hover:bg-accent/50"
-                  }
-                `}
-                aria-pressed={formation === f.id}
-              >
-                <div className="font-semibold text-sm mb-1">{f.name}</div>
-                <div className="text-xs opacity-80 line-clamp-2">
-                  {f.description}
-                </div>
-              </button>
+                name={f.name}
+                description={f.description}
+                chosen={formation === f.id}
+                onChoose={() => onFormationChange(f.id)}
+              />
             ))}
           </div>
         )}
 
         {/* Template Formations */}
         {activeCategory === "template" && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {templateFormations.map((t) => (
-              <button
+              <ChoiceTile
                 key={t.id}
-                type="button"
-                onClick={() => onFormationChange(t.id)}
-                className={`
-                  p-3 rounded-xl text-left transition-all duration-200
-                  border-2 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1
-                  ${
-                    formation === t.id
-                      ? "bg-primary/10 border-primary text-foreground shadow-sm"
-                      : "bg-accent/30 border-transparent text-muted-foreground hover:border-primary/30 hover:bg-accent/50"
-                  }
-                `}
-                aria-pressed={formation === t.id}
-              >
-                <div className="font-semibold text-sm mb-1">{t.name}</div>
-                <div className="text-xs opacity-80 line-clamp-2">
-                  {t.description}
-                </div>
-              </button>
+                name={t.name}
+                description={t.description}
+                chosen={formation === t.id}
+                onChoose={() => onFormationChange(t.id)}
+              />
             ))}
           </div>
         )}
@@ -263,37 +241,29 @@ const EnhancedFormationSelector = memo((props: EnhancedModeProps) => {
         {activeCategory === "custom" && (
           <>
             {!isAuthenticated ? (
-              <div className="p-6 text-center rounded-xl bg-accent/30 border border-border">
-                <p className="text-sm text-muted-foreground mb-3">
+              <div className="flex flex-col items-center gap-3 rounded-tile bg-fill p-6 text-center">
+                <p className="text-label text-ink-soft">
                   Sign in to create and save your own formations
                 </p>
                 {onSignInClick && (
-                  <button
-                    type="button"
-                    onClick={onSignInClick}
-                    className="min-h-11 px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
-                  >
+                  <button type="button" onClick={onSignInClick} className="btn btn-ink">
                     Sign In
                   </button>
                 )}
               </div>
             ) : userFormations.length === 0 ? (
-              <div className="p-6 text-center rounded-xl bg-accent/30 border border-border">
-                <p className="text-sm text-muted-foreground mb-3">
+              <div className="flex flex-col items-center gap-3 rounded-tile bg-fill p-6 text-center">
+                <p className="text-label text-ink-soft">
                   You haven&apos;t created any formations yet
                 </p>
                 {onCreateFormation && (
-                  <button
-                    type="button"
-                    onClick={onCreateFormation}
-                    className="min-h-11 px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
-                  >
+                  <button type="button" onClick={onCreateFormation} className="btn btn-ink">
                     Create Your First Formation
                   </button>
                 )}
               </div>
             ) : (
-              <div className="space-y-2">
+              <div className="flex flex-col gap-2">
                 {userFormations.map((f) => (
                   <FormationCard
                     key={f.id}
@@ -314,7 +284,7 @@ const EnhancedFormationSelector = memo((props: EnhancedModeProps) => {
 
         {/* Shared Formation */}
         {activeCategory === "shared" && sharedFormation && (
-          <div className="space-y-2">
+          <div className="flex flex-col gap-2">
             <FormationCard
               formation={sharedFormation}
               isSelected={formation === sharedFormation.id}
@@ -327,7 +297,7 @@ const EnhancedFormationSelector = memo((props: EnhancedModeProps) => {
               }
             />
             {!isAuthenticated && (
-              <p className="text-xs text-muted-foreground text-center">
+              <p className="text-center text-caption text-ink-soft">
                 Sign in to copy this formation to your collection
               </p>
             )}
@@ -337,14 +307,9 @@ const EnhancedFormationSelector = memo((props: EnhancedModeProps) => {
 
       {/* Selected formation info */}
       {selectedInfo && (
-        <div className="p-3 rounded-lg bg-accent/30 border border-border">
-          <div className="text-xs text-muted-foreground">
-            <span className="font-medium text-foreground">
-              {activeCategory === "builtin" ? "Trade-offs" : "Description"}:{" "}
-            </span>
-            {selectedInfo.tradeoffs || "No description available"}
-          </div>
-        </div>
+        <ChoiceNote lead={activeCategory === "builtin" ? "Trade-offs" : "Description"}>
+          {selectedInfo.tradeoffs || "No description available"}
+        </ChoiceNote>
       )}
     </div>
   );

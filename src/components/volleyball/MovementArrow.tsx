@@ -43,10 +43,10 @@ export const MovementArrow = memo(
           y2={endY}
           className={`transition-all duration-200 ${
             isHighlighted
-              ? "stroke-primary stroke-[3]"
-              : "stroke-primary/50 stroke-[2]"
+              ? "stroke-ink stroke-[3]"
+              : "stroke-ink-soft stroke-[2]"
           }`}
-          markerEnd="url(#arrowhead)"
+          markerEnd={isHighlighted ? "url(#arrowhead-selected)" : "url(#arrowhead)"}
           strokeLinecap="round"
         />
       </motion.g>

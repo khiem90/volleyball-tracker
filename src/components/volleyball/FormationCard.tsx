@@ -2,6 +2,9 @@
 
 import { memo } from "react";
 import type { UserFormation } from "@/lib/volleyball/types";
+import { Chip } from "@/components/shared/Chip";
+import { Icon } from "@/components/shared/Icon";
+import { QUIET_BUTTON } from "./styles";
 
 type FormationCardProps = {
   formation: UserFormation;
@@ -35,60 +38,49 @@ export const FormationCard = memo(
 
     return (
       <div
-        className={`
-          p-4 rounded-xl border-2 transition-all duration-200
-          ${
-            isSelected
-              ? "bg-primary/10 border-primary shadow-sm"
-              : "bg-card border-border hover:border-primary/30"
-          }
-        `}
+        className={`flex flex-col gap-2 rounded-tile border p-4 transition-colors ${
+          isSelected ? "border-action bg-action-tint" : "border-line bg-surface"
+        }`}
       >
         {/* Header */}
-        <div className="flex items-start justify-between gap-2 mb-2">
+        <div className="flex items-center justify-between gap-2">
           <button
             type="button"
             onClick={onSelect}
-            className="flex-1 text-left focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded"
+            className="flex min-h-11 min-w-0 flex-1 items-center rounded-chip text-left"
             aria-pressed={isSelected}
           >
-            <h4 className="font-semibold text-foreground line-clamp-1">
+            <h4 className="line-clamp-1 text-title font-semibold wrap-anywhere">
               {formation.name}
             </h4>
           </button>
 
-          {/* Visibility badge */}
-          <span
-            className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-              formation.visibility === "unlisted"
-                ? "bg-blue-100 text-blue-700"
-                : "bg-muted text-muted-foreground"
-            }`}
+          {/* Visibility chip. On the green tint a grey chip turns white, so it still shows. */}
+          <Chip
+            tone={formation.visibility === "unlisted" ? "action" : "fill"}
+            className={isSelected ? "bg-surface" : ""}
           >
             {formation.visibility === "unlisted" ? "Shared" : "Private"}
-          </span>
+          </Chip>
         </div>
 
         {/* Description */}
         {formation.description && (
-          <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
+          <p className="line-clamp-2 text-label text-ink-soft">
             {formation.description}
           </p>
         )}
 
         {/* Tags */}
         {formation.tags && formation.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1 mb-3">
+          <div className="flex flex-wrap items-center gap-1">
             {formation.tags.slice(0, 3).map((tag) => (
-              <span
-                key={tag}
-                className="px-2 py-0.5 rounded-md bg-accent text-xs text-muted-foreground"
-              >
+              <Chip key={tag} className={isSelected ? "bg-surface" : ""}>
                 {tag}
-              </span>
+              </Chip>
             ))}
             {formation.tags.length > 3 && (
-              <span className="px-2 py-0.5 text-xs text-muted-foreground">
+              <span className="px-2 text-caption text-ink-soft">
                 +{formation.tags.length - 3}
               </span>
             )}
@@ -96,26 +88,20 @@ export const FormationCard = memo(
         )}
 
         {/* Date */}
-        <p className="text-xs text-muted-foreground mb-3">
+        <p className="text-caption text-ink-soft">
           Updated {formatDate(formation.updatedAt)}
         </p>
 
         {/* Actions */}
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="mt-1 flex flex-wrap items-center gap-2">
           {/* Select button */}
           <button
             type="button"
             onClick={onSelect}
-            className={`
-              min-h-11 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors
-              ${
-                isSelected
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-accent hover:bg-accent/80 text-foreground"
-              }
-            `}
+            className={`btn px-4 ${isSelected ? "btn-ink" : "btn-fill"}`}
             aria-label={isSelected ? "Selected" : "Select formation"}
           >
+            {isSelected && <Icon id="check" size={14} />}
             {isSelected ? "Selected" : "Select"}
           </button>
 
@@ -126,7 +112,7 @@ export const FormationCard = memo(
                 <button
                   type="button"
                   onClick={onEdit}
-                  className="min-h-11 px-3 py-1.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                  className={QUIET_BUTTON}
                   aria-label="Edit formation"
                 >
                   Edit
@@ -137,7 +123,7 @@ export const FormationCard = memo(
                 <button
                   type="button"
                   onClick={onDuplicate}
-                  className="min-h-11 px-3 py-1.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                  className={QUIET_BUTTON}
                   aria-label="Duplicate formation"
                 >
                   Duplicate
@@ -148,7 +134,7 @@ export const FormationCard = memo(
                 <button
                   type="button"
                   onClick={onShare}
-                  className="min-h-11 px-3 py-1.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                  className={QUIET_BUTTON}
                   aria-label="Share formation"
                 >
                   Share
@@ -159,7 +145,7 @@ export const FormationCard = memo(
                 <button
                   type="button"
                   onClick={onDelete}
-                  className="min-h-11 px-3 py-1.5 rounded-lg text-sm text-red-500 hover:text-red-600 hover:bg-red-50 transition-colors"
+                  className="btn btn-danger-quiet px-3"
                   aria-label="Delete formation"
                 >
                   Delete
@@ -173,7 +159,7 @@ export const FormationCard = memo(
             <button
               type="button"
               onClick={onDuplicate}
-              className="min-h-11 px-3 py-1.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+              className={QUIET_BUTTON}
               aria-label="Copy to My Formations"
             >
               Copy to My Formations

@@ -1,6 +1,7 @@
 "use client";
 
 import { memo } from "react";
+import { GROUP_LABEL } from "../styles";
 
 type ValidationError = {
   message: string;
@@ -20,17 +21,15 @@ export const ValidationPanel = memo(function ValidationPanel({
   }
 
   return (
-    <div className="space-y-2">
-      <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">
-        Validation
-      </h3>
+    <div className="flex flex-col gap-2">
+      <h3 className={GROUP_LABEL}>Validation</h3>
 
       {blockingErrors.length > 0 && (
-        <div className="p-3 rounded-lg bg-red-50 text-sm">
-          <p className="font-medium text-red-700 mb-1">
+        <div className="rounded-tile border border-danger/40 bg-danger-tint p-3 text-danger">
+          <p className="mb-1 text-label font-semibold">
             Errors ({blockingErrors.length})
           </p>
-          <ul className="text-red-600 text-xs space-y-1">
+          <ul className="flex flex-col gap-1 text-caption">
             {blockingErrors.slice(0, 3).map((err, i) => (
               <li key={i}>{err.message}</li>
             ))}
@@ -42,11 +41,11 @@ export const ValidationPanel = memo(function ValidationPanel({
       )}
 
       {overlapWarnings.length > 0 && (
-        <div className="p-3 rounded-lg bg-accent text-sm border border-border">
-          <p className="font-medium text-foreground mb-1">
+        <div className="rounded-tile bg-fill p-3">
+          <p className="mb-1 text-label font-semibold">
             Overlap Warnings ({overlapWarnings.length})
           </p>
-          <ul className="text-muted-foreground text-xs space-y-1">
+          <ul className="flex flex-col gap-1 text-caption text-ink-soft">
             {overlapWarnings.slice(0, 5).map((warn, i) => (
               <li key={i}>{warn.message}</li>
             ))}

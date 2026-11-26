@@ -3,6 +3,8 @@
 import { memo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { FormationVisibility } from "@/lib/volleyball/types";
+import { Icon } from "@/components/shared/Icon";
+import { GROUP_LABEL, toggleClass } from "../styles";
 
 type FormationDetailsProps = {
   expanded: boolean;
@@ -17,6 +19,8 @@ type FormationDetailsProps = {
   onVisibilityChange: (visibility: FormationVisibility) => void;
 };
 
+const FIELD_LABEL = "mb-1 block text-caption font-medium text-ink-soft";
+
 export const FormationDetails = memo(function FormationDetails({
   expanded,
   onToggleExpanded,
@@ -30,25 +34,20 @@ export const FormationDetails = memo(function FormationDetails({
   onVisibilityChange,
 }: FormationDetailsProps) {
   return (
-    <div className="space-y-2 border-t border-border pt-4">
+    <div className="flex flex-col gap-2 border-t border-line pt-4">
       <button
         type="button"
         onClick={onToggleExpanded}
-        className="w-full min-h-11 flex items-center justify-between text-left"
+        className="flex min-h-11 w-full items-center justify-between gap-2 rounded-chip text-left"
         aria-expanded={expanded}
         aria-controls="formation-details-content"
       >
-        <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">
-          Formation Details
-        </h3>
-        <svg
-          className={`w-4 h-4 text-muted-foreground transition-transform ${expanded ? "rotate-180" : ""}`}
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
+        <h3 className={GROUP_LABEL}>Formation Details</h3>
+        <Icon
+          id="chevron-down"
+          size={16}
+          className={`shrink-0 text-ink-soft transition-transform ${expanded ? "rotate-180" : ""}`}
+        />
       </button>
       <AnimatePresence initial={false}>
         {expanded && (
@@ -60,25 +59,27 @@ export const FormationDetails = memo(function FormationDetails({
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="space-y-4 pt-1">
+            {/* The padding keeps a focus ring from being cut off by the clip above. */}
+            <div className="flex flex-col gap-4 p-1">
               {/* Name */}
               <div>
-                <label htmlFor="formation-name" className="block text-sm font-medium mb-1">
-                  Name <span className="text-red-500">*</span>
+                <label htmlFor="formation-name" className={FIELD_LABEL}>
+                  Name *
                 </label>
-                <input
-                  id="formation-name"
-                  type="text"
-                  value={name}
-                  onChange={(e) => onNameChange(e.target.value)}
-                  placeholder="My Custom Formation"
-                  className="w-full min-h-11 px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
-                />
+                <span className="field">
+                  <input
+                    id="formation-name"
+                    type="text"
+                    value={name}
+                    onChange={(e) => onNameChange(e.target.value)}
+                    placeholder="My Custom Formation"
+                  />
+                </span>
               </div>
 
               {/* Description */}
               <div>
-                <label htmlFor="formation-description" className="block text-sm font-medium mb-1">
+                <label htmlFor="formation-description" className={FIELD_LABEL}>
                   Description
                 </label>
                 <textarea
@@ -87,55 +88,50 @@ export const FormationDetails = memo(function FormationDetails({
                   onChange={(e) => onDescriptionChange(e.target.value)}
                   placeholder="Notes about this formation..."
                   rows={3}
-                  className="w-full min-h-11 px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                  className="field-area block resize-none"
                 />
               </div>
 
               {/* Tags */}
               <div>
-                <label htmlFor="formation-tags" className="block text-sm font-medium mb-1">
+                <label htmlFor="formation-tags" className={FIELD_LABEL}>
                   Tags (comma separated)
                 </label>
-                <input
-                  id="formation-tags"
-                  type="text"
-                  value={tags.join(", ")}
-                  onChange={(e) =>
-                    onTagsChange(
-                      e.target.value
-                        .split(",")
-                        .map((t) => t.trim())
-                        .filter(Boolean)
-                    )
-                  }
-                  placeholder="stack, 4-pass, advanced"
-                  className="w-full min-h-11 px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
-                />
+                <span className="field">
+                  <input
+                    id="formation-tags"
+                    type="text"
+                    value={tags.join(", ")}
+                    onChange={(e) =>
+                      onTagsChange(
+                        e.target.value
+                          .split(",")
+                          .map((t) => t.trim())
+                          .filter(Boolean)
+                      )
+                    }
+                    placeholder="stack, 4-pass, advanced"
+                  />
+                </span>
               </div>
 
               {/* Visibility */}
               <div>
-                <label className="block text-sm font-medium mb-2">Visibility</label>
+                <label className={FIELD_LABEL}>Visibility</label>
                 <div className="flex gap-2">
                   <button
                     type="button"
                     onClick={() => onVisibilityChange("private")}
-                    className={`flex-1 min-h-11 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      visibility === "private"
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-accent hover:bg-accent/80"
-                    }`}
+                    className={`${toggleClass(visibility === "private")} flex-1`}
+                    aria-pressed={visibility === "private"}
                   >
                     Private
                   </button>
                   <button
                     type="button"
                     onClick={() => onVisibilityChange("unlisted")}
-                    className={`flex-1 min-h-11 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      visibility === "unlisted"
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-accent hover:bg-accent/80"
-                    }`}
+                    className={`${toggleClass(visibility === "unlisted")} flex-1`}
+                    aria-pressed={visibility === "unlisted"}
                   >
                     Unlisted (Shareable)
                   </button>
