@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormationCard, FormationEditorModal, ShareFormationDialog } from "@/components/volleyball";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
@@ -10,7 +9,16 @@ import { getTemplateFormations } from "@/lib/volleyball/templateFormations";
 import { formationDesignerHref } from "@/lib/volleyball/formationLinks";
 import type { UserFormation, FormationData, FormationVisibility } from "@/lib/volleyball/types";
 import { MotionDiv, slideUp } from "@/components/motion";
-import { PageLoadingSpinner } from "@/components/shared";
+import {
+  CARD_ROW,
+  Card,
+  CardEmpty,
+  CardError,
+  DeleteConfirmDialog,
+  Icon,
+  PageLoadingSpinner,
+} from "@/components/shared";
+import { PageHeader } from "@/components/shell/PageHeader";
 
 export default function MyFormationsPage() {
   const router = useRouter();
@@ -38,8 +46,11 @@ export default function MyFormationsPage() {
   const [sharingFormationId, setSharingFormationId] = useState<string | null>(null);
   const sharingFormation = sharingFormationId ? getById(sharingFormationId) ?? null : null;
 
-  // Delete confirmation state
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  // Delete confirmation state. The dialog names the formation, and keeps the
+  // name while it closes, so its words do not change on the way out.
+  const [deleteTarget, setDeleteTarget] = useState<UserFormation | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const templates = getTemplateFormations();
 
@@ -105,20 +116,23 @@ export default function MyFormationsPage() {
     setSharingFormationId(formation.id);
   }, []);
 
-  // Handle delete
-  const handleDelete = useCallback(
-    async (formationId: string) => {
-      if (deletingId === formationId) {
-        await remove(formationId);
-        setDeletingId(null);
-      } else {
-        setDeletingId(formationId);
-        // Reset after 3 seconds if not confirmed
-        setTimeout(() => setDeletingId(null), 3000);
-      }
-    },
-    [deletingId, remove]
-  );
+  // Delete the formation the dialog is asking about
+  const handleAskDelete = useCallback((formation: UserFormation) => {
+    setDeleteTarget(formation);
+    setDeleteOpen(true);
+  }, []);
+
+  const handleConfirmDelete = useCallback(async () => {
+    if (!deleteTarget) return;
+
+    setIsDeleting(true);
+    try {
+      await remove(deleteTarget.id);
+      setDeleteOpen(false);
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [deleteTarget, remove]);
 
   // Loading state
   if (authLoading || !isAuthenticated) {
@@ -127,55 +141,44 @@ export default function MyFormationsPage() {
 
   return (
     <>
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <MotionDiv
-          initial="hidden"
-          animate="visible"
-          variants={slideUp}
-          className="mb-8"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <Link
-              href="/tools/volleyball-rotations"
-              className="inline-flex min-h-11 items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              &larr; Back to Rotations
-            </Link>
-          </div>
-          <h1 className="text-3xl font-black tracking-tight mb-2">
-            My <span className="text-primary">Formations</span>
-          </h1>
-          <p className="text-muted-foreground">
-            Create, manage, and share your custom volleyball formations
-          </p>
-        </MotionDiv>
+      <PageHeader
+        back={{ href: "/tools/volleyball-rotations", label: "Back to Rotations" }}
+        title="My Formations"
+        line="Create, manage, and share your custom volleyball formations"
+      />
 
+      {/* Start-aligned so each card is as tall as its rows, not its column. */}
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-12">
         {/* Create New Section */}
         <MotionDiv
           initial="hidden"
           animate="visible"
           variants={slideUp}
-          className="mb-8"
+          className="min-w-0 lg:col-span-5"
         >
-          <h2 className="text-lg font-semibold mb-4">Create New Formation</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-            {templates.map((template) => (
-              <button
-                key={template.id}
-                type="button"
-                onClick={() => handleCreateNew(template.id)}
-                className="p-4 rounded-xl border-2 border-dashed border-border hover:border-primary text-left transition-all hover:bg-accent/30"
-              >
-                <div className="font-semibold text-sm mb-1">
-                  Start from {template.name}
-                </div>
-                <div className="text-xs text-muted-foreground line-clamp-2">
-                  {template.description}
-                </div>
-              </button>
-            ))}
-          </div>
+          <Card title="Create New Formation" icon="plus">
+            <ul className="divide-y divide-line">
+              {templates.map((template) => (
+                <li key={template.id}>
+                  <button
+                    type="button"
+                    onClick={() => handleCreateNew(template.id)}
+                    className={`flex w-full items-center gap-3 text-left ${CARD_ROW}`}
+                  >
+                    <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                      <span className="text-title font-semibold leading-snug wrap-anywhere">
+                        Start from {template.name}
+                      </span>
+                      <span className="line-clamp-2 text-caption text-ink-soft">
+                        {template.description}
+                      </span>
+                    </span>
+                    <Icon id="plus" size={14} className="shrink-0 text-ink-soft" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </Card>
         </MotionDiv>
 
         {/* Formations List */}
@@ -183,41 +186,33 @@ export default function MyFormationsPage() {
           initial="hidden"
           animate="visible"
           variants={slideUp}
+          className="min-w-0 lg:col-span-7"
         >
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">
-              Your Formations ({formations.length})
-            </h2>
-          </div>
+          <Card title={`Your Formations (${formations.length})`} icon="save">
+            {error && <CardError message={error.message} />}
 
-          {error && (
-            <div className="p-4 rounded-lg bg-red-50 text-red-700 text-sm mb-4">
-              {error.message}
-            </div>
-          )}
-
-          {formationsLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-            </div>
-          ) : formations.length === 0 ? (
-            <div className="text-center py-12 rounded-xl bg-accent/30 border border-border">
-              <p className="text-muted-foreground mb-4">
-                You haven&apos;t created any formations yet.
-              </p>
-              <button
-                type="button"
-                onClick={() => handleCreateNew()}
-                className="min-h-11 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 font-medium"
-              >
-                Create Your First Formation
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {formations.map((formation) => (
-                <div key={formation.id} className="relative">
+            {formationsLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <span
+                  className="spinner size-8 text-ink-soft"
+                  role="status"
+                  aria-label="Loading formations"
+                />
+              </div>
+            ) : formations.length === 0 ? (
+              <CardEmpty
+                message="You haven't created any formations yet."
+                action={
+                  <button type="button" onClick={() => handleCreateNew()} className="btn btn-ink">
+                    Create Your First Formation
+                  </button>
+                }
+              />
+            ) : (
+              <div className="flex flex-col gap-3 p-4">
+                {formations.map((formation) => (
                   <FormationCard
+                    key={formation.id}
                     formation={formation}
                     isSelected={false}
                     isOwner={true}
@@ -225,38 +220,24 @@ export default function MyFormationsPage() {
                     onEdit={() => handleEdit(formation)}
                     onDuplicate={() => handleDuplicate(formation)}
                     onShare={() => handleOpenShare(formation)}
-                    onDelete={() => handleDelete(formation.id)}
+                    onDelete={() => handleAskDelete(formation)}
                   />
-                  {/* Delete confirmation overlay */}
-                  {deletingId === formation.id && (
-                    <div className="absolute inset-0 bg-mb-navy/55 rounded-xl flex items-center justify-center">
-                      <div className="mb-dialog p-4 text-center">
-                        <p className="text-sm font-medium mb-2">Delete this formation?</p>
-                        <div className="flex gap-2 justify-center">
-                          <button
-                            type="button"
-                            onClick={() => setDeletingId(null)}
-                            className="min-h-11 px-3 py-1 text-sm bg-accent rounded-lg"
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(formation.id)}
-                            className="min-h-11 px-3 py-1 text-sm bg-red-500 text-white rounded-lg"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
+          </Card>
         </MotionDiv>
       </div>
+
+      {/* Delete confirmation */}
+      <DeleteConfirmDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title="Delete this formation?"
+        description={`${deleteTarget?.name ?? "It"} will be removed from your formations.`}
+        onConfirm={handleConfirmDelete}
+        isDeleting={isDeleting}
+      />
 
       {/* Editor Modal */}
       <FormationEditorModal

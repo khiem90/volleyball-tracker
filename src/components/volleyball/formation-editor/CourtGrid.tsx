@@ -31,14 +31,13 @@ export const CourtGrid = memo(function CourtGrid({
 }: CourtGridProps) {
   return (
     <>
-      {/* Court background */}
+      {/* Court floor */}
       <rect
         x={PADDING}
         y={PADDING}
         width={WIDTH}
         height={HEIGHT}
-        fill="url(#editorCourtGradient)"
-        stroke="oklch(0.55 0.12 145 / 0.5)"
+        className="fill-fill stroke-ink-soft"
         strokeWidth="2"
         rx="4"
       />
@@ -59,14 +58,14 @@ export const CourtGrid = memo(function CourtGrid({
         y1={PADDING}
         x2={PADDING + WIDTH}
         y2={PADDING}
-        className="stroke-foreground/40"
+        className="stroke-ink"
         strokeWidth="4"
       />
       <text
         x={PADDING + WIDTH / 2}
         y={PADDING - 12}
         textAnchor="middle"
-        className="fill-muted-foreground text-xs font-semibold uppercase tracking-wider"
+        className="fill-ink-soft text-xs font-semibold"
       >
         Net
       </text>
@@ -77,14 +76,14 @@ export const CourtGrid = memo(function CourtGrid({
         y1={attackLineY}
         x2={PADDING + WIDTH}
         y2={attackLineY}
-        className="stroke-primary/40"
+        className="stroke-ink-soft"
         strokeWidth="2"
         strokeDasharray="8 4"
       />
       <text
         x={PADDING + WIDTH + 8}
         y={attackLineY + 4}
-        className="fill-muted-foreground text-[10px] font-medium"
+        className="fill-ink-soft text-[10px] font-medium"
       >
         3m
       </text>
@@ -94,7 +93,7 @@ export const CourtGrid = memo(function CourtGrid({
         x={PADDING + WIDTH / 2}
         y={PADDING + HEIGHT + 18}
         textAnchor="middle"
-        className="fill-muted-foreground text-xs font-semibold uppercase tracking-wider"
+        className="fill-ink-soft text-xs font-semibold"
       >
         End Line
       </text>
@@ -105,12 +104,12 @@ export const CourtGrid = memo(function CourtGrid({
         y1={PADDING}
         x2={PADDING + WIDTH / 2}
         y2={PADDING + HEIGHT}
-        className="stroke-foreground/10"
+        className="stroke-ink-soft/50"
         strokeWidth="1"
         strokeDasharray="4 4"
       />
 
-      {/* Zone labels (faded in background) */}
+      {/* Zone numbers, as a faint watermark on the floor, as on the rotation tool's court. */}
       {ZONE_LABELS.map(({ zone, x, y }) => {
         const coords = toSvgCoords(x, y);
         return (
@@ -120,7 +119,8 @@ export const CourtGrid = memo(function CourtGrid({
             y={coords.y}
             textAnchor="middle"
             dominantBaseline="middle"
-            className="fill-foreground/10 text-2xl font-bold select-none pointer-events-none"
+            aria-hidden="true"
+            className="fill-ink/10 text-2xl font-bold select-none pointer-events-none"
           >
             {zone}
           </text>
@@ -132,7 +132,7 @@ export const CourtGrid = memo(function CourtGrid({
         x={PADDING + WIDTH / 2}
         y={VIEWBOX_HEIGHT - 8}
         textAnchor="middle"
-        className="fill-foreground text-sm font-bold uppercase tracking-widest"
+        className="fill-ink text-sm font-bold"
       >
         {mode === "serving" ? "Serving" : "Receiving"} - R{rotation}
       </text>
@@ -142,7 +142,7 @@ export const CourtGrid = memo(function CourtGrid({
         <text
           x={PADDING + 4}
           y={PADDING - 12}
-          className="fill-primary text-[10px] font-medium uppercase"
+          className="fill-ink text-[10px] font-medium"
         >
           Edit Mode
         </text>

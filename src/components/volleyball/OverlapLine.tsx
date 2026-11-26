@@ -2,7 +2,7 @@
 
 import { memo, useMemo } from "react";
 import type { OverlapConstraint, PlayerPosition } from "@/lib/volleyball/types";
-import { ZONE_POSITIONS } from "@/lib/volleyball/constants";
+import { OVERLAP_COLORS, ZONE_POSITIONS } from "@/lib/volleyball/constants";
 
 type OverlapLineProps = {
   overlap: OverlapConstraint;
@@ -34,24 +34,16 @@ export const OverlapLine = memo(
       };
     }, [overlap, players, toSvgCoords, selectedPlayer]);
 
-    // Determine line style based on constraint type
-    const strokeColor =
-      overlap.type === "front-back"
-        ? "oklch(0.6 0.15 250 / 0.4)" // Blue for front-back
-        : "oklch(0.6 0.15 45 / 0.4)"; // Orange for left-right
-
-    const highlightedColor =
-      overlap.type === "front-back"
-        ? "oklch(0.6 0.15 250 / 0.8)"
-        : "oklch(0.6 0.15 45 / 0.8)";
-
+    // Blue for front-back, orange for left-right. A line is quiet until one
+    // of its two players is selected.
     return (
       <line
         x1={coords1.x}
         y1={coords1.y}
         x2={coords2.x}
         y2={coords2.y}
-        stroke={isHighlighted ? highlightedColor : strokeColor}
+        stroke={OVERLAP_COLORS[overlap.type]}
+        strokeOpacity={isHighlighted ? 1 : 0.5}
         strokeWidth={isHighlighted ? 3 : 1.5}
         strokeDasharray={overlap.type === "front-back" ? "6 3" : "3 3"}
         className="transition-all duration-200"

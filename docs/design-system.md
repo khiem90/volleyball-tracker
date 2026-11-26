@@ -34,8 +34,9 @@ the opacity form, as in `bg-ink/55`. An inline style reads `var(--action)`.
 
 White (`#ffffff`, `text-white`) is the text on a green, black, or filled red
 button.
-Team colors are the user's own and are painted as inline styles. They are the
-one color source outside this table.
+Team colors are the user's own and are painted as inline styles. They and the
+rotation tool's court palette, described near the end, are the two color
+sources outside this table.
 
 `src/__tests__/design/tokens.test.ts` reads these values from the stylesheet
 and fails when a text pair drops under 4.5 to 1. The pairs are ink on surface
@@ -578,7 +579,7 @@ folder on the guard's migrated list, an old name fails the build.
 | `mb-btn-navy` | `btn-ink` |
 | `mb-btn-outline-navy`, `mb-btn-outline` | `btn-fill` |
 | `mb-btn-outline-red` | `btn-danger-quiet` |
-| `mb-dialog` | `dialog`. The three volleyball modals still write the old name on frames of their own. |
+| `mb-dialog` | `dialog`. Nothing writes it by hand any more: every dialog is the shared `Dialog`. |
 | `mb-shadow-panel` | `lift` |
 | `mb-input` | `field` |
 | `mb-textarea` | `field-area` |
@@ -611,11 +612,11 @@ The old color tokens resolve to roles: `--mb-paper` to `ground`,
 
 ## Forbidden
 
-- The old token classes: `bg-background`, `text-foreground`, `bg-card`, `bg-popover`, `bg-primary`, `text-primary-foreground`, `bg-secondary`, `bg-muted`, `text-muted-foreground`, `bg-accent`, `text-destructive`, `border-border`, `border-input`, `ring-ring`, and every other utility built on `background`, `foreground`, `card`, `popover`, `primary`, `secondary`, `muted`, `accent`, `destructive`, `border`, `input`, or `ring`. `src/__tests__/design/tokens.test.ts` scans every source file outside the volleyball tools and fails on one.
+- The old token classes: `bg-background`, `text-foreground`, `bg-card`, `bg-popover`, `bg-primary`, `text-primary-foreground`, `bg-secondary`, `bg-muted`, `text-muted-foreground`, `bg-accent`, `text-destructive`, `border-border`, `border-input`, `ring-ring`, and every other utility built on `background`, `foreground`, `card`, `popover`, `primary`, `secondary`, `muted`, `accent`, `destructive`, `border`, `input`, or `ring`. `src/__tests__/design/tokens.test.ts` scans every source file and the stylesheet and fails on one. None of them is defined any more, so one that slipped through would draw nothing.
 - The old theme's names in new code: the `mb-` prefix, `Mb` on a component or a type, "matchbook", and the two old font names. The same test fails on one in any folder or file on its migrated list.
-- A radius off the scale. On the migrated list only `rounded-card`, `rounded-tile`, `rounded-chip`, `rounded-pill`, `rounded-full`, and `rounded-none` pass. Everywhere else the test still fails on `rounded-xl` and up and on an arbitrary radius above 4px.
+- A radius off the scale. On the migrated list only `rounded-card`, `rounded-tile`, `rounded-chip`, `rounded-pill`, `rounded-full`, and `rounded-none` pass. Everywhere else the test fails on `rounded-md` and up and on an arbitrary radius above 4px. The old radius scale is gone, so those names are Tailwind's own sizes now, and a bare `rounded` or `rounded-sm` is 4px.
 - `dark:` utilities. The design is light only.
-- Colors outside the role tokens: Tailwind's named colors (`slate-500`, `amber-200`), new hex values, oklch literals. Team colors are the exception.
+- Colors outside the role tokens: Tailwind's named colors (`slate-500`, `amber-200`), new hex values, oklch literals. Team colors and the court's palette are the exceptions.
 - Red on anything that is not a destructive action or an error. No red for live, for a loss, or for a status.
 - A border or a shadow on a card, and red text on `fill`.
 - A filled red button on a row of a list. That one is `btn-danger-quiet`.
@@ -627,12 +628,38 @@ The old color tokens resolve to roles: `--mb-paper` to `ground`,
 - Black overlays, backdrop blur, and gradients. The one exception is the scoring page's team-color panels (`TeamScorePanel`), which sit on the team color and keep their translucent white controls and the amber Leading and Winner pill with its backdrop blur.
 - `shadcn add` output as it comes. `components.json` still says `"iconLibrary": "lucide"`, so a generated component imports `lucide-react`. Swap those imports for `Icon` before it is used, because lint refuses them.
 
-## The legacy token block
+## The court's palette
 
-The `:root` block at the foot of `src/app/globals.css` (`--background`,
-`--primary`, `--border`, and the rest) and the `@theme inline` maps at the top
-of the file are not a second palette. Only `src/components/volleyball/` and
-`src/app/(shell)/tools/volleyball-rotations/` still read them, plus the base
-layer's element defaults, and each one resolves to a role token through an old
-name, so those pages already show the new palette. The block goes when the
-volleyball tools are reworked. Nothing new is written against it.
+The rotation tool tells seven player roles apart by color, and two kinds of
+overlap line. Those nine colors live in `src/lib/volleyball/constants.ts` as
+hex values and are painted as inline styles and SVG attributes, the same way
+a team color is. Nothing else reads them.
+
+| Name | Value | What it is |
+| --- | --- | --- |
+| `PLAYER_COLORS.S` | `#d40924` | Setter, white label. |
+| `PLAYER_COLORS.OPP` | `#0f74c5` | Opposite, white label. |
+| `PLAYER_COLORS.OH1` | `#1e7729` | Outside hitter 1, white label. |
+| `PLAYER_COLORS.OH2` | `#71c575` | Outside hitter 2, ink label. |
+| `PLAYER_COLORS.MB1` | `#ef7926` | Middle blocker 1, ink label. |
+| `PLAYER_COLORS.MB2` | `#fdbc6f` | Middle blocker 2, ink label. |
+| `PLAYER_COLORS.L` | `#9543c6` | Libero, white label. |
+| `OVERLAP_COLORS["front-back"]` | `#2563eb` | The dashed front and back overlap line, and its name in the help. |
+| `OVERLAP_COLORS["left-right"]` | `#c2410c` | The dotted left and right overlap line, and its name in the help. |
+
+Each player's label is ink or white, whichever `letterColor` in
+`src/lib/teamColors.ts` picks for the color under it.
+`src/__tests__/volleyball/courtColors.test.ts` fails when a label drops under
+4.5 to 1 on its color, when two roles share a color, or when an overlap color
+drops under 4.5 to 1 on white.
+
+Everything else on the court is a role token: the floor is `fill`, the lines
+and the arrows are `ink-soft`, the net and a selected player's ring are `ink`.
+The setter's red is the hue the tool has always given that role. It marks a
+player and is not the `danger` token, so the rule that red means a
+destructive action or an error does not reach it.
+
+The controls around the court share four class strings from
+`src/components/volleyball/styles.ts`. A button that is one of a set, or a
+switch, is `toggleClass`: filled with ink when it is on. A tile that picks a
+formation is `choiceTileClass`: the green tint and a green edge when chosen.

@@ -301,7 +301,7 @@ export const TeamReadinessPanel = ({ rows }: { rows: MbReadinessRow[] }) => (
                     <span className="w-8 text-[0.76rem] font-semibold tabular-nums">
                       {row.percent}%
                     </span>
-                    <span className="h-[7px] w-24 overflow-hidden rounded-sm bg-[rgba(7,50,77,0.12)]">
+                    <span className="h-[7px] w-24 overflow-hidden rounded-none bg-[rgba(7,50,77,0.12)]">
                       <span
                         className="block h-full"
                         style={{

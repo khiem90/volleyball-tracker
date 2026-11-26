@@ -64,7 +64,8 @@ export type PlayerInfo = {
   shortName: string;
   description: string;
   color: string;
-  textColor: string;
+  /** The label on that color: ink or white. */
+  textColor: 'ink' | 'white';
 };
 
 /** Formation configuration */

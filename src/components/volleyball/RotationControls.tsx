@@ -2,10 +2,11 @@
 
 import { memo } from "react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { MbIcon } from "@/components/matchbook/MbIcon";
+import { Chip } from "@/components/shared/Chip";
+import { Icon } from "@/components/shared/Icon";
 import type { RotationNumber, GameMode } from "@/lib/volleyball/types";
 import { isSetterFrontRow, getFrontRowAttackerCount } from "@/lib/volleyball/rotations";
+import { toggleClass } from "./styles";
 
 type RotationControlsProps = {
   rotation: RotationNumber;
@@ -21,6 +22,12 @@ type RotationControlsProps = {
   onNext: () => void;
   onPrev: () => void;
 };
+
+/** One half of the Serving and Receiving switch. */
+const modeClass = (on: boolean): string =>
+  `min-h-11 rounded-chip px-4 text-label font-semibold transition-colors ${
+    on ? "bg-ink text-white" : "text-ink-soft hover:text-ink"
+  }`;
 
 export const RotationControls = memo(
   ({
@@ -41,17 +48,16 @@ export const RotationControls = memo(
     const attackerCount = getFrontRowAttackerCount(rotation);
 
     return (
-      <div className="space-y-4">
+      <div className="flex flex-col gap-4">
         {/* Rotation Stepper. On a phone the six rotations take a row of their own. */}
         <div className="flex flex-wrap items-center justify-center gap-3">
           <Button
             variant="outline"
             size="icon"
             onClick={onPrev}
-            className="rounded-full"
             aria-label="Previous rotation"
           >
-            <MbIcon id="chevron-left" size={20} />
+            <Icon id="chevron-left" size={20} />
           </Button>
 
           <div className="order-first flex w-full items-center justify-center gap-1.5 sm:order-none sm:w-auto">
@@ -60,15 +66,11 @@ export const RotationControls = memo(
                 key={r}
                 type="button"
                 onClick={() => onRotationChange(r)}
-                className={`
-                  w-11 h-11 rounded-full font-bold text-lg transition-all duration-200
-                  focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2
-                  ${
-                    rotation === r
-                      ? "bg-primary text-primary-foreground shadow-lg scale-110"
-                      : "bg-accent hover:bg-accent/80 text-foreground hover:scale-105"
-                  }
-                `}
+                className={`size-11 rounded-full text-title font-bold tabular-nums transition-colors ${
+                  rotation === r
+                    ? "bg-ink text-white"
+                    : "bg-fill text-ink hover:bg-ink/10"
+                }`}
                 aria-label={`Rotation ${r}`}
                 aria-pressed={rotation === r}
               >
@@ -81,41 +83,32 @@ export const RotationControls = memo(
             variant="outline"
             size="icon"
             onClick={onNext}
-            className="rounded-full"
             aria-label="Next rotation"
           >
-            <MbIcon id="chevron-right" size={20} />
+            <Icon id="chevron-right" size={20} />
           </Button>
         </div>
 
-        {/* Status Badges */}
+        {/* Status chips */}
         <div className="flex flex-wrap items-center justify-center gap-2">
-          <Badge variant="secondary" className="gap-1.5 px-3 py-1">
-            <span className="text-muted-foreground">Setter:</span>
-            <span className="font-semibold">{setterPosition}</span>
-          </Badge>
-          <Badge variant="secondary" className="gap-1.5 px-3 py-1">
-            <span className="text-muted-foreground">Attackers:</span>
-            <span className="font-semibold">{attackerCount} Front</span>
-          </Badge>
+          <Chip>
+            <span className="font-medium text-ink-soft">Setter:</span>
+            {setterPosition}
+          </Chip>
+          <Chip>
+            <span className="font-medium text-ink-soft">Attackers:</span>
+            {attackerCount} Front
+          </Chip>
         </div>
 
         {/* Toggle Controls */}
         <div className="flex flex-wrap items-center justify-center gap-2">
           {/* Serving/Receiving Toggle */}
-          <div className="flex rounded-xl border border-border p-1 bg-accent/30">
+          <div className="flex rounded-tile bg-fill p-1">
             <button
               type="button"
               onClick={() => onModeChange("serving")}
-              className={`
-                min-h-11 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200
-                focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1
-                ${
-                  mode === "serving"
-                    ? "bg-primary text-primary-foreground shadow-md"
-                    : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                }
-              `}
+              className={modeClass(mode === "serving")}
               aria-pressed={mode === "serving"}
             >
               Serving
@@ -123,15 +116,7 @@ export const RotationControls = memo(
             <button
               type="button"
               onClick={() => onModeChange("receiving")}
-              className={`
-                min-h-11 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200
-                focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1
-                ${
-                  mode === "receiving"
-                    ? "bg-primary text-primary-foreground shadow-md"
-                    : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                }
-              `}
+              className={modeClass(mode === "receiving")}
               aria-pressed={mode === "receiving"}
             >
               Receiving
@@ -142,15 +127,7 @@ export const RotationControls = memo(
           <button
             type="button"
             onClick={() => onLiberoToggle(!liberoActive)}
-            className={`
-              min-h-11 px-4 py-2 rounded-xl text-sm font-semibold border-2 transition-all duration-200
-              focus:outline-none focus:ring-2 focus:ring-offset-1
-              ${
-                liberoActive
-                  ? "bg-purple-500/20 border-purple-500/50 text-purple-700 focus:ring-purple-500"
-                  : "bg-accent border-border text-muted-foreground hover:border-primary/50 focus:ring-primary"
-              }
-            `}
+            className={`${toggleClass(liberoActive)} px-4`}
             aria-pressed={liberoActive}
           >
             Libero {liberoActive ? "ON" : "OFF"}
@@ -163,23 +140,10 @@ export const RotationControls = memo(
           <button
             type="button"
             onClick={() => onShowOverlapsToggle(!showOverlaps)}
-            className={`
-              min-h-11 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all duration-200
-              flex items-center gap-1.5
-              focus:outline-none focus:ring-2 focus:ring-offset-1
-              ${
-                showOverlaps
-                  ? "bg-amber-500/20 border-amber-500/50 text-amber-700 focus:ring-amber-500"
-                  : "bg-accent border-border text-muted-foreground hover:border-primary/50 focus:ring-primary"
-              }
-            `}
+            className={toggleClass(showOverlaps)}
             aria-pressed={showOverlaps}
           >
-            {showOverlaps ? (
-              <MbIcon id="eye" size={14} />
-            ) : (
-              <MbIcon id="eye-off" size={14} />
-            )}
+            <Icon id={showOverlaps ? "eye" : "eye-off"} size={14} />
             Overlaps
           </button>
 
@@ -187,19 +151,10 @@ export const RotationControls = memo(
           <button
             type="button"
             onClick={() => onShowArrowsToggle(!showArrows)}
-            className={`
-              min-h-11 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all duration-200
-              flex items-center gap-1.5
-              focus:outline-none focus:ring-2 focus:ring-offset-1
-              ${
-                showArrows
-                  ? "bg-blue-500/20 border-blue-500/50 text-blue-700 focus:ring-blue-500"
-                  : "bg-accent border-border text-muted-foreground hover:border-primary/50 focus:ring-primary"
-              }
-            `}
+            className={toggleClass(showArrows)}
             aria-pressed={showArrows}
           >
-            <MbIcon id="swap" size={14} />
+            <Icon id="swap" size={14} />
             Arrows
           </button>
         </div>

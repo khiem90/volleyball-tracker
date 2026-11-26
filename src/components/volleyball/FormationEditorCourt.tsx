@@ -239,6 +239,7 @@ export const FormationEditorCourt = memo(
           viewBox={`0 0 ${VIEWBOX_WIDTH} ${VIEWBOX_HEIGHT}`}
           className={`w-full h-full ${isDrawingArrow ? "cursor-crosshair" : ""}`}
           role="application"
+          data-formation-court
           aria-label="Formation editor court. Drag players to reposition them."
           onClick={handleCourtClickForArrow}
           onMouseMove={handleMouseMove}

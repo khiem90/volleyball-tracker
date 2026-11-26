@@ -256,7 +256,7 @@ describe("the dialog's frame", () => {
     expect(labelContrast(classLook("dialog"))).toBeGreaterThanOrEqual(4.5);
   });
 
-  /* The three volleyball modals write the old name on a frame of their own. */
+  /* Nothing writes the old name by hand any more. The pair goes with the other old names. */
   it("is drawn the same under its old name", () => {
     expect(classLook("mb-dialog")).toEqual(classLook("dialog"));
   });

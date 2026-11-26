@@ -1,8 +1,9 @@
 "use client";
 
 import { memo, useCallback, useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { MbIcon } from "@/components/matchbook/MbIcon";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Icon } from "@/components/shared/Icon";
 import { FormationEditorCourt } from "./FormationEditorCourt";
 import { useFormationEditor } from "@/hooks/useFormationEditor";
 import type {
@@ -162,187 +163,177 @@ export const FormationEditorModal = memo(
       onClose();
     }, [editor, onClose]);
 
-    // Prevent body scroll when modal is open
-    useEffect(() => {
-      if (isOpen) {
-        document.body.style.overflow = "hidden";
-      } else {
-        document.body.style.overflow = "";
-      }
-      return () => {
-        document.body.style.overflow = "";
-      };
-    }, [isOpen]);
-
-    if (!isOpen) return null;
+    // Escape closes the dialog, but first it belongs to what is under way:
+    // the court clears its own selection, and a half-drawn arrow is cancelled.
+    const handleEscape = useCallback(
+      (event: KeyboardEvent) => {
+        const inCourt =
+          event.target instanceof Element &&
+          event.target.closest("[data-formation-court]") !== null;
+        if (inCourt) {
+          event.preventDefault();
+          return;
+        }
+        if (isDrawingArrow) {
+          event.preventDefault();
+          handleCancelDrawingArrow();
+        }
+      },
+      [isDrawingArrow, handleCancelDrawingArrow]
+    );
 
     return (
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-mb-navy/55 p-4"
-            onClick={(e) => e.target === e.currentTarget && handleClose()}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="mb-dialog w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col"
-            >
-              {/* Header */}
-              <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-                <h2 className="text-xl font-bold">
-                  {mode === "create" && "Create Formation"}
-                  {mode === "edit" && "Edit Formation"}
-                  {mode === "duplicate" && "Duplicate Formation"}
-                </h2>
-                <div className="flex items-center gap-3">
-                  {editor.hasUnsavedChanges && (
-                    <span className="text-sm text-muted-foreground">Unsaved changes</span>
-                  )}
-                  <button
-                    type="button"
-                    onClick={handleClose}
-                    className="flex size-11 items-center justify-center rounded-[4px] text-mb-navy transition-colors hover:bg-mb-navy/6"
-                    aria-label="Close editor"
-                  >
-                    <MbIcon id="close" size={20} />
-                  </button>
-                </div>
-              </div>
+      <Dialog
+        open={isOpen}
+        onOpenChange={(open) => {
+          if (!open) handleClose();
+        }}
+      >
+        <DialogContent
+          aria-describedby={undefined}
+          onEscapeKeyDown={handleEscape}
+          className="flex flex-col gap-0 overflow-hidden p-0 sm:max-w-6xl"
+        >
+          {/* Header. The right padding keeps it clear of the dialog's close control. */}
+          <div className="flex min-h-15 flex-wrap items-center justify-between gap-x-3 border-b border-line py-2 pr-14 pl-4 sm:pl-6">
+            <DialogTitle>
+              <Icon id="court" size={18} className="shrink-0" />
+              {mode === "create" && "Create Formation"}
+              {mode === "edit" && "Edit Formation"}
+              {mode === "duplicate" && "Duplicate Formation"}
+            </DialogTitle>
+            {editor.hasUnsavedChanges && (
+              <span className="text-caption text-ink-soft">Unsaved changes</span>
+            )}
+          </div>
 
-              {/* Draft Prompt */}
-              {showDraftPrompt && (
-                <div className="px-6 py-3 bg-primary/10 border-b border-primary/20 flex items-center justify-between">
-                  <span className="text-sm">You have an unsaved draft. Would you like to continue?</span>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={handleLoadDraft}
-                      className="px-3 py-1 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
-                    >
-                      Load Draft
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleDiscardDraft}
-                      className="px-3 py-1 text-sm bg-accent rounded-lg hover:bg-accent/80"
-                    >
-                      Start Fresh
-                    </button>
-                  </div>
-                </div>
+          {/* Draft Prompt */}
+          {showDraftPrompt && (
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-action-tint px-4 py-3 sm:px-6">
+              <span className="text-label">
+                You have an unsaved draft. Would you like to continue?
+              </span>
+              <div className="flex gap-2">
+                <button type="button" onClick={handleLoadDraft} className="btn btn-ink px-4">
+                  Load Draft
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDiscardDraft}
+                  className="btn bg-surface px-4 text-ink hover:bg-fill"
+                >
+                  Start Fresh
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/*
+           * Main Content. On a phone this is the one part that scrolls, with
+           * the court first so it is in reach, and the header and footer stay
+           * put. From lg up the controls and the court sit side by side and
+           * each scrolls on its own.
+           */}
+          <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto p-4 sm:p-6 lg:flex-row lg:overflow-hidden">
+            {/* Left Sidebar - Controls & Metadata */}
+            <div className="scrollbar-thin flex shrink-0 flex-col gap-4 lg:min-h-0 lg:w-80 lg:overflow-y-auto lg:px-1">
+              <ArrowControls
+                isDrawingArrow={isDrawingArrow}
+                arrowStartRole={arrowStartRole}
+                arrowEntries={arrowEntries}
+                onStartDrawing={handleStartDrawingArrow}
+                onDoneDrawing={handleDoneDrawing}
+                onCancelSelection={() => setArrowStartRole(null)}
+                onRemoveArrow={handleRemoveArrow}
+              />
+
+              <RotationNavigator
+                currentRotation={editor.currentRotation}
+                currentMode={editor.currentMode}
+                liberoActive={editor.liberoActive}
+                onRotationChange={editor.setCurrentRotation}
+                onModeChange={editor.setCurrentMode}
+                onLiberoChange={editor.setLiberoActive}
+              />
+
+              <QuickActions
+                hasCopiedFrame={editor.hasCopiedFrame}
+                onCopyFrame={editor.copyCurrentFrame}
+                onPasteFrame={editor.pasteFrame}
+                onResetRotation={editor.resetCurrentRotation}
+              />
+
+              <FormationDetails
+                expanded={detailsExpanded}
+                onToggleExpanded={() => setDetailsExpanded(!detailsExpanded)}
+                name={editor.metadata.name}
+                description={editor.metadata.description}
+                tags={editor.metadata.tags}
+                visibility={editor.metadata.visibility}
+                onNameChange={editor.setName}
+                onDescriptionChange={editor.setDescription}
+                onTagsChange={editor.setTags}
+                onVisibilityChange={editor.setVisibility}
+              />
+
+              <ValidationPanel
+                blockingErrors={editor.blockingErrors}
+                overlapWarnings={editor.overlapWarnings}
+              />
+            </div>
+
+            {/* Right - Court Editor */}
+            <div className="order-first flex shrink-0 flex-col gap-4 lg:order-none lg:min-h-0 lg:min-w-0 lg:flex-1 lg:overflow-y-auto">
+              {editor.currentFrame && (
+                <FormationEditorCourt
+                  frame={editor.currentFrame}
+                  rotation={editor.currentRotation}
+                  mode={editor.currentMode}
+                  liberoActive={editor.liberoActive}
+                  selectedRole={editor.selectedRole}
+                  onSelectRole={editor.setSelectedRole}
+                  onPositionChange={editor.updatePlayerPosition}
+                  onDragStart={() => editor.setIsDragging(true)}
+                  onDragEnd={() => editor.setIsDragging(false)}
+                  isDrawingArrow={isDrawingArrow}
+                  arrowStartRole={arrowStartRole}
+                  onArrowStartSelect={handleArrowStartSelect}
+                  onArrowEndSelect={handleArrowEndSelect}
+                  onArrowCancel={handleCancelDrawingArrow}
+                />
               )}
 
-              {/* Main Content */}
-              <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-6 p-6">
-                  {/* Left Sidebar - Controls & Metadata */}
-                  <div className="lg:w-80 shrink-0 space-y-4 overflow-y-auto min-h-0 px-2 scrollbar-thin">
-                    <ArrowControls
-                      isDrawingArrow={isDrawingArrow}
-                      arrowStartRole={arrowStartRole}
-                      arrowEntries={arrowEntries}
-                      onStartDrawing={handleStartDrawingArrow}
-                      onDoneDrawing={handleDoneDrawing}
-                      onCancelSelection={() => setArrowStartRole(null)}
-                      onRemoveArrow={handleRemoveArrow}
-                    />
-
-                    <RotationNavigator
-                      currentRotation={editor.currentRotation}
-                      currentMode={editor.currentMode}
-                      liberoActive={editor.liberoActive}
-                      onRotationChange={editor.setCurrentRotation}
-                      onModeChange={editor.setCurrentMode}
-                      onLiberoChange={editor.setLiberoActive}
-                    />
-
-                    <QuickActions
-                      hasCopiedFrame={editor.hasCopiedFrame}
-                      onCopyFrame={editor.copyCurrentFrame}
-                      onPasteFrame={editor.pasteFrame}
-                      onResetRotation={editor.resetCurrentRotation}
-                    />
-
-                    <FormationDetails
-                      expanded={detailsExpanded}
-                      onToggleExpanded={() => setDetailsExpanded(!detailsExpanded)}
-                      name={editor.metadata.name}
-                      description={editor.metadata.description}
-                      tags={editor.metadata.tags}
-                      visibility={editor.metadata.visibility}
-                      onNameChange={editor.setName}
-                      onDescriptionChange={editor.setDescription}
-                      onTagsChange={editor.setTags}
-                      onVisibilityChange={editor.setVisibility}
-                    />
-
-                    <ValidationPanel
-                      blockingErrors={editor.blockingErrors}
-                      overlapWarnings={editor.overlapWarnings}
-                    />
-                  </div>
-
-                  {/* Right - Court Editor */}
-                  <div className="flex-1 min-w-0 space-y-4">
-                    {editor.currentFrame && (
-                      <FormationEditorCourt
-                        frame={editor.currentFrame}
-                        rotation={editor.currentRotation}
-                        mode={editor.currentMode}
-                        liberoActive={editor.liberoActive}
-                        selectedRole={editor.selectedRole}
-                        onSelectRole={editor.setSelectedRole}
-                        onPositionChange={editor.updatePlayerPosition}
-                        onDragStart={() => editor.setIsDragging(true)}
-                        onDragEnd={() => editor.setIsDragging(false)}
-                        isDrawingArrow={isDrawingArrow}
-                        arrowStartRole={arrowStartRole}
-                        onArrowStartSelect={handleArrowStartSelect}
-                        onArrowEndSelect={handleArrowEndSelect}
-                        onArrowCancel={handleCancelDrawingArrow}
-                      />
-                    )}
-
-                    {/* Instructions */}
-                    <div className="text-center text-sm text-muted-foreground">
-                      <p>Drag players to reposition. Use arrow keys for fine adjustments.</p>
-                      <p className="text-xs mt-1">Shift + Arrow for larger steps • Ctrl + Arrow for fast moves • Press Esc to cancel</p>
-                    </div>
-                  </div>
+              {/* Instructions */}
+              <div className="text-center text-label text-ink-soft">
+                <p>Drag players to reposition. Use arrow keys for fine adjustments.</p>
+                <p className="mt-1 text-caption">
+                  Shift + Arrow for larger steps • Ctrl + Arrow for fast moves • Press Esc to cancel
+                </p>
               </div>
+            </div>
+          </div>
 
-              {/* Footer */}
-              <div className="flex items-center justify-between px-6 py-4 border-t border-border bg-accent/30">
-                {saveError && (
-                  <p className="text-sm text-red-500">{saveError}</p>
-                )}
-                <div className="flex-1" />
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={handleClose}
-                    className="min-h-11 px-4 py-2 rounded-lg text-sm font-medium hover:bg-accent transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleSave}
-                    disabled={isSaving || !editor.metadata.name.trim()}
-                    className="min-h-11 px-6 py-2 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    {isSaving ? "Saving..." : mode === "edit" ? "Update" : "Save"}
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          {/* Footer. A solid surface, so what scrolls above it never shows through. */}
+          <div className="flex flex-wrap items-center justify-end gap-3 border-t border-line bg-surface px-4 py-3 sm:px-6">
+            {saveError && (
+              <p role="alert" className="mr-auto text-label font-medium text-danger">
+                {saveError}
+              </p>
+            )}
+            <Button type="button" variant="outline" onClick={handleClose}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleSave}
+              disabled={isSaving || !editor.metadata.name.trim()}
+              className="px-6"
+            >
+              {isSaving ? "Saving..." : mode === "edit" ? "Update" : "Save"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     );
   }
 );
