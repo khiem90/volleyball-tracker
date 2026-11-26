@@ -74,6 +74,13 @@ export const FinalScore = ({
   </div>
 );
 
+/**
+ * The frame of both result dialogs. A phone on its side is 390px tall and the
+ * guest's result is taller, so the dialog stops 16px short of each edge and
+ * scrolls inside.
+ */
+export const RESULT_DIALOG = "sm:max-w-md";
+
 /** The confirm before a result is recorded: the score, the winner, and a way back to playing. */
 export const MatchCompleteDialog = memo(function MatchCompleteDialog({
   open,
@@ -93,7 +100,7 @@ export const MatchCompleteDialog = memo(function MatchCompleteDialog({
 }: MatchCompleteDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className={RESULT_DIALOG}>
         <DialogHeader>
           <DialogTitle>
             <Icon id="trophy" size={18} className="shrink-0" />

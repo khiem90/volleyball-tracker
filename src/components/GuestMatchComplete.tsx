@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { STOCK_COLOR } from "@/components/match";
-import { FinalScore } from "@/components/match/MatchCompleteDialog";
+import { FinalScore, RESULT_DIALOG } from "@/components/match/MatchCompleteDialog";
 import { Icon } from "@/components/shared/Icon";
 import type { PersistentTeam } from "@/types/game";
 import { signInHref } from "@/lib/shell";
@@ -55,7 +55,7 @@ export const GuestMatchComplete = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className={RESULT_DIALOG}>
         <DialogHeader>
           <DialogTitle>
             <Icon id="trophy" size={18} className="shrink-0" />
