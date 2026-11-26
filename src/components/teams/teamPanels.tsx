@@ -130,7 +130,7 @@ const DirectoryFacts = ({ row, selected }: { row: TeamRow; selected: boolean }) 
       >
         {STATUS_LABEL[row.status]}
       </Chip>
-      <FormDots form={row.form} slots={5} warnTint />
+      <FormDots form={row.form} slots={5} />
     </span>
   </>
 );
@@ -463,7 +463,7 @@ export const TeamProfilePanel = ({
             {row.form.length === 0 ? (
               <p className="text-caption text-ink-soft">No matches played yet</p>
             ) : (
-              <FormDots form={row.form} slots={row.form.length} warnTint />
+              <FormDots form={row.form} slots={row.form.length} />
             )}
           </div>
         </div>

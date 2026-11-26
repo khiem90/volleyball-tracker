@@ -354,7 +354,7 @@ for tighter columns with each cell kept on one line. Wrap a wide table in
 
 - `live-dot` is the 7px green dot that pulses. `<Chip live>` carries one.
 - `spinner` is a 16px ring in the color of the text around it. `<InlineSpinner />` draws it. `<PageLoadingSpinner />` is the large one for a page that is loading.
-- `FormDots` and `FormLetters` from `@/components/shared/RecentForm` show a team's recent results. A win is green. A loss is soft ink.
+- `FormDots` and `FormLetters` from `@/components/shared/RecentForm` show a team's recent results. A win is `action`. A loss is `ink-soft`: a soft ink dot in `FormDots`, and a soft ink letter on `fill` in `FormLetters`. Each result keeps its own color whatever the team's record, and an empty slot is a faint dot.
 - `team-panel-score` is the soft shadow under the white digits on the scoring page's team-color panels. Nothing else has a text shadow.
 
 ## The shell
