@@ -1,0 +1,25 @@
+import { useMemo } from "react";
+import { useApp } from "@/context/AppContext";
+import { quickMatchData, type QuickMatchData } from "@/lib/quickMatchData";
+
+/**
+ * What the Quick Match page shows of the account's saved matches, read from
+ * the roster and the matches the app already holds, plus today's date for
+ * the page's header.
+ */
+export const useQuickMatchData = (): QuickMatchData & { dateLine: string } => {
+  const { roster, matches } = useApp();
+
+  return useMemo(
+    () => ({
+      dateLine: new Date().toLocaleDateString("en-US", {
+        weekday: "long",
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      }),
+      ...quickMatchData(roster, matches),
+    }),
+    [roster, matches],
+  );
+};
