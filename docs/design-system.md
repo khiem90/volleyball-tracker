@@ -388,12 +388,6 @@ bar's and `size="page"` is sign-in's. It is not a link, so wrap it in one
 where it should lead home. The crest's path is `CREST_SRC` in
 `src/lib/assetPaths.ts`.
 
-### Reload banner
-
-`UpdateBanner` is an `ink` strip with white text and a green Reload button at
-44px. It sits in the flow under the top bar, and under the scoring header, so
-it covers nothing.
-
 ## Icons
 
 Every icon is a `<symbol>` in `public/assets/matchbook/icons/sprite.svg`,

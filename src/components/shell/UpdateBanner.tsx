@@ -15,15 +15,15 @@ export const UpdateBanner = () => {
   return (
     <div
       role="status"
-      className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 bg-ink py-2 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] text-center text-white"
+      className="ink-bar flex flex-wrap items-center justify-center gap-x-4 gap-y-2 py-2 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] text-center"
     >
       <p className="text-label font-medium">A new version of the app is ready.</p>
-      {/* The main button at a toolbar's height, with a white focus ring, since its ink one is lost on this strip. */}
+      {/* The main button at a bar's height. The bar turns its focus ring white. */}
       <button
         type="button"
         onClick={reload}
         disabled={switching}
-        className="btn btn-action min-h-11 px-5 text-label focus-visible:outline-white"
+        className="btn btn-action min-h-11 px-5 text-label"
       >
         {switching ? "Reloading..." : "Reload"}
       </button>

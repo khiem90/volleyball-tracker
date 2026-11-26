@@ -31,4 +31,4 @@ Covers spec stories 1, 5, 8, 72, and 78.
 
 - No page uses `PageHeader` yet. Each screen ticket swaps its own masthead for it, so until then a page shows the white top bar over its old masthead on the ground.
 - On a phone, a page that passes `back` has no brand row and so no account button. That is the spec's layout. The account button is one tap back.
-- The menu and the avatar take their new look from ticket 05's branch. Nothing here was looked at in a browser.
+- Nothing here was looked at in a browser.
