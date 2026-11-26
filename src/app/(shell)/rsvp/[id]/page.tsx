@@ -3,6 +3,7 @@
 import { useParams } from "next/navigation";
 import { Card, CardError, PageLoadingSpinner } from "@/components/shared";
 import { RsvpDialog } from "@/components/rsvpList/RsvpDialog";
+import { ListHeader } from "@/components/rsvpList/ListHeader";
 import { ListLinkPanel } from "@/components/rsvpList/ListLinkPanel";
 import { ListNotFound } from "@/components/rsvpList/ListNotFound";
 import { ListNoticesPanel } from "@/components/rsvpList/ListNoticesPanel";
@@ -15,10 +16,12 @@ import { useListPage } from "@/components/rsvpList/useListPage";
 
 /**
  * A list's page, which is also its RSVP link. A signed-in person holding
- * the link sees the list's name, its scheduled time, its capacity, and
- * everyone on it by name, split into who is in and who is waiting. They
- * RSVP from here, change their name and note, and withdraw, until the
- * scheduled time. After it the page is read-only.
+ * the link reads the list's name, its scheduled time, and its capacity in
+ * the header, and under it where they stand: in, waiting at a position,
+ * or not on the list. They RSVP from that card, change their name and
+ * note, and withdraw, until the scheduled time. After it the page is
+ * read-only. The owner's notices and everyone on the list by name, split
+ * into who is in and who is waiting, follow in cards.
  *
  * On a by-team list each RSVP is a team. One person RSVPs the whole team
  * under a team name, and the page says teams where it would say people.
@@ -27,12 +30,12 @@ import { useListPage } from "@/components/rsvpList/useListPage";
  * it to everyone who can open the page: Watch while it is live, and See
  * results once it is completed.
  *
- * The owner sees the same and RSVPs the same way, and also gets the link
- * to copy, the settings to change, Remove on each row, the box for a held
- * spot, and Close or Reopen, all until the scheduled time. Duplicate and
- * Delete stay after it. With the link off, anyone but the owner gets the
- * shared not found, the same as for a list that does not exist. A guest
- * is sent to sign in and back here.
+ * The owner sees the same and RSVPs the same way, and also gets the way
+ * back to their lists, the link to copy, the settings to change, Remove
+ * on each row, the box for a held spot, and Close or Reopen, all until
+ * the scheduled time. Duplicate and Delete stay after it. With the link
+ * off, anyone but the owner gets the shared not found, the same as for a
+ * list that does not exist. A guest is sent to sign in and back here.
  */
 export default function RsvpListPage() {
   const params = useParams();
@@ -52,37 +55,19 @@ export default function RsvpListPage() {
 
   return (
     <>
-      <header className="mb-4 flex flex-col gap-2">
-        <span className="mb-kicker">RSVP</span>
-        <h1 className="matchbook-display min-w-0 max-w-full text-3xl font-bold leading-none tracking-[0.01em] [overflow-wrap:anywhere] sm:text-5xl">
-          {list.name}
-        </h1>
-        {page.when ? (
-          <p className="flex flex-wrap items-baseline gap-x-2 text-[0.95rem] font-semibold">
-            <span>{page.when.viewer}</span>
-            {page.when.owner && (
-              <span className="text-[0.8rem] font-normal text-mb-ink-muted">
-                {page.when.owner} where it was set
-              </span>
-            )}
-          </p>
-        ) : (
-          <p className="text-[0.85rem] text-mb-ink-muted">No scheduled time yet.</p>
-        )}
-      </header>
-
-      <ListNoticesPanel
-        listId={list.id}
-        isOwner={page.isOwner}
-        readerUid={rsvp.mine?.uid ?? null}
-        className="mb-4"
-      />
-
-      <ListTournamentsPanel list={list} className="mb-4" />
+      <ListHeader list={list} when={page.when} view={rsvp} isOwner={page.isOwner} />
 
       <div className="grid gap-4 lg:grid-cols-12 lg:items-start">
         <div className="flex flex-col gap-4 lg:col-span-5">
           <ListRsvpPanel list={list} view={rsvp} />
+
+          <ListTournamentsPanel list={list} />
+
+          <ListNoticesPanel
+            listId={list.id}
+            isOwner={page.isOwner}
+            readerUid={rsvp.mine?.uid ?? null}
+          />
 
           {page.isOwner && <ListLinkPanel link={page.link} />}
 

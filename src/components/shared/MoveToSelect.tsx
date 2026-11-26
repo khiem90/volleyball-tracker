@@ -1,4 +1,4 @@
-import { MbIcon } from "@/components/matchbook/MbIcon";
+import { Icon } from "./Icon";
 
 /**
  * The "Move to" menu beside a player on a mixed team. It lists the other
@@ -20,7 +20,7 @@ export const MoveToSelect = ({
 }) => (
   <span className="relative shrink-0">
     <select
-      className="mb-select-native w-auto text-[0.72rem]"
+      className="field-select w-auto"
       value=""
       disabled={disabled}
       onChange={(event) => event.target.value && onMove(event.target.value)}
@@ -33,10 +33,10 @@ export const MoveToSelect = ({
         </option>
       ))}
     </select>
-    <MbIcon
+    <Icon
       id="chevron-down"
-      size={13}
-      className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-mb-ink-muted"
+      size={14}
+      className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-ink-soft"
     />
   </span>
 );

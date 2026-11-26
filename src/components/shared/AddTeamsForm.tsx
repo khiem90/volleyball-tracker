@@ -86,7 +86,7 @@ export const AddTeamsForm = ({ onAdd }: AddTeamsFormProps) => {
 
   return (
     <div className="border-b border-line">
-      <form onSubmit={submitName} className="flex flex-wrap items-center gap-2 px-3 py-2.5">
+      <form onSubmit={submitName} className="flex flex-wrap items-center gap-2 px-4 py-3">
         <label className="field min-w-[12rem] flex-1">
           <Icon id="plus" size={14} className="shrink-0 text-ink-soft" />
           <input
@@ -123,7 +123,7 @@ export const AddTeamsForm = ({ onAdd }: AddTeamsFormProps) => {
       {pasteOpen && (
         <div
           id="paste-team-names"
-          className="flex flex-col gap-2 border-t border-line px-3 py-2.5"
+          className="flex flex-col gap-2 border-t border-line px-4 py-3"
         >
           <label htmlFor="pasted-team-names" className="text-caption font-medium text-ink-soft">
             One team per line
@@ -156,7 +156,7 @@ export const AddTeamsForm = ({ onAdd }: AddTeamsFormProps) => {
       )}
 
       {notice && (
-        <p role="status" className="px-3 pb-2.5 text-caption font-medium text-ink-soft">
+        <p role="status" className="px-4 pb-3 text-caption font-medium text-ink-soft">
           {notice}
         </p>
       )}

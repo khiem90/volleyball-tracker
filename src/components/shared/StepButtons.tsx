@@ -16,7 +16,7 @@ export const StepButtons = ({
   max: number;
   onChange: (value: number) => void;
 }) => {
-  const step = "mb-btn mb-btn-outline-navy min-w-11 px-3 text-[1rem]";
+  const step = "btn btn-fill min-w-11 px-3 text-title";
   return (
     <>
       <button

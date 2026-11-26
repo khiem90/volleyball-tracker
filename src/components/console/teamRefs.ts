@@ -1,4 +1,3 @@
-import { crestForTeam } from "@/components/matchbook/types";
 import type { Team } from "@/lib/teamShapes";
 import type { PersistentTeam } from "@/types/game";
 
@@ -20,7 +19,6 @@ export const teamLookup = (teams: PersistentTeam[]): TeamLookup => {
     return {
       id: teamId,
       name: team?.name ?? "Unknown",
-      crest: crestForTeam(teamId, team?.name ?? ""),
       ...(team?.color !== undefined && { color: team.color }),
     };
   };

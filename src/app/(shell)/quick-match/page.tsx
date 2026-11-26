@@ -2,23 +2,40 @@
 
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
 import { useAuth } from "@/context/AuthContext";
+import { useQuickMatchData } from "@/hooks/useQuickMatchData";
 import { useQuickMatchPage } from "@/hooks/useQuickMatchPage";
-import { PageLoadingSpinner } from "@/components/shared";
 import { ConfirmDialog } from "@/components/console/ConfirmDialog";
-import { MbIcon } from "@/components/matchbook/MbIcon";
-import { Crest, FormLetters, Panel, PanelEmpty, TeamName } from "@/components/matchbook/Panel";
 import {
-  useMatchbookQuickMatch,
-  type MbAbandonedMatchRow,
-  type MbTeamFormSummary,
-} from "@/components/matchbook/useMatchbookQuickMatch";
-import { TeamMark } from "@/components/shared/TeamMark";
+  CARD_ROW,
+  Card,
+  CardEmpty,
+  CardError,
+  Chip,
+  FormLetters,
+  Icon,
+  PageLoadingSpinner,
+  ScoreLine,
+  TeamMark,
+} from "@/components/shared";
+import { PageHeader } from "@/components/shell/PageHeader";
 import { GUEST_AWAY_TEAM, GUEST_HOME_TEAM } from "@/constants/guestTeams";
+import type { AbandonedMatchRow, TeamFormSummary } from "@/lib/quickMatchData";
 import { signInHref } from "@/lib/shell";
+import type { Team } from "@/lib/teamShapes";
 
 /* ------------------------- Small building blocks ------------------------- */
+
+/** A small label over a control or a figure. */
+const LABEL = "text-caption font-medium text-ink-soft";
+
+/** A team on one side with the score in the middle, which stays centered whatever the names' lengths. */
+const SIDES = "grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-2";
+
+/** Where a team's mark will sit once a team is picked: the mark's shape in grey, with no letter. */
+const EmptyMark = ({ size }: { size: number }) => (
+  <span aria-hidden="true" className="team-mark bg-fill" style={{ width: size, height: size }} />
+);
 
 const TeamSelect = ({
   label,
@@ -35,76 +52,81 @@ const TeamSelect = ({
 }) => {
   const picked = teams.find((team) => team.id === value);
   return (
-    <div className="min-w-0 flex-1">
-      <p className="mb-kicker mb-1 text-center">{label}</p>
-      <div className="flex flex-col items-center gap-2">
-        {/* The same height with a team picked or not, so the select below does not jump. */}
-        <span className="flex h-[65px] items-center">
-          {picked ? (
-            <TeamMark name={picked.name} color={picked.color} size={56} />
-          ) : (
-            <Image
-              src="/assets/matchbook/brand/crest.svg"
-              alt=""
-              width={56}
-              height={65}
-              className="opacity-25 grayscale"
-            />
-          )}
-        </span>
-        <div className="relative w-full">
-          <select
-            className="mb-select-native"
-            value={value}
-            onChange={(event) => onChange(event.target.value)}
-            aria-label={label}
-          >
-            <option value="">Select team…</option>
-            {teams.map((team) => (
-              <option key={team.id} value={team.id} disabled={team.id === disabledId}>
-                {team.name}
-              </option>
-            ))}
-          </select>
-          <MbIcon
-            id="chevron-down"
-            size={14}
-            className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-mb-ink-muted"
-          />
-        </div>
+    <div className="flex min-w-0 flex-1 flex-col items-center gap-2">
+      <p className={LABEL}>{label}</p>
+      {/* The same size with a team picked or not, so the select below does not jump. */}
+      {picked ? (
+        <TeamMark name={picked.name} color={picked.color} size={56} />
+      ) : (
+        <EmptyMark size={56} />
+      )}
+      <div className="relative w-full">
+        <select
+          className="field-select"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          aria-label={label}
+        >
+          <option value="">Select team…</option>
+          {teams.map((team) => (
+            <option key={team.id} value={team.id} disabled={team.id === disabledId}>
+              {team.name}
+            </option>
+          ))}
+        </select>
+        <Icon
+          id="chevron-down"
+          size={14}
+          className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-ink-soft"
+        />
       </div>
     </div>
   );
 };
 
+/** One of the guest's two fixed teams: its mark over its name. */
+const GuestSide = ({ team }: { team: Team }) => (
+  <div className="flex flex-col items-center gap-2">
+    <TeamMark name={team.name} color={team.color} size={56} />
+    <span className="text-body font-bold">{team.name}</span>
+  </div>
+);
+
 const ScorePreviewSide = ({
   summary,
   placeholder,
 }: {
-  summary: MbTeamFormSummary | null;
+  summary: TeamFormSummary | null;
   placeholder: string;
 }) => (
-  <div className="flex flex-1 flex-col items-center gap-1.5">
+  <div className="flex min-w-0 flex-col items-center gap-1 text-center">
     {summary ? (
       <>
-        <Crest team={summary.team} size={64} />
-        <span className="matchbook-display text-[0.95rem] font-bold">
+        <TeamMark name={summary.team.name} color={summary.team.color} size={64} />
+        {/* The selects cut a long name to one line. Here it takes up to three before it is cut. */}
+        <span
+          title={summary.team.name}
+          className="mt-1 line-clamp-3 max-w-full text-body font-bold leading-tight wrap-break-word"
+        >
           {summary.team.name}
         </span>
-        <span className="mb-kicker">({summary.record})</span>
+        <span className={`${LABEL} tabular-nums`}>({summary.record})</span>
       </>
     ) : (
       <>
-        <Image
-          src="/assets/matchbook/brand/crest.svg"
-          alt=""
-          width={64}
-          height={74}
-          className="opacity-25 grayscale"
-        />
-        <span className="text-[0.8rem] text-mb-ink-muted">{placeholder}</span>
+        <EmptyMark size={64} />
+        <span className="mt-1 text-label text-ink-soft">{placeholder}</span>
       </>
     )}
+  </div>
+);
+
+/** One side of the form comparison: the team's mark and name over its last results. */
+const FormSide = ({ summary }: { summary: TeamFormSummary }) => (
+  <div className="flex min-w-0 flex-col items-center gap-1.5">
+    <TeamMark name={summary.team.name} color={summary.team.color} size={40} />
+    <span className="max-w-full truncate text-caption font-semibold">{summary.team.name}</span>
+    <FormLetters form={summary.form} />
   </div>
 );
 
@@ -117,10 +139,10 @@ const FormStatRow = ({
   label: string;
   right: string | number;
 }) => (
-  <div className="grid grid-cols-[1fr_auto_1fr] items-center border-b border-mb-rule py-1.5 text-[0.9rem] tabular-nums last:border-b-0">
-    <span className="matchbook-display font-bold">{left}</span>
-    <span className="mb-kicker">{label}</span>
-    <span className="matchbook-display text-right font-bold">{right}</span>
+  <div className="grid grid-cols-[1fr_auto_1fr] items-center border-b border-line py-2 tabular-nums last:border-b-0">
+    <span className="text-title font-bold">{left}</span>
+    <span className={LABEL}>{label}</span>
+    <span className="text-right text-title font-bold">{right}</span>
   </div>
 );
 
@@ -129,40 +151,37 @@ const AbandonedMatch = ({
   match,
   onDiscard,
 }: {
-  match: MbAbandonedMatchRow;
+  match: AbandonedMatchRow;
   onDiscard: () => void;
 }) => (
-  <div className="flex flex-col gap-2 px-3 py-3">
-    <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-      <TeamName team={match.home} className="justify-self-start" />
-      <span className="matchbook-display whitespace-nowrap text-[0.95rem] font-bold tabular-nums">
-        {match.homeScore} – {match.awayScore}
-      </span>
-      <TeamName team={match.away} reverse className="justify-self-end" />
-    </div>
+  <li className="flex flex-col gap-3 px-4 py-3">
+    <ScoreLine
+      home={match.home}
+      away={match.away}
+      homeScore={match.homeScore}
+      awayScore={match.awayScore}
+    />
     <div className="flex flex-wrap items-center justify-between gap-2">
-      <p className="mb-kicker">Started {match.started}</p>
-      <div className="flex items-center gap-2">
+      <p className="text-caption text-ink-soft">Started {match.started}</p>
+      {/* On a phone the buttons take a line of their own and share it. */}
+      <div className="flex w-full items-center gap-2 sm:w-auto">
         <button
           type="button"
           onClick={onDiscard}
-          className="mb-btn mb-btn-outline-red px-3 text-[0.72rem]"
+          className="btn btn-danger-quiet flex-1 sm:flex-none"
         >
-          <MbIcon id="trash" size={14} />
+          <Icon id="trash" size={14} />
           Discard
         </button>
         {match.resumable && (
-          <Link
-            href={`/match/${match.id}`}
-            className="mb-btn mb-btn-navy px-3 text-[0.72rem]"
-          >
-            <MbIcon id="quick" size={12} />
+          <Link href={`/match/${match.id}`} className="btn btn-ink flex-1 sm:flex-none">
+            <Icon id="quick" size={14} />
             Resume
           </Link>
         )}
       </div>
     </div>
-  </div>
+  </li>
 );
 
 /* --------------------------------- Page ---------------------------------- */
@@ -170,7 +189,7 @@ const AbandonedMatch = ({
 export default function QuickMatchPage() {
   const router = useRouter();
   const { isGuest, isLoading } = useAuth();
-  const data = useMatchbookQuickMatch();
+  const data = useQuickMatchData();
   const {
     availableTeams,
     awayTeamId,
@@ -210,118 +229,90 @@ export default function QuickMatchPage() {
 
   return (
     <>
-      {/* Masthead */}
-      <header className="mb-5 flex flex-wrap items-center gap-x-6 gap-y-4">
-        <div className="flex min-w-0 items-center gap-4">
-          <h1 className="matchbook-display min-w-0 text-4xl font-bold leading-none tracking-[0.01em] sm:text-5xl">
-            Quick <span className="text-mb-coral">Match</span>
-          </h1>
-          {!isGuest && (
-            <div className="flex flex-col items-center border-[2px] border-mb-coral px-2.5 py-1 text-mb-coral">
-              <span className="matchbook-display text-[0.6rem] font-bold tracking-[0.28em]">
-                Match
-              </span>
-              <span className="matchbook-display text-2xl font-bold leading-none tabular-nums">
-                {data.nextMatchNumber}
-              </span>
-            </div>
-          )}
-          <div className="hidden sm:block">
-            <p
-              className="matchbook-display text-[0.74rem] font-bold tracking-[0.1em]"
-              suppressHydrationWarning
-            >
-              {data.dateLine}
-            </p>
-            <p className="mb-kicker">{data.matchesCompleted} matches completed</p>
-          </div>
-        </div>
-
-        <div className="flex w-full flex-wrap gap-3 sm:ml-auto sm:w-auto">
+      <PageHeader
+        title="Quick Match"
+        status={
+          isGuest ? undefined : <Chip className="tabular-nums">Match {data.nextMatchNumber}</Chip>
+        }
+        line={
+          <>
+            <span suppressHydrationWarning>{data.dateLine}</span> • {data.matchesCompleted} matches
+            completed
+          </>
+        }
+        action={
+          /* The page's one green button. The preview card's own start button is the black pill. */
           <button
             type="button"
             onClick={startScoring}
             disabled={!startEnabled}
-            className="mb-btn mb-btn-coral flex-1 disabled:cursor-not-allowed disabled:opacity-40 sm:flex-none"
+            className="btn btn-action"
           >
-            <MbIcon id="quick" size={14} />
+            <Icon id="quick" size={18} />
             Start Match
           </button>
-        </div>
-      </header>
+        }
+      />
 
-      {/* Panel grid */}
+      {/* Card grid */}
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
         {/* Quick matches left mid-way */}
         {!isGuest && data.abandonedQuickMatches.length > 0 && (
-          <div className="xl:col-span-12">
-            <Panel
+          <div className="min-w-0 xl:col-span-12">
+            <Card
               title="Left Mid-Way"
               meta={
-                <span className="mb-kicker">
-                  {data.abandonedQuickMatches.length === 1
-                    ? "1 match"
-                    : `${data.abandonedQuickMatches.length} matches`}
-                </span>
+                data.abandonedQuickMatches.length === 1
+                  ? "1 match"
+                  : `${data.abandonedQuickMatches.length} matches`
               }
             >
-              <div className="flex flex-col divide-y divide-mb-rule">
+              <ul className="divide-y divide-line">
                 {data.abandonedQuickMatches.map((m) => (
-                  <AbandonedMatch
-                    key={m.id}
-                    match={m}
-                    onDiscard={() => setDiscardingId(m.id)}
-                  />
+                  <AbandonedMatch key={m.id} match={m} onDiscard={() => setDiscardingId(m.id)} />
                 ))}
-              </div>
-            </Panel>
+              </ul>
+            </Card>
           </div>
         )}
 
         {/* Match setup */}
-        <div className="xl:col-span-7">
-          <Panel title="Match Setup">
+        <div className="min-w-0 xl:col-span-7">
+          <Card title="Match Setup">
             {isGuest ? (
-              <div className="flex flex-1 flex-col gap-4 p-5">
+              <div className="flex flex-1 flex-col gap-4 p-4">
                 <div className="flex items-center justify-center gap-5">
-                  <div className="flex flex-col items-center gap-2">
-                    <Crest team={guestHome} size={56} />
-                    <span className="matchbook-display text-[0.9rem] font-bold">Team A</span>
-                  </div>
-                  <span className="mb-score-box px-2 text-[0.7rem] tracking-[0.1em]">VS</span>
-                  <div className="flex flex-col items-center gap-2">
-                    <Crest team={guestAway} size={56} />
-                    <span className="matchbook-display text-[0.9rem] font-bold">Team B</span>
-                  </div>
+                  <GuestSide team={guestHome} />
+                  <span className="chip text-ink-soft">VS</span>
+                  <GuestSide team={guestAway} />
                 </div>
-                <p className="text-center text-[0.85rem] text-mb-ink-muted">
+                <p className="text-center text-label text-ink-soft">
                   You&apos;re playing as a guest with two default teams. Sign in to
                   pick your own teams and keep the match in your history.
                 </p>
-                <Link href={signInHref("/quick-match")} className="mb-btn mb-btn-navy mx-auto">
-                  <MbIcon id="login" size={14} />
+                <Link href={signInHref("/quick-match")} className="btn btn-ink mx-auto">
+                  <Icon id="login" size={14} />
                   Sign In to Use Your Teams
                 </Link>
               </div>
             ) : availableTeams.length < 2 ? (
-              <div className="flex flex-1 flex-col items-center justify-center gap-3 px-4 py-8 text-center">
-                <p className="text-[0.85rem] text-mb-ink-muted">
-                  {availableTeams.length === 0
+              <CardEmpty
+                message={
+                  availableTeams.length === 0
                     ? "No teams exist yet — a quick match needs two teams."
-                    : "Only one team exists — a quick match needs two."}
-                </p>
-                <button
-                  type="button"
-                  onClick={handleQuickCreateTeam}
-                  className="mb-btn mb-btn-outline text-[0.72rem] px-3 py-1.5"
-                >
-                  <MbIcon id="plus" size={12} />
-                  Create a team
-                </button>
-              </div>
+                    : "Only one team exists — a quick match needs two."
+                }
+                action={
+                  <button type="button" onClick={handleQuickCreateTeam} className="btn btn-fill">
+                    <Icon id="plus" size={14} />
+                    Create a team
+                  </button>
+                }
+              />
             ) : (
-              <div className="flex flex-1 flex-col gap-4 p-5">
-                <div className="flex items-start gap-3 sm:gap-5">
+              <div className="flex flex-1 flex-col gap-4 p-4">
+                {/* End-aligned, so the swap button sits level with the two selects. */}
+                <div className="flex items-end gap-2 sm:gap-5">
                   <TeamSelect
                     label="Home Team"
                     value={homeTeamId}
@@ -329,16 +320,15 @@ export default function QuickMatchPage() {
                     teams={availableTeams}
                     onChange={handleHomeTeamSelect}
                   />
+                  {/* A circle on a phone, where the selects need the width. The word shows from sm up. */}
                   <button
                     type="button"
                     onClick={handleSwapTeams}
                     title="Swap home and away"
-                    className="mt-9 flex h-11 w-11 shrink-0 flex-col items-center justify-center gap-0.5 border-[1.5px] border-mb-navy bg-mb-paper-bright text-mb-navy transition-colors hover:bg-[rgba(7,50,77,0.06)]"
+                    className="btn btn-fill min-w-11 shrink-0 px-2.5 sm:px-4"
                   >
-                    <MbIcon id="swap" size={16} />
-                    <span className="matchbook-display text-[0.5rem] font-bold tracking-[0.12em]">
-                      Swap
-                    </span>
+                    <Icon id="swap" size={16} />
+                    <span className="sr-only sm:not-sr-only">Swap</span>
                   </button>
                   <TeamSelect
                     label="Away Team"
@@ -349,40 +339,34 @@ export default function QuickMatchPage() {
                   />
                 </div>
 
-                {error && (
-                  <p className="border-[1.5px] border-mb-red px-3 py-2 text-center text-[0.8rem] font-medium text-mb-red">
-                    {error}
-                  </p>
-                )}
+                {error && <CardError message={error} className="text-center" />}
 
-                <div className="mt-auto flex flex-wrap items-center justify-between gap-3 border-t border-mb-rule pt-3">
-                  <p className="text-[0.72rem] text-mb-ink-muted">
+                <div className="mt-auto flex flex-wrap items-center justify-between gap-3 border-t border-line pt-3">
+                  <p className="text-caption text-ink-soft">
                     Scores are tracked point by point once the match starts.
                   </p>
-                  <button
-                    type="button"
-                    onClick={handleRandomSelect}
-                    className="mb-btn mb-btn-outline-navy px-3 py-1.5 text-[0.72rem]"
-                  >
-                    <MbIcon id="swap" size={12} />
+                  <button type="button" onClick={handleRandomSelect} className="btn btn-fill">
+                    <Icon id="swap" size={14} />
                     Random Teams
                   </button>
                 </div>
               </div>
             )}
-          </Panel>
+          </Card>
         </div>
 
         {/* Scoreboard preview */}
-        <div className="xl:col-span-5">
-          <Panel title="Scoreboard Preview" icon="live" tone="navy">
-            <div className="flex flex-1 flex-col gap-4 p-5">
-              <div className="flex items-center gap-3">
+        <div className="min-w-0 xl:col-span-5">
+          <Card title="Scoreboard Preview" icon="live">
+            <div className="flex flex-1 flex-col gap-4 p-4">
+              {/* The sides hang from the top and the score is as tall as a mark, so the
+                  two marks and the score stay level when one name wraps further. */}
+              <div className={`${SIDES} items-start`}>
                 <ScorePreviewSide summary={homeSummary} placeholder="Home team" />
-                <div className="flex items-center gap-2.5">
-                  <span className="matchbook-display text-6xl font-bold tabular-nums">0</span>
-                  <span className="mb-score-box px-2 text-[0.7rem] tracking-[0.1em]">VS</span>
-                  <span className="matchbook-display text-6xl font-bold tabular-nums">0</span>
+                <div className="flex h-16 items-center gap-2 text-score font-extrabold leading-none tabular-nums">
+                  <span>0</span>
+                  <span className="chip text-ink-soft">VS</span>
+                  <span>0</span>
                 </div>
                 <ScorePreviewSide summary={awaySummary} placeholder="Away team" />
               </div>
@@ -390,91 +374,71 @@ export default function QuickMatchPage() {
                 type="button"
                 onClick={startScoring}
                 disabled={!startEnabled}
-                className="mb-btn mb-btn-coral mt-auto w-full py-3 text-[0.9rem] disabled:cursor-not-allowed disabled:opacity-40"
+                className="btn btn-ink mt-auto w-full"
               >
-                <MbIcon id="quick" size={16} />
+                <Icon id="quick" size={16} />
                 Start Scoring
               </button>
               {!startEnabled && !isGuest && (
-                <p className="text-center text-[0.72rem] text-mb-ink-muted">
+                <p className="text-center text-caption text-ink-soft">
                   Select both teams to start scoring.
                 </p>
               )}
             </div>
-          </Panel>
+          </Card>
         </div>
 
         {!isGuest && (
           <>
             {/* Recent quick matches */}
-            <div className="xl:col-span-7">
-              <Panel title="Recent Quick Matches" action="View All" href="/summaries">
+            <div className="min-w-0 xl:col-span-7">
+              <Card title="Recent Quick Matches" action="View All" href="/summaries">
                 {data.recentQuickMatches.length === 0 ? (
-                  <PanelEmpty message="No quick matches exist yet — your finished quick matches will be listed here." />
+                  <CardEmpty message="No quick matches exist yet — your finished quick matches will be listed here." />
                 ) : (
-                  <div className="flex flex-col divide-y divide-mb-rule">
-                    {data.recentQuickMatches.map((m, i) => (
-                      <div
-                        key={i}
-                        className="grid grid-cols-[44px_1fr_auto_1fr_14px] items-center gap-2 px-3 py-2.5"
-                      >
-                        <p className="matchbook-display text-[0.66rem] font-bold leading-tight text-mb-ink-muted">
-                          {m.date}
-                        </p>
-                        <TeamName team={m.home} className="justify-self-start" />
-                        <span className="matchbook-display whitespace-nowrap text-[0.95rem] font-bold tabular-nums">
-                          {m.homeScore} – {m.awayScore}
-                        </span>
-                        <TeamName team={m.away} reverse className="justify-self-end" />
-                        <span
-                          className="h-2.5 w-2.5 justify-self-end rounded-full"
-                          style={{
-                            background: m.homeWon
-                              ? "var(--mb-green)"
-                              : "var(--mb-red)",
-                          }}
-                          title={m.homeWon ? "Home team won" : "Away team won"}
+                  <ul className="divide-y divide-line">
+                    {data.recentQuickMatches.map((m) => (
+                      <li key={m.id} className="flex flex-col gap-1.5 px-4 pt-2.5 pb-3">
+                        <p className="text-center text-caption text-ink-soft">{m.date}</p>
+                        <ScoreLine
+                          home={m.home}
+                          away={m.away}
+                          homeScore={m.homeScore}
+                          awayScore={m.awayScore}
+                          winner={m.winner}
                         />
-                      </div>
+                      </li>
                     ))}
-                  </div>
+                  </ul>
                 )}
-                <div className="mt-auto border-t border-mb-rule px-4 py-2 text-center">
-                  <Link href="/summaries" className="mb-panel-link justify-center">
-                    View Full Match History
-                    <MbIcon id="chevron-right" size={11} />
-                  </Link>
-                </div>
-              </Panel>
+                <Link
+                  href="/summaries"
+                  className={`card-link mt-auto justify-center border-t border-line text-body font-bold text-action ${CARD_ROW}`}
+                >
+                  View Full Match History
+                  <Icon id="chevron-right" size={14} />
+                </Link>
+              </Card>
             </div>
 
             {/* Team form comparison */}
-            <div className="xl:col-span-5">
-              <Panel
-                title="Team Form"
-                meta={<span className="mb-kicker">Last 5 Matches</span>}
-              >
+            <div className="min-w-0 xl:col-span-5">
+              <Card title="Team Form" meta="Last 5 Matches">
                 {!homeSummary || !awaySummary ? (
-                  <PanelEmpty message="No comparison exists yet — select both teams to compare their form." />
+                  <CardEmpty message="No comparison exists yet — select both teams to compare their form." />
                 ) : (
                   <div className="flex flex-1 flex-col p-4">
-                    <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 border-b-[1.5px] border-mb-navy pb-3">
-                      <div className="flex flex-col items-center gap-1">
-                        <Crest team={homeSummary.team} size={40} />
-                        <FormLetters form={homeSummary.form} />
-                      </div>
+                    <div className={`${SIDES} items-center border-b border-line pb-3`}>
+                      <FormSide summary={homeSummary} />
                       <div className="text-center">
-                        <p className="mb-kicker">Record</p>
-                        <p className="matchbook-display text-[1.05rem] font-bold tabular-nums">
+                        <p className={LABEL}>Record</p>
+                        <p className="text-title font-bold tabular-nums">
                           {homeSummary.record} · {awaySummary.record}
                         </p>
                       </div>
-                      <div className="flex flex-col items-center gap-1">
-                        <Crest team={awaySummary.team} size={40} />
-                        <FormLetters form={awaySummary.form} />
-                      </div>
+                      <FormSide summary={awaySummary} />
                     </div>
-                    <div className="pt-2">
+                    <div className="pt-1">
                       <FormStatRow
                         left={homeSummary.won}
                         label="Wins"
@@ -498,7 +462,7 @@ export default function QuickMatchPage() {
                     </div>
                   </div>
                 )}
-              </Panel>
+              </Card>
             </div>
           </>
         )}
