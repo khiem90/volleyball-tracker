@@ -3,7 +3,7 @@
 import { memo, useCallback } from "react";
 import { motion } from "framer-motion";
 import type { PlayerPosition } from "@/lib/volleyball/types";
-import { COURT_SVG } from "@/lib/volleyball/constants";
+import { COURT_SVG, PLAYER_COLORS } from "@/lib/volleyball/constants";
 
 type PlayerNodeProps = {
   player: PlayerPosition;
@@ -17,6 +17,7 @@ const { NODE_RADIUS } = COURT_SVG;
 export const PlayerNode = memo(
   ({ player, toSvgCoords, isSelected, onSelect }: PlayerNodeProps) => {
     const coords = toSvgCoords(player.position.x, player.position.y);
+    const labelClass = PLAYER_COLORS[player.role]?.text === "ink" ? "fill-ink" : "fill-white";
 
     const handleClick = useCallback(
       (e: React.MouseEvent) => {
@@ -68,12 +69,11 @@ export const PlayerNode = memo(
           <motion.circle
             r={NODE_RADIUS + 6}
             fill="none"
-            className="stroke-primary"
+            className="stroke-ink"
             strokeWidth="3"
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ type: "spring", stiffness: 300 }}
-            filter="url(#glow)"
           />
         )}
 
@@ -82,7 +82,7 @@ export const PlayerNode = memo(
           <circle
             r={NODE_RADIUS + 3}
             fill="none"
-            className="stroke-blue-400/60"
+            className="stroke-ink-soft"
             strokeWidth="2"
             strokeDasharray="4 3"
           />
@@ -92,17 +92,15 @@ export const PlayerNode = memo(
         <circle
           r={NODE_RADIUS}
           fill={player.color}
-          stroke="white"
+          className="stroke-surface"
           strokeWidth="2"
-          className="drop-shadow-md"
         />
 
         {/* Player label */}
         <text
           textAnchor="middle"
           dominantBaseline="central"
-          className="fill-white text-sm font-bold pointer-events-none select-none"
-          style={{ textShadow: "0 1px 2px rgba(0,0,0,0.3)" }}
+          className={`${labelClass} text-sm font-bold pointer-events-none select-none`}
         >
           {player.label}
         </text>
@@ -111,7 +109,7 @@ export const PlayerNode = memo(
         <text
           y={NODE_RADIUS + 14}
           textAnchor="middle"
-          className="fill-muted-foreground text-[10px] font-medium pointer-events-none"
+          className="fill-ink-soft text-[10px] font-medium pointer-events-none"
         >
           Z{player.zone}
         </text>

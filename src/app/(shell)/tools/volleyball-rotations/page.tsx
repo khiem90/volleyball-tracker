@@ -3,8 +3,8 @@
 import { Suspense, useState, useCallback, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { MbIcon } from "@/components/matchbook/MbIcon";
-import { Panel } from "@/components/matchbook/Panel";
+import { Card, Chip, Icon, PageLoadingSpinner } from "@/components/shared";
+import { PageHeader } from "@/components/shell/PageHeader";
 import {
   VolleyballCourt,
   RotationControls,
@@ -21,7 +21,6 @@ import { isBuiltinFormation } from "@/lib/volleyball/formations";
 import { resolveFormation } from "@/lib/volleyball/formationChoice";
 import { formationIdIn } from "@/lib/volleyball/formationLinks";
 import { signInHref } from "@/lib/shell";
-import { PageLoadingSpinner } from "@/components/shared";
 
 const RotationLab = () => {
   const router = useRouter();
@@ -180,49 +179,40 @@ const RotationLab = () => {
 
   return (
     <>
-      {/* Masthead */}
-      <header className="mb-5 flex flex-wrap items-center gap-x-6 gap-y-4">
-        <div className="flex min-w-0 items-center gap-4">
-          <h1 className="matchbook-display min-w-0 text-4xl font-bold leading-none tracking-[0.01em] sm:text-5xl">
-            5-1 <span className="text-mb-coral">Rotation Lab</span>
-          </h1>
-          <div className="flex flex-col items-center border-[2px] border-mb-coral px-2.5 py-1 text-mb-coral">
-            <span className="matchbook-display text-2xl font-bold leading-none tabular-nums">
-              R{rotation}
-            </span>
-            <span className="matchbook-display text-[0.6rem] font-bold tracking-[0.18em]">
-              {mode === "serving" ? "Serve" : "Receive"}
-            </span>
-          </div>
-          <p className="mb-kicker hidden max-w-[220px] sm:block">
-            All six rotations with overlap rules, formations, and movement
-            transitions.
-          </p>
-        </div>
-
-        <div className="flex w-full flex-wrap gap-3 sm:ml-auto sm:w-auto">
-          {isAuthenticated && (
-            <Link
-              href="/tools/volleyball-rotations/my-formations"
-              className="mb-btn mb-btn-navy flex-1 sm:flex-none"
+      <PageHeader
+        title="5-1 Rotation Lab"
+        status={
+          <Chip>
+            R{rotation} • {mode === "serving" ? "Serve" : "Receive"}
+          </Chip>
+        }
+        line="All six rotations with overlap rules, formations, and movement transitions."
+        action={
+          <>
+            {/* On a phone the green button comes first and this one sits under it. */}
+            {isAuthenticated && (
+              <Link
+                href="/tools/volleyball-rotations/my-formations"
+                className="btn btn-fill order-last sm:order-none"
+              >
+                <Icon id="save" size={14} />
+                My Formations
+              </Link>
+            )}
+            <button
+              type="button"
+              onClick={isAuthenticated ? handleCreateFormation : handleSignInClick}
+              className="btn btn-action"
             >
-              <MbIcon id="save" size={14} />
-              My Formations
-            </Link>
-          )}
-          <button
-            type="button"
-            onClick={isAuthenticated ? handleCreateFormation : handleSignInClick}
-            className="mb-btn mb-btn-coral flex-1 sm:flex-none"
-          >
-            <MbIcon id="plus" size={14} />
-            Create Formation
-          </button>
-        </div>
-      </header>
+              <Icon id="plus" size={18} />
+              Create Formation
+            </button>
+          </>
+        }
+      />
 
       {/* Rotation controls strip */}
-      <div className="mb-panel mb-4 h-auto">
+      <Card className="mb-4 h-auto">
         <div className="p-4">
           <RotationControls
             rotation={rotation}
@@ -239,40 +229,36 @@ const RotationLab = () => {
             onPrev={prevRotation}
           />
         </div>
-      </div>
+      </Card>
 
       {/* Template or custom formation indicator */}
       {templateOrCustom && (
-        <div className="mb-panel mb-4 h-auto">
+        <Card className="mb-4 h-auto">
           <div className="flex flex-wrap items-center justify-between gap-3 p-4">
-            <div>
-              <p className="mb-kicker">
+            <div className="min-w-0">
+              <p className="text-caption font-medium text-ink-soft">
                 {templateOrCustom.source === "template" ? "Template Formation" : "Custom Formation"}
               </p>
-              <p className="matchbook-display text-[1rem] font-bold">
-                {templateOrCustom.name}
-              </p>
+              <p className="text-title font-bold wrap-anywhere">{templateOrCustom.name}</p>
               {templateOrCustom.description && (
-                <p className="text-[0.76rem] text-mb-ink-muted">
-                  {templateOrCustom.description}
-                </p>
+                <p className="text-label text-ink-soft">{templateOrCustom.description}</p>
               )}
             </div>
             <button
               type="button"
               onClick={() => handleFormationChange("traditional")}
-              className="mb-btn mb-btn-outline-navy px-3 py-1.5 text-[0.72rem]"
+              className="btn btn-fill"
             >
               Switch to Built-in
             </button>
           </div>
-        </div>
+        </Card>
       )}
 
-      {/* Court + guide grid */}
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
-        <div className="xl:col-span-7">
-          <Panel title="Court Diagram">
+      {/* Court + guide grid. Start-aligned so each card is as tall as what it holds. */}
+      <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-12">
+        <div className="min-w-0 xl:col-span-7">
+          <Card title="Court Diagram" icon="court">
             <div className="p-4">
               <VolleyballCourt
                 players={players}
@@ -285,11 +271,11 @@ const RotationLab = () => {
                 showArrows={showArrows}
               />
             </div>
-          </Panel>
+          </Card>
         </div>
 
-        <div className="flex flex-col gap-4 xl:col-span-5">
-          <Panel title="Position Guide">
+        <div className="flex min-w-0 flex-col gap-4 xl:col-span-5">
+          <Card title="Position Guide" icon="teams">
             <div className="p-4">
               <LegendPanel
                 players={players}
@@ -299,17 +285,17 @@ const RotationLab = () => {
                 onPlayerSelect={setSelectedPlayer}
               />
             </div>
-          </Panel>
+          </Card>
 
-          <Panel title="Rotation Notes">
+          <Card title="Rotation Notes" icon="help">
             <div className="p-4">
               <HelpAccordion />
             </div>
-          </Panel>
+          </Card>
         </div>
 
-        <div className="xl:col-span-12">
-          <Panel title="Formations">
+        <div className="min-w-0 xl:col-span-12">
+          <Card title="Formations" icon="clipboard">
             <div className="p-4">
               <FormationSelector
                 enhanced={true}
@@ -326,7 +312,7 @@ const RotationLab = () => {
                 onSignInClick={handleSignInClick}
               />
             </div>
-          </Panel>
+          </Card>
         </div>
       </div>
 

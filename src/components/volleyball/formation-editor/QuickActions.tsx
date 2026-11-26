@@ -1,6 +1,7 @@
 "use client";
 
 import { memo } from "react";
+import { GROUP_LABEL } from "../styles";
 
 type QuickActionsProps = {
   hasCopiedFrame: boolean;
@@ -16,31 +17,21 @@ export const QuickActions = memo(function QuickActions({
   onResetRotation,
 }: QuickActionsProps) {
   return (
-    <div className="space-y-2">
-      <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">
-        Quick Actions
-      </h3>
+    <div className="flex flex-col gap-2">
+      <h3 className={GROUP_LABEL}>Quick Actions</h3>
       <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={onCopyFrame}
-          className="min-h-11 px-3 py-1.5 text-sm bg-accent rounded-lg hover:bg-accent/80"
-        >
+        <button type="button" onClick={onCopyFrame} className="btn btn-fill px-4">
           Copy Frame
         </button>
         <button
           type="button"
           onClick={onPasteFrame}
           disabled={!hasCopiedFrame}
-          className="min-h-11 px-3 py-1.5 text-sm bg-accent rounded-lg hover:bg-accent/80 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="btn btn-fill px-4"
         >
           Paste Frame
         </button>
-        <button
-          type="button"
-          onClick={onResetRotation}
-          className="min-h-11 px-3 py-1.5 text-sm text-orange-600 hover:bg-orange-50 rounded-lg"
-        >
+        <button type="button" onClick={onResetRotation} className="btn btn-danger-quiet px-4">
           Reset Rotation
         </button>
       </div>

@@ -1,7 +1,8 @@
 "use client";
 
 import { memo, useState } from "react";
-import { MbIcon } from "@/components/matchbook/MbIcon";
+import { Icon } from "@/components/shared/Icon";
+import { OVERLAP_COLORS } from "@/lib/volleyball/constants";
 
 type AccordionItemProps = {
   title: string;
@@ -14,24 +15,24 @@ const AccordionItem = memo(
     const [isOpen, setIsOpen] = useState(defaultOpen);
 
     return (
-      <div className="border-b border-border last:border-b-0">
+      <div className="border-b border-line last:border-b-0">
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
-          className="w-full flex items-center justify-between py-3 px-1 text-left hover:bg-accent/30 rounded-lg transition-colors"
+          className="flex min-h-11 w-full items-center justify-between gap-2 rounded-chip px-1 py-3 text-left transition-colors hover:bg-ink/4"
           aria-expanded={isOpen}
         >
-          <span className="font-medium text-sm text-foreground">{title}</span>
-          <MbIcon
+          <span className="text-label font-medium">{title}</span>
+          <Icon
             id="chevron-down"
             size={16}
-            className={`text-muted-foreground transition-transform duration-200 ${
+            className={`shrink-0 text-ink-soft transition-transform duration-200 ${
               isOpen ? "rotate-180" : ""
             }`}
           />
         </button>
         {isOpen && (
-          <div className="pb-4 px-1 text-sm text-muted-foreground space-y-2">
+          <div className="flex flex-col gap-2 px-1 pb-4 text-label text-ink-soft">
             {children}
           </div>
         )}
@@ -41,23 +42,24 @@ const AccordionItem = memo(
 );
 AccordionItem.displayName = "AccordionItem";
 
+/** The help under the notes. It has no frame of its own: the card it sits in is the frame. */
 export const HelpAccordion = memo(() => {
   return (
-    <div className="rounded-xl border border-border bg-card p-4">
-      <h3 className="text-sm font-bold text-foreground mb-3 flex items-center gap-2">
-        <span className="w-5 h-5 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xs">
+    <div>
+      <h3 className="mb-3 flex items-center gap-2 text-label font-bold">
+        <span className="card-icon text-caption" aria-hidden="true">
           ?
         </span>
         Help & Information
       </h3>
 
-      <div className="space-y-1">
+      <div className="flex flex-col gap-1">
         <AccordionItem title="What are Rotations 1-6?" defaultOpen>
           <p>
             In volleyball, teams rotate clockwise each time they win serve. The
             6 rotations represent the 6 possible starting positions:
           </p>
-          <ul className="list-disc list-inside pl-2 mt-2 space-y-1">
+          <ul className="flex list-inside list-disc flex-col gap-1 pl-2">
             <li>
               <strong>Rotation 1:</strong> Setter serves from Zone 1 (back
               right)
@@ -78,22 +80,22 @@ export const HelpAccordion = memo(() => {
             Overlap lines show the positional constraints that must be
             maintained at the moment of serve contact (FIVB Rule 7.4):
           </p>
-          <ul className="list-disc list-inside pl-2 mt-2 space-y-1">
+          <ul className="flex list-inside list-disc flex-col gap-1 pl-2">
             <li>
-              <strong className="text-blue-600">
+              <strong style={{ color: OVERLAP_COLORS["front-back"] }}>
                 Blue dashed lines (Front/Back):
               </strong>{" "}
               Back-row players must be behind their corresponding front-row
               player
             </li>
             <li>
-              <strong className="text-amber-600">
+              <strong style={{ color: OVERLAP_COLORS["left-right"] }}>
                 Orange dotted lines (Left/Right):
               </strong>{" "}
               Middle players must be between their side players
             </li>
           </ul>
-          <p className="mt-2 text-xs">
+          <p className="text-caption">
             Note: As of 2025, overlap rules only apply to the receiving team.
           </p>
         </AccordionItem>
@@ -103,7 +105,7 @@ export const HelpAccordion = memo(() => {
             Arrows show the transition movement from serve-contact position to
             base/attack position:
           </p>
-          <ul className="list-disc list-inside pl-2 mt-2 space-y-1">
+          <ul className="flex list-inside list-disc flex-col gap-1 pl-2">
             <li>Setter moves to the setting position (right of center)</li>
             <li>Outside hitters move to their approach lanes</li>
             <li>Middle blockers move to the center for quick attacks</li>
@@ -116,7 +118,7 @@ export const HelpAccordion = memo(() => {
             The Libero is a defensive specialist who wears a different colored
             jersey:
           </p>
-          <ul className="list-disc list-inside pl-2 mt-2 space-y-1">
+          <ul className="flex list-inside list-disc flex-col gap-1 pl-2">
             <li>Replaces back-row middle blockers</li>
             <li>Cannot attack above the net or set from front court</li>
             <li>Specializes in passing and defense</li>
@@ -126,7 +128,7 @@ export const HelpAccordion = memo(() => {
 
         <AccordionItem title="Formation differences">
           <p>Different formations optimize for different situations:</p>
-          <ul className="list-disc list-inside pl-2 mt-2 space-y-1">
+          <ul className="flex list-inside list-disc flex-col gap-1 pl-2">
             <li>
               <strong>Traditional:</strong> Balanced 3-passer receive, good for
               consistent passing

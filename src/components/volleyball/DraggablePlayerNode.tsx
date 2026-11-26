@@ -49,6 +49,7 @@ export const DraggablePlayerNode = memo(
 
     const coords = toSvgCoords(position.x, position.y);
     const color = PLAYER_COLORS[role]?.bg || "gray";
+    const labelClass = PLAYER_COLORS[role]?.text === "ink" ? "fill-ink" : "fill-white";
 
     // Motion values for instant drag tracking (bypasses React re-render)
     const motionX = useMotionValue(coords.x);
@@ -278,7 +279,7 @@ export const DraggablePlayerNode = memo(
           <motion.circle
             r={NODE_RADIUS + 8}
             fill="none"
-            className="stroke-primary"
+            className="stroke-ink"
             strokeWidth="3"
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{
@@ -298,12 +299,11 @@ export const DraggablePlayerNode = memo(
           <motion.circle
             r={NODE_RADIUS + 6}
             fill="none"
-            className="stroke-primary"
+            className="stroke-ink"
             strokeWidth="3"
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ type: "spring", stiffness: 300 }}
-            filter="url(#glow)"
           />
         )}
 
@@ -312,7 +312,7 @@ export const DraggablePlayerNode = memo(
           <motion.circle
             r={NODE_RADIUS + 10}
             fill="none"
-            className="stroke-primary/50"
+            className="stroke-ink-soft"
             strokeWidth="2"
             strokeDasharray="4 4"
             initial={{ scale: 0.9, opacity: 0 }}
@@ -325,7 +325,7 @@ export const DraggablePlayerNode = memo(
           <circle
             r={NODE_RADIUS + 3}
             fill="none"
-            className="stroke-blue-400/60"
+            className="stroke-ink-soft"
             strokeWidth="2"
             strokeDasharray="4 3"
           />
@@ -335,17 +335,15 @@ export const DraggablePlayerNode = memo(
         <circle
           r={NODE_RADIUS}
           fill={color}
-          stroke="white"
+          className="stroke-surface"
           strokeWidth="2"
-          className={`drop-shadow-md ${isDragging ? "drop-shadow-lg" : ""}`}
         />
 
         {/* Player label */}
         <text
           textAnchor="middle"
           dominantBaseline="central"
-          className="fill-white text-sm font-bold pointer-events-none select-none"
-          style={{ textShadow: "0 1px 2px rgba(0,0,0,0.3)" }}
+          className={`${labelClass} text-sm font-bold pointer-events-none select-none`}
         >
           {label}
         </text>
@@ -355,7 +353,7 @@ export const DraggablePlayerNode = memo(
           <text
             y={NODE_RADIUS + 14}
             textAnchor="middle"
-            className="fill-primary text-[10px] font-medium pointer-events-none"
+            className="fill-ink text-[10px] font-medium pointer-events-none"
           >
             {position.x.toFixed(2)}, {position.y.toFixed(2)}
           </text>

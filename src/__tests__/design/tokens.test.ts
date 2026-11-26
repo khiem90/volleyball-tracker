@@ -6,12 +6,12 @@ import { describe, expect, it } from "vitest";
 import { contrastRatio } from "@/lib/contrast";
 
 /*
- * The design-system guard. Every matchbook screen is built from the mb-*
- * tokens and classes in src/app/globals.css; the old shadcn-style tokens are
- * legacy that only the volleyball tools still read. This file reads every
- * source file outside those tools and fails on anything from the forbidden
- * list below, so a dialog cannot quietly be restyled back. The list lives
- * here and nowhere else; docs/design-system.md repeats it in prose.
+ * The design-system guard. Every screen is built from the role tokens and the
+ * shared classes in src/app/globals.css. The shadcn-style tokens that came
+ * before them are deleted, and this file reads every source file, the
+ * stylesheet included, and fails on anything from the forbidden list below,
+ * so a dialog cannot quietly be restyled back. The list lives here and
+ * nowhere else; docs/design-system.md repeats it in prose.
  */
 
 /* Utilities that take a color token. */
@@ -36,9 +36,12 @@ const forbidden: Rule[] = [
     ),
   },
   {
-    /* rounded-lg is 4px and rounded-full is a circle, not a corner; both pass. */
+    /*
+     * Tailwind's own steps: rounded-md is 6px and rounded-lg is 8px.
+     * rounded-sm is 4px and rounded-full is a circle, not a corner; both pass.
+     */
     name: "radius above 4px",
-    pattern: new RegExp(`(?<![\\w-])${variants}rounded(?:-[a-z]{1,2})?-(?:xl|2xl|3xl|4xl)(?![\\w-])`, "g"),
+    pattern: new RegExp(`(?<![\\w-])${variants}rounded(?:-[a-z]{1,2})?-(?:md|lg|xl|2xl|3xl|4xl)(?![\\w-])`, "g"),
   },
   {
     name: "arbitrary radius above 4px",
@@ -83,6 +86,7 @@ describe("the forbidden list", () => {
 
   it("flags radii above 4px and dark-mode utilities", () => {
     expect(violationsIn("rounded-xl")).toEqual(["rounded-xl"]);
+    expect(violationsIn("rounded-md hover:rounded-lg")).toEqual(["rounded-md", "hover:rounded-lg"]);
     expect(violationsIn("sm:rounded-2xl rounded-t-3xl")).toEqual(["sm:rounded-2xl", "rounded-t-3xl"]);
     expect(violationsIn("rounded-[8px]")).toEqual(["rounded-[8px]"]);
     expect(violationsIn("rounded-[0.75rem]")).toEqual(["rounded-[0.75rem]"]);
@@ -107,7 +111,6 @@ describe("the forbidden list", () => {
       "rounded-[4px]",
       "rounded-[2px]",
       "rounded-sm",
-      "rounded-lg",
       "rounded-full",
       "shadow-[0_8px_22px_rgba(57,41,23,0.08)]",
       "text-primary-color-name",
@@ -298,6 +301,41 @@ describe("the typeface", () => {
 });
 
 /*
+ * The shadcn-style tokens from before the old theme. The volleyball tools were
+ * their last reader. With the names gone from the stylesheet, a class such as
+ * bg-primary or border-border draws nothing, and the radius steps are
+ * Tailwind's own again.
+ */
+describe("the legacy tokens", () => {
+  const legacyColors = [
+    "background", "foreground", "card", "card-foreground", "popover", "popover-foreground",
+    "primary", "primary-foreground", "secondary", "secondary-foreground", "muted",
+    "muted-foreground", "accent", "accent-foreground", "destructive", "border", "input", "ring",
+    "chart-1", "chart-2", "chart-3", "chart-4", "chart-5",
+  ];
+
+  it.each(legacyColors)("%s is not defined, and no utility is made from it", (name) => {
+    expect(tokens[name]).toBeUndefined();
+    expect(tokens[`color-${name}`]).toBeUndefined();
+  });
+
+  /* The old 4px base and the steps worked out from it. */
+  it("leave Tailwind's radius steps alone", () => {
+    expect(tokens.radius).toBeUndefined();
+    for (const step of ["sm", "md", "lg", "xl", "2xl", "3xl", "4xl"]) {
+      expect(tokens[`radius-${step}`], step).toBeUndefined();
+    }
+  });
+
+  /* Every element's border color and the page's ground and ink come from the role tokens. */
+  it("are not what the base layer's defaults read", () => {
+    const base = stylesheet.slice(stylesheet.indexOf("@layer base"));
+    expect(base).toMatch(/\*\s*\{\s*@apply border-line\b/);
+    expect(base).toMatch(/body\s*\{\s*@apply bg-ground text-ink;/);
+  });
+});
+
+/*
  * The folders and files that have left the old theme, relative to src. One to
  * a line, sorted by path. A ticket that moves a screen adds its line in its
  * sorted place, and from then on the two rules below hold for everything in it.
@@ -312,6 +350,7 @@ const migrated: string[] = [
   "app/(shell)/rsvp",
   "app/(shell)/summaries",
   "app/(shell)/teams",
+  "app/(shell)/tools",
   "app/login",
   "app/match",
   "components/GlobalUndoToast.tsx",
@@ -341,7 +380,9 @@ const migrated: string[] = [
   "components/ui/button.tsx",
   "components/ui/dialog.tsx",
   "components/ui/dropdown-menu.tsx",
+  "components/volleyball",
   "context/useHomeLists.ts",
+  "hooks/useFormationEditor.ts",
   "hooks/useFullscreen.ts",
   "hooks/useGuestQuickMatch.ts",
   "hooks/useLoginPage.ts",
@@ -351,6 +392,8 @@ const migrated: string[] = [
   "hooks/useTeamsData.ts",
   "hooks/useTeamsPage.ts",
   "hooks/useTournamentsPage.ts",
+  "hooks/useUserFormations.ts",
+  "hooks/useVolleyballRotation.ts",
   "hooks/useWakeLock.ts",
   "lib/dateTile.ts",
   "lib/history.ts",
@@ -365,6 +408,7 @@ const migrated: string[] = [
   "lib/teamsData.ts",
   "lib/tournamentStatus.ts",
   "lib/tournamentsPage.ts",
+  "lib/volleyball",
 ];
 
 /*
@@ -514,15 +558,10 @@ describe("the migrated folders", () => {
   });
 });
 
-describe("the source outside the volleyball tools", () => {
+describe("the whole source", () => {
   const src = fileURLToPath(new URL("../../", import.meta.url));
 
-  /* The volleyball tools keep the old tokens until their redesign. */
   const skipped = [
-    join("components", "volleyball"),
-    join("app", "(shell)", "tools", "volleyball-rotations"),
-    /* Defines the legacy token block and the base layer that reads it. */
-    join("app", "globals.css"),
     /* This file, which spells the forbidden classes out. */
     join("__tests__", "design"),
   ];
@@ -539,14 +578,15 @@ describe("the source outside the volleyball tools", () => {
     return !skipped.some((prefix) => path === prefix || path.startsWith(prefix + sep));
   });
 
-  it("reads the screens, the primitives, and the stylesheet's neighbours", () => {
+  it("reads the screens, the primitives, the volleyball tools, and the stylesheet", () => {
     const paths = sourceFiles.map((file) => relative(src, file).split(sep).join("/"));
     expect(paths).toContain("components/ui/dialog.tsx");
     expect(paths).toContain("components/shared/DeleteConfirmDialog.tsx");
     expect(paths).toContain("app/(shell)/competitions/[id]/page.tsx");
-    expect(paths).not.toContain("components/volleyball/RotationControls.tsx");
-    expect(paths).not.toContain("app/(shell)/tools/volleyball-rotations/page.tsx");
-    expect(paths).not.toContain("app/globals.css");
+    expect(paths).toContain("components/volleyball/RotationControls.tsx");
+    expect(paths).toContain("app/(shell)/tools/volleyball-rotations/page.tsx");
+    expect(paths).toContain("app/globals.css");
+    expect(paths).not.toContain("__tests__/design/tokens.test.ts");
   });
 
   it("uses no old token class, radius above 4px, or dark-mode utility", () => {

@@ -1,16 +1,36 @@
-import type { PlayerRole, PlayerInfo, CourtZone, CourtPosition } from './types';
+import { letterColor, type LetterColor } from '../teamColors';
+import type { PlayerRole, PlayerInfo, CourtZone, CourtPosition, OverlapType } from './types';
 
 /**
- * Player color scheme using OKLch for perceptual consistency
+ * The color each role is drawn in on the court and in the legend. These and
+ * the two overlap colors below are the court's own palette, outside the role
+ * tokens, because a role is told apart by its hue. Each is written as #rrggbb
+ * so a test can hold its label to 4.5 to 1. The label is ink or white,
+ * whichever stands out more.
  */
-export const PLAYER_COLORS: Record<PlayerRole, { bg: string; text: string }> = {
-  S: { bg: 'oklch(0.55 0.22 25)', text: 'white' }, // Red - Setter
-  OPP: { bg: 'oklch(0.55 0.15 250)', text: 'white' }, // Blue - Opposite
-  OH1: { bg: 'oklch(0.55 0.15 145)', text: 'white' }, // Green - Outside 1
-  OH2: { bg: 'oklch(0.60 0.12 145)', text: 'white' }, // Light Green - Outside 2
-  MB1: { bg: 'oklch(0.60 0.15 55)', text: 'white' }, // Orange - Middle 1
-  MB2: { bg: 'oklch(0.65 0.12 55)', text: 'white' }, // Light Orange - Middle 2
-  L: { bg: 'oklch(0.60 0.18 310)', text: 'white' }, // Purple - Libero
+const playerColor = (bg: string): { bg: string; text: LetterColor } => ({
+  bg,
+  text: letterColor(bg),
+});
+
+export const PLAYER_COLORS: Record<PlayerRole, { bg: string; text: LetterColor }> = {
+  S: playerColor('#d40924'), // Red - Setter
+  OPP: playerColor('#0f74c5'), // Blue - Opposite
+  OH1: playerColor('#1e7729'), // Green - Outside 1
+  OH2: playerColor('#71c575'), // Light Green - Outside 2
+  MB1: playerColor('#ef7926'), // Orange - Middle 1
+  MB2: playerColor('#fdbc6f'), // Light Orange - Middle 2
+  L: playerColor('#9543c6'), // Purple - Libero
+};
+
+/**
+ * The color of an overlap line, by the kind of rule it draws. The help text
+ * calls them the blue lines and the orange lines, and writes each name in its
+ * line's color.
+ */
+export const OVERLAP_COLORS: Record<OverlapType, string> = {
+  'front-back': '#2563eb',
+  'left-right': '#c2410c',
 };
 
 /**

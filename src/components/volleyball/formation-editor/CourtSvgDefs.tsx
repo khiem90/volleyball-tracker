@@ -5,18 +5,6 @@ import { memo } from "react";
 export const CourtSvgDefs = memo(function CourtSvgDefs() {
   return (
     <defs>
-      {/* Court gradient */}
-      <linearGradient
-        id="editorCourtGradient"
-        x1="0%"
-        y1="0%"
-        x2="0%"
-        y2="100%"
-      >
-        <stop offset="0%" stopColor="oklch(0.55 0.12 145 / 0.25)" />
-        <stop offset="100%" stopColor="oklch(0.55 0.12 145 / 0.10)" />
-      </linearGradient>
-
       {/* Arrow marker */}
       <marker
         id="editorArrowhead"
@@ -26,20 +14,8 @@ export const CourtSvgDefs = memo(function CourtSvgDefs() {
         refY="3.5"
         orient="auto"
       >
-        <polygon
-          points="0 0, 10 3.5, 0 7"
-          className="fill-primary/70"
-        />
+        <polygon points="0 0, 10 3.5, 0 7" className="fill-ink-soft" />
       </marker>
-
-      {/* Glow filter for selected elements */}
-      <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-        <feGaussianBlur stdDeviation="3" result="blur" />
-        <feMerge>
-          <feMergeNode in="blur" />
-          <feMergeNode in="SourceGraphic" />
-        </feMerge>
-      </filter>
 
       {/* Grid pattern */}
       <pattern
@@ -53,7 +29,7 @@ export const CourtSvgDefs = memo(function CourtSvgDefs() {
           fill="none"
           stroke="currentColor"
           strokeWidth="0.5"
-          className="text-foreground/5"
+          className="text-ink/15"
         />
       </pattern>
     </defs>

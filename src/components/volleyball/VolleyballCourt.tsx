@@ -74,19 +74,7 @@ export const VolleyballCourt = memo(
           tabIndex={0}
         >
           <defs>
-            {/* Court gradient */}
-            <linearGradient
-              id="courtGradient"
-              x1="0%"
-              y1="0%"
-              x2="0%"
-              y2="100%"
-            >
-              <stop offset="0%" stopColor="oklch(0.55 0.12 145 / 0.25)" />
-              <stop offset="100%" stopColor="oklch(0.55 0.12 145 / 0.10)" />
-            </linearGradient>
-
-            {/* Arrow marker */}
+            {/* Arrow markers: one for a plain arrow, one for the selected player's */}
             <marker
               id="arrowhead"
               markerWidth="10"
@@ -95,30 +83,27 @@ export const VolleyballCourt = memo(
               refY="3.5"
               orient="auto"
             >
-              <polygon
-                points="0 0, 10 3.5, 0 7"
-                className="fill-primary/70"
-              />
+              <polygon points="0 0, 10 3.5, 0 7" className="fill-ink-soft" />
             </marker>
-
-            {/* Glow filter for selected elements */}
-            <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-              <feGaussianBlur stdDeviation="3" result="blur" />
-              <feMerge>
-                <feMergeNode in="blur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
+            <marker
+              id="arrowhead-selected"
+              markerWidth="10"
+              markerHeight="7"
+              refX="9"
+              refY="3.5"
+              orient="auto"
+            >
+              <polygon points="0 0, 10 3.5, 0 7" className="fill-ink" />
+            </marker>
           </defs>
 
-          {/* Court background */}
+          {/* Court floor */}
           <rect
             x={PADDING}
             y={PADDING}
             width={WIDTH}
             height={HEIGHT}
-            fill="url(#courtGradient)"
-            stroke="oklch(0.55 0.12 145 / 0.5)"
+            className="fill-fill stroke-ink-soft"
             strokeWidth="2"
             rx="4"
           />
@@ -129,14 +114,14 @@ export const VolleyballCourt = memo(
             y1={PADDING}
             x2={PADDING + WIDTH}
             y2={PADDING}
-            className="stroke-foreground/40"
+            className="stroke-ink"
             strokeWidth="4"
           />
           <text
             x={PADDING + WIDTH / 2}
             y={PADDING - 12}
             textAnchor="middle"
-            className="fill-muted-foreground text-xs font-semibold uppercase tracking-wider"
+            className="fill-ink-soft text-xs font-semibold"
           >
             Net
           </text>
@@ -147,14 +132,14 @@ export const VolleyballCourt = memo(
             y1={attackLineY}
             x2={PADDING + WIDTH}
             y2={attackLineY}
-            className="stroke-primary/40"
+            className="stroke-ink-soft"
             strokeWidth="2"
             strokeDasharray="8 4"
           />
           <text
             x={PADDING + WIDTH + 8}
             y={attackLineY + 4}
-            className="fill-muted-foreground text-[10px] font-medium"
+            className="fill-ink-soft text-[10px] font-medium"
           >
             3m
           </text>
@@ -164,7 +149,7 @@ export const VolleyballCourt = memo(
             x={PADDING + WIDTH / 2}
             y={PADDING + HEIGHT + 18}
             textAnchor="middle"
-            className="fill-muted-foreground text-xs font-semibold uppercase tracking-wider"
+            className="fill-ink-soft text-xs font-semibold"
           >
             End Line
           </text>
@@ -175,12 +160,16 @@ export const VolleyballCourt = memo(
             y1={PADDING}
             x2={PADDING + WIDTH / 2}
             y2={PADDING + HEIGHT}
-            className="stroke-foreground/10"
+            className="stroke-ink-soft/50"
             strokeWidth="1"
             strokeDasharray="4 4"
           />
 
-          {/* Zone labels (faded in background) */}
+          {/*
+            Zone numbers, as a faint watermark on the floor. They stay under
+            4.5 to 1 on purpose: each player carries its own "Z" label, and at
+            full strength the two would run into each other in the back row.
+          */}
           {[
             { zone: 4, x: 0.17, y: 0.88 },
             { zone: 3, x: 0.5, y: 0.88 },
@@ -197,7 +186,8 @@ export const VolleyballCourt = memo(
                 y={coords.y}
                 textAnchor="middle"
                 dominantBaseline="middle"
-                className="fill-foreground/10 text-2xl font-bold select-none pointer-events-none"
+                aria-hidden="true"
+                className="fill-ink/10 text-2xl font-bold select-none pointer-events-none"
               >
                 {zone}
               </text>
@@ -206,7 +196,7 @@ export const VolleyballCourt = memo(
 
           {/* Overlap constraint lines */}
           {showOverlaps && (
-            <g className="opacity-60">
+            <g>
               {overlaps.map((overlap, i) => (
                 <OverlapLine
                   key={`overlap-${i}`}
@@ -250,7 +240,7 @@ export const VolleyballCourt = memo(
             x={PADDING + WIDTH / 2}
             y={VIEWBOX_HEIGHT - 8}
             textAnchor="middle"
-            className="fill-foreground text-sm font-bold uppercase tracking-widest"
+            className="fill-ink text-sm font-bold"
           >
             {mode === "serving" ? "Serving" : "Receiving"}
           </text>
