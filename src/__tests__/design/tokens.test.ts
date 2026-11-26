@@ -6,12 +6,13 @@ import { describe, expect, it } from "vitest";
 import { contrastRatio } from "@/lib/contrast";
 
 /*
- * The design-system guard. Every screen is built from the role tokens and the
- * shared classes in src/app/globals.css. The shadcn-style tokens that came
- * before them are deleted, and this file reads every source file, the
- * stylesheet included, and fails on anything from the forbidden list below,
- * so a dialog cannot quietly be restyled back. The list lives here and
- * nowhere else; docs/design-system.md repeats it in prose.
+ * The design-system guard. Every screen is built from the role tokens, the two
+ * scales, and the shared classes in src/app/globals.css. This file reads every
+ * source file, the stylesheet included, and fails on a name from either of the
+ * two designs that came before, on a radius that is not a step of the scale,
+ * and on a dark-mode utility, so no screen can quietly be restyled back. The
+ * lists live here and nowhere else; docs/design-system.md repeats them in
+ * prose.
  */
 
 /* Utilities that take a color token. */
@@ -36,36 +37,14 @@ const forbidden: Rule[] = [
     ),
   },
   {
-    /*
-     * Tailwind's own steps: rounded-md is 6px and rounded-lg is 8px.
-     * rounded-sm is 4px and rounded-full is a circle, not a corner; both pass.
-     */
-    name: "radius above 4px",
-    pattern: new RegExp(`(?<![\\w-])${variants}rounded(?:-[a-z]{1,2})?-(?:md|lg|xl|2xl|3xl|4xl)(?![\\w-])`, "g"),
-  },
-  {
-    name: "arbitrary radius above 4px",
-    pattern: new RegExp(`(?<![\\w-])${variants}rounded(?:-[a-z]{1,2})?-\\[(\\d*\\.?\\d+)(px|rem)\\]`, "g"),
-  },
-  {
     name: "dark-mode utility",
     pattern: new RegExp(`(?<![\\w-])dark:`, "g"),
   },
 ];
 
-/* Every forbidden class in one piece of source text, in order. */
+/* Every forbidden class in one piece of source text, rule by rule. */
 function violationsIn(text: string): string[] {
-  const found: string[] = [];
-  for (const rule of forbidden) {
-    for (const match of text.matchAll(rule.pattern)) {
-      if (rule.name === "arbitrary radius above 4px") {
-        const px = match[2] === "rem" ? Number(match[1]) * 16 : Number(match[1]);
-        if (px <= 4) continue;
-      }
-      found.push(match[0]);
-    }
-  }
-  return found;
+  return forbidden.flatMap((rule) => [...text.matchAll(rule.pattern)].map((match) => match[0]));
 }
 
 describe("the forbidden list", () => {
@@ -84,50 +63,37 @@ describe("the forbidden list", () => {
     expect(violationsIn("data-[state=open]:bg-accent")).toEqual(["data-[state=open]:bg-accent"]);
   });
 
-  it("flags radii above 4px and dark-mode utilities", () => {
-    expect(violationsIn("rounded-xl")).toEqual(["rounded-xl"]);
-    expect(violationsIn("rounded-md hover:rounded-lg")).toEqual(["rounded-md", "hover:rounded-lg"]);
-    expect(violationsIn("sm:rounded-2xl rounded-t-3xl")).toEqual(["sm:rounded-2xl", "rounded-t-3xl"]);
-    expect(violationsIn("rounded-[8px]")).toEqual(["rounded-[8px]"]);
-    expect(violationsIn("rounded-[0.75rem]")).toEqual(["rounded-[0.75rem]"]);
-    expect(violationsIn("dark:bg-mb-navy")).toEqual(["dark:"]);
+  it("flags a dark-mode utility", () => {
+    expect(violationsIn("dark:bg-ink")).toEqual(["dark:"]);
+    expect(violationsIn("sm:dark:text-white")).toEqual(["dark:"]);
   });
 
-  it("lets the matchbook utilities through", () => {
+  it("lets the role utilities through", () => {
     const allowed = [
-      "border-mb-navy",
-      "bg-mb-paper",
-      "bg-mb-paper-bright",
-      "text-mb-ink-muted",
-      "text-mb-red",
-      "ring-coral",
-      "ring-mb-coral",
-      "bg-mb-navy/55",
-      "hover:bg-mb-navy/6",
-      "data-[variant=destructive]:text-mb-red",
+      "border-line",
+      "bg-ground",
+      "bg-surface",
+      "text-ink-soft",
+      "text-danger",
+      "ring-action",
+      "bg-ink/55",
+      "hover:bg-fill",
+      "data-[variant=destructive]:text-danger",
       "border",
       "border-b",
-      "border-[1.5px]",
-      "rounded-[4px]",
-      "rounded-[2px]",
-      "rounded-sm",
+      "border-ink-soft/75",
+      "rounded-card",
       "rounded-full",
-      "shadow-[0_8px_22px_rgba(57,41,23,0.08)]",
       "text-primary-color-name",
       "focus:outline-none",
       "accent-color",
+      "darker:",
     ];
     for (const className of allowed) {
       expect(violationsIn(className), className).toEqual([]);
     }
   });
 });
-
-/*
- * The redesign's checks, from here to the next describe of the old guard.
- * They read the role tokens and the scales from the stylesheet, and they hold
- * the folders that have left the old theme to the new names.
- */
 
 describe("the contrast ratio", () => {
   it("runs from 1 for a color on itself to 21 for black on white", () => {
@@ -242,20 +208,6 @@ describe("the radius and type scales", () => {
   });
 });
 
-/*
- * The theme this design replaced named its colors by hue. Its names are caught
- * by the name ban further down. Its nine hex values and the two rgb triplets
- * its washes were mixed from are caught here.
- */
-describe("the old theme's palette", () => {
-  it("has no color left in the stylesheet", () => {
-    for (const hex of ["f7f0e4", "fffaf1", "07324d", "ee4b34", "148f89", "e6a01f", "5a347d", "16885f", "5d6c70"]) {
-      expect(stylesheet, hex).not.toContain(hex);
-    }
-    expect(stylesheet).not.toMatch(/rgba[(](?:7, 50, 77|238, 75, 52)/);
-  });
-});
-
 describe("the typeface", () => {
   const layout = readFileSync(
     fileURLToPath(new URL("../../app/layout.tsx", import.meta.url)),
@@ -319,86 +271,10 @@ describe("the legacy tokens", () => {
 });
 
 /*
- * The folders and files that have left the old theme, relative to src. One to
- * a line, sorted by path. A ticket that moves a screen adds its line in its
- * sorted place, and from then on the two rules below hold for everything in it.
- */
-const migrated: string[] = [
-  "app/(shell)/competitions/[id]/page.tsx",
-  "app/(shell)/competitions/new",
-  "app/(shell)/competitions/page.tsx",
-  "app/(shell)/layout.tsx",
-  "app/(shell)/page.tsx",
-  "app/(shell)/quick-match",
-  "app/(shell)/rsvp",
-  "app/(shell)/summaries",
-  "app/(shell)/teams",
-  "app/(shell)/tools",
-  "app/layout.tsx",
-  "app/login",
-  "app/match",
-  "components/GlobalUndoToast.tsx",
-  "components/GuestMatchComplete.tsx",
-  "components/UndoToast.tsx",
-  "components/console",
-  "components/creation",
-  "components/dialogs",
-  "components/match",
-  "components/rsvpList",
-  "components/shared/AddTeamsForm.tsx",
-  "components/shared/Brand.tsx",
-  "components/shared/Card.tsx",
-  "components/shared/Chip.tsx",
-  "components/shared/Choice.tsx",
-  "components/shared/DateTile.tsx",
-  "components/shared/MoveToSelect.tsx",
-  "components/shared/RecentForm.tsx",
-  "components/shared/ScoreLine.tsx",
-  "components/shared/StepButtons.tsx",
-  "components/shared/TeamMark.tsx",
-  "components/shared/TeamName.tsx",
-  "components/shell",
-  "components/teams",
-  "components/ui/avatar.tsx",
-  "components/ui/badge.tsx",
-  "components/ui/button.tsx",
-  "components/ui/dialog.tsx",
-  "components/ui/dropdown-menu.tsx",
-  "components/volleyball",
-  "context/useHomeLists.ts",
-  "hooks/useFormationEditor.ts",
-  "hooks/useFullscreen.ts",
-  "hooks/useGuestQuickMatch.ts",
-  "hooks/useLoginPage.ts",
-  "hooks/useMatchPage.ts",
-  "hooks/useQuickMatchData.ts",
-  "hooks/useQuickMatchPage.ts",
-  "hooks/useTeamsData.ts",
-  "hooks/useTeamsPage.ts",
-  "hooks/useTournamentsPage.ts",
-  "hooks/useUserFormations.ts",
-  "hooks/useVolleyballRotation.ts",
-  "hooks/useWakeLock.ts",
-  "lib/dateTile.ts",
-  "lib/history.ts",
-  "lib/home.ts",
-  "lib/quickMatchData.ts",
-  "lib/saveFile.ts",
-  "lib/scoreLine.ts",
-  "lib/shell.ts",
-  "lib/teamColors.ts",
-  "lib/teamShapes.ts",
-  "lib/teamStats.ts",
-  "lib/teamsData.ts",
-  "lib/tournamentStatus.ts",
-  "lib/tournamentsPage.ts",
-  "lib/volleyball",
-];
-
-/*
- * The mb prefix on a class or a token (mb-btn, text-mb-navy, --mb-rule) and on
- * a component or a type (MbIcon). Tailwind's bottom margin shares the prefix:
- * mb-4, mb-auto, mb-px, and mb-[3px] are not the old theme.
+ * The theme this design replaced put the mb prefix on a class or a token
+ * (mb-btn, text-mb-navy, --mb-rule) and on a component or a type (MbIcon).
+ * Tailwind's bottom margin shares the prefix: mb-4, mb-auto, mb-px, and
+ * mb-[3px] are not the old theme.
  */
 const mbPrefix = /(?<![A-Za-z0-9])mb-(?!(?:auto|px)(?![\w-]))[a-z][a-z0-9]*(?:-[a-z0-9]+)*|(?<![A-Z])Mb[A-Z]\w*/g;
 
@@ -408,6 +284,20 @@ const oldWords = /matchbook|oswald|outfit/gi;
 /* Every old-theme name in one piece of source text: the mb names first, then the words. */
 function oldThemeNamesIn(text: string): string[] {
   return [...text.matchAll(mbPrefix), ...text.matchAll(oldWords)].map((match) => match[0]);
+}
+
+/*
+ * The old theme's nine colors as hex, and its navy and coral as the rgb
+ * triplets its washes were written with. Its names are caught above. These
+ * are the values, which a class string or an inline style can carry under no
+ * name at all.
+ */
+const oldPalette =
+  /#(?:f7f0e4|fffaf1|07324d|ee4b34|148f89|e6a01f|5a347d|16885f|5d6c70)(?![0-9a-f])|rgba?\(\s*(?:7,\s*50,\s*77|238,\s*75,\s*52)(?!\d)/gi;
+
+/* Every old-theme color in one piece of source text. */
+function oldPaletteIn(text: string): string[] {
+  return [...text.matchAll(oldPalette)].map((match) => match[0]);
 }
 
 /* A radius utility with whatever follows it: rounded, rounded-lg, sm:rounded-t-[8px]. */
@@ -427,20 +317,6 @@ function radiiOffTheScaleIn(text: string): string[] {
   return [...text.matchAll(radiusUtility)]
     .map((match) => match[0])
     .filter((utility) => !onTheScale.test(utility));
-}
-
-const sourceRoot = fileURLToPath(new URL("../../", import.meta.url));
-const sourceFile = /\.(tsx?|css)$/;
-
-/* The source files a list names: a listed file as it is, a listed folder with everything under it. */
-function sourceFilesIn(entries: string[]): string[] {
-  return entries.flatMap((entry) => {
-    const path = join(sourceRoot, entry);
-    if (sourceFile.test(entry)) return [path];
-    return readdirSync(path, { recursive: true, encoding: "utf8" })
-      .filter((name) => sourceFile.test(name))
-      .map((name) => join(path, name));
-  });
 }
 
 describe("the old theme's names", () => {
@@ -482,6 +358,32 @@ describe("the old theme's names", () => {
   });
 });
 
+describe("the old theme's palette", () => {
+  it("flags its colors as hex and as the triplets of its washes", () => {
+    expect(oldPaletteIn('themeColor: "#f7f0e4"')).toEqual(["#f7f0e4"]);
+    expect(oldPaletteIn("border-[#07324D] text-[#EE4B34]")).toEqual(["#07324D", "#EE4B34"]);
+    expect(oldPaletteIn("hover:bg-[rgba(7,50,77,0.04)]")).toEqual(["rgba(7,50,77"]);
+    expect(oldPaletteIn("background: rgba(238, 75, 52, 0.06);")).toEqual(["rgba(238, 75, 52"]);
+    expect(oldPaletteIn("rgb(7 50 77)")).toEqual([]);
+  });
+
+  it("lets the role tokens' values and other colors through", () => {
+    const allowed = [
+      "#f1f3f4",
+      "#087a4d",
+      "#cf3f32",
+      "#eab308",
+      "rgba(0, 0, 0, 0.1)",
+      "rgba(7, 50, 770, 1)",
+      "#07324d1",
+      "id 07324d",
+    ];
+    for (const text of allowed) {
+      expect(oldPaletteIn(text), text).toEqual([]);
+    }
+  });
+});
+
 describe("the named radius rule", () => {
   it("flags a radius that is not a step of the scale", () => {
     expect(radiiOffTheScaleIn("rounded-lg")).toEqual(["rounded-lg"]);
@@ -513,82 +415,75 @@ describe("the named radius rule", () => {
   });
 });
 
-describe("the migrated folders", () => {
-  it("are listed one to a line and sorted by path", () => {
-    expect(migrated).toEqual([...new Set(migrated)].sort());
+/* Where the guard looks: every .ts, .tsx, and .css file under src, apart from its own folder. */
+const src = fileURLToPath(new URL("../../", import.meta.url));
+
+/* This folder, whose files spell the forbidden names out. */
+const ownFolder = join("__tests__", "design");
+
+const walk = (dir: string, wanted: RegExp): string[] =>
+  readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const file = join(dir, entry.name);
+    if (entry.isDirectory()) return walk(file, wanted);
+    return wanted.test(entry.name) ? [file] : [];
   });
 
-  it("are read file by file, a folder with everything under it", () => {
-    const paths = sourceFilesIn(["app/layout.tsx", "components/ui"]).map((file) =>
-      relative(sourceRoot, file).split(sep).join("/"),
-    );
-    expect(paths).toContain("app/layout.tsx");
-    expect(paths).toContain("components/ui/dialog.tsx");
-    expect(paths).not.toContain("app/globals.css");
-    expect(paths).not.toContain("components/shared/DeleteConfirmDialog.tsx");
-  });
+const pathOf = (file: string) => relative(src, file).split(sep).join("/");
 
-  it("use no old-theme name and no radius off the scale", () => {
-    const offenders: string[] = [];
-    for (const file of sourceFilesIn(migrated)) {
-      const lines = readFileSync(file, "utf8").split("\n");
-      lines.forEach((line, index) => {
-        for (const hit of [...oldThemeNamesIn(line), ...radiiOffTheScaleIn(line)]) {
-          offenders.push(`${relative(sourceRoot, file).split(sep).join("/")}:${index + 1} ${hit}`);
-        }
-      });
-    }
-    expect(offenders).toEqual([]);
-  });
+const sourceFiles = walk(src, /\.(tsx?|css)$/).filter((file) => {
+  const path = relative(src, file);
+  return path !== ownFolder && !path.startsWith(ownFolder + sep);
 });
 
+/* What a check finds in one file's text, each hit as "path:line hit". */
+function hitsIn(path: string, text: string, check: (line: string) => string[]): string[] {
+  return text.split("\n").flatMap((line, index) => check(line).map((hit) => `${path}:${index + 1} ${hit}`));
+}
+
+/* Every hit of a check across the source. */
+const offendersOf = (check: (line: string) => string[]): string[] =>
+  sourceFiles.flatMap((file) => hitsIn(pathOf(file), readFileSync(file, "utf8"), check));
+
 describe("the whole source", () => {
-  const src = fileURLToPath(new URL("../../", import.meta.url));
-
-  const skipped = [
-    /* This file, which spells the forbidden classes out. */
-    join("__tests__", "design"),
-  ];
-
-  const walk = (dir: string): string[] =>
-    readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-      const file = join(dir, entry.name);
-      if (entry.isDirectory()) return walk(file);
-      return /\.(tsx?|css)$/.test(entry.name) ? [file] : [];
-    });
-
-  const sourceFiles = walk(src).filter((file) => {
-    const path = relative(src, file);
-    return !skipped.some((prefix) => path === prefix || path.startsWith(prefix + sep));
-  });
-
-  it("reads the screens, the primitives, the volleyball tools, and the stylesheet", () => {
-    const paths = sourceFiles.map((file) => relative(src, file).split(sep).join("/"));
+  it("is every source file, the stylesheet, and the tests outside this folder", () => {
+    const paths = sourceFiles.map(pathOf);
     expect(paths).toContain("components/ui/dialog.tsx");
     expect(paths).toContain("components/shared/DeleteConfirmDialog.tsx");
+    expect(paths).toContain("components/motion/index.tsx");
+    expect(paths).toContain("context/AuthContext.tsx");
     expect(paths).toContain("app/(shell)/competitions/[id]/page.tsx");
     expect(paths).toContain("components/volleyball/RotationControls.tsx");
     expect(paths).toContain("app/(shell)/tools/volleyball-rotations/page.tsx");
     expect(paths).toContain("app/globals.css");
-    expect(paths).not.toContain("__tests__/design/tokens.test.ts");
+    expect(paths).toContain("__tests__/shell/shell.test.ts");
+    expect(paths.filter((path) => path.startsWith("__tests__/design/"))).toEqual([]);
   });
 
-  it("uses no old token class, radius above 4px, or dark-mode utility", () => {
-    const offenders: string[] = [];
-    for (const file of sourceFiles) {
-      const lines = readFileSync(file, "utf8").split("\n");
-      lines.forEach((line, index) => {
-        for (const hit of violationsIn(line)) {
-          offenders.push(`${relative(src, file).split(sep).join("/")}:${index + 1} ${hit}`);
-        }
-      });
-    }
-    expect(offenders).toEqual([]);
+  it("is reported by file and line", () => {
+    const text = 'import { Icon } from "@/components/shared";\n<MbIcon className="rounded-lg mb-btn" />\n';
+    expect(hitsIn("a/b.tsx", text, oldThemeNamesIn)).toEqual(["a/b.tsx:2 MbIcon", "a/b.tsx:2 mb-btn"]);
+    expect(hitsIn("a/b.tsx", text, radiiOffTheScaleIn)).toEqual(["a/b.tsx:2 rounded-lg"]);
+    expect(hitsIn("a/b.tsx", text, violationsIn)).toEqual([]);
+  });
+
+  it("uses no old token class and no dark-mode utility", () => {
+    expect(offendersOf(violationsIn)).toEqual([]);
+  });
+
+  it("uses no name from the old theme", () => {
+    expect(offendersOf(oldThemeNamesIn)).toEqual([]);
+  });
+
+  it("uses no color from the old theme's palette", () => {
+    expect(offendersOf(oldPaletteIn)).toEqual([]);
+  });
+
+  it("uses no radius off the scale", () => {
+    expect(offendersOf(radiiOffTheScaleIn)).toEqual([]);
   });
 });
 
 describe("the icon sprite", () => {
-  const src = fileURLToPath(new URL("../../", import.meta.url));
   const icons = fileURLToPath(new URL("../../../public/assets/icons/", import.meta.url));
   const sprite = readFileSync(join(icons, "sprite.svg"), "utf8");
 
@@ -607,8 +502,8 @@ describe("the icon sprite", () => {
 
   /* The places source names a glyph. Group 1 is a bare string, group 2 an expression. */
   const askingPatterns = [
-    /* The id of an icon tag, under either name of the component. */
-    /<(?:Mb)?Icon\b[^>]*?\sid=(?:"([^"]*)"|\{([^}]*)\})/g,
+    /* The id of an icon tag. */
+    /<Icon\b[^>]*?\sid=(?:"([^"]*)"|\{([^}]*)\})/g,
     /* An icon prop, key, or default: icon="x", filledIcon: "x", icon = "x", icon={a ? "x" : "y"}. */
     /\b\w*[iI]con\s*[:=]\s*(?:"([a-z]+(?:-[a-z]+)*)"|\{([^}]*)\})/g,
     /* A lookup table of glyphs: const STAT_ICONS = { Wins: "compete" }. */
@@ -672,7 +567,6 @@ describe("the icon sprite", () => {
 
   it("reads the ids a piece of source asks for", () => {
     expect(iconIdsIn('<Icon id="trash" size={14} />')).toEqual(["trash"]);
-    expect(iconIdsIn('<MbIcon id="chevron-left" size={20} />')).toEqual(["chevron-left"]);
     expect(iconIdsIn('<Icon\n  id="chevron-down"\n  size={13}\n/>')).toEqual(["chevron-down"]);
     expect(iconIdsIn('<Icon id={copied ? "check" : "clipboard"} size={14} />')).toEqual([
       "check",
@@ -763,23 +657,10 @@ describe("the icon sprite", () => {
   });
 
   it("has every icon id the source asks for", () => {
-    const walk = (dir: string): string[] =>
-      readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-        const file = join(dir, entry.name);
-        if (entry.isDirectory()) return walk(file);
-        return /\.tsx?$/.test(entry.name) ? [file] : [];
-      });
-    /* This file spells out ids no sprite has. */
-    const guard = join("__tests__", "design") + sep;
-
     const offenders: string[] = [];
-    for (const file of walk(src)) {
-      const path = relative(src, file);
-      if (path.startsWith(guard)) continue;
+    for (const file of sourceFiles.filter((name) => /\.tsx?$/.test(name))) {
       const asked = iconIdsIn(readFileSync(file, "utf8"));
-      for (const id of missingFrom(sprite, asked)) {
-        offenders.push(`${path.split(sep).join("/")} ${id}`);
-      }
+      for (const id of missingFrom(sprite, asked)) offenders.push(`${pathOf(file)} ${id}`);
     }
     expect(offenders).toEqual([]);
   });
