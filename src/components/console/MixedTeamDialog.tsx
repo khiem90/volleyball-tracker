@@ -16,7 +16,8 @@ import type { TeamRow } from "@/lib/console";
 import type { MixedTeamEdit } from "@/lib/entries";
 import { RSVP_NAME_MAX } from "@/lib/rsvp";
 import { plural } from "@/lib/utils";
-import { LABEL, ROW_BUTTON } from "./parts";
+import { ROW_BUTTON } from "./parts";
+import { LABEL } from "@/components/shared/classes";
 
 /**
  * The team's name with Save, offered once the field holds a name that

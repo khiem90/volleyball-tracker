@@ -1,3 +1,4 @@
+import { shortDate } from "@/lib/dates";
 import { entryTeams } from "@/lib/entries";
 import { FORMAT_LABELS, isBracketFormat, isRotationFormat } from "@/lib/formats";
 import { calculateStandings } from "@/lib/roundRobin";
@@ -59,12 +60,8 @@ export const tournamentRows = (tournaments: Tournament[], matches: Match[]): Tou
 export interface BracketCell {
   home: Team | null;
   away: Team | null;
-  homeScore: number;
-  awayScore: number;
-  homeWon: boolean;
-  awayWon: boolean;
-  live: boolean;
-  pending: boolean;
+  /** What its tile shows, by the rule every score line reads. */
+  line: MatchLine;
 }
 
 export interface BracketRound {
@@ -113,9 +110,6 @@ export interface SelectedTournament {
   seriesLabel: string;
 }
 
-const shortDate = (ts?: number) =>
-  ts ? new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "TBD";
-
 const roundLabel = (round: number, maxRound: number, cellsInRound: number): string => {
   if (round === maxRound) return cellsInRound > 1 ? `Round ${round}` : "Final";
   if (round === maxRound - 1 && cellsInRound <= 2) return "Semifinals";
@@ -137,12 +131,7 @@ const smallBracket = (matches: Match[], teamOf: (teamId: string) => Team): Brack
       .map((m) => ({
         home: m.homeTeamId ? teamOf(m.homeTeamId) : null,
         away: m.awayTeamId ? teamOf(m.awayTeamId) : null,
-        homeScore: m.homeScore,
-        awayScore: m.awayScore,
-        homeWon: m.winnerId === m.homeTeamId && m.status === "completed",
-        awayWon: m.winnerId === m.awayTeamId && m.status === "completed",
-        live: m.status === "in_progress",
-        pending: m.status === "pending",
+        line: matchLine(m),
       }));
     if (cells.length > 0) rounds.push({ label: roundLabel(round, maxRound, cells.length), cells });
   }

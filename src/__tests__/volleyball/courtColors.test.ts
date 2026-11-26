@@ -1,11 +1,12 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { contrastRatio } from "@/lib/contrast";
+import { INK } from "@/lib/teamColors";
 import { OVERLAP_COLORS, PLAYER_COLORS, PLAYER_INFO } from "@/lib/volleyball/constants";
 import type { PlayerRole } from "@/lib/volleyball/types";
 
-/* What each letter color paints, from the spec's token table. */
-const LETTER = { ink: "#15181b", white: "#ffffff" };
+/* What each letter color paints. Ink is the app's own, which teamColors.test.ts holds to the stylesheet. */
+const LETTER = { ink: INK, white: "#ffffff" };
 const SURFACE = "#ffffff";
 
 const roles = Object.keys(PLAYER_COLORS) as PlayerRole[];

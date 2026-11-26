@@ -7,12 +7,10 @@ import {
   settingsUsedBy,
   type TournamentSetup,
 } from "@/lib/creation";
+import { LABEL } from "@/components/shared/classes";
 
 const COURT_CHOICES = [1, 2, 3, 4];
 const SERIES_CHOICES = [1, 3, 5, 7];
-
-/** The label above a control. */
-const LABEL = "text-caption font-medium text-ink-soft";
 
 const PointsField = ({
   id,

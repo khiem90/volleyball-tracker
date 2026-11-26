@@ -2,11 +2,11 @@
 
 import { StepButtons } from "@/components/shared";
 import { epochToWallClock, timeLabel, wallClockToEpoch } from "@/lib/rsvp";
+import { LABEL } from "@/components/shared/classes";
 
 const MAX_CAPACITY = 999;
 
-/** The label above a control, and the note under one. The setup form writes its own fields with the same two. */
-export const FIELD_LABEL = "text-caption font-medium text-ink-soft";
+/** The note under a control. The setup form writes its own fields with it and the shared label. */
 export const FIELD_NOTE = "text-caption text-ink-soft";
 
 const Problem = ({ id, problem }: { id: string; problem?: string }) =>
@@ -48,7 +48,7 @@ export const DateTimeField = ({
   const owner = value !== null && setZone ? timeLabel(value, setZone, zone).owner : null;
   return (
     <label htmlFor={id} className="flex flex-col gap-1.5">
-      <span className={FIELD_LABEL}>{label}</span>
+      <span className={LABEL}>{label}</span>
       <span className={`field ${problem ? "border-danger" : ""}`}>
         <input
           id={id}
@@ -85,7 +85,7 @@ export const CapacityField = ({
   const clamp = (n: number) => Math.max(0, Math.min(MAX_CAPACITY, n));
   return (
     <div className="flex flex-col gap-1.5">
-      <label htmlFor={id} className={FIELD_LABEL}>
+      <label htmlFor={id} className={LABEL}>
         Capacity
       </label>
       <div className="flex gap-2">

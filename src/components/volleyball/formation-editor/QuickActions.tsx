@@ -1,7 +1,7 @@
 "use client";
 
 import { memo } from "react";
-import { GROUP_LABEL } from "../styles";
+import { LABEL } from "@/components/shared/classes";
 
 type QuickActionsProps = {
   hasCopiedFrame: boolean;
@@ -18,7 +18,7 @@ export const QuickActions = memo(function QuickActions({
 }: QuickActionsProps) {
   return (
     <div className="flex flex-col gap-2">
-      <h3 className={GROUP_LABEL}>Quick Actions</h3>
+      <h3 className={LABEL}>Quick Actions</h3>
       <div className="flex flex-wrap gap-2">
         <button type="button" onClick={onCopyFrame} className="btn btn-fill px-4">
           Copy Frame

@@ -210,9 +210,13 @@ export default function TeamsPage() {
 
   return (
     <>
-      {/* The page has no main action. A team is added in the directory card's own strip. */}
+      {/*
+        The page has no main action. A team is added in the directory card's
+        own strip. The page and that card are both titled Team Directory, as
+        they were before the redesign.
+      */}
       <PageHeader
-        title="Teams"
+        title="Team Directory"
         status={<Chip className="tabular-nums">{plural(data.teamCount, "team")}</Chip>}
         line={
           <span suppressHydrationWarning>

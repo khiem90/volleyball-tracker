@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import sharp from "sharp";
 import { describe, expect, it } from "vitest";
 import { CREST_SRC } from "@/lib/assetPaths";
+import { token } from "./stylesheet";
 
 /*
  * The brand outside the page: what a phone shows when the app is installed
@@ -15,14 +16,6 @@ import { CREST_SRC } from "@/lib/assetPaths";
 const pathTo = (fromRoot: string): string =>
   fileURLToPath(new URL(`../../../${fromRoot}`, import.meta.url));
 const read = (fromRoot: string): string => readFileSync(pathTo(fromRoot), "utf8");
-
-/* A role token's value in the stylesheet: "--surface: #ffffff;" gives #ffffff. */
-const stylesheet = read("src/app/globals.css");
-const token = (role: string): string => {
-  const value = stylesheet.match(new RegExp(`--${role}:\\s*([^;]+);`))?.[1].trim();
-  if (!value) throw new Error(`no --${role} in globals.css`);
-  return value;
-};
 
 const manifest = JSON.parse(read("public/manifest.json")) as {
   theme_color: string;

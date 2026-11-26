@@ -6,6 +6,7 @@ import { useApp } from "@/context/AppContext";
 import { useAuth } from "@/context/AuthContext";
 import { useHomeLists } from "@/context/useHomeLists";
 import {
+  CARD_FOOT_LINK,
   CARD_ROW,
   Card,
   CardEmpty,
@@ -20,6 +21,7 @@ import { PageHeader } from "@/components/shell/PageHeader";
 import { MatchRow } from "@/components/console/MatchRow";
 import { teamLookup } from "@/components/console/teamRefs";
 import { courtsWord } from "@/lib/console";
+import { shortDate, todayLine } from "@/lib/dates";
 import { formatLabel, isRotationFormat } from "@/lib/formats";
 import { playedIn } from "@/lib/history";
 import {
@@ -40,7 +42,7 @@ const whenLabel = (ts: number | undefined) => {
   const date = new Date(ts);
   return date.toDateString() === new Date().toDateString()
     ? date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
-    : date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    : shortDate(ts);
 };
 
 /* A row that opens something: its words on the left and one thing on the right. */
@@ -241,7 +243,7 @@ const ResultsCard = ({ results, error }: { results: RecentResult[]; error: strin
     )}
     <Link
       href="/summaries"
-      className={`card-link justify-center border-t border-line text-body font-bold text-action ${CARD_ROW}`}
+      className={CARD_FOOT_LINK}
     >
       Every result in History
       <Icon id="chevron-right" size={14} />
@@ -293,11 +295,7 @@ export default function HomePage() {
     return <PageLoadingSpinner />;
   }
 
-  const today = new Date().toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-  });
+  const today = todayLine();
 
   return (
     <>

@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { ConfirmDialog } from "@/components/console/ConfirmDialog";
-import { FIELD_LABEL, FIELD_NOTE } from "@/components/rsvpList/RsvpFields";
+import { FIELD_NOTE } from "@/components/rsvpList/RsvpFields";
 import { RsvpRows, RsvpSectionHead } from "@/components/rsvpList/RsvpRows";
 import { Card, CardEmpty, CardError, Icon, InlineSpinner } from "@/components/shared";
 import { RSVP_NAME_MAX, rsvpEntryProblems } from "@/lib/rsvp";
@@ -10,6 +10,7 @@ import type { ListWording } from "@/lib/rsvpList";
 import type { Rsvp, RsvpTakes } from "@/types/game";
 import type { ListOwnerControls } from "./useListOwnerControls";
 import type { ListRsvpView } from "./useListRsvpView";
+import { LABEL } from "@/components/shared/classes";
 
 /**
  * The owner's box for a held spot: a name for someone without an account,
@@ -48,7 +49,7 @@ const HeldSpotForm = ({
 
   return (
     <form onSubmit={add} className="flex flex-col gap-1.5 border-b border-line p-4">
-      <label htmlFor="list-held-spot-name" className={FIELD_LABEL}>
+      <label htmlFor="list-held-spot-name" className={LABEL}>
         {wording.label}
       </label>
       <div className="flex gap-2">

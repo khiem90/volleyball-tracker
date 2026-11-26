@@ -34,6 +34,7 @@ import {
 } from "@/lib/history";
 import { csvFile, saveFile } from "@/lib/saveFile";
 import { plural } from "@/lib/utils";
+import { LABEL } from "@/components/shared/classes";
 
 /** How many rows a list shows before Show more, and how many more each tap adds. */
 const ITEMS_PAGE = 10;
@@ -53,9 +54,6 @@ const dateLabel = (ts: number) =>
 /** "7:42 PM": the ledger's day heading already gives the date. */
 const timeLabel = (ts: number | undefined) =>
   ts ? new Date(ts).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : "";
-
-/* The caption over a filter or the search field. */
-const FIELD_LABEL = "text-caption font-medium text-ink-soft";
 
 /** The foot of a list that has more rows than it shows. */
 const ShowMore = ({ hidden, onClick }: { hidden: number; onClick: () => void }) => (
@@ -163,7 +161,7 @@ const FilterSelect = ({
   onChange: (value: string) => void;
 }) => (
   <label className="flex min-w-0 flex-col gap-1">
-    <span className={FIELD_LABEL}>{label}</span>
+    <span className={LABEL}>{label}</span>
     <span className="relative">
       <select className="field-select" value={value} onChange={(e) => onChange(e.target.value)}>
         <option value="">{all}</option>
@@ -258,7 +256,7 @@ const LedgerCard = ({ rows, error }: { rows: LedgerRow[]; error: string | null }
               onChange={(teamId) => filter({ teamId })}
             />
             <label className="flex min-w-0 flex-col gap-1 sm:col-span-2">
-              <span className={FIELD_LABEL}>Search</span>
+              <span className={LABEL}>Search</span>
               <span className="field">
                 <input
                   type="search"

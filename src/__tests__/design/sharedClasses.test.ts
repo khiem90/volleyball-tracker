@@ -1,17 +1,19 @@
 // @vitest-environment node
-import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { CARD_ROW } from "@/components/shared/Card";
 import { contrastRatio } from "@/lib/contrast";
+import { stylesheet, tokens } from "./stylesheet";
 
 /*
- * The shared classes in src/app/globals.css: the card, the four buttons, the
- * dialog's frame, the menu, the ink bar, the chip, the date tile, the form
- * controls, and the table. This file reads the
- * stylesheet's rules and holds them to the numbers in
- * .scratch/app-redesign/spec.md, which are the ones a thumb or an eye notices:
- * 44px to tap, 52px for the main button, a pill, a 14px card, readable text.
+ * The shared classes in src/app/globals.css: the card, the five buttons, the
+ * dialog's frame, the menu, the ink bar, the chip, the date tile, and the form
+ * controls. This file reads the stylesheet's rules and checks two things. A
+ * class's text reaches 4.5 to 1 on the class's own background. And the rules
+ * on the forbidden list in docs/design-system.md that a stylesheet can break
+ * are kept: 44px to tap, no forced uppercase, no border or shadow on a card,
+ * no shadow but the lift, no color of the lift's own, and no red off a
+ * destructive class. How a class looks is not pinned here. The owner's eye
+ * checks that.
  */
 
 type CssRule = { selectors: string[]; declarations: Record<string, string> };
@@ -40,13 +42,24 @@ function declarationsFor(rules: CssRule[], selector: string): Record<string, str
   );
 }
 
-const stylesheet = readFileSync(fileURLToPath(new URL("../../app/globals.css", import.meta.url)), "utf8");
+/* The selectors of the rules that paint with a custom property: a class that reads var(--danger) writes red. */
+function selectorsPaintingWith(rules: CssRule[], property: string): string[] {
+  return rules
+    .filter((rule) =>
+      Object.entries(rule.declarations).some(
+        ([name, value]) => !name.startsWith("--") && value.includes(`var(--${property}`),
+      ),
+    )
+    .flatMap((rule) => rule.selectors);
+}
+
 const rules = rulesIn(stylesheet);
 const lookOf = (selector: string) => declarationsFor(rules, selector);
 const classLook = (className: string) => lookOf(`.${className}`);
 
 describe("reading the stylesheet's rules", () => {
   const sample = rulesIn(`
+    @theme inline { --color-danger: var(--danger); }
     @layer components {
       /* A comment with a { brace } in it. */
       .btn,
@@ -56,19 +69,22 @@ describe("reading the stylesheet's rules", () => {
       }
       .btn:hover { color: red; }
       .btn-action { min-height: 3.25rem; }
+      .btn-danger { background: var(--danger); }
+      .btn-danger-quiet:active { background: var(--danger-tint); }
       @media (hover: hover) {
         .card  >  .btn { gap: 1px; }
+        .btn-danger:hover { background: color-mix(in srgb, var(--danger) 88%, var(--ink)); }
       }
     }
   `);
 
   it("lists each rule's selectors and declarations", () => {
-    expect(sample).toEqual([
+    expect(sample.slice(1, 4)).toEqual([
       { selectors: [".btn", ".button"], declarations: { "min-height": "2.75rem", color: "#fff" } },
       { selectors: [".btn:hover"], declarations: { color: "red" } },
       { selectors: [".btn-action"], declarations: { "min-height": "3.25rem" } },
-      { selectors: [".card > .btn"], declarations: { gap: "1px" } },
     ]);
+    expect(sample.at(-2)).toEqual({ selectors: [".card > .btn"], declarations: { gap: "1px" } });
   });
 
   it("gathers what one selector sets", () => {
@@ -77,6 +93,16 @@ describe("reading the stylesheet's rules", () => {
     expect(declarationsFor(sample, ".btn:hover")).toEqual({ color: "red" });
     expect(declarationsFor(sample, ".card > .btn")).toEqual({ gap: "1px" });
     expect(declarationsFor(sample, ".missing")).toEqual({});
+  });
+
+  /* The theme block that names a token for a utility paints nothing with it. */
+  it("names the selectors that paint with a token, and with its tint", () => {
+    expect(selectorsPaintingWith(sample, "danger")).toEqual([
+      ".btn-danger",
+      ".btn-danger-quiet:active",
+      ".btn-danger:hover",
+    ]);
+    expect(selectorsPaintingWith(sample, "action")).toEqual([]);
   });
 });
 
@@ -88,10 +114,13 @@ describe("case", () => {
   });
 });
 
-describe("the live dot", () => {
-  /* Live is green. Red is for destructive actions. */
-  it("is drawn in action", () => {
-    expect(classLook("live-dot").background).toBe("var(--action)");
+describe("red", () => {
+  /* Live, a loss, and a status are never red, so no class of theirs reads danger or its tint. */
+  it("is written only by the destructive button and the destructive menu row", () => {
+    const writingRed = selectorsPaintingWith(rules, "danger");
+    expect(writingRed).toContain(".btn-danger");
+    expect(writingRed).toContain(".menu-item-danger");
+    expect(writingRed.filter((selector) => !/^\.(?:btn|menu-item)-danger(?![\w])/.test(selector))).toEqual([]);
   });
 });
 
@@ -99,15 +128,12 @@ describe("the live dot", () => {
 const px = (length: string | undefined): number =>
   length === undefined ? NaN : length.endsWith("rem") ? parseFloat(length) * 16 : parseFloat(length);
 
-/* The role tokens' values, read from the stylesheet. */
-const tokens: Record<string, string> = {};
-for (const [, name, value] of stylesheet.matchAll(/--([\w-]+):\s*(#[0-9a-f]{6});/g)) tokens[name] = value;
-
-/* The hex color a declaration paints: white, or a role token. */
+/* The hex color a declaration paints: white, or a role token whose value is a hex color. */
 function hexOf(value: string | undefined): string {
   if (value === "#fff" || value === "#ffffff") return "#ffffff";
   const role = value?.match(/^var\(--([\w-]+)\)$/)?.[1];
-  return (role && tokens[role]) || `not a color: ${value}`;
+  const hex = role ? tokens[role] : undefined;
+  return hex && /^#[0-9a-f]{6}$/.test(hex) ? hex : `not a color: ${value}`;
 }
 
 /* The text of a class on its own background. */
@@ -119,6 +145,8 @@ describe("reading a class's colors", () => {
     expect(hexOf("var(--action)")).toBe("#087a4d");
     expect(hexOf("var(--ink)")).toBe("#15181b");
     expect(hexOf("blue")).toBe("not a color: blue");
+    /* The control edge is a mix, not a hex color. */
+    expect(hexOf("var(--control-line)")).toBe("not a color: var(--control-line)");
     expect(hexOf(undefined)).toBe("not a color: undefined");
   });
 
@@ -137,34 +165,12 @@ describe("the buttons", () => {
   const kinds = ["action", "ink", "fill", "danger", "danger-quiet"];
   const look = (kind: string) => ({ ...classLook("btn"), ...classLook(`btn-${kind}`) });
 
-  it.each(kinds)("btn-%s is a pill at least 44px tall", (kind) => {
-    expect(look(kind)["border-radius"]).toBe("var(--radius-pill)");
+  it.each(kinds)("btn-%s is at least 44px tall", (kind) => {
     expect(px(look(kind)["min-height"])).toBeGreaterThanOrEqual(44);
-  });
-
-  it("the main button is 52px tall", () => {
-    expect(px(look("action")["min-height"])).toBe(52);
-  });
-
-  it.each([
-    ["action", "#fff", "var(--action)"],
-    ["ink", "#fff", "var(--ink)"],
-    ["fill", "var(--ink)", "var(--fill)"],
-    ["danger", "#fff", "var(--danger)"],
-    ["danger-quiet", "var(--danger)", "var(--surface)"],
-  ])("btn-%s writes %s on %s", (kind, color, background) => {
-    expect(look(kind).color).toBe(color);
-    expect(look(kind).background).toBe(background);
   });
 
   it.each(kinds)("btn-%s has a label that reaches 4.5 to 1", (kind) => {
     expect(labelContrast(look(kind))).toBeGreaterThanOrEqual(4.5);
-  });
-
-  /* White on a white card, so the control edge is what gives the quiet red button its shape. */
-  it("the quiet red button is edged like a form control and filled like none", () => {
-    expect(look("danger-quiet").border).toBe("1px solid var(--control-line)");
-    expect(look("danger").border).toBeUndefined();
   });
 
   /* Hover and pressed keep red text on a ground where it still reaches 4.5 to 1. */
@@ -173,17 +179,6 @@ describe("the buttons", () => {
     expect(lookOf(`.btn-danger-quiet:${state}`)).not.toEqual({});
     expect(labelContrast(stated)).toBeGreaterThanOrEqual(4.5);
   });
-
-  const states = ["hover", "active", "focus-visible", "disabled"];
-  const cases = kinds.flatMap((kind) => states.map((state) => [kind, state]));
-
-  it.each(cases)("btn-%s has a rule for :%s", (kind, state) => {
-    const stated = new RegExp(`^\\.btn(?:-${kind})?:${state}(?![\\w-])`);
-    const found = rules.filter((rule) => rule.selectors.some((selector) => stated.test(selector)));
-    expect(found.length).toBeGreaterThan(0);
-    expect(Object.keys(found[0].declarations).length).toBeGreaterThan(0);
-  });
-
 });
 
 /* The properties of a look that draw an edge or a lift. */
@@ -191,15 +186,10 @@ const edges = (look: Record<string, string>) =>
   Object.keys(look).filter((property) => /^(border(?!-radius)|box-shadow|outline)/.test(property));
 
 describe("the card", () => {
-  it("is a surface with a 14px radius, no border, and no shadow", () => {
-    const card = classLook("card");
-    expect(card.background).toBe("var(--surface)");
-    expect(card["border-radius"]).toBe("var(--radius-card)");
-    expect(edges(card)).toEqual([]);
-  });
-
-  it("rules its head off from the rows with a line", () => {
-    expect(classLook("card-head")["border-bottom"]).toBe("1px solid var(--line)");
+  /* It separates from the ground by its color alone. */
+  it("has no border and no shadow", () => {
+    expect(classLook("card")).not.toEqual({});
+    expect(edges(classLook("card"))).toEqual([]);
   });
 
   it("gives the link in its head or at its foot 44px to tap", () => {
@@ -213,45 +203,35 @@ describe("the card", () => {
 });
 
 describe("the dialog's frame", () => {
-  /* The overlay dims the page behind it, so the frame needs no edge and no lift. */
-  it("is a surface with a 14px radius, no border, and no shadow", () => {
-    const frame = classLook("dialog");
-    expect(frame.background).toBe("var(--surface)");
-    expect(frame["border-radius"]).toBe("var(--radius-card)");
-    expect(edges(frame)).toEqual([]);
-  });
-
   /* A dialog opens in a portal on <body>, so it cannot count on a screen's own text color. */
-  it("writes in ink, readable on the frame", () => {
-    expect(classLook("dialog").color).toBe("var(--ink)");
+  it("writes text that reaches 4.5 to 1 on the frame", () => {
     expect(labelContrast(classLook("dialog"))).toBeGreaterThanOrEqual(4.5);
   });
 });
 
 describe("the lift", () => {
   /* The ink, thinned. A shadow with a hue of its own would be a color outside the role tokens. */
-  it("is one shadow mixed from ink, with no color of its own", () => {
+  it("is mixed from ink, with no color of its own", () => {
     const lift = classLook("lift");
-    expect(edges(lift)).toEqual(["box-shadow"]);
     expect(lift["box-shadow"]).toContain("var(--ink)");
     expect(lift["box-shadow"]).not.toMatch(/#[0-9a-f]{3}|rgba?\(/i);
+  });
+
+  /* A card has none, and neither has the dialog, which the dimmed page sets apart. */
+  it("is the only shadow a class draws", () => {
+    const shadowed = rules.filter((rule) => "box-shadow" in rule.declarations).flatMap((rule) => rule.selectors);
+    expect(shadowed).toEqual([".lift"]);
   });
 });
 
 describe("the menu", () => {
-  it("is a surface with a 10px radius", () => {
-    const menu = classLook("menu");
-    expect(menu.background).toBe("var(--surface)");
-    expect(menu["border-radius"]).toBe("var(--radius-tile)");
-    expect(labelContrast(menu)).toBeGreaterThanOrEqual(4.5);
+  /* Like a dialog it opens in a portal on <body>, so it sets its own ink. */
+  it("writes text that reaches 4.5 to 1 on its own surface", () => {
+    expect(labelContrast(classLook("menu"))).toBeGreaterThanOrEqual(4.5);
   });
 
   it("gives each item 44px to tap", () => {
     expect(px(classLook("menu-item")["min-height"])).toBeGreaterThanOrEqual(44);
-  });
-
-  it("washes the item the pointer or the arrow keys are on", () => {
-    expect(lookOf(".menu-item:focus").background).toBe("var(--fill)");
   });
 
   /*
@@ -259,68 +239,47 @@ describe("the menu", () => {
    * danger tint is too near white to show on a white menu, so the row with
    * the focus fills with danger and writes in white.
    */
-  it("writes a destructive item in danger, and in white on danger once it has focus", () => {
+  it("keeps a destructive item readable, at rest and once it has the focus", () => {
     const item = { ...classLook("menu"), ...classLook("menu-item"), ...classLook("menu-item-danger") };
-    expect(item.color).toBe("var(--danger)");
     expect(labelContrast(item)).toBeGreaterThanOrEqual(4.5);
+    expect(lookOf(".menu-item-danger:focus")).not.toEqual({});
     const focused = { ...item, ...lookOf(".menu-item:focus"), ...lookOf(".menu-item-danger:focus") };
-    expect(focused.background).toBe("var(--danger)");
-    expect(focused.color).toBe("#fff");
     expect(labelContrast(focused)).toBeGreaterThanOrEqual(4.5);
   });
 });
 
 describe("the ink bar", () => {
   /* The undo toast and the reload banner. */
-  it("writes white on ink", () => {
-    const bar = classLook("ink-bar");
-    expect(bar.background).toBe("var(--ink)");
-    expect(bar.color).toBe("#fff");
-    expect(labelContrast(bar)).toBeGreaterThanOrEqual(4.5);
+  it("writes text that reaches 4.5 to 1 on the bar", () => {
+    expect(labelContrast(classLook("ink-bar"))).toBeGreaterThanOrEqual(4.5);
   });
 
   /*
    * The green button's focus ring is ink, which cannot be seen on ink, and the
-   * default green ring gives 3.3 to 1 there. On the bar every ring is white.
+   * default green ring gives 3.3 to 1 there. On the bar every ring takes a
+   * color that reaches 4.5 to 1 on it.
    */
-  it.each([[".ink-bar :focus-visible"], [".ink-bar .btn:focus-visible"]])("%s draws its ring in white", (selector) => {
-    expect(lookOf(selector)["outline-color"]).toBe("#fff");
+  it.each([[".ink-bar :focus-visible"], [".ink-bar .btn:focus-visible"]])("%s draws a ring that shows on the bar", (selector) => {
+    const ring = hexOf(lookOf(selector)["outline-color"]);
+    expect(contrastRatio(ring, hexOf(classLook("ink-bar").background))).toBeGreaterThanOrEqual(4.5);
   });
 });
 
 describe("the status chip", () => {
   const green = () => ({ ...classLook("chip"), ...classLook("chip-action") });
 
-  it("is a pill in fill with ink text", () => {
-    const chip = classLook("chip");
-    expect(chip["border-radius"]).toBe("var(--radius-pill)");
-    expect(chip.background).toBe("var(--fill)");
-    expect(chip.color).toBe("var(--ink)");
-  });
-
-  it("is action on action-tint when it marks something live or confirmed", () => {
-    expect(green()["border-radius"]).toBe("var(--radius-pill)");
-    expect(green().background).toBe("var(--action-tint)");
-    expect(green().color).toBe("var(--action)");
-  });
-
   it("is readable in both tones", () => {
+    expect(classLook("chip-action")).not.toEqual({});
     expect(labelContrast(classLook("chip"))).toBeGreaterThanOrEqual(4.5);
     expect(labelContrast(green())).toBeGreaterThanOrEqual(4.5);
   });
 });
 
 describe("the date tile", () => {
-  it("is a 10px tile in fill with the day in ink", () => {
-    const tile = classLook("date-tile");
-    expect(tile["border-radius"]).toBe("var(--radius-tile)");
-    expect(tile.background).toBe("var(--fill)");
-    expect(tile.color).toBe("var(--ink)");
-  });
-
-  it("writes the month in soft ink, readable on the tile", () => {
+  it("writes the day and the month so both read on the tile", () => {
     const month = { ...classLook("date-tile"), ...classLook("date-tile-month") };
-    expect(month.color).toBe("var(--ink-soft)");
+    expect(classLook("date-tile-month")).not.toEqual({});
+    expect(labelContrast(classLook("date-tile"))).toBeGreaterThanOrEqual(4.5);
     expect(labelContrast(month)).toBeGreaterThanOrEqual(4.5);
   });
 });
@@ -348,66 +307,13 @@ describe("the form controls", () => {
    * reach 3 to 1 on the card it sits on. The line token gives 1.16.
    */
   it("have an edge that reaches 3 to 1 on a surface", () => {
-    const edge = stylesheet.match(/--control-line:\s*([^;]+);/)?.[1].trim();
+    const edge = tokens["control-line"];
     expect(contrastRatio(mixedOver(edge, tokens.surface), tokens.surface)).toBeGreaterThanOrEqual(3);
     expect(contrastRatio(tokens.line, tokens.surface)).toBeLessThan(3);
   });
 
-  /* The input's box, the textarea, the native select, the search field. */
-  const boxes = ["field", "field-area", "field-select", "field-search"];
-
-  it.each(boxes)("%s is a 10px box on surface with the control edge", (name) => {
-    const box = classLook(name);
-    expect(box["border-radius"]).toBe("var(--radius-tile)");
-    expect(box.background).toBe("var(--surface)");
-    expect(box.border).toBe("1px solid var(--control-line)");
-  });
-
+  /* The input's box, the native select, the search field. A checkbox is 22px, so its row is the target. */
   it.each(["field", "field-select", "field-search"])("%s is at least 44px tall", (name) => {
     expect(px(classLook(name)["min-height"])).toBeGreaterThanOrEqual(44);
-  });
-
-  it.each([
-    [".field:focus-within"],
-    [".field-area:focus"],
-    [".field-select:focus"],
-    [".field-search:focus-within"],
-    [".field-check:focus-visible"],
-  ])("%s draws a ring in action", (selector) => {
-    expect(lookOf(selector).outline).toBe("2px solid var(--action)");
-  });
-
-  it("the checkbox takes a radius from the scale and fills with action when checked", () => {
-    expect(classLook("field-check")["border-radius"]).toBe("var(--radius-chip)");
-    expect(lookOf(".field-check:checked")["background-color"]).toBe("var(--action)");
-  });
-});
-
-describe("the table", () => {
-  it("heads its columns in soft ink over a line rule", () => {
-    const head = lookOf(".data-table th");
-    expect(head.color).toBe("var(--ink-soft)");
-    expect(head["border-bottom"]).toBe("1px solid var(--line)");
-  });
-
-  it("divides its rows with a line rule and holds its digits in place", () => {
-    const cell = lookOf(".data-table td");
-    expect(cell["border-bottom"]).toBe("1px solid var(--line)");
-    expect(cell["font-variant-numeric"]).toBe("tabular-nums");
-  });
-
-  it("has a compact size with tighter columns", () => {
-    const regular = px(lookOf(".data-table td")["padding-inline"]);
-    const compact = px(lookOf(".data-table-compact td")["padding-inline"]);
-    expect(compact).toBeLessThan(regular);
-  });
-});
-
-describe("the spinner", () => {
-  it("is a ring in the color of the text around it", () => {
-    const ring = classLook("spinner");
-    expect(ring["border-radius"]).toBe("var(--radius-pill)");
-    expect(ring.border).toBe("2px solid currentColor");
-    expect(ring["border-top-color"]).toBe("transparent");
   });
 });

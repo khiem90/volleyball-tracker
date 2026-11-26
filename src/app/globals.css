@@ -75,11 +75,12 @@
   --action: #087a4d;
   /* The background of a green chip. */
   --action-tint: #e2f4eb;
-  /* Destructive actions only. */
+  /* Destructive actions and error messages. */
   --danger: #cf3f32;
   /*
-   * The background of a red chip or notice. Danger sits at 4.76 to 1 on white,
-   * so its tint has to stay this close to white for danger text to reach 4.5.
+   * The background of an error message, and of the quiet red button while it
+   * is pressed. No chip is red. Danger sits at 4.76 to 1 on white, so its tint
+   * has to stay this close to white for danger text to reach 4.5.
    */
   --danger-tint: #fff7f6;
   /*
@@ -112,8 +113,8 @@
  * The shared classes: the card, the buttons, the chip, the date tile, the form
  * controls, the table. They sit in the components layer, so a utility on the
  * same element wins over them. src/__tests__/design/sharedClasses.test.ts
- * reads these rules and holds them to the sizes and the contrast the design
- * asks for.
+ * reads these rules and holds them to the contrast and the 44px the design
+ * asks for, and to the forbidden list where a stylesheet can break it.
  */
 @layer components {
   /*
@@ -697,9 +698,10 @@
 /*
  * The team mark, drawn by src/components/shared/TeamMark.tsx. The shield's
  * corners are a shape of their own, 28% on top and 44% at the foot, and no
- * step of the radius scale. The component sets the size, the letter's size,
- * and the team's color inline. In the components layer, so a utility on the
- * mark wins over it.
+ * step of the radius scale. The guard lets this one declaration through by
+ * its value and fails on any other radius that is written out. The component
+ * sets the size, the letter's size, and the team's color inline. In the
+ * components layer, so a utility on the mark wins over it.
  */
 @layer components {
   .team-mark {
@@ -749,7 +751,7 @@ body {
 
 .scrollbar-thin::-webkit-scrollbar-thumb {
   background-color: color-mix(in srgb, var(--ink-soft) 35%, transparent);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { FIELD_LABEL, FIELD_NOTE } from "@/components/rsvpList/RsvpFields";
+import { FIELD_NOTE } from "@/components/rsvpList/RsvpFields";
 import { Icon, InlineSpinner } from "@/components/shared";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { RSVP_NAME_MAX, RSVP_NOTE_MAX, rsvpEntryProblems, type RsvpEntry } from "@/lib/rsvp";
 import type { ListWording } from "@/lib/rsvpList";
+import { LABEL } from "@/components/shared/classes";
 
 /** A field's problem, and why a send or a withdrawal failed. */
 const PROBLEM = "text-caption font-medium text-danger";
@@ -134,7 +135,7 @@ export const RsvpDialog = ({
 
         <form id="rsvp-form" onSubmit={submit} className="flex flex-col gap-5">
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="rsvp-name" className={FIELD_LABEL}>
+            <label htmlFor="rsvp-name" className={LABEL}>
               {wording.nameLabel}
             </label>
             <span className={problems.name ? "field border-danger" : "field"}>
@@ -158,7 +159,7 @@ export const RsvpDialog = ({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="rsvp-note" className={FIELD_LABEL}>
+            <label htmlFor="rsvp-note" className={LABEL}>
               Note (optional)
             </label>
             <textarea

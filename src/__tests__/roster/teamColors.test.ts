@@ -1,15 +1,14 @@
 // @vitest-environment node
-import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { contrastRatio } from "@/lib/contrast";
 import { fallbackColor, INK, letterColor, TEAM_COLORS } from "@/lib/teamColors";
+import { token } from "../design/stylesheet";
 
 const YELLOW = "#eab308";
 const INDIGO = "#6366f1";
 
-/* What each answer paints, from the spec's token table. */
-const LETTER = { ink: "#15181b", white: "#ffffff" };
+/* What each answer paints. Ink is the app's own, which the last test here holds to the stylesheet. */
+const LETTER = { ink: INK, white: "#ffffff" };
 
 describe("the letter on a team's mark", () => {
   it("is ink on the palette's yellow", () => {
@@ -32,13 +31,7 @@ describe("the letter on a team's mark", () => {
   });
 
   it("measures against the ink the stylesheet defines", () => {
-    const stylesheet = readFileSync(
-      fileURLToPath(new URL("../../app/globals.css", import.meta.url)),
-      "utf8",
-    );
-
-    expect(stylesheet).toContain(`--ink: ${LETTER.ink};`);
-    expect(INK).toBe(LETTER.ink);
+    expect(INK).toBe(token("ink"));
   });
 });
 

@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useApp } from "@/context/AppContext";
+import { todayLine } from "@/lib/dates";
 import { quickMatchData, type QuickMatchData } from "@/lib/quickMatchData";
 
 /**
@@ -12,12 +13,7 @@ export const useQuickMatchData = (): QuickMatchData & { dateLine: string } => {
 
   return useMemo(
     () => ({
-      dateLine: new Date().toLocaleDateString("en-US", {
-        weekday: "long",
-        month: "long",
-        day: "numeric",
-        year: "numeric",
-      }),
+      dateLine: todayLine({ year: true }),
       ...quickMatchData(roster, matches),
     }),
     [roster, matches],

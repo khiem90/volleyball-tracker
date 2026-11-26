@@ -2,44 +2,29 @@ import type { FormResult } from "@/lib/teamShapes";
 
 /*
  * A win is green. A loss is soft ink, never red, because red is for
- * destructive actions.
+ * destructive actions. Every result keeps its own color however the run
+ * went, so a win reads as a win on a losing team too.
  */
 const DOT: Record<FormResult, string> = {
   W: "bg-action",
   L: "bg-ink-soft",
 };
 
+/* The letter of a loss is soft ink on fill. */
 const LETTER: Record<FormResult, string> = {
   W: "bg-action text-white",
   L: "bg-fill text-ink-soft",
 };
 
-/**
- * A team's recent form as a run of dots, padded with empty slots. With
- * `warnTint`, a team that has won half its matches or fewer shows every
- * result in soft ink.
- */
-export const FormDots = ({
-  form,
-  slots = 8,
-  warnTint = false,
-}: {
-  form: FormResult[];
-  slots?: number;
-  warnTint?: boolean;
-}) => {
-  const winCount = form.filter((result) => result === "W").length;
-  const muted = warnTint && form.length > 0 && winCount <= form.length / 2;
-  return (
-    <span className="inline-flex items-center gap-[3px]">
-      {Array.from({ length: slots }, (_, i) => {
-        const result = form[i];
-        const color = result ? (muted ? DOT.L : DOT[result]) : "bg-ink-soft/20";
-        return <span key={i} className={`form-dot ${color}`} />;
-      })}
-    </span>
-  );
-};
+/** A team's recent form as a run of dots, a win in green and a loss in soft ink, padded with faint empty slots. */
+export const FormDots = ({ form, slots = 8 }: { form: FormResult[]; slots?: number }) => (
+  <span className="inline-flex items-center gap-[3px]">
+    {Array.from({ length: slots }, (_, i) => {
+      const result = form[i];
+      return <span key={i} className={`form-dot ${result ? DOT[result] : "bg-ink-soft/20"}`} />;
+    })}
+  </span>
+);
 
 /** A team's recent form as W and L in small circles. */
 export const FormLetters = ({ form }: { form: FormResult[] }) => (

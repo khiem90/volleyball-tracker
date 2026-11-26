@@ -1,5 +1,6 @@
 export { Icon } from "./Icon";
-export { Card, CardEmpty, CardError, CARD_ROW } from "./Card";
+export { Card, CardEmpty, CardError, CARD_FOOT_LINK, CARD_ROW } from "./Card";
+export { LABEL } from "./classes";
 export { Chip } from "./Chip";
 export { DateTile, NoDateTile } from "./DateTile";
 export { FormDots, FormLetters } from "./RecentForm";
@@ -14,4 +15,5 @@ export { StepButtons } from "./StepButtons";
 export { TeamMark } from "./TeamMark";
 export { TeamName } from "./TeamName";
 export { ScoreLine } from "./ScoreLine";
+export { BracketTile } from "./BracketTile";
 export { Brand } from "./Brand";

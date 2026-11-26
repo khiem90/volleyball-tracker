@@ -121,3 +121,57 @@ describe("selectedTournament", () => {
     });
   });
 });
+
+/* The small bracket reads each match by the rule the console's bracket reads it by. */
+describe("selectedTournament's bracket", () => {
+  it("reads a bye as a bye, with no score, no winner, and nobody on its empty side", () => {
+    const world = started("single_elimination", 3);
+    expect(world.matches.some((m) => m.isBye)).toBe(true);
+
+    const { bracket } = selectedTournament(world.tournament, world.matches, roster);
+
+    const bye = bracket[0].cells.find((cell) => cell.home === null || cell.away === null);
+    expect(bye?.line).toEqual({
+      homeScore: null,
+      awayScore: null,
+      winner: null,
+      decidedBy: "bye",
+      live: false,
+    });
+  });
+
+  it("gives a match waiting on an earlier round no score, with the side nobody holds left empty", () => {
+    const world = started("single_elimination", 4);
+
+    const { bracket } = selectedTournament(world.tournament, world.matches, roster);
+
+    expect(bracket.map((round) => round.label)).toEqual(["Semifinals", "Final"]);
+    expect(bracket[1].cells).toEqual([
+      {
+        home: null,
+        away: null,
+        line: { homeScore: null, awayScore: null, winner: null, decidedBy: null, live: false },
+      },
+    ]);
+  });
+
+  it("names the winner of a result, of a forfeit, and nobody while a match is live", () => {
+    const world = started("single_elimination", 4);
+    const [first, second] = world.matches;
+    const played = win(world, first.id, first.awayTeamId);
+    const matches = played.matches.map((m) =>
+      m.id === second.id ? { ...m, status: "in_progress" as const, homeScore: 3, awayScore: 1 } : m,
+    );
+
+    const { bracket } = selectedTournament(played.tournament, matches, roster);
+
+    expect(bracket[0].cells.map((cell) => cell.line)).toEqual([
+      { homeScore: 20, awayScore: 25, winner: "away", decidedBy: null, live: false },
+      { homeScore: 3, awayScore: 1, winner: null, decidedBy: null, live: true },
+    ]);
+
+    const forfeited = withdraw(world, first.homeTeamId);
+    const after = selectedTournament(forfeited.tournament, forfeited.matches, roster);
+    expect(after.bracket[0].cells[0].line).toMatchObject({ winner: "away", decidedBy: "forfeit" });
+  });
+});

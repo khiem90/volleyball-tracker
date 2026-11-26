@@ -6,6 +6,7 @@ import { Chip } from "@/components/shared/Chip";
 import { Icon } from "@/components/shared/Icon";
 import type { RotationNumber, GameMode } from "@/lib/volleyball/types";
 import { isSetterFrontRow, getFrontRowAttackerCount } from "@/lib/volleyball/rotations";
+import { cn } from "@/lib/utils";
 import { toggleClass } from "./styles";
 
 type RotationControlsProps = {
@@ -22,12 +23,6 @@ type RotationControlsProps = {
   onNext: () => void;
   onPrev: () => void;
 };
-
-/** One half of the Serving and Receiving switch. */
-const modeClass = (on: boolean): string =>
-  `min-h-11 rounded-chip px-4 text-label font-semibold transition-colors ${
-    on ? "bg-ink text-white" : "text-ink-soft hover:text-ink"
-  }`;
 
 export const RotationControls = memo(
   ({
@@ -66,11 +61,8 @@ export const RotationControls = memo(
                 key={r}
                 type="button"
                 onClick={() => onRotationChange(r)}
-                className={`size-11 rounded-full text-title font-bold tabular-nums transition-colors ${
-                  rotation === r
-                    ? "bg-ink text-white"
-                    : "bg-fill text-ink hover:bg-ink/10"
-                }`}
+                // The same square as a rotation button in the formation editor, 44px a side.
+                className={cn(toggleClass(rotation === r), "w-11 px-0 tabular-nums")}
                 aria-label={`Rotation ${r}`}
                 aria-pressed={rotation === r}
               >
@@ -103,12 +95,12 @@ export const RotationControls = memo(
 
         {/* Toggle Controls */}
         <div className="flex flex-wrap items-center justify-center gap-2">
-          {/* Serving/Receiving Toggle */}
-          <div className="flex rounded-tile bg-fill p-1">
+          {/* Serving/Receiving Toggle. The pair stays together when the row wraps. */}
+          <div className="flex gap-2">
             <button
               type="button"
               onClick={() => onModeChange("serving")}
-              className={modeClass(mode === "serving")}
+              className={cn(toggleClass(mode === "serving"), "px-4")}
               aria-pressed={mode === "serving"}
             >
               Serving
@@ -116,7 +108,7 @@ export const RotationControls = memo(
             <button
               type="button"
               onClick={() => onModeChange("receiving")}
-              className={modeClass(mode === "receiving")}
+              className={cn(toggleClass(mode === "receiving"), "px-4")}
               aria-pressed={mode === "receiving"}
             >
               Receiving
@@ -127,7 +119,7 @@ export const RotationControls = memo(
           <button
             type="button"
             onClick={() => onLiberoToggle(!liberoActive)}
-            className={`${toggleClass(liberoActive)} px-4`}
+            className={cn(toggleClass(liberoActive), "px-4")}
             aria-pressed={liberoActive}
           >
             Libero {liberoActive ? "ON" : "OFF"}

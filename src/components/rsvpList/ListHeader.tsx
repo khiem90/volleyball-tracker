@@ -1,16 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { FIELD_LABEL } from "@/components/rsvpList/RsvpFields";
 import { DateTile, NoDateTile } from "@/components/shared";
 import { PageHeader } from "@/components/shell/PageHeader";
 import { deviceZone, type TimeLabel } from "@/lib/rsvp";
 import type { RsvpList } from "@/types/game";
 import type { ListRsvpView } from "./useListRsvpView";
+import { LABEL } from "@/components/shared/classes";
 
 const Fact = ({ label, value }: { label: string; value: string }) => (
   <div className="flex flex-col gap-0.5">
-    <dt className={FIELD_LABEL}>{label}</dt>
+    <dt className={LABEL}>{label}</dt>
     <dd className="text-body font-semibold tabular-nums">{value}</dd>
   </div>
 );

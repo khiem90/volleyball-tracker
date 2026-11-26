@@ -3,7 +3,6 @@
 import {
   CapacityField,
   DateTimeField,
-  FIELD_LABEL,
   FIELD_NOTE,
 } from "@/components/rsvpList/RsvpFields";
 import { Choice } from "@/components/shared";
@@ -17,6 +16,7 @@ import {
   type ListSetupProblems,
 } from "@/lib/rsvpList";
 import type { RsvpTakes } from "@/types/game";
+import { LABEL } from "@/components/shared/classes";
 
 const TAKES_CHOICES: { value: RsvpTakes; label: string }[] = [
   { value: "people", label: TAKES_LABEL.people },
@@ -58,7 +58,7 @@ export const ListSetupFields = ({
 }) => (
   <div className="flex flex-col gap-5 p-4">
     <div className="flex flex-col gap-1.5">
-      <label htmlFor="list-name" className={FIELD_LABEL}>
+      <label htmlFor="list-name" className={LABEL}>
         Name
       </label>
       <span className={`field ${problems.name ? "border-danger" : ""}`}>
@@ -87,7 +87,7 @@ export const ListSetupFields = ({
 
     {takesLocked ? (
       <div className="flex flex-col gap-1.5">
-        <span className={FIELD_LABEL}>RSVPs</span>
+        <span className={LABEL}>RSVPs</span>
         <span className="text-body font-semibold">{TAKES_LABEL[setup.takes]}</span>
         <p className={FIELD_NOTE}>{LIST_TAKES_LOCKED}</p>
       </div>

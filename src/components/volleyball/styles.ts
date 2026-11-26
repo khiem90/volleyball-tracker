@@ -3,9 +3,6 @@
  * the page and one in the editor are the same control.
  */
 
-/** The small heading over a group of controls. */
-export const GROUP_LABEL = "text-caption font-medium text-ink-soft";
-
 /**
  * A button that is one of a set, or a switch. Filled with ink when it is
  * chosen or on, white with the control edge when it is not.
@@ -24,6 +21,3 @@ export const choiceTileClass = (chosen: boolean): string =>
       ? "border-action bg-action-tint"
       : "border-ink-soft/75 bg-surface hover:border-ink"
   }`;
-
-/** A button with no fill of its own, for the lesser actions beside a row's main one. */
-export const QUIET_BUTTON = "btn px-3 text-ink-soft hover:bg-ink/8 hover:text-ink";

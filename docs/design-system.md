@@ -73,8 +73,9 @@ and `rounded-none` squares a corner off.
 | `rounded-chip` | 8px | Icon backings, the checkbox, small square chips. A status chip is a pill. |
 | `rounded-pill` | full | Buttons and status chips. |
 
-A class in the stylesheet or an inline style reads `var(--radius-card)` and
-its neighbours.
+A class in the stylesheet reads `var(--radius-card)` and its neighbours. A
+`border-radius` declaration holds those tokens, `0`, or `50%`, and nothing
+else. Markup takes the utility, so an inline style sets no radius at all.
 
 ## Type
 
@@ -106,8 +107,11 @@ step goes in the stylesheet and in that list together, or `cn()` takes
 The classes are in the components layer of `src/app/globals.css`, so a utility
 on the same element wins over them. The components are in
 `src/components/shared` and `src/components/ui`.
-`src/__tests__/design/sharedClasses.test.ts` reads the classes and holds them
-to the numbers on this page.
+`src/__tests__/design/sharedClasses.test.ts` reads the classes and checks
+what a test can: each class's text reaches 4.5 to 1 on its own background, a
+control is 44px tall, a card has no border or shadow, the lift is the only
+shadow, and only the destructive classes read `danger`. It does not pin how a
+class looks. That is checked by eye.
 
 ### Card
 
@@ -130,6 +134,7 @@ import { Card, CardEmpty, CardError, CARD_ROW } from "@/components/shared/Card";
 - `Card` takes `title`, `icon`, `meta`, `action` with `href`, `className`, and `children`. Without a title it has no head.
 - The head shows the glyph on a grey backing, the title, and one thing on the right. `action` and `href` together make a text link there. Otherwise `meta` shows. A `meta` of plain text is written as secondary text, and anything else, such as a chip or a live tag, is drawn as it comes.
 - `CARD_ROW` is the class string for a tappable row: 44px at least, 16px side padding, and a hover wash.
+- `CARD_FOOT_LINK` is the class string for the link at a card's foot that leads to the rest of its list, such as "Every result in History": `card-link` in bold green, in the middle of a row of its own under a `line` rule.
 - `CardEmpty` says why a card has nothing to show, with one grey button or a control of the page's own under it. `CardError` is an error message in danger. It takes a `className`, so it also serves outside a card.
 - The classes behind them are `card`, `card-head`, `card-title`, `card-icon`, and `card-link`. `card-link` is also the text link at a card's foot and a page's way back.
 
@@ -248,7 +253,8 @@ color, so a mark drawn from `entryTeams()` shows a mixed team like any other.
 
 `ScoreLine` in `src/components/shared/ScoreLine.tsx` is one match on one
 line: a team, the score, the other team. It comes in two sizes. Every screen
-that shows a match draws it with this, and no match is drawn by hand.
+that shows a match draws it with this, or with the bracket tile below where
+the match sits in a bracket, and no match is drawn by hand.
 
 ```tsx
 <ScoreLine home={home} away={away} homeScore={21} awayScore={15} />
@@ -275,6 +281,7 @@ that shows a match draws it with this, and no match is drawn by hand.
   court it takes a second line first, and the two marks and the score stay
   on one level whatever runs under a name.
 - Scores use `tabular-nums`, so a digit holds its place as the score changes.
+  An en dash sits between the two, at both sizes. A hyphen is the wrong mark.
 - `decidedBy` is for a result with no score. `"bye"` puts a "Bye" pill in the
   middle, and `"forfeit"` a lone dash in the score's chip.
 - `live` turns a row's score green on `action-tint`. A court's score stays
@@ -285,6 +292,26 @@ that shows a match draws it with this, and no match is drawn by hand.
   scores, `winner`, `decidedBy`, and `live`. A stored match holds 0 and 0
   before play starts, and `matchLine` leaves those out. Spread its result
   into the component: `<ScoreLine home={home} away={away} {...matchLine(match)} />`.
+
+`BracketTile` in `src/components/shared/BracketTile.tsx` is the score line
+stacked for a bracket: a 160px `fill` tile with a side on each line, the mark
+at 18 and the score at the line's end. The console's Bracket tab and the
+Tournaments page's small bracket both draw it, so a match reads the same in
+both.
+
+```tsx
+<BracketTile home={home} away={away} {...matchLine(match)} />
+```
+
+- It takes what `matchLine(match)` gives and follows the score line's rule
+  for the bold side.
+- A match still to be played shows no score. A live match shows its score in
+  green and says Live at the foot. A forfeit shows no score and says Forfeit
+  at the foot.
+- A bye is nobody's match. Its tile is a dashed outline with no fill, and its
+  empty side reads "Bye". Any other side nobody holds reads "TBD".
+- `href` makes the tile a link and `onClick` a button. `action` is the
+  page's own words at the foot's end, such as the console's "Correct".
 
 `MatchRow` in `src/components/console/MatchRow.tsx` is the row size with what
 a list needs around it: a soft line over the score saying where the match
@@ -308,7 +335,7 @@ which a phone zooms the page when a field takes focus.
 | `field-search` | A search box: a glyph and a bare `<input>` of a fixed 9rem width. |
 | `field-check` | A checkbox, drawn in the stylesheet so it looks the same on every phone: an 8px-radius box that fills with `action` and a white tick. |
 
-- A label above a control is `text-caption font-medium text-ink-soft`.
+- A label above a control is `text-caption font-medium text-ink-soft`. `LABEL` from `@/components/shared` holds that string, so write `className={LABEL}`. It is also the small label over a value and the heading over a group of controls.
 - A control with a problem adds `border-danger`, and the message under it is `text-caption font-medium text-danger` with `role="alert"`.
 - A disabled control turns `fill` with soft text.
 - `field`, `field-select`, and `field-search` are 44px tall. A checkbox is 22px, so its row or its label is the 44px target.
@@ -328,7 +355,7 @@ for tighter columns with each cell kept on one line. Wrap a wide table in
 
 - `live-dot` is the 7px green dot that pulses. `<Chip live>` carries one.
 - `spinner` is a 16px ring in the color of the text around it. `<InlineSpinner />` draws it. `<PageLoadingSpinner />` is the large one for a page that is loading.
-- `FormDots` and `FormLetters` from `@/components/shared/RecentForm` show a team's recent results. A win is green. A loss is soft ink.
+- `FormDots` and `FormLetters` from `@/components/shared/RecentForm` show a team's recent results. A win is `action`. A loss is `ink-soft`: a soft ink dot in `FormDots`, and a soft ink letter on `fill` in `FormLetters`. Each result keeps its own color whatever the team's record, and an empty slot is a faint dot.
 - `team-panel-score` is the soft shadow under the white digits on the scoring page's team-color panels. Nothing else has a text shadow.
 
 ## The shell
@@ -392,7 +419,7 @@ import { PageHeader } from "@/components/shell/PageHeader";
 - `status` is a chip beside the title.
 - `line` is a short line of secondary text beside the title. It drops under the title when the two do not fit on one row.
 - `action` is the page's main action. On a phone it runs the full width under the title. From `sm` up it sits at the end of the title's row.
-- `back` is for a page one level down. The link sits above the title in soft ink with `chevron-left`. On a phone it takes the place of the brand row: the shell hides that row while a back link is on the page, so the account button is one tap back.
+- `back` is for a page one level down. The link sits above the title in soft ink with `chevron-left` at 18, the size the chosen prototype drew it. On a phone it takes the place of the brand row: the shell hides that row while a back link is on the page, so the account button is one tap back.
 - `children` come last, for a tab strip or a filter row.
 - `className` is the gap under the block, `mb-4` unless the page says otherwise.
 
@@ -432,10 +459,22 @@ holds those to the stylesheet and checks each icon's size and ground.
 Every icon is a `<symbol>` in `public/assets/icons/sprite.svg`, rendered with
 `<Icon id="trash" size={14} />` from `@/components/shared/Icon`. The icon is `aria-hidden`, and a button that is only an icon carries the
 `aria-label`. Color comes from `currentColor`, so set a text color on the icon
-or its parent. Sizes in use: 14 inside a button or a card's title, 16 in a
-row, 18 in a dialog title, 20 for the close and back controls, 24 on the
-scoring page. There is no bare tick, and `check` is a circled tick. A left
+or its parent. There is no bare tick, and `check` is a circled tick. A left
 chevron is `chevron-left`, not a rotated `chevron-right`.
+
+An icon is drawn at one of these eight sizes. The second column says where
+each mostly goes.
+
+| Size | Where |
+| --- | --- |
+| 12 | The chevron that ends a text link, a tab's lock, and a glyph inside a line of caption text. |
+| 14 | Inside a button, and in a card's title. |
+| 16 | In a row, a menu item, and a tab of the `lg` row. |
+| 18 | A dialog's title, the green main button, a glyph on a grey tile, and the page header's back chevron. |
+| 20 | The close control, the scoring page's back control, a button that is only a chevron, and a format or tool tile's glyph. |
+| 22 | A tab in the phone tab bar, and the glyph over a Club Snapshot number. |
+| 24 | The plus and minus on the scoring page. |
+| 28 | Beside words at the page title's size, which is the RSVP standing line. |
 
 The drawings are the regular weight of Phosphor Icons, copied into the sprite.
 Phosphor is MIT licensed and its notice is `PHOSPHOR-LICENSE.txt` beside the
@@ -595,7 +634,7 @@ neither does the dialog, because the overlay already sets it apart.
 
 - The old token classes: `bg-background`, `text-foreground`, `bg-card`, `bg-popover`, `bg-primary`, `text-primary-foreground`, `bg-secondary`, `bg-muted`, `text-muted-foreground`, `bg-accent`, `text-destructive`, `border-border`, `border-input`, `ring-ring`, and every other utility built on `background`, `foreground`, `card`, `popover`, `primary`, `secondary`, `muted`, `accent`, `destructive`, `border`, `input`, or `ring`. `src/__tests__/design/tokens.test.ts` scans every source file and the stylesheet and fails on one. None of them is defined any more, so one that slipped through would draw nothing.
 - A name or a color from the theme this design replaced: its prefix on a class, a token, a component, or a type, its name in a path, its two typefaces, and its palette's hex values. The same test holds the patterns and fails on one anywhere in `src`, in this page, and in the config files that point at assets.
-- A radius off the scale. Only `rounded-card`, `rounded-tile`, `rounded-chip`, `rounded-pill`, `rounded-full`, and `rounded-none` pass, on any side or corner and behind any variant. A bare `rounded`, Tailwind's own steps such as `rounded-md`, and an arbitrary radius all fail. The test reads words and not markup, so the word in a comment fails too. Write "round corners" there.
+- A radius off the scale. Only `rounded-card`, `rounded-tile`, `rounded-chip`, `rounded-pill`, `rounded-full`, and `rounded-none` pass, on any side or corner and behind any variant. A bare `rounded`, Tailwind's own steps such as `rounded-md`, and an arbitrary radius all fail. The test reads words and not markup, so the word in a comment fails too. Write "round corners" there. A `border-radius` declaration in a stylesheet fails unless every value is a radius token, `0`, or `50%`, and an inline `borderRadius` fails whatever its value. The team mark's shield is the one declaration let through, by its exact value and only in `src/app/globals.css`.
 - `dark:` utilities. The design is light only.
 - Colors outside the role tokens: Tailwind's named colors (`slate-500`, `amber-200`), new hex values, oklch literals. Team colors and the court's palette are the exceptions.
 - Red on anything that is not a destructive action or an error. No red for live, for a loss, or for a status.
@@ -606,7 +645,7 @@ neither does the dialog, because the overlay already sets it apart.
 - Forced uppercase, by a class or by the `uppercase` utility on a heading or a label.
 - A tappable control under 44px tall.
 - `lucide-react`, `@heroicons/react`, and `@phosphor-icons/react`. None is installed and `eslint.config.mjs` rejects an import of any of them.
-- Black overlays, backdrop blur, and gradients. The one exception is the scoring page's team-color panels (`TeamScorePanel`), which sit on the team color and keep their translucent white controls and the amber Leading and Winner pill with its backdrop blur.
+- Black overlays, backdrop blur, and gradients. The one exception is the scoring page: its team-color panels (`TeamScorePanel`), which sit on the team color and keep their translucent white controls and the amber Leading and Winner pill with its backdrop blur, and the `bg-black` ground `ScoringScreen` puts behind them in fullscreen. Each panel's color thins toward one corner and lets what is behind it through, so the black is part of how a fullscreen panel looks. The guard has no pattern for either, so they are held to this page by review.
 - `shadcn add` output as it comes. `components.json` names Phosphor as the icon library, because the sprite's drawings are Phosphor's. A generated component imports `@phosphor-icons/react`, or `lucide-react` from a CLI that does not know Phosphor. Neither is installed and lint refuses both. Swap the import for `Icon`, with the id the table under "Icons" gives for the glyph.
 
 ## The court's palette
@@ -640,7 +679,16 @@ The setter's red is the hue the tool has always given that role. It marks a
 player and is not the `danger` token, so the rule that red means a
 destructive action or an error does not reach it.
 
-The controls around the court share four class strings from
+The controls around the court share two class strings from
 `src/components/volleyball/styles.ts`. A button that is one of a set, or a
-switch, is `toggleClass`: filled with ink when it is on. A tile that picks a
+switch, is `toggleClass`: filled with ink when it is on, white with the
+control edge when it is off. The six rotation buttons and Serving and
+Receiving, on the page and in the editor, the page's Libero, Overlaps, and
+Arrows switches, and the formation category tabs are all this one control. A
+tile that picks a
 formation is `choiceTileClass`: the green tint and a green edge when chosen.
+The small heading over a group of controls is the shared `LABEL`.
+
+The tool has no button kind of its own. Every other button there is one of
+the five under "Which button". Edit, Duplicate, and Share on a saved
+formation are the grey button.
