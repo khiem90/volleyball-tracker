@@ -268,9 +268,27 @@ drawn by hand after that.
   instant win end with no points played, so the score alone cannot say who
   won. `boldSide()` in `src/lib/scoreLine.ts` holds the rule.
 - Leave both scores out, or pass `null`, and the middle is a "vs" pill.
-- The two sides are equal columns and a long name is cut short, so the score
-  stays in the middle of the line whatever the names' lengths.
+- The two sides are equal columns, so the score stays in the middle of the
+  line whatever the names' lengths. A long name is cut short in a row. On a
+  court it takes a second line first.
 - Scores use `tabular-nums`, so a digit holds its place as the score changes.
+- `decidedBy` is for a result with no score. `"bye"` puts a "Bye" pill in the
+  middle, and `"forfeit"` a lone dash in the score's chip.
+- `live` turns a row's score green on `action-tint`. A court's score stays
+  ink, because the court's card says Live in its head.
+- Pass `null` for a side nobody holds yet, such as a bracket slot waiting on
+  an earlier round. It reads "TBD" in soft ink beside a blank shield.
+- `matchLine(match)` in `src/lib/scoreLine.ts` turns a stored match into the
+  scores, `winner`, `decidedBy`, and `live`. A stored match holds 0 and 0
+  before play starts, and `matchLine` leaves those out. Spread its result
+  into the component: `<ScoreLine home={home} away={away} {...matchLine(match)} />`.
+
+`MatchRow` in `src/components/console/MatchRow.tsx` is the row size with what
+a list needs around it: a soft line over the score saying where the match
+sits, the link or button that makes the whole row tappable, and the two
+instant win buttons under it. Home, History, and the console's lists draw
+their matches with it. `LiveTag` in the same file is the live dot with its
+word in green, for a place that has no room for a chip.
 
 ### Form controls
 
