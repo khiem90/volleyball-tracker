@@ -59,12 +59,8 @@ export const tournamentRows = (tournaments: Tournament[], matches: Match[]): Tou
 export interface BracketCell {
   home: Team | null;
   away: Team | null;
-  homeScore: number;
-  awayScore: number;
-  homeWon: boolean;
-  awayWon: boolean;
-  live: boolean;
-  pending: boolean;
+  /** What its tile shows, by the rule every score line reads. */
+  line: MatchLine;
 }
 
 export interface BracketRound {
@@ -137,12 +133,7 @@ const smallBracket = (matches: Match[], teamOf: (teamId: string) => Team): Brack
       .map((m) => ({
         home: m.homeTeamId ? teamOf(m.homeTeamId) : null,
         away: m.awayTeamId ? teamOf(m.awayTeamId) : null,
-        homeScore: m.homeScore,
-        awayScore: m.awayScore,
-        homeWon: m.winnerId === m.homeTeamId && m.status === "completed",
-        awayWon: m.winnerId === m.awayTeamId && m.status === "completed",
-        live: m.status === "in_progress",
-        pending: m.status === "pending",
+        line: matchLine(m),
       }));
     if (cells.length > 0) rounds.push({ label: roundLabel(round, maxRound, cells.length), cells });
   }

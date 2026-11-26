@@ -248,7 +248,8 @@ color, so a mark drawn from `entryTeams()` shows a mixed team like any other.
 
 `ScoreLine` in `src/components/shared/ScoreLine.tsx` is one match on one
 line: a team, the score, the other team. It comes in two sizes. Every screen
-that shows a match draws it with this, and no match is drawn by hand.
+that shows a match draws it with this, or with the bracket tile below where
+the match sits in a bracket, and no match is drawn by hand.
 
 ```tsx
 <ScoreLine home={home} away={away} homeScore={21} awayScore={15} />
@@ -285,6 +286,26 @@ that shows a match draws it with this, and no match is drawn by hand.
   scores, `winner`, `decidedBy`, and `live`. A stored match holds 0 and 0
   before play starts, and `matchLine` leaves those out. Spread its result
   into the component: `<ScoreLine home={home} away={away} {...matchLine(match)} />`.
+
+`BracketTile` in `src/components/shared/BracketTile.tsx` is the score line
+stacked for a bracket: a 160px `fill` tile with a side on each line, the mark
+at 18 and the score at the line's end. The console's Bracket tab and the
+Tournaments page's small bracket both draw it, so a match reads the same in
+both.
+
+```tsx
+<BracketTile home={home} away={away} {...matchLine(match)} />
+```
+
+- It takes what `matchLine(match)` gives and follows the score line's rule
+  for the bold side.
+- A match still to be played shows no score. A live match shows its score in
+  green and says Live at the foot. A forfeit shows no score and says Forfeit
+  at the foot.
+- A bye is nobody's match. Its tile is a dashed outline with no fill, and its
+  empty side reads "Bye". Any other side nobody holds reads "TBD".
+- `href` makes the tile a link and `onClick` a button. `action` is the
+  page's own words at the foot's end, such as the console's "Correct".
 
 `MatchRow` in `src/components/console/MatchRow.tsx` is the row size with what
 a list needs around it: a soft line over the score saying where the match

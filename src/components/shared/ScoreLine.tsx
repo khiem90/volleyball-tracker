@@ -8,7 +8,7 @@ import { TeamMark } from "./TeamMark";
 const COLUMNS = "grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center";
 
 /** What a side with no team yet reads, such as a bracket slot waiting on an earlier round. */
-const EMPTY_SLOT = "TBD";
+export const EMPTY_SLOT = "TBD";
 
 /** A side's name: ink and bold for the winner or leader, soft for the side behind. */
 const nameTone = (side: ScoreSide, bold: ScoreSide | null, plain: string): string =>

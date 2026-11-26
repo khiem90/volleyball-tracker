@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { useTournamentsPage } from "@/hooks/useTournamentsPage";
 import {
+  BracketTile,
   Card,
   CardEmpty,
   Chip,
@@ -17,66 +18,9 @@ import {
 } from "@/components/shared";
 import { PageHeader } from "@/components/shell/PageHeader";
 import { deleteTournamentDescription } from "@/lib/console";
-import type { Team } from "@/lib/teamShapes";
 import { TOURNAMENT_STATUS } from "@/lib/tournamentStatus";
-import type { BracketCell, ListedMatch, SelectedTournament } from "@/lib/tournamentsPage";
+import type { ListedMatch, SelectedTournament } from "@/lib/tournamentsPage";
 import { cn } from "@/lib/utils";
-
-/** One side of a bracket match. The winner is bold, and the side it beat is dimmed. */
-const BracketSide = ({
-  team,
-  score,
-  won,
-  lost,
-  showScore,
-}: {
-  team: Team | null;
-  score: number;
-  won: boolean;
-  lost: boolean;
-  showScore: boolean;
-}) => {
-  const tone = won ? "font-bold text-ink" : lost ? "font-medium text-ink-soft" : "font-medium text-ink";
-  return (
-    <div className="flex items-center gap-1.5 px-2.5 py-1.5">
-      {team ? (
-        <>
-          <TeamMark name={team.name} color={team.color} size={18} />
-          <span className={cn("min-w-0 flex-1 truncate text-caption", tone)}>{team.name}</span>
-        </>
-      ) : (
-        <span className="flex-1 text-caption text-ink-soft">TBD</span>
-      )}
-      {showScore && <span className={cn("text-caption tabular-nums", tone)}>{score}</span>}
-    </div>
-  );
-};
-
-/** One match of the small bracket: a grey tile with a side on each line. */
-const BracketBox = ({ cell }: { cell: BracketCell }) => (
-  <div className="w-40 shrink-0 divide-y divide-surface overflow-hidden rounded-tile bg-fill">
-    <BracketSide
-      team={cell.home}
-      score={cell.homeScore}
-      won={cell.homeWon}
-      lost={cell.awayWon}
-      showScore={!cell.pending}
-    />
-    <BracketSide
-      team={cell.away}
-      score={cell.awayScore}
-      won={cell.awayWon}
-      lost={cell.homeWon}
-      showScore={!cell.pending}
-    />
-    {cell.live && (
-      <div className="flex items-center justify-end gap-1.5 px-2.5 py-1 text-caption font-semibold text-action">
-        <span className="live-dot" aria-hidden="true" />
-        Live
-      </div>
-    )}
-  </div>
-);
 
 /** A glyph on a grey tile, a label, and the value under it. */
 const Fact = ({
@@ -144,7 +88,7 @@ const MainCard = ({ selected }: { selected: SelectedTournament }) => {
                 <p className="text-caption font-medium text-ink-soft">{round.label}</p>
                 <div className="flex flex-1 flex-col justify-around gap-3">
                   {round.cells.map((cell, i) => (
-                    <BracketBox key={i} cell={cell} />
+                    <BracketTile key={i} home={cell.home} away={cell.away} {...cell.line} />
                   ))}
                 </div>
               </div>
