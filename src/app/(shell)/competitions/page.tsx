@@ -284,20 +284,26 @@ export default function TournamentsPage() {
                   return (
                     <li
                       key={row.id}
+                      // The selected row is washed green, as the Teams tab's selected team is.
                       className={cn(
-                        "flex items-center gap-1 border-l-[3px] pl-[13px] pr-2 transition-colors hover:bg-ink/4",
-                        isSelected ? "border-action bg-ink/4" : "border-transparent",
+                        "flex items-center gap-1 pl-4 pr-2 transition-colors",
+                        isSelected ? "bg-action-tint" : "hover:bg-ink/4",
                       )}
                     >
                       <button
                         type="button"
-                        aria-pressed={isSelected}
+                        aria-current={isSelected}
                         onClick={() => data.setSelectedId(row.id)}
                         className="flex min-h-14 min-w-0 flex-1 cursor-pointer flex-col items-start justify-center gap-0.5 py-2 text-left focus-visible:-outline-offset-2"
                       >
                         <span className="flex max-w-full items-center gap-2">
                           <span className="truncate text-title font-semibold">{row.name}</span>
-                          <Chip tone={rowStatus.tone} live={rowStatus.live}>
+                          {/* On the green wash a chip needs white under it to keep its edge. */}
+                          <Chip
+                            tone={rowStatus.tone}
+                            live={rowStatus.live}
+                            className={isSelected ? "bg-surface" : ""}
+                          >
                             {rowStatus.label}
                           </Chip>
                         </span>
