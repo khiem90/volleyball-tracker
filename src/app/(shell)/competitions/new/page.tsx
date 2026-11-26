@@ -1,11 +1,9 @@
 "use client";
 
 import { Suspense } from "react";
-import Link from "next/link";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
-import { PageLoadingSpinner } from "@/components/shared";
-import { MbIcon } from "@/components/matchbook/MbIcon";
-import { Panel } from "@/components/matchbook/Panel";
+import { Card, CardError, Icon, PageLoadingSpinner } from "@/components/shared";
+import { PageHeader } from "@/components/shell/PageHeader";
 import { AdvancedSettings } from "@/components/creation/AdvancedSettings";
 import { FormatPicker } from "@/components/creation/FormatPicker";
 import { TeamChecklist } from "@/components/creation/TeamChecklist";
@@ -33,35 +31,27 @@ function NewTournamentContent() {
 
   return (
     <>
-      <header className="mb-4 flex flex-col gap-3">
-        <Link href="/competitions" className="mb-panel-link self-start">
-          <MbIcon id="chevron-right" size={11} className="rotate-180" />
-          Tournaments
-        </Link>
-        <h1 className="matchbook-display text-3xl font-bold leading-none tracking-[0.01em] sm:text-5xl">
-          New <span className="text-mb-coral">Tournament</span>
-        </h1>
-        <p className="text-[0.85rem] text-mb-ink-muted">
-          Pick a format, name it, tick the teams or import them from an RSVP list, then start it
-          now or keep it as a draft.
-        </p>
-      </header>
+      <PageHeader
+        back={{ href: "/competitions", label: "Tournaments" }}
+        title="New Tournament"
+        line="Pick a format, name it, tick the teams or import them from an RSVP list, then start it now or keep it as a draft."
+      />
 
-      <div className="flex max-w-3xl flex-col gap-4">
-        <Panel title="Format">
+      <div className="flex max-w-3xl flex-col gap-3">
+        <Card title="Format">
           <FormatPicker
             value={setup.format}
             onChange={(format) => page.change({ format })}
             problem={problems.format}
           />
-        </Panel>
+        </Card>
 
-        <Panel title="Name">
-          <div className="flex flex-col gap-1.5 p-3">
-            <label htmlFor="tournament-name" className="mb-kicker">
+        <Card title="Name">
+          <div className="flex flex-col gap-1.5 p-4">
+            <label htmlFor="tournament-name" className="text-caption font-medium text-ink-soft">
               What to call it
             </label>
-            <span className="mb-input">
+            <span className={`field ${problems.name ? "border-danger" : ""}`}>
               <input
                 id="tournament-name"
                 type="text"
@@ -76,12 +66,12 @@ function NewTournamentContent() {
               />
             </span>
             {problems.name && (
-              <p id="name-problem" role="alert" className="text-[0.78rem] font-medium text-mb-red">
+              <p id="name-problem" role="alert" className="text-caption font-medium text-danger">
                 {problems.name}
               </p>
             )}
           </div>
-        </Panel>
+        </Card>
 
         <TeamChecklist
           roster={page.roster}
@@ -103,32 +93,26 @@ function NewTournamentContent() {
           onChange={page.change}
         />
 
-        <div className="flex flex-col gap-3">
-          {alert && (
-            <p
-              role="alert"
-              className="border-[1.5px] border-mb-red px-3 py-2 text-[0.8rem] font-medium text-mb-red"
-            >
-              {alert}
-            </p>
-          )}
-          <div className="flex gap-2">
+        {/* The two ways to finish sit on a card, because the grey button has no edge on the ground. */}
+        <div className="card gap-3 p-4">
+          {alert && <CardError message={alert} className="" />}
+          <div className="flex flex-col-reverse gap-2 sm:flex-row">
             <button
               type="button"
               onClick={() => page.create("draft")}
               disabled={page.busy !== null}
-              className="mb-btn mb-btn-outline-navy min-w-0 flex-1 px-2"
+              className="btn btn-fill sm:flex-1"
             >
-              <MbIcon id="save" size={14} />
+              <Icon id="save" size={16} />
               {page.busy === "draft" ? "Saving..." : "Save as draft"}
             </button>
             <button
               type="button"
               onClick={() => page.create("start")}
               disabled={page.busy !== null}
-              className="mb-btn mb-btn-coral min-w-0 flex-1 px-2"
+              className="btn btn-action sm:flex-1"
             >
-              <MbIcon id="live" size={14} />
+              <Icon id="live" size={18} />
               {page.busy === "start" ? "Starting..." : "Create and start"}
             </button>
           </div>

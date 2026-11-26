@@ -1,7 +1,6 @@
 "use client";
 
-import { MbIcon } from "@/components/matchbook/MbIcon";
-import { Choice } from "@/components/shared";
+import { Choice, Icon } from "@/components/shared";
 import {
   ALL_SETTINGS,
   courtTerminology,
@@ -11,6 +10,9 @@ import {
 
 const COURT_CHOICES = [1, 2, 3, 4];
 const SERIES_CHOICES = [1, 3, 5, 7];
+
+/** The label above a control. */
+const LABEL = "text-caption font-medium text-ink-soft";
 
 const PointsField = ({
   id,
@@ -24,8 +26,8 @@ const PointsField = ({
   onChange: (value: number) => void;
 }) => (
   <label htmlFor={id} className="flex flex-col gap-1.5">
-    <span className="mb-kicker">{label}</span>
-    <span className="mb-input">
+    <span className={LABEL}>{label}</span>
+    <span className="field">
       <input
         id={id}
         type="number"
@@ -42,9 +44,9 @@ const PointsField = ({
 );
 
 /**
- * The settings most tournaments never touch, behind one disclosure. Only
- * the ones the chosen format uses are shown; with no format chosen yet,
- * all of them are.
+ * The settings most tournaments never touch, in one card whose head opens
+ * and closes it. Only the ones the chosen format uses are shown; with no
+ * format chosen yet, all of them are.
  */
 export const AdvancedSettings = ({
   setup,
@@ -61,22 +63,26 @@ export const AdvancedSettings = ({
   const { venue: courtWord, venuePlural: courtWords } = courtTerminology(setup.courtWord);
 
   return (
-    <section className="mb-panel">
+    <section className="card">
       <button
         type="button"
         onClick={onToggle}
         aria-expanded={open}
         aria-controls="advanced-settings"
-        className={`mb-panel-head min-h-11 w-full text-left ${open ? "" : "border-b-0"}`}
+        className={`card-head w-full cursor-pointer text-left transition-colors hover:bg-ink/4 focus-visible:-outline-offset-2 ${
+          open ? "" : "border-b-0"
+        }`}
       >
-        <span className="matchbook-display flex items-center gap-2 text-[0.95rem] font-bold tracking-[0.05em]">
-          <MbIcon id="settings" size={16} />
+        <span className="card-title">
+          <span className="card-icon">
+            <Icon id="settings" size={14} />
+          </span>
           Advanced settings
         </span>
-        <MbIcon
+        <Icon
           id="chevron-down"
-          size={13}
-          className={`shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
+          size={16}
+          className={`shrink-0 text-ink-soft transition-transform ${open ? "rotate-180" : ""}`}
         />
       </button>
       {open && (
@@ -125,7 +131,7 @@ export const AdvancedSettings = ({
           )}
           {used.points && (
             <div className="flex flex-col gap-1.5">
-              <span className="mb-kicker">Standings points</span>
+              <span className={LABEL}>Standings points</span>
               <div className="grid grid-cols-2 gap-3">
                 <PointsField
                   id="points-for-win"
@@ -143,8 +149,8 @@ export const AdvancedSettings = ({
             </div>
           )}
           <label htmlFor="court-word" className="flex flex-col gap-1.5">
-            <span className="mb-kicker">Call a court a</span>
-            <span className="mb-input">
+            <span className={LABEL}>Call a court a</span>
+            <span className="field">
               <input
                 id="court-word"
                 type="text"
@@ -156,7 +162,7 @@ export const AdvancedSettings = ({
                 autoCapitalize="none"
               />
             </span>
-            <span className="text-[0.72rem] text-mb-ink-muted">
+            <span className="text-caption text-ink-soft">
               Field or table, if that fits your sport.
             </span>
           </label>
