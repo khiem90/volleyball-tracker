@@ -413,6 +413,23 @@ bar's and `size="page"` is sign-in's. It is not a link, so wrap it in one
 where it should lead home. The crest's path is `CREST_SRC` in
 `src/lib/assetPaths.ts`.
 
+The crest is a ball over a net on the team mark's shield. The net's tape and
+centre strap make the T. It is drawn three times in `public/brand`, each a
+square:
+
+| File | Where it goes |
+| --- | --- |
+| `crest.svg` | `Brand`, and the home-screen and Apple icons, on white. The mesh is ink. |
+| `crest-small.svg` | The favicon. Use it for anything at 32px or under, where the mesh turns to mud. |
+| `crest-maskable.svg` | The maskable icons. A white crest on a full green square, inside the 80% safe circle. |
+
+`node scripts/generate-icons.mjs` draws every icon from those three files, so
+a new crest is three new files and one run. The drawings sit on a 6.25 unit
+grid, which is one pixel at 16px, so keep edges on it. The manifest's
+`theme_color` and the page's theme-color tag are the `surface` color and its
+`background_color` is the `ground` color. `src/__tests__/design/brand.test.ts`
+holds those to the stylesheet and checks each icon's size and ground.
+
 ## Icons
 
 Every icon is a `<symbol>` in `public/assets/matchbook/icons/sprite.svg`,

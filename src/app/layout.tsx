@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
-    // Dark status bar text on the paper design; white text would vanish on it.
+    // Dark status bar text, because the top bar is white and white text would vanish on it.
     statusBarStyle: "default",
     title: "Tournaments",
   },
@@ -29,14 +29,15 @@ export const metadata: Metadata = {
 
 // Cover fit lets the page run under the notch and the home indicator; the
 // shell and the scoring page pad themselves clear of both with the
-// safe-area insets. The theme color is the matchbook paper.
+// safe-area insets. The theme color is the surface token's value, the white
+// of the top bar, and public/manifest.json says the same.
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
   viewportFit: "cover",
-  themeColor: "#f7f0e4",
+  themeColor: "#ffffff",
   colorScheme: "light",
 };
 

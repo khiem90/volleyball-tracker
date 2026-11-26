@@ -351,6 +351,7 @@ const migrated: string[] = [
   "app/(shell)/summaries",
   "app/(shell)/teams",
   "app/(shell)/tools",
+  "app/layout.tsx",
   "app/login",
   "app/match",
   "components/GlobalUndoToast.tsx",
