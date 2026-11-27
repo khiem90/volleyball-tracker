@@ -320,7 +320,7 @@ Lint and the type checker run clean at every commit, as today.
 
 ## What changed during the build
 
-The owner merged the build into `master` on 2026-11-27 as pull request 27, from the integration branch `claude/grill-with-docs-redesign-27d048`. All 20 tickets are in it and the code review's findings are fixed. The status stays `ready-for-human` because two things are still the owner's: a look at each screen on a real phone, and the crest pick.
+The owner merged the build into `master` on 2026-11-27 as pull request 27, from the integration branch `claude/grill-with-docs-redesign-27d048`. All 20 tickets are in it and the code review's findings are fixed. The owner looked at the app on a phone the same day and flagged nothing, so tickets 01 to 18 and 20 are resolved. The status stays `ready-for-human` for ticket 19, which waits on the owner's crest pick and a look at the installed app's icon.
 
 These are the places where the build left this spec. `docs/design-system.md` is the current description of each.
 

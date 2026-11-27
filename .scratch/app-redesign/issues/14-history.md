@@ -10,7 +10,7 @@ Covers spec stories 31, 32, 60, and 61.
 
 **Blocked by:** 03, 05, 06
 
-**Status:** ready-for-human
+**Status:** resolved
 
 - [x] History shows the same results in the same groups and order as today.
 - [x] Every match is a row-size score line with marks, the winner in bold, and the loser dimmed.
@@ -20,7 +20,7 @@ Covers spec stories 31, 32, 60, and 61.
 - [x] An empty History shows today's empty state in the new look.
 - [x] History's files contain no old-theme name and are on the guard's list of migrated folders.
 - [x] The history tests pass unedited, along with the rest of the suite outside the design folder. Lint and the type checker are clean.
-- [ ] The owner has looked at History on a phone and what they flagged is fixed.
+- [x] The owner has looked at History on a phone and what they flagged is fixed.
 
 ## Comments
 
@@ -28,3 +28,4 @@ Covers spec stories 31, 32, 60, and 61.
 - Groups, not applicable: History has no group per tournament. A completed tournament is one row that opens its console, and the ledger groups every match by day. Both are kept. The row shows the name, format, teams, matches, date, and "Winner: name" with the winner's mark where the star was.
 - Delete and discard, not applicable: History has neither, so it opens no dialog.
 - Merged on the integration branch `claude/grill-with-docs-redesign-27d048` and through the code review. The one open box is the owner's own look on a phone, so the status is `ready-for-human` until they have had it.
+- The owner looked at the app on a phone on 2026-11-27, after the merge, and said it looks good. Nothing was flagged, so the last box is ticked and the ticket is resolved.

@@ -14,7 +14,7 @@ Covers spec stories 3, 4, 53, 54, 55, and 56.
 
 **Blocked by:** 03, 05
 
-**Status:** ready-for-human
+**Status:** resolved
 
 - [x] The team-color panels keep their size, layout, colors, and tap targets. Text on a panel keeps the contrast handling it has today.
 - [x] The scoring header uses the role tokens and shows team marks where it showed crests.
@@ -24,7 +24,7 @@ Covers spec stories 3, 4, 53, 54, 55, and 56.
 - [x] Scoring a point, an undo, finishing a game, finishing a match, and leaving the page all behave as they did.
 - [x] The scoring files contain no old-theme name, and their folders are on the guard's list of migrated folders.
 - [x] The 56 test files outside the design folder pass unedited. Lint and the type checker are clean.
-- [ ] The owner has looked at the scoring page on a phone, as an owner and as a guest, and what they flagged is fixed.
+- [x] The owner has looked at the scoring page on a phone, as an owner and as a guest, and what they flagged is fixed.
 
 ## Comments
 
@@ -32,3 +32,4 @@ Covers spec stories 3, 4, 53, 54, 55, and 56.
 - The panels changed in name only. Fullscreen keeps its black ground, because a panel's color thins toward one corner and the ground shows through it.
 - Nobody has seen this in a browser. Check at 390px: the header with Fullscreen, Undo, and End beside two chips, and the result dialogs, where the 44px score leaves each team's name about 60px.
 - Merged on the integration branch `claude/grill-with-docs-redesign-27d048` and through the code review. The one open box is the owner's own look on a phone, so the status is `ready-for-human` until they have had it.
+- The owner looked at the app on a phone on 2026-11-27, after the merge, and said it looks good. Nothing was flagged, so the last box is ticked and the ticket is resolved.

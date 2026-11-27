@@ -17,7 +17,7 @@ Covers spec stories 18, 33, and 35 to 41.
 
 **Blocked by:** 03, 05, 06
 
-**Status:** ready-for-human
+**Status:** resolved
 
 - [x] The header block shows "Home", today's date, and the Quick Match button as the main action.
 - [x] The live tournaments card lists the same tournaments in the same order as today, each with its facts, a Resume pill, and the count of matches being scored when there is one.
@@ -27,7 +27,7 @@ Covers spec stories 18, 33, and 35 to 41.
 - [x] A card with nothing to show, a guest, and a signed-in user with no tournaments each see what they see today, in the new look.
 - [x] Home's files contain no old-theme name and are on the guard's list of migrated folders.
 - [x] The home tests pass unedited, along with the rest of the suite outside the design folder. Lint and the type checker are clean.
-- [ ] The owner has looked at Home on a phone and on a laptop, and what they flagged is fixed.
+- [x] The owner has looked at Home on a phone and on a laptop, and what they flagged is fixed.
 
 ## Comments
 
@@ -35,3 +35,4 @@ Covers spec stories 18, 33, and 35 to 41.
 - "Each with a count" is not applicable to Recent results and Tools, which have no count today. Live tournaments and Your RSVPs keep theirs.
 - Dropped to match the picture: the chevron in the Resume pill, the chevron after an RSVP's standing, and the court glyph on the tools row. Recent results gains the `history` glyph in its head. A list with no scheduled time shows a calendar glyph on a grey tile where the date tile would be.
 - Merged on the integration branch `claude/grill-with-docs-redesign-27d048` and through the code review. The one open box is the owner's own look on a phone, so the status is `ready-for-human` until they have had it.
+- The owner looked at the app on a phone on 2026-11-27, after the merge, and said it looks good. Nothing was flagged, so the last box is ticked and the ticket is resolved.

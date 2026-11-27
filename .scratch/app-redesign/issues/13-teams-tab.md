@@ -10,7 +10,7 @@ Covers spec stories 25, 29, and 30.
 
 **Blocked by:** 03, 05, 06
 
-**Status:** ready-for-human
+**Status:** resolved
 
 - [x] The roster lists the same teams in the same order as today, each with its mark, name, and the same facts and status.
 - [x] Search and any filters work as today in the new form controls.
@@ -19,7 +19,7 @@ Covers spec stories 25, 29, and 30.
 - [x] An empty roster shows today's empty state in the new look.
 - [x] The Teams tab's files and the team dialogs contain no old-theme name and are on the guard's list of migrated folders.
 - [x] The roster tests pass unedited, along with the rest of the suite outside the design folder. Lint and the type checker are clean.
-- [ ] The owner has added, edited, and deleted a team on a phone, and what they flagged is fixed.
+- [x] The owner has added, edited, and deleted a team on a phone, and what they flagged is fixed.
 
 ## Comments
 
@@ -27,3 +27,4 @@ Covers spec stories 25, 29, and 30.
 - The directory and the readiness list are rows now, not tables, so neither scrolls sideways. The selected row is washed with `action-tint`. The teal edge on the top row is gone, and its rank number still says it leads.
 - The page's title reads "Teams". It was "Team Directory", which the first card still says. Status words read "Active", "Idle", "Ready", "Good", and "Needs attention" where the data holds capitals.
 - Merged on the integration branch `claude/grill-with-docs-redesign-27d048` and through the code review. The one open box is the owner's own look on a phone, so the status is `ready-for-human` until they have had it.
+- The owner looked at the app on a phone on 2026-11-27, after the merge, and said it looks good. Nothing was flagged, so the last box is ticked and the ticket is resolved.
