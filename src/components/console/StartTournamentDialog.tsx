@@ -10,8 +10,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { MbIcon } from "@/components/matchbook/MbIcon";
 import { InlineSpinner } from "@/components/shared";
+import { Icon } from "@/components/shared/Icon";
+import { TeamMark } from "@/components/shared/TeamMark";
 import { formatLabel, isBracketFormat } from "@/lib/formats";
 import { getPlayInMatchCount } from "@/lib/singleElimination";
 import type { PersistentTeam, Tournament } from "@/types/game";
@@ -82,10 +83,13 @@ export const StartTournamentDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={showPlayInSelection ? "sm:max-w-lg" : "sm:max-w-md"}>
+      {/* One column that cannot grow past the dialog, so a long team name is cut short in its row. */}
+      <DialogContent
+        className={`grid-cols-1 ${showPlayInSelection ? "sm:max-w-lg" : "sm:max-w-md"}`}
+      >
         <DialogHeader>
           <DialogTitle>
-            <MbIcon id="play" size={18} className="shrink-0" />
+            <Icon id="play" size={18} className="shrink-0" />
             Start the tournament?
           </DialogTitle>
           <DialogDescription>
@@ -95,21 +99,22 @@ export const StartTournamentDialog = ({
         </DialogHeader>
 
         {showPlayInSelection && (
-          <div className="py-2">
-            <div className="mb-3 flex items-center justify-between">
-              <p className="text-sm font-medium">
+          <div>
+            <div className="mb-1 flex items-center justify-between gap-3">
+              <p className="text-label font-semibold">
                 Pick {playInTeamCount} team{playInTeamCount > 1 ? "s" : ""} to play in
               </p>
-              <span className="text-xs text-mb-ink-muted">
+              <span className="shrink-0 text-caption tabular-nums text-ink-soft">
                 {selectedPlayInTeamIds.length}/{playInTeamCount} picked
               </span>
             </div>
-            <p className="mb-3 text-xs text-mb-ink-muted">
+            <p className="mb-3 text-caption text-ink-soft">
               They play {playInMatchCount} play-in match{playInMatchCount > 1 ? "es" : ""}. The
               other {teamCount - playInTeamCount} team{teamCount - playInTeamCount > 1 ? "s" : ""}{" "}
               get a bye into the next round.
             </p>
-            <div className="max-h-60 space-y-1 overflow-y-auto">
+            {/* The padding keeps a focus ring clear of the edge the list scrolls under. */}
+            <div className="-m-1 flex max-h-60 flex-col gap-1.5 overflow-y-auto p-1">
               {teams.map((team) => {
                 const isSelected = selectedPlayInTeamIds.includes(team.id);
                 const isDisabled =
@@ -120,20 +125,18 @@ export const StartTournamentDialog = ({
                     type="button"
                     onClick={() => toggleTeam(team.id)}
                     disabled={isDisabled}
-                    className={`flex min-h-11 w-full items-center gap-3 rounded-[4px] border bg-mb-paper-bright px-3 py-2 text-left transition-colors ${
+                    aria-pressed={isSelected}
+                    className={`flex min-h-11 w-full shrink-0 items-center gap-2.5 rounded-tile border px-3 py-2 text-left transition-colors ${
                       isSelected
-                        ? "border-mb-navy bg-mb-navy/6"
+                        ? "border-action bg-action-tint"
                         : isDisabled
-                          ? "cursor-not-allowed border-mb-rule opacity-50"
-                          : "border-mb-rule hover:bg-mb-navy/6"
+                          ? "cursor-not-allowed border-ink-soft/75 opacity-45"
+                          : "border-ink-soft/75 hover:bg-ink/4"
                     }`}
                   >
-                    <span
-                      className="h-4 w-4 shrink-0 rounded-full border-[1.5px] border-mb-navy"
-                      style={{ backgroundColor: team.color }}
-                    />
-                    <span className="flex-1 truncate text-sm">{team.name}</span>
-                    {isSelected && <MbIcon id="check" size={16} className="shrink-0" />}
+                    <TeamMark name={team.name} color={team.color} size={22} />
+                    <span className="min-w-0 flex-1 truncate text-body font-medium">{team.name}</span>
+                    {isSelected && <Icon id="check" size={18} className="shrink-0 text-action" />}
                   </button>
                 );
               })}
@@ -151,7 +154,7 @@ export const StartTournamentDialog = ({
             Cancel
           </Button>
           <Button onClick={handleStart} disabled={!canStart} className="sm:flex-1">
-            {isStarting ? <InlineSpinner /> : <MbIcon id="play" size={14} />}
+            {isStarting ? <InlineSpinner /> : <Icon id="play" size={14} />}
             {isStarting ? "Starting..." : "Start"}
           </Button>
         </DialogFooter>

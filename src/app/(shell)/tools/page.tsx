@@ -2,13 +2,13 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { useAuth } from "@/context/AuthContext";
 import { getUserFormations } from "@/lib/volleyball/userFormations";
 import type { UserFormation } from "@/lib/volleyball/types";
 import { signInHref } from "@/lib/shell";
-import { MbIcon } from "@/components/matchbook/MbIcon";
-import { Panel, PanelEmpty } from "@/components/matchbook/Panel";
+import { CARD_ROW, Card, CardEmpty, Chip, Icon } from "@/components/shared";
+import { PageHeader } from "@/components/shell/PageHeader";
+import { CourtReference } from "@/components/volleyball/CourtReference";
 
 const TOOLS = [
   {
@@ -36,6 +36,13 @@ const TOOLS = [
     href: "/competitions/new",
   },
 ];
+
+/* A row that opens something: its words on the left and one thing on the right. */
+const ROW = `flex items-center gap-3 ${CARD_ROW}`;
+const ROW_TEXT = "flex min-w-0 flex-1 flex-col gap-0.5";
+/* A long name wraps, mid-word if it must, so it never pushes the right side out of the row. */
+const ROW_NAME = "text-title font-semibold leading-snug wrap-anywhere";
+const ROW_FACTS = "text-caption text-ink-soft";
 
 export default function ToolsPage() {
   const { user, isGuest } = useAuth();
@@ -71,135 +78,105 @@ export default function ToolsPage() {
 
   return (
     <>
-      {/* Masthead */}
-      <header className="mb-5 flex flex-wrap items-center gap-x-6 gap-y-4">
-        <div className="flex min-w-0 items-center gap-4">
-          <h1 className="matchbook-display min-w-0 text-4xl font-bold leading-none tracking-[0.01em] sm:text-5xl">
-            Tournament <span className="text-mb-coral">Toolkit</span>
-          </h1>
-          <div className="flex flex-col items-center border-[2px] border-mb-coral px-2.5 py-1 text-mb-coral">
-            <span className="matchbook-display text-2xl font-bold leading-none tabular-nums">
-              {TOOLS.length}
-            </span>
-            <span className="matchbook-display text-[0.6rem] font-bold tracking-[0.22em]">
-              Tools
-            </span>
-          </div>
-        </div>
-
-        <div className="flex w-full flex-wrap gap-3 sm:ml-auto sm:w-auto">
-          <Link href="/tools/volleyball-rotations" className="mb-btn mb-btn-coral flex-1 sm:flex-none">
-            <MbIcon id="court" size={14} />
+      <PageHeader
+        title="Tournament Toolkit"
+        status={<Chip>{TOOLS.length} Tools</Chip>}
+        action={
+          <Link href="/tools/volleyball-rotations" className="btn btn-action">
+            <Icon id="court" size={18} />
             Open Designer
           </Link>
-        </div>
-      </header>
+        }
+      />
 
-      {/* Panel grid */}
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
-        {/* Tool launcher */}
-        <div className="xl:col-span-12">
-          <Panel title="Toolkit">
-            <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 xl:grid-cols-4">
+      {/* Start-aligned so each card is as tall as its rows, not its column. */}
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-12">
+        <div className="flex min-w-0 flex-col gap-4 lg:col-span-7">
+          {/* Tool launcher */}
+          <Card title="Toolkit" icon="tools">
+            <ul className="divide-y divide-line">
               {TOOLS.map((tool) => (
-                <Link
-                  key={tool.title}
-                  href={tool.href}
-                  className="group flex flex-col gap-2 border-[1.5px] border-mb-navy bg-mb-paper-bright p-4 transition-colors hover:bg-[rgba(7,50,77,0.04)]"
-                >
-                  <span className="flex h-11 w-11 items-center justify-center rounded-full border-[1.5px] border-mb-navy text-mb-navy">
-                    <MbIcon id={tool.icon} size={20} />
-                  </span>
-                  <span className="matchbook-display text-[0.95rem] font-bold tracking-[0.06em]">
-                    {tool.title}
-                  </span>
-                  <span className="text-[0.76rem] leading-snug text-mb-ink-muted">
-                    {tool.description}
-                  </span>
-                  <span className="mb-panel-link mt-auto min-h-0 pt-1 group-hover:text-mb-coral">
-                    Open Tool
-                    <MbIcon id="chevron-right" size={11} />
-                  </span>
-                </Link>
+                <li key={tool.title}>
+                  <Link href={tool.href} className={ROW}>
+                    <span className="grid size-11 shrink-0 place-items-center rounded-tile bg-fill">
+                      <Icon id={tool.icon} size={20} />
+                    </span>
+                    <span className={ROW_TEXT}>
+                      <span className={ROW_NAME}>{tool.title}</span>
+                      <span className={ROW_FACTS}>{tool.description}</span>
+                    </span>
+                    <span className="flex shrink-0 items-center gap-1 text-caption font-semibold text-ink-soft">
+                      Open Tool
+                      <Icon id="chevron-right" size={14} />
+                    </span>
+                  </Link>
+                </li>
               ))}
-            </div>
-          </Panel>
-        </div>
+            </ul>
+          </Card>
 
-        {/* Saved formations */}
-        <div className="xl:col-span-7">
-          <Panel
+          {/* Saved formations */}
+          <Card
             title="Saved Formations"
+            icon="save"
             action="Manage All"
             href="/tools/volleyball-rotations/my-formations"
           >
             {isGuest ? (
-              <PanelEmpty
+              <CardEmpty
                 message="No formations exist yet — sign in to save and share your rotation layouts."
                 actionLabel="Sign in"
                 href={signInHref("/tools")}
               />
             ) : formationsState === "loading" ? (
-              <p className="p-4 text-center text-[0.8rem] text-mb-ink-muted">
+              <p className="px-4 py-8 text-center text-label text-ink-soft">
                 Loading saved formations…
               </p>
             ) : formationsState === "error" ? (
-              <PanelEmpty message="Saved formations could not be loaded right now — try again from My Formations." />
+              <CardEmpty message="Saved formations could not be loaded right now — try again from My Formations." />
             ) : formations.length === 0 ? (
-              <PanelEmpty
+              <CardEmpty
                 message="No formations exist yet — save a layout from the rotation designer to see it here."
                 actionLabel="Open designer"
                 href="/tools/volleyball-rotations"
               />
             ) : (
-              <div className="flex flex-col divide-y divide-mb-rule">
+              <ul className="divide-y divide-line">
                 {formations.slice(0, 6).map((formation) => (
-                  <Link
-                    key={formation.id}
-                    href="/tools/volleyball-rotations/my-formations"
-                    className="grid grid-cols-[auto_1fr_auto_auto] items-center gap-2.5 px-4 py-2 transition-colors hover:bg-[rgba(7,50,77,0.04)]"
-                  >
-                    <MbIcon id="clipboard" size={15} className="text-mb-navy" />
-                    <span className="min-w-0">
-                      <span className="matchbook-display block truncate text-[0.78rem] font-bold">
-                        {formation.name}
+                  <li key={formation.id}>
+                    <Link href="/tools/volleyball-rotations/my-formations" className={ROW}>
+                      <Icon id="clipboard" size={16} className="shrink-0 text-ink-soft" />
+                      <span className={ROW_TEXT}>
+                        <span className={ROW_NAME}>{formation.name}</span>
+                        {formation.description && (
+                          <span className={`line-clamp-1 ${ROW_FACTS}`}>
+                            {formation.description}
+                          </span>
+                        )}
                       </span>
-                      {formation.description && (
-                        <span className="block truncate text-[0.66rem] text-mb-ink-muted">
-                          {formation.description}
-                        </span>
-                      )}
-                    </span>
-                    {formation.shareId && (
-                      <span className="matchbook-display text-[0.6rem] font-bold tracking-[0.1em] text-mb-teal">
-                        Shared
+                      {formation.shareId && <Chip tone="action">Shared</Chip>}
+                      <span className="shrink-0 text-caption text-ink-soft tabular-nums">
+                        {formatDate(formation.updatedAt)}
                       </span>
-                    )}
-                    <span className="mb-kicker">{formatDate(formation.updatedAt)}</span>
-                  </Link>
+                    </Link>
+                  </li>
                 ))}
-              </div>
+              </ul>
             )}
-          </Panel>
+          </Card>
         </div>
 
         {/* Court reference */}
-        <div className="xl:col-span-5">
-          <Panel title="Court Reference" tone="navy" icon="court">
-            <div className="flex flex-1 flex-col items-center gap-3 p-5">
-              <Image
-                src="/assets/matchbook/diagrams/volleyball-court.svg"
-                alt="Top-down volleyball court diagram with position zones"
-                width={340}
-                height={220}
-                className="h-auto w-full max-w-[360px]"
-              />
-              <p className="text-center text-[0.74rem] leading-snug text-mb-ink-muted">
+        <div className="min-w-0 lg:col-span-5">
+          <Card title="Court Reference" icon="court">
+            <div className="flex flex-col items-center gap-3 p-4">
+              <CourtReference className="h-auto w-full max-w-100" />
+              <p className="text-center text-label text-ink-soft">
                 Standard indoor court with rotation zones 1–6. Open the rotation
                 designer to place players and validate overlap rules against it.
               </p>
             </div>
-          </Panel>
+          </Card>
         </div>
       </div>
     </>

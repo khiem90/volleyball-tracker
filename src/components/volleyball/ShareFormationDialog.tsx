@@ -1,8 +1,16 @@
 "use client";
 
 import { memo, useState, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { MbIcon } from "@/components/matchbook/MbIcon";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Icon } from "@/components/shared/Icon";
 import type { UserFormation } from "@/lib/volleyball/types";
 import { formationShareLink } from "@/lib/volleyball/formationLinks";
 import { useOrigin } from "@/hooks/useOrigin";
@@ -83,139 +91,121 @@ export const ShareFormationDialog = memo(
       }
     }, [shareUrl]);
 
-    if (!isOpen || !formation) return null;
+    if (!formation) return null;
 
     return (
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-mb-navy/55 p-4"
-            onClick={(e) => e.target === e.currentTarget && onClose()}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="mb-dialog w-full max-w-md overflow-hidden"
-            >
-              {/* Header */}
-              <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-                <h2 className="text-lg font-bold">Share Formation</h2>
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="flex size-11 items-center justify-center rounded-[4px] text-mb-navy transition-colors hover:bg-mb-navy/6"
-                  aria-label="Close dialog"
-                >
-                  <MbIcon id="close" size={20} />
-                </button>
-              </div>
+      <Dialog
+        open={isOpen}
+        onOpenChange={(open) => {
+          if (!open) onClose();
+        }}
+      >
+        {/* With no description to point at, the dialog is told it has none. */}
+        <DialogContent
+          className="sm:max-w-md"
+          {...(formation.description ? {} : { "aria-describedby": undefined })}
+        >
+          <DialogHeader>
+            <DialogTitle>
+              <Icon id="share" size={18} className="shrink-0" />
+              Share Formation
+            </DialogTitle>
+          </DialogHeader>
 
-              {/* Content */}
-              <div className="p-6 space-y-4">
-                {/* Formation Info */}
-                <div>
-                  <h3 className="font-semibold text-foreground">{formation.name}</h3>
-                  {formation.description && (
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {formation.description}
-                    </p>
-                  )}
+          {/* Formation Info */}
+          <div className="flex flex-col gap-1">
+            <h3 className="text-title font-semibold wrap-anywhere">{formation.name}</h3>
+            {formation.description && (
+              <DialogDescription className="text-label">
+                {formation.description}
+              </DialogDescription>
+            )}
+          </div>
+
+          {/* Sharing Status */}
+          <div className="rounded-tile bg-fill p-4">
+            {shareUrl ? (
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center gap-2">
+                  <span className="size-2 rounded-full bg-action" aria-hidden="true" />
+                  <span className="text-label font-semibold text-action">
+                    Sharing enabled
+                  </span>
                 </div>
 
-                {/* Sharing Status */}
-                <div className="p-4 rounded-lg bg-accent/50">
-                  {shareUrl ? (
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-green-500" />
-                        <span className="text-sm font-medium text-green-700">
-                          Sharing enabled
-                        </span>
-                      </div>
-
-                      {/* Share URL */}
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="text"
-                          value={shareUrl}
-                          readOnly
-                          className="flex-1 min-h-11 px-3 py-2 text-sm bg-background border border-border rounded-lg"
-                        />
-                        <button
-                          type="button"
-                          onClick={handleCopyLink}
-                          className={`min-h-11 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                            copied
-                              ? "bg-green-500 text-white"
-                              : "bg-primary text-primary-foreground hover:bg-primary/90"
-                          }`}
-                        >
-                          {copied ? "Copied!" : "Copy"}
-                        </button>
-                      </div>
-
-                      <p className="text-xs text-muted-foreground">
-                        Anyone with this link can view your formation
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="text-center py-2">
-                      <p className="text-sm text-muted-foreground mb-3">
-                        This formation is private. Enable sharing to generate a link.
-                      </p>
-                      <button
-                        type="button"
-                        onClick={handleEnableSharing}
-                        disabled={pending !== null}
-                        className="min-h-11 px-4 py-2 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-                      >
-                        {pending === "enable" ? "Enabling..." : "Enable Sharing"}
-                      </button>
-                    </div>
-                  )}
+                {/* Share URL */}
+                <div className="flex items-center gap-2">
+                  <span className="field min-w-0 flex-1">
+                    <input
+                      type="text"
+                      value={shareUrl}
+                      readOnly
+                      aria-label="Share link"
+                      className="truncate"
+                    />
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleCopyLink}
+                    className="btn btn-ink shrink-0 px-4"
+                  >
+                    {copied && <Icon id="check" size={14} />}
+                    {copied ? "Copied!" : "Copy"}
+                  </button>
                 </div>
 
-                {/* Error */}
-                {error && (
-                  <p className="text-sm text-red-500">{error}</p>
-                )}
-
-                {/* Disable Sharing */}
-                {shareUrl && (
-                  <div className="pt-2 border-t border-border">
-                    <button
-                      type="button"
-                      onClick={handleDisableSharing}
-                      disabled={pending !== null}
-                      className="min-h-11 text-sm text-red-500 hover:text-red-600 disabled:opacity-50"
-                    >
-                      {pending === "disable" ? "Disabling..." : "Make Private"}
-                    </button>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      This will revoke access for anyone with the share link
-                    </p>
-                  </div>
-                )}
+                <p className="text-caption text-ink-soft">
+                  Anyone with this link can view your formation
+                </p>
               </div>
-
-              {/* Footer */}
-              <div className="px-6 py-4 border-t border-border bg-accent/30 flex justify-end">
+            ) : (
+              <div className="flex flex-col items-center gap-3 py-2 text-center">
+                <p className="text-label text-ink-soft">
+                  This formation is private. Enable sharing to generate a link.
+                </p>
                 <button
                   type="button"
-                  onClick={onClose}
-                  className="min-h-11 px-4 py-2 rounded-lg text-sm font-medium hover:bg-accent transition-colors"
+                  onClick={handleEnableSharing}
+                  disabled={pending !== null}
+                  className="btn btn-ink"
                 >
-                  Close
+                  {pending === "enable" ? "Enabling..." : "Enable Sharing"}
                 </button>
               </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            )}
+          </div>
+
+          {/* Error */}
+          {error && (
+            <p role="alert" className="text-label font-medium text-danger">
+              {error}
+            </p>
+          )}
+
+          {/* Disable Sharing */}
+          {shareUrl && (
+            <div className="flex flex-col items-start gap-2 border-t border-line pt-4">
+              <button
+                type="button"
+                onClick={handleDisableSharing}
+                disabled={pending !== null}
+                className="btn btn-danger-quiet px-4"
+              >
+                {pending === "disable" ? "Disabling..." : "Make Private"}
+              </button>
+              <p className="text-caption text-ink-soft">
+                This will revoke access for anyone with the share link
+              </p>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     );
   }
 );

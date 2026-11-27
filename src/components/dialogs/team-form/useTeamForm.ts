@@ -71,8 +71,7 @@ export const useTeamForm = ({ open, team, onSubmit, onClose }: UseTeamFormProps)
     onClose();
   }, [onClose]);
 
-  // Preview data
-  const previewInitial = name.trim().charAt(0).toUpperCase() || "T";
+  // The preview draws the team's mark from this name, so the mark shows its initial.
   const previewName = name.trim() || "Team Name";
 
   return {
@@ -83,7 +82,6 @@ export const useTeamForm = ({ open, team, onSubmit, onClose }: UseTeamFormProps)
     isEditing,
 
     // Preview data
-    previewInitial,
     previewName,
 
     // Actions

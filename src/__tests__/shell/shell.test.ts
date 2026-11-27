@@ -67,7 +67,7 @@ describe("SHELL_TABS", () => {
 
   it("draws every tab with an icon the sprite has", () => {
     // Read from the repo root, which is where vitest runs.
-    const sprite = readFileSync("public/assets/matchbook/icons/sprite.svg", "utf8");
+    const sprite = readFileSync("public/assets/icons/sprite.svg", "utf8");
     for (const spec of SHELL_TABS) {
       expect(sprite, spec.label).toContain(`<symbol id="${spec.icon}" `);
     }

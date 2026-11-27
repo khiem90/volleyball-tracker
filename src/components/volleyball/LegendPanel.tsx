@@ -2,8 +2,9 @@
 
 import { memo } from "react";
 import type { PlayerPosition, RotationNumber, GameMode } from "@/lib/volleyball/types";
-import { PLAYER_INFO } from "@/lib/volleyball/constants";
+import { PLAYER_COLORS, PLAYER_INFO } from "@/lib/volleyball/constants";
 import { isSetterFrontRow } from "@/lib/volleyball/rotations";
+import { Chip } from "@/components/shared/Chip";
 
 type LegendPanelProps = {
   players: PlayerPosition[];
@@ -25,23 +26,23 @@ export const LegendPanel = memo(
     const activeRoles = [...new Set(players.map((p) => p.role))];
 
     return (
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-bold text-foreground">Players</h3>
-          <span className="text-xs text-muted-foreground px-2 py-1 rounded-md bg-accent">
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="text-title font-bold">Players</h3>
+          <Chip>
             R{rotation} • {mode === "serving" ? "Serve" : "Receive"}
-          </span>
+          </Chip>
         </div>
 
         {/* Rotation info */}
-        <div className="p-3 rounded-lg bg-accent/50 border border-border">
-          <div className="text-sm">
+        <div className="rounded-tile bg-fill p-3">
+          <div className="text-label">
             <span className="font-medium">Setter position: </span>
-            <span className={isSetterFrontRow(rotation) ? "text-amber-600" : "text-blue-600"}>
+            <span className="font-bold">
               {isSetterFrontRow(rotation) ? "Front Row" : "Back Row"}
             </span>
           </div>
-          <div className="text-xs text-muted-foreground mt-1">
+          <div className="mt-1 text-caption text-ink-soft">
             {isSetterFrontRow(rotation)
               ? "2 front-row attackers available"
               : "3 front-row attackers available"}
@@ -49,7 +50,7 @@ export const LegendPanel = memo(
         </div>
 
         {/* Player legend */}
-        <div className="space-y-2">
+        <div className="flex flex-col gap-2">
           {activeRoles.map((role) => {
             const info = PLAYER_INFO[role];
             const player = players.find((p) => p.role === role);
@@ -60,42 +61,34 @@ export const LegendPanel = memo(
                 key={role}
                 type="button"
                 onClick={() => onPlayerSelect(isSelected ? null : role)}
-                className={`
-                  w-full p-3 rounded-xl text-left transition-all duration-200
-                  border-2 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1
-                  ${
-                    isSelected
-                      ? "border-primary bg-primary/10 shadow-sm"
-                      : "border-transparent bg-accent/30 hover:bg-accent/50 hover:border-primary/20"
-                  }
-                `}
+                className={`w-full rounded-tile border bg-fill p-3 text-left transition-colors ${
+                  isSelected ? "border-ink" : "border-transparent hover:border-ink-soft/75"
+                }`}
                 aria-pressed={isSelected}
               >
                 <div className="flex items-center gap-3">
                   {/* Color indicator */}
                   <div
-                    className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-md shrink-0"
+                    className={`flex size-10 shrink-0 items-center justify-center rounded-full text-label font-bold ${
+                      info.textColor === "ink" ? "text-ink" : "text-white"
+                    }`}
                     style={{ backgroundColor: info.color }}
                   >
                     {info.shortName}
                   </div>
 
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-sm text-foreground">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-label font-semibold">
                         {info.fullName}
                       </span>
-                      {player?.isBackRow && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-700 font-medium">
-                          Back
-                        </span>
-                      )}
+                      {player?.isBackRow && <Chip className="bg-surface py-0">Back</Chip>}
                     </div>
-                    <div className="text-xs text-muted-foreground line-clamp-1">
+                    <div className="line-clamp-1 text-caption text-ink-soft">
                       {info.description}
                     </div>
                     {player && (
-                      <div className="text-[10px] text-muted-foreground/70 mt-0.5">
+                      <div className="mt-0.5 text-caption text-ink-soft">
                         Zone {player.zone}
                       </div>
                     )}
@@ -107,16 +100,17 @@ export const LegendPanel = memo(
         </div>
 
         {/* Quick reference */}
-        <div className="pt-2 border-t border-border">
-          <div className="text-xs text-muted-foreground space-y-1">
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-0.5 border-t-2 border-dashed border-blue-400"></div>
-              <span>Back row player indicator</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-purple-500/50"></div>
-              <span>Libero (replaces back-row MB)</span>
-            </div>
+        <div className="flex flex-col gap-1 border-t border-line pt-3 text-caption text-ink-soft">
+          <div className="flex items-center gap-2">
+            <div className="w-4 border-t-2 border-dashed border-ink-soft"></div>
+            <span>Back row player indicator</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div
+              className="size-3 rounded-full"
+              style={{ backgroundColor: PLAYER_COLORS.L.bg }}
+            ></div>
+            <span>Libero (replaces back-row MB)</span>
           </div>
         </div>
       </div>

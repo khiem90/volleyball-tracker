@@ -10,12 +10,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { MbIcon } from "@/components/matchbook/MbIcon";
 import { InlineSpinner, MoveToSelect } from "@/components/shared";
+import { Icon } from "@/components/shared/Icon";
 import type { TeamRow } from "@/lib/console";
 import type { MixedTeamEdit } from "@/lib/entries";
 import { RSVP_NAME_MAX } from "@/lib/rsvp";
 import { plural } from "@/lib/utils";
+import { ROW_BUTTON } from "./parts";
+import { LABEL } from "@/components/shared/classes";
 
 /**
  * The team's name with Save, offered once the field holds a name that
@@ -50,11 +52,11 @@ const NameForm = ({
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-1.5">
-      <label htmlFor="mixed-team-name" className="mb-kicker">
+      <label htmlFor="mixed-team-name" className={LABEL}>
         Team name
       </label>
       <div className="flex gap-2">
-        <span className="mb-input min-w-0 flex-1">
+        <span className="field min-w-0 flex-1">
           <input
             id="mixed-team-name"
             type="text"
@@ -65,7 +67,7 @@ const NameForm = ({
             enterKeyHint="done"
           />
         </span>
-        <button type="submit" className="mb-btn mb-btn-navy" disabled={!canSave}>
+        <button type="submit" className="btn btn-ink" disabled={!canSave}>
           Save
         </button>
       </div>
@@ -88,8 +90,8 @@ const AddPlayerForm = ({ busy, onAdd }: { busy: boolean; onAdd: (name: string) =
 
   return (
     <form onSubmit={submit} className="flex gap-2">
-      <label className="mb-input min-w-0 flex-1">
-        <MbIcon id="plus" size={14} className="shrink-0 text-mb-ink-muted" />
+      <label className="field min-w-0 flex-1">
+        <Icon id="plus" size={16} className="shrink-0 text-ink-soft" />
         <input
           type="text"
           value={name}
@@ -101,7 +103,7 @@ const AddPlayerForm = ({ busy, onAdd }: { busy: boolean; onAdd: (name: string) =
           enterKeyHint="done"
         />
       </label>
-      <button type="submit" className="mb-btn mb-btn-navy" disabled={!canAdd}>
+      <button type="submit" className="btn btn-ink" disabled={!canAdd}>
         Add
       </button>
     </form>
@@ -126,20 +128,18 @@ const Players = ({
 }) => {
   const players = team.players ?? [];
   if (players.length === 0) {
-    return <p className="text-[0.85rem] text-mb-ink-muted">Nobody is on this team.</p>;
+    return <p className="text-label text-ink-soft">Nobody is on this team.</p>;
   }
   return (
-    <ul aria-label={`Players on ${team.name}`} className="flex flex-col border border-mb-rule">
+    <ul aria-label={`Players on ${team.name}`} className="flex flex-col divide-y divide-line">
       {players.map((name, index) => {
         const player = { name, index };
         return (
           <li
             key={`${index}:${name}`}
-            className="flex flex-wrap items-center justify-between gap-2 border-b border-mb-rule px-3 py-2 last:border-b-0"
+            className="flex flex-wrap items-center justify-between gap-2 py-2"
           >
-            <span className="min-w-0 text-[0.92rem] font-semibold [overflow-wrap:anywhere]">
-              {name}
-            </span>
+            <span className="min-w-0 text-body font-semibold wrap-anywhere">{name}</span>
             <span className="flex shrink-0 flex-wrap items-center justify-end gap-2">
               {others.length > 0 && (
                 <MoveToSelect
@@ -155,10 +155,10 @@ const Players = ({
                 type="button"
                 onClick={() => onEdit({ kind: "remove_player", teamId: team.teamId, player })}
                 disabled={busy}
-                className="mb-btn mb-btn-outline"
+                className={`${ROW_BUTTON} btn-danger-quiet`}
                 aria-label={`Remove ${name} from ${team.name}`}
               >
-                <MbIcon id="remove-user" size={14} />
+                <Icon id="remove-user" size={14} />
                 Remove
               </button>
             </span>
@@ -199,12 +199,12 @@ export const MixedTeamDialog = ({
       if (!open) onClose();
     }}
   >
-    <DialogContent className="sm:max-w-md">
+    <DialogContent className="grid-cols-1 sm:max-w-md">
       {team && (
         <>
           <DialogHeader>
             <DialogTitle>
-              <MbIcon id="pencil" size={18} className="shrink-0" />
+              <Icon id="pencil" size={18} className="shrink-0" />
               Edit {team.name}
             </DialogTitle>
             <DialogDescription>
@@ -221,14 +221,15 @@ export const MixedTeamDialog = ({
 
           <div className="flex flex-col gap-1.5">
             {/* The spinner sits beside the count, so the dialog keeps its height while a change saves. */}
-            <span className="mb-kicker flex min-h-5 items-center gap-2">
+            <span className={`flex min-h-5 items-center gap-2 ${LABEL}`}>
               {plural(team.players?.length ?? 0, "player")}
               {busy && <InlineSpinner />}
               <span role="status" className="sr-only">
                 {busy ? "Saving" : ""}
               </span>
             </span>
-            <div className="max-h-[40vh] overflow-auto">
+            {/* The side padding keeps a button's focus ring clear of the edge the list scrolls under. */}
+            <div className="-mx-1 max-h-[40vh] overflow-auto px-1">
               <Players
                 team={team}
                 others={mixedTeams.filter((other) => other.teamId !== team.teamId)}
@@ -243,7 +244,7 @@ export const MixedTeamDialog = ({
           </div>
 
           {error && (
-            <p role="alert" className="text-[0.8rem] font-medium text-mb-red">
+            <p role="alert" className="text-caption font-medium text-danger">
               {error}
             </p>
           )}

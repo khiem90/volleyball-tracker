@@ -2,6 +2,8 @@
 
 import { memo } from "react";
 import type { FormationCategory } from "@/lib/volleyball/types";
+import { cn } from "@/lib/utils";
+import { toggleClass } from "./styles";
 
 type CategoryConfig = {
   id: FormationCategory;
@@ -54,25 +56,16 @@ export const FormationCategoryTabs = memo(
               key={category.id}
               type="button"
               onClick={() => onCategoryChange(category.id)}
-              className={`
-                min-h-11 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200
-                focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1
-                ${
-                  isActive
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "bg-accent/50 text-muted-foreground hover:bg-accent hover:text-foreground"
-                }
-              `}
+              className={cn(toggleClass(isActive), "px-4")}
               aria-pressed={isActive}
               title={category.description}
             >
               {category.label}
               {typeof count === "number" && count > 0 && (
+                // The count sits on the button's own ground: ink when chosen, white when not.
                 <span
-                  className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs ${
-                    isActive
-                      ? "bg-primary-foreground/20 text-primary-foreground"
-                      : "bg-muted text-muted-foreground"
+                  className={`rounded-pill px-1.5 py-0.5 text-caption tabular-nums ${
+                    isActive ? "bg-white/20 text-white" : "bg-fill text-ink-soft"
                   }`}
                 >
                   {count}

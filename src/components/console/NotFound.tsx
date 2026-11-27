@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { Panel, PanelEmpty } from "@/components/matchbook/Panel";
+import { Card, CardEmpty } from "@/components/shared/Card";
 import { STALE_SCORER_LINK } from "@/lib/shareLinks";
 import { signInHref } from "@/lib/shell";
 import type { NotFoundReason } from "./useConsole";
@@ -21,12 +21,15 @@ export const NotFound = ({ reason, isGuest }: { reason: NotFoundReason; isGuest:
         ? "This tournament does not exist or is not being shared. If it is yours, sign in to open it."
         : "This tournament does not exist, is not being shared, or belongs to another account.";
   return (
-    <Panel title={reason === "stale_link" ? "Scorer link replaced" : "Tournament not found"}>
-      <PanelEmpty
+    <Card
+      title={reason === "stale_link" ? "Scorer link replaced" : "Tournament not found"}
+      className="h-auto"
+    >
+      <CardEmpty
         message={message}
         actionLabel={isGuest ? "Sign in" : "Back to tournaments"}
         href={isGuest ? signInHref(pathname) : "/competitions"}
       />
-    </Panel>
+    </Card>
   );
 };

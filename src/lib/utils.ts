@@ -1,5 +1,19 @@
 import { clsx, type ClassValue } from "clsx"
-import { twMerge } from "tailwind-merge"
+import { extendTailwindMerge } from "tailwind-merge"
+
+/*
+ * The steps of the type scale and the radius scale in src/app/globals.css.
+ * Without them a merge takes text-title for a text color and drops it beside
+ * text-ink, and it never sees that rounded-card and rounded-pill conflict.
+ */
+const twMerge = extendTailwindMerge({
+  extend: {
+    theme: {
+      text: ["page-title", "title", "body", "label", "caption", "tab", "score"],
+      radius: ["card", "tile", "chip", "pill"],
+    },
+  },
+})
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))

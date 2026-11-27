@@ -3,9 +3,9 @@
 import { useAppUpdate } from "@/context/AppUpdateContext";
 
 /**
- * The offer of a newly deployed version: a strip with Reload, in the flow
- * under the top bar or the scoring header, so it covers nothing. The page
- * reloads only on that tap.
+ * The offer of a newly deployed version: an ink strip with a green Reload,
+ * in the flow under the top bar or the scoring header, so it covers nothing.
+ * The page reloads only on that tap.
  */
 export const UpdateBanner = () => {
   const { status, reload } = useAppUpdate();
@@ -15,14 +15,15 @@ export const UpdateBanner = () => {
   return (
     <div
       role="status"
-      className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 border-t-[1.5px] border-mb-navy bg-mb-navy py-2 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] text-center text-mb-paper-bright"
+      className="ink-bar flex flex-wrap items-center justify-center gap-x-4 gap-y-2 py-2 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] text-center"
     >
-      <p className="text-[0.85rem] font-medium">A new version of the app is ready.</p>
+      <p className="text-label font-medium">A new version of the app is ready.</p>
+      {/* The main button at a bar's height. The bar turns its focus ring white. */}
       <button
         type="button"
         onClick={reload}
         disabled={switching}
-        className="mb-btn mb-btn-coral px-5"
+        className="btn btn-action min-h-11 px-5 text-label"
       >
         {switching ? "Reloading..." : "Reload"}
       </button>

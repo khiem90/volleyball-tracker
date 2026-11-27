@@ -10,10 +10,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { MbIcon } from "@/components/matchbook/MbIcon";
 import { InlineSpinner } from "@/components/shared";
+import { Icon } from "@/components/shared/Icon";
+import { TeamMark } from "@/components/shared/TeamMark";
 import type { Match } from "@/types/game";
-import type { TeamLookup } from "./teamRefs";
+import type { ConsoleTeam, TeamLookup } from "./teamRefs";
 
 /** A whole number of points, or null for anything else. */
 const points = (value: string): number | null => {
@@ -22,20 +23,24 @@ const points = (value: string): number | null => {
   return Number(trimmed);
 };
 
+/** One team's score: its mark and name over a field with large digits. */
 const ScoreField = ({
   id,
-  label,
+  team,
   value,
   onChange,
 }: {
   id: string;
-  label: string;
+  team: ConsoleTeam;
   value: string;
   onChange: (value: string) => void;
 }) => (
   <label htmlFor={id} className="flex min-w-0 flex-1 flex-col gap-1.5">
-    <span className="matchbook-display truncate text-[0.78rem] font-bold">{label}</span>
-    <span className="mb-input">
+    <span className="flex min-w-0 items-center gap-2">
+      <TeamMark name={team.name} color={team.color} size={22} />
+      <span className="truncate text-label font-bold">{team.name}</span>
+    </span>
+    <span className="field min-h-14">
       <input
         id={id}
         type="number"
@@ -43,7 +48,7 @@ const ScoreField = ({
         min={0}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="text-center text-[1.4rem] font-bold tabular-nums"
+        className="text-center text-[1.5rem] font-bold tabular-nums"
         autoComplete="off"
       />
     </span>
@@ -90,7 +95,7 @@ const ScoreForm = ({
     <form onSubmit={submit} className="flex flex-col gap-4">
       <DialogHeader>
         <DialogTitle>
-          <MbIcon id="pencil" size={18} className="shrink-0" />
+          <Icon id="pencil" size={18} className="shrink-0" />
           Correct the score
         </DialogTitle>
         <DialogDescription>{explanation(match.forfeitedBy !== undefined, series, bracket)}</DialogDescription>
@@ -98,22 +103,21 @@ const ScoreForm = ({
       <div className="flex items-end gap-3">
         <ScoreField
           id="correct-home-score"
-          label={team(match.homeTeamId).name}
+          team={team(match.homeTeamId)}
           value={home}
           onChange={setHome}
         />
-        <span className="matchbook-display pb-3 text-[0.8rem] font-bold text-mb-ink-muted">
-          –
-        </span>
+        {/* As tall as a field, so the dash sits level with the digits. */}
+        <span className="flex h-14 items-center text-title font-bold text-ink-soft">–</span>
         <ScoreField
           id="correct-away-score"
-          label={team(match.awayTeamId).name}
+          team={team(match.awayTeamId)}
           value={away}
           onChange={setAway}
         />
       </div>
       {(tied || error) && (
-        <p role="alert" className="text-[0.8rem] font-medium text-mb-red">
+        <p role="alert" className="text-caption font-medium text-danger">
           {error ?? "A match cannot end in a tie."}
         </p>
       )}
@@ -128,7 +132,7 @@ const ScoreForm = ({
           Cancel
         </Button>
         <Button type="submit" disabled={!canSave} className="sm:flex-1">
-          {isBusy ? <InlineSpinner /> : <MbIcon id="pencil" size={14} />}
+          {isBusy ? <InlineSpinner /> : <Icon id="pencil" size={14} />}
           {isBusy ? "Saving..." : "Save score"}
         </Button>
       </DialogFooter>
@@ -178,7 +182,8 @@ export const CorrectResultDialog = ({
       if (!open && !isBusy) onClose();
     }}
   >
-    <DialogContent className="sm:max-w-md">
+    {/* One column that cannot grow past the dialog, so a long team name is cut short over its field. */}
+    <DialogContent className="grid-cols-1 sm:max-w-md">
       {match && (
         <ScoreForm
           key={match.id}

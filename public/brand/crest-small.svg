@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-labelledby="title">
+  <title id="title">Tournament Tracker crest, small</title>
+  <defs>
+    <clipPath id="shield"><path d="M28 0H72A28 28 0 0 1 100 28V56A44 44 0 0 1 56 100H44A44 44 0 0 1 0 56V28A28 28 0 0 1 28 0Z"/></clipPath>
+  </defs>
+  <path d="M28 0H72A28 28 0 0 1 100 28V56A44 44 0 0 1 56 100H44A44 44 0 0 1 0 56V28A28 28 0 0 1 28 0Z" fill="#087a4d"/>
+  <g clip-path="url(#shield)">
+    <path d="M0 43.75H100V56.25H56.25V100H43.75V56.25H0Z" fill="#fff"/>
+  </g>
+  <circle cx="68.75" cy="25" r="12.5" fill="#fff"/>
+</svg>

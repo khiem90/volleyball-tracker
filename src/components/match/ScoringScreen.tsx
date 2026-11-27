@@ -24,7 +24,8 @@ export interface ScoringSide {
   score: number;
 }
 
-const STOCK_COLOR: Record<Side, string> = { home: "#3b82f6", away: "#f97316" };
+/** The color of a side whose team has none: the roster palette's blue and orange. */
+export const STOCK_COLOR: Record<Side, string> = { home: "#3b82f6", away: "#f97316" };
 
 export interface CompleteDialogState {
   open: boolean;
@@ -110,8 +111,11 @@ export const ScoringScreen = ({
     : "Confirm the final score and the winner.";
   const confirmLabel = series.isSeries ? "Confirm game" : "Confirm result";
 
+  // A panel's color thins toward one corner and lets what is behind it
+  // through: the page's ground, or black in fullscreen. Both are part of
+  // how the panels look, so fullscreen keeps its black.
   return (
-    <div className={`flex min-h-dvh flex-col ${isFullscreen ? "bg-black" : "matchbook-surface"}`}>
+    <div className={`flex min-h-dvh flex-col ${isFullscreen ? "bg-black" : ""}`}>
       {!isFullscreen && (
         <ScoringHeader
           backHref={backHref}
@@ -134,15 +138,15 @@ export const ScoringScreen = ({
       {!isFullscreen && <UpdateBanner />}
 
       {notice && (
-        <div className="z-20 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 border-b border-mb-rule bg-mb-paper-bright px-4 py-2 text-center">
-          <p role="status" className="text-[0.85rem] text-mb-navy">
+        <div className="z-20 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 border-b border-line bg-surface px-4 py-2 text-center">
+          <p role="status" className="text-label text-ink">
             {notice}
           </p>
           {noticeAction && (
             <button
               type="button"
               onClick={noticeAction.onClick}
-              className="mb-btn mb-btn-coral px-4"
+              className="btn btn-action min-h-11 px-4 text-label"
             >
               {noticeAction.label}
             </button>
@@ -162,7 +166,7 @@ export const ScoringScreen = ({
           onAddPoint={() => onAddPoint("home")}
           onDeductPoint={() => onDeductPoint("home")}
         />
-        <div aria-hidden className="h-1 bg-[rgba(7,50,77,0.35)] landscape:h-auto landscape:w-1" />
+        <div aria-hidden className="h-1 bg-ink/35 landscape:h-auto landscape:w-1" />
         <TeamScorePanel
           side="away"
           teamName={away.name}

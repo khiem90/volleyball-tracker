@@ -1,6 +1,6 @@
 "use client";
 
-import { Panel, PanelEmpty } from "@/components/matchbook/Panel";
+import { Card, CardEmpty } from "@/components/shared/Card";
 import {
   isCorrectable,
   takesInstantWin,
@@ -37,18 +37,15 @@ export const SchedulePanel = ({
 }) => {
   const played = rows.filter((row) => row.match.status === "completed").length;
   return (
-    <Panel
+    // With no matches the card is as tall as its one line. Stretched to the
+    // row, it floated that line in the middle of a tall white card.
+    <Card
       title="Schedule"
-      meta={
-        rows.length > 0 ? (
-          <span className="mb-kicker">
-            {played}/{rows.length} played
-          </span>
-        ) : undefined
-      }
+      meta={rows.length > 0 ? `${played}/${rows.length} played` : undefined}
+      className={rows.length === 0 ? "h-auto" : ""}
     >
       {rows.length === 0 ? (
-        <PanelEmpty
+        <CardEmpty
           message={
             tournament.status === "draft"
               ? "The schedule is made when the tournament starts."
@@ -56,7 +53,7 @@ export const SchedulePanel = ({
           }
         />
       ) : (
-        <div className="max-h-[70vh] divide-y divide-mb-rule overflow-y-auto">
+        <div className="max-h-[70vh] divide-y divide-line overflow-y-auto">
           {rows.map(({ match, label }) => (
             <MatchRow
               key={match.id}
@@ -76,6 +73,6 @@ export const SchedulePanel = ({
           ))}
         </div>
       )}
-    </Panel>
+    </Card>
   );
 };

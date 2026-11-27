@@ -19,7 +19,15 @@ import { PLAYER_COLORS, BACK_ROW_ZONES } from "@/lib/volleyball/constants";
 import { ROTATION_CHART } from "@/lib/volleyball/rotations";
 import { signInHref } from "@/lib/shell";
 import { MotionDiv, slideUp } from "@/components/motion";
-import { PageLoadingSpinner } from "@/components/shared";
+import { Card, CardEmpty, Chip, Icon, PageLoadingSpinner } from "@/components/shared";
+import { PageHeader } from "@/components/shell/PageHeader";
+
+const longDate = (timestamp: number): string =>
+  new Date(timestamp).toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
 
 export default function SharedFormationPage() {
   const params = useParams();
@@ -170,187 +178,142 @@ export default function SharedFormationPage() {
   // Error state
   if (error || !formation) {
     return (
-      <div className="max-w-4xl mx-auto py-12">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">Formation Not Found</h1>
-          <p className="text-muted-foreground mb-6">
-            {error || "This formation doesn't exist or is no longer shared."}
-          </p>
-          <Link
-            href="/tools/volleyball-rotations"
-            className="inline-flex min-h-11 items-center px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
-          >
-            Go to Rotations Tool
-          </Link>
-        </div>
-      </div>
+      <>
+        <PageHeader title="Formation Not Found" />
+        <Card className="h-auto">
+          <CardEmpty
+            message={error || "This formation doesn't exist or is no longer shared."}
+            action={
+              <Link href="/tools/volleyball-rotations" className="btn btn-ink">
+                Go to Rotations Tool
+              </Link>
+            }
+          />
+        </Card>
+      </>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto">
-      {/* Header */}
-      <MotionDiv
-        initial="hidden"
-        animate="visible"
-        variants={slideUp}
-        className="mb-8"
+    <>
+      <PageHeader
+        back={{ href: "/tools/volleyball-rotations", label: "Back to Rotations" }}
+        title={formation.name}
+        status={<Chip>Shared Formation</Chip>}
+        line={formation.description || undefined}
       >
-        <div className="flex items-center justify-between mb-2">
-          <Link
-            href="/tools/volleyball-rotations"
-            className="inline-flex min-h-11 items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            &larr; Back to Rotations
-          </Link>
-          <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-700 rounded-full">
-            Shared Formation
-          </span>
-        </div>
-        <h1 className="text-3xl font-black tracking-tight mb-2">
-          {formation.name}
-        </h1>
-        {formation.description && (
-          <p className="text-muted-foreground">{formation.description}</p>
-        )}
         {formation.tags && formation.tags.length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-2">
+          <div className="flex flex-wrap gap-2 pb-3.5">
             {formation.tags.map((tag) => (
-              <span
-                key={tag}
-                className="px-2 py-0.5 text-xs bg-accent rounded-md"
-              >
-                {tag}
-              </span>
+              <Chip key={tag}>{tag}</Chip>
             ))}
           </div>
         )}
-      </MotionDiv>
+      </PageHeader>
 
       {/* Copy to My Formations CTA */}
-      <MotionDiv
-        initial="hidden"
-        animate="visible"
-        variants={slideUp}
-        className="mb-6"
-      >
-        {isAuthenticated ? (
-          <div className="p-4 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-between">
-            <div>
-              <p className="font-medium">Like this formation?</p>
-              <p className="text-sm text-muted-foreground">
-                Copy it to your collection to customize it
+      <MotionDiv initial="hidden" animate="visible" variants={slideUp} className="mb-4">
+        <Card className="h-auto">
+          <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <p className="text-title font-semibold">
+                {isAuthenticated ? "Like this formation?" : "Want to customize this formation?"}
+              </p>
+              <p className="text-label text-ink-soft">
+                {isAuthenticated
+                  ? "Copy it to your collection to customize it"
+                  : "Sign in to copy it to your collection"}
               </p>
             </div>
-            <button
-              type="button"
-              onClick={handleCopyToMyFormations}
-              disabled={isCopying || copied}
-              className={`min-h-11 px-4 py-2 rounded-lg font-medium transition-colors ${
-                copied
-                  ? "bg-green-500 text-white"
-                  : "bg-primary text-primary-foreground hover:bg-primary/90"
-              } disabled:opacity-50`}
-            >
-              {copied ? "Copied!" : isCopying ? "Copying..." : "Copy to My Formations"}
-            </button>
+            {isAuthenticated ? (
+              <button
+                type="button"
+                onClick={handleCopyToMyFormations}
+                disabled={isCopying || copied}
+                className="btn btn-action sm:shrink-0"
+              >
+                {copied && <Icon id="check" size={18} />}
+                {copied ? "Copied!" : isCopying ? "Copying..." : "Copy to My Formations"}
+              </button>
+            ) : (
+              <Link
+                href={signInHref(`/tools/volleyball-rotations/shared/${shareId}`)}
+                className="btn btn-action sm:shrink-0"
+              >
+                Sign In
+              </Link>
+            )}
           </div>
-        ) : (
-          <div className="p-4 rounded-xl bg-accent/50 border border-border flex items-center justify-between">
-            <div>
-              <p className="font-medium">Want to customize this formation?</p>
-              <p className="text-sm text-muted-foreground">
-                Sign in to copy it to your collection
-              </p>
-            </div>
-            <Link
-              href={signInHref(`/tools/volleyball-rotations/shared/${shareId}`)}
-              className="min-h-11 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 font-medium"
-            >
-              Sign In
-            </Link>
-          </div>
-        )}
+        </Card>
       </MotionDiv>
 
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
+      {/* Main Content Grid. Start-aligned so each card is as tall as what it holds. */}
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
         {/* Left Column: Court + Controls */}
-        <div className="space-y-6">
-          {/* Controls Card */}
-          <div className="rounded-2xl border border-border bg-card p-4 md:p-6">
-            <RotationControls
-              rotation={rotation}
-              mode={mode}
-              liberoActive={liberoActive}
-              showOverlaps={showOverlaps}
-              showArrows={showArrows}
-              onRotationChange={setRotation}
-              onModeChange={setMode}
-              onLiberoToggle={setLiberoActive}
-              onShowOverlapsToggle={setShowOverlaps}
-              onShowArrowsToggle={setShowArrows}
-              onNext={nextRotation}
-              onPrev={prevRotation}
-            />
-          </div>
+        <div className="flex min-w-0 flex-col gap-4">
+          <Card>
+            <div className="p-4">
+              <RotationControls
+                rotation={rotation}
+                mode={mode}
+                liberoActive={liberoActive}
+                showOverlaps={showOverlaps}
+                showArrows={showArrows}
+                onRotationChange={setRotation}
+                onModeChange={setMode}
+                onLiberoToggle={setLiberoActive}
+                onShowOverlapsToggle={setShowOverlaps}
+                onShowArrowsToggle={setShowArrows}
+                onNext={nextRotation}
+                onPrev={prevRotation}
+              />
+            </div>
+          </Card>
 
-          {/* Court Visualization Card */}
-          <div className="rounded-2xl border border-border bg-card p-4 md:p-6">
-            <VolleyballCourt
-              players={players}
-              overlaps={overlaps}
-              arrows={arrows}
-              selectedPlayer={selectedPlayer}
-              onPlayerSelect={setSelectedPlayer}
-              mode={mode}
-              showOverlaps={showOverlaps}
-              showArrows={showArrows}
-            />
-          </div>
+          <Card>
+            <div className="p-4">
+              <VolleyballCourt
+                players={players}
+                overlaps={overlaps}
+                arrows={arrows}
+                selectedPlayer={selectedPlayer}
+                onPlayerSelect={setSelectedPlayer}
+                mode={mode}
+                showOverlaps={showOverlaps}
+                showArrows={showArrows}
+              />
+            </div>
+          </Card>
         </div>
 
         {/* Right Sidebar: Legend */}
-        <div className="space-y-6 lg:sticky lg:top-20 lg:h-fit">
-          {/* Legend Panel */}
-          <div className="rounded-2xl border border-border bg-card p-4">
-            <LegendPanel
-              players={players}
-              rotation={rotation}
-              mode={mode}
-              selectedPlayer={selectedPlayer}
-              onPlayerSelect={setSelectedPlayer}
-            />
-          </div>
+        <div className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-20">
+          <Card>
+            <div className="p-4">
+              <LegendPanel
+                players={players}
+                rotation={rotation}
+                mode={mode}
+                selectedPlayer={selectedPlayer}
+                onPlayerSelect={setSelectedPlayer}
+              />
+            </div>
+          </Card>
 
-          {/* Formation Info */}
-          <div className="rounded-2xl border border-border bg-card p-4">
-            <h3 className="font-semibold mb-2">About This Formation</h3>
-            <dl className="space-y-2 text-sm">
+          <Card title="About This Formation">
+            <dl className="flex flex-col gap-2 p-4 text-label">
               <div>
-                <dt className="text-muted-foreground">Created</dt>
-                <dd>
-                  {new Date(formation.createdAt).toLocaleDateString(undefined, {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })}
-                </dd>
+                <dt className="text-caption text-ink-soft">Created</dt>
+                <dd>{longDate(formation.createdAt)}</dd>
               </div>
               <div>
-                <dt className="text-muted-foreground">Last Updated</dt>
-                <dd>
-                  {new Date(formation.updatedAt).toLocaleDateString(undefined, {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })}
-                </dd>
+                <dt className="text-caption text-ink-soft">Last Updated</dt>
+                <dd>{longDate(formation.updatedAt)}</dd>
               </div>
             </dl>
-          </div>
+          </Card>
         </div>
       </div>
-    </div>
+    </>
   );
 }

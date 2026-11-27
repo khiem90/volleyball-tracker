@@ -1,18 +1,12 @@
 import type { Metadata, Viewport } from "next";
-import { Outfit, Oswald } from "next/font/google";
+import { Figtree } from "next/font/google";
 import { Providers } from "@/components/Providers";
 import "./globals.css";
 
-const outfit = Outfit({
-  variable: "--font-outfit",
+// The one typeface, as a variable font, so every weight from 300 to 900 is one file.
+const figtree = Figtree({
+  variable: "--font-figtree",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800", "900"],
-});
-
-const oswald = Oswald({
-  variable: "--font-oswald",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -22,7 +16,7 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
-    // Dark status bar text on the paper design; white text would vanish on it.
+    // Dark status bar text, because the top bar is white and white text would vanish on it.
     statusBarStyle: "default",
     title: "Tournaments",
   },
@@ -35,14 +29,15 @@ export const metadata: Metadata = {
 
 // Cover fit lets the page run under the notch and the home indicator; the
 // shell and the scoring page pad themselves clear of both with the
-// safe-area insets. The theme color is the matchbook paper.
+// safe-area insets. The theme color is the surface token's value, the white
+// of the top bar, and public/manifest.json says the same.
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
   viewportFit: "cover",
-  themeColor: "#f7f0e4",
+  themeColor: "#ffffff",
   colorScheme: "light",
 };
 
@@ -51,9 +46,11 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // The font's variable goes on <html> because the stylesheet's theme reads it
+  // on :root. On <body> it is one element too low and no screen gets the face.
   return (
-    <html lang="en">
-      <body className={`${outfit.variable} ${oswald.variable} font-sans antialiased`}>
+    <html lang="en" className={figtree.variable}>
+      <body className="font-sans antialiased">
         <Providers>{children}</Providers>
       </body>
     </html>

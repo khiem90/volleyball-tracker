@@ -1,39 +1,48 @@
 "use client";
 
-import { MbIcon } from "@/components/matchbook/MbIcon";
-import { Panel } from "@/components/matchbook/Panel";
-import { NOT_OPEN_YET } from "@/lib/rsvp";
+import { Card, Icon } from "@/components/shared";
+import { NOT_OPEN_YET, type RsvpStanding } from "@/lib/rsvp";
 import { listTakesRsvps } from "@/lib/rsvpList";
 import type { RsvpList } from "@/types/game";
 import type { ListRsvpView } from "./useListRsvpView";
 
-const Fact = ({ label, value }: { label: string; value: string }) => (
-  <div className="flex flex-col gap-0.5">
-    <span className="mb-kicker">{label}</span>
-    <span className="text-[0.95rem] font-semibold">{value}</span>
-  </div>
-);
+/** A standing on the list: in, or waiting. */
+type OnTheListKind = Exclude<RsvpStanding["kind"], "none">;
+
+/** The band's ground and text. Green is for in and nothing else. */
+const STANDING_TONE: Record<OnTheListKind, string> = {
+  confirmed: "bg-action-tint text-action",
+  waitlisted: "bg-fill text-ink",
+};
+
+/** The glyph before the band's words. */
+const STANDING_ICONS: Record<OnTheListKind, string> = {
+  confirmed: "check",
+  waitlisted: "clock",
+};
 
 /**
- * Where the viewer stands, in one line: in at a spot, or waiting at a
- * position. `text` says it for a person or for a team.
+ * Where the viewer stands, as the band the card opens with and the largest
+ * type under the page's title: in on green, or waiting with the position
+ * on grey.
  */
-const StandingLine = ({ isIn, text }: { isIn: boolean; text: string }) => (
+const StandingBand = ({ kind, text }: { kind: OnTheListKind; text: string }) => (
   <p
-    className={`flex items-start gap-2 text-[0.9rem] font-semibold ${isIn ? "text-mb-green" : ""}`}
+    className={`flex items-center gap-2.5 px-4 py-4 text-page-title font-extrabold ${STANDING_TONE[kind]}`}
   >
-    <MbIcon id={isIn ? "check" : "clock"} size={16} className="mt-0.5 shrink-0" />
-    <span className="min-w-0 [overflow-wrap:anywhere]">{text}</span>
+    <Icon id={STANDING_ICONS[kind]} size={28} className="shrink-0" />
+    <span className="min-w-0 wrap-anywhere">{text}</span>
   </p>
 );
 
 /**
- * The panel a person RSVPs from, for themselves or on a by-team list for
- * their team. It shows the capacity in people or in teams and how many
- * are in and waiting. Before the open time it counts down over a disabled
- * button. From then the button opens the RSVP dialog, and once every spot
- * is taken it joins the waitlist. Someone on the list sees where they
- * stand and a button to change their RSVP, until the scheduled time. A
+ * The card a person RSVPs from, for themselves or on a by-team list for
+ * their team. For someone on the list it opens with where they stand, then
+ * says it in a sentence with the name they gave. Someone with no RSVP gets
+ * no band. Before the open time the card counts down over a disabled
+ * button. From then the green button opens the RSVP dialog, and
+ * once every spot is taken it joins the waitlist. Someone on the list gets
+ * a button to change their RSVP or withdraw, until the scheduled time. A
  * list that takes no RSVPs says why in place of the button.
  */
 export const ListRsvpPanel = ({ list, view }: { list: RsvpList; view: ListRsvpView }) => {
@@ -42,76 +51,68 @@ export const ListRsvpPanel = ({ list, view }: { list: RsvpList; view: ListRsvpVi
   const isFull = state?.kind === "full";
 
   return (
-    <Panel title="The list" icon="calendar">
-      <div className="grid grid-cols-3 gap-3 border-b border-mb-rule p-4">
-        <Fact label="Capacity" value={wording.count(list.capacity)} />
-        <Fact label="In" value={split ? String(split.confirmed.length) : "..."} />
-        <Fact label="Waiting" value={split ? String(split.waitlisted.length) : "..."} />
-      </div>
+    <Card>
+      {view.mine && standing.kind !== "none" && (
+        <StandingBand kind={standing.kind} text={wording.homeStanding(standing)} />
+      )}
 
       <div className="flex flex-col gap-3 p-4">
+        {view.mine && standing.kind !== "none" && (
+          <p className="text-body wrap-anywhere">
+            {wording.standing(standing, view.mine.name, list.capacity, !view.isOver)}
+          </p>
+        )}
+
         {view.countdown !== null && (
           <div className="flex flex-col gap-0.5" role="timer" aria-live="off">
-            <span className="mb-kicker">RSVPs open in</span>
-            <span className="matchbook-display text-3xl font-bold leading-none tabular-nums">
-              {view.countdown}
-            </span>
+            <span className="text-caption font-medium text-ink-soft">RSVPs open in</span>
+            <span className="text-page-title font-extrabold tabular-nums">{view.countdown}</span>
           </div>
         )}
 
-        {view.mine ? (
-          <>
-            {standing.kind !== "none" && (
-              <StandingLine
-                isIn={standing.kind === "confirmed"}
-                text={wording.standing(standing, view.mine.name, list.capacity, !view.isOver)}
-              />
-            )}
-            {view.canChange && (
+        {view.mine
+          ? view.canChange && (
               <button
                 type="button"
-                className="mb-btn mb-btn-outline-navy w-full sm:w-auto sm:self-start"
+                className="btn btn-ink w-full sm:w-auto sm:self-start"
                 onClick={view.dialog.open}
               >
-                <MbIcon id="pencil" size={14} />
+                <Icon id="pencil" size={14} />
                 Your RSVP
               </button>
+            )
+          : showsButton && (
+              <>
+                {isFull && (
+                  <p className="text-body">
+                    {wording.full(split ? split.waitlisted.length + 1 : null)}
+                  </p>
+                )}
+                <button
+                  type="button"
+                  className="btn btn-action w-full sm:w-auto sm:self-start"
+                  disabled={!view.canRsvp}
+                  onClick={view.dialog.open}
+                >
+                  <Icon id="calendar" size={18} />
+                  {isFull ? "Join the waitlist" : "RSVP"}
+                </button>
+              </>
             )}
-          </>
-        ) : (
-          showsButton && (
-            <>
-              {isFull && (
-                <p className="text-[0.85rem]">
-                  {wording.full(split ? split.waitlisted.length + 1 : null)}
-                </p>
-              )}
-              <button
-                type="button"
-                className="mb-btn mb-btn-coral w-full sm:w-auto sm:self-start"
-                disabled={!view.canRsvp}
-                onClick={view.dialog.open}
-              >
-                <MbIcon id="calendar" size={14} />
-                {isFull ? "Join the waitlist" : "RSVP"}
-              </button>
-            </>
-          )
-        )}
 
         {view.refusal && !view.mine && (
           <div role="alert" className="flex flex-col gap-0.5">
-            <p className="text-[0.85rem] font-semibold text-mb-red">{view.refusal}</p>
+            <p className="text-label font-semibold text-danger">{view.refusal}</p>
             {view.refusal === NOT_OPEN_YET && (
-              <p className="text-[0.75rem] text-mb-ink-muted">
+              <p className="text-caption text-ink-soft">
                 This phone&apos;s clock may be running ahead. Try again in a moment.
               </p>
             )}
           </div>
         )}
 
-        {view.shut && <p className="text-[0.85rem] text-mb-ink-muted">{view.shut}</p>}
+        {view.shut && <p className="text-label text-ink-soft">{view.shut}</p>}
       </div>
-    </Panel>
+    </Card>
   );
 };

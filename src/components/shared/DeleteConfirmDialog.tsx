@@ -10,7 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { MbIcon } from "@/components/matchbook/MbIcon";
+import { Icon } from "./Icon";
 import { InlineSpinner } from "./InlineSpinner";
 
 type DeleteConfirmDialogProps = {
@@ -25,7 +25,7 @@ type DeleteConfirmDialogProps = {
   className?: string;
 };
 
-/** The confirm before a tournament is deleted: a navy question, and only the Delete button in red. */
+/** The confirm before a tournament is deleted: a question in ink, and only the Delete button in red. */
 export const DeleteConfirmDialog = memo(function DeleteConfirmDialog({
   open,
   onOpenChange,
@@ -41,7 +41,7 @@ export const DeleteConfirmDialog = memo(function DeleteConfirmDialog({
       <DialogContent className={className ?? "sm:max-w-md"}>
         <DialogHeader>
           <DialogTitle>
-            <MbIcon id="trash" size={18} className="shrink-0" />
+            <Icon id="trash" size={18} className="shrink-0" />
             {title}
           </DialogTitle>
           <DialogDescription>{description}</DialogDescription>
@@ -61,7 +61,7 @@ export const DeleteConfirmDialog = memo(function DeleteConfirmDialog({
             disabled={isDeleting || !canConfirm}
             className="sm:flex-1"
           >
-            {isDeleting ? <InlineSpinner /> : <MbIcon id="trash" size={14} />}
+            {isDeleting ? <InlineSpinner /> : <Icon id="trash" size={14} />}
             {isDeleting ? "Deleting..." : "Delete"}
           </Button>
         </DialogFooter>

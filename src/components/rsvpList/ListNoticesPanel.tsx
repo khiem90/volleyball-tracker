@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { MbIcon } from "@/components/matchbook/MbIcon";
-import { Panel, PanelEmpty, PanelError } from "@/components/matchbook/Panel";
 import { NoticeList } from "@/components/rsvpList/NoticeList";
-import { DeleteConfirmDialog } from "@/components/shared";
+import { FIELD_NOTE } from "@/components/rsvpList/RsvpFields";
+import { Card, CardEmpty, CardError, DeleteConfirmDialog, Icon } from "@/components/shared";
 import { useListNotices } from "@/context/useListNotices";
 import { NOTICE_BODY_MAX, noticeProblem } from "@/lib/rsvp";
 import type { Notice } from "@/types/game";
+import { LABEL } from "@/components/shared/classes";
 
 /**
  * A list's notices, newest first, on the list's page. Everyone who can
@@ -16,7 +16,7 @@ import type { Notice } from "@/types/game";
  *
  * Posting clears the box at once, since the notice shows from the local
  * write. A refusal puts the text back and says why. Anyone but the owner
- * sees no panel until there is a notice to read.
+ * sees no card until there is a notice to read.
  *
  * `readerUid` is the viewer's uid while they have an RSVP on the list.
  * Opening the page records on that RSVP that they have seen the notices,
@@ -69,26 +69,20 @@ export const ListNoticesPanel = ({
   if (!isOwner && !loadError && (notices === null || notices.length === 0)) return null;
 
   return (
-    <Panel
+    <Card
       title="Notices"
       icon="bell"
-      meta={
-        notices && notices.length > 0 ? (
-          <span className="matchbook-display text-[0.72rem] font-bold tracking-[0.1em]">
-            {notices.length}
-          </span>
-        ) : undefined
-      }
+      meta={notices && notices.length > 0 ? String(notices.length) : undefined}
       className={className}
     >
       {isOwner && (
-        <form onSubmit={submit} className="flex flex-col gap-1.5 border-b border-mb-rule p-4">
-          <label htmlFor="list-notice-body" className="mb-kicker">
+        <form onSubmit={submit} className="flex flex-col gap-1.5 border-b border-line p-4">
+          <label htmlFor="list-notice-body" className={LABEL}>
             New notice
           </label>
           <textarea
             id="list-notice-body"
-            className={shownProblem ? "mb-textarea border-mb-red" : "mb-textarea"}
+            className={shownProblem ? "field-area border-danger" : "field-area"}
             rows={3}
             value={draft}
             onChange={(event) => {
@@ -102,33 +96,29 @@ export const ListNoticesPanel = ({
           <p
             id="list-notice-body-help"
             role={shownProblem ? "alert" : undefined}
-            className={
-              shownProblem
-                ? "text-[0.78rem] font-medium text-mb-red"
-                : "text-[0.72rem] text-mb-ink-muted"
-            }
+            className={shownProblem ? "text-caption font-medium text-danger" : FIELD_NOTE}
           >
             {shownProblem ??
               `Up to ${NOTICE_BODY_MAX} characters. Everyone on the list sees it on this page.`}
           </p>
           {error && (
-            <p role="alert" className="text-[0.78rem] font-medium text-mb-red">
+            <p role="alert" className="text-caption font-medium text-danger">
               {error}
             </p>
           )}
-          <button type="submit" className="mb-btn mb-btn-navy mt-1.5 self-start" disabled={!!problem}>
-            <MbIcon id="bell" size={14} />
+          <button type="submit" className="btn btn-ink mt-1.5 self-start" disabled={!!problem}>
+            <Icon id="bell" size={14} />
             Post
           </button>
         </form>
       )}
 
       {loadError ? (
-        <PanelError message="The notices could not be loaded. Check your connection and reload." />
+        <CardError message="The notices could not be loaded. Check your connection and reload." />
       ) : notices === null ? (
-        <PanelEmpty message="Loading the notices..." />
+        <CardEmpty message="Loading the notices..." />
       ) : notices.length === 0 ? (
-        <PanelEmpty message="No notices yet." />
+        <CardEmpty message="No notices yet." />
       ) : (
         <NoticeList notices={notices} onDelete={isOwner ? setDeleting : undefined} />
       )}
@@ -142,6 +132,6 @@ export const ListNoticesPanel = ({
           onConfirm={confirmDelete}
         />
       )}
-    </Panel>
+    </Card>
   );
 };

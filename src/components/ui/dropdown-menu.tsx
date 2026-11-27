@@ -6,9 +6,10 @@ import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu"
 import { cn } from "@/lib/utils"
 
 /*
- * The matchbook menu. The content is a paper-bright panel with the navy frame;
- * items are display-face rows at 44px. The menu portals to <body>, outside
- * .matchbook-surface, so the content carries the ink color and the body font.
+ * The one menu. The content is a white surface with a 10px radius and the
+ * lift, and each item is a 44px row. The look is the menu, menu-item, and
+ * menu-item-danger classes in globals.css. Radix keeps the arrow keys,
+ * Escape, and the return of focus to the trigger.
  */
 
 function DropdownMenu({
@@ -39,7 +40,7 @@ function DropdownMenuContent({
         data-slot="dropdown-menu-content"
         sideOffset={sideOffset}
         className={cn(
-          "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-50 max-h-(--radix-dropdown-menu-content-available-height) min-w-32 max-w-[calc(100vw-2rem)] origin-(--radix-dropdown-menu-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-[4px] border-[1.5px] border-mb-navy bg-mb-paper-bright p-1 font-sans text-mb-navy mb-shadow-panel",
+          "menu lift data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-50 max-h-(--radix-dropdown-menu-content-available-height) min-w-32 max-w-[calc(100vw-2rem)] origin-(--radix-dropdown-menu-content-transform-origin) overflow-x-hidden overflow-y-auto",
           className
         )}
         {...props}
@@ -53,7 +54,7 @@ function DropdownMenuItem({
   variant = "default",
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Item> & {
-  /** `destructive` is the red row (Sign out): red text with a red wash on focus. */
+  /** `destructive` is the red row (Sign out, Delete): red text, and white on red once it has the focus. */
   variant?: "default" | "destructive"
 }) {
   return (
@@ -61,7 +62,8 @@ function DropdownMenuItem({
       data-slot="dropdown-menu-item"
       data-variant={variant}
       className={cn(
-        "matchbook-display relative flex min-h-11 cursor-pointer items-center gap-2 rounded-[4px] px-3 text-[0.8rem] font-semibold tracking-[0.06em] outline-hidden select-none focus:bg-mb-navy/6 data-[variant=destructive]:text-mb-red data-[variant=destructive]:focus:bg-mb-red/10 data-[variant=destructive]:focus:text-mb-red data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+        "menu-item relative [&_svg]:pointer-events-none [&_svg]:shrink-0",
+        variant === "destructive" && "menu-item-danger",
         className
       )}
       {...props}
@@ -69,6 +71,7 @@ function DropdownMenuItem({
   )
 }
 
+/* Text that heads a menu or a group of items, such as who is signed in. Not a row to tap. */
 function DropdownMenuLabel({
   className,
   ...props
@@ -76,7 +79,7 @@ function DropdownMenuLabel({
   return (
     <DropdownMenuPrimitive.Label
       data-slot="dropdown-menu-label"
-      className={cn("px-3 py-2 text-sm font-medium", className)}
+      className={cn("px-3 py-2 text-label font-medium", className)}
       {...props}
     />
   )
@@ -89,7 +92,7 @@ function DropdownMenuSeparator({
   return (
     <DropdownMenuPrimitive.Separator
       data-slot="dropdown-menu-separator"
-      className={cn("-mx-1 my-1 h-px bg-mb-rule", className)}
+      className={cn("-mx-1 my-1 h-px bg-line", className)}
       {...props}
     />
   )

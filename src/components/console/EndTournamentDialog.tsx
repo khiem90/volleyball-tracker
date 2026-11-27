@@ -9,8 +9,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { MbIcon } from "@/components/matchbook/MbIcon";
 import { InlineSpinner } from "@/components/shared";
+import { Icon } from "@/components/shared/Icon";
 
 interface EndTournamentDialogProps {
   open: boolean;
@@ -30,10 +30,10 @@ export const EndTournamentDialog = ({
   onEnd,
 }: EndTournamentDialogProps) => (
   <Dialog open={open} onOpenChange={onOpenChange}>
-    <DialogContent className="sm:max-w-md">
+    <DialogContent className="grid-cols-1 sm:max-w-md">
       <DialogHeader>
         <DialogTitle>
-          <MbIcon id="compete" size={18} className="shrink-0" />
+          <Icon id="compete" size={18} className="shrink-0" />
           End the tournament?
         </DialogTitle>
         <DialogDescription>
@@ -56,7 +56,7 @@ export const EndTournamentDialog = ({
           disabled={isEnding}
           className="sm:flex-1"
         >
-          {isEnding ? <InlineSpinner /> : <MbIcon id="compete" size={14} />}
+          {isEnding ? <InlineSpinner /> : <Icon id="compete" size={14} />}
           {isEnding ? "Ending..." : "End tournament"}
         </Button>
       </DialogFooter>

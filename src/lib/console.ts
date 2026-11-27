@@ -493,6 +493,9 @@ export interface BracketView {
   sections: BracketSection[];
 }
 
+/** The title of a double elimination's losers side, which the Tournaments page's small bracket leaves out. */
+export const LOSERS = "Losers";
+
 /**
  * The Bracket tab: rounds of matches in position order. A single
  * elimination is one section; a double elimination is the winners bracket,
@@ -523,7 +526,7 @@ export const bracketView = (tournament: Tournament, matches: Match[]): BracketVi
     return {
       sections: [
         { title: "Winners", rounds: rounds("winners", structure.winners) },
-        { title: "Losers", rounds: rounds("losers", structure.losers) },
+        { title: LOSERS, rounds: rounds("losers", structure.losers) },
         {
           title: "Grand Final",
           rounds: structure.grandFinals

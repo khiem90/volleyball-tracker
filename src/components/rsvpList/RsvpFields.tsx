@@ -2,12 +2,16 @@
 
 import { StepButtons } from "@/components/shared";
 import { epochToWallClock, timeLabel, wallClockToEpoch } from "@/lib/rsvp";
+import { LABEL } from "@/components/shared/classes";
 
 const MAX_CAPACITY = 999;
 
+/** The note under a control. The setup form writes its own fields with it and the shared label. */
+export const FIELD_NOTE = "text-caption text-ink-soft";
+
 const Problem = ({ id, problem }: { id: string; problem?: string }) =>
   problem ? (
-    <p id={id} role="alert" className="text-[0.78rem] font-medium text-mb-red">
+    <p id={id} role="alert" className="text-caption font-medium text-danger">
       {problem}
     </p>
   ) : null;
@@ -44,8 +48,8 @@ export const DateTimeField = ({
   const owner = value !== null && setZone ? timeLabel(value, setZone, zone).owner : null;
   return (
     <label htmlFor={id} className="flex flex-col gap-1.5">
-      <span className="mb-kicker">{label}</span>
-      <span className={`mb-input ${problem ? "border-mb-red" : ""}`}>
+      <span className={LABEL}>{label}</span>
+      <span className={`field ${problem ? "border-danger" : ""}`}>
         <input
           id={id}
           type="datetime-local"
@@ -56,10 +60,8 @@ export const DateTimeField = ({
           aria-describedby={problem ? `${id}-problem` : undefined}
         />
       </span>
-      {owner && (
-        <span className="text-[0.72rem] text-mb-ink-muted">{owner} where it was set.</span>
-      )}
-      {note && <span className="text-[0.72rem] text-mb-ink-muted">{note}</span>}
+      {owner && <span className={FIELD_NOTE}>{owner} where it was set.</span>}
+      {note && <span className={FIELD_NOTE}>{note}</span>}
       <Problem id={`${id}-problem`} problem={problem} />
     </label>
   );
@@ -83,11 +85,11 @@ export const CapacityField = ({
   const clamp = (n: number) => Math.max(0, Math.min(MAX_CAPACITY, n));
   return (
     <div className="flex flex-col gap-1.5">
-      <label htmlFor={id} className="mb-kicker">
+      <label htmlFor={id} className={LABEL}>
         Capacity
       </label>
-      <div className="flex gap-1">
-        <span className={`mb-input min-w-0 flex-1 ${problem ? "border-mb-red" : ""}`}>
+      <div className="flex gap-2">
+        <span className={`field min-w-0 flex-1 ${problem ? "border-danger" : ""}`}>
           <input
             id={id}
             type="number"
@@ -108,7 +110,7 @@ export const CapacityField = ({
           onChange={(next) => onChange(clamp(next))}
         />
       </div>
-      <span className="text-[0.72rem] text-mb-ink-muted">{note}</span>
+      <span className={FIELD_NOTE}>{note}</span>
       <Problem id={`${id}-problem`} problem={problem} />
     </div>
   );

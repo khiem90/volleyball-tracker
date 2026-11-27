@@ -220,8 +220,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   return (
     <AuthContext.Provider value={value}>
       {isSigningOut ? (
-        <div className="matchbook-surface flex min-h-dvh items-center justify-center">
-          <p role="status" className="matchbook-display text-[0.9rem] font-bold tracking-[0.1em]">
+        <div className="flex min-h-dvh items-center justify-center bg-ground">
+          <p role="status" className="text-title font-semibold text-ink">
             Signing out...
           </p>
         </div>

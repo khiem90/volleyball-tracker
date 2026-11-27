@@ -1,8 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { MbIcon } from "@/components/matchbook/MbIcon";
-import { Crest, Panel, PanelEmpty, TeamMark } from "@/components/matchbook/Panel";
+import { Card, CardEmpty } from "@/components/shared/Card";
+import { Chip } from "@/components/shared/Chip";
+import { Icon } from "@/components/shared/Icon";
+import { ScoreLine } from "@/components/shared/ScoreLine";
+import { TeamMark } from "@/components/shared/TeamMark";
 import {
   capitalize,
   courtLabel,
@@ -15,7 +18,8 @@ import {
 import { scoringHref } from "@/lib/scoring";
 import { getChampionCount } from "@/lib/win2out";
 import type { Match, Tournament } from "@/types/game";
-import { LiveTag, MatchRow, scoringLink } from "./MatchRow";
+import { LiveTag, MatchRow, WinButton, scoringLink } from "./MatchRow";
+import { ROW_BUTTON } from "./parts";
 import type { TeamLookup } from "./teamRefs";
 
 /** The court and queue controls an owner or scorer gets while a rotation tournament is live. */
@@ -31,7 +35,8 @@ export interface CourtControls {
   busy: boolean;
 }
 
-const SMALL_BUTTON = "mb-btn px-3 text-[0.66rem]";
+/** A 44px round button that holds one glyph. */
+const ROUND_BUTTON = "btn btn-fill size-11 shrink-0 p-0";
 
 /** What a court card says under each team: streaks, titles, or where it is in its two-match run. */
 const teamNotes = (tournament: Tournament, court: CourtView, teamId: string): string[] => {
@@ -55,7 +60,8 @@ const teamNotes = (tournament: Tournament, court: CourtView, teamId: string): st
 /**
  * The Swap button under a team on a court. It starts a swap, finishes one
  * by naming this team as the one to trade places with, or cancels the swap
- * it started.
+ * it started. The team a swap started from holds the black pill until the
+ * swap ends.
  */
 const SwapButton = ({ teamId, controls }: { teamId: string; controls: CourtControls }) => {
   const starting = controls.swapping === teamId;
@@ -65,43 +71,41 @@ const SwapButton = ({ teamId, controls }: { teamId: string; controls: CourtContr
       onClick={() => (starting ? controls.onCancelSwap() : controls.onSwap(teamId))}
       disabled={controls.busy}
       aria-pressed={starting}
-      className={`${SMALL_BUTTON} ${starting ? "mb-btn-outline" : "mb-btn-outline-navy"} mt-1`}
+      className={`${ROW_BUTTON} mt-1 ${starting ? "btn-ink" : "btn-fill"}`}
     >
-      <MbIcon id="swap" size={12} />
+      <Icon id="swap" size={14} />
       {starting ? "Cancel" : controls.swapping ? "Swap here" : "Swap"}
     </button>
   );
 };
 
-const CourtSide = ({
+/** What sits under a team's name on a court: its notes, then its Swap button when it can be swapped. */
+const UnderTeam = ({
   teamId,
   notes,
-  team,
   swap,
 }: {
   teamId: string;
   notes: string[];
-  team: TeamLookup;
   /** The swap controls, when this team can be swapped. */
   swap?: CourtControls;
-}) => {
-  const ref = team(teamId);
-  return (
-    <div className="flex min-w-0 flex-col items-center gap-1 text-center">
-      <Crest team={ref} size={40} />
-      <span className="matchbook-display text-[0.82rem] font-bold leading-tight [overflow-wrap:anywhere]">
-        {ref.name}
+}) => (
+  <>
+    {notes.map((note) => (
+      <span key={note} className="text-caption leading-tight text-ink-soft">
+        {note}
       </span>
-      {notes.map((note) => (
-        <span key={note} className="mb-kicker normal-case tracking-[0.06em]">
-          {note}
-        </span>
-      ))}
-      {swap && <SwapButton teamId={teamId} controls={swap} />}
-    </div>
-  );
-};
+    ))}
+    {swap && <SwapButton teamId={teamId} controls={swap} />}
+  </>
+);
 
+/**
+ * One court as a card: the court-size score line, with the score between
+ * the teams while the match is in play and "vs" until then. Anyone who may
+ * score gets the green button that opens the scoring page, and above it,
+ * when the tournament takes instant wins, a button per team.
+ */
 const CourtCard = ({
   tournament,
   court,
@@ -118,77 +122,70 @@ const CourtCard = ({
   controls: CourtControls | null;
 }) => {
   const match = court.match;
-  const live = match?.status === "in_progress";
+  const playing = match?.status === "in_progress" ? match : null;
   const [homeId, awayId] = match ? [match.homeTeamId, match.awayTeamId] : court.teamIds;
   const instantWin = tournament.settings.instantWin && access.canScore && match;
   // Teams can be swapped while the court's match is still waiting. A swap
   // started from one side of a court cannot end on the other side of it.
-  const swapFor = (teamId: string, otherId: string) =>
+  const swapFor = (otherId: string) =>
     controls !== null && match?.status === "pending" && controls.swapping !== otherId
       ? controls
       : undefined;
 
   return (
-    <article className="flex flex-col border-[1.5px] border-mb-navy bg-mb-paper-bright">
-      <header className="flex items-center justify-between gap-2 border-b border-mb-rule px-3 py-2">
-        <span className="matchbook-display text-[0.8rem] font-bold tracking-[0.08em]">
-          {courtLabel(tournament, court.court)}
-        </span>
-        {live ? <LiveTag /> : <span className="mb-kicker">{match ? "Waiting" : "Empty"}</span>}
+    // A card written out, because a court is an article and Card draws a section.
+    <article className="card h-auto">
+      <header className="card-head">
+        <h2 className="card-title">{courtLabel(tournament, court.court)}</h2>
+        {playing ? (
+          <LiveTag />
+        ) : (
+          <span className="text-caption text-ink-soft">{match ? "Waiting" : "Empty"}</span>
+        )}
       </header>
 
-      <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 px-3 py-3">
-        <CourtSide
-          teamId={homeId}
-          notes={teamNotes(tournament, court, homeId)}
-          team={team}
-          swap={swapFor(homeId, awayId)}
-        />
-        <div className="flex flex-col items-center gap-1">
-          {live && match ? (
-            <span className="matchbook-display whitespace-nowrap text-3xl font-bold tabular-nums text-mb-coral">
-              {match.homeScore} – {match.awayScore}
-            </span>
-          ) : (
-            <span className="mb-score-box px-2 text-[0.7rem] tracking-[0.1em]">VS</span>
-          )}
-        </div>
-        <CourtSide
-          teamId={awayId}
-          notes={teamNotes(tournament, court, awayId)}
-          team={team}
-          swap={swapFor(awayId, homeId)}
-        />
-      </div>
+      <ScoreLine
+        size="court"
+        home={team(homeId)}
+        away={team(awayId)}
+        homeScore={playing?.homeScore}
+        awayScore={playing?.awayScore}
+        homeBelow={
+          <UnderTeam
+            teamId={homeId}
+            notes={teamNotes(tournament, court, homeId)}
+            swap={swapFor(awayId)}
+          />
+        }
+        awayBelow={
+          <UnderTeam
+            teamId={awayId}
+            notes={teamNotes(tournament, court, awayId)}
+            swap={swapFor(homeId)}
+          />
+        }
+        className="px-3 pb-3.5 pt-[18px]"
+      />
 
       {access.canScore && match && (
-        <footer className="flex flex-wrap gap-2 border-t border-mb-rule p-2">
+        <div className="grid grid-cols-2 gap-2 px-3 pb-3">
           {instantWin && (
             <>
-              <button
-                type="button"
+              <WinButton
+                name={team(match.homeTeamId).name}
                 onClick={() => onInstantWin(match, match.homeTeamId)}
-                className="mb-btn mb-btn-outline-navy min-w-0 flex-1 whitespace-normal py-1.5 leading-tight"
-              >
-                {team(match.homeTeamId).name} won
-              </button>
-              <button
-                type="button"
+              />
+              <WinButton
+                name={team(match.awayTeamId).name}
                 onClick={() => onInstantWin(match, match.awayTeamId)}
-                className="mb-btn mb-btn-outline-navy min-w-0 flex-1 whitespace-normal py-1.5 leading-tight"
-              >
-                {team(match.awayTeamId).name} won
-              </button>
+              />
             </>
           )}
-          <Link
-            href={scoringHref(match)}
-            className={`mb-btn mb-btn-coral min-h-11 ${instantWin ? "basis-full" : "flex-1"}`}
-          >
-            <MbIcon id="live" size={14} />
-            {live ? "Continue scoring" : "Score"}
+          <Link href={scoringHref(match)} className="btn btn-action col-span-2">
+            <Icon id="live" size={16} />
+            {playing ? "Continue scoring" : "Score"}
           </Link>
-        </footer>
+        </div>
       )}
     </article>
   );
@@ -198,22 +195,27 @@ const CourtCard = ({
 const SwapNotice = ({ teamName, onCancel }: { teamName: string; onCancel: () => void }) => (
   <div
     role="status"
-    className="flex items-center justify-between gap-3 border-b border-mb-rule bg-[rgba(238,75,52,0.06)] px-4 py-2"
+    className="flex items-center justify-between gap-3 rounded-card bg-action-tint py-2 pl-4 pr-2"
   >
-    <p className="text-[0.8rem]">
+    <p className="min-w-0 text-label text-ink">
       Swapping <span className="font-semibold">{teamName}</span>. Tap Swap here on the team to
       trade places with.
     </p>
-    <button type="button" onClick={onCancel} className={`${SMALL_BUTTON} mb-btn-outline-navy`}>
+    <button
+      type="button"
+      onClick={onCancel}
+      className={`${ROW_BUTTON} bg-surface text-ink`}
+    >
       Cancel
     </button>
   </div>
 );
 
 /**
- * The teams waiting for a court, first to play at the top. With controls,
- * each row has up and down buttons that move the team one place, and while
- * a swap is under way a button that brings the team onto that court.
+ * The teams waiting for a court as a card of numbered rows, first to play
+ * at the top. With controls, each row has up and down buttons that move the
+ * team one place, and while a swap is under way a button that brings the
+ * team onto that court.
  */
 const Queue = ({
   queue,
@@ -224,35 +226,32 @@ const Queue = ({
   team: TeamLookup;
   controls: CourtControls | null;
 }) => (
-  <div className="border-t border-mb-rule">
-    <div className="flex items-center justify-between gap-2 px-4 py-2">
-      <span className="matchbook-display text-[0.8rem] font-bold tracking-[0.06em]">
-        Queue
-        <span className="ml-2 text-mb-ink-muted">{queue.length}</span>
-      </span>
-    </div>
+  <Card title="Queue" meta={String(queue.length)} className="h-auto">
     {queue.length === 0 ? (
-      <p className="px-4 pb-3 text-[0.8rem] text-mb-ink-muted">Every team is on a court.</p>
+      <p className="px-4 py-3 text-label text-ink-soft">Every team is on a court.</p>
     ) : (
-      <ol className="flex flex-col divide-y divide-mb-rule border-t border-mb-rule">
+      <ol className="flex flex-col divide-y divide-line">
         {queue.map((teamId, i) => {
           const ref = team(teamId);
           return (
-            <li key={teamId} className="flex min-h-11 items-center gap-2 px-4 py-1">
-              <span className="matchbook-display w-5 shrink-0 text-center text-[0.8rem] font-bold tabular-nums text-mb-ink-muted">
+            <li key={teamId} className="flex min-h-14 items-center gap-2.5 py-1.5 pl-4 pr-2">
+              <span className="w-4 shrink-0 text-body font-semibold tabular-nums text-ink-soft">
                 {i + 1}
               </span>
-              <TeamMark team={ref} size={20} className="min-w-0 flex-1" />
-              {i === 0 && <span className="mb-kicker shrink-0 text-mb-coral">Next up</span>}
+              <TeamMark name={ref.name} color={ref.color} size={26} />
+              <span className="line-clamp-2 min-w-0 flex-1 text-body font-semibold leading-tight wrap-break-word">
+                {ref.name}
+              </span>
+              {i === 0 && <Chip tone="action">Next up</Chip>}
               {controls &&
                 (controls.swapping ? (
                   <button
                     type="button"
                     onClick={() => controls.onSwap(teamId)}
                     disabled={controls.busy}
-                    className={`${SMALL_BUTTON} mb-btn-outline-navy shrink-0`}
+                    className={`${ROW_BUTTON} btn-fill`}
                   >
-                    <MbIcon id="swap" size={12} />
+                    <Icon id="swap" size={14} />
                     Swap here
                   </button>
                 ) : (
@@ -262,18 +261,18 @@ const Queue = ({
                       onClick={() => controls.onMove(teamId, i - 1)}
                       disabled={controls.busy || i === 0}
                       aria-label={`Move ${ref.name} up`}
-                      className="mb-btn mb-btn-outline-navy min-w-11 px-2"
+                      className={ROUND_BUTTON}
                     >
-                      <MbIcon id="chevron-down" size={14} className="rotate-180" />
+                      <Icon id="chevron-down" size={16} className="rotate-180" />
                     </button>
                     <button
                       type="button"
                       onClick={() => controls.onMove(teamId, i + 1)}
                       disabled={controls.busy || i === queue.length - 1}
                       aria-label={`Move ${ref.name} down`}
-                      className="mb-btn mb-btn-outline-navy min-w-11 px-2"
+                      className={ROUND_BUTTON}
                     >
-                      <MbIcon id="chevron-down" size={14} />
+                      <Icon id="chevron-down" size={16} />
                     </button>
                   </span>
                 ))}
@@ -282,7 +281,7 @@ const Queue = ({
         })}
       </ol>
     )}
-  </div>
+  </Card>
 );
 
 const MatchList = ({
@@ -299,9 +298,11 @@ const MatchList = ({
   access: ConsoleAccess;
 }) =>
   matches.length === 0 ? null : (
-    <div>
-      <p className="mb-kicker border-b border-mb-rule px-3 py-1.5">{title}</p>
-      <div className="flex flex-col divide-y divide-mb-rule">
+    <div className="border-line [&:not(:first-child)]:border-t">
+      <p className="border-b border-line px-4 py-2 text-caption font-medium text-ink-soft">
+        {title}
+      </p>
+      <div className="flex flex-col divide-y divide-line">
         {matches.map((match) => (
           <MatchRow
             key={match.id}
@@ -316,11 +317,11 @@ const MatchList = ({
   );
 
 /**
- * The Courts tab. Rotation formats show each court with the match on it and
- * the queue behind them, with tap controls to swap teams and reorder the
- * queue for anyone who may arrange the courts; the other formats show what
- * is live and what is ready to play. Tapping a match opens scoring for an
- * owner or scorer.
+ * The Courts tab. Rotation formats show each court as a card with the match
+ * on it, and the queue as a card behind them, with tap controls to swap
+ * teams and reorder the queue for anyone who may arrange the courts. The
+ * other formats show one card of what is live and what is ready to play.
+ * Tapping a match opens scoring for an owner or scorer.
  */
 export const CourtsPanel = ({
   tournament,
@@ -343,18 +344,27 @@ export const CourtsPanel = ({
   const controls = access.canEditCourts ? offered : null;
 
   if (view.kind === "rotation") {
-    const live = view.courts.filter((c) => c.match?.status === "in_progress").length;
+    if (draft) {
+      return (
+        <Card title={title}>
+          <CardEmpty message={`Start the tournament to open the ${courts}.`} />
+        </Card>
+      );
+    }
     return (
-      <Panel title={title} meta={live > 0 ? <LiveTag /> : undefined}>
+      <div className="flex flex-col gap-3">
         {controls?.swapping && (
           <SwapNotice teamName={team(controls.swapping).name} onCancel={controls.onCancelSwap} />
         )}
-        {draft ? (
-          <PanelEmpty message={`Start the tournament to open the ${courts}.`} />
-        ) : view.courts.length === 0 ? (
-          <PanelEmpty message={`No ${courts} are in play.`} />
+        {view.courts.length === 0 ? (
+          <Card title={title} className="h-auto">
+            <CardEmpty message={`No ${courts} are in play.`} />
+          </Card>
         ) : (
-          <div className="grid grid-cols-1 gap-3 p-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+          // A court needs about a phone's width to keep its names whole. Two fit
+          // side by side only on a tablet: from lg up the section is one column
+          // of the page's grid.
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-1">
             {view.courts.map((court) => (
               <CourtCard
                 key={court.court}
@@ -368,18 +378,18 @@ export const CourtsPanel = ({
             ))}
           </div>
         )}
-        {!draft && <Queue queue={view.queue} team={team} controls={controls} />}
-      </Panel>
+        <Queue queue={view.queue} team={team} controls={controls} />
+      </div>
     );
   }
 
   const empty = view.live.length === 0 && view.pending.length === 0;
   return (
-    <Panel title={title} meta={view.live.length > 0 ? <LiveTag /> : undefined}>
+    <Card title={title} meta={view.live.length > 0 ? <LiveTag /> : undefined}>
       {draft ? (
-        <PanelEmpty message="Start the tournament to schedule its matches." />
+        <CardEmpty message="Start the tournament to schedule its matches." />
       ) : empty ? (
-        <PanelEmpty
+        <CardEmpty
           message={
             tournament.status === "completed"
               ? "Every match has been played."
@@ -404,6 +414,6 @@ export const CourtsPanel = ({
           />
         </div>
       )}
-    </Panel>
+    </Card>
   );
 };

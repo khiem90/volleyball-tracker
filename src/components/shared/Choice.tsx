@@ -1,6 +1,6 @@
 "use client";
 
-/** A row of choices, one of them chosen. Each is thumb-sized. */
+/** A row of choices, one of them chosen. Each is thumb-sized. The chosen one is filled with ink. */
 export const Choice = <T extends string | number | boolean>({
   id,
   label,
@@ -17,10 +17,15 @@ export const Choice = <T extends string | number | boolean>({
   onChange: (value: T) => void;
 }) => (
   <div className="flex flex-col gap-1.5">
-    <span id={`${id}-label`} className="mb-kicker">
+    <span id={`${id}-label`} className="text-caption font-medium text-ink-soft">
       {label}
     </span>
-    <div role="radiogroup" aria-labelledby={`${id}-label`} className="flex flex-wrap gap-1.5">
+    {/* Two to a row on a phone, where four labels at the button's size do not fit on one line. */}
+    <div
+      role="radiogroup"
+      aria-labelledby={`${id}-label`}
+      className="grid grid-cols-2 gap-1.5 sm:flex sm:flex-wrap"
+    >
       {options.map((option) => {
         const selected = option.value === value;
         return (
@@ -30,10 +35,10 @@ export const Choice = <T extends string | number | boolean>({
             role="radio"
             aria-checked={selected}
             onClick={() => onChange(option.value)}
-            className={`matchbook-display min-h-11 min-w-11 flex-1 rounded-[4px] border-[1.5px] px-3 text-[0.72rem] font-bold tracking-[0.06em] transition-colors ${
+            className={`min-h-11 min-w-11 flex-1 rounded-tile border px-3 text-label font-semibold transition-colors ${
               selected
-                ? "border-mb-navy bg-mb-navy text-mb-paper-bright"
-                : "border-mb-rule bg-mb-paper-bright text-mb-navy hover:border-mb-navy"
+                ? "border-ink bg-ink text-white"
+                : "border-ink-soft/75 bg-surface text-ink hover:border-ink"
             }`}
           >
             {option.label}
@@ -41,6 +46,6 @@ export const Choice = <T extends string | number | boolean>({
         );
       })}
     </div>
-    {note && <p className="text-[0.72rem] text-mb-ink-muted">{note}</p>}
+    {note && <p className="text-caption text-ink-soft">{note}</p>}
   </div>
 );

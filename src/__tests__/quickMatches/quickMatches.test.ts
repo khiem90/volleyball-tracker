@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { doc, getDoc } from "firebase/firestore";
 import { describe, expect, it } from "vitest";
-import { buildTeamTallies } from "@/components/matchbook/teamStats";
+import { buildTeamTallies } from "@/lib/teamStats";
 import {
   abandonedQuickMatches,
   addQuickMatch,

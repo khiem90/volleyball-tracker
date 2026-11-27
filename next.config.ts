@@ -8,7 +8,7 @@ import withPWAInit from "@ducanh2912/next-pwa";
 // old sprite lacks and draws blank icons. A hash of the sprite in its URL
 // sends a changed sprite past every old cache.
 const spriteVersion = createHash("sha1")
-  .update(readFileSync("public/assets/matchbook/icons/sprite.svg"))
+  .update(readFileSync("public/assets/icons/sprite.svg"))
   .digest("hex")
   .slice(0, 8);
 

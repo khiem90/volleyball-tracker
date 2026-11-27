@@ -2,6 +2,8 @@
 
 import { memo } from "react";
 import type { PlayerRole, CourtPosition } from "@/lib/volleyball/types";
+import { Icon } from "@/components/shared/Icon";
+import { LABEL } from "@/components/shared/classes";
 
 type ArrowControlsProps = {
   isDrawingArrow: boolean;
@@ -23,62 +25,34 @@ export const ArrowControls = memo(function ArrowControls({
   onRemoveArrow,
 }: ArrowControlsProps) {
   return (
-    <div className="space-y-2">
-      <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">
-        Movement Arrows
-      </h3>
+    <div className="flex flex-col gap-2">
+      <h3 className={LABEL}>Movement Arrows</h3>
 
       {/* Draw Arrow Button / Drawing State */}
       {isDrawingArrow ? (
-        <div className="space-y-2">
-          <div className="p-2 rounded-lg bg-primary/10 border border-primary/30">
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-              <span className="text-xs font-medium text-primary">
-                {arrowStartRole
-                  ? `Click on the court where ${arrowStartRole} should move`
-                  : "Click a player to start drawing"}
-              </span>
-            </div>
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2 rounded-tile bg-action-tint p-2.5">
+            <span className="live-dot" aria-hidden="true" />
+            <span className="text-caption font-medium text-action">
+              {arrowStartRole
+                ? `Click on the court where ${arrowStartRole} should move`
+                : "Click a player to start drawing"}
+            </span>
           </div>
           <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={onDoneDrawing}
-              className="flex-1 min-h-11 px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 font-medium"
-            >
+            <button type="button" onClick={onDoneDrawing} className="btn btn-ink flex-1">
               Done
             </button>
             {arrowStartRole && (
-              <button
-                type="button"
-                onClick={onCancelSelection}
-                className="min-h-11 px-3 py-1.5 text-sm bg-accent rounded-lg hover:bg-accent/80"
-              >
+              <button type="button" onClick={onCancelSelection} className="btn btn-fill">
                 Cancel
               </button>
             )}
           </div>
         </div>
       ) : (
-        <button
-          type="button"
-          onClick={onStartDrawing}
-          className="w-full min-h-11 px-3 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 font-medium flex items-center justify-center gap-2"
-        >
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M14 5l7 7m0 0l-7 7m7-7H3"
-            />
-          </svg>
+        <button type="button" onClick={onStartDrawing} className="btn btn-ink w-full">
+          <Icon id="swap" size={14} />
           Draw Arrow
         </button>
       )}
@@ -89,28 +63,16 @@ export const ArrowControls = memo(function ArrowControls({
           {arrowEntries.map(([role]) => (
             <div
               key={role}
-              className="flex items-center gap-1 pl-3 rounded-md bg-accent/50 text-xs"
+              className="flex items-center rounded-pill bg-fill pl-3 text-caption font-medium"
             >
-              <span className="font-medium">{role}</span>
+              <span>{role}</span>
               <button
                 type="button"
                 onClick={() => onRemoveArrow(role)}
-                className="flex size-11 items-center justify-center rounded hover:bg-accent text-muted-foreground hover:text-red-500 transition-colors"
+                className="flex size-11 items-center justify-center rounded-full text-ink-soft transition-colors hover:text-danger"
                 aria-label={`Remove arrow for ${role}`}
               >
-                <svg
-                  className="w-3 h-3"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
+                <Icon id="close" size={12} />
               </button>
             </div>
           ))}
