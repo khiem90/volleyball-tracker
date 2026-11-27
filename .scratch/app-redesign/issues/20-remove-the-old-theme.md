@@ -16,7 +16,7 @@ Covers spec stories 1, 7, 77, and 78.
 
 **Blocked by:** 07, 08, 10, 11, 12, 13, 14, 16, 18, 19
 
-**Status:** ready-for-human
+**Status:** resolved
 
 - [x] A search of the source finds no use of an old token, an old shared class, or the old icon component name. Anything found is moved to the new names first.
 - [x] The old token names and the old shared classes are deleted from the stylesheet.
@@ -28,7 +28,7 @@ Covers spec stories 1, 7, 77, and 78.
 - [x] The design-system document matches what was built, with no mention of the old theme. The project instructions' design-system paragraph is rewritten to match.
 - [x] Each of the five tabs, the console, the scoring page, sign-in, and the volleyball tool has been opened on a phone and on a laptop with no leftover piece of the old look.
 - [x] The full suite passes. Lint, the type checker, and a production build are clean.
-- [ ] The owner has said the branch is ready to merge.
+- [x] The owner has said the branch is ready to merge.
 
 ## Comments
 
@@ -38,3 +38,4 @@ Covers spec stories 1, 7, 77, and 78.
 - The Teams page's directory list fills its card from `xl` up, the defect carried from ticket 13. A merger saw it at 1280px with 11 teams: the list ends at the card's foot, level with Team Readiness, and scrolls inside. At 1024px and 390px it keeps the 60% cap.
 - The phone-and-laptop sweep ran on the dev server in a 390px touch context and at 1280px, not on a real phone. It covered the five tabs, the seeded RSVP list, the Win 2 & Out console's five tabs, the guest scoring page, sign-in, Quick Match, Tools, and the rotations tool. Every icon drew from the sprite's new address, no page was wider than its window, no console logged an error, and no element carried the old fonts, palette, uppercase, 1.5px border, or 4px corner.
 - The code review's findings are fixed and merged at `5940127`. The one open box is the owner's word that the branch is ready to merge, so the status is `ready-for-human`.
+- The owner merged the branch into `master` on 2026-11-27 as pull request 27, merge commit `594d7cc`. That is the last box, so the ticket is resolved.

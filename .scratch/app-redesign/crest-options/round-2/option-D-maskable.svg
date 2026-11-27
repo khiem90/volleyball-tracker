@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-labelledby="title">
+  <title id="title">Tournament Tracker crest, maskable</title>
+  <rect width="100" height="100" fill="#087a4d"/>
+  <g transform="translate(23 23) scale(.54)">
+  <path d="M10 0H36A10 10 0 0 1 46 10V47A3 3 0 0 0 46 53V90A10 10 0 0 1 36 100H10A10 10 0 0 1 0 90V53A3 3 0 0 0 0 47V10A10 10 0 0 1 10 0ZM64 0H90A10 10 0 0 1 100 10V47A3 3 0 0 0 100 53V90A10 10 0 0 1 90 100H64A10 10 0 0 1 54 90V53A3 3 0 0 0 54 47V10A10 10 0 0 1 64 0Z" fill="#fff"/>
+  <path d="M8 26H38V36H28V74H18V36H8ZM62 26H92V36H82V74H72V36H62Z" fill="#087a4d"/>
+  <path d="M3 50H43M57 50H97" fill="none" stroke="#15181b" stroke-width="3"/>
+  </g>
+</svg>

@@ -320,7 +320,7 @@ Lint and the type checker run clean at every commit, as today.
 
 ## What changed during the build
 
-The build is on the integration branch `claude/grill-with-docs-redesign-27d048`. All 20 tickets are merged and the code review's findings are fixed. The status is `ready-for-human` because what is left is the owner's: a look at each screen on a real phone, the crest pick, and the word that the branch may merge.
+The owner merged the build into `master` on 2026-11-27 as pull request 27, from the integration branch `claude/grill-with-docs-redesign-27d048`. All 20 tickets are in it and the code review's findings are fixed. The status stays `ready-for-human` because two things are still the owner's: a look at each screen on a real phone, and the crest pick.
 
 These are the places where the build left this spec. `docs/design-system.md` is the current description of each.
 
