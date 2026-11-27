@@ -348,4 +348,4 @@ The build made these calls without asking, and the review left them for the owne
 - Home's result rows have chevrons.
 - In the volleyball tools, Escape closes the formation editor, delete waits in a dialog, and the player palette is its own.
 
-Two faults are older than this work and were left alone, because this spec changes looks only. The Tournaments page lists a bye under Recent Results, with "TBD" and an opponent named "Unknown". The two brackets name their rounds differently: "Semifinals" and "Final" on the Tournaments page, "Semi-Finals" and "Finals" in the console.
+Two faults older than this work were fixed at the owner's word, after the review, in `e72a5dd`. The Tournaments page listed a bye under Recent Results, with "TBD" and an opponent named "Unknown". The two brackets named their rounds differently. The small bracket now reads the console's bracket view, so both say "Semi-Finals" and "Finals", and a double elimination's grand final has a column of its own after the winners side.
