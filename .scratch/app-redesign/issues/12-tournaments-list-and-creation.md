@@ -11,7 +11,7 @@ Covers spec stories 57, 58, 59, and 65.
 
 **Blocked by:** 03, 05, 06
 
-**Status:** ready-for-human
+**Status:** resolved
 
 - [x] The list shows the same tournaments in the same groups and order as today. Each row has the name, the format, a chip for draft, live, or completed, and its facts.
 - [x] Duplicating and deleting a tournament are reached the same way as today and use the shared menu and dialog.
@@ -24,7 +24,7 @@ Covers spec stories 57, 58, 59, and 65.
 - [x] The step buttons are the shared buttons, with the forward step in green.
 - [x] The files for the list and for creation contain no old-theme name and are on the guard's list of migrated folders.
 - [x] The creation and tournaments tests pass unedited, along with the rest of the suite outside the design folder. Lint and the type checker are clean.
-- [ ] The owner has created a tournament of each format on a phone, and what they flagged is fixed.
+- [x] The owner has created a tournament of each format on a phone, and what they flagged is fixed.
 
 ## Comments
 
@@ -32,3 +32,4 @@ Covers spec stories 57, 58, 59, and 65.
 - Not applicable, by ruling 1. Creation has no steps. Its two buttons are "Save as draft" in grey and "Create and start" in green, on a card at the foot.
 - The Tournaments page keeps its dashboard of one selected tournament. Its court, schedule, and result rows are the shared score line under a centered label. Nothing here has been seen in a browser.
 - Merged on the integration branch `claude/grill-with-docs-redesign-27d048` and through the code review. The one open box is the owner's own look on a phone, so the status is `ready-for-human` until they have had it.
+- The owner looked at the app on a phone on 2026-11-27, after the merge, and said it looks good. Nothing was flagged, so the last box is ticked and the ticket is resolved.

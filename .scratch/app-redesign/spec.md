@@ -1,6 +1,6 @@
 # App redesign
 
-Status: ready-for-human
+Status: resolved
 
 Agreed in a grilling session that ran from 2026-11-23 to 2026-11-25. Vocabulary
 is in `GLOSSARY.md`. The owner picked the look from nine prototype directions
@@ -320,7 +320,7 @@ Lint and the type checker run clean at every commit, as today.
 
 ## What changed during the build
 
-The build is on the integration branch `claude/grill-with-docs-redesign-27d048`. All 20 tickets are merged and the code review's findings are fixed. The status is `ready-for-human` because what is left is the owner's: a look at each screen on a real phone, the crest pick, and the word that the branch may merge.
+The owner merged the build into `master` on 2026-11-27 as pull request 27, from the integration branch `claude/grill-with-docs-redesign-27d048`. All 20 tickets are in it and the code review's findings are fixed. The owner looked at the app on a phone the same day and flagged nothing, and kept the crest as built, so all 20 tickets are resolved.
 
 These are the places where the build left this spec. `docs/design-system.md` is the current description of each.
 
@@ -330,7 +330,7 @@ These are the places where the build left this spec. `docs/design-system.md` is 
 - The scoring page's fullscreen ground stays black, and the document names it as the one exemption.
 - The team mark's shield is the one shape off the radius scale.
 - Where a ticket described something a screen never had, the screen's behavior won. Each such criterion says "not applicable" in its ticket's comments.
-- The crest is round 2's option A, "Ball over the net", built without the owner's pick. Ticket 19's comments say how to swap it.
+- The crest is round 2's option A, "Ball over the net". It was built before the owner picked, and the owner kept it after the merge. The other drawings are in `.scratch/app-redesign/crest-options/`.
 
 The build made these calls without asking, and the review left them for the owner to judge.
 

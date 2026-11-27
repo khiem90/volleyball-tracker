@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-labelledby="title">
+  <title id="title">Tournament Tracker crest</title>
+  <path d="M31.25 37.5H68.75V50H56.25V87.5H43.75V50H31.25Z" fill="#15181b"/>
+  <path d="M50 12.5V31.25M25 50V31.25H75V50M12.5 87.5V56.25H37.5V87.5M62.5 87.5V56.25H87.5V87.5" fill="none" stroke="#087a4d" stroke-width="9.5" stroke-linejoin="round"/>
+</svg>

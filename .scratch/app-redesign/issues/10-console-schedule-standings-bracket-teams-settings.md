@@ -12,7 +12,7 @@ Covers spec stories 50, 51, 52, and 61.
 
 **Blocked by:** 09
 
-**Status:** ready-for-human
+**Status:** resolved
 
 - [x] Schedule shows each match as a row-size score line with its court and state, and the same actions per match as today, including a correction.
 - [x] Standings shows the same columns and order as today in the shared table, with a mark beside each team and the champion marked as today.
@@ -23,7 +23,7 @@ Covers spec stories 50, 51, 52, and 61.
 - [x] The not-found view uses the new look.
 - [x] Every console file contains no old-theme name, and the console's folders are on the guard's list of migrated folders.
 - [x] The console tests pass unedited, along with the rest of the suite outside the design folder. Lint and the type checker are clean.
-- [ ] The owner has looked at each tab on a phone, with a round robin and with a bracket format, and what they flagged is fixed.
+- [x] The owner has looked at each tab on a phone, with a round robin and with a bracket format, and what they flagged is fixed.
 
 ## Comments
 
@@ -31,3 +31,4 @@ Covers spec stories 50, 51, 52, and 61.
 - The leader of the standings is marked by a green place number. The teal bar was an inset shadow on the cell.
 - Settings is three cards now: the name, courts, and facts, then the two links, then Duplicate, End, and Delete. End and Delete are the quiet red button, and each dialog confirms in filled red.
 - Merged on the integration branch `claude/grill-with-docs-redesign-27d048` and through the code review. The one open box is the owner's own look on a phone, so the status is `ready-for-human` until they have had it.
+- The owner looked at the app on a phone on 2026-11-27, after the merge, and said it looks good. Nothing was flagged, so the last box is ticked and the ticket is resolved.

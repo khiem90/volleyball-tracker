@@ -12,7 +12,7 @@ Covers spec stories 62, 64, and 66.
 
 **Blocked by:** 03, 05, 06
 
-**Status:** ready-for-human
+**Status:** resolved
 
 - [x] The tab lists the same RSVP lists in the same order as today, upcoming first. Each row has a date tile, the name, the scheduled time, and the count against capacity.
 - [x] The new-list page has the same fields, defaults, and validation as today in the new form controls, with the save action in green.
@@ -23,7 +23,7 @@ Covers spec stories 62, 64, and 66.
 - [x] The tournaments made from the list show as rows with a status chip.
 - [x] The files for the tab, the new-list page, and the owner's panels contain no old-theme name and are on the guard's list of migrated folders.
 - [x] The RSVP list tests pass unedited, along with the rest of the suite outside the design folder. Lint and the type checker are clean.
-- [ ] The owner has created a list and managed its people on a phone, and what they flagged is fixed.
+- [x] The owner has created a list and managed its people on a phone, and what they flagged is fixed.
 
 ## Comments
 
@@ -33,3 +33,4 @@ Covers spec stories 62, 64, and 66.
 - A live tournament's row draws `LiveTag`, which ticket 09 is rebuilding. A completed one draws a grey chip.
 - Left open: `rsvp/[id]/page.tsx` keeps its hand-written header for ticket 16 and is not on the guard's list. The By person or By team choice and the link's On or Off choice are `Choice`, which ticket 12 restyles. Nothing was looked at in a browser.
 - Merged on the integration branch `claude/grill-with-docs-redesign-27d048` and through the code review. The one open box is the owner's own look on a phone, so the status is `ready-for-human` until they have had it.
+- The owner looked at the app on a phone on 2026-11-27, after the merge, and said it looks good. Nothing was flagged, so the last box is ticked and the ticket is resolved.
