@@ -1,3 +1,4 @@
+import { bracketView, LOSERS } from "@/lib/console";
 import { shortDate } from "@/lib/dates";
 import { entryTeams } from "@/lib/entries";
 import { FORMAT_LABELS, isBracketFormat, isRotationFormat } from "@/lib/formats";
@@ -110,33 +111,29 @@ export interface SelectedTournament {
   seriesLabel: string;
 }
 
-const roundLabel = (round: number, maxRound: number, cellsInRound: number): string => {
-  if (round === maxRound) return cellsInRound > 1 ? `Round ${round}` : "Final";
-  if (round === maxRound - 1 && cellsInRound <= 2) return "Semifinals";
-  if (round === maxRound - 2 && cellsInRound <= 4) return "Quarterfinals";
-  return `Round ${round}`;
-};
-
-/** The first four rounds of a bracket. A double elimination shows its winners side and the grand final. */
-const smallBracket = (matches: Match[], teamOf: (teamId: string) => Team): BracketRound[] => {
-  const shown = matches.filter(
-    (m) => !m.bracket || m.bracket === "winners" || m.bracket === "grand_finals",
-  );
-  const maxRound = Math.max(0, ...shown.map((m) => m.round));
-  const rounds: BracketRound[] = [];
-  for (let round = 1; round <= maxRound; round++) {
-    const cells = shown
-      .filter((m) => m.round === round)
-      .sort((a, b) => a.position - b.position)
-      .map((m) => ({
+/**
+ * The first four rounds of a bracket, in the console's rounds and under the
+ * console's names. A double elimination shows its winners side and then the
+ * grand final, and leaves the losers side to the console.
+ */
+const smallBracket = (
+  tournament: Tournament,
+  matches: Match[],
+  teamOf: (teamId: string) => Team,
+): BracketRound[] =>
+  bracketView(tournament, matches)
+    .sections.filter((section) => section.title !== LOSERS)
+    .flatMap((section) => section.rounds)
+    .filter((round) => round.matches.length > 0)
+    .slice(0, 4)
+    .map((round) => ({
+      label: round.label,
+      cells: round.matches.map((m) => ({
         home: m.homeTeamId ? teamOf(m.homeTeamId) : null,
         away: m.awayTeamId ? teamOf(m.awayTeamId) : null,
         line: matchLine(m),
-      }));
-    if (cells.length > 0) rounds.push({ label: roundLabel(round, maxRound, cells.length), cells });
-  }
-  return rounds.slice(0, 4);
-};
+      })),
+    }));
 
 /** Everything the page shows of one tournament. `allMatches` may hold other tournaments' matches too. */
 export const selectedTournament = (
@@ -190,14 +187,15 @@ export const selectedTournament = (
       matches.length > 0 ? Math.round((completed.length / matches.length) * 100) : 0,
     courtCount: isRotationFormat(tournament.format) ? tournament.settings.courts : null,
     winner: tournament.winnerId ? teamOf(tournament.winnerId) : null,
-    bracket: isElimination ? smallBracket(matches, teamOf) : [],
+    bracket: isElimination ? smallBracket(tournament, matches, teamOf) : [],
     standings,
     liveCourts: live.slice(0, 4).map((m, i) => listed(m, `Court ${i + 1}`)),
     schedule: pending
       .filter((m) => m.homeTeamId && m.awayTeamId)
       .slice(0, 5)
       .map((m) => listed(m, `Round ${m.round}`)),
-    recent: [...completed]
+    recent: completed
+      .filter((m) => !m.isBye)
       .sort((a, b) => (b.completedAt ?? 0) - (a.completedAt ?? 0))
       .slice(0, 5)
       .map((m) => listed(m, shortDate(m.completedAt))),

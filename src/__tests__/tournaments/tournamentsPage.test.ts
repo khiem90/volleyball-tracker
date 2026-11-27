@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { bracketView } from "@/lib/console";
 import { selectedTournament, tournamentRows } from "@/lib/tournamentsPage";
 import type { PersistentTeam } from "@/types/game";
 import {
@@ -122,6 +123,15 @@ describe("selectedTournament", () => {
   });
 });
 
+describe("selectedTournament's recent results", () => {
+  it("leaves out a bye, which nobody played", () => {
+    const world = started("single_elimination", 3);
+    expect(world.matches.some((m) => m.isBye && m.status === "completed")).toBe(true);
+
+    expect(selectedTournament(world.tournament, world.matches, roster).recent).toEqual([]);
+  });
+});
+
 /* The small bracket reads each match by the rule the console's bracket reads it by. */
 describe("selectedTournament's bracket", () => {
   it("reads a bye as a bye, with no score, no winner, and nobody on its empty side", () => {
@@ -145,7 +155,7 @@ describe("selectedTournament's bracket", () => {
 
     const { bracket } = selectedTournament(world.tournament, world.matches, roster);
 
-    expect(bracket.map((round) => round.label)).toEqual(["Semifinals", "Final"]);
+    expect(bracket.map((round) => round.label)).toEqual(["Semi-Finals", "Finals"]);
     expect(bracket[1].cells).toEqual([
       {
         home: null,
@@ -173,5 +183,26 @@ describe("selectedTournament's bracket", () => {
     const forfeited = withdraw(world, first.homeTeamId);
     const after = selectedTournament(forfeited.tournament, forfeited.matches, roster);
     expect(after.bracket[0].cells[0].line).toMatchObject({ winner: "away", decidedBy: "forfeit" });
+  });
+
+  it("names its rounds as the console's bracket names them", () => {
+    const single = started("single_elimination", 4);
+    const double = started("double_elimination", 4);
+
+    const labels = (world: typeof single) =>
+      selectedTournament(world.tournament, world.matches, roster).bracket.map((round) => round.label);
+
+    expect(labels(single)).toEqual(
+      bracketView(single.tournament, single.matches).sections[0].rounds.map((round) => round.label),
+    );
+    expect(labels(double)).toEqual(["Winners Semi-Finals", "Winners Finals", "Grand Finals"]);
+  });
+
+  it("gives a double elimination's grand final a column of its own, after the winners side", () => {
+    const world = started("double_elimination", 4);
+
+    const { bracket } = selectedTournament(world.tournament, world.matches, roster);
+
+    expect(bracket.map((round) => round.cells.length)).toEqual([2, 1, 1]);
   });
 });
